@@ -23,16 +23,19 @@ state_of() {   # $1 = app -> "playing|paused|stopped"
 track_of() {
   osascript -e "tell application \"$1\" to name of current track" 2>/dev/null
 }
+artist_of() {
+  osascript -e "tell application \"$1\" to artist of current track" 2>/dev/null
+}
 
 last=""
 while true; do
-  icon="none"; text=""
+  icon="none"; text=""; who=""
   for app in Spotify Music; do
     [ "$(running "$app")" = "true" ] || continue
     st="$(state_of "$app")"
     case "$st" in
-      playing) icon="play";  text="$(track_of "$app")"; break ;;
-      paused)  icon="pause"; text="$(track_of "$app")"; break ;;
+      playing) icon="play";  text="$(track_of "$app")"; who="$(artist_of "$app")"; break ;;
+      paused)  icon="pause"; text="$(track_of "$app")"; who="$(artist_of "$app")"; break ;;
     esac
   done
 
@@ -44,14 +47,18 @@ while true; do
   # part-way through any track longer than 3 minutes, and it came back at the next
   # track. Re-push well inside that window so the slot stays alive without losing
   # the staleness guarantee.
-  cur="$icon|$text"
+  cur="$icon|$text|$who"
   if [ "$cur" != "$last" ] || { [ -n "$last" ] && [ $(( $(date +%s) - keepalive_at )) -ge "$KEEPALIVE" ]; }; then
     keepalive_at=$(date +%s)
     last="$cur"
     if [ -z "$text" ] && [ "$icon" = "none" ]; then
       "$PY" "$PUSH" --clear
     else
-      "$PY" "$PUSH" "$text" --icon "$icon"
+      # Two packets: line 0 = title, line 1 = artist. A second line does not fit
+      # in one report (32 bytes leaves ~26 for ASCII after framing), and a torn
+      # update is harmless -- the lines are independently meaningful.
+      "$PY" "$PUSH" "$text" --icon "$icon" --line 0
+      "$PY" "$PUSH" "$who"  --icon "$icon" --line 1
     fi
   fi
   sleep "$INTERVAL"

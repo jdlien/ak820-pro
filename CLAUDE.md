@@ -1330,6 +1330,57 @@ The correct order is the one that eventually worked: **reproduce first, bisect
 second.** Re-flashing the full patch answered it in one step and made three
 planned bisect flashes unnecessary.
 
+### Two-line text slot, and the vertical budget
+
+The panel is **exactly full** -- 128 rows with nothing spare:
+
+```
+0..24     connection strip   25
+25        gap                 1
+26..53    text (2 lines)     28   two 7x14 cells
+54..87    clock              34
+88..110   lock band          23   20px face
+111..127  battery            17
+```
+
+**A glyph blit paints its WHOLE cell, background included**, so cells cannot
+overlap and two lines cost exactly 2x the cell height. That is why the 13px
+atlas is a **tight 7x14 cell** -- at the original 7x17 it wasted 4 rows per line
+and two lines would not fit. Regenerating the atlas re-loses the b/h/p join
+fixes and the hand-drawn `%`; both must be re-applied (row offsets shift with
+the cell height).
+
+**Protocol: `TEXT_SET_LINE` (0x03)** = `[line][icon][ASCII...]`. One line per
+packet, because 32 bytes leaves ~26 for text after framing and two 16-char lines
+is 32. Torn updates are harmless -- the lines are independently meaningful and
+the producer polls every 3 s. `TEXT_SET` (0x01) still works and **clears line 1**
+so a single-line producer cannot strand a stale artist.
+
+**Single-line text keeps the adaptive size** (20px if <= 11 chars). Only a real
+second line costs legibility, since two 20px cells would need 46 rows.
+
+**The battery percentage is 13px by force, not choice.** The band is 17 rows,
+the icon alone needs 17 (`BATT_Y0 = STATUS_Y+4`, 12 tall), and a 20px cell is 23.
+Restoring the 20px lock labels used the last slack. To get it back, something
+else has to give: the two text lines, the clock, or the lock labels.
+
+**Rows 126-127 were dead space.** `LCD_OFF_Y 2` is a controller offset, not lost
+rows -- the full 0..127 is visible. One row of bottom margin is kept on purpose:
+the bezel clips the outermost pixels, the same reason `BATT_X0` is 5.
+
+**⚠️ The padlock must fit inside the lock band's clear rect.** It is 16px drawn
+at `LOCK_Y+3`, so it needs a band of at least 19. While the band was briefly
+17px its bottom two rows sat outside `lcd_clear_rect(0, LOCK_Y, W, STATUS_Y-LOCK_Y)`
+and stayed lit forever once the locks cleared. If the band is ever shrunk again,
+move the padlock or shrink it too.
+
+**⚠️ `mkraw.py` validates the cell markers -- CHECK ITS EXIT STATUS.** Editing a
+glyph by hand can clobber the magenta marker at its cell's top-left, and marker
+spacing IS the advance. It then fails with `non-uniform glyph advance` -- but if
+the failure is swallowed, the STALE blob gets provisioned and a device-vs-local
+CRC check still passes, because neither side has the change. **Confirm the blob's
+CRC actually changed after regenerating**, not just that the device matches.
+
 ### Known quirks
 
 **FIXED (symptom) — hard freeze while adjusting RGB.** Predates any of this

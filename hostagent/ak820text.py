@@ -17,6 +17,7 @@ import argparse, sys
 VID, PID = 0x0C45, 0x8009
 USAGE_PAGE, USAGE = 0xFF60, 0x61        # QMK raw HID
 SET_VALUE, TEXT_CHANNEL, TEXT_SET, TEXT_CLEAR = 0x07, 0x12, 0x01, 0x02
+TEXT_SET_LINE = 0x03                     # per-line set: [line][icon][ascii...]
 MAXLEN = 16                              # 128px band / 10px glyph advance
 ICONS = {"none": 0, "play": 1, "pause": 2, "stop": 3}
 
@@ -59,6 +60,16 @@ def send(payload):
         h.close()
 
 
+def push_line(line, text, icon="none"):
+    """Set one line of the two-line slot. line 0 = title, 1 = artist.
+
+    A second line needs its own packet: 32 bytes leaves ~26 for ASCII after
+    framing, and two 16-char lines would be 32. Torn updates are harmless --
+    the lines are independently meaningful and the poll interval is 3 s."""
+    body = to_ascii(text)[:MAXLEN].encode("ascii", "replace")
+    send([SET_VALUE, TEXT_CHANNEL, TEXT_SET_LINE, line, ICONS[icon]] + list(body))
+
+
 def push(icon="none", text=""):
     """Reusable entry point for producer scripts (avoids a subprocess per
     update, which matters more on Windows). icon is a key of ICONS."""
@@ -73,13 +84,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", default="")
     ap.add_argument("--icon", default="none", choices=list(ICONS))
+    ap.add_argument("--line", type=int, default=None,
+                    help="0 = title, 1 = artist; omit for the legacy single-line set")
     ap.add_argument("--clear", action="store_true")
     a = ap.parse_args()
 
     if a.clear:
         send([SET_VALUE, TEXT_CHANNEL, TEXT_CLEAR])
         return
-    push(a.icon, a.text)
+    if a.line is not None:
+        push_line(a.line, a.text, a.icon)
+    else:
+        push(a.icon, a.text)
 
 
 if __name__ == "__main__":
