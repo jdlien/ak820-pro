@@ -1215,6 +1215,49 @@ ids by **sorted filename**. So an asset change needs a firmware rebuild with the
 new `flash_assets.h` AND a re-provision, applied together. Between the two the
 panel draws garbage; that is expected, not a fault.
 
+**Font is chosen PER STRING.** <= `TEXT_BIG_MAX` (11) chars uses the 20px face,
+longer uses the 13px one. Most titles are short and there is no reason to render
+"Everlong" tiny just because "Bohemian Rhapsody" would not fit.
+
+**Text is aligned to the TRANSPORT ICON, not the band.** The icon spans rows
+31..42 (centre 36.5). Each face is centred on that by its **cap-to-baseline mass,
+not its cell** — the cell includes descender space that is empty for most strings
+and drags the apparent centre down, which is what made it look 2px high. 20px
+needs `TEXT_BIG_DY` 0, 13px needs `TEXT_FONT_DY` 4; **one constant for both
+misaligns one of them.** Any new face needs its ink rows measured and its own DY.
+
+**Hand-fixed in the 13px atlas: the stem->shoulder join on `b`, `h`, `p`**, where
+the arch sprang off the stem with a 1px hole and read as disconnected. **`k` was
+deliberately left alone** — its similar-looking gap is the diagonal arm
+approaching the stem, which it meets two rows lower. A naive "close every gap"
+pass would break it.
+
+**⚠️ Do NOT try to thicken the 13px face.** Synthetic emboldening (dilate 1px)
+closes every counter — `m` becomes a solid white block. At a 7px advance the
+glyphs are ~5px wide, and three stems plus two gaps is 5px minimum at 1px each,
+so there is no room for 2px stems at this density. **A real Bold weight cannot
+rescue it either; the geometry does not permit it.** Density and weight are the
+same dial here. Going up a size instead: 15-16 give inconsistent stems, 17-18
+give uniform 2px but only 13 chars, barely better than the 20px face.
+
+### Two lines of text: what it would cost
+
+Not possible in the current band, and the transport bites before the layout does.
+
+| Limit | Number |
+|---|---|
+| Text band height | 24px |
+| Two 13px lines (ink + 2px gap) | **28px** — 4px short |
+| Clock in the 20px face instead of 30px | frees 11px -> band 35px, **2 lines fit** |
+| Hiding the clock while playing | band 58px, 3 lines |
+
+**But the raw-HID packet is the real ceiling.** The text channel is deliberately
+ONE packet with ~27 usable bytes, which is what let the design skip offsets,
+commits and partial-render states. Two lines at 16 chars is 32 bytes — over
+budget. **Two lines of ~13 chars is 26 bytes and fits.** So the transport forces
+shorter lines than the panel could physically show, and adding a second packet
+would reintroduce all the framing the design avoided.
+
 **Remaining easy win: the clock font stores 95 glyphs to draw eleven.**
 Iosevka-Regular-30 is 96,900 B of the ~199 KB blob, and the clock only ever draws
 `0`-`9` and `:`. Subsetting it would reclaim ~86 KB.
