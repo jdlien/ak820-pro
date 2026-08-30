@@ -11,3 +11,8 @@ venv/
 
 .DS_Store
 __pycache__/
+
+# Source TTFs for the atlas generator: large, and re-downloadable.
+# See assets-src/FONTS.md
+assets-src/*.ttf
+assets-src/*.otf

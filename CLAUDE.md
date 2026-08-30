@@ -1172,6 +1172,53 @@ Windows layer would cycle keyboard layouts on every click.
 Keychron V1. Identical config behaving differently across boards pointed at a
 per-board default rather than QMK-wide behaviour, which is exactly where it was.
 
+### Fonts: the atlas pipeline, and why the sizes are what they are
+
+`assets-src/mkfontatlas.py` renders any TTF/OTF into the atlas PNG format
+`mkraw.py` expects (fixed cells, magenta marker at each cell's top-left, marker
+spacing = advance). Pillow is in the venv. `--probe` reports natural metrics so
+you can pick a cell; `--aa` enables anti-aliasing, which should be used **only**
+for large glyphs.
+
+**Render MONOCHROME via `getmask(mode="1")`, not antialiased-then-thresholded.**
+They are different FreeType render modes and give different results; thresholding
+a grey render throws away the hinting.
+
+| Asset | Cell | Advance | Chars/line | Used for |
+|---|---|---|---|---|
+| Iosevka-Medium-14 | 7x18 | 7px | **16** | host text slot (song titles) |
+| Iosevka-Medium-20 | 10x23 | 10px | 12 | status band, connection digit |
+| Iosevka-Regular-30 | 15x34 | 15px | 8 | clock |
+
+**⚠️ The capital P defect at size 20 is IOSEVKA, not the toolchain.** Measured
+across sizes 16-26 in true monochrome hinted mode: **size 20 is the only one in
+that range where P's stem collapses to 1px** (start col 2, width 1) while B/D/R/H
+all get (1,2). Hinting does not fix it; it reproduces exactly.
+
+**Size 19 is NOT the answer** — it fixes P but collapses every glyph's RIGHT stem
+to 1px, which is worse and more widespread. The shipped atlas has **P hand-fixed
+at size 20**, which is the best available combination. Do not "fix" it by
+re-rendering at another ppem.
+
+**⚠️ Iosevka Aile (proportional) is WIDER than Iosevka mono.** Measured at 20px:
+Aile fits 10 characters where the mono fits 12. Iosevka's monospace is famously
+condensed (0.5em advance), so going proportional here LOSES density. Proportional
+rendering and a per-glyph width table were investigated and abandoned for this
+reason — the lever for more characters is a smaller size, not variable advance.
+
+**Size 12 was built, compared on the panel, and rejected** — 20 chars/line, but
+the counters (the enclosed spaces in a/e/o/g) start closing at that density, and
+word shapes stop reading at a glance. 14 was chosen as the knee of the curve.
+
+**⚠️ ADDING OR REMOVING A FONT SHIFTS EVERY LATER ASSET ID** — `mkraw.py` assigns
+ids by **sorted filename**. So an asset change needs a firmware rebuild with the
+new `flash_assets.h` AND a re-provision, applied together. Between the two the
+panel draws garbage; that is expected, not a fault.
+
+**Remaining easy win: the clock font stores 95 glyphs to draw eleven.**
+Iosevka-Regular-30 is 96,900 B of the ~199 KB blob, and the clock only ever draws
+`0`-`9` and `:`. Subsetting it would reclaim ~86 KB.
+
 ### Known quirks
 
 **FIXED (symptom) — hard freeze while adjusting RGB.** Predates any of this

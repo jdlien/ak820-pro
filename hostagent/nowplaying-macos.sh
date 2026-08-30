@@ -12,6 +12,8 @@ set -u
 PY="${PY:-/Users/jdlien/code/ak820-pro/venv/bin/python}"
 PUSH="$(dirname "$0")/ak820text.py"
 INTERVAL="${INTERVAL:-3}"     # seconds; 1s is wasteful and can make Spotify sluggish
+KEEPALIVE="${KEEPALIVE:-60}"  # seconds; must stay well under the firmware's 3 min expiry
+keepalive_at=0
 
 running() { osascript -e "application \"$1\" is running" 2>/dev/null; }
 
@@ -34,9 +36,17 @@ while true; do
     esac
   done
 
-  # Only push on change: every write is a raw-HID round trip and a panel redraw.
+  # Push on change, plus a periodic KEEPALIVE.
+  #
+  # The firmware expires the text band after DISPLAY_TEXT_TIMEOUT_MS (3 min) so a
+  # dead agent, a sleeping machine or an unplugged board leaves a blank slot
+  # rather than a stale track. Pushing only on change therefore blanked the panel
+  # part-way through any track longer than 3 minutes, and it came back at the next
+  # track. Re-push well inside that window so the slot stays alive without losing
+  # the staleness guarantee.
   cur="$icon|$text"
-  if [ "$cur" != "$last" ]; then
+  if [ "$cur" != "$last" ] || { [ -n "$last" ] && [ $(( $(date +%s) - keepalive_at )) -ge "$KEEPALIVE" ]; }; then
+    keepalive_at=$(date +%s)
     last="$cur"
     if [ -z "$text" ] && [ "$icon" = "none" ]; then
       "$PY" "$PUSH" --clear

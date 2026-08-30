@@ -17,7 +17,7 @@ import argparse, sys
 VID, PID = 0x0C45, 0x8009
 USAGE_PAGE, USAGE = 0xFF60, 0x61        # QMK raw HID
 SET_VALUE, TEXT_CHANNEL, TEXT_SET, TEXT_CLEAR = 0x07, 0x12, 0x01, 0x02
-MAXLEN = 12                              # 128px band / 10px glyph advance
+MAXLEN = 16                              # 128px band / 10px glyph advance
 ICONS = {"none": 0, "play": 1, "pause": 2, "stop": 3}
 
 # The atlases carry printable ASCII only. Transliterate the punctuation real
