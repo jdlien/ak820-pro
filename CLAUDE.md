@@ -1030,6 +1030,51 @@ wrappers break between OS versions. **Windows is better here**:
 browsers register SMTC sessions, so YouTube works. The firmware is
 platform-agnostic — a Windows producer sends the same bytes, no reflash.
 
+### Playback position replaces the clock while playing
+
+`2:34/18:45` in the clock band, from `TEXT_PLAYBACK` (0x04) —
+`[state][pos_hi][pos_lo][dur_hi][dur_lo]`, whole seconds, 16-bit (18.2 h).
+
+**The firmware advances the timer itself on the 1 Hz tick**; the host only
+re-asserts an absolute position every poll. Without that it would jump three
+seconds at a time and read as broken. It costs **no extra panel work** — this
+band already repaints once a second for the clock's seconds, and the render
+redraws only the character cells that changed, exactly as the clock does.
+
+**Font adapts, and only past an hour.** 20px normally (`2:34/18:45` = 100px);
+13px once a duration needs `H:MM:SS` (`1:02:34/2:15:00` = 150px at 20px, over
+the 128px panel). A 20px cell is 23 rows against this band's 22, so it borrows
+one row from the gap below — hence `CLOCK_BAND_H 23`, which **must** cover
+everything either owner draws or switching between clock and timer strands a
+row. Same clear-rect coupling that stranded the padlock.
+
+**Only the PLAYING state takes the band.** A frozen timer is less useful than
+the time of day, so pause hands it straight back.
+
+**The media key freezes it immediately** (`display_playback_key()`), the same
+optimistic trick the transport icon uses — otherwise it kept counting for up to
+a poll after a pause, which is the one thing a paused timer must not do. Resume
+needs no guess about the position: **position does not change while paused**, so
+the held value is still correct and only the *advancing* flag is in doubt.
+
+It freezes rather than restoring the clock outright because the keypress may
+have gone to a browser tab the agent cannot see, in which case the player is
+still going and the host re-asserts it. A frozen timer that resumes is a smaller
+lie than the clock flashing up and being replaced.
+
+**Expires after `PLAYBACK_TIMEOUT_MS` (20 s)** so a dead agent or a sleeping
+machine cannot leave a timer counting up forever.
+
+**⚠️ Duration units differ by app: Music reports SECONDS, Spotify
+MILLISECONDS.** Getting it wrong shows a 3-minute track as 3 seconds and looks
+exactly like a firmware bug.
+
+**⚠️ Browser media is invisible to all of this**, as it is to the song text —
+AppleScript only talks to apps with a scripting dictionary, and browsers do not
+publish media state that way. The only route is the private MediaRemote
+framework (what `nowplaying-cli` wraps), which Apple has progressively locked
+down and which breaks between OS versions. Deliberately not used.
+
 ### Boot splash is JD's bunny logo (2026-08-29)
 
 **The file is still named `sonixqmk.png` and that is deliberate.** Asset ids are
@@ -1292,6 +1337,27 @@ would reintroduce all the framing the design avoided.
 **Remaining easy win: the clock font stores 95 glyphs to draw eleven.**
 Iosevka-Regular-30 is 96,900 B of the ~199 KB blob, and the clock only ever draws
 `0`-`9` and `:`. Subsetting it would reclaim ~86 KB.
+
+### ⚠️ The bootloader looks EXACTLY like a dead board
+
+No RGB, dark LCD, no typing — there is no subtle indicator. Hit 2026-08-30
+right after a flash: the board had flashed fine, rebooted into QMK, and a second
+`Fn`+`Esc` put it straight back into the bootloader, where it read as a hang.
+
+**Check `0x7140` before assuming a hang.** The armed-flasher loop exits after
+one flash, so nothing is watching to catch a second entry.
+
+```sh
+ioreg -p IOUSB -w0 -l | grep -q '"idProduct" = 28992' && echo BOOTLOADER
+```
+
+Recovery is re-running the flash, NOT a power cycle. Distinguishing the two:
+
+| | bootloader | the hang |
+|---|---|---|
+| USB id | `0x7140` | `0x8009` |
+| `ak820ctl info` | interface absent | **I/O Timeout** |
+| fix | re-flash | power cycle (switch to `off`, unplug 10 s) |
 
 ### ⚠️ Keyboard feels slow / drops keystrokes? CHECK THE HOST FIRST
 

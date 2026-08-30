@@ -37,7 +37,22 @@ set -u
 PY="${PY:-/Users/jdlien/code/ak820-pro/venv/bin/python}"
 PUSH="$(dirname "$0")/ak820text.py"
 INTERVAL="${INTERVAL:-3}"     # seconds; 1s is wasteful and can make Spotify sluggish
-KEEPALIVE="${KEEPALIVE:-60}"  # seconds; must stay well under the firmware's 3 min expiry
+# Seconds between unconditional re-pushes. Two jobs, and the SHORTER one sets it:
+#
+#   1. Keep the band alive. The firmware blanks it after DISPLAY_TEXT_TIMEOUT_MS
+#      (3 min) so a dead agent or a sleeping machine cannot leave a stale track
+#      on screen. Any value well under 3 min does this.
+#   2. Correct the firmware's OPTIMISTIC play/pause guess, which is why this is
+#      10 and not 60. process_record_kb flips the icon the instant the media key
+#      is pressed, then trusts the host to confirm it. When the keypress lands
+#      somewhere this script cannot see -- a browser tab, which AppleScript does
+#      not expose -- the host state never changes, so the on-change push never
+#      fires and the guess stands uncorrected until the next keepalive. At 60 s
+#      that is a minute of a backwards icon.
+#
+# Frequent identical pushes are cheap: display_set_text_line() compares before
+# marking the band dirty, so a repeat costs a HID write and no repaint.
+KEEPALIVE="${KEEPALIVE:-30}"
 keepalive_at=0
 
 running() { osascript -e "application \"$1\" is running" 2>/dev/null; }
@@ -51,15 +66,31 @@ track_of() {
 artist_of() {
   osascript -e "tell application \"$1\" to artist of current track" 2>/dev/null
 }
+position_of() {   # $1 = app -> whole seconds
+  osascript -e "tell application \"$1\" to player position" 2>/dev/null \
+    | awk '{printf "%d", $1 + 0}'
+}
+duration_of() {   # $1 = app -> whole seconds
+  # ⚠️ UNITS DIFFER BY APP: Music reports duration in SECONDS, Spotify in
+  # MILLISECONDS. Getting this wrong shows a 3-minute track as 3 seconds (or
+  # 50 minutes), which looks like a firmware bug and is not one.
+  local d
+  d="$(osascript -e "tell application \"$1\" to duration of current track" 2>/dev/null)"
+  [ -z "$d" ] && return
+  if [ "$1" = "Spotify" ]; then awk -v d="$d" 'BEGIN{printf "%d", d/1000}'
+  else                          awk -v d="$d" 'BEGIN{printf "%d", d}'
+  fi
+}
 
 last=""
 while true; do
-  icon="none"; text=""; who=""
+  icon="none"; text=""; who=""; pos=""; dur=""
   for app in Spotify Music; do
     [ "$(running "$app")" = "true" ] || continue
     st="$(state_of "$app")"
     case "$st" in
-      playing) icon="play";  text="$(track_of "$app")"; who="$(artist_of "$app")"; break ;;
+      playing) icon="play";  text="$(track_of "$app")"; who="$(artist_of "$app")"
+               pos="$(position_of "$app")"; dur="$(duration_of "$app")"; break ;;
       paused)  icon="pause"; text="$(track_of "$app")"; who="$(artist_of "$app")"; break ;;
     esac
   done
@@ -72,8 +103,31 @@ while true; do
   # part-way through any track longer than 3 minutes, and it came back at the next
   # track. Re-push well inside that window so the slot stays alive without losing
   # the staleness guarantee.
+  # Opt-in push log: PUSHLOG=~/some.log to record every push and whether it was
+  # a real change or a keepalive. Kept because it is the only way to tell a
+  # firmware repaint bug from legitimate churn -- correlate a flash you can see
+  # on the panel against what was actually sent. Off by default: a write per
+  # push, for a question that is usually not being asked.
+
+  # Playback readout, pushed EVERY poll while playing and separately from the
+  # text lines -- re-sending the text would mark the band dirty for nothing.
+  # The firmware ticks the timer between pushes, so this only corrects drift
+  # and catches seeks; it hands the band back to the clock the moment playback
+  # is not "playing".
+  if [ "$icon" = "play" ] && [ -n "$dur" ]; then
+    "$PY" "$PUSH" --playback 1 "${pos:-0}" "$dur"
+    pb_shown=1
+  elif [ "${pb_shown:-0}" = "1" ]; then
+    "$PY" "$PUSH" --playback 0 0 0
+    pb_shown=0
+  fi
+
   cur="$icon|$text|$who"
   if [ "$cur" != "$last" ] || { [ -n "$last" ] && [ $(( $(date +%s) - keepalive_at )) -ge "$KEEPALIVE" ]; }; then
+    if [ -n "${PUSHLOG:-}" ]; then
+      if [ "$cur" != "$last" ]; then why="CHANGED"; else why="keepalive"; fi
+      printf '%s %-9s %s\n' "$(date '+%H:%M:%S')" "$why" "$cur" >> "$PUSHLOG"
+    fi
     keepalive_at=$(date +%s)
     last="$cur"
     if [ -z "$text" ] && [ "$icon" = "none" ]; then
@@ -87,14 +141,16 @@ while true; do
       # Two packets: a second line does not fit in one report (32 bytes leaves
       # ~26 for ASCII after framing). A torn update is harmless -- the lines are
       # independently meaningful and the poll interval is 3 s.
+      # BOTH lines in ONE invocation. The firmware repaints the band from its
+      # ~10 Hz tick, so two separate processes can straddle a tick boundary and
+      # produce two full-band clear-and-redraw cycles -- a visible double flash
+      # on every track change. One open puts the packets ~1 ms apart.
       if [ -n "$who" ]; then
-        "$PY" "$PUSH" "$who"  --icon "$icon" --line 0
-        "$PY" "$PUSH" "$text" --icon "$icon" --line 1
+        "$PY" "$PUSH" "$who" --line1 "$text" --icon "$icon"
       else
-        # No artist: put the title on line 0 rather than leaving a blank first
-        # line, and clear line 1 so a previous artist cannot linger.
-        "$PY" "$PUSH" "$text" --icon "$icon" --line 0
-        "$PY" "$PUSH" ""      --icon "$icon" --line 1
+        # No artist: title on line 0 rather than a blank first line, and line 1
+        # explicitly cleared so a previous artist cannot linger.
+        "$PY" "$PUSH" "$text" --line1 "" --icon "$icon"
       fi
     fi
   fi

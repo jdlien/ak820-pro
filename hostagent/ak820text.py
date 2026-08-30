@@ -18,7 +18,8 @@ import hid
 VID, PID = 0x0C45, 0x8009
 USAGE_PAGE, USAGE = 0xFF60, 0x61        # QMK raw HID
 SET_VALUE, TEXT_CHANNEL, TEXT_SET, TEXT_CLEAR = 0x07, 0x12, 0x01, 0x02
-TEXT_SET_LINE = 0x03                     # per-line set: [line][icon][ascii...]
+TEXT_SET_LINE = 0x03
+TEXT_PLAYBACK = 0x04                     # per-line set: [line][icon][ascii...]
 MAXLEN = 16                              # 128px band / 10px glyph advance
 ICONS = {"none": 0, "play": 1, "pause": 2, "stop": 3}
 
@@ -51,11 +52,20 @@ def open_device():
                      "(is VIA holding it? close the usevia.app tab)")
 
 
-def send(payload):
+def send(*payloads):
+    """Write one or more reports through a SINGLE device open.
+
+    Batching matters for more than efficiency. The firmware repaints the text
+    band from its ~10 Hz housekeeping tick, so two reports that straddle a tick
+    boundary produce TWO full-band clear-and-redraw cycles -- a visible double
+    flash on every track change. Issued back to back through one open they are
+    ~1 ms apart and always land in the same tick, so the band repaints once.
+    """
     h = open_device()
     try:
-        # QMK raw HID expects a 32-byte report; leading 0 is the report id.
-        h.write(bytes([0x00] + payload + [0x00] * (32 - len(payload))))
+        for payload in payloads:
+            # QMK raw HID expects a 32-byte report; leading 0 is the report id.
+            h.write(bytes([0x00] + payload + [0x00] * (32 - len(payload))))
     finally:
         h.close()
 
@@ -66,8 +76,31 @@ def push_line(line, text, icon="none"):
     A second line needs its own packet: 32 bytes leaves ~26 for ASCII after
     framing, and two 16-char lines would be 32. Torn updates are harmless --
     the lines are independently meaningful and the poll interval is 3 s."""
+    send(_line_packet(line, text, icon))
+
+
+def _line_packet(line, text, icon="none"):
     body = to_ascii(text)[:MAXLEN].encode("ascii", "replace")
-    send([SET_VALUE, TEXT_CHANNEL, TEXT_SET_LINE, line, ICONS[icon]] + list(body))
+    return [SET_VALUE, TEXT_CHANNEL, TEXT_SET_LINE, line, ICONS[icon]] + list(body)
+
+
+def push_playback(state, pos, dur):
+    """Playback position, drawn in place of the clock while playing.
+
+    state 0 hands the band back to the clock. Seconds are 16-bit big-endian --
+    18.2 hours, past any track. The firmware advances pos itself once a second,
+    so this only has to re-assert the truth every few seconds; that is what
+    makes it read as a running timer instead of a value that jumps per poll.
+    """
+    pos = max(0, min(0xFFFF, int(pos)))
+    dur = max(0, min(0xFFFF, int(dur)))
+    send([SET_VALUE, TEXT_CHANNEL, TEXT_PLAYBACK, 1 if state else 0,
+          pos >> 8, pos & 0xFF, dur >> 8, dur & 0xFF])
+
+
+def push_both(line0, line1, icon="none"):
+    """Both lines in one device open, so the band repaints once. See send()."""
+    send(_line_packet(0, line0, icon), _line_packet(1, line1, icon))
 
 
 def push(icon="none", text=""):
@@ -88,13 +121,24 @@ def main():
                     help="0 = the line beside the transport icon, 1 = the "
                          "full-width line below it; omit for the legacy "
                          "single-line set")
+    ap.add_argument("--line1", default=None,
+                    help="text for line 1, sent WITH the positional text (line 0) "
+                         "in one device open so the band repaints once")
+    ap.add_argument("--playback", nargs=3, metavar=("STATE", "POS", "DUR"),
+                    help="playback readout: STATE 1=playing 0=hand back to the "
+                         "clock, POS and DUR in whole seconds")
     ap.add_argument("--clear", action="store_true")
     a = ap.parse_args()
 
     if a.clear:
         send([SET_VALUE, TEXT_CHANNEL, TEXT_CLEAR])
         return
-    if a.line is not None:
+    if a.playback:
+        push_playback(int(a.playback[0]), float(a.playback[1]), float(a.playback[2]))
+        return
+    if a.line1 is not None:
+        push_both(a.text, a.line1, a.icon)
+    elif a.line is not None:
         push_line(a.line, a.text, a.icon)
     else:
         push(a.icon, a.text)
