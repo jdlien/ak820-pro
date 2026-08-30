@@ -1347,6 +1347,29 @@ untouched pixel for pixel, so the clock looks exactly as it did. Re-rendering
 would need the Iosevka **Regular** TTF (only Medium is in `FONTS.md`) and would
 risk changing the hinting for no gain.
 
+**The colon is hand-shifted UP 3 ROWS, and that is not a crop artifact.**
+Iosevka's colon is positioned for lowercase text, where it sits between
+x-height letters. Digits are full cap-height, so a text colon reads visibly low
+between them — it was 3 rows low in the original 34-row atlas too. Clock faces
+normally centre it. Measured, both centres now land on 10.5:
+
+```
+before   digits 0..21 centre 10.5   colon 6..21 centre 13.5   +3.0 low
+after    digits 0..21 centre 10.5   colon 3..18 centre 10.5    0.0
+```
+
+Re-applying after any atlas regeneration: shift the `:` cell's pixels up 3,
+fill the vacated rows with background, and **re-paint the magenta marker at the
+cell's top-left** — `mkraw.py` reads markers from row 0 only.
+
+**A glyph moved INSIDE its existing cell is an assets-only change.** Dimensions
+do not change, so `flash_assets.h` comes out byte-identical — which is the check
+that authorises skipping a firmware rebuild, and it means no mismatch window at
+all. Confirm the header really is identical rather than assuming it; and confirm
+the blob CRC actually CHANGED, since a swallowed `mkraw` failure provisions a
+stale blob that a device-vs-local check still passes, both sides being equally
+wrong.
+
 **⚠️ Descenders are clipped in that atlas.** `g`/`p`/`q`/`y` lost their tails.
 Harmless because nothing but the clock uses `FONT_CLOCK`. If general text is
 ever drawn at this size, regenerate at the full 15x34 cell and hand the 12 rows

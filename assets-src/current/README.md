@@ -5,7 +5,7 @@ because the originals live in `time-util-ak820pro/assets/`, which is a pristine
 upstream clone with uncommitted working-tree changes. A `git checkout` there
 silently destroys them, and there is no way to read assets back off the board.
 
-Blob CRC on device: `0x143CAEF2` (verify with `ak820ctl flash crc 0xCE0000 179968`).
+Blob CRC on device: `0x9816A10B` (verify with `ak820ctl flash crc 0xCE0000 179968`).
 
 | File | Cell | Note |
 |---|---|---|
