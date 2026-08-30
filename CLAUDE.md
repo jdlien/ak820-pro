@@ -356,7 +356,38 @@ seconds only — no sub-second register — so the reference itself is quantised
 Beating that needs a different reference (USB SOF timing, or a host-assisted
 calibration protocol over raw HID), which is a lot of machinery for a keyboard.
 
-**Seed confirmed working.** First boot with `RTC_PERIOD_INITIAL 33400`: **zero**
+**RTC_PERIOD_INITIAL is 33600, MEASURED on this unit 2026-08-30.** It was
+33400, which ran ~0.5% fast from boot (-7.2 ms/s) and hit the 2 s snap threshold
+in ~4.5 minutes -- visibly drifting and jumping while the trim spent ~7 minutes
+converging. Two independent estimates agreed on ~33600: the firmware's own trim
+computed 33587 from a 360-ticks/358-s window, and a host phase measurement after
+that trim implied 33607.
+
+| | seed 33400 | seed 33600 |
+|---|---|---|
+| drift from boot | -7.2 ms/s | **+0.82 ms/s** |
+| time to the 2 s snap | ~4.5 min | **~40 min** |
+
+The sign flip shows 33600 slightly overshoots (ideal ~33572); left alone, since
+the trim absorbs 820 ppm easily.
+
+**⚠️ NEVER UPSTREAM THIS VALUE.** The ILRC is an untrimmed on-chip RC oscillator
+that varies part to part and with temperature. 33600 is right for this board and
+would start another unit further off than the nominal 32000 does. The durable fix
+is **persisting the converged period** -- one eeconfig field written when the trim
+settles -- which works for any unit and makes the seed irrelevant. Not yet built.
+
+**Post-sync phase is a fixed offset that DIFFERS PER SYNC**: measured +67 ms in
+one run and -229 ms in another, each with near-zero internal spread. That is the
+signature of an uncontrolled prescaler -- but note the display reads the **SN32**,
+and `rtcSetTime()` evidently does not reset its divider either. Rachel's brief
+proposed a PCF STOP-bit sequence for this; the measurements say the PCF is fine
+(no uniform-second scatter remains) and the residual is on the SN32 side. If the
+last few hundred ms are ever wanted, that is where they are -- and it is a change
+to the SN32 set path, not the PCF one. Inferred from two samples; get more before
+acting.
+
+ First boot with `RTC_PERIOD_INITIAL 33400`: **zero**
 `[rtc]` events — no trims, no snaps — in the first 11 minutes, against five
 `corrected drift` corrections in the same window on the previous boot climbing
 from 32000. Observed offset ~0.5 s behind host.
