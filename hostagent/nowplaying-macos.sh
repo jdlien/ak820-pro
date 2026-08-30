@@ -8,6 +8,31 @@
 #
 # On Windows the equivalent is GlobalSystemMediaTransportControlsSessionManager,
 # which is a public API AND covers browsers -- see CLAUDE.md.
+
+# --- singleton guard -------------------------------------------------------
+# The raw HID interface is EXCLUSIVE: a second poller cannot open it and every
+# push fails with "exclusive access and device already open". This has bitten
+# twice, and the second time it masqueraded as a FIRMWARE fault -- a stale
+# manual run left over from a debugging session was stealing the interface, and
+# the keyboard looked broken until the process list was checked.
+#
+# mkdir is atomic on every filesystem we care about, so it is the lock. A stale
+# directory (killed -9, reboot) is detected by probing the recorded pid rather
+# than by age, which has no false positives.
+LOCK="${TMPDIR:-/tmp}/ak820pro-nowplaying.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  old=$(cat "$LOCK/pid" 2>/dev/null || true)
+  if [ -n "$old" ] && kill -0 "$old" 2>/dev/null; then
+    echo "$(date '+%H:%M:%S') another poller is live as pid $old -- exiting"
+    exit 0
+  fi
+  echo "$(date '+%H:%M:%S') clearing stale lock (pid ${old:-unknown} is gone)"
+  rm -rf "$LOCK"; mkdir "$LOCK" || exit 1
+fi
+echo $$ > "$LOCK/pid"
+trap 'rm -rf "$LOCK"' EXIT INT TERM
+# ---------------------------------------------------------------------------
+
 set -u
 PY="${PY:-/Users/jdlien/code/ak820-pro/venv/bin/python}"
 PUSH="$(dirname "$0")/ak820text.py"
@@ -54,11 +79,23 @@ while true; do
     if [ -z "$text" ] && [ "$icon" = "none" ]; then
       "$PY" "$PUSH" --clear
     else
-      # Two packets: line 0 = title, line 1 = artist. A second line does not fit
-      # in one report (32 bytes leaves ~26 for ASCII after framing), and a torn
-      # update is harmless -- the lines are independently meaningful.
-      "$PY" "$PUSH" "$text" --icon "$icon" --line 0
-      "$PY" "$PUSH" "$who"  --icon "$icon" --line 1
+      # Line 0 sits beside the transport icon and loses ~2 characters to it;
+      # line 1 runs the full width. ARTIST goes on line 0 because it is the less
+      # valuable of the two and can afford the loss -- the title gets the full
+      # width on line 1.
+      #
+      # Two packets: a second line does not fit in one report (32 bytes leaves
+      # ~26 for ASCII after framing). A torn update is harmless -- the lines are
+      # independently meaningful and the poll interval is 3 s.
+      if [ -n "$who" ]; then
+        "$PY" "$PUSH" "$who"  --icon "$icon" --line 0
+        "$PY" "$PUSH" "$text" --icon "$icon" --line 1
+      else
+        # No artist: put the title on line 0 rather than leaving a blank first
+        # line, and clear line 1 so a previous artist cannot linger.
+        "$PY" "$PUSH" "$text" --icon "$icon" --line 0
+        "$PY" "$PUSH" ""      --icon "$icon" --line 1
+      fi
     fi
   fi
   sleep "$INTERVAL"

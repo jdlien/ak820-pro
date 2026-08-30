@@ -85,7 +85,9 @@ def main():
     ap.add_argument("text", nargs="?", default="")
     ap.add_argument("--icon", default="none", choices=list(ICONS))
     ap.add_argument("--line", type=int, default=None,
-                    help="0 = title, 1 = artist; omit for the legacy single-line set")
+                    help="0 = the line beside the transport icon, 1 = the "
+                         "full-width line below it; omit for the legacy "
+                         "single-line set")
     ap.add_argument("--clear", action="store_true")
     a = ap.parse_args()
 
@@ -99,4 +101,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # A busy interface is an ordinary, recoverable condition -- VIA has the
+    # device, or another poller is mid-push -- and a poller retries in seconds.
+    # Dumping a 15-line traceback per failure buried the ONE line that actually
+    # diagnoses it (a stray second poller) under thousands of identical stacks.
+    # One line, and the exit status still says it failed.
+    try:
+        main()
+    except hid.HIDException as e:
+        msg = str(e)
+        if "already open" in msg:
+            msg = "interface busy (VIA, or another poller is running)"
+        print(f"ak820text: {msg}", file=sys.stderr)
+        raise SystemExit(1)
