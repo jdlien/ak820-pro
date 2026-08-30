@@ -80,7 +80,7 @@ Identical on `WINFN` and `MACFN`. `Fn` is the physical key right of right-Cmd.
 |---|---|
 | `Fn`+`Q` / `W` / `E` | Bluetooth slots 1 / 2 / 3 |
 | `Fn`+`R` | 2.4 GHz dongle |
-| `Fn`+`P` | pair (hold) |
+| `Fn`+`P` | ~~pair (hold)~~ — **UNBOUND 2026-08-29**, see below |
 | `Fn`+`←` / `→` | RGB hue − / + (step 8) |
 | `Fn`+`↑` / `↓` | RGB brightness + / − (step 16) |
 | `Fn`+`6` / `7` | RGB saturation + / − (step 16) |
@@ -1066,6 +1066,38 @@ provision one, `mkanim.py` in `time-util-ak820pro/assets/` converts a GIF to a
 frame blob. Ceiling is 244 frames, derived from the room between `ANIM_BASE` and
 the asset region rather than guessed.
 
+### `Fn`+`P` (BT_PAIR) is unbound by default — redundant, and destructive
+
+Dropped from both Fn layers 2026-08-29. **The keycode stays in the
+`ak820pro_keycodes` enum and in `via.json`** — that pairing is INDEX-MATCHED, so
+removing an entry shifts every later keycode and corrupts existing VIA keymaps.
+Only the default binding changed; assign it in VIA if you want it back.
+
+| Mode | What it did | Why that is not worth a key |
+|---|---|---|
+| Bluetooth | pairs the currently-selected slot | Holding `Fn`+`Q`/`W`/`E` already selects **and** pairs — strictly better |
+| 2.4G | the only pairing key that works there | Drops a working dongle link, and almost certainly cannot complete |
+
+**Confirmed on hardware:** pressing it in 2.4G showed `Pairing 2.4G` and killed the
+dongle link; toggling the slider brought it back. That recovery is the tell —
+**the dongle never lost its bond**, so the keyboard's broadcast was half a
+handshake with nothing answering. A bare USB receiver with no button realistically
+needs vendor software to enter pairing, which customers do not get.
+
+Note the gating asymmetry that made this the only 2.4G pairing route:
+
+```
+BT1/BT2/BT3   ->  wireless_mode == WL_MODE_BT     (Bluetooth only)
+BT24G         ->  wireless_mode == WL_MODE_24G    (2.4G only)
+BT_PAIR       ->  wireless_mode != WL_MODE_USB    (ANY wireless mode)
+```
+
+**Recovering from an accidental trigger:** slide to `bt`, then back to `2.4G`.
+Sliding *directly* back does not work — a select for the profile that is currently
+advertising is declined (see the `A6 <slot>` entry). The cancel-pairing bounce
+that automates this is scoped to BT slots only, so 2.4G still needs the two-step
+by hand. Worth extending only if the key is ever rebound.
+
 ### Known quirks
 
 **FIXED (symptom) — hard freeze while adjusting RGB.** Predates any of this
@@ -1112,9 +1144,29 @@ Deliberately **not** gated on `anim_active()`: the animation player runs
 continuous DMA, so that would mean RGB settings never persist while an animation
 plays. Blits are short, so per-blit gating still finds gaps.
 
-Status: deliberate hammering of the brightness keys no longer reproduces it.
-**Not proven** — it was always intermittent, and one clean run is not a fix.
-Watch for it in normal use.
+**⚠️ IT CAME BACK — AND THE FIRST FIX WAS AIMED AT THE WRONG THING.** Reproduced
+2026-08-29 by **assigning keys in VIA**: one bright green row, board dead until a
+power cycle. `rgb_matrix_eeprom_flush_allowed()` only gates RGB's *own* eeconfig
+flush, which was simply the trigger we happened to notice first. VIA's
+dynamic-keymap writes take a completely different path and were never covered.
+
+**The bug was never about RGB.** It is about ANY internal-flash program/erase
+overlapping the flash->LCD DMA. Gating one producer left every other one open.
+
+**Real fix: `backing_store_pre_write_hook()`**, a weak hook added to
+`platforms/chibios/drivers/wear_leveling/wear_leveling_efl.c` and called from
+`backing_store_unlock()`. Unlock brackets the *whole* program/erase sequence, so
+it catches every writer — eeconfig, VIA keymaps, wear-levelling consolidation —
+instead of whichever one was noticed. The board's override in `ak820pro.c` drains
+any in-flight blit first.
+
+**Waiting is sufficient, not merely a narrowing.** Flash writes are synchronous on
+the main loop and blits are started from the main loop too, so once the in-flight
+blit drains, no new one can begin before the write completes.
+
+**VIA key assignment is now the RELIABLE REPRODUCTION** — the first one we have
+had. Every earlier attempt was "hammer the brightness keys and hope", which is why
+"it stopped happening" was such weak evidence. Retest with VIA, not with RGB.
 
 **Diagnostic recipe** (reuse for any future hang): raw-HID round-trip
 (`ak820ctl info`) is the liveness probe — USB enumeration and `ak820ctl list` are
