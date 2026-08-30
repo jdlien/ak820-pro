@@ -13,6 +13,7 @@ Usage:
     ak820text.py --clear
 """
 import argparse, sys
+import hid
 
 VID, PID = 0x0C45, 0x8009
 USAGE_PAGE, USAGE = 0xFF60, 0x61        # QMK raw HID
@@ -43,7 +44,6 @@ def open_device():
     the hidapi-style hid.device()/open_path(). Match on usage page/usage rather
     than vid/pid alone -- the board publishes several HID interfaces and only
     0xFF60/0x61 is QMK's raw HID."""
-    import hid
     for d in hid.enumerate(VID, PID):
         if d.get("usage_page") == USAGE_PAGE and d.get("usage") == USAGE:
             return hid.Device(path=d["path"])

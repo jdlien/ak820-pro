@@ -1330,17 +1330,90 @@ The correct order is the one that eventually worked: **reproduce first, bisect
 second.** Re-flashing the full patch answered it in one step and made three
 planned bisect flashes unnecessary.
 
+### The clock atlas is cropped to its ink — where 12 rows came from
+
+`Iosevka-Regular-30.png` was a **15x34** cell, cut for full ASCII with room for
+ascenders and descenders. The clock only ever draws `0`-`9` and `:`, which use
+neither, so **12 of its 34 rows were blank by construction** — 5 above the
+digits, 7 below. Cropping to the measured ink (2026-08-30) freed those 12 rows
+of panel *and* cut **34 KB** off the blob (96,900 -> 62,700 B).
+
+That is what paid for the even gaps around the lock row and for keeping the
+battery percentage at 20px. Before it the panel was full to the row and every
+spacing choice was a trade against another one.
+
+**It was a CROP of the existing atlas, not a re-render** — the glyphs are
+untouched pixel for pixel, so the clock looks exactly as it did. Re-rendering
+would need the Iosevka **Regular** TTF (only Medium is in `FONTS.md`) and would
+risk changing the hinting for no gain.
+
+**⚠️ Descenders are clipped in that atlas.** `g`/`p`/`q`/`y` lost their tails.
+Harmless because nothing but the clock uses `FONT_CLOCK`. If general text is
+ever drawn at this size, regenerate at the full 15x34 cell and hand the 12 rows
+back — do not nudge offsets to compensate.
+
+To re-crop: measure the ink extent of `0123456789:`, crop to it, then re-paint
+one magenta pixel at each cell's top-left. `mkraw.py` reads markers from **row 0
+only** and marker spacing IS the advance, so a crop that removes row 0 destroys
+the grid unless the markers are restored.
+
+Copies of the shipped atlases and blob are in **`assets-src/current/`** — the
+originals live in `time-util-ak820pro/assets/`, an upstream clone whose changes
+are uncommitted, and **there is no way to read assets back off the board.**
+
+### ⚠️ Panel spacing is set by INK, not by band boundaries
+
+The 20px cell carries **4 blank rows above its caps and 4 below its baseline**,
+so a band boundary sits nowhere near where the eye puts the edge. This is why
+"move the lock row down 1px" is never one constant.
+
+Balancing the gaps either side of the lock row took **three coupled moves**:
+
+| Move | Why it was forced |
+|---|---|
+| `LOCK_Y` 81 -> 82 | what was actually asked for |
+| `STATUS_Y` 104 -> 105 | the 20px cell needs all 23 rows, so the lock band cannot grow without pushing the battery down |
+| `CLOCK_Y` 57 -> 56 | the first two alone give 7 and 8; this makes them exactly equal |
+
+Measure ink-to-ink when judging spacing:
+
+```
+icons -> text   2
+text  -> clock  2
+clock -> lock   8      (was 6 -- visibly lopsided against the 8 below)
+lock  -> batt   8
+```
+
+### ⚠️ Provision assets AFTER flashing firmware, not before
+
+Assets and firmware must change together, and there is always a window where
+they disagree and the panel renders garbage. **Which order decides how alarming
+that window looks.**
+
+Provisioning first (assets new, firmware old) was tried 2026-08-30 to get a
+single reboot. It makes the WHOLE panel mangled, because the firmware reads
+15x34 cells out of a 15x22 atlas and every glyph lands wrong. It reads as a
+dead board.
+
+Flash the firmware first. The mismatch is then confined to the clock, which is
+obviously one broken element rather than a broken keyboard.
+
+Either way: **raw HID round-trip (`ak820ctl info`) is the liveness probe.** A
+board that answers it is fine no matter what the panel shows.
+
 ### Two-line text slot, and the vertical budget
 
 The panel is **exactly full** -- 128 rows with nothing spare:
 
 ```
 0..24     connection strip   25
-25        gap                 1
-26..53    text (2 lines)     28   two 7x14 cells
-54..87    clock              34
-88..110   lock band          23   20px face
-111..127  battery            17
+25..26    gap                 2
+27..54    text (2 lines)     28   two 7x14 cells, at 27 and 41
+55        gap                 1
+56..77    clock              22   Regular-30, CROPPED to its ink
+78..81    gap                 4
+82..104   lock band          23   20px face
+105..127  battery            23   20px face
 ```
 
 **A glyph blit paints its WHOLE cell, background included**, so cells cannot
@@ -1359,10 +1432,10 @@ so a single-line producer cannot strand a stale artist.
 **Single-line text keeps the adaptive size** (20px if <= 11 chars). Only a real
 second line costs legibility, since two 20px cells would need 46 rows.
 
-**The battery percentage is 13px by force, not choice.** The band is 17 rows,
-the icon alone needs 17 (`BATT_Y0 = STATUS_Y+4`, 12 tall), and a 20px cell is 23.
-Restoring the 20px lock labels used the last slack. To get it back, something
-else has to give: the two text lines, the clock, or the lock labels.
+**The battery percentage is 20px again** (2026-08-30). It had been forced down
+to 13px when the band was 17 rows against a 23-row cell -- "something else has
+to give: the two text lines, the clock, or the lock labels." The clock gave: it
+was carrying 12 blank rows it never used. See the clock-crop section.
 
 **Rows 126-127 were dead space.** `LCD_OFF_Y 2` is a controller offset, not lost
 rows -- the full 0..127 is visible. One row of bottom margin is kept on purpose:
