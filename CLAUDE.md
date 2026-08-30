@@ -1545,6 +1545,63 @@ CRC actually changed after regenerating**, not just that the device matches.
 
 ### Known quirks
 
+**⚠️ THE HANG IS A CRAWL, NOT A DEAD CPU — the entry below is WRONG about the
+mechanism, and it cost hours.** Captured on the console 2026-08-30:
+
+```
+16:57:24  matrix scan frequency: 391
+16:57:32  matrix scan frequency: 178      <- 8 s gap, then HALF rate
+```
+
+**A parked CPU or a HardFault cannot emit that line.** The board is alive the
+whole time. Every earlier reading — "CPU parked in WFI with no pending interrupt
+left to wake it" — was inferred from `ak820ctl info` timing out and the LED mux
+stopping, neither of which distinguishes dead from slow.
+
+**Mechanism:** `blit_done` is cleared when a DMA blit is armed and set only by
+`blit_done_cb` off the SPI0 completion IRQ. **Miss that IRQ once and the flag is
+false forever** — nothing else in the tree writes it. Every later wait then
+burns its full bound, **~1 s at 48 MHz**, several times per housekeeping pass.
+Raw HID times out, typing is lost, power cycle only. Indistinguishable from a
+hang from outside, and nothing recovered from it.
+
+`lcd_blit_flash()` already carried the comment *"it never completes, the caller
+spins out its timeout, and SPI0 is left in DMA mode with FLASH_CS asserted"* —
+**the consequence was documented and simply never handled.**
+
+**Fix: `lcd_blit_wait()`** tears the bus down as a completion would, declares the
+blit done, counts it, and prints `[lcd] blit timeout #N`. Bound cut 4,000,000 ->
+1,000,000 (~250 ms). The animation player's wait was **unbounded** — same
+failure, no exit at all — and is now bounded too.
+
+**`[lcd] blit timeout` in the console is now THE signal.** Zero under load means
+the cause is gone; a climbing count means the recovery is only covering for it.
+
+**Why it got worse "recently": blit COUNT.** The bug is old and latent, but it
+scales with how many blits run. The two-line text slot, the per-second playback
+readout and more frequent host pushes all landed 2026-08-30 and all add blits.
+None of them created it; they roll the dice more often.
+
+**The diagnostic that cracked it was the timestamped console log**, exactly as
+the recipe below prescribes. Run it BEFORE theorising:
+
+```sh
+qmk console 2>&1 | while IFS= read -r l; do printf "%s %s\n" "$(date +%H:%M:%S)" "$l"; done \
+  >> ~/Library/Logs/ak820pro-console.log
+```
+
+Then `awk` the timestamps for gaps — a gap FOLLOWED BY MORE OUTPUT is a stall;
+a gap with nothing after it is a real death. That single distinction redirected
+the whole investigation.
+
+**Interrupts are now masked across the per-line flash PROGRAM window**
+(`efl_ramtext.diff`). The `.ramtext` move keeps the flash routines executing
+while the array is busy, but the vector table and every ISR still live in flash,
+and this board runs ~39,000 interrupts/s between the row scan and the 20 kHz GPT
+tick — so a handler fetched out of a mid-program array is near certain. **Sector
+erase is deliberately NOT masked**: it is milliseconds, and masking that long
+starves UART2, where being late means losing CH582F data.
+
 **FIXED (symptom) — hard freeze while adjusting RGB.** Predates any of this
 session's changes. Symptom: a row of keys stuck on one solid colour (whichever of
 the 18 hardware row slots the mux stopped on) and the board completely dead until
