@@ -1262,6 +1262,43 @@ would reintroduce all the framing the design avoided.
 Iosevka-Regular-30 is 96,900 B of the ~199 KB blob, and the clock only ever draws
 `0`-`9` and `:`. Subsetting it would reclaim ~86 KB.
 
+### ⚠️ Keyboard feels slow / drops keystrokes? CHECK THE HOST FIRST
+
+2026-08-30: the board became close to unusable — severe keystroke loss, **in
+wired mode as well as Bluetooth**. It looked exactly like a firmware regression
+and was diagnosed as one. It was not.
+
+**A/B tested afterwards: the suspected firmware change runs perfectly clean.**
+Flashing the exact patch back reproduced nothing.
+
+What actually correlated was **host-side process accumulation**. Over one long
+session ~24 background captures, watchers and flashers were started, several
+without reliably killing their predecessor. One log alone holds **2,736 lines of
+`exclusive access and device already open`** — two `qmk console` instances
+spinning in a tight retry loop against the macOS HID subsystem.
+
+**Before suspecting firmware:**
+
+```sh
+pgrep -fl "qmk console|ak820ctl|clock-phase"   # leftover pollers?
+launchctl list | grep ak820                    # agents running?
+```
+
+`qmk console` claims the interface exclusively, so a second instance retries in a
+loop. Kill everything, then retest.
+
+**Two process failures made this much worse than it needed to be, both mine:**
+
+1. **Three changes were flashed in one build** (read-back opcode, a logging flag,
+   host-side transmit alignment), so when the board broke there was nothing to
+   bisect against.
+2. **The "fix" killed every poller AND reverted the firmware in one step**, then
+   credited the firmware. That destroyed the evidence a second time.
+
+The correct order is the one that eventually worked: **reproduce first, bisect
+second.** Re-flashing the full patch answered it in one step and made three
+planned bisect flashes unnecessary.
+
 ### Known quirks
 
 **FIXED (symptom) — hard freeze while adjusting RGB.** Predates any of this
