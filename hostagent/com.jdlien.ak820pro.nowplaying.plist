@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jdlien.ak820pro.nowplaying</string>
+
+    <!-- The script hardcodes the venv python and resolves ak820text.py relative
+         to itself, so launchd's minimal PATH is not a problem. Paths below are
+         absolute because launchd has no notion of a working directory. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/jdlien/code/ak820-pro/hostagent/nowplaying-macos.sh</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- The script is an infinite poll loop, so any exit is a failure: the
+         keyboard was unplugged, the venv moved, or python died. Restart it. -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Without this a crash-on-start loops as fast as launchd will allow. 30 s
+         is long enough to not spin, short enough to pick the keyboard back up
+         soon after it is replugged. -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/jdlien/Library/Logs/ak820pro-nowplaying.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jdlien/Library/Logs/ak820pro-nowplaying.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

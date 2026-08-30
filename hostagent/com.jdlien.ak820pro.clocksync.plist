@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jdlien.ak820pro.clocksync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/jdlien/code/ak820-pro/hostagent/ak820-clocksync.sh</string>
+    </array>
+
+    <!-- Every 6 hours. The PCF drifts ~58 ppm (~5 s/day), so this bounds the
+         error to roughly 1.3 s -- inside the firmware's own 2 s snap threshold,
+         so the display never visibly jumps. -->
+    <key>StartInterval</key>
+    <integer>21600</integer>
+
+    <!-- Also run at login, so an unplugged-overnight board is corrected as soon
+         as the machine is back. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/jdlien/Library/Logs/ak820pro-clocksync.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jdlien/Library/Logs/ak820pro-clocksync.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

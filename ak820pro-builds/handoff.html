@@ -1,0 +1,645 @@
+<title>AK820 Pro QMK Handoff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root{
+  --ground:#F6F4F1;
+  --surface:#FFFFFF;
+  --surface-2:#F0EDE8;
+  --ink:#1B1917;
+  --ink-2:#514B45;
+  --ink-3:#7D746B;
+  --rule:#DED8D0;
+  --rule-2:#EAE5DE;
+  --accent:#A9542A;
+  --accent-soft:#F3E4D8;
+  --ok:#2F6E5C;
+  --ok-soft:#DDEBE5;
+  --danger:#8E2436;
+  --danger-soft:#F5E0E2;
+  --shadow:0 1px 2px rgba(27,25,23,.05),0 8px 24px -12px rgba(27,25,23,.14);
+
+  --f-display:"Archivo",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:"Source Serif 4",ui-serif,Georgia,"Times New Roman",serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+
+  --fs-xs:.75rem; --fs-sm:.875rem; --fs-base:1.0625rem;
+  --fs-lg:1.1875rem; --fs-xl:1.4375rem; --fs-2xl:1.9375rem; --fs-3xl:2.625rem;
+  --measure:68ch;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#181614;
+    --surface:#201D1A;
+    --surface-2:#262320;
+    --ink:#EFEAE3;
+    --ink-2:#BDB4AA;
+    --ink-3:#918780;
+    --rule:#37312B;
+    --rule-2:#2C2723;
+    --accent:#DC8E5E;
+    --accent-soft:#3A2A1E;
+    --ok:#72C2A8;
+    --ok-soft:#1E322C;
+    --danger:#E4868F;
+    --danger-soft:#37211F;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#181614;
+  --surface:#201D1A;
+  --surface-2:#262320;
+  --ink:#EFEAE3;
+  --ink-2:#BDB4AA;
+  --ink-3:#918780;
+  --rule:#37312B;
+  --rule-2:#2C2723;
+  --accent:#DC8E5E;
+  --accent-soft:#3A2A1E;
+  --ok:#72C2A8;
+  --ok-soft:#1E322C;
+  --danger:#E4868F;
+  --danger-soft:#37211F;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:var(--fs-base);
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+
+.wrap{
+  max-width:1160px;
+  margin:0 auto;
+  padding:0 clamp(1.25rem,4vw,2.5rem) 6rem;
+}
+
+/* ---- masthead ---- */
+.masthead{
+  padding:clamp(2.5rem,7vw,4.5rem) 0 2rem;
+  border-bottom:2px solid var(--ink);
+}
+.eyebrow{
+  font-family:var(--f-mono);
+  font-size:var(--fs-xs);
+  font-weight:500;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin:0 0 1rem;
+}
+h1{
+  font-family:var(--f-display);
+  font-weight:700;
+  font-size:var(--fs-3xl);
+  line-height:1.04;
+  letter-spacing:-.022em;
+  text-wrap:balance;
+  margin:0 0 .75rem;
+}
+.standfirst{
+  max-width:var(--measure);
+  font-size:var(--fs-lg);
+  color:var(--ink-2);
+  margin:0 0 2rem;
+}
+.meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0 2.5rem;
+  font-family:var(--f-mono);
+  font-size:var(--fs-xs);
+  line-height:1.9;
+}
+.meta div{display:flex;gap:.55rem}
+.meta dt{color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em}
+.meta dd{margin:0;color:var(--ink);font-weight:500}
+
+/* ---- layout ---- */
+.cols{display:block}
+@media (min-width:1080px){
+  .cols{display:grid;grid-template-columns:12rem minmax(0,1fr);gap:4rem;align-items:start}
+  .rail{position:sticky;top:2rem;display:block}
+}
+.rail{display:none;padding-top:3.5rem}
+.rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.15rem}
+.rail a{
+  display:grid;
+  grid-template-columns:1.65rem 1fr;
+  gap:.25rem;
+  font-family:var(--f-mono);
+  font-size:var(--fs-xs);
+  line-height:1.45;
+  color:var(--ink-3);
+  text-decoration:none;
+  padding:.4rem .5rem;
+  border-radius:3px;
+  border-left:2px solid transparent;
+}
+.rail a span{color:var(--accent);font-weight:500}
+.rail a:hover{color:var(--ink);background:var(--surface-2);border-left-color:var(--accent)}
+.rail a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---- sections ---- */
+section{padding-top:3.5rem;scroll-margin-top:1.5rem}
+.shead{
+  display:grid;
+  grid-template-columns:2.5rem 1fr;
+  gap:.5rem;
+  align-items:baseline;
+  border-top:1px solid var(--rule);
+  padding-top:1.1rem;
+  margin-bottom:1.5rem;
+}
+.snum{
+  font-family:var(--f-mono);
+  font-size:var(--fs-sm);
+  font-weight:700;
+  color:var(--accent);
+  letter-spacing:.02em;
+}
+h2{
+  font-family:var(--f-display);
+  font-weight:600;
+  font-size:var(--fs-2xl);
+  letter-spacing:-.018em;
+  line-height:1.12;
+  text-wrap:balance;
+  margin:0;
+}
+h3{
+  font-family:var(--f-display);
+  font-weight:600;
+  font-size:var(--fs-xl);
+  letter-spacing:-.012em;
+  line-height:1.2;
+  text-wrap:balance;
+  margin:2.5rem 0 .85rem;
+}
+h4{
+  font-family:var(--f-display);
+  font-weight:600;
+  font-size:var(--fs-base);
+  letter-spacing:-.005em;
+  margin:2rem 0 .6rem;
+}
+p,ul,ol{max-width:var(--measure)}
+p{margin:0 0 1.05rem}
+ul,ol{margin:0 0 1.15rem;padding-left:1.4rem}
+li{margin-bottom:.45rem}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600;color:var(--ink)}
+em{font-style:italic}
+a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+
+code{
+  font-family:var(--f-mono);
+  font-size:.855em;
+  background:var(--surface-2);
+  border:1px solid var(--rule-2);
+  border-radius:3px;
+  padding:.1em .34em;
+  word-break:break-word;
+}
+
+/* ---- chips ---- */
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:.35rem;
+  font-family:var(--f-mono);
+  font-size:var(--fs-xs);
+  font-weight:500;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  padding:.16rem .5rem;
+  border-radius:2px;
+  border:1px solid;
+  white-space:nowrap;
+  vertical-align:.06em;
+}
+.chip-ok{color:var(--ok);background:var(--ok-soft);border-color:var(--ok)}
+.chip-stale{color:var(--ink-3);background:var(--surface-2);border-color:var(--rule)}
+.chip-danger{color:var(--danger);background:var(--danger-soft);border-color:var(--danger)}
+
+/* ---- callouts ---- */
+.note{
+  max-width:var(--measure);
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-left:3px solid var(--ink-3);
+  border-radius:0 4px 4px 0;
+  padding:1.05rem 1.25rem;
+  margin:0 0 1.35rem;
+  box-shadow:var(--shadow);
+}
+.note > :last-child{margin-bottom:0}
+.note-head{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin-bottom:.6rem;
+  font-family:var(--f-display);
+  font-weight:600;
+  font-size:var(--fs-sm);
+}
+.note.ok{border-left-color:var(--ok)}
+.note.danger{border-left-color:var(--danger)}
+.note.stale{border-left-color:var(--ink-3)}
+.note p{font-size:var(--fs-sm);line-height:1.6;max-width:none}
+
+/* ---- code blocks ---- */
+pre{
+  font-family:var(--f-mono);
+  font-size:var(--fs-sm);
+  line-height:1.6;
+  background:var(--surface);
+  color:var(--ink);
+  border:1px solid var(--rule);
+  border-radius:4px;
+  padding:1rem 1.15rem;
+  margin:0 0 1.35rem;
+  overflow-x:auto;
+  max-width:var(--measure);
+  tab-size:2;
+}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.cmt{color:var(--ink-3)}
+
+/* ---- tables ---- */
+.tscroll{
+  overflow-x:auto;
+  margin:0 0 1.5rem;
+  border:1px solid var(--rule);
+  border-radius:4px;
+  background:var(--surface);
+  box-shadow:var(--shadow);
+  max-width:var(--measure);
+}
+.tscroll.wide{max-width:none}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th,td{text-align:left;padding:.62rem .95rem;border-bottom:1px solid var(--rule-2);vertical-align:top}
+thead th{
+  font-family:var(--f-mono);
+  font-size:var(--fs-xs);
+  font-weight:500;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+  background:var(--surface-2);
+  border-bottom:1px solid var(--rule);
+  white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+tbody th{font-weight:600;font-family:var(--f-body)}
+
+/* ---- pipeline ---- */
+.pipe{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.4rem;
+  align-items:center;
+  max-width:var(--measure);
+  margin:0 0 1.35rem;
+  padding:0;
+  list-style:none;
+}
+.pipe li{
+  font-family:var(--f-mono);
+  font-size:var(--fs-xs);
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:3px;
+  padding:.3rem .55rem;
+  margin:0;
+  white-space:nowrap;
+}
+.pipe li.key{border-color:var(--accent);color:var(--accent);font-weight:500}
+.pipe .arw{color:var(--ink-3);font-family:var(--f-mono);font-size:var(--fs-xs)}
+
+footer{
+  margin-top:5rem;
+  padding-top:1.5rem;
+  border-top:1px solid var(--rule);
+  font-family:var(--f-mono);
+  font-size:var(--fs-xs);
+  color:var(--ink-3);
+  max-width:var(--measure);
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Handoff · Gremlin → Gizmo</p>
+  <h1>AK820 Pro QMK Handoff</h1>
+  <p class="standfirst">Flashing fpb's QMK port onto an AJAZZ AK820 Pro, with VIA remapping and a customizable LCD. Setup and flashing happen on the Mac; the Windows box has already proven the build works.</p>
+  <dl class="meta">
+    <div><dt>Board</dt><dd>AJAZZ AK820 Pro</dd></div>
+    <div><dt>Branch</dt><dd>ak820pro-flashlcd-unified-dualspi</dd></div>
+    <div><dt>Target</dt><dd>macOS Tahoe 26.x</dd></div>
+    <div><dt>Dated</dt><dd>2026-08-28</dd></div>
+  </dl>
+</header>
+
+<div class="cols">
+
+  <nav class="rail" aria-label="Sections">
+    <ol>
+      <li><a href="#s0"><span>0</span>State of play</a></li>
+      <li><a href="#s1"><span>1</span>Hardware &amp; device IDs</a></li>
+      <li><a href="#s2"><span>2</span>Which branch</a></li>
+      <li><a href="#s3"><span>3</span>Setup</a></li>
+      <li><a href="#s4"><span>4</span>Flashing</a></li>
+      <li><a href="#s5"><span>5</span>The screen</a></li>
+      <li><a href="#s6"><span>6</span>Keymap</a></li>
+      <li><a href="#s7"><span>7</span>Repos</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+  <section id="s0">
+    <div class="shead"><span class="snum">00</span><h2>State of play</h2></div>
+
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Machine</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><th>GREMLIN <span style="color:var(--ink-3);font-weight:400">(Windows 11)</span></th>
+              <td>Keyboard is <strong>physically plugged in here</strong> right now. WSL build env working at <code>~/ak820pro</code>. Verified <code>.bin</code>s at <code>C:\Users\jdlien\code\ak820pro-builds\</code>.</td></tr>
+          <tr><th>Gizmo <span style="color:var(--ink-3);font-weight:400">(macOS Tahoe)</span></th>
+              <td>Target machine. Nothing set up yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note danger">
+      <div class="note-head"><span class="chip chip-danger">Blocker</span> Move the cable first</div>
+      <p>The keyboard sits on a physical Genesys Logic hub on GREMLIN. It is <strong>not</strong> RDP-redirected — the Mac's own input arrives separately as “Remote Desktop Keyboard Device” on <code>TERMINPUT_BUS</code> — so the AK820 will not appear on the Mac until it is replugged there.</p>
+    </div>
+
+    <p>Everything below was verified against the actual source and the actual USB bus, not assumed. Where a project doc is wrong, it is called out.</p>
+  </section>
+
+  <section id="s1">
+    <div class="shead"><span class="snum">01</span><h2>Hardware and device IDs</h2></div>
+
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Component</th><th>Part</th></tr></thead>
+        <tbody>
+          <tr><th>MCU</th><td><strong>HFD80CP100</strong> — clone of SONiX SN32F299. QMK: <code>SN32F299F</code>, bootloader <code>sn32-dfu</code></td></tr>
+          <tr><th>Wireless</th><td>WCH <strong>CH582F</strong> (BT + 2.4 GHz). Own firmware — <em>untouched</em> by a QMK flash</td></tr>
+          <tr><th>External flash</th><td><strong>PY25Q128HA</strong>, 16 MB SPI</td></tr>
+          <tr><th>LCD</th><td>0.85″ 128×128, <strong>GC9107</strong></td></tr>
+          <tr><th>RTC</th><td>CHMC D8563F (PCF8563 clone), bit-banged I²C</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>State</th><th class="mono">VID:PID</th></tr></thead>
+        <tbody>
+          <tr><th>This unit, stock v1.10</th><td class="mono">0C45:800A</td></tr>
+          <tr><th>Other stock batches</th><td class="mono">0C45:8009 (v1.13) · 0C45:8099 (v1.14)</td></tr>
+          <tr><th><strong>Bootloader (ISP)</strong></th><td class="mono"><strong>0C45:7140</strong></td></tr>
+          <tr><th>After flashing QMK</th><td class="mono">0C45:8009</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The PID is a firmware property, not a hardware one</h3>
+    <div class="note ok">
+      <div class="note-head"><span class="chip chip-ok">Verified</span> Descriptors decoded from the stock binaries</div>
+      <p>fpb's commit on the v1.14 dump states it directly: <em>“the USB PID really does change: V1.13 is 0x0C45:0x8009, V1.14 is 0x0C45:0x8099.”</em> So this unit's <code>800A</code> simply reflects stock v1.10 — it is <strong>not</strong> evidence of a hardware variant, and fpb's images are valid for it.</p>
+      <p><code>800A</code> is also the Leobod K81 Pro's PID, a coincidence of a shared vendor SDK. Decoding the USB string descriptors settles it: both AJAZZ dumps carry iProduct <code>AK820</code> — exactly what this unit reports — while the Leobod one carries <code>K81 Pro</code>.</p>
+    </div>
+
+    <h3>There is no rollback to the exact shipped image</h3>
+    <p><strong>SonixFlasherC is write-only</strong> — there is no <code>--read</code> or <code>--dump</code>. The shipped v1.10 cannot be backed up. Recovery means fpb's <code>AJAZZ_AK820PRO_PID_8009_V1.13</code> image: same hardware, different version.</p>
+    <p>Prefer <strong>v1.13 over v1.14</strong> for rollback. v1.14's PID change to <code>8099</code> makes the keyboard undetectable by AJAZZ's own drivers.</p>
+    <p>Optional, free, and worth doing while still on stock: grab AJAZZ's Windows driver installer and keep it. It is the only route to a vendor firmware image.</p>
+  </section>
+
+  <section id="s2">
+    <div class="shead"><span class="snum">02</span><h2>Which branch, and why</h2></div>
+
+    <p><code>ak820pro-flashlcd-unified-dualspi</code> of <code>github.com/fpb/qmk_firmware</code>.</p>
+    <p>It is fpb's preferred build <em>and</em> the only recommended branch carrying a VIA keymap. LCD art and GIF animations live in external SPI flash and are provisioned from the host — which is precisely what makes the screen customizable without a firmware rebuild.</p>
+    <p>Everything works: key matrix, per-key RGB (hardware PWM), LCD, dip switches, volume knob, BT/2.4G, RTC clock, flash provisioning.</p>
+
+    <h3>Two project docs are stale — ignore them</h3>
+
+    <div class="note stale">
+      <div class="note-head"><span class="chip chip-stale">Stale doc</span> ak820ctl's README</div>
+      <p>It says flash provisioning is <code>ak820pro-flashlcd-tiles</code> <strong>only</strong>. Wrong for this branch. Verified in <code>keyboards/a_jazz/ak820pro/ak820pro.c</code>: <code>FLASH_CHANNEL = 0x11</code> (“Flash provisioning channel (Stage D)”) is present, alongside <code>RTC_CHANNEL = 0x10</code> for the clock. Both channels are live.</p>
+    </div>
+
+    <div class="note stale">
+      <div class="note-head"><span class="chip chip-stale">Stale doc</span> rules.mk</div>
+      <p>It claims the RTC “does NOT work on hardware yet”. Superseded — later rtc commits landed bit-bang I²C fixes, and the main README lists clock support as done.</p>
+      <p>It also points at <code>graphics/res/mkraw.py</code>, which does not exist there. The packers live in the <strong>ak820ctl repo</strong> at <code>assets/mkraw.py</code> and <code>assets/mkanim.py</code>.</p>
+    </div>
+  </section>
+
+  <section id="s3">
+    <div class="shead"><span class="snum">03</span><h2>Setup</h2></div>
+
+    <p>Run <code>ak820pro-mac-setup.sh</code>. It is idempotent — re-run it freely. It mirrors the pattern already proven on GREMLIN: xpack toolchain plus a venv <code>qmk</code> CLI, so Homebrew is needed only for the two C tools.</p>
+
+<pre><code>chmod +x ak820pro-mac-setup.sh &amp;&amp; ./ak820pro-mac-setup.sh</code></pre>
+
+    <p>What it does:</p>
+    <ol>
+      <li><code>brew install hidapi pkg-config</code></li>
+      <li>Clone <code>fpb/qmk_firmware</code> at the branch above</li>
+      <li>xpack <code>arm-none-eabi-gcc</code> 13.3.1 into <code>~/ak820pro</code> — arch auto-detected, no sudo</li>
+      <li>Python venv + <code>qmk</code> CLI</li>
+      <li><code>make git-submodule</code> (~230 MB)</li>
+      <li>Apply the six ChibiOS patches, in order</li>
+      <li><code>qmk compile -kb a_jazz/ak820pro -km via</code></li>
+      <li>Build <strong>fpb's</strong> SonixFlasherC and ak820ctl</li>
+    </ol>
+
+    <h4>Patch order is load-bearing</h4>
+    <ul class="pipe">
+      <li>hardware_pwm</li><li class="arw">→</li>
+      <li>i2c_fallback</li><li class="arw">→</li>
+      <li>rtc_lld</li><li class="arw">→</li>
+      <li class="key">spi_fifo_pump</li><li class="arw">→</li>
+      <li class="key">spi_flash_dma</li><li class="arw">→</li>
+      <li class="key">efl_ramtext</li>
+    </ul>
+    <p><code>spi_flash_dma</code> must follow <code>spi_fifo_pump</code> — both edit the same SPI LLD file — and <code>efl_ramtext</code> is <strong>required for VIA</strong>; without it, flash operations can stall the SPI DMA interrupts.</p>
+
+    <div class="note">
+      <div class="note-head">Patches are working-tree edits</div>
+      <p>Any <code>git submodule update</code> silently discards all six. Re-run the script's step 5 to reapply.</p>
+    </div>
+
+    <p>Result:</p>
+<pre><code>~/ak820pro/qmk_firmware/a_jazz_ak820pro_via.bin
+~/ak820pro/SonixFlasherC/sonixflasher
+~/ak820pro/time-util-ak820pro/ak820ctl</code></pre>
+
+    <h4>Rebuilding later</h4>
+<pre><code>export PATH="$HOME/ak820pro/xpack-arm-none-eabi-gcc-13.3.1-1.1/bin:$HOME/ak820pro/venv/bin:$PATH"
+cd ~/ak820pro/qmk_firmware &amp;&amp; qmk compile -kb a_jazz/ak820pro -km via</code></pre>
+
+    <h3>Verifying a build is sane</h3>
+    <p>A correct build is <strong>~27% nonzero</strong> across the 256 KB image, with a vector table reading:</p>
+
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Vector</th><th class="mono">Value</th></tr></thead>
+        <tbody>
+          <tr><th>SP</th><td class="mono">0x20000400</td></tr>
+          <tr><th>Reset</th><td class="mono">0x00000191</td></tr>
+          <tr><th>HardFault</th><td class="mono">0x00000193</td></tr>
+          <tr><th>SVC[11] · PendSV[14]</th><td class="mono">0x00000193</td></tr>
+          <tr><th>USB descriptor</th><td class="mono">0C45:8009, bcd 0x0100</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The GREMLIN build matched fpb's prebuilt on every one of those.</p>
+
+    <div class="note danger">
+      <div class="note-head"><span class="chip chip-danger">False alarm</span> Don't compare density to stock</div>
+      <p>Stock firmware is ~90% nonzero. That ratio is what exposed fpb's <em>truncated</em> v1.14 extraction — the one that bricked a keyboard. Applying it to a QMK build, which is legitimately ~27%, produces a false alarm.</p>
+    </div>
+  </section>
+
+  <section id="s4">
+    <div class="shead"><span class="snum">04</span><h2>Flashing</h2></div>
+
+    <h3>Entering the bootloader — this needs the case open, once</h3>
+    <p>While still on stock firmware, the <strong>only</strong> way in is shorting two pins under the spacebar while plugging in USB. They sit under two insulation layers plus a removable foam strip; a window has to be cut through the insulation. Photo: <code>img/bootloader-pins.jpg</code> in <code>fpb/ajazz-ak820-pro</code>.</p>
+    <p>Once QMK is on, this is never needed again — <strong>ESC while plugging in</strong>, or <strong>Fn+ESC</strong> from a running keyboard.</p>
+
+    <h3>Flash</h3>
+<pre><code>cd ~/ak820pro
+./SonixFlasherC/sonixflasher --vidpid 0c45/7140 \
+    --file qmk_firmware/a_jazz_ak820pro_via.bin</code></pre>
+    <p>Confirm the bootloader is present first:</p>
+<pre><code>system_profiler SPUSBDataType | grep -i 7140</code></pre>
+    <p>The keyboard reboots into QMK.</p>
+
+    <div class="note danger">
+      <div class="note-head"><span class="chip chip-danger">Tahoe</span> Upstream will not work</div>
+      <p>macOS Tahoe requires fpb's <code>fix_for_macos_tahoe</code> branch. Upstream <code>SonixQMK/SonixFlasherC</code> has only a <code>main</code> branch and does not carry the fix.</p>
+    </div>
+
+    <h3>Rollback</h3>
+    <p>Same pin short — the ESC shortcut is gone once you leave QMK — then flash <code>StockFWBinaries/AJAZZ_AK820PRO_PID_8009_V1.13_SN32F290.bin</code> from <code>fpb/ajazz-ak820-pro</code> with the same command.</p>
+
+    <h3>macOS gotcha</h3>
+    <p>If <code>ak820ctl</code> reports the raw HID interface as not found, grant the terminal app <strong>Input Monitoring</strong> in System Settings → Privacy &amp; Security. macOS gates HID access to keyboard-class devices.</p>
+  </section>
+
+  <section id="s5">
+    <div class="shead"><span class="snum">05</span><h2>Customizing the screen</h2></div>
+
+    <p>The dashboard draws: a 128×128 boot splash, the big clock (<code>HH:MM:SS</code> or <code>HH:MM</code>) plus date, an OS icon, a connection icon with a blinking channel digit, battery, and a GIF animation slot.</p>
+    <p>Art is RGB565 with colors baked in. Source PNGs and both packers live in <code>~/ak820pro/time-util-ak820pro/assets/</code>. Python 3 stdlib only — no Pillow, no ffmpeg.</p>
+    <p>The current set is 8 assets: <code>sonixqmk</code> (128×128 splash), five 24×24 icons (apple, windows, cable, bluetooth, 2.4g), and two Iosevka font atlases — Regular-30 at 15×34 and Medium-20 at 10×23, 95 glyphs each. Font atlases mark each glyph cell with a magenta <code>(255,0,255)</code> pixel at its top-left, so the packer derives grid and advance width itself. No metrics file.</p>
+
+    <h3>Set the clock</h3>
+<pre><code>./ak820ctl clock                      <span class="cmt"># host's current local time</span>
+./ak820ctl clock 2026-07-01T14:30:00  <span class="cmt"># specific</span></code></pre>
+
+    <h3>Change the art</h3>
+<pre><code>cd ~/ak820pro/time-util-ak820pro/assets
+<span class="cmt"># edit the PNGs, keeping each image's dimensions</span>
+python3 mkraw.py --flash          <span class="cmt"># -&gt; flash_assets.bin + flash_assets.h</span>
+cd ..
+./ak820ctl info                   <span class="cmt"># JEDEC id + writable base</span>
+./ak820ctl flash write 0x0CE0000 assets/flash_assets.bin</code></pre>
+    <p>Takes effect on next boot. <code>flash write</code> erases, streams, then CRC32-verifies on device.</p>
+
+    <div class="note">
+      <div class="note-head">The one firmware coupling</div>
+      <p>If you add, remove, or reorder assets, <code>flash_assets.h</code> changes and must be copied into the firmware tree, then rebuilt. Changing only <em>pixels</em> needs no rebuild.</p>
+    </div>
+<pre><code>cp assets/flash_assets.h \
+   ~/ak820pro/qmk_firmware/keyboards/a_jazz/ak820pro/graphics/res/</code></pre>
+
+    <h3>GIF animation</h3>
+<pre><code>cd ~/ak820pro/time-util-ak820pro/assets
+python3 mkanim.py myloop.gif -o myloop.bin   <span class="cmt"># --fit cover|contain</span>
+cd ..
+./ak820ctl flash write 0x540000 assets/myloop.bin --unlock</code></pre>
+    <p>Toggle it on the keyboard with <strong>Fn+Delete</strong> (<code>ANIM_TOG</code>, already bound in the VIA keymap).</p>
+
+    <div class="note ok">
+      <div class="note-head"><span class="chip chip-ok">Verified</span> Addresses read from graphics/lcd_bus.c</div>
+      <p>The docs disagree with each other on these, so they were taken from firmware source rather than any README.</p>
+    </div>
+
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Constant</th><th class="mono">Value</th></tr></thead>
+        <tbody>
+          <tr><th><code>FLASH_ASSET_BASE</code></th><td class="mono">0x0CE0000 <span style="color:var(--ink-3)">— 3.12 MB, erased since manufacture, always writable</span></td></tr>
+          <tr><th><code>ANIM_BASE</code></th><td class="mono">0x540000</td></tr>
+          <tr><th><code>ANIM_STRIDE</code> · <code>ANIM_HDR</code></th><td class="mono">0x8000 · 0x100</td></tr>
+          <tr><th>Max frames</th><td class="mono">243</td></tr>
+          <tr><th>Unlockable stock slots</th><td class="mono">0x1AA000 · 0x200000 · 0x38B000 · 0x540000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Animation slots need <code>--unlock</code>; the stock LCD-asset region is never writable. Flashing is refused while an animation is playing — toggle it off first. Playback is a fixed <strong>~100 ms/frame</strong>, so a GIF authored at another rate plays faster or slower; <code>mkanim.py</code> prints both durations.</p>
+
+    <div class="note stale">
+      <div class="note-head"><span class="chip chip-stale">Not applicable</span> The v1.14 slot move</div>
+      <p>fpb's note about stock animation slots moving to <code>0x1AA000</code> / <code>0x38B000</code> is a <em>stock firmware</em> detail. QMK defines its own <code>ANIM_BASE = 0x540000</code>, so <code>0x540000</code> is correct here.</p>
+    </div>
+  </section>
+
+  <section id="s6">
+    <div class="shead"><span class="snum">06</span><h2>Keymap</h2></div>
+    <p>The VIA keymap has four layers — <code>WINBASE</code>, <code>WINFN</code>, <code>MACBASE</code>, <code>MACFN</code> — on <code>LAYOUT_82_ansi</code>, with <code>QK_BOOT</code> on Fn+Esc and <code>ANIM_TOG</code> on Fn+Delete. The encoder is exposed as a remappable VIA knob.</p>
+    <p>Load <code>QMKFWBinaries/via.json</code> from <code>fpb/ajazz-ak820-pro</code> into VIA or Vial. Dynamic keymap is 4 layers.</p>
+  </section>
+
+  <section id="s7">
+    <div class="shead"><span class="snum">07</span><h2>Repos</h2></div>
+    <div class="tscroll wide">
+      <table>
+        <thead><tr><th>Repo</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">fpb/qmk_firmware @ ak820pro-flashlcd-unified-dualspi</td><td>the port</td></tr>
+          <tr><td class="mono">fpb/ajazz-ak820-pro</td><td>reverse-engineering docs, pinouts, stock + prebuilt binaries, <code>via.json</code></td></tr>
+          <tr><td class="mono">fpb/time-util-ak820pro</td><td><code>ak820ctl</code> — clock + LCD provisioning, asset pipeline</td></tr>
+          <tr><td class="mono">fpb/SonixFlasherC @ fix_for_macos_tahoe</td><td>flasher — <strong>required</strong> on Tahoe</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Prebuilt <code>.bin</code>s exist in <code>fpb/ajazz-ak820-pro/QMKFWBinaries/</code> if you ever want to skip building — including <code>ak820pro-flashlcd-unified-dualspi_via.bin</code>.</p>
+  </section>
+
+  <footer>
+    Verified against firmware source and the live USB bus on GREMLIN, 2026-08-28. Where a project README disagrees with the source, the source won.
+  </footer>
+
+  </main>
+</div>
+</div>

@@ -1,0 +1,13 @@
+# Upstream clones -- each is its own repo with its own remote. Cloned by
+# ak820pro-builds/ak820pro-mac-setup.sh, not vendored here.
+qmk_firmware-ak820pro/
+ajazz-ak820-pro/
+time-util-ak820pro/
+SonixFlasherC/
+
+# Build artifacts: large, disposable, regenerable.
+xpack-arm-none-eabi-gcc-13.3.1-1.1/
+venv/
+
+.DS_Store
+__pycache__/

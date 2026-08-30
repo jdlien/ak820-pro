@@ -1,0 +1,1680 @@
+# AK820 Pro → QMK
+
+Workspace for putting **fpb's QMK port** onto JD's **AJAZZ AK820 Pro** keyboard,
+with VIA remapping and a customizable 0.85″ LCD.
+
+This folder is **not** a git repo. It is a workspace holding four independent
+upstream clones plus a local toolchain. Nothing here is a fork — do not expect
+local commits, and do not commit into the nested clones unless asked.
+
+The authoritative background document is
+[`ak820pro-builds/AK820PRO-HANDOFF.md`](ak820pro-builds/AK820PRO-HANDOFF.md)
+(same content as `handoff.html`). **Read it before doing anything substantive** —
+it carries the hardware IDs, flash memory map, asset pipeline, and a list of
+upstream project docs that are stale and should be ignored. This file summarizes
+the workspace; the handoff explains the device.
+
+---
+
+## Current state (as of 2026-08-29) — QMK IS FLASHED AND RUNNING
+
+- Build environment on this Mac (Gizmo, macOS Tahoe 26.6.2, Apple Silicon): **done and verified**.
+- **QMK VIA firmware flashed successfully** on 2026-08-28. Flash verification
+  checksum OK; the board rebooted on its own into QMK.
+- Keyboard now enumerates as **`0C45:8009`**, product name **"AK820 PRO"**.
+- `ak820ctl` sees the QMK raw HID interface (`usage_page=0xFF60 usage=0x61`,
+  iface 1). **No Input Monitoring permission was needed** — handoff §4's warning
+  did not apply in practice.
+- **LCD assets provisioned** to `0x0CE0000` — **195584 B, 11 assets**, verified on
+  device with **`crc32=0x46139223`** (2026-08-29, the bunny splash). RTC set.
+  The earlier 184064 B / 8 assets / `0xAF49C1FA` figures are superseded.
+- **LCD orientation and inversion fixed** (see local firmware edits below) —
+  confirmed on hardware: right way up, white text on black, clean to every edge.
+- RGB default set to dim warm white, though EEPROM still holds whatever was last
+  set by hotkey/VIA.
+- **LED field rate 121 → 1046 Hz**, DLP-rainbow artifact much reduced (not
+  eliminated — it is inherent to time-slotted R/G/B and no achievable rate
+  removes it).
+- **LCD backlight is now dimmable** — software PWM, 12 perceptually-spaced
+  levels, `Fn`+`PgUp`/`PgDn`. Boots at the dimmest lit step.
+- **Clock**: divider trim implemented and converging; seeded at the measured
+  value. Was ~4 s/min out, now holds inside the 2 s threshold.
+- **Freeze while adjusting RGB**: fixed by an eeconfig flush guard. Not yet proven
+  over normal use.
+- **Bluetooth (2026-08-29)**: ACK timeouts **0.38 → 0.042 per frame**, zero
+  dropped, at the *highest* row-ISR rate. Root cause was an inverted interrupt
+  priority table — see that section, and check it FIRST on any regression.
+- **Four CH582F state bugs fixed**, all wire-traced: missed `5B 32`, media keys
+  gated on a stale flag, `A6 51` dropped mid-connect, and `A6 <slot>` being a
+  no-op while advertising.
+- **Pairing UX**: 2 s hold that fires under the finger with a progress bar, and a
+  status band that says what the blinking digit means.
+- **Boot splash is JD's bunny logo**; the file is still named `sonixqmk.png` on
+  purpose (asset ids are sorted by filename).
+- Measured matrix scan rate **~390-400 Hz** (1396 stock) at `SPD_STEP 128`.
+  A 2.5 ms scan period; confirmed on hardware as "nearly instant" over
+  Bluetooth. See the scan-rate table.
+
+### Working with VIA
+
+Load `keyboards/a_jazz/ak820pro/via.json` (identical to the
+`ajazz-ak820-pro/QMKFWBinaries/` copy) — the board is not in VIA's database.
+usevia.app in Chrome/Edge only (WebHID); Settings → **Show Design tab** →
+**Load Draft Definition**. Verified to match the running firmware
+(`0x0C45`/`0x8009`).
+
+Layers are `WINBASE=0, WINFN=1, MACBASE=2, MACFN=3` — the mac/win dip switch
+selects the base, so per-key remaps usually need doing on both 0 and 2.
+`menus: ["qmk_rgb_matrix"]` gives a full lighting picker; 20 custom keycodes
+(`BT*`, `RGBM_*`, `SCR_TOG`, `SCR_UP`, `SCR_DN`, `ANIM_TOG`) are exposed.
+
+**VIA's stored keymap overrides the firmware default.** A keycode newly bound in
+`keymap.c` will NOT appear if the dynamic keymap in EEPROM already has that key
+assigned — assign it in VIA instead, or reset the EEPROM keymap.
+
+### Stock-keymap shortcuts (as shipped, before any VIA remaps)
+
+Identical on `WINFN` and `MACFN`. `Fn` is the physical key right of right-Cmd.
+
+| Keys | Does |
+|---|---|
+| `Fn`+`Q` / `W` / `E` | Bluetooth slots 1 / 2 / 3 |
+| `Fn`+`R` | 2.4 GHz dongle |
+| `Fn`+`P` | pair (hold) |
+| `Fn`+`←` / `→` | RGB hue − / + (step 8) |
+| `Fn`+`↑` / `↓` | RGB brightness + / − (step 16) |
+| `Fn`+`6` / `7` | RGB saturation + / − (step 16) |
+| `Fn`+`X` | RGB on/off |
+| `Fn`+`\` | next RGB effect |
+| `Fn`+`-` / `=` | effect speed − / + |
+| `Fn`+`Esc` | `QK_BOOT` — bootloader |
+| `Fn`+`Delete` | `ANIM_TOG` |
+
+**BT keys are inert in wired mode.** `CH582_PROTOCOL.md`: the protocol is live
+only in BT (`== 1`) or 2.4G (`== 2`) mode; in USB mode the CH582F is bypassed
+entirely. Set the `bt/off/cable` dip switch first.
+
+Pairing UX — **the "10 s" description that was here was wrong**; no such logic
+exists in the code, and there is no "aborts if the link comes up" behaviour.
+What `process_record_kb()` actually does with `BT1`/`BT2`/`BT3` (Fn+Q/W/E):
+
+| Action | Effect |
+|---|---|
+| **Press** (any slot, selected or not) | `ch582_set_profile()` — selects the slot and starts a connect. State goes to `LINKING`; the digit slow-blinks. |
+| **Held past `BT_PAIR_HOLD_MS` (2 s)** | `ch582_enter_pairing()` — the slot starts advertising. Digit fast-blinks. A `Pair: ======` bar fills during the hold. |
+| **Release** | Disarms only. |
+
+**Pairing used to fire on key-UP, not at the threshold** — so holding did nothing
+visible until you let go, contradicting the code's own comment. Fixed 2026-08-29:
+`bt_pair_hold_task()` runs on the 10 Hz housekeeping tick and fires the instant
+the threshold passes while the key is still down. Both the slot keys and `Fn`+`P`
+now only arm/disarm in `process_record_kb()`.
+
+**The hold is 2 seconds** (was 1 s until 2026-08-29). **A slot-key press also
+issues a select/reconnect**, so a merely slow tap at 1 s would drop a live link
+and start advertising, and recovering needs a re-select. Pairing is rare and
+deliberate; reconnecting is the common action, so the gesture must sit well clear
+of any tap. The cost of a longer hold is only frustration when nothing shows it
+is working — hence the progress bar, which is what makes 2 s *better* rather than
+merely safer.
+
+**Expect ~200 ms MORE than the constant by stopwatch, at any threshold.**
+`bt_pair_hold_task()` runs on the 10 Hz housekeeping tick and the band redraws on
+that same tick, so a 1 s threshold measured as ~1.2-1.3 s by hand. That is tick
+granularity, not slack — **do not "correct" the constant for it.**
+
+**The original 1 s figure was MEASURED, not assumed.** `BT_PAIR_HOLD_MS` in
+`ak820pro.c`. Captured 2026-08-29 with temporary instrumentation:
+
+```
+[pair] press slot=3
+[5b] 36  x2            slot unreachable, fails instantly
+[pair] fire at 1066ms  our threshold
+[pair] A6 51 queued
+[5b] 31                MODULE ADVERTISING, same second
+[pair] release at 2942ms armed=0
+```
+
+`5B 31` lands ~1.1 s after the press, so **there is no downstream delay** — the
+module does not defer the pair command behind the in-flight connect attempt, a
+theory that looked plausible and was wrong.
+
+**Why it felt like 3 s (worth understanding before "fixing" the number).** Two
+separate causes, both about feedback rather than timing:
+
+1. Pairing used to fire on key-UP. Holding 1 s then releasing *did* work, but
+   nothing was visible until the release, so the whole gesture read as one long
+   action. Fixed by `bt_pair_hold_task()`.
+2. Even firing correctly, the hold was **silent until it fired** — being 100 ms
+   short looked identical to the feature not working, so the natural response is
+   to hold longer and longer. Hence `display_set_pair_hint()`: the band shows
+   `Hold to pair` from the press until it resolves.
+
+The hint **outranks every link state** in `conn_status_update()`. During the hold
+the state is whatever the press kicked off, and on an unreachable slot that is
+`REJECTED` — so without the override the panel read `Link failed` while the user
+was still mid-gesture. Nothing has failed yet at that point.
+
+**Do not raise `BT_PAIR_HOLD_MS` to match the old 3 s guess.** That would make the
+firmware genuinely require what was only ever a feedback artifact.
+
+### ⚠️ `A6 <slot>` is DECLINED while the module is advertising
+
+**Symptom:** pair to a device, enter pairing mode again, then try to go back —
+it will not reconnect until you switch to another slot and back.
+
+**Captured on the wire 2026-08-29** (`Fn`+`W` = slot 2, phone already paired):
+
+```
+[tx] A6 51 pair      -> [rx] 5B 31   module advertising
+[tx] A6 32 select    -> [rx] 5B 23   idle. NO 33 (attempting), NO 32.   <-- declined
+[tx] A6 33 select    -> [rx] 5B 36
+[tx] A6 32 select    -> [rx] 5B 32   works, after the back-and-forth
+```
+
+**It is NOT a lost frame.** The module answers — with `5B 23`. It stops
+advertising and then simply never starts connecting. A working select is answered
+`33`/`34`/`32` inside a second (measured, both in this trace and elsewhere), so
+the absence of any of those is a reliable "it declined".
+
+**Why it never recovered:** the select is issued exactly once. The cold-boot
+retry below is gated `connect_requested && !module_alive`, so once the module has
+ACKed anything it is never re-issued — deliberately, and for a good reason.
+
+**RETRYING DOES NOT WORK. Four hypotheses died here; do not re-derive them:**
+
+| # | Hypothesis | Killed by |
+|---|---|---|
+| 1 | Lost UART frame | The module *replies* — with `5B 23`. |
+| 2 | Timing; retry until it takes | **8 selects over 10 s drew ZERO responses.** |
+| 3 | Retry when it goes idle (`5B 23`) | It emits *nothing at all* while advertising, so the trigger never fires. |
+| 4 | **Same-slot select is a no-op; a DIFFERENT slot is required** | Matches every trace, and is why the manual `Fn`+`Q` workaround works. |
+
+The module ignores `A6 <slot>` for the whole BLE advertising window — **minutes**,
+confirmed by the user ("it does eventually pair, but it takes a few minutes").
+Naming a *different* slot forces a state change immediately.
+
+An earlier trace made this look like timing: recovery came at +9 s. But that
+recovery was an `A6 33` — a **different slot**. The delay was incidental; the slot
+change was the cause. Reading it as timing cost two failed fixes.
+
+**Fix — the cancel-pairing bounce.** Pressing a slot key while THAT slot is
+advertising now does automatically what the user did by hand: send a different
+slot, wait `CH582_BOUNCE_MS` (700 ms), then send the real target (which, being
+different from the bounce, is honoured). Verified 2026-08-29, ~1 s recovery:
+
+```
+[tx] A6 51 pair              -> [rx] 5B 31   advertising
+[tx] A6 32 select (cancel-pairing)
+[tx] A6 31 bounce            -> [rx] 5B 32   state forced
+[tx] A6 32 after bounce      -> [rx] 5B 33, 5B 32   reconnected
+```
+
+**⚠️ The bounce slot can briefly CONNECT.** In the verification trace the bounce
+to slot 1 returned `5B 32` — it really did link to slot 1 for ~700 ms before
+moving on. Unavoidable: forcing the state change requires naming another slot, so
+this is the same exposure the manual workaround has. If it becomes annoying,
+prefer a bounce slot recently seen to fail (`5B 36`), which is usually an empty
+one. Only reachable when cancelling pairing, never on an ordinary slot change.
+
+`select_pending` (re-issue after `CH582_SELECT_CONFIRM_MS`, up to
+`CH582_SELECT_MAX_TRIES`) is **kept as a backstop** for genuinely dropped
+selects, but note it cannot fix the advertising case — that is what the bounce is
+for.
+
+**⚠️ The retry MUST stop the moment `5B 33`/`34` arrives, and it does.** That is
+the whole reason the old blanket 500 ms retry was removed: re-selecting a module
+that is *already attempting* restarts its advertising and starves a slow
+reconnect. A phone reconnects in <500 ms and beats the retry, but **macOS
+directed advertising takes longer and never completes**, which previously forced
+a manual pairing entry. Retrying only while the module has NOT started an attempt
+is what makes this safe — do not widen the condition.
+
+### ⚠️ `A6 51` is ignored while a connect attempt is in flight
+
+**The real cause of "hold 1 s: nothing, 2 s: nothing, 3 s: works".** It is not a
+timing threshold at all — it is *state*-dependent, and it defeated a measurement
+that looked conclusive.
+
+Pressing a slot key calls `ch582_set_profile()`, which issues a connect (`A6
+<slot>`). The module then reports `5B 33`/`34` (attempting) for a while. A
+hold-to-pair fires **straight into that window**, and the single `A6 51` is
+silently dropped. Only once the attempt is abandoned (`5B 36`) is the module
+listening — which is why the *third* press works: by then it has given up.
+
+**How this hid from instrumentation.** A one-shot capture caught the module
+already in the abandoned state (earlier presses had left it there), so `A6 51`
+landed first try and `5B 31` arrived ~1.1 s after the press. That reads as clean
+confirmation of the 1 s threshold and is nothing of the kind — a single
+measurement of state-dependent behaviour only ever confirms the state it caught.
+The user's repeated press/release pattern was the more informative experiment.
+
+**Fix:** pairing is confirmed by `5B 31`, not by having sent `A6 51`.
+`pairing_pending` resends every `CH582_PAIR_RETRY_MS` (400 ms) up to
+`CH582_PAIR_MAX_TRIES` (12, ~4.8 s), and clears on `5B 31` (confirmed), `5B 32`
+(connected instead), or `ch582_set_profile()` (superseded).
+
+`conn_state` is still set to `PAIRING` **optimistically** on the first send, so
+the band reacts immediately; the retry makes it true. Waiting for `5B 31` to
+update the display would leave `Link failed` on screen for seconds after the user
+did exactly the right thing.
+
+**If it still needs multiple presses**, the next thing to try is explicitly
+cancelling the in-flight connect before sending `A6 51`, rather than outwaiting
+it. Retrying is the less invasive option and was tried first.
+
+### The clock: architecture, two doc errors, and the divider trim
+
+Two physical clocks. A battery-backed **PCF8563** (a CHMC D8563F clone) is the
+reference; the **SN32 internal RTC** is the live 1 Hz clock the display reads,
+seeded from the PCF and disciplined to it.
+
+**`config.h` and `rtc.h` were both wrong about how this works.** They claim
+calibration *"snaps the phase and trims the divider so the clock self-locks on
+any hardware (no hardcoded SECCNTV)"*. It did not. `rtc_clock_discipline()` only
+ever called `rtcSetTime()` — a phase snap. `rtc_lld_set_period()` existed (added
+by `rtc_lld.diff`) and was never called. `config.h` also cited a
+`RTC_CAL_INTERVAL_S` that does not exist, at "~1/min", when `rtc.c` defaulted
+`RTC_CHECK_INTERVAL_S` to **3600**.
+
+Why it mattered: `SN32_RTC_CLK_SOURCE` is `SN32_RTC_CLK_SRC_ILRC`, the **internal
+RC oscillator**, with `SN32_RTC_PERIOD_DEFAULT 32000` assuming exactly 32 kHz.
+This unit's ILRC runs ~34.3 kHz — **~4% fast**, entirely normal for an untrimmed
+RC. Snapping alone left a sawtooth as big as an interval's drift: **±5 minutes**
+per hour at the stock 3600 s interval.
+
+Now implemented: a real divider trim, measured over a window built from two
+**snap-immune** quantities — `rtc_seconds_count` (free-running tick count,
+untouched by `rtcSetTime`) and the PCF's own absolute time. Verified converging
+on hardware:
+
+```
+trim 32000 -> 32695  (360 ticks / 345 s)   +695
+trim 32695 -> 33019  (360 ticks / 353 s)   +324
+trim 33019 -> 33251  (360 ticks / 355 s)   +232
+trim 33251 -> 33330  (420 ticks / 418 s)   +79
+trim 33330 -> 33376  (720 ticks / 718 s)   +46
+```
+
+Steps shrink and **windows lengthen on their own** as it locks. Phase snaps
+stopped entirely once converged.
+
+**Three traps, all hit during development:**
+
+1. *Restarting the window on a phase snap.* The snap fires exactly when drift is
+   large, so the trim never survived to take a second sample and **never ran
+   once**. Hence the snap-immune window.
+2. *Trimming on any nonzero difference.* The reference has 1 s resolution, so a
+   60 s window always shows ±1 whether or not the clock is wrong. The window
+   never grew, resolution stayed at 1.7%, and it **limit-cycled** between the two
+   adjacent quantised answers (33103 ↔ 33664) forever. Hence
+   `RTC_CAL_MIN_WINDOW_S 300` and `RTC_CAL_MIN_DIFF_S 2`.
+3. *Applying the full correction.* A quantisation-sized overshoot becomes a
+   standing oscillation. Hence half-step damping — costs iterations, buys
+   convergence.
+
+`RTC_PERIOD_INITIAL 33400` seeds the measured value because **the trimmed period
+is not persisted** — every boot otherwise re-climbed from 32000 over ~40 minutes
+with the display visibly jumping. It is a per-unit, temperature-dependent RC
+value: a starting point, never a substitute for the trim. Re-measure by removing
+it and watching the trims converge from stock.
+
+**⚠️ THE PCF8563 DRIFTS ~58 ppm — ABOUT 5 s/DAY. A SCHEDULED RESYNC *IS* NEEDED.**
+An earlier note here said the opposite ("still within 2 s… no scheduled
+`ak820ctl clock` job is needed"), measured a few hours after setting it. Over a
+few hours the error is still inside the ±2 s snap threshold and looks like
+nothing. Measured again at **24 h: 5 seconds fast**, i.e. ~58 ppm, ~3 min/month.
+Normal for an uncompensated 32.768 kHz crystal, worse in a clone.
+
+**The divider trim is not at fault and cannot help.** Everything above disciplines
+the SN32 *to the PCF*, so the trim faithfully reproduces the reference's error.
+The trim is doing its job perfectly on a reference that is wrong. Do not go
+looking in `rtc.c` when the clock drifts by minutes per month.
+
+**Fix: `hostagent/ak820-clocksync.sh` + `com.jdlien.ak820pro.clocksync.plist`,
+every 6 hours** (`StartInterval 21600`, plus `RunAtLoad`). At 58 ppm that bounds
+the error to ~1.3 s — inside `RTC_DRIFT_THRESHOLD_S`, so the display never
+visibly jumps. Log: `~/Library/Logs/ak820pro-clocksync.log`.
+
+**It needs `ak820ctl clock --no-wait`, a flag added for this.** `cmd_clock` used
+to read a reply, and raw-HID replies route through the **active host driver** — so
+in BT/2.4G mode the answer goes over the air and the command fails *even with the
+cable plugged in*, which is the normal way this board is used. The write-only path
+(`xfer_nowait`) sidesteps that exactly as `ak820text.py` does. A clock set needs no
+confirmation: a silent miss is corrected by the next run.
+
+**It still requires the USB cable** — the HID interface has to exist. On battery
+there is no sync path at all, so a board left unplugged for days will drift the
+full ~5 s/day. `RunAtLoad` catches it as soon as the machine is back.
+
+**±2 s is the design bound, not residual error.** `RTC_DRIFT_THRESHOLD_S 2` is
+where the phase snap fires, so the loop guarantees it. `1` would halve it at the
+cost of the display jumping a second more often.
+
+**~1 s is the hard floor regardless of trim quality.** The PCF exposes whole
+seconds only — no sub-second register — so the reference itself is quantised.
+Beating that needs a different reference (USB SOF timing, or a host-assisted
+calibration protocol over raw HID), which is a lot of machinery for a keyboard.
+
+**Seed confirmed working.** First boot with `RTC_PERIOD_INITIAL 33400`: **zero**
+`[rtc]` events — no trims, no snaps — in the first 11 minutes, against five
+`corrected drift` corrections in the same window on the previous boot climbing
+from 32000. Observed offset ~0.5 s behind host.
+
+**That residual ~0.5 s is a fixed phase offset, not drift.** Seeding/snapping
+sets the SN32 to whatever whole second the PCF reports, but the read lands at an
+arbitrary point *within* that second, so a systematic lag averaging 0.5 s is
+baked in. It does not accumulate. To remove it you would poll the PCF at init
+until the seconds register is observed to roll over, then set the SN32 at that
+instant — costs up to a second of I2C polling at startup, buys half a second.
+Judged not worth it; noted so nobody re-derives it.
+
+### LCD backlight brightness (software PWM)
+
+`PANEL_BKL` (**A16**) is a plain GPIO — stock firmware only had on/off
+(`SCR_TOG`), so brightness is done in software.
+
+**Hardware PWM on this pin is impossible — verified in the SN32F299 datasheet,
+do not re-investigate.** `P0.16`'s only alternate function is `CT16B5_CAP0`, a
+capture *input*. There is no PWM output route to A16. (An earlier note here said
+this was "unverified" and that a dedicated timer would be "a second kHz ISR for
+no gain" — both wrong, and the timer turned out to be the fix.)
+
+The tick comes from **CT16B3 (`GPTD4`) at a measured 20 kHz**, not from the RGB
+row ISR. See "The backlight/indicator PWM tick is a dedicated timer" for why that
+move mattered and the `MCTRL` gotcha that makes it work.
+
+- `BKL_PWM_TICKS 48` → 20000/48 = **417 Hz** switching, floor 1/48 = 2.1%.
+  Confirmed flicker-free on hardware 2026-08-29. It was sized while the tick was
+  silently losing 23% of its interrupts; now that the tick is steady there is
+  headroom to lengthen the period for a dimmer floor.
+- Levels are **perceptually spaced**, not linear:
+  `{ 0, 1, 2, 3, 5, 8, 12, 18, 26, 37, 50, 64 }`. An even spread wastes steps at
+  the top where they are indistinguishable and gives nothing usable at the
+  bottom, which is the end that matters in a dark room.
+- `DISPLAY_BRIGHTNESS_DEFAULT 1` (1/48 ≈ 2.1%) — chosen on hardware as right for
+  a dark room.
+- **Not persisted.** Every kb-eeconfig write is an internal-flash program/erase,
+  i.e. the thing that wedges this board. Change the default in `config.h`.
+
+**Minimum brightness is 1 tick, so a dimmer floor needs a LONGER period, which
+lowers the switching rate.** That is now the *whole* trade — period against
+floor, at a fixed 20 kHz tick.
+
+It used to be a three-way coupling, because the tick came from the RGB row ISR:
+`SPD_STEP`, `BKL_PWM_TICKS` and the switching rate all moved together, so tuning
+the LED field rate for the rainbow silently retuned the backlight. **That is no
+longer true** — the tick has its own timer. Old notes claiming `SPD_STEP` was
+raised "so the backlight period could double" describe a design that no longer
+exists.
+
+`SCR_UP` / `SCR_DN` keycodes are on `Fn`+`PgUp` / `Fn`+`PgDn`, beside the
+existing `Fn`+`Home` toggle.
+
+> **Adding custom keycodes:** the `ak820pro_keycodes` enum is **index-matched** to
+> `via.json`'s `customKeycodes[]` (both map onto `QK_KB_0`). **Append only** —
+> inserting anywhere else shifts every later keycode and silently corrupts
+> existing VIA keymaps.
+
+### ⚠️ Interrupt priority ordering — the single most important tuning fact here
+
+**The ChibiOS defaults had this inverted, and it caused two apparently unrelated
+bugs that cost most of a session.** Set in `mcuconf.h`; on Cortex-M0 a LOWER
+number is a HIGHER priority.
+
+| Prio | Source | Why it sits there |
+|---|---|---|
+| **1** | `SN32_SERIAL_UART2` | The CH582F link. **The only peripheral here where being late means LOSING DATA.** Defaulted to 3 — the bottom. |
+| **2** | `SN32_GPT_CT16B3` | Backlight/indicator PWM tick. Tiny, but must be *regular* or the display visibly flickers. |
+| **3** | `SN32_PWM_CT16B0/1/2` | RGB row scan. Long and very frequent, but a few µs of jitter on an LED is invisible. Defaulted to 2. |
+
+Every symptom below is a consequence of getting this wrong:
+
+- **UART at the bottom (default)** → the row ISR preempted byte servicing, so
+  frames to and from the CH582F were mangled. Outbound: ACK timeouts, TX queue
+  overflow, dropped keystrokes — *you could out-type the Bluetooth link*.
+  Inbound: dropped `5B 32` frames, which is the connection-digit blink bug.
+  **Same root cause, both directions** — they were chased separately for hours.
+- **GPT at 3 (below the row scan)** → 23% of PWM ticks were lost, measured as
+  **15,385 Hz against a configured 20,000**. Symptom: LCD backlight flicker that
+  got worse the dimmer it went.
+- **GPT at 1 (above the UART)** — an intermediate wrong fix. It restored the tick
+  to 19,997 Hz but tripled ACK timeouts (0.38 → **1.14 per frame**), because the
+  tick then preempted the UART.
+
+Only the ordering above satisfies all three. **Measured on hardware 2026-08-29
+at `SPD_STEP 128`** (row ISR ~18,800/s — the load that supposedly "broke
+Bluetooth"), across a real typing burst of 430 frames:
+
+| | Timeouts / frame |
+|---|---|
+| Old baseline, `SPD_STEP 16` | 0.38 |
+| GPT at priority 1 (wrong fix) | 1.14 |
+| **This ordering, `SPD_STEP 128`** | **0.042**, `dropped=0` |
+
+**Bluetooth is now ~9x healthier at the HIGHEST row-ISR rate than it was at the
+stock rate with the priorities inverted.** That is the whole lesson: the ISR rate
+was never the fault, only a proxy for it. Backing off `SPD_STEP` treated the
+symptom and cost the LED field rate for nothing.
+
+Measure the ratio over a *sustained burst*, not a short sample — boot traffic
+runs ~0.58/frame and will make a healthy board look broken.
+
+**If Bluetooth throughput ever regresses, check this table FIRST.** The tempting
+move is to lower `RGB_MATRIX_SPD_STEP` to slow the row ISR down; that treats a
+symptom and costs LED field rate, which is the DLP-rainbow knob.
+
+### The backlight/indicator PWM tick is a dedicated timer, not the row ISR
+
+Originally the LCD backlight and the three indicator LEDs were software-PWM'd
+from `sn32_rgb_isr_hook()` inside the RGB row ISR. That worked but **welded the
+PWM switching rate to `RGB_MATRIX_SPD_STEP`** — so tuning the LED field rate for
+the rainbow artifact silently re-tuned the backlight into or out of flicker.
+
+They now run from **CT16B3 (`GPTD4`) at a verified 20 kHz**, set up in
+`pwm_tick_init()` in `ak820pro.c`. `SPD_STEP` no longer affects them at all.
+
+Enabling it needs three things, and the third is not obvious:
+
+1. `halconf.h`: `#define HAL_USE_GPT TRUE` before `#include_next`.
+2. `mcuconf.h`: `SN32_GPT_USE_CT16B3 TRUE`, plus the priority above.
+3. **`SN_CT16B3->MCTRL = CT16_PWM_UNLOCK(SN_CT16B3->MCTRL | mskCT16_MRnRST_EN(0));`**
+   after `gptStartContinuous()`.
+
+Without (3) the timer fires **once and never again** — the SN32 GPT LLD enables
+the match interrupt but never sets reset-on-match, so the counter runs away past
+the match value instead of restarting. Symptom seen on hardware: the backlight
+blinked at full brightness roughly every 4-5 seconds and was otherwise black.
+It looks exactly like a brightness bug and is not one.
+
+**Hardware PWM on the backlight pin is NOT available — checked, don't re-derive.**
+`PANEL_BKL` is **A16**, and the SN32F299 datasheet gives `P0.16` the alternate
+function `CT16B5_CAP0` — a capture *input*. There is no PWM output route to that
+pin. Software PWM off a dedicated timer is the correct answer, not a workaround.
+
+### Matrix scan rate vs row-ISR rate (measured)
+
+| Row ISR | Matrix scan | Notes |
+|---|---|---|
+| 2,189/s | 1396 Hz | stock |
+| 8,963/s | ~1050 Hz | `SPD_STEP 64`, field rate 498 Hz (no GPT tick yet) |
+| 18,800/s | **389-404 Hz** | `SPD_STEP 128`, field rate 1046 Hz — **current, measured 2026-08-29** |
+
+The 585 Hz once predicted for this row was measured **before** the dedicated
+20 kHz PWM tick existed. With the GPT running there are ~38,800 interrupts/s
+between the two sources, and the real figure is ~390-400 Hz. Confirmed on
+hardware as feeling "nearly instant" to type on over Bluetooth.
+
+**The millisecond timebase runs ~1.2% slow at this load — a saturation canary.**
+`[pwmtick]` reports 20,150-20,260 Hz for a timer that is configured at, and was
+measured at, exactly 20,000. The timer cannot have sped up; QMK's `timer_read32()`
+ms counter has slowed, because systick interrupts are occasionally lost under
+~38,800 interrupts/s. The reading tracks row-ISR load exactly, which is the tell.
+
+Consequences are benign and worth knowing rather than fixing: the clock reads the
+SN32 RTC's hardware registers and the divider trim uses `rtc_seconds_count` plus
+the PCF's absolute time, so **neither is affected**; debounce becomes 5.06 ms.
+But if this number climbs much further, the board is out of CPU — treat a rising
+`[pwmtick]` as the first sign, before typing feel degrades.
+
+Cost scales **worse than linearly** — ISR entry/exit overhead on a Cortex-M0
+dominates a handler this small. 585 Hz is a 1.7 ms scan period; typing latency is
+dominated by switch travel and debounce, both far larger, and it feels fine on
+hardware. This is the first thing to back off (`SPD_STEP` → 64) if typing ever
+regresses.
+
+### Indicator LEDs (Caps / Win Lock / Charging)
+
+All three are plain GPIOs — Caps `D15`, Win Lock `C15`, Charging `B18` — and were
+searchlights at full drive. They are software-PWM'd on the same tick as the LCD
+backlight (`sn32_rgb_isr_hook` in `ak820pro.c`, which also calls
+`display_backlight_tick()`), with **per-LED levels**.
+
+- `INDICATOR_BRIGHTNESS_DEFAULT 1` — Caps and Win Lock, dimmest lit step.
+- `CHARGING_LED_BRIGHTNESS 0` — **off**. Not user-controllable, and the battery
+  icon now shows charging anyway.
+- `phase < duty` handles both ends without special cases: duty 0 never fires
+  (genuinely off, not a short pulse), duty == period is always on.
+
+**Caps Lock had to be claimed from QMK core.** It was driven by
+`led_update_ports()` from `indicators` in `keyboard.json`. `led_update_kb()`
+returning `false` skips that write so the pin is ours — but the `indicators`
+entry is **kept**, because it is what defines `LED_CAPS_LOCK_PIN` and configures
+D15 as an output at init.
+
+**Brightness and flicker are the same knob.** At these levels the LED is lit for
+exactly one tick per period, so one pulse per period *is* the flicker frequency —
+dimmer necessarily means slower. Measured on this unit:
+
+| Ticks | Switching | Min duty | Result |
+|---|---|---|---|
+| 64 | 293 Hz | 1.6% | no flicker, slightly too bright |
+| **96** | **195 Hz** | **1.0%** | current — accepted |
+| 128 | 146 Hz | 0.78% | Caps visibly flickered, looked intermittent |
+
+The only escape is a faster ISR, which costs matrix scan rate. If flicker
+returns, **shorten** `IND_PWM_TICKS` (brighter, faster) rather than reaching for
+`RGB_MATRIX_SPD_STEP`.
+
+### Caps Lock LED is unreliable over Bluetooth — same root cause as the digit bug
+
+Confirmed on hardware 2026-08-28: flaky in BT, reliable wired.
+
+`host_keyboard_leds()` dispatches to the **active host driver**. Wired, that is
+the USB LED report — direct and reliable. In BT/2.4G it is
+`bluetooth_keyboard_leds()` → the CH582F's `host_leds`, which `ch582f_ajazz.c`
+gates on `is_module_connected` and zeroes on every `5B` link-down code. So a
+wrong link state **silently drops every `5A` LED frame** and the Caps LED stays
+dark while the host thinks Caps is on. Same fragility as the BT channel-digit
+quirk; the `5A` promotion heuristic helps but does not guarantee it.
+
+**Not a bug: the laptop's Caps LED and the AK820's do not sync.** macOS tracks
+Caps Lock state per HID device, so each keyboard keeps its own state and LED.
+Capitalisation is global once Caps is on; the indicators are independent.
+
+### Battery display
+
+Bottom strip (`STATUS_Y 106`): battery icon bottom-left, percentage still
+right-aligned. 24x12 body plus terminal nub, drawn with `lcd_fill_rect` as four
+1px edges so the interior stays background and the fill is independent.
+
+- Colour by level: green >50%, amber 21-50%, red <=20%.
+- **Charging overrides with cyan**, on the outline as well as the fill, so it
+  reads as a state change rather than a level change.
+- Fill **rounds up** — any nonzero charge shows at least one column, because an
+  empty outline at 3% reads as "dead" rather than "nearly dead".
+- Redraw triggers on **charging state as well as level**. Easy to miss: the
+  level can sit unchanged for an hour while the cable goes in.
+- **9x14 charging bolt** right of the icon, shown only while actively charging
+  (`CHRG` low AND `STDBY` high — plugged in with a full battery is "done", not
+  charging, so the bolt stays hidden). Redundant with the cyan, deliberately:
+  colour is a fine cue once you know it, the bolt is legible immediately.
+- Icon at `BATT_X0 5` and percentage right-aligned to `PANEL_WIDTH - 4`, not the
+  panel edges — **the LCD is recessed and the bezel clips the outermost columns**
+  when viewed from the right.
+
+**Drawing diagonals: rasterise, do not hand-place.** Two hand-built zigzags of
+rectangles both read as the digit "4". Diagonals only look like diagonals when
+they step one pixel at a time, so define the shape as a polygon, rasterise it
+with PIL, and emit the horizontal runs as `lcd_fill_rect` calls (11 rects for the
+bolt). Reusable for any future glyph.
+
+**Runtime estimate: considered and rejected.** The CH582F reports whole percent
+only, so with a multi-day battery **1% ≈ 1.2 hours** — no rate is observable in
+under an hour, and ~5% of drop (≈6 h unplugged) is needed for even ±20%. RGB
+brightness swings the draw by perhaps 5-10x, so a rate measured under one load
+does not predict another, and this board lives plugged in, which resets the
+history constantly. It would be wrong far more often than right, and a
+confidently wrong number is worse than a blank space. Would need a voltage read
+or current sense; the protocol doc is explicit that `5C <pct>` is all there is.
+
+### LCD lock / layer indicator band
+
+The clock (Regular-30, 34 tall at `CLOCK_Y 49`) ends at y82 and the battery row
+starts at `STATUS_Y 106`, leaving **exactly 23px** — which is the Medium-20 cell
+height, so one row of status text fits precisely.
+
+```
+[padlock]  CAPS      WIN      FN|SCR
+   x=4     x=20      x=64      x=96
+```
+
+- Labels appear **only when active**; the band is left black otherwise. This
+  board lives on a desk in a dark room, so a permanently-lit row of words defeats
+  the point.
+- **Yellow padlock** appears for *lock* states only — CAPS, WIN, SCR. A held Fn
+  layer is not a lock and lights its slot without one; that stays correct if Fn
+  is ever made a toggle.
+- **Third slot is shared.** Scroll Lock wins when actually set, but the board has
+  no Scroll Lock key and macOS effectively never sets it, so in practice it is
+  the Fn indicator. Both fit: `FN` → x115, `SCR` → x125.
+- Redraws on the **~10 Hz housekeeping tick**, not the 1 Hz clock path, so a Caps
+  press shows immediately. Self-guards on state change.
+
+**Labels are white because `lcd_draw_flash_text()` has no colour parameter.** The
+atlases are RGB565 with colour baked in, and a glyph blit paints its whole cell
+*including* the black background — there is no transparency and no tinting.
+Colour is only available from `lcd_fill_rect`, which is why the padlock is drawn
+from rectangles rather than being a glyph. Real icons would mean regenerating
+`flash_assets.bin` + `flash_assets.h`, a firmware rebuild **and** re-provisioning
+— the coupling the handoff warns about.
+
+The padlock is 13×16: body plus a 9px shackle whose crown steps in two rows (5
+wide, then 7). A first attempt at 11×14 with a 5px flat-topped shackle read as a
+blob — too narrow against the body and visibly square on top.
+
+**"WIN", not "GUI".** The flag is `keymap_config.no_gui`, which technically
+disables Cmd on a Mac — but GUI-lock exists so the Windows key cannot yank you
+out of a fullscreen game, and on macOS locking Cmd would disable most hotkeys and
+nobody would enable it deliberately. The label names the only context where the
+feature is meaningful. (Also: nobody outside keyboard firmware calls it "GUI".)
+The accessor stays `lock_state_gui()` to match QMK.
+
+Fn detection uses the raw layer bitmask `(1<<1)|(1<<3)` for `WINFN`/`MACFN`,
+because that enum lives in `keymap.c` and is not visible from `ak820pro.c`.
+**Update the mask if layer indices are ever rearranged.**
+
+### Caps Lock did not capitalise — RESOLVED, cause never confirmed
+
+**Resolved 2026-08-28 after a reflash; root cause unknown.** Recorded because it
+cost real time and would look identical if it recurs. Observed: pressing Caps on the AK820 makes
+macOS show the caps indicator under the cursor, but typed letters are NOT
+capitalised. The MacBook's own Caps works normally. Not explainable by the LED
+code, which cannot affect keycode processing.
+
+**The NKRO theory below was never confirmed and was NOT the fix** — the console
+proves the Command combo never fired, so NKRO was never toggled. Most likely a
+state desync between macOS and the board that a reset cleared. Kept as the first
+thing to check if it returns.
+
+Hypothesis: `nkro: true` means the board presents **two** keyboard HID
+interfaces (confirmed via `ak820ctl list`: `usage_page=0x0001 usage=0x06` on both
+iface 0 and iface 2). macOS tracks Caps Lock state **per HID device**, so the
+toggle can register on one interface while ordinary keystrokes arrive on the
+other — indicator on, capitalisation not applied. The internal keyboard is a
+single device and has no such split.
+
+Against it: `NKRO_DEFAULT_ON` is **false**, so NKRO is off unless something
+enabled it — in which case both keystrokes and the Caps toggle use the same boot
+interface and macOS has nothing to split.
+
+**To investigate if it recurs**, no binding needed (`command: true` is on):
+hold **both Shifts**, then tap **`S`** — dumps `keymap_config.nkro`,
+`keyboard_protocol` and `host_keyboard_leds()` to the console. **`N`** toggles
+NKRO, **`H`** lists all magic keys. `IS_COMMAND()` is
+`get_mods() == MOD_MASK_SHIFT`, i.e. *exactly* both shifts and nothing else — a
+third modifier held silently prevents it firing.
+
+**Confirmed real, and the source of the confusion: macOS tracks Caps Lock state
+per keyboard**, not globally as on a PC. The MacBook's Caps and the AK820's are
+independent — separate states, separate LEDs. Expected behaviour, not a bug.
+
+### ⚠️ `flash write` ERASES FIRST — a failed write leaves the panel blank
+
+Hit on 2026-08-28. `ak820ctl flash write` erases all 48 sectors before writing,
+so a write that fails after starting destroys the existing assets. Symptom: the
+LCD shows **only the battery icon** — because that is drawn from `lcd_fill_rect`
+rectangles, while everything else (clock glyphs, connection strip, OS logo) comes
+from flash. That contrast is the fastest way to recognise it.
+
+The firmware announces the state clearly, and recovery is exactly what it says:
+
+```
+[assets] NO VALID INDEX at 0xCE0000 -- panel stays blank.
+[assets] provision with: ak820ctl flash write 0xCE0000 flash_assets.bin
+```
+
+**Verify raw HID responds BEFORE starting a write** (`ak820ctl info`). The write
+needs QMK running and the raw-HID interface free; if it is blocked, the erase
+still happens and you are left with nothing.
+
+**The usual cause is BLUETOOTH MODE, not a busy interface.** Confirmed in
+`tmk_core/protocol/host.c`:
+
+```c
+void host_raw_hid_send(uint8_t *data, uint8_t length) {
+    host_driver_t *driver = host_get_active_driver();   // BT driver in BT mode
+    (*driver->send_raw_hid)(data, length);
+}
+```
+
+Raw-HID **replies route through the active host driver**. In BT/2.4G mode the
+firmware receives the USB request, handles it, and sends the answer over the
+*wireless* link — where `ak820ctl` is not listening. So **`ak820ctl` and VIA both
+require the dip switch in wired mode.** Same host-driver indirection that makes
+the Caps LED unreliable over BT; third symptom of one cause.
+
+A browser can also hold the interface (usevia.app claims it exclusively while
+connected, and closing the tab in one browser does not help if it is open in
+another), but check the dip switch FIRST — it is the more common cause and
+costs nothing to rule out.
+
+Signature either way: `ak820ctl` says `no reply` while `qmk console` keeps
+printing scan rates — **console alive + raw HID silent is NOT the hang**. The
+hang kills both.
+
+**Do not reflash firmware to fix this** — the firmware is fine, and the
+bootloader is the wrong direction: provisioning needs QMK *running*. If the board
+is already in the bootloader, flashing the same binary is the quickest way back
+(sonixflasher reboots into QMK afterwards).
+
+**Do not touch the mode switch during a write.** Flipping `bt/off/cable`
+re-points the active host driver and drops the HID stream mid-transfer — seen at
+84% with `IOHIDDeviceSetReport failed: (0xE00002ED) device not responding`. The
+erase has already happened by then, so it leaves the same blank panel. Same
+hazard class as the browser holding the interface, different trigger. The board
+itself stays perfectly healthy throughout; just re-run the write.
+
+**Assets load at boot**, so after a successful write the panel stays blank until
+a power cycle. Watch for `[assets] index ok, N entries`.
+
+**Always confirm the on-device CRC against the local blob**, since a partial
+write can still report progress:
+
+```sh
+python3 -c "import zlib;print(hex(zlib.crc32(open('assets/flash_assets.bin','rb').read())))"
+```
+
+### Parameter overlay (info band shows what you just changed)
+
+Adjusting a setting puts a readout in the text band for `PARAM_OVERLAY_HOLD_MS`
+(2 s), then hands the band back. Covers RGB hue / sat / brightness / speed /
+effect, **RGB on-off**, **NKRO**, and **LCD backlight**.
+
+**NKRO is the one with no other feedback anywhere.** It is toggled by a magic key
+(both shifts + `N`), which is easy to hit by accident, and finding out what state
+it was in previously meant attaching a console — see the Caps Lock investigation.
+The other magic-key toggles (`swap_control_capslock`, `swap_lalt_lgui`,
+`swap_grave_esc`, `swap_backslash_backspace`, `swap_lctl_lgui`, `swap_rctl_rgui`)
+are equally invisible and equally accidental; they were left off as clutter, but
+**a mysteriously misbehaving key is worth checking against that list.** Both
+shifts + `H` lists them, both shifts + `S` dumps status.
+
+**`Fn`+`X` is `RM_TOGG`, QMK's built-in — NOT the custom `RGBM_TOG`.** It never
+reaches `process_record_kb`'s custom-keycode switch, so a keycode hook would have
+missed it entirely. Polling the flag catches it, the custom keycodes, and VIA.
+
+```
+Bright  53%     Hue    180     Sat     55%
+Speed   50%     Chevron        Jellybean
+```
+
+**Removable by design — one define.** `#define PARAM_OVERLAY` in `config.h`;
+comment it out and the poll task (`ak820pro.c`), the string slot (`display.c`) and
+the declaration (`display.h`) all compile out. Nothing else references it. Keep it
+that way — it is a personal nicety and should not entangle the rest.
+
+**POLLED, not hooked into `process_record_kb`.** Five byte comparisons on the
+10 Hz tick catch the `Fn` hotkeys, the `RGBM_*` custom keycodes **and anything VIA
+changes**, without caring which path made the change. Intercepting keycodes would
+miss VIA entirely. A `primed` flag skips the first pass so the band does not flash
+a readout at every boot for a change that never happened.
+
+**Effect names are a LOCAL table, deliberately not `rgb_matrix_get_mode_name()`.**
+That function is gated behind `RGB_MATRIX_MODE_NAME_ENABLE`, costs flash for all
+~40 effect names, and returns the raw enum spelling — `RAINBOW_MOVING_CHEVRON` is
+22 characters against a 12-character band. Only **10 animations are enabled**
+(`keyboard.json`), so a hand-written table is smaller *and* more readable. Each
+case is `#ifdef`'d on its own `ENABLE_RGB_MATRIX_*` so the build survives a change
+to the animation list; anything unlisted falls through to `Mode N`.
+
+**Percentages, not raw 0-255** — `53%` is legible where `136` needs you to know
+the scale. Hue is the exception: it is circular, so degrees are the meaningful
+unit. To show step counts (`16/31`) instead, change the `snprintf` formats.
+
+**Priority: pair hint > RGB > link state > host text.** An active gesture wants
+immediate feedback; a link state is passive and will still be there in two
+seconds.
+
+**The freeze risk here is smaller than it looks.** The hang fires when an eeconfig
+flash write races a flash→LCD DMA blit, and RGB adjustment is exactly when it used
+to happen — so adding LCD activity there is a fair worry. But the eeconfig flush is
+**synchronous on the main loop**, and `rgb_matrix_eeprom_flush_allowed()` already
+blocks starting a flush while a blit is in flight, so the two are mutually
+exclusive. If anything the extra blits *defer* flash writes, which is protective.
+
+### Wireless status overlay (firmware-owned words in the text band)
+
+The icon strip says *which* link and the digit says *which slot*, but a blinking
+digit only means something if you already know ~200 ms = pairing and ~700 ms =
+connecting. This puts it in words, in the same 24px band as the host text slot.
+
+| Link state | Shown | Note |
+|---|---|---|
+| `PAIRING`, BT | `Pair with:` ⟷ `AK820 5.1-1` | Alternates every 1.5 s (`CONN_STATUS_ALT_MS`), reading as one sentence. The name is the **exact advertised string**, slot digit included — the point is telling you what to look for in the phone's list, so a tidier name would be a lie. Tracks the slot: `-2`, `-3`. |
+| `PAIRING`, 2.4G | `Pairing 2.4G` | The dongle pairs; there is no advertised name, so nothing to alternate with. |
+| `LINKING` | `Connecting` | |
+| `CONNECTED` | `Connected` | **~3 s only** (`CONN_STATUS_HOLD_MS`), then the band is released. |
+| `REJECTED` | `Link failed` ⟷ `Hold Fn+W` | Symptom alternating with the **remedy**, naming the single key for the slot that failed (`Q`/`W`/`E` for BT 1-3, `R` for the dongle). `Hold Fn+Q/W/E` is 13 chars — over budget — and worse advice, since the slot is known. |
+| wired | *nothing* | The CH582F is bypassed in USB mode, so its state is stale — report nothing rather than the last wireless session's. |
+
+**The remedy is shown for `REJECTED` only — deliberately NOT for a long-lived
+`LINKING`.** A persistent `LINKING` is ambiguous: it is equally a dropped
+`5B 32` on a link that is actually **up** (the known bug), and telling someone to
+hold the slot key there would tear down a working connection to fix a display
+bug. `REJECTED` has no such ambiguity — nothing is working either way, so
+re-pairing costs nothing. This also makes the advice robust against the `0x36`
+uncertainty below: "re-pair this slot" is sane for any stuck wireless state, so a
+wrong reading of the code costs the label, not the instruction.
+
+**Dirty-tracking gotcha (was a real bug).** `conn_status_buf` is shared by the
+pairing and remedy strings, so a change of *state* must mark it dirty as well as
+a change of *slot* — `REJECTED` → `PAIRING` on the same slot rewrites the buffer
+while its POINTER is unchanged, and a pointer compare alone leaves the previous
+message on the panel. Both feed `changed` in `conn_status_update()`.
+
+**`5B 36` — CAPTURED ON THE WIRE 2026-08-29, and it is absent from the protocol
+doc's state table** (which lists only `0x31`, `0x32`, `0x33`/`0x34`, `0x23`).
+Selecting an unreachable slot produced:
+
+```
+5B 34            connect attempt
+5B 32  x2        link established        <- a DIFFERENT, successful slot
+5B 23            idle
+  --- Fn+E pressed, selecting an unreachable slot ---
+5B 33  x2        connect attempt
+5B 36            ATTEMPT ABANDONED
+5B 23  x2        idle  (ignored by the parser)
+```
+
+So `0x36` follows failed attempts and then **persists** — the module never
+retracts it, and the trailing `5B 23` is deliberately ignored, so `REJECTED`
+sticks until something else changes state.
+
+**It means "the attempt failed", NOT "not paired".** A bonded host that simply
+happens to be powered off would look identical. That is why the panel says
+`Link failed` and not `Refused` (asserts the host decided) or `Not paired`
+(asserts an absent bond) — both claim more than the capture supports. The
+disassembly has been wrong before in ways that mattered: it called `0xA1`
+"channel connect" when it carries keystrokes, and `5C` "brightness" when it is
+battery percent.
+
+**The digit must NOT be blanked in this state.** It originally was, which is what
+made a failed connect look like a display bug — the slot is still the one you
+selected, so hiding it discards real information. It now shows on a **2 s pulse**
+(`CONN_BLINK_FAILED_MS`), reading as dormant rather than busy; solid could not be
+reused because solid already means connected.
+
+**The advertising name cannot currently be changed, and "5.1" is meaningless.**
+It is Bluetooth-version marketing with no functional role. `0xA9` (device name)
+exists but **this port never sends it**, so the name comes from the module's own
+stored value; it appends the slot to a prefix, giving `AK820 5.1-1`. Renaming
+would mean sending `0xA9` with framing documented only as `"AK820 5.1-$"` plus a
+separate length field, **none of it verified on the wire**, writing to module
+storage **that cannot be read back** (there is no dump path off this board).
+Capture what the stock firmware sends before attempting it.
+
+**It borrows the band; it does not own it.** There is no spare vertical space
+(top strip 0..24, text 25..48, clock 49..82, locks 83..105, battery 106..), so
+the overlay outranks host text *while active* and hands it straight back. A track
+title is displaced for seconds, never lost.
+
+**`CONNECTED` is a confirmation, not a readout.** The solid digit already says
+"connected" indefinitely; holding the word there would permanently cost the music
+slot to convey nothing new.
+
+**The overlay gets TWELVE characters; the host slot gets fewer.** The overlay
+draws no icon, so it starts at `CONN_STATUS_X` (4) rather than `TEXT_X` (16):
+4 + 12*10 = 124, inside the 128px panel and keeping the same 4px margin the
+battery row uses for the recessed bezel. Host text, which must clear the icon
+gutter, would run to x=136 at 12 glyphs and get clipped — so that path is
+effectively 11. Widening the overlay by one character is exactly what let the
+full advertised name fit.
+
+**No icon is drawn.** The icon IDs are media transports (play/pause/stop) and
+would misdescribe a link event.
+
+Implementation is `conn_status_update()` in `graphics/display.c`, called from the
+~10 Hz housekeeping tick *before* `draw_text_slot()` so an appearing or releasing
+overlay repaints on the same tick. State is a `const char *` to a string literal,
+so the change check is a pointer compare.
+
+### Host text slot (arbitrary data pushed to the LCD)
+
+A single line the host pushes over raw HID, drawn in the 24px band at **y25..48**
+between the top row and the clock. **The firmware attaches no meaning to it** —
+a host script decides what it says. Media is just the first producer.
+
+```
+channel 0x12 TEXT_CHANNEL
+  0x01 TEXT_SET    [icon][up to 12 ASCII bytes]
+  0x02 TEXT_CLEAR
+```
+
+**One packet carries everything, so there is no framing.** The band fits 12
+glyphs (128px / 10px advance) against ~27 usable bytes per raw-HID report, so
+offsets, commits and partial-render states were all designed away rather than
+solved. This is why the feature stayed small.
+
+- `icon`: `0 none, 1 play, 2 pause, 3 stop` — an ICON ID, not a "media state",
+  so other producers can reuse it without the name lying. Drawn from
+  `lcd_fill_rect` (green/amber/red) because colour is unavailable from the font
+  atlases.
+- **No scrolling, deliberately.** A marquee would redraw at ~10 Hz and keep the
+  flash→LCD DMA busy far more than the current cadence — the same resource the
+  eeconfig-write freeze was about. Truncation is also less distracting.
+- **Non-ASCII becomes `?`** in firmware (the atlases are printable-ASCII only, so
+  anything else indexes off the glyph table). The host script transliterates
+  first — curly quotes, em-dashes, accents — so `?` is a last resort.
+- **Expires after `DISPLAY_TEXT_TIMEOUT_MS` (3 min)** and blanks itself on the
+  10 Hz tick, without the host having to do anything. Stale data presented
+  confidently is worse than none: agent crashes, sleep and unplug all end with a
+  blank slot rather than last night's track.
+
+**Optimistic play/pause.** `process_record_kb` catches `KC_MEDIA_PLAY_PAUSE` and
+flips the icon immediately, then the next host poll overwrites it with the truth.
+The host stays authoritative, so a wrong guess self-corrects within one interval
+— unlike tracking playback locally, which desyncs permanently. It returns
+**true** (the keypress must still reach the host) and deliberately does **not**
+touch `text_stamp`, since a guess is not evidence the agent is alive.
+
+**NOT A BUG: a track from hours ago in the band is usually correct.** It looks
+exactly like the expiry having failed, and is not. `nowplaying-macos.sh` pushes on
+`paused` as well as `playing`, so an open player sitting on last night's track
+keeps reporting that track — it is the live answer to *"what plays if you hit
+play"*, refreshed every 3 s. The `DISPLAY_TEXT_TIMEOUT_MS` expiry only fires when
+**nothing refreshes the slot**, which is why it never triggers here. Confirmed
+2026-08-29: Music reported `paused` / `Memoirs (VIP)` while the band showed it.
+
+To make paused blank the band instead, drop the `paused)` case in the poll loop —
+but note that makes the firmware's optimistic play/pause icon flip incoherent, as
+it would flip to a pause icon that is about to vanish.
+
+**Installed as a LaunchAgent** (`hostagent/com.jdlien.ak820pro.nowplaying.plist`,
+copied to `~/Library/LaunchAgents/`). `KeepAlive` with `ThrottleInterval 30`, so
+unplugging the keyboard retries every 30 s rather than spinning. Log at
+`~/Library/Logs/ak820pro-nowplaying.log`. Three absolute paths need changing on a
+different machine: the script path, the log path, and `PY` in the script.
+
+**The push is write-only, so it works in BT mode** — unlike `ak820ctl` and VIA.
+Those break wirelessly because the firmware routes raw-HID *replies* through the
+active host driver; `ak820text.py` only ever calls `h.write()`, so there is no
+reply to misroute. It does still need the USB cable connected for the HID
+interface to exist.
+
+**AppleScript needs Automation permission.** Launched from `launchd` rather than a
+terminal, the consent prompt may not surface and queries silently return empty —
+band stays blank, nothing in the log. Fix in System Settings → Privacy & Security
+→ Automation.
+
+**Host side** lives in `hostagent/`, outside the QMK clone:
+
+| File | What |
+|---|---|
+| `ak820text.py` | the dumb pipe — text + icon, one packet. Knows nothing about music. |
+| `nowplaying-macos.sh` | one producer: polls Spotify/Music every 3 s, pushes on change |
+
+Uses the `hid` package's `hid.Device(path=…)` API (a QMK CLI dependency), not
+hidapi's `hid.device()`. Match on `usage_page 0xFF60 / usage 0x61` — the board
+publishes several HID interfaces and only that one is QMK raw HID.
+
+`nowplaying-macos.sh` checks `is running` **before** querying player state:
+asking Music for its state will otherwise **launch** the app, which is a rude
+side effect for a background poller.
+
+**AppleScript, not MediaRemote** — app-specific (so no browser/YouTube media),
+but stable. Apple has progressively restricted MediaRemote and third-party
+wrappers break between OS versions. **Windows is better here**: 
+`GlobalSystemMediaTransportControlsSessionManager` is a public API *and*
+browsers register SMTC sessions, so YouTube works. The firmware is
+platform-agnostic — a Windows producer sends the same bytes, no reflash.
+
+### Boot splash is JD's bunny logo (2026-08-29)
+
+**The file is still named `sonixqmk.png` and that is deliberate.** Asset ids are
+assigned by **sorted filename** in `mkraw.py`, so renaming it shifts every id
+after it, which forces a firmware rebuild *and* a synchronised re-provision —
+with a window where the LCD renders garbage if the two disagree. Keeping the name
+made this an **assets-only** change: the generated `flash_assets.h` came out
+byte-identical to the firmware's copy, which is the check that authorises
+skipping a rebuild.
+
+Source art (`assets-src/bunny-source.png`, 612x792 RGBA) is **black ink on a
+transparent ground**, so the alpha channel IS the shape. Two non-obvious steps:
+
+1. **Inverted.** The panel draws on black, so ink becomes white and transparent
+   becomes black. The artwork's negative space (face, inner ear, eye) then reads
+   as dark, which is how the logo is meant to look on a dark ground.
+2. **Trimmed BEFORE scaling.** The artboard carries ~99px of empty margin left
+   and 86 right. Scaling the canvas rendered the bunny at only ~63x98 inside a
+   128px panel; trimming to the ink bbox (427x667) first gets it to **78x122**,
+   ~22% larger each way. Always trim to the alpha bounding box.
+
+Downsampling is an **area average**, not point sampling — 427x667 -> 78x122 is a
+5.5x reduction and nearest-neighbour shreds the thin ear strokes. Grey edge
+values cost nothing since the target is RGB565.
+
+The design is 0.640 aspect (tall and narrow) against a square panel, so it cannot
+fill the width without distortion. It is JD's own logo — **do not stretch it.**
+
+Regenerate with `assets-src/mkbunny.py` (stdlib only; **no Pillow on this
+machine** — it reuses `mkraw.decode_png`), then `mkraw.py --flash`, diff the
+header, and provision. Original splash kept at
+`assets-src/sonixqmk-original-splash.png`.
+
+### The animation slot is stock, orphaned, and empty
+
+`Fn`+`Delete` (`ANIM_TOG`) plays a full-screen frame animation straight from
+external flash by DMA — an AJAZZ feature the stock firmware used. Frames live at
+`ANIM_BASE 0x540000`, `ANIM_STRIDE` 32 KB each, one per 100 ms off the
+housekeeping tick. While it runs it **owns the SPI bus**: the dashboard is
+suspended and RTC polling must stop, because the bit-banged RTC I2C (A14/A15)
+shares port A with the flash SPI1 pins (A12/A13) and glitches them mid-DMA.
+
+**On this board it does nothing, and that is correct.** Probed 2026-08-29 with
+`ak820ctl flash crc` (there is no read command, but a CRC against a known pattern
+answers the question):
+
+| Region | CRC | Means |
+|---|---|---|
+| `0x540000` +256 (header) | `0x0D968558` | **exactly the CRC of 256 zero bytes** — frame count is 0 |
+| `0x540100` +4096 (frames) | `0xC71C0011` | neither blank (`0xFF`) nor zero — real pixel data |
+
+So orphaned stock frames are still sitting there under a zeroed header. That
+region is **below `FLASH_ASSET_BASE`**, so `ak820ctl` will not write it without
+`--unlock` — which is why provisioning the QMK assets never disturbed it.
+
+**Pressing it used to blink the screen black for ~1 s.** `anim_toggle()` paused
+the dashboard and flipped the panel orientation *before* checking the header, then
+undid both — and `display_set_paused(false)` forces a full repaint. Fixed
+2026-08-29 by reading the header first; an empty slot is now a true no-op. Safe
+there because the dashboard does SPI1 flash reads constantly anyway.
+
+**There is NO validation** — no magic, no checksum. The zero count is the only
+thing protecting the panel; a bad header paints garbage rather than failing. To
+provision one, `mkanim.py` in `time-util-ak820pro/assets/` converts a GIF to a
+frame blob. Ceiling is 244 frames, derived from the room between `ANIM_BASE` and
+the asset region rather than guessed.
+
+### Known quirks
+
+**FIXED (symptom) — hard freeze while adjusting RGB.** Predates any of this
+session's changes. Symptom: a row of keys stuck on one solid colour (whichever of
+the 18 hardware row slots the mux stopped on) and the board completely dead until
+a power cycle.
+
+Confirmed live on 2026-08-28, not inferred:
+
+| Signal | During hang |
+|---|---|
+| USB `0x8009` on bus | present |
+| 6 HID interfaces | present (**OS-cached — proves nothing**) |
+| `ak820ctl info` raw-HID round-trip | **`no reply`** |
+| `matrix scan frequency` on console | **silent for 2m14s** |
+| LED row mux | frozen, one row energised |
+| Recovery | power cycle only |
+
+USB peripheral alive, nothing at application level running = CPU parked in `WFI`
+with no pending interrupt left to wake it. `config.h` already documented the
+mechanism: an eeconfig/VIA flash write stalls instruction fetch long enough that
+the SPI0 DMA completion IRQ is missed and the WFI wakeup is lost. Every RGB
+adjustment step writes eeconfig, which is why tuning LEDs triggers it.
+
+`efl_ramtext.diff` (applied) narrows this race but **does not close it**.
+
+**`CORTEX_ENABLE_WFI_IDLE FALSE` was tried first and DID NOT FIX IT.** The
+config.h comment describes two failures from one cause — a missed SPI0 DMA
+completion IRQ *and* a lost WFI wakeup — and that only addresses the second. It
+reproduced on the very next build, log ending on `rgb matrix set hsv [EEPROM]`
+exactly as before. Kept `FALSE` anyway (free on a plugged-in board, removes one
+half), but **do not mistake it for the fix**.
+
+The actual fix is two-layered:
+
+1. `RGB_MATRIX_EEPROM_WRITE_DELAY 750` — QMK's `eeconfig_flush_rgb_matrix_task`
+   debounce, which this tree had but wasn't calling. Cuts writes from ~8/s while
+   a key is held to ≤1.3/s. Good for flash wear independently.
+2. `rgb_matrix_eeprom_flush_allowed()` in `ak820pro.c` returning
+   `!lcd_blit_busy()` — never *start* an internal-flash write while a flash→LCD
+   DMA blit is in flight. Aims to close the race rather than narrow it.
+
+Deliberately **not** gated on `anim_active()`: the animation player runs
+continuous DMA, so that would mean RGB settings never persist while an animation
+plays. Blits are short, so per-blit gating still finds gaps.
+
+Status: deliberate hammering of the brightness keys no longer reproduces it.
+**Not proven** — it was always intermittent, and one clean run is not a fix.
+Watch for it in normal use.
+
+**Diagnostic recipe** (reuse for any future hang): raw-HID round-trip
+(`ak820ctl info`) is the liveness probe — USB enumeration and `ak820ctl list` are
+**not**, they answer from OS-cached descriptors. `DEBUG_MATRIX_SCAN_RATE` and
+`console: true` are both already on, so `qmk console` prints a scan-rate line
+every second; the second it stops is the second the main loop died. Capture it
+with timestamps to a log so the *next* hang leaves the preceding lines:
+
+```sh
+qmk console 2>&1 | while IFS= read -r l; do printf "%s %s\n" "$(date +%H:%M:%S)" "$l"; done >> log
+```
+
+**The stuck-LINKING state silently KILLED MEDIA KEYS over Bluetooth — fixed
+2026-08-29.** This is the part that made the bug look cosmetic when it was not.
+`bluetooth_send_keyboard()` sends `0xA1` frames **unconditionally**, but
+`bluetooth_send_consumer()` was gated on `ch582_kbd_output_active()`, i.e.
+`connect_requested && is_module_connected`. So while stranded in `LINKING`:
+
+| Path | Frame | Gated? | Result while stuck |
+|---|---|---|---|
+| Typing | `0xA1` | no | **works** |
+| Volume / media (encoder) | `0xA3` | on `is_module_connected` | **silently dropped** |
+
+Hence "Bluetooth mostly works" — half the input path was dead and the other half
+was fine. The gate is now `connect_requested` only, matching the keyboard path:
+a consumer frame sent to a link that is genuinely down just goes nowhere, which
+is strictly better than dropping it on a link that is actually up. The now-unused
+`ch582_kbd_output_active()` helper was removed.
+
+**There is no way to ASK the module its state — checked, do not re-derive.**
+`0xA5` "Status" is documented as inert with no reply, and `CH582F_PROTOCOL.md`
+forbids `5C` battery as a connection signal in bold. `5B 32` is a one-shot
+announcement and `5B 23` (idle) is emitted both connected and disconnected, so a
+dropped `5B 32` and a genuinely failed link produce **byte-for-byte identical**
+traffic from then on. The driver cannot distinguish them; only heuristics remain.
+
+**Most likely root cause: the interrupt priority inversion.** `5B 32` is a single
+inbound UART frame, and UART2 sat at the LOWEST priority while the row ISR ran at
+up to 18,800/s — the same starvation that mangled outbound frames. Intermittent
+by nature ("mostly works, occasionally not"), which matches the observed
+behaviour. Priorities were fixed 2026-08-29; **watch whether the blink recurs on
+that firmware before adding any further heuristic.**
+
+**Real bug — BT channel digit blinks forever after a successful pair.**
+Observed 2026-08-28: paired fine and typing worked, but the channel digit kept
+blinking. Flipping the dip switch to wired and back to BT fixed it.
+
+Root cause is a genuine fragility, not a coding slip. `ch582f_ajazz.c` derives
+connection state *only* from `5B` event frames, and `CH582_PROTOCOL.md` states
+`5B 32` is **"the only 'connected' signal."** The module sends it **once**, on
+link-up, and never re-asserts — the doc notes the RX line is *"otherwise silent
+at steady idle."* So the driver is edge-triggered (`conn_state =
+CH582_CONN_LINKING; /* attempting until 5B says otherwise */`), and one missed
+frame strands it in `LINKING` indefinitely while the link is actually live.
+
+Blink rate identifies the stuck state: **~200 ms = `PAIRING`**,
+**~700 ms = `LINKING`** (`CONN_BLINK_PAIRING_MS` / `CONN_BLINK_LINKING_MS` in
+`graphics/display.c`).
+
+**Fix implemented and flashed 2026-08-28. Early hardware testing looks good** —
+switching to BT gave a solid icon + solid digit, and pairing a phone to an empty
+slot behaved correctly (fast blink while advertising, then settled). Not yet
+*conclusively* proven: the original bug was intermittent, and a solid digit is
+also what the normal `5B 32` path produces, so a handful of good cycles cannot
+distinguish "fixed" from "did not recur." Treat as probable-good, not confirmed.
+Promotes `LINKING` → `CONNECTED` on a `5A` host-LED frame (a host only sends LED
+state to a device it is connected to). The naive version is unsafe, because the
+existing `5A` guard exists precisely to reject forged frames from the *power-up /
+2.4G link-up burst* — the same window a promotion would fire in. So it is gated
+three ways:
+
+1. same plausibility mask as the existing guard, `(d & ~0x1F) == 0`;
+2. state must be exactly `LINKING` — never `IDLE`/`REJECTED`/`PAIRING`;
+3. `CH582_5A_PROMOTE_MS` (3000 ms) must have elapsed since `LINKING` began.
+
+The dwell is what makes it safe: a genuine `5B 32` arrives at link-up and would
+already have won, so anything still `LINKING` 3 s later is a missed frame, not
+one in flight. The promoting frame deliberately does **not** apply its LED bits —
+lighting Caps off the frame that establishes the link is the exact failure the
+original guard prevents; a real host repeats its LED state.
+
+`linking_since` is a dedicated 32-bit timestamp, **not** `last_attempt_time`,
+which the connect retry resets every 500 ms and so never accumulates. It is
+stamped at both `LINKING` entry points, guarded on the `5B 33/34` path so
+repeated frames do not restart the window.
+
+**Known gap:** only recovers from `LINKING` (slow blink). A stuck `PAIRING`
+(fast blink) is not covered — during pairing the module is advertising and no
+host should be sending LED frames, making promotion a weaker inference there.
+
+**Do not use the `5C` battery reply for this** — the protocol doc warns in bold
+it must never be treated as a connected signal, and the driver already polls it
+every 5 s.
+
+**To validate:** several pair/re-pair cycles; digit should go solid within ~3 s
+of link-up. Confirm Caps Lock still mirrors over BT.
+
+**Mitigated — "DLP rainbow" color sparkle** on the RGB, visible peripherally / on
+eye movement. `SN32F2XX_RGB_MATRIX_ROW_CHANNELS 3 // R, B, G` means R/G/B light
+in separate time slots, so saccades separate the fields. Inherent to the driving
+scheme, not the LED packages. **Halved by doubling the field rate to 242 Hz** —
+see "RGB field rate" under the local firmware edits for the math, the coupled
+constants, and the next lever. Not fully eliminable at any achievable field rate.
+- **`sonixqmk` boot splash has a white background** (the PNG is 52% pure white —
+  fpb authored it that way). It only looked black before because the panel was
+  inverting. To darken it: edit the PNG, re-run `mkraw.py --flash`, re-provision
+  with `ak820ctl` — **no firmware rebuild needed**, since asset count and
+  dimensions are unchanged so `flash_assets.h` stays identical.
+
+**The shipped v1.10 is gone permanently.** The AJAZZ Windows driver installer was
+never grabbed, so the rollback floor is fpb's
+`StockFWBinaries/AJAZZ_AK820PRO_PID_8009_V1.13_SN32F290.bin`.
+
+### Re-entering the bootloader
+
+The pin short is **no longer needed**: `ESC` while plugging in, or `Fn`+`ESC`
+from a running keyboard. Re-flashing is now cheap.
+
+### If you ever do need the pin short again
+
+It is a **2-pin female header** in the spacebar channel, just left of the
+spacebar switch — not a pair of exposed pads (`ajazz-ak820-pro/img/bootloader-pins.jpg`).
+
+Hard-won details:
+
+- **A pair of SIM-eject tools works far better than tweezers.** Stiff, right
+  pitch, won't skate off mid-insertion. Seating something that *stays* put beats
+  trying to pinch contacts at the same instant you seat the USB connector.
+- The ISP pin is sampled **only at power-on reset**. This is a tri-mode board
+  with a battery, so put the `bt/off/cable` dip switch in **cable** (or off) and
+  wait ~10 s unplugged, or the MCU may never actually cold-boot and the short
+  does nothing no matter how good the contact is.
+- **Bootloader mode looks completely dead** — no RGB at all, LCD dark, no
+  typing. If anything lights up, it booted stock/QMK instead. There is no subtle
+  indicator.
+- Bootloader mode is **latched**. Once `0C45:7140` appears you can remove the
+  short — and you should, or `sonixflasher`'s post-flash reboot lands right back
+  in the bootloader.
+
+---
+
+## Environment
+
+`source env.sh` sets `QMK_HOME` and `PATH` for everything below.
+
+> The handoff and `ak820pro-mac-setup.sh` assume `~/ak820pro`. **That directory
+> does not exist.** Everything was built in place here instead, to reuse the
+> clones that were already present. Translate paths accordingly when following
+> the handoff.
+
+```sh
+source env.sh
+cd "$QMK_HOME" && qmk compile -kb a_jazz/ak820pro -km via
+```
+
+Toolchain: xpack `arm-none-eabi-gcc` 13.3.1, venv `qmk` CLI 1.2.0 (fine on the
+system Python 3.14), Homebrew `hidapi` 0.15.0 + `pkg-config`.
+
+### ⚠️ SonixFlasherC MUST be built with `USE_LIBUSB=1`
+
+**`make sonixflasher` silently produces a binary that cannot flash on Tahoe.**
+This cost real time — do not repeat it.
+
+Being on fpb's `fix_for_macos_tahoe` branch is **not sufficient**. Look at the
+Makefile: the fix lives in `hid_wrappers.c`, and `OBJS=hid_wrappers.o` sits
+inside an `ifeq ($(USE_LIBUSB), 1)` block. Without the flag, `hid_wrappers.c` is
+never compiled, the binary links against plain hidapi, and it fails — while
+still reporting itself as `sonixflasher 2.0.8`, exactly like a good build.
+
+```sh
+brew install libusb
+cd SonixFlasherC && make clean && rm -f sonixflasher && make USE_LIBUSB=1
+nm sonixflasher | grep -c libusb     # must be > 0
+```
+
+**Failure signature** (all five retries, no other diagnostic):
+
+```
+ERROR: Could not open the device (Is the device connected?).
+Device failed to open, re-trying in 3 seconds. Attempt 1 of 5...
+```
+
+**Do not chase this as a permissions problem.** The tell is that
+`ioreg -p IOUSB` shows the device present while **no `IOHIDDevice` node exists
+for it**:
+
+```sh
+ioreg -c IOHIDDevice -w0 -l | grep -c '"ProductID" = 28992'   # 0 on Tahoe
+```
+
+On Tahoe, macOS enumerates the SN32 bootloader as a USB device but publishes no
+HID interface, so hidapi has nothing to open. **`sudo` does not help** — there
+is no HID node to gain permission to. Neither does Input Monitoring, and neither
+does disabling the agent sandbox (all three were tried). libusb talks to the USB
+device node directly and sidesteps the whole problem.
+
+### ⚠️ Local firmware edits — uncommitted, in an upstream clone
+
+`qmk_firmware-ak820pro/` is a pristine clone with **uncommitted local changes**.
+A `git checkout`/`git pull`/`git stash` there silently reverts them and the
+keyboard regresses. Check `git status` before touching that repo.
+
+**Two of these are in QMK CORE, outside `keyboards/`** — easy to miss when
+looking for local changes. `git status` in `qmk_firmware-ak820pro/` is the only
+reliable inventory.
+
+Inside `keyboards/a_jazz/ak820pro/`:
+
+| File | Change | Why |
+|---|---|---|
+| `graphics/lcd_bus.c` | `MADCTL_270` (`0xA8`) → `MADCTL_DASH` (`0x68`) | **This unit's LCD is mounted 180° from fpb's** and rendered upside down. Traded MY for MX. |
+| `graphics/lcd_bus.c` | added `0x21, 0, 0` (INVON) to the init sequence | This panel renders the firmware's white-on-black as black-on-white without it. |
+| `keyboard.json` | `rgb_matrix.default` += `hue 21, sat 140, val 64` | Dim warm white instead of QMK's default full-brightness red (`val 64` against the 255 ceiling ≈ 25%). |
+| `config.h` | `RGB_MATRIX_MAXIMUM_BRIGHTNESS 255`, `HUE_STEP 16`, `VAL_STEP 8`, `SPD_STEP 128` | LED field rate 121 → **1046 Hz** for the DLP-rainbow artifact. Only safe with the priority ordering in `mcuconf.h` — see that section. |
+| `config.h` | `CORTEX_ENABLE_WFI_IDLE FALSE` | Removes one half of the hang mechanism. **Did not fix the hang** — kept because it is free on a plugged-in board. |
+| `config.h` | `DISPLAY_CLOCK_SHOW_SECONDS TRUE` | Was `FALSE` with no stated reason; `display.c` defaults it on. |
+| `config.h` | `RTC_CHECK_INTERVAL_S 60`, `RTC_PERIOD_INITIAL 33400` | Calibration was hourly; the ILRC divider is measured, not nominal. See the RTC section. |
+| `config.h` | `RGB_MATRIX_EEPROM_WRITE_DELAY 750` | Debounces eeconfig writes (~8/s → ≤1.3/s). Half of the hang fix. |
+| `rtc/rtc.c` | divider trim in `rtc_clock_discipline()`, seed in `rtc_init()` | The trim the docs claimed existed but never did. See the RTC section. |
+| `bluetooth/ch582f_ajazz.c` | `CH582_5A_PROMOTE_MS`, `linking_since`, `5A` promotion branch | Recovers from a missed `5B 32`. See the BT quirk entry. |
+| `ak820pro.c` | `rgb_matrix_eeprom_flush_allowed()` → `!lcd_blit_busy()` | The actual hang fix. See the hang entry. |
+| `ak820pro.c` | `SCR_UP` / `SCR_DN` cases in `process_record_kb` | LCD brightness keys. |
+| `ak820pro.c` | `TEXT_CHANNEL 0x12`, `is_text_cmd`, `text_command` | Host text slot — see its section. |
+| `ak820pro.c` | `KC_MEDIA_PLAY_PAUSE` case (returns **true**) | Optimistic play/pause icon flip. |
+| `graphics/display.c` `.h` | text slot buffer, render, expiry, transport glyphs | ditto. |
+| `graphics/display.c` | `conn_status_update()`, `CONN_STATUS_HOLD_MS`, overlay render | Wireless status words in the text band — see its section. |
+| `config.h` | `PARAM_OVERLAY`, `PARAM_OVERLAY_HOLD_MS` | One switch that compiles every readout in or out entirely. |
+| `ak820pro.c` | `param_status_task()`, `rgb_mode_short()` | Polls RGB / NKRO / RGB-enable on the 10 Hz tick; local short-name table for the 10 enabled effects. |
+| `graphics/display.{c,h}` | `display_set_param_status()`, `display_get_brightness_max()` | Stores and renders the readout; formatting stays in `ak820pro.c` so the RGB API is out of the graphics layer. |
+| `ak820pro.c` | `SCR_UP`/`SCR_DN` push `LCD nn%` | LCD backlight readout, level index as a percentage. |
+| `graphics/lcd_bus.c` | `anim_toggle()` reads the header BEFORE pausing | An empty animation slot blinked the screen black for ~1 s and did nothing. This board's stock header reads **zero frames**, so that was all `Fn`+`Delete` did. Upstreamable. |
+| `ak820pro.h` | `SCR_UP`, `SCR_DN` **appended** to `ak820pro_keycodes` | Index-matched to `via.json` — append only. |
+| `graphics/display.c` | backlight software PWM + brightness API, ticked from `GPTD4` | See the dedicated-timer section. |
+| `graphics/display.h` | `display_{get,set}_brightness`, `display_brightness_{up,down}` | ditto. |
+| `config.h` | `DISPLAY_BRIGHTNESS_DEFAULT 1`, `INDICATOR_BRIGHTNESS_DEFAULT 1`, `CHARGING_LED_BRIGHTNESS 0` | Dimmest lit step; charging LED off. **No longer coupled to `SPD_STEP`** — the PWM tick moved to its own timer. |
+| `keymaps/via/keymap.c` | `SCR_UP`/`SCR_DN` on `Fn`+`PgUp`/`PgDn`, **both** Fn layers | Beside the existing `Fn`+`Home` toggle. |
+| `mcuconf.h` | **`SN32_SERIAL_UART2_PRIORITY 1`, `SN32_GPT_CT16B3_IRQ_PRIORITY 2`, `SN32_PWM_CT16B0/1/2_IRQ_PRIORITY 3`** | The defaults were inverted. Fixes Bluetooth throughput AND backlight flicker. See the priority section. |
+| `mcuconf.h` | `SN32_GPT_USE_CT16B3 TRUE` | Dedicated 20 kHz PWM tick. |
+| `halconf.h` | `HAL_USE_GPT TRUE` | ditto. |
+| `ak820pro.c` | `pwm_tick_init()`, `pwm_tick_cb()`, `MCTRL` reset-on-match | The 20 kHz tick. The `MCTRL` line is mandatory — see the timer section. |
+| `ak820pro.c` | `indicators_tick()`, `led_update_kb()` → `false` | Per-LED indicator PWM; claims Caps from QMK core. |
+| `bluetooth/ch582f_ajazz.c` | `tx_stat_sent` / `tx_stat_timeout` / `tx_stat_drop` counters | **KEPT** — prints `[ch582]` every 5 s *on change only*. The BT path is the fragile one; this is how the priority inversion was caught. |
+| `bluetooth/ch582f_ajazz.c` | `bluetooth_send_consumer()` gated on `connect_requested` only | Was also gated on `is_module_connected`, which silently killed media keys whenever the digit was stuck blinking. See the digit entry. |
+| `ak820pro.c` | `[pwmtick]` per-second print **REMOVED** | Served its purpose; the recipe to re-add it (and how to read the number) is in the comment above `pwm_tick_cb()`. |
+| `ak820pro.c` | `bt_pair_hold_task()`; slot keys + `Fn`+`P` only arm/disarm | Hold-to-pair fires at the threshold under the finger, not on key-up. |
+| `graphics/display.{c,h}` | `display_set_pair_hint()`, `Hold to pair` | Feedback during the hold; outranks link state. |
+| `graphics/display.c` | `CONN_BLINK_FAILED_MS`, digit shown on `REJECTED` | A failed link kept its slot digit instead of blanking it. |
+| `bluetooth/ch582f_ajazz.c` | `pairing_pending`, `CH582_PAIR_RETRY_MS`, `CH582_PAIR_MAX_TRIES` | Resend `A6 51` until `5B 31` confirms — the module drops it during a connect attempt. |
+| `ak820pro.c` | `BT_PAIR_HOLD_MS` 1000 → **2000** | A slow tap at 1 s could accidentally drop a live link and start advertising. |
+| `graphics/display.{c,h}` | `display_set_pair_hint(int16_t pct)` → `Pair: ======` bar | Progress during the hold; a static label at 2 s reads as "nothing is happening". |
+| `bluetooth/ch582f_ajazz.c` | `select_pending`, `CH582_SELECT_CONFIRM_MS`, `CH582_SELECT_MAX_TRIES` | Backstop retry for a dropped select. Stops on `5B 33`/`34`. |
+| `bluetooth/ch582f_ajazz.c` | `bounce_pending`, `CH582_BOUNCE_MS` | Cancel-pairing bounce — the only thing that gets the module out of advertising. |
+| `via.json` | `SCR_UP`, `SCR_DN` **appended** to `customKeycodes[]` | Must stay index-aligned with the enum. |
+
+**In QMK core — these are the ones a `git checkout` will silently eat:**
+
+| File | Change | Why |
+|---|---|---|
+| `quantum/rgb_matrix/rgb_matrix.c` | weak `rgb_matrix_eeprom_flush_allowed()` hook; `rgb_task_sync` uses `eeconfig_flush_rgb_matrix_task(RGB_MATRIX_EEPROM_WRITE_DELAY)` | QMK already had the debounce helper and simply wasn't using it. The weak hook defaults to permissive, so behaviour is unchanged for every other keyboard. |
+| `drivers/led/sn32f2xx.c` | weak `sn32_rgb_isr_hook()` called from `rgb_callback` | Gives a board a kHz-rate tick without its own timer; the AK820 Pro software-PWMs the LCD backlight with it. Empty no-op by default, so other boards are unaffected. |
+| `drivers/led/sn32f2xx.c` | `periodticks = RGB_MATRIX_MAXIMUM_BRIGHTNESS + 1` | `pwm_lld_start` writes the period match as `period - 1`, so a full-value colour channel wrote `MR = 255` against a counter resetting at 254 — a match that **never fires**, blanking that channel at exactly 100%. Looked like the colour lurching at max brightness and brief flashes while stepping. |
+
+**The LCD changes are unit-specific, not general fixes.** fpb's units need
+`0xA8` and no INVON. Do not upstream them without a flag.
+
+How the inversion was diagnosed, since it is counterintuitive: `display.c`
+defines `COL_BG 0x0000` (black) and `COL_FG 0xFFFF` (white), and the source art
+is white-on-black (font atlas measured at 80.6% black background). The board
+showed black-on-white, and an *asset-free* board showed solid **white** — which
+is the black clear-to-background being inverted. Both symptoms, one cause.
+
+`LCD_OFF_X 1` / `LCD_OFF_Y 2` did **not** need adjusting after the 180° flip —
+verified on hardware, pixels reach every edge with no garbage band.
+
+#### RGB field rate — why those three constants move together
+
+`drivers/led/sn32f2xx.c` lights the 18 hardware rows (6 key rows × R,B,G) one at
+a time, one row per PWM period, so a key's three colour channels fire in separate
+time slots. The full R→B→G cycle rate is:
+
+```
+freq / periodticks / SN32F2XX_RGB_MATRIX_ROWS_HW
+```
+
+with `periodticks = RGB_MATRIX_MAXIMUM_BRIGHTNESS` and — the non-obvious part —
+
+```c
+freq = HUE_STEP * SAT_STEP * VAL_STEP * SPD_STEP * LED_PROCESS_LIMIT
+```
+
+**The PWM clock is derived from the UI step sizes.** That coupling is a wart in
+the SonixQMK driver, not a local choice, and it means changing a step size
+silently retunes the LED field rate. `HARDWARE_PWM.md` confirms the steps were
+being abused for exactly this (it lists reverting a `HUE_STEP=2` tuning as a
+payoff of moving to hardware PWM).
+
+Stock: `8*16*16*16*17 = 557056`, `/255`, `/18` = **121 Hz**. Above flicker fusion
+when still, but the ~0.46 ms channel spacing smears into colour fringes during a
+saccade — the DLP rainbow artifact.
+
+**There are two levers, and they are not equivalent.** An intermediate revision
+lowered `periodticks` to 128 (→ 242 Hz) — that works, but spends PWM resolution,
+and this board is run *dim in a dark room*, so the low end is the worst thing to
+coarsen. Raising `freq` buys the same field rate for free: `PWM_CLK` is
+`SN32_HCLK` = 48 MHz against a stock `freq` of ~0.56 MHz, so there is ample
+headroom. `SPD_STEP` is the right factor to spend — it sets only the
+animation-speed step, meaningless on `solid_color`.
+
+Current: `SPD_STEP` **128**, `periodticks` **255** (all 256 brightness levels).
+
+```
+freq = 16*16*8*128*17 = 4456448
+psc  = 48e6/4456448 - 1 = 9         (integer division; hal_pwm_lld.c:293)
+eff  = 48e6/10 = 4800000 Hz
+field rate = 4800000 / 255 / 18 = 1046 Hz
+```
+
+| | Stock | Interim (128 ceil) | 64 | **Now (128)** |
+|---|---|---|---|---|
+| Effective PWM clock | 558 kHz | 558 kHz | 2.29 MHz | **4.8 MHz** |
+| Field rate | 121.6 Hz | 242.2 Hz | 498.0 Hz | **1046 Hz** |
+| Brightness levels | 255 | 128 | 255 | **255** |
+| Dim steps | 15 | 16 | 31 | **31** |
+| Row ISR | 2,189/s | 4,360/s | 8,964/s | **18,800/s** |
+| Matrix scan | 1396 Hz | — | ~1050 Hz | **~390-400 Hz** |
+| Speed steps | 16 | 16 | 4 | **2** |
+
+Confirmed on hardware 2026-08-29: rainbow **diminished** at 1046 Hz, and typing
+over Bluetooth is "nearly instant" despite the 390-400 Hz scan. All 256
+brightness levels retained, which was the point of raising `freq` rather than
+spending `periodticks`.
+
+**`SPD_STEP 128` was previously backed out as "it breaks Bluetooth" — that was
+wrong.** The fault was the interrupt priority inversion, not the ISR rate; at
+this same 18,800/s the link now measures 0.042 ACK timeouts per frame against a
+0.38 baseline at stock rate. Do not re-derive that mistake: see the priority
+section before touching this constant.
+
+Do not expect any achievable field rate to remove the artifact entirely; it is
+inherent to lighting R, G and B in separate time slots.
+
+Note the artifact's *visibility* in a dark room is mostly dark adaptation and
+contrast, not the duty cycle. Duty does set how wide each colour's image is while
+the R→B→G spacing stays fixed — so shorter pulses give crisper, better-separated
+bars — but that is second-order.
+
+**⚠️ ANIMATION SPEED ONLY HAS 3 SETTINGS (0 / 50% / 100%). THAT IS THE COST OF
+THE FIELD RATE, NOT A BUG.** `SPD_STEP` is 128 against a 0-255 range, so the only
+reachable values are 0, 128 and 255. It looks broken and is not.
+
+**Do NOT "fix" it by lowering `SPD_STEP`** — that is the PWM clock multiplier, and
+dropping it to the stock 16 takes the field rate from 1046 Hz back to 121 Hz and
+the DLP-rainbow artifact returns at full strength. Nothing in the UI connects
+those two things, which is exactly why this note exists.
+
+Accepted deliberately 2026-08-29: JD does not use animated effects (the board runs
+`solid_color` dim warm white), so coarse speed control costs nothing real.
+
+If speed granularity is ever wanted, **rebalance rather than reduce** — the
+product is what matters, not which factor carries it:
+
+| | Now | Swap |
+|---|---|---|
+| `SAT_STEP` | 16 | 32 |
+| `SPD_STEP` | 128 | 64 |
+| `freq` | 4,456,448 | **4,456,448 — identical** |
+| Field rate | 1046 Hz | **1046 Hz — unchanged** |
+| Speed values | 3 | 5 |
+| Sat values | 16 | 9 |
+
+Saturation is a set-once parameter where 9 values still reaches anywhere useful,
+so that is the cheapest factor to spend next. Going all the way back to
+`SPD_STEP 16` is not realistic: it needs an 8x increase elsewhere, i.e. 2 hue
+values or 4 brightness values, both far worse than coarse speed.
+
+**The readout says `Speed 50%`, which oversells it** — a percentage implies
+continuous control. `Speed 1/2` would be honest. Not worth a flash cycle on its
+own; bundle it with the next change.
+
+**Two traps if you tune this further:**
+
+1. `periodticks` is *also* the `val` ceiling, and the driver feeds the raw colour
+   byte straight in as duty (`pwmEnableChannel(..., led_state[i].b)`). Halving it
+   makes every **stored** `val` render twice as bright — EEPROM survives the
+   flash, so the board comes back brighter and needs re-dimming by hand. Scale
+   `RGB_MATRIX_DEFAULT_VAL` to match whenever you change the ceiling.
+2. Lowering `VAL_STEP` for finer dimming **halves the field rate**, because it is
+   a factor of `freq`. Compensate on another step (that is why `HUE_STEP` is 16).
+
+**`SPD_STEP 128` is now shipped and measured** — see the table above. The CPU
+cost is real (row ISR ~18,800/s, matrix scan ~390-400 Hz, ms timebase 1.2% slow)
+but was confirmed on hardware as feeling near-instant to type on.
+
+If more field rate is ever wanted, the next lever is **not** `SPD_STEP 256` —
+`psc` would floor at 4 (eff 9.6 MHz, ~2092 Hz) but the row ISR would hit
+~37,600/s on top of the 20 kHz GPT, which is past what this M0 has left. Buy the
+headroom back first by halving the GPT tick to 10 kHz (`PWM_TICK_HZ`), which
+costs backlight switching rate (417 → 208 Hz) but no field rate at all.
+
+Do **not** reach for `periodticks` to get there — it would undo the dimming
+granularity that is the whole reason `freq` was raised instead.
+
+### The ChibiOS patches are working-tree edits
+
+Six `.diff` files in `keyboards/a_jazz/ak820pro/` are applied by hand into
+`lib/chibios-contrib/`. They are **not committed**, so **any `git submodule
+update` silently discards them** and the build breaks in confusing ways. Order
+matters — `spi_flash_dma` must follow `spi_fifo_pump` (same LLD file), and
+`efl_ramtext` is required for VIA:
+
+```
+hardware_pwm → i2c_fallback → rtc_lld → spi_fifo_pump → spi_flash_dma → efl_ramtext
+```
+
+Reapply with the loop in `ak820pro-builds/ak820pro-mac-setup.sh` step 5, which
+is idempotent (it reverse-checks each patch before applying).
+
+### Verifying a build
+
+Do **not** compare byte-for-byte against the GREMLIN binary — builds are not
+reproducible; literal-pool pointers shift by a constant offset with the build
+string. Compare *structurally* instead. A good build is ~27% nonzero across the
+256 KB image with:
+
+| | |
+|---|---|
+| SP | `0x20000400` |
+| Reset | `0x00000191` |
+| HardFault / SVC[11] / PendSV[14] | `0x00000193` |
+| USB descriptor | `0C45:8009` bcd `0x0100` |
+
+The Mac build matched the GREMLIN build on all of these. **Never compare
+density against stock firmware (~90% nonzero)** — that comparison produces a
+false alarm, as it did once already.
+
+---
+
+## Contents
+
+### Local, not from upstream
+
+| Path | What |
+|---|---|
+| `CLAUDE.md` | this file |
+| `env.sh` | sets `QMK_HOME` + `PATH`; `source` it before building or flashing |
+| `ak820pro-builds/AK820PRO-HANDOFF.md` | **the reference document** — hardware, memory map, flashing, LCD assets |
+| `ak820pro-builds/handoff.html` | same content, styled |
+| `ak820pro-builds/ak820pro-mac-setup.sh` | idempotent one-shot setup; assumes `~/ak820pro`, so paths need translating |
+| `ak820pro-builds/a_jazz_ak820pro_via.bin` | firmware built on GREMLIN (Windows/WSL), kept as a reference |
+| `ak820pro-builds/a_jazz_ak820pro_default.bin` | ditto, non-VIA keymap |
+| `hostagent/ak820text.py` | pushes text + icon to the LCD over raw HID; knows nothing about music |
+| `hostagent/nowplaying-macos.sh` | polls Spotify/Music every 3 s and feeds the pipe |
+
+### Upstream clones (pristine — verify before assuming otherwise)
+
+| Path | Origin | Branch |
+|---|---|---|
+| `qmk_firmware-ak820pro/` | `fpb/qmk_firmware` | `ak820pro-flashlcd-unified-dualspi` |
+| `ajazz-ak820-pro/` | `fpb/ajazz-ak820-pro` | `main` |
+| `time-util-ak820pro/` | `fpb/time-util-ak820pro` | `main` |
+| `SonixFlasherC/` | **`fpb/SonixFlasherC`** | **`fix_for_macos_tahoe`** |
+
+`SonixFlasherC` was originally cloned from upstream `SonixQMK/main`, which does
+**not** work on Tahoe. An `fpb` remote was added and the branch switched. If a
+future session finds it back on `SonixQMK/main`, that is a regression.
+
+All four arrived from GREMLIN with CRLF line endings, showing as whole-file
+diffs. That was normalized with `git checkout -- .`; the real diff was empty.
+If they look mass-modified again, check `git diff --ignore-cr-at-eol --stat`
+before believing it.
+
+### Build artifacts (large, disposable, regenerable)
+
+| Path | Size |
+|---|---|
+| `xpack-arm-none-eabi-gcc-13.3.1-1.1/` | 876 MB — ARM toolchain |
+| `qmk_firmware-ak820pro/` | 1.6 GB — mostly submodules |
+| `venv/` | 45 MB — `qmk` CLI |
+
+---
+
+## Where things live
+
+**Firmware** — `qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/`
+
+- `ak820pro.c` — raw HID channels: `RTC_CHANNEL = 0x10`, `FLASH_CHANNEL = 0x11`.
+  Both are live on this branch, contrary to ak820ctl's README.
+- `graphics/lcd_bus.c` — the authoritative flash memory map (`FLASH_ASSET_BASE`,
+  `ANIM_BASE`, stride, frame limit). Trust this over any prose doc.
+- `graphics/res/flash_assets.h` — generated by `mkraw.py`; the one firmware
+  coupling to the asset set.
+- `keymaps/via/` — four layers: `WINBASE`, `WINFN`, `MACBASE`, `MACFN`.
+  `QK_BOOT` on Fn+Esc, `ANIM_TOG` on Fn+Delete, encoder exposed as a VIA knob.
+- `*.diff` × 6 — the ChibiOS patches described above.
+- `docs/LCD_FLASH_LAYER.md`, `docs/LCD_DMA_BRANCHES.md`
+- `rules.mk` — contains two stale claims (RTC "does not work", a `mkraw.py` path
+  that does not exist there). See handoff §2.
+
+**Host tools**
+
+- `SonixFlasherC/sonixflasher` — built v2.0.8 **with `USE_LIBUSB=1`** (mandatory,
+  see above). Write-only; **there is no way to dump firmware off the board.**
+- `time-util-ak820pro/ak820ctl` — built. `clock`, `info`, `flash write|erase|crc`,
+  `list`. Confirmed working against the flashed board; `info` reports
+  `jedec id 0x856017`, `writable from 0xCE0000`.
+- `time-util-ak820pro/assets/flash_assets.bin` + `.h` — generated by
+  `mkraw.py --flash`, already provisioned to the board. **Always diff the
+  generated `flash_assets.h` against
+  `qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/res/flash_assets.h`
+  before flashing assets** — if they disagree, the firmware needs a rebuild or
+  the LCD renders garbage.
+- `time-util-ak820pro/assets/` — `mkraw.py` (stills → `flash_assets.bin` + `.h`)
+  and `mkanim.py` (GIF → frame blob). Python 3 stdlib only — no Pillow, no
+  ffmpeg. Source PNGs: `sonixqmk` splash, five 24×24 status icons, two Iosevka
+  font atlases.
+
+**Reference material** — `ajazz-ak820-pro/`
+
+- `docs/` — MCU/LCD/flash/RTC datasheets, `matrix.md`, `HARDWARE_PWM.md`,
+  `CH582F_PROTOCOL.md`, `gc9107_init.c`
+- `img/` — pinouts, wiring, **`bootloader-pins.jpg`** (needed for the pin short)
+- `StockFWBinaries/` — vendor images. For rollback use
+  **`AJAZZ_AK820PRO_PID_8009_V1.13_SN32F290.bin`**, *not* the v1.14 one — v1.14
+  changes the PID to `8099`, which makes AJAZZ's own drivers stop seeing the board.
+- `QMKFWBinaries/` — fpb's prebuilt `.bin`s for every branch, plus **`via.json`**
+  to load into VIA/Vial.
+
+---
+
+## Re-flashing
+
+`Fn`+`ESC` from the running keyboard, then:
+
+```sh
+source env.sh
+ioreg -p IOUSB -w0 -l | grep -c '"idProduct" = 28992'   # 0x7140 — confirm first
+./SonixFlasherC/sonixflasher --vidpid 0c45/7140 --file "$QMK_HOME/a_jazz_ak820pro_via.bin"
+```
+
+A good flash prints `Flash Verification Checksum: OK!` then `Rebooting.` and the
+board comes back as `0x8009` on its own. Expect one benign-looking retry early —
+`Code Option Table ... Expected: 0x0000 Received: 0xFFFF` triggers
+`Device failed to init, re-trying`, then it succeeds on attempt 2. That is
+normal, not a fault.
+
+Rollback to stock is the same command with the v1.13 image, but **requires the
+pin short again** — `Fn`+`ESC` disappears the moment you leave QMK.
+
+### Checking USB state
+
+`system_profiler SPUSBDataType` returns **empty** under this agent's sandbox —
+use `ioreg` instead. Product IDs are decimal there:
+
+| decimal | hex | meaning |
+|---|---|---|
+| `3141` | `0x0C45` | vendor (all states) |
+| `32778` | `0x800A` | stock v1.10 (gone now) |
+| `28992` | `0x7140` | bootloader |
+| `32777` | `0x8009` | **QMK — current state** |
+
+`scratchpad/usbwatch.sh` (this session) polls `ioreg` once a second and prints
+only on state change, which is far easier than watching a terminal while both
+hands are busy with the keyboard. Worth recreating if you need it again.
