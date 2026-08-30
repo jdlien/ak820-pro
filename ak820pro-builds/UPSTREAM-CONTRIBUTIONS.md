@@ -150,6 +150,27 @@ real target. Recovery ~1 s, down from minutes.
 *connect* (observed: `5B 32` on the bounce). Unavoidable — forcing the state
 change requires naming another slot, the same exposure the manual workaround has.
 
+### 2.7 Modified consumer keycodes race the USB endpoints — a QMK-wide issue
+
+Not board-specific at all, and probably affects **every QMK keyboard** using a
+modified consumer keycode such as `LSA(KC_VOLU)`.
+
+`register_code16()` registers the modifiers and sends the consumer usage
+back-to-back. But the consumer/extra report goes out on `USB_ENDPOINT_IN_SHARED`
+while the keyboard report uses its own endpoint, and the host polls those
+independently with **no ordering guarantee**. So the host can see the media event
+before the modifier state lands. Measured on macOS: ~1/3 of encoder clicks lost
+the modifiers entirely, and occasionally saw Alt without Shift.
+
+Note `ENCODER_MAP_KEY_DELAY` defaults to `TAP_CODE_DELAY` which defaults to **0**,
+and at 0 the delay is `#if`'d out of `quantum/encoder.c` — while QMK's own
+non-encoder-map fallback in the same file hardcodes `tap_code_delay(KC_VOLU, 10)`
+for exactly this reason. That inconsistency is worth raising on its own.
+
+Our workaround is board-level (`process_modified_consumer()`), but the principled
+fix belongs in `register_code16()`: flush the keyboard report and yield before
+dispatching a consumer usage when modifiers are involved.
+
 ### 2.6 `anim_toggle()` blinks the screen on an empty slot
 
 Not a CH582F bug, but the same tier: small, obviously correct, and it affects

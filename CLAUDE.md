@@ -1098,6 +1098,54 @@ advertising is declined (see the `A6 <slot>` entry). The cancel-pairing bounce
 that automates this is scoped to BT slots only, so 2.4G still needs the two-step
 by hand. Worth extending only if the key is ever rebound.
 
+### ⚠️ Modified consumer keycodes race the endpoints — `LSA(KC_VOLU)` on the knob
+
+`Shift`+`Alt`+Volume is macOS's quarter-step fine adjustment, and binding
+`LSA(KC_VOLD/U)` to the encoder *mostly* worked — which is the tell.
+
+**Symptoms, all three from one gesture:**
+
+| What the host saw | Result | Rate (default config) |
+|---|---|---|
+| both modifiers | quarter step (correct) | ~2/3 |
+| no modifiers | full step | ~1/3 |
+| Alt only | opens the Sound settings dialog | rare |
+
+Three different outcomes from one action is a host sampling a **transient
+modifier state**, not a mapping error.
+
+**Root cause: the two reports go out on DIFFERENT USB ENDPOINTS.** `usb_main.c`
+sends consumer/extra on `USB_ENDPOINT_IN_SHARED`; the keyboard report has its own
+endpoint (`KEYBOARD_SHARED_EP` is not defined). The host polls them independently
+and guarantees **no ordering between them**. QMK's `register_code16()` registers
+the mods and fires the consumer usage back-to-back with zero gap, so macOS can
+service the shared endpoint first.
+
+**`ENCODER_MAP_KEY_DELAY` is NOT the fix, though it looks like one.** It defaults
+to `TAP_CODE_DELAY`, which defaults to 0 — and at 0 the delay is `#if`'d out of
+`quantum/encoder.c` entirely, so encoder press and release are adjacent
+instructions. Setting it to 10 took the failure rate from ~1/3 to ~1/8. **Better
+but still wrong**, because it spaces press from release while the race is INSIDE
+the press. A partial improvement here is a warning sign, not progress.
+
+**The fix: `process_modified_consumer()` in `ak820pro.c`** — register the mods,
+`send_keyboard_report()` to flush them, `wait_ms(MODIFIED_CONSUMER_GAP_MS)` (8) so
+the host has polled and applied them, *then* the consumer usage. Release unwinds
+in reverse. Confirmed rock solid on hardware 2026-08-29. Applies to any modified
+consumer keycode, not just the encoder.
+
+Cost: ~36 ms per detent (2x the gap plus 2x `ENCODER_MAP_KEY_DELAY`), so ~28
+clicks/s. Raise the gap if full steps reappear, lower it if the knob feels slow.
+
+**The keymap is platform-aware.** `LSA` is on the Mac layers only; `WINBASE`/
+`WINFN` keep plain `KC_VOLD/U`. Shift+Alt is meaningless to Windows volume — and
+worse, **`Alt`+`Shift` is Windows' input-language switch hotkey**, so `LSA` on a
+Windows layer would cycle keyboard layouts on every click.
+
+**Useful diagnostic precedent:** the same VIA mapping worked reliably on a
+Keychron V1. Identical config behaving differently across boards pointed at a
+per-board default rather than QMK-wide behaviour, which is exactly where it was.
+
 ### Known quirks
 
 **FIXED (symptom) — hard freeze while adjusting RGB.** Predates any of this
