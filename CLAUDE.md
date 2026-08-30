@@ -1134,8 +1134,34 @@ the host has polled and applied them, *then* the consumer usage. Release unwinds
 in reverse. Confirmed rock solid on hardware 2026-08-29. Applies to any modified
 consumer keycode, not just the encoder.
 
-Cost: ~36 ms per detent (2x the gap plus 2x `ENCODER_MAP_KEY_DELAY`), so ~28
-clicks/s. Raise the gap if full steps reappear, lower it if the knob feels slow.
+**Making it keep up with a fast spin took three more steps**, and the ordering of
+what mattered was not obvious:
+
+1. **Hold the modifiers across a burst** (`MODIFIED_CONSUMER_HOLD_MS` 150).
+   Re-establishing them every detent cost the full ordering gap each time. Now
+   only the FIRST click pays it; the rest just send the usage. Uses REAL mods,
+   not weak ones — the action layer clears weak mods on ordinary keypresses,
+   which would silently drop them mid-spin.
+2. **`ENCODER_MAP_KEY_DELAY` 10 → 1.** `wait_ms()` BLOCKS THE MAIN LOOP, and the
+   main loop is what samples the encoder — so this delay did not merely slow the
+   knob, it made fast spins **drop detents outright**. It is also largely
+   unnecessary: `usb_endpoint_in_send()` writes into an output buffer queue
+   (`obqWriteTimeout`), so consecutive consumer reports already serialise across
+   USB frames and cannot coalesce. Kept at 1 rather than 0 because QMK's comment
+   says these delays "cater for Windows", and 0 compiles the block out entirely.
+3. **`MAX_QUEUED_ENCODER_EVENTS` 4 → 32.** The default is
+   `MAX(4, NUM_ENCODERS_MAX_PER_SIDE + 1)` = **4**, and it is a RING buffer, so
+   usable depth is 3. Events past that are **dropped outright, not delayed** —
+   the direct cause of "moderate turns fine, fast turns lose a lot". Each event
+   is an index plus a direction, so 32 costs tens of bytes.
+
+**Remaining ceiling, accepted deliberately.** The encoder is sampled once per
+main-loop iteration and the matrix scan is ~390 Hz (down from 1396 stock, because
+`SPD_STEP 128` drives the row ISR at ~18,800/s for the rainbow). At
+`resolution: 2` that aliases somewhere around 90-100 detents/s. Dropping to
+`SPD_STEP 64` would roughly double the headroom — **and it is NOT worth it**: the
+rainbow is visible every time you look at the board, ramming the volume is rare.
+Do not "fix" the encoder by spending the field rate.
 
 **The keymap is platform-aware.** `LSA` is on the Mac layers only; `WINBASE`/
 `WINFN` keep plain `KC_VOLD/U`. Shift+Alt is meaningless to Windows volume — and
