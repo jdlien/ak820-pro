@@ -2086,6 +2086,44 @@ hardware_pwm → i2c_fallback → rtc_lld → spi_fifo_pump → spi_flash_dma �
 Reapply with the loop in `ak820pro-builds/ak820pro-mac-setup.sh` step 5, which
 is idempotent (it reverse-checks each patch before applying).
 
+### ⚠️ TWO SESSIONS CANNOT SHARE THIS TREE SAFELY — the binary path is shared
+
+Hit 2026-08-30 with two Claude sessions working in this workspace at once.
+
+**`qmk compile` writes to ONE path**, `$QMK_HOME/a_jazz_ak820pro_via.bin`. So
+**whoever compiles last owns that file**, regardless of who armed a flasher.
+One session's rebuild silently replaced the other's binary eleven seconds
+before a flash; the flash then carried the wrong build and reported success.
+
+The failure is nasty because it looks like your change simply had no effect:
+verification checksum OK, board reboots normally, and the panel shows the other
+session's firmware. Nothing errors.
+
+**Guards, in order of usefulness:**
+
+1. **`stat` the binary before flashing** and confirm the timestamp is your build,
+   not merely recent. This is the only reliable check.
+2. **Disarm before handing over** — `pkill -f "seq 1 900"` for the arm loop used
+   here. But note this does NOT protect you: the hazard is the shared file, not
+   the flasher.
+3. **Say so out loud.** Cross-session messages (`ListAgents` / `SendMessage`)
+   work between sessions on this machine and are the practical coordination
+   channel.
+
+Other shared resources that conflict the same way:
+
+| Resource | Conflict |
+|---|---|
+| `$QMK_HOME/a_jazz_ak820pro_via.bin` | last compile wins, silently |
+| `qmk console` | EXCLUSIVE; a second instance retries in a tight loop |
+| raw HID (`0xFF60`/`0x61`) | `ak820ctl`, VIA and the media poller all want it |
+| `flash_assets.bin` + `flash_assets.h` | must change together or the panel renders garbage |
+| the six ChibiOS `.diff` patches | uncommitted working-tree edits; a `git checkout` in that tree eats them |
+
+**Do not `git checkout` in `qmk_firmware-ak820pro/` to resolve a conflict.** That
+silently discards the hand-applied ChibiOS patches and the build breaks in
+confusing ways later.
+
 ### Verifying a build
 
 Do **not** compare byte-for-byte against the GREMLIN binary — builds are not
