@@ -1694,6 +1694,98 @@ the failure is swallowed, the STALE blob gets provisioned and a device-vs-local
 CRC check still passes, because neither side has the change. **Confirm the blob's
 CRC actually changed after regenerating**, not just that the device matches.
 
+### ⚠️ Two LED glitches during RGB adjustment — different causes, one fixed
+
+Both look like "the LEDs flash wrong for a moment while adjusting". They are
+unrelated, and the TIMING tells them apart.
+
+**One row briefly lit a wrong colour, DURING a hold — FIXED 2026-08-31.**
+`sn32f2xx_flush()` memcpy'd into `led_state[]` from the main loop while the row
+ISR reads that same array to set each channel's duty. No lock, so the ISR could
+land mid-copy and drive a frame that is part new, part old. **The split falls at
+whatever byte the copy reached, which is why it shows as ONE ROW** — that
+spatial localisation is what identifies it; a timing artefact would not be
+localised. Now wrapped in `chSysLock()`: ~10-16 µs for an 82-128 LED copy at
+48 MHz against a 53 µs row-ISR period. Board-agnostic, upstreamable.
+
+Hold-to-repeat probably made a long-latent race VISIBLE — 83 steps/s produces
+far more frame updates than tapping ever did.
+
+**A brief DARK flash — QMK's flush is a RATE LIMIT, not a debounce.** This one
+surprised us and the fix is board-side:
+
+```c
+// quantum/eeconfig.h -- eeconfig_flush_##name##_task
+if (timer_elapsed(flush_timer) > timeout) { flush(); flush_timer = timer_read(); }
+```
+
+It fires every `RGB_MATRIX_EEPROM_WRITE_DELAY` ms for as long as the config
+stays dirty — **including throughout a held adjust key**, not once after it
+settles. Each write makes the internal flash array busy for milliseconds, the
+row ISR cannot run to arm the next row, and the matrix goes dark.
+
+`rgb_matrix_eeprom_flush_allowed()` in `ak820pro.c` now also waits for the RGB
+values to stop moving (`RGB_SETTLE_MS`), turning "a write every 750 ms while
+adjusting" into "one write once you settle". That also cuts flash wear and cuts
+exposure to the still-unexplained RGB-adjust hang, whose trigger is an
+internal-flash write.
+
+### The rainbow is a GEOMETRY problem, not a flicker problem
+
+Do not reason about it with flicker-fusion intuition. Flicker has a threshold
+(~60-90 Hz) above which more rate buys nothing. **Saccadic colour breakup has
+no threshold** — the eye sweeps at 100-500 deg/s and sequential colour fields
+land on different retinal positions, so fringe width scales LINEARLY with field
+rate.
+
+```
+field rate   slot gap   fringe @200 deg/s   @500 deg/s
+   121 Hz     2755 us         33.1'            82.6'    stock
+  1042 Hz      320 us          3.8'             9.6'    current
+  2083 Hz      160 us          1.9'             4.8'    max realistic here
+  4000 Hz       83 us          1.0'             2.5'    ~invisible
+```
+
+Foveal acuity is ~1 arcmin. **Doubling the field rate halves the fringe; it
+does not remove it.** Reaching invisibility needs ~4x current (row ISR ~72,000/s),
+well past this M0. Do not spend scan rate expecting a cure.
+
+**⚠️ COLOUR CHOICE IS A FREE 2x — bigger than any achievable frequency change.**
+The slot order is **R -> B -> G** (`SN32F2XX_RGB_MATRIX_ROW_CHANNELS 3`), so what
+matters is how far apart a colour's lit channels sit:
+
+| Colour | Channels | Slots | Gaps apart | Fringe @200 deg/s |
+|---|---|---|---|---|
+| white / warm white | R+B+G | 1,2,3 | full cycle | worst |
+| **orange / amber** | R+G | 1,3 | **2** | 7.6' |
+| **purple / magenta** | R+B | 1,2 | **1** | 3.8' |
+| cyan | B+G | 2,3 | 1 | 3.8' |
+| pure R, B or G | one | — | 0 | **none** |
+
+Magenta over amber halves the fringe for free — the same win doubling the field
+rate would buy, at zero CPU cost. **Amber is the worst two-channel colour on
+this hardware.** A single saturated channel has no sequential fields at all.
+
+### If the LEDs ever stop being worth their cost
+
+`SN32F2XX_RGB_MATRIX_ROW_CHANNELS` is a parameter. Modelled, not measured:
+
+```
+config                            slots  row ISR/s  field Hz  total IRQ  scan
+full RGB, now (psc 9)                18     18,750     1,042     38,750   370
+RED ONLY, PWM clock cut 3x (psc 29)   6      6,250     1,042     26,250  ~546
+RGB off entirely, LCD kept            0          0         0     20,000  ~717
+RGB off + backlight tick 10 kHz       0          0         0     10,000 ~1434
+```
+
+**The ISR fires once per PWM PERIOD, not once per row**, so cutting channels
+3 -> 1 does NOT cut CPU by itself — it TRIPLES the field rate. Cutting CPU needs
+a slower PWM clock, which single-colour can then afford.
+
+Single channel makes rainbow **structurally impossible**, at any frequency.
+`ROW_CHANNELS 1` is untested here and rgb_matrix effects would render only their
+red component.
+
 ### Known quirks
 
 **⚠️ THE HANG IS A CRAWL, NOT A DEAD CPU — the entry below is WRONG about the
