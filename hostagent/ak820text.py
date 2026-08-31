@@ -20,7 +20,11 @@ USAGE_PAGE, USAGE = 0xFF60, 0x61        # QMK raw HID
 SET_VALUE, TEXT_CHANNEL, TEXT_SET, TEXT_CLEAR = 0x07, 0x12, 0x01, 0x02
 TEXT_SET_LINE = 0x03
 TEXT_PLAYBACK = 0x04                     # per-line set: [line][icon][ascii...]
-MAXLEN = 16                              # 128px band / 10px glyph advance
+# Per-line character budget, matching DISPLAY_TEXT_MAX_L0/L1 in the firmware.
+# Only line 0 sits beside the transport icon, so it loses the 14px gutter:
+# (128 - 14) / 6 = 19. Line 1 runs the full width: (128 - 2) / 6 = 21. The
+# firmware clamps too -- this is here so the producer knows what will survive.
+MAXLEN = {0: 19, 1: 21}
 ICONS = {"none": 0, "play": 1, "pause": 2, "stop": 3}
 
 # The atlases carry printable ASCII only. Transliterate the punctuation real
@@ -71,16 +75,21 @@ def send(*payloads):
 
 
 def push_line(line, text, icon="none"):
-    """Set one line of the two-line slot. line 0 = title, 1 = artist.
+    """Set one line of the two-line slot.
 
-    A second line needs its own packet: 32 bytes leaves ~26 for ASCII after
-    framing, and two 16-char lines would be 32. Torn updates are harmless --
+    Line 0 sits beside the transport icon (19 chars); line 1 runs the full
+    width (21). The producer decides what goes where -- nowplaying-macos.sh
+    puts the ARTIST on line 0 and the TITLE on line 1, so the title gets the
+    two extra characters.
+
+    A second line needs its own packet: 32 bytes leaves ~27 for ASCII after
+    framing, and two lines would be 40. Torn updates are harmless --
     the lines are independently meaningful and the poll interval is 3 s."""
     send(_line_packet(line, text, icon))
 
 
 def _line_packet(line, text, icon="none"):
-    body = to_ascii(text)[:MAXLEN].encode("ascii", "replace")
+    body = to_ascii(text)[:MAXLEN[line]].encode("ascii", "replace")
     return [SET_VALUE, TEXT_CHANNEL, TEXT_SET_LINE, line, ICONS[icon]] + list(body)
 
 
@@ -109,7 +118,8 @@ def push(icon="none", text=""):
     if not text and icon == "none":
         send([SET_VALUE, TEXT_CHANNEL, TEXT_CLEAR])
         return
-    body = to_ascii(text)[:MAXLEN].encode("ascii", "replace")
+    # TEXT_SET is line 0 in the firmware, so it carries line 0's budget.
+    body = to_ascii(text)[:MAXLEN[0]].encode("ascii", "replace")
     send([SET_VALUE, TEXT_CHANNEL, TEXT_SET, ICONS[icon]] + list(body))
 
 

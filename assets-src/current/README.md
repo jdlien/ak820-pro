@@ -5,13 +5,28 @@ because the originals live in `time-util-ak820pro/assets/`, which is a pristine
 upstream clone with uncommitted working-tree changes. A `git checkout` there
 silently destroys them, and there is no way to read assets back off the board.
 
-Blob CRC on device: `0x9816A10B` (verify with `ak820ctl flash crc 0xCE0000 179968`).
+Blob CRC on device: `0x5C829F45` (verify with `ak820ctl flash crc 0xCE0000 177408`).
 
 | File | Cell | Note |
 |---|---|---|
-| `Iosevka-Medium-13.png` | 7x14 | song text; hand-fixed b/h/p joins and `%` |
+| `Iosevka-Medium-13.png` | 6x14 | song text — **this is COZETTE, not Iosevka**, see below |
 | `Iosevka-Medium-20.png` | 10x23 | lock labels, battery %, conn digit; hand-fixed `P` |
 | `Iosevka-Regular-30.png` | 15x22 | clock — **CROPPED to its ink**, see below |
+
+## `Iosevka-Medium-13.png` holds Cozette, and the name is deliberate
+
+`mkraw.py` assigns asset ids by **sorted filename**, so renaming the file would
+shift every later id and force a synchronised firmware rebuild and re-provision,
+with a window where the panel renders garbage. Keeping the name is what made the
+font swap an assets-only change — the same trick as the bunny splash still being
+`sonixqmk.png`. **Do not "fix" the filename.**
+
+Regenerate with `assets-src/mkbdfatlas.py assets-src/cozette.bdf
+Iosevka-Medium-13.png --cell 6x14` (baseline defaults to row 9, which is the row
+Iosevka used and which the firmware's vertical offsets are tuned to).
+
+The previous Iosevka 13px render is not on disk anywhere — it lives in this
+repo's history, in the commit that introduced Cozette.
 
 ## The clock atlas is cropped, and that is load-bearing
 

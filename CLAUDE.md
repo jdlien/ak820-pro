@@ -3,9 +3,12 @@
 Workspace for putting **fpb's QMK port** onto JD's **AJAZZ AK820 Pro** keyboard,
 with VIA remapping and a customizable 0.85″ LCD.
 
-This folder is **not** a git repo. It is a workspace holding four independent
-upstream clones plus a local toolchain. Nothing here is a fork — do not expect
-local commits, and do not commit into the nested clones unless asked.
+This folder **is** a git repo (it was not, originally — that claim survived here
+long after it stopped being true). It holds four independent upstream clones plus
+a local toolchain; the local files — `CLAUDE.md`, `hostagent/`, `assets-src/` —
+are tracked and committed to `main`. The **nested clones are not** part of it: do
+not commit into them unless asked, except `qmk_firmware-ak820pro`, which carries
+the board work on its own `ak820pro-jdlien` branch.
 
 The authoritative background document is
 [`ak820pro-builds/AK820PRO-HANDOFF.md`](ak820pro-builds/AK820PRO-HANDOFF.md)
@@ -35,8 +38,8 @@ the workspace; the handoff explains the device.
 - **LED field rate 121 → 1046 Hz**, DLP-rainbow artifact much reduced (not
   eliminated — it is inherent to time-slotted R/G/B and no achievable rate
   removes it).
-- **LCD backlight is now dimmable** — software PWM, 12 perceptually-spaced
-  levels, `Fn`+`PgUp`/`PgDn`. Boots at the dimmest lit step.
+- **LCD backlight is now dimmable** — software PWM, **10** perceptually-spaced
+  levels, `Fn`+`PgUp`/`PgDn`. Boots at level 5 of 9 (`LCD 56%`).
 - **Clock**: divider trim implemented and converging; seeded at the measured
   value. Was ~4 s/min out, now holds inside the 2 s threshold.
 - **Freeze while adjusting RGB**: fixed by an eeconfig flush guard. Not yet proven
@@ -420,11 +423,21 @@ move mattered and the `MCTRL` gotcha that makes it work.
   silently losing 23% of its interrupts; now that the tick is steady there is
   headroom to lengthen the period for a dimmer floor.
 - Levels are **perceptually spaced**, not linear:
-  `{ 0, 1, 2, 3, 5, 8, 12, 18, 26, 37, 50, 64 }`. An even spread wastes steps at
-  the top where they are indistinguishable and gives nothing usable at the
-  bottom, which is the end that matters in a dark room.
-- `DISPLAY_BRIGHTNESS_DEFAULT 1` (1/48 ≈ 2.1%) — chosen on hardware as right for
-  a dark room.
+  `bkl_duty[] = { 0, 1, 2, 3, 5, 8, 12, 18, 27, 48 }` — **10 entries, indices
+  0..9**, so `BKL_MAX_LEVEL` is 9. (This table used to be documented here as
+  twelve entries ending `26, 37, 50, 64`. It never was; anyone computing a level
+  from that list got the wrong index.) An even spread wastes steps at the top
+  where they are indistinguishable and gives nothing usable at the bottom, which
+  is the end that matters in a dark room.
+- **The `Fn`+`PgUp`/`PgDn` readout is the LEVEL INDEX, not the duty** —
+  `level * 100 / 9`, so level 1 shows `LCD 11%` and level 5 shows `LCD 56%`.
+  Because the spacing is perceptual, level 5 is duty **8/48 ≈ 17%** of the actual
+  PWM period. The two numbers are meant to diverge; do not "fix" one to match.
+- `DISPLAY_BRIGHTNESS_DEFAULT 5` (`LCD 56%`, duty 8/48) — **was 1** (`LCD 11%`,
+  1/48 ≈ 2.1%) until 2026-08-30. Level 1 was chosen in a dark room against a
+  mostly-blank panel and is genuinely too dim against real content: the lit
+  pixels are a small fraction of the area, so they carry the whole impression.
+  Middle of the range is the better compromise and is still far below stock.
 - **Not persisted.** Every kb-eeconfig write is an internal-flash program/erase,
   i.e. the thing that wedges this board. Change the default in `config.h`.
 
@@ -778,6 +791,42 @@ itself stays perfectly healthy throughout; just re-run the write.
 
 **Assets load at boot**, so after a successful write the panel stays blank until
 a power cycle. Watch for `[assets] index ok, N entries`.
+
+### ⚠️ A CRC MATCH DOES NOT MEAN THE BOARD IS RENDERING THE NEW ASSETS
+
+Hit 2026-08-30 and worth its own heading, because every check you would normally
+run **passes** while the panel draws garbage.
+
+The index is parsed into RAM **once, at boot**. Provision after that and flash
+holds the new blob while RAM still describes the old one. `ak820ctl flash crc`
+reads the *flash*, so device and local agree perfectly — both sides are correct,
+and the stale copy is the one nobody is looking at.
+
+What it looks like, using the Cozette swap as the worked example:
+
+- The 13px atlas sat at the same offset `+0x001500` in both blobs, so it was
+  found — but the cached index said `cell_w=7` against 6-wide tiles. Glyph `n` is
+  read at `n * cell_w * cell_h * 2`, i.e. 196 B per glyph out of a 168 B/glyph
+  array, **so the skew compounds along the alphabet**.
+- Worse, that atlas *shrank* 18,620 → 15,960 B, so **every later asset moved
+  2,660 B earlier**. The 20px font, the clock, the connection strip and the icons
+  were all read from the wrong addresses.
+
+**Power-cycle after every provision, before judging anything on the panel.** Dip
+switch to `off`, ~10 s, back to `cable` — the board is battery-backed, so pulling
+the cable alone does not cold-boot it.
+
+### The firmware reads `cell_w` from the flash index AT RUNTIME
+
+`lcd_bus.c` takes `a->cell_w` from the index sector and `lcd_draw_flash_text()`
+advances by it, so **changing a font's cell size does not shift any asset id**
+and the regenerated `flash_assets.h` differs by its dimension COMMENT only. That
+is why 7x14 → 6x14 needed no coordinated re-provision of the kind the handoff
+warns about.
+
+What *is* compile-time, and so does need a rebuild: `DISPLAY_TEXT_MAX_L0`/`_L1`,
+and the hardcoded `adv = big ? 10 : 6` in `draw_playback()`. **That one is easy
+to miss** — it is the only place a cell width is written out by hand.
 
 **Always confirm the on-device CRC against the local blob**, since a partial
 write can still report progress:
@@ -1250,21 +1299,113 @@ per-board default rather than QMK-wide behaviour, which is exactly where it was.
 
 ### Fonts: the atlas pipeline, and why the sizes are what they are
 
-`assets-src/mkfontatlas.py` renders any TTF/OTF into the atlas PNG format
-`mkraw.py` expects (fixed cells, magenta marker at each cell's top-left, marker
-spacing = advance). Pillow is in the venv. `--probe` reports natural metrics so
-you can pick a cell; `--aa` enables anti-aliasing, which should be used **only**
-for large glyphs.
+There are **two** importers, and which one you want depends on the source:
 
-**Render MONOCHROME via `getmask(mode="1")`, not antialiased-then-thresholded.**
-They are different FreeType render modes and give different results; thresholding
-a grey render throws away the hinting.
+- `assets-src/mkfontatlas.py` renders a TTF/OTF (Pillow, in the venv). `--probe`
+  reports natural metrics so you can pick a cell; `--aa` only for large glyphs.
+- `assets-src/mkbdfatlas.py` imports a **BDF bitmap font**. No ppem, no hinting,
+  no threshold — it copies pixels a human already placed. This is what the 13px
+  face now uses; see the Cozette section below.
 
-| Asset | Cell | Advance | Chars/line | Used for |
+Both emit what `mkraw.py` expects: fixed cells, magenta marker at each cell's
+top-left, marker spacing = advance.
+
+**Render MONOCHROME via `getmask(mode="1")`, not antialiased-then-thresholded**
+(TTF path only). They are different FreeType render modes and give different
+results; thresholding a grey render throws away the hinting.
+
+| Asset (filename) | Really is | Cell | Chars/line | Used for |
 |---|---|---|---|---|
-| Iosevka-Medium-14 | 7x18 | 7px | **16** | host text slot (song titles) |
-| Iosevka-Medium-20 | 10x23 | 10px | 12 | status band, connection digit |
-| Iosevka-Regular-30 | 15x34 | 15px | 8 | clock |
+| `Iosevka-Medium-13` | **Cozette** | 6x14 | **19 / 21** | host text slot (song titles) |
+| `Iosevka-Medium-20` | Iosevka | 10x23 | 12 | status band, connection digit, battery % |
+| `Iosevka-Regular-30` | Iosevka | 15x22 | 8 | clock (**cropped** from 15x34) |
+
+Chars/line for the 13px face is **19 beside the transport-icon gutter, 21 on the
+full-width line** — see `DISPLAY_TEXT_MAX_L0`/`_L1`.
+
+### ⚠️ `Iosevka-Medium-13.png` CONTAINS COZETTE (2026-08-30)
+
+**The filename is a lie on purpose.** `mkraw.py` assigns ids by sorted filename,
+so renaming would shift every later id and force a synchronised rebuild and
+re-provision. Keeping the name is what made the swap assets-only — the same trick
+as the bunny splash still being `sonixqmk.png`. **Do not "fix" it.**
+
+**Why the swap: Iosevka kept losing the quantisation lottery at 13px.** Measured
+defects in the shipped atlas, not impressions:
+
+| Glyph | Was |
+|---|---|
+| `j` | **2px stem** where every other lowercase stem is 1px, plus a broken `##.#` tail |
+| `A` | legs stepping at different rows (left 2→1, right 4→5) over a lumpy crossbar |
+| `d` | flat 5px bowl top merging into the stem, while the mirrored `b` was round |
+| `l` | near-indistinguishable from `1` — `klmnop` reads as `k1mnop` |
+
+Those join the capital P at size 20, the doubled `t` at 14, and the hand-closed
+b/h/p arch joins already recorded below. **That is a pattern, not bad luck**: an
+outline font at a ppem with no pixels to spare. Each patch was individual and
+none survived a regeneration.
+
+Cozette is drawn by hand at **6x13**, which is exactly this grid — the classic
+terminal-bitmap size, along with misc-fixed 6x13, uw-ttyp0 t0-13 and ProggyClean.
+MIT licensed; `assets-src/cozette.bdf` + `COZETTE-LICENSE` are committed.
+
+**The baseline is PINNED to row 9, and that is load-bearing.** `display.c` centres
+text on the transport icon by cap-to-baseline ink (`TEXT_FONT_DY`, `TEXT_BIG_DY`,
+the `icon_y` ladder), and the two-line layout stacks cells `TEXT_LINE_H` apart.
+Landing the new baseline where Iosevka's sat keeps all of that correct. Let it
+float and you buy a firmware change for nothing. `mkbdfatlas.py` **refuses to
+clip** rather than silently shaving descenders — the failure that cost the clock
+atlas its `g`/`p`/`q`/`y` tails.
+
+**Cell went 7x14 → 6x14**, Cozette's own design advance. The 7px cell spent a
+column of letterspacing per glyph for nothing; native bought three characters per
+line. Cozette carries a 1px left bearing (ink cols 1..6), so the importer
+normalises the leftmost ink to col 0 — otherwise every string moves a pixel right
+and eats the margin the recessed bezel wants at the 21-character end.
+
+**⚠️ PROPORTIONAL WIDTH WAS MEASURED AND REJECTED — do not re-derive.** Ink-width
+histogram across the 95 glyphs: `1px×3, 2px×6, 3px×8, 4px×3, 5px×73, 6px×2`.
+**73 of 95 are already exactly 5px**; only `!"'(),.:;I[]`jl|` have slack. Real
+titles save 4–12%:
+
+```
+Bohemian Rhapsody   102 -> 98px    4%      The Chain     54 -> 50px    8%
+Everlong             48 -> 46px    5%      Little Wing   66 -> 59px   11%
+Smells Like Teen Spirit  138 -> 122px  12%
+```
+
+That is one to two characters, against a format change spanning `mkraw.py`, the
+flash index, `lcd_draw_flash_glyph`/`lcd_text_width` and the host's truncation.
+**And it would look worse**: you cannot make a proportional font by trimming a
+monospace one. Cozette's `I` is serifed (`.###.`/`..#..`/`.###.`) *deliberately*,
+to fill its box and stay distinct from `l`. Trimmed to 3px it sits jammed against
+its neighbours with sidebearings nobody drew.
+
+### Legibility ceiling: it needs leaning in, and that is accepted
+
+Cap heights, measured on the shipped atlases:
+
+| Face | Cap height | ≈ physical | at 60 cm |
+|---|---|---|---|
+| 13px (two-line) | **8 rows** | 1.35 mm | ~7.7 arcmin |
+| 20px (single-line) | 15 rows | 2.53 mm | ~14.5 arcmin |
+
+Comfortable reading wants roughly 16–20 arcmin of cap height, so the two-line
+face is **under half** that at normal typing distance — leaning in to ~30 cm
+doubles the angle, which is exactly why leaning in works. This is physics, not
+typography: no font fixes a 0.85″ panel angled away from you.
+
+**The only lever is the 20px face, and it costs the artist line.** The firmware
+already selects it automatically, but only when line 1 is empty, so dropping the
+artist from `nowplaying-macos.sh` would buy it — a host-side change, no rebuild.
+It fits **11 characters**, though, so most titles fall back to 13px anyway.
+
+**Accepted deliberately.** The slot's real job is *recognition*, not reading: it
+answers "what is this song I already know" at a glance. A familiar word shape
+resolves well below the acuity that novel text needs, and for genuinely new music
+a title alone was never going to be enough. Cozette HiDPI (12x26) was considered
+and is strictly worse — 16-row caps but only 9–10 characters, against the 20px
+face's 15 rows and 11.
 
 **⚠️ The capital P defect at size 20 is IOSEVKA, not the toolchain.** Measured
 across sizes 16-26 in true monochrome hinted mode: **size 20 is the only one in
@@ -1497,7 +1638,7 @@ The panel is **exactly full** -- 128 rows with nothing spare:
 ```
 0..24     connection strip   25
 25..26    gap                 2
-27..54    text (2 lines)     28   two 7x14 cells, at 27 and 41
+27..54    text (2 lines)     28   two 6x14 cells, at 27 and 41
 55        gap                 1
 56..77    clock              22   Regular-30, CROPPED to its ink
 78..81    gap                 4
@@ -1507,16 +1648,26 @@ The panel is **exactly full** -- 128 rows with nothing spare:
 
 **A glyph blit paints its WHOLE cell, background included**, so cells cannot
 overlap and two lines cost exactly 2x the cell height. That is why the 13px
-atlas is a **tight 7x14 cell** -- at the original 7x17 it wasted 4 rows per line
-and two lines would not fit. Regenerating the atlas re-loses the b/h/p join
-fixes and the hand-drawn `%`; both must be re-applied (row offsets shift with
-the cell height).
+atlas is a **tight 6x14 cell** -- at the original 7x17 it wasted 4 rows per line
+and two lines would not fit. (The hand-fixed b/h/p joins and the hand-drawn `%`
+that used to need re-applying after every regeneration are **gone with Iosevka**
+-- a BDF import needs no patching, which was much of the point.)
 
 **Protocol: `TEXT_SET_LINE` (0x03)** = `[line][icon][ASCII...]`. One line per
-packet, because 32 bytes leaves ~26 for text after framing and two 16-char lines
-is 32. Torn updates are harmless -- the lines are independently meaningful and
-the producer polls every 3 s. `TEXT_SET` (0x01) still works and **clears line 1**
-so a single-line producer cannot strand a stale artist.
+packet, because 32 bytes leaves ~27 for text after framing and two lines is 40.
+Torn updates are harmless -- the lines are independently meaningful and the
+producer polls every 3 s. `TEXT_SET` (0x01) still works and **clears line 1** so
+a single-line producer cannot strand a stale artist.
+
+**⚠️ THE TWO LINES HAVE DIFFERENT BUDGETS.** Only line 0 sits beside the 14px
+transport-icon gutter, so it gets `(128-14)/6 = 19`; line 1 starts at `TEXT_X2`
+(2) and gets `(128-2)/6 = 21`. `DISPLAY_TEXT_MAX_L0` / `_L1` in `display.h`,
+mirrored by `MAXLEN = {0: 19, 1: 21}` in `hostagent/ak820text.py`.
+
+**The producer puts the ARTIST on line 0 and the TITLE on line 1**, so the title
+gets the wider line -- the artist is the more expendable of the two. Both lines
+end at the same column, so the last cell's ink lands at 126 and there is **no
+bezel margin left** on a string long enough to use every character.
 
 **Single-line text keeps the adaptive size** (20px if <= 11 chars). Only a real
 second line costs legibility, since two 20px cells would need 46 rows.
@@ -1903,7 +2054,10 @@ Inside `keyboards/a_jazz/ak820pro/`:
 | `ak820pro.h` | `SCR_UP`, `SCR_DN` **appended** to `ak820pro_keycodes` | Index-matched to `via.json` — append only. |
 | `graphics/display.c` | backlight software PWM + brightness API, ticked from `GPTD4` | See the dedicated-timer section. |
 | `graphics/display.h` | `display_{get,set}_brightness`, `display_brightness_{up,down}` | ditto. |
-| `config.h` | `DISPLAY_BRIGHTNESS_DEFAULT 1`, `INDICATOR_BRIGHTNESS_DEFAULT 1`, `CHARGING_LED_BRIGHTNESS 0` | Dimmest lit step; charging LED off. **No longer coupled to `SPD_STEP`** — the PWM tick moved to its own timer. |
+| `config.h` | `DISPLAY_BRIGHTNESS_DEFAULT 5`, `INDICATOR_BRIGHTNESS_DEFAULT 1`, `CHARGING_LED_BRIGHTNESS 0` | LCD boots mid-range (`LCD 56%`, duty 8/48) — the dimmest step was too dim against real content. Indicators stay at the dimmest lit step; charging LED off. **No longer coupled to `SPD_STEP`** — the PWM tick moved to its own timer. |
+| `graphics/display.h` | `DISPLAY_TEXT_MAX_L0 19`, `DISPLAY_TEXT_MAX_L1 21` | Per-line budgets — only line 0 loses the transport-icon gutter. |
+| `graphics/display.c` | `TEXT_X2`, 6px-advance comments, `adv = big ? 10 : 6` | The 6x14 cell. The `adv` in `draw_playback()` is the one hand-written cell width in the tree. |
+| `graphics/res/flash_assets.h` | dimension comment `7x14` → `6x14` | Generated. Comment-only: ids unchanged, `cell_w` is read from flash at runtime. |
 | `keymaps/via/keymap.c` | `SCR_UP`/`SCR_DN` on `Fn`+`PgUp`/`PgDn`, **both** Fn layers | Beside the existing `Fn`+`Home` toggle. |
 | `mcuconf.h` | **`SN32_SERIAL_UART2_PRIORITY 1`, `SN32_GPT_CT16B3_IRQ_PRIORITY 2`, `SN32_PWM_CT16B0/1/2_IRQ_PRIORITY 3`** | The defaults were inverted. Fixes Bluetooth throughput AND backlight flicker. See the priority section. |
 | `mcuconf.h` | `SN32_GPT_USE_CT16B3 TRUE` | Dedicated 20 kHz PWM tick. |
@@ -2157,6 +2311,8 @@ false alarm, as it did once already.
 | `ak820pro-builds/ak820pro-mac-setup.sh` | idempotent one-shot setup; assumes `~/ak820pro`, so paths need translating |
 | `ak820pro-builds/a_jazz_ak820pro_via.bin` | firmware built on GREMLIN (Windows/WSL), kept as a reference |
 | `ak820pro-builds/a_jazz_ak820pro_default.bin` | ditto, non-VIA keymap |
+| `assets-src/mkbdfatlas.py` | imports a BDF bitmap font into the atlas PNG format; pins the baseline, refuses to clip |
+| `assets-src/cozette.bdf` | the 13px face (MIT, `COZETTE-LICENSE` beside it) — committed, unlike the 10 MB Iosevka TTF |
 | `hostagent/ak820text.py` | pushes text + icon to the LCD over raw HID; knows nothing about music |
 | `hostagent/nowplaying-macos.sh` | polls Spotify/Music every 3 s and feeds the pipe |
 

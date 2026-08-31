@@ -10,7 +10,7 @@
 
 enum {
     ASSET_2_4_G_ICON_24X24             = 0,   // 24x24
-    ASSET_IOSEVKA_MEDIUM_13            = 1,   // 7x14, font 7x14
+    ASSET_IOSEVKA_MEDIUM_13            = 1,   // 6x14, font 6x14
     ASSET_IOSEVKA_MEDIUM_20            = 2,   // 10x23, font 10x23
     ASSET_IOSEVKA_REGULAR_30           = 3,   // 15x22, font 15x22
     ASSET_APPLE_ICON_24X24             = 4,   // 24x24
