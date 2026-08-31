@@ -2181,6 +2181,23 @@ those two things, which is exactly why this note exists.
 Accepted deliberately 2026-08-29: JD does not use animated effects (the board runs
 `solid_color` dim warm white), so coarse speed control costs nothing real.
 
+**⚠️ THIS IS A GENERAL PRINCIPLE, AND IT HAS NOW BEEN USED TWICE.** `freq` is a
+PRODUCT of the four UI step sizes and `LED_PROCESS_LIMIT`, so any one of them
+can be made finer for free by making another coarser. What matters is the
+product, not which factor carries it.
+
+Applied 2026-08-30 to buy **hue** granularity: `HUE_STEP` 16 -> 8 (22.5 deg ->
+11.25 deg, 32 values) paid for by `SAT_STEP` 16 -> 32 (16 values -> 8). Product
+unchanged at 4,456,448, so psc stays 9, the effective clock stays 4.8 MHz and
+the field rate stays 1046 Hz. Saturation is the cheapest factor to spend: it is
+set-once, 8 values still reaches anywhere useful, and hue is the one you
+actually hunt around in with the on-panel readout.
+
+The table below is the same trick aimed at speed instead. **Do not treat these
+as two unrelated tweaks** — if you need granularity anywhere, find the factor
+you care least about and trade it, rather than lowering the one you want and
+silently halving the field rate.
+
 If speed granularity is ever wanted, **rebalance rather than reduce** — the
 product is what matters, not which factor carries it:
 
