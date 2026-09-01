@@ -2742,7 +2742,11 @@ switchover that resets the MCU. **Measured and NAMED via the RSTST readout
 (HC_CONN byte 7): the reset is an LVD BROWNOUT (rstst=0x05, LVD+SW, no
 POR)** — the rail sags below the low-voltage threshold during switchover
 but never fully discharges. Direction-asymmetric: wired→BT rides through
-and does NOT reboot (verified); BT→cable browns out EVERY time.
+and does NOT reboot (verified); BT→cable browns out EVERY time; **the 2.4G
+position browns out in BOTH directions** (measured, same rstst=0x05
+LVD+SW signature). The ride-through is analog contact-timing marginality,
+not design — only the cable→BT edge happens to make-before-break.
+Transition matrix: cable→BT is the ONLY flip that does not reboot.
 Consequences:
 
 - **Every RAM state is lost on the flip**: health counters, the RTC divider
