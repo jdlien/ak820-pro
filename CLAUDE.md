@@ -75,6 +75,39 @@ selects the base, so per-key remaps usually need doing on both 0 and 2.
 `keymap.c` will NOT appear if the dynamic keymap in EEPROM already has that key
 assigned — assign it in VIA instead, or reset the EEPROM keymap.
 
+### The VIA keymap survives a flash now — `ak820keymap.py`
+
+Flashing erases the emulated EEPROM, so every firmware update used to mean
+re-entering the VIA keymap by hand. `./flash.sh` now dumps it first and writes
+it back afterwards.
+
+```sh
+python3 hostagent/ak820keymap.py dump      # -> ~/Documents/ak820pro-keymap.json
+python3 hostagent/ak820keymap.py restore
+python3 hostagent/ak820keymap.py show      # inspect a saved file
+```
+
+**It saves the RAW dynamic-keymap buffer (720 B = 4 layers x 6 x 15 x 2), not
+VIA's `.layout.json`.** That export stores keycode *names*, so restoring it
+would need a QMK name-to-value table that drifts as QMK renames keycodes —
+exactly the class of problem that made `RM_SPDD` look broken. The raw buffer
+round-trips whatever the board holds and needs no table.
+
+**Encoders are a SEPARATE command** (`0x14`/`0x15`, outside the keymap buffer).
+Skipping them would silently drop the knob mapping — on this board that includes
+`LSA(KC_VOLD/U)` on the Mac layers, whose absence looks like the fine-volume
+feature breaking rather than a backup gap.
+
+Guards: refuses an all-zero dump (a failed read cannot overwrite a good backup),
+writes via temp + atomic rename, and refuses to restore a file whose matrix or
+layer count disagrees with the board. **Wired mode required** — raw HID replies
+route through the active host driver, the same reason `ak820ctl` and VIA need
+the cable.
+
+Verified 2026-08-31: dump -> restore -> dump returns byte-identical keymap and
+encoders, and the decoded encoder values match JD's own VIA export on all four
+layers.
+
 ### Stock-keymap shortcuts (as shipped, before any VIA remaps)
 
 Identical on `WINFN` and `MACFN`. `Fn` is the physical key right of right-Cmd.
@@ -2471,6 +2504,8 @@ false alarm, as it did once already.
 | `ak820pro-builds/a_jazz_ak820pro_default.bin` | ditto, non-VIA keymap |
 | `assets-src/mkbdfatlas.py` | imports a BDF bitmap font into the atlas PNG format; pins the baseline, refuses to clip |
 | `assets-src/cozette.bdf` | the 13px face (MIT, `COZETTE-LICENSE` beside it) — committed, unlike the 10 MB Iosevka TTF |
+| `flash.sh` | flash + keymap preservation; the normal way to flash |
+| `hostagent/ak820keymap.py` | dump/restore the VIA keymap over raw HID — flashing erases it |
 | `hostagent/ak820text.py` | pushes text + icon to the LCD over raw HID; knows nothing about music |
 | `hostagent/nowplaying-macos.sh` | polls Spotify/Music every 3 s and feeds the pipe |
 
@@ -2552,7 +2587,23 @@ before believing it.
 
 ## Re-flashing
 
-`Fn`+`ESC` from the running keyboard, then:
+**Use `./flash.sh`** — it preserves the VIA keymap, which the erase would
+otherwise destroy:
+
+```sh
+./flash.sh                          # defaults to $QMK_HOME/a_jazz_ak820pro_via.bin
+./flash.sh path/to/other.bin
+./flash.sh --no-backup              # skip the keymap dump/restore
+```
+
+It dumps the keymap while QMK is still running, waits for you to press
+`Fn`+`ESC`, flashes detached (an interrupted `sonixflasher` leaves the board
+erased — this has happened here), waits for `0x8009`, then writes the keymap
+back. **It refuses to flash if the backup fails**, since that is the one moment
+the keymap is recoverable. It also prints the binary's mtime: `qmk compile`
+writes one shared path, so confirm it is YOUR build, not merely a recent one.
+
+The manual equivalent, if you need it:
 
 ```sh
 source env.sh
