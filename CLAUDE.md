@@ -428,6 +428,12 @@ that varies part to part and with temperature. 33600 is right for this board and
 would start another unit further off than the nominal 32000 does. The durable fix
 is **persisting the converged period** -- one eeconfig field written when the trim
 settles -- which works for any unit and makes the seed irrelevant.
+**Reflashing ERASES it** (the emulated EEPROM goes with every flash), so a
+flash restarts the climb from `RTC_PERIOD_INITIAL` until the first
+post-10-min trim persists again -- measured 2026-09-01 after six flashes in
+one night: ~6000 ppm slow, halving per trim. The constant is thousands of
+ppm off on a different day (ILRC tempco), which is exactly why the trim
+persists.
 **BUILT 2026-09-01 (hardening phase 4, commit 08aecac174):** the trim now
 persists any accepted sane value after 10 min uptime when it moves >= 32 ticks
 from what is stored (kb_eeconfig, coalesced deferred write), and rtc_init

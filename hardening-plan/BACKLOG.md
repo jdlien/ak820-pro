@@ -74,3 +74,18 @@ NOT reproduce on macOS. clear_keyboard() now runs before the route flips
 anyway (bt_ui_mode_slider). Upstream issue DEFERRED until the consequence
 reproduces on some host (try Windows) -- the source-level observation alone
 is thin receipts.
+
+## RTC: reflash erases the persisted trim; SECCNTV write costs ~0.5 s phase (2026-09-01)
+
+Measured after the flash marathon: board ~4100-6200 ppm slow, halving per
+trim -- RE-CONVERGENCE from the compile-time seed, not a regression. Two
+facts to carry: (1) every reflash erases eeconfig incl. the persisted
+divider period, so the ~hour-long climb (with 2 s snaps) restarts after
+each flash until the first post-10-min trim persists again; (2) per SN32F299
+datasheet 12.5.6 (found by the f4 session), writing SECCNTV resets SECCNT,
+so each trim discards the elapsed fraction of the current second -- a mean
+0.5 s phase loss per trim, later corrected by a snap. Possible improvement:
+apply trims only at a second boundary (right after the 1 Hz callback) to
+bound the loss to ~0. Also: the ILRC's temperature coefficient means a
+fixed RTC_PERIOD_INITIAL can be thousands of ppm off on a different day --
+the persisted value is the real seed; the constant is only for fresh EEPROM.
