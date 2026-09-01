@@ -15,10 +15,16 @@ keystrokes, not "channel connect"; `5C` is battery percent, not brightness).
   bypassed entirely.** So the `Fn`+`Q/W/E/R` keys are inert in wired mode, and
   the module's reported state is stale there (the panel deliberately shows
   nothing).
-- **Raw-HID replies route through the active host driver** (`host.c`), so
-  `ak820ctl`, VIA and `ak820keymap.py` all require **wired mode**. Write-only
-  pushes (`ak820text.py`, `ak820ctl clock --no-wait`) work in any mode as long
-  as the cable is physically connected.
+- **Raw-HID replies return over USB in ANY slider position** — the cable
+  just has to be connected. QMK's default routes replies through the active
+  host driver, and the BT driver's `send_raw_hid` is a weak NO-OP, so they
+  used to be silently discarded in BT/2.4G ("no reply" with the cable in,
+  measured 2026-08-28). Fixed by overriding `bluetooth_send_raw_hid()` to
+  send over USB (`ch582f_ajazz.c`, commit 4b86d95014, 2026-08-29; round-trips
+  re-verified in the BT position 2026-09-01 — see
+  `clock-sync-plan/phase-0-facts.md` F1). So `ak820ctl`, VIA and
+  `ak820keymap.py` work in any mode; only an unplugged cable (no HID
+  interface) blocks them. Ignore older "wired mode required" notes.
 - **UART2 must be the highest interrupt priority** — it is the only peripheral
   where being late loses data. The full priority table and the two bugs the
   inverted default caused are in [leds.md](leds.md). **If BT throughput ever

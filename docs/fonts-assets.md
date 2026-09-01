@@ -108,11 +108,13 @@ subsetting would reclaim ~86 KB of the ~199 KB blob.
    flash). The firmware prints the recovery command. **Verify raw HID
    responds (`ak820ctl info`) BEFORE starting** — if it can't answer, the
    erase still happens.
-2. **The usual cause of "no reply" is BLUETOOTH MODE, not a busy
-   interface.** Raw-HID replies route through the active host driver, so
-   `ak820ctl` and VIA require wired mode even with the cable in. A browser
-   holding the interface (usevia.app, any browser still open) is the other
-   cause. Console alive + raw HID silent is NOT the hang; the hang kills
+2. **"No reply" causes**: a browser holding the interface exclusively
+   (usevia.app — closing the tab in one browser does not help if it is open
+   in another), or the cable simply not connected. The slider position no
+   longer matters: raw-HID replies return over USB in any mode since board
+   commit 4b86d95014 (2026-08-29) — the historical "Bluetooth mode" cause
+   (replies silently discarded via the BT driver's no-op `send_raw_hid`) is
+   fixed. Console alive + raw HID silent is NOT the hang; the hang kills
    both. Do not reflash firmware to fix a blank panel — provisioning needs
    QMK *running*.
 3. **Do not touch the mode slider during a write** — it re-points the host

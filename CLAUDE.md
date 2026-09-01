@@ -26,7 +26,7 @@ paths.
 | [docs/wireless.md](docs/wireless.md) | CH582F module, BT/2.4G, pairing UX, the `A6`/`5B` quirks, slot memory |
 | [docs/display.md](docs/display.md) | LCD panel variant, band layout, glyph queue/DMA pump, backlight, overlays, host text slot |
 | [docs/fonts-assets.md](docs/fonts-assets.md) | Font atlases, Cozette, clock crop, asset provisioning and its traps |
-| [docs/clock.md](docs/clock.md) | The two RTCs, divider trim, persisted period, the 3 h resync agent |
+| [docs/clock.md](docs/clock.md) | The two RTCs, divider trim, persisted period, the timekeeper resync agent |
 | [docs/leds.md](docs/leds.md) | **Interrupt priorities**, RGB field rate, indicator LEDs, the rainbow, effects |
 | [docs/hardware.md](docs/hardware.md) | Slider power quirk, bootloader, build/flash, watchdog+health, hang history, diagnostics |
 
@@ -73,9 +73,11 @@ looking identical).
 
 Load `keyboards/a_jazz/ak820pro/via.json` (board not in VIA's database):
 usevia.app in Chrome/Edge → Settings → Show Design tab → Load Draft
-Definition. **Wired mode required** — raw-HID replies route through the
-active host driver, so VIA, `ak820ctl` and `ak820keymap.py` all break in
-BT/2.4G mode (write-only pushes still work).
+Definition. **The USB cable must be connected; the slider position does not
+matter** — raw-HID replies return over USB in any mode (board commit
+4b86d95014, 2026-08-29; verified with round-trips in the BT position
+2026-09-01). Older notes demanding "wired mode" describe the pre-fix
+firmware.
 
 - Layers: `WINBASE=0, WINFN=1, MACBASE=2, MACFN=3` — the mac/win dip switch
   picks the base, so per-key remaps usually need doing on both 0 and 2.

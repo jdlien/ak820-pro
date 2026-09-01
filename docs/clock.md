@@ -80,18 +80,21 @@ like nothing.) **The divider trim cannot help**: it disciplines the SN32 *to*
 the PCF, so it faithfully reproduces the reference's error. Do not go looking
 in `rtc.c` when the clock drifts minutes per month.
 
-**Fix: `hostagent/ak820-clocksync.sh` + `com.jdlien.ak820pro.clocksync.plist`,
-every 3 hours** (`StartInterval 10800`, plus `RunAtLoad`). At 58 ppm, 3 h
-bounds the drift well inside the 2 s deadband and survives two consecutive
-missed runs; 12 h would allow 2.51 s — over threshold, visible jump. Log:
-`~/Library/Logs/ak820pro-clocksync.log`.
+**Fix: the timekeeper agent** — `hostagent/ak820-timekeeper.py` +
+`com.jdlien.ak820pro.timekeeper` LaunchAgent (part of the clock-sync
+project; see `clock-sync-plan/PLAN.md`). It syncs on device enumeration, on
+wake, and every 5 min, logging to `~/Library/Logs/ak820pro-clocksync.log`.
+It **replaced** the older 3-hour `ak820-clocksync.sh` +
+`com.jdlien.ak820pro.clocksync` agent (retired 2026-09-01, plist removed) —
+the 3 h/10800 sizing rationale in that script predates sub-second sync.
 
-- It uses `ak820ctl clock --no-wait` (write-only) so it works with the board
-  in BT/2.4G mode — a reply-reading clock set fails wirelessly even with the
-  cable in, because raw-HID replies route through the active host driver.
-- It still requires the USB cable (the HID interface has to exist). A board
-  left unplugged for days drifts the full ~5 s/day; `RunAtLoad` catches it
-  when the machine is back.
+- Host sync requires the USB cable (the HID interface has to exist), but
+  **the slider position does not matter** — raw-HID replies return over USB
+  in any mode (commit 4b86d95014; verified in the BT position,
+  `clock-sync-plan/phase-0-facts.md` F1). `ak820ctl clock --no-wait`'s
+  write-only path guards against a limitation that no longer exists.
+- A board left unplugged for days drifts the full ~5 s/day; the
+  on-enumeration sync catches it as soon as it is plugged back in.
 
 ## Timebase note
 
