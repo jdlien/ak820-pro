@@ -46,16 +46,35 @@ echo
 pkill -f "qmk console" 2>/dev/null && echo "stopped a running qmk console"
 
 # --- 1. back up the keymap while QMK is still running ----------------------
+KEYMAP="${KEYMAP:-$HOME/Documents/ak820pro-keymap.json}"
 if [ "$BACKUP" = 1 ]; then
-    echo "== backing up the VIA keymap =="
-    if ! "$PY" hostagent/ak820keymap.py dump; then
+    if usb "$BOOTLOADER"; then
+        # Already in the bootloader: QMK is gone, so there is nothing to read.
+        # Fall back to the last backup rather than refusing -- but say how old it
+        # is, because restoring a stale keymap silently is worse than not doing it.
+        if [ -f "$KEYMAP" ]; then
+            echo "== already in the bootloader -- cannot dump =="
+            stat -f "   using existing backup from %Sm" "$KEYMAP"
+            echo "   (if you have changed the keymap since, Ctrl-C, leave the"
+            echo "    bootloader by replugging, and re-run to capture it)"
+            echo
+        else
+            echo "Already in the bootloader and no backup exists at:"
+            echo "  $KEYMAP"
+            echo "Replug to get back into QMK and re-run, or pass --no-backup."
+            exit 1
+        fi
+    else
+        echo "== backing up the VIA keymap =="
+        if ! "$PY" hostagent/ak820keymap.py dump "$KEYMAP"; then
+            echo
+            echo "Backup FAILED -- not flashing."
+            echo "  Raw HID needs QMK running and the dip switch on 'cable'."
+            echo "  Re-run with --no-backup to flash anyway and lose the keymap."
+            exit 1
+        fi
         echo
-        echo "Backup FAILED -- not flashing."
-        echo "  Raw HID needs QMK running and the dip switch on 'cable'."
-        echo "  Re-run with --no-backup to flash anyway and lose the keymap."
-        exit 1
     fi
-    echo
 fi
 
 # --- 2. wait for the bootloader --------------------------------------------
@@ -88,7 +107,7 @@ sleep 6                                  # let the HID interfaces settle
 if [ "$BACKUP" = 1 ]; then
     echo "== restoring the VIA keymap =="
     for try in 1 2 3; do
-        "$PY" hostagent/ak820keymap.py restore && break
+        "$PY" hostagent/ak820keymap.py restore "$KEYMAP" && break
         [ "$try" = 3 ] && { echo "restore failed -- run it by hand once the board settles:";
                             echo "  $PY hostagent/ak820keymap.py restore"; exit 1; }
         sleep 4
