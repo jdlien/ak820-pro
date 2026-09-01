@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jdlien.ak820pro.timekeeper</string>
+
+    <!-- Persistent agent (clock-sync plan 3.8): syncs the board's clock on
+         enumeration, on wake, and every 10 min; re-measures the USB SOF
+         bias for ak820ctl. Replaces com.jdlien.ak820pro.clocksync. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/jdlien/code/ak820-pro/venv/bin/python3</string>
+        <string>/Users/jdlien/code/ak820-pro/hostagent/ak820-timekeeper.py</string>
+    </array>
+
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/jdlien/Library/Logs/ak820pro-timekeeper.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jdlien/Library/Logs/ak820pro-timekeeper.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

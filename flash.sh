@@ -79,8 +79,8 @@ fi
 
 # --- 2. wait for the bootloader --------------------------------------------
 if ! usb "$BOOTLOADER"; then
-    echo "== press Fn+Esc to enter the bootloader =="
-    for _ in $(seq 1 120); do usb "$BOOTLOADER" && break; sleep 1; done
+    echo "== press Fn+Esc to enter the bootloader (waiting up to 10 min) =="
+    for _ in $(seq 1 600); do usb "$BOOTLOADER" && break; sleep 1; done   # 10 min: no need to race it
 fi
 usb "$BOOTLOADER" || { echo "timed out waiting for the bootloader (0x7140)"; exit 1; }
 echo "bootloader detected (0C45:7140)"
@@ -117,4 +117,8 @@ fi
 echo
 "$PY" hostagent/ak820keymap.py show >/dev/null 2>&1
 ./time-util-ak820pro/ak820ctl info >/dev/null 2>&1 && echo "raw HID: OK -- board is healthy"
+# A flash erased the persisted RTC trim and the board re-seeded the clock from
+# the PCF at a random sub-second phase; set it properly now (clock-sync plan).
+echo "== syncing the clock =="
+./time-util-ak820pro/ak820ctl clock || echo "clock sync failed -- run ./time-util-ak820pro/ak820ctl clock by hand"
 echo "done."
