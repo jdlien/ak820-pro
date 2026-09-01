@@ -171,6 +171,34 @@ and `draw_text_slot`. Make it explicit:
 - Delete dead code found by the phase-2 sweep (e.g. anything orphaned by
   earlier fixes) — each deletion its own commit with the CLAUDE.md tie-in.
 
+## Execution record (2026-09-01)
+
+- **3.1 done** (five commits, one module per commit, both flavors building
+  under -Werror after each): bt_ui, kb_eeconfig, consumer_mod,
+  param_overlay, indicators, hid_protocol. ak820pro.c: ~1550 → 564 lines.
+- **3.3 done**: shared layer enum + derived Fn mask, check_via_sync.py in
+  build.sh, named font advances, layout/duty _Static_asserts.
+- **3.2 done at the "default deliverable" level**: pending_control_action
+  unification (commit c383ae2033), spec'd first in findings-ch582-states.md
+  with the do-not-break invariants; the full observed-state table rewrite
+  and the host-side pure-model test were considered and NOT taken (decisions
+  recorded in the states doc). Fault injection: HC_INJECT + HC_CONN +
+  scripts/bt_faults.py replay the wire captures against the real parser.
+  One deliberate nuance: PA_BOUNCE survives 5B 31/32 exactly as
+  bounce_pending did.
+- **3.4 done differently than planned**: the band arbiter as designed
+  (per-producer slots + priority picker) already existed after the peer
+  session's b75507a600/d770b64937/831cc67703 — conn_status_update is the
+  arbiter, band_clear enforces the shadow invariant. What actually remained
+  were the audit's blocking paths, now closed (commit ba2d6a2cd4): nothing
+  ever blocks on the glyph queue (defer/discard replaces gq_flush), and the
+  clock band (clock + playback) rides the queue on a third shadow slot.
+  Lock band was already per-slot diffed by the peer; battery/digit stay
+  blocking at their measured ~2-6 ms (accepted).
+- **3.5**: display.c was NOT split further (the arbiter work didn't force
+  it); no dead code found beyond sn32f2xx_blank(), kept deliberately
+  (audit C-3).
+
 ## Deliverables
 
 - [ ] `ak820pro.c` ≤ ~450 lines, five new modules, per-module commits,

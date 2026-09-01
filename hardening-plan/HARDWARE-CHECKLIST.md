@@ -78,4 +78,27 @@ Rides along with the phase-1 flash (same artifacts). Additional checks:
       session: typical `[health]` line, worst loop gap, scan band — the
       numbers a future session compares against.
 
-(Phase 3+ entries are appended as their code lands.)
+## Phase 3 — refactors (commits 1b6b6f8003..ba2d6a2cd4)
+
+Same artifacts as phases 1-2. The refactors target zero behaviour change,
+so the verification is "everything still works", plus the BT fault matrix:
+
+- [ ] **General pass:** typing, encoder (incl. fast spins + the LSA
+      fine-volume on Mac layers), Fn hotkeys, RGB adjust hold-to-repeat and
+      end-stop readouts, LCD brightness keys, NKRO toggle readout, VIA
+      keymap edit, dip switches (Mac/Win logo + mode slider), clock,
+      battery icon/percent/bolt, lock band, media text + playback timer.
+- [ ] **Clock/playback band via the glyph queue:** watch the seconds tick
+      (no flicker), start/stop media (band swaps cleanly, no stranded
+      pixels), let a >1 h video run past the hour (font switch relayout
+      clean).
+- [ ] **BT matrix (findings-ch582-states.md):** pair/unpair on all three
+      slots; cancel-pairing on the same slot (the bounce -- ~1 s recovery);
+      select an unreachable slot (Link failed + remedy text, digit lazy
+      pulse); 2.4G mode; media keys over BT while LINKING; a macOS slow
+      reconnect.
+- [ ] **Fault injection (instrumented):** `python3 scripts/bt_faults.py`
+      — ALL FAULT TESTS PASS. Then toggle the mode slider to restore real
+      link state.
+
+(Phase 4 entries are appended as its code lands.)
