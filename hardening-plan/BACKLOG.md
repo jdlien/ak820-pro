@@ -54,8 +54,9 @@ happens. Run when it next "feels bad".
 
 Measured: wired->BT does NOT reboot; BT->wired reboots EVERY time (power-
 source switchover; direction-asymmetric ride-through). The boot reset cause
-is now readable -- HC_CONN reply byte 7 carries raw RSTST (bit2 = LVD
-brownout, bit4 = POR) -- read it after a BT->cable flip to name the reset.
+is now readable -- HC_CONN reply byte 7 carries raw RSTST. MEASURED
+2026-09-01: the BT->cable flip reset is rstst=0x05 (LVD+SW, no POR) --
+an LVD BROWNOUT during the power-source switchover. Question CLOSED.
 
 Held-key-across-host-switch: QMK's handle_host_changed() verifiably never
 clears report state (Rachel, from source), but the predicted stuck key did

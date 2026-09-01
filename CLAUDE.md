@@ -2738,7 +2738,12 @@ pin short again** — `Fn`+`ESC` disappears the moment you leave QMK.
 Discovered 2026-09-01 (the bunny splash appeared on a BT→cable flip with the
 cable connected the whole time). In the BT position the MCU runs from the
 BATTERY even when USB is attached; the flip to cable is a power-source
-switchover that resets the MCU. Consequences:
+switchover that resets the MCU. **Measured and NAMED via the RSTST readout
+(HC_CONN byte 7): the reset is an LVD BROWNOUT (rstst=0x05, LVD+SW, no
+POR)** — the rail sags below the low-voltage threshold during switchover
+but never fully discharges. Direction-asymmetric: wired→BT rides through
+and does NOT reboot (verified); BT→cable browns out EVERY time.
+Consequences:
 
 - **Every RAM state is lost on the flip**: health counters, the RTC divider
   trim (until its persisted value takes over), the WDT consecutive-reset
