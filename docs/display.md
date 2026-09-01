@@ -1,0 +1,254 @@
+# The LCD: panel, layout, rendering, and what the bands show
+
+The 0.85″ 128×128 GC9107 panel, driven over dual-SPI DMA from external flash.
+Code: `graphics/lcd_bus.c` (bus, memory map — authoritative over any prose
+doc), `graphics/display.c` (dashboard). Fonts and asset provisioning are in
+[fonts-assets.md](fonts-assets.md).
+
+## Panel variant — a compile flag, not an edit
+
+JD's unit is mounted 180° from fpb's and needs inversion on. Default build:
+`MADCTL 0x68` + INVON. `AK820PRO_LCD_VARIANT_FPB` (config.h or
+`-e EXTRAFLAGS=-DAK820PRO_LCD_VARIANT_FPB`) selects fpb-style panels
+(`0xA8`, no INVON). Neither is a "fix" — they are per-unit variants.
+
+Diagnostic that settled the inversion (counterintuitive): the source art is
+white-on-black, the board showed black-on-white, and an *asset-free* board
+showed solid **white** — the black clear-to-background being inverted. Both
+symptoms, one cause. `LCD_OFF_X 1` / `LCD_OFF_Y 2` are controller offsets and
+did not need adjusting after the flip; pixels reach every edge.
+
+## Vertical budget — the panel is exactly full
+
+```
+0..24     connection strip   25
+25..26    gap                 2
+27..54    text (2 lines)     28   two 6x14 cells, at 27 and 41
+55        gap                 1
+56..77    clock              22   Regular-30, CROPPED to its ink
+78..81    gap                 4
+82..104   lock band          23   20px face
+105..127  battery            23   20px face
+```
+
+- **A glyph blit paints its WHOLE cell, background included** — no
+  transparency, no tinting (colour exists only via `lcd_fill_rect`). Cells
+  cannot overlap; two lines cost exactly 2× the cell height.
+- **Spacing is judged by INK, not band boundaries** — the 20px cell carries 4
+  blank rows above caps and 4 below baseline, so "move a band 1px" is never
+  one constant (balancing the lock row took three coupled moves). Measure
+  ink-to-ink: icons→text 2, text→clock 2, clock→lock 8, lock→batt 8.
+- **Anything drawn must fit inside its band's clear rect.** The 16px padlock
+  at `LOCK_Y+3` needs a band ≥ 19 rows; when the band was briefly 17px its
+  bottom rows sat outside the clear and stayed lit forever.
+- One row of bottom margin and `BATT_X0 5` / right margin 4 are deliberate —
+  **the bezel clips the outermost pixels** (panel is recessed).
+
+## How the panel paints: DMA pump, cell diff, glyph queue
+
+The band used to block ~53 ms per two-line repaint on the main loop — enough
+to swallow keystrokes once the media poller made it frequent. Two fixes, in
+order of importance:
+
+1. **Keep the DMA, drop the wait.** `lcd_draw_flash_glyph_try()` arms one
+   glyph and returns; `display_blit_pump()` drives the queue from
+   `housekeeping_task_kb()` at main-loop rate (~390 Hz). A line lands in
+   ~50 ms wall clock, ~0 ms CPU.
+   > ⚠️ One glyph per 10 Hz HOUSEKEEPING tick was tried first: a 20-glyph
+   > line takes 2 seconds and visibly crawls. The granularity was never
+   > wrong; the clock was.
+2. **Do not clear before repainting.** Each band diffs against a shadow of
+   what is on the panel and blits only changed cells — `Bright 25%` →
+   `Bright 26%` is one glyph, not a wipe and eleven. **The wipe WAS the
+   flicker.**
+
+⚠️ **Composing the line in RAM and blitting once is WORSE — do not
+re-derive.** `flash_read_bytes()` is a full `spiExchange()` call PER BYTE
+(~5.5 KB of them per 12-char line), converting a free DMA transfer into a
+CPU-bound loop, plus 5.9 KB of SRAM.
+
+**Glyph queue invariants** (2026-09-01 hardening):
+
+- The 10 Hz housekeeping pass **defers instead of flushing** while glyphs are
+  pending (`if (gq_pending()) return;`) — nothing blocks the main loop on the
+  panel any more.
+- The pump carries the only bounded-wait recovery on the queue path: a 50 ms
+  grace, then `lcd_blit_wait()` teardown. Removing that (it looked redundant)
+  would let one lost SPI0 completion IRQ park the queue **and** the deferring
+  housekeeping forever, with the main loop alive so the watchdog never fires.
+  Codex flagged the same hazard independently.
+- A band's shadow distinguishes **moved** (font/x/y changed — clear exactly
+  the known old run) from **unknown** (`!shadow.valid` — clear the full band
+  width). Conflating them caused the stray-`g` bug: `Connecting` →
+  `Connected` via an invalidated shadow cleared only the new run's width and
+  left the old string's tail on the panel. Fixed + hardware-verified
+  2026-09-01.
+- `[lcd] blit timeout` on the console is THE health signal: zero under load
+  means the pump is not fighting the bus.
+
+## Backlight (software PWM, dimmable, persisted)
+
+`PANEL_BKL` (A16) is a plain GPIO. **Hardware PWM on this pin is impossible —
+verified in the SN32F299 datasheet; `P0.16`'s only alternate function is a
+capture input. Do not re-investigate.** The PWM ticks from CT16B3 (GPTD4) at
+20 kHz — see [leds.md](leds.md) for the timer setup and the `MCTRL` gotcha.
+
+- `BKL_PWM_TICKS 48` → 417 Hz switching, floor 2.1%. Levels are perceptually
+  spaced: `{0,1,2,3,5,8,12,18,27,48}`, indices 0..9.
+- **The `Fn`+`PgUp`/`PgDn` readout is the LEVEL INDEX** (`level*100/9`), not
+  the duty — level 5 shows `LCD 56%` but is duty 8/48 ≈ 17%. The two numbers
+  are meant to diverge; do not "fix" one to match.
+- **Persisted since 2026-09-01** via kb_eeconfig's coalesced ~5 s deferred
+  flush (safe because every flash program drains in-flight LCD DMA first —
+  the old "never persist" rule predated that hook).
+  `DISPLAY_BRIGHTNESS_DEFAULT 5` is only the fresh-EEPROM fallback. The
+  bootloader splash forces max brightness through the RAW setter, which
+  deliberately does not persist.
+- A dimmer floor needs a longer period, which lowers the switching rate —
+  that is the whole trade at a fixed 20 kHz tick.
+
+## Lock / layer band
+
+`[padlock] CAPS  WIN  FN|SCR` — labels only when active; the board lives in a
+dark room. Yellow padlock for *lock* states only (a held Fn layer is not a
+lock). Third slot shared: Scroll Lock wins when set, but macOS never sets it,
+so in practice it is the Fn indicator. Redraws on the 10 Hz tick so Caps shows
+immediately.
+
+- "WIN", not "GUI": the label names the only context where GUI-lock is
+  meaningful (Windows fullscreen gaming). Accessor stays `lock_state_gui()`.
+- The padlock is drawn from rectangles because glyphs have no colour.
+- Fn detection: `FN_LAYER_MASK` in `indicators.c`, built from the shared
+  layer enum in `ak820pro.h` (`WINFN`/`MACFN`).
+
+## Battery row
+
+Icon bottom-left (outline + independent fill), percentage right-aligned to
+`PANEL_WIDTH - 4`. Green >50%, amber 21-50%, red ≤20%; **charging overrides
+with cyan** on outline and fill, plus a 9×14 bolt while actively charging
+(`CHRG` low AND `STDBY` high — full-and-plugged-in is "done", no bolt). Fill
+rounds up so 3% doesn't read as dead. Redraw triggers on charging state as
+well as level. Drawing diagonals: rasterise a polygon and emit horizontal
+runs — hand-placed zigzags read as the digit "4".
+
+**Runtime estimate: considered and rejected.** 1% ≈ 1.2 h, RGB swings draw
+5-10×, board lives plugged in — it would be confidently wrong. `5C <pct>` is
+all the module reports.
+
+## Param overlay (readout of what you just changed)
+
+Shows RGB hue/sat/brightness/speed/effect, RGB on-off, NKRO, and LCD
+backlight for 2 s in the text band. `param_overlay.c`; compiles out entirely
+via `#define PARAM_OVERLAY` in config.h — keep it that way.
+
+- **POLLED on the 10 Hz tick, not hooked into keycodes** — catches Fn
+  hotkeys, custom keycodes, `Fn`+`X` (`RM_TOGG`, QMK builtin, never reaches
+  the custom switch) AND VIA changes. A `primed` flag skips the boot pass.
+- NKRO is the readout with no other feedback anywhere; it is toggled by
+  magic key (both shifts + `N`) which is easy to hit by accident. Both
+  shifts + `S` dumps status, `H` lists the magic keys — a mysteriously
+  misbehaving key is worth checking against that list.
+- Effect names are a local table (10 enabled effects), not
+  `rgb_matrix_get_mode_name()` — smaller, readable, band-sized.
+- Priority: pair hint > RGB readout > link state > host text.
+
+## Wireless status overlay (words for the blinking digit)
+
+Firmware-owned words in the text band, `conn_status_update()`:
+
+| State | Shown |
+|---|---|
+| `PAIRING`, BT | `Pair with:` ⟷ `AK820 5.1-1` (the exact advertised name, alternating 1.5 s) |
+| `PAIRING`, 2.4G | `Pairing 2.4G` |
+| `LINKING` | `Connecting` |
+| `CONNECTED` | `Connected` — ~3 s, then the band is released |
+| `REJECTED` | `Link failed` ⟷ `Hold Fn+W` (the single key for the failed slot) |
+| wired | nothing — the module's state is stale in USB mode |
+
+- The remedy shows for `REJECTED` only, deliberately not for a long
+  `LINKING` — that state is ambiguous with the dropped-`5B 32` display bug,
+  and the advice would tear down a working link.
+- **Dirty-tracking gotcha (was a real bug):** the shared buffer means a
+  change of *state* must mark dirty as well as a change of *slot* — a pointer
+  compare alone leaves the previous message up.
+- The overlay borrows the band and hands it back; a track title is displaced
+  for seconds, never lost. It gets 12 characters (no icon gutter); host text
+  effectively 11 at 20px.
+
+## Alert slot
+
+`display_set_alert()` puts a firmware-owned warning in the band for 60 s
+(below the pair hint in priority). First user: the watchdog reset notice
+(`WDT reset x1`) — a recovery the user would otherwise never know happened.
+See [hardware.md](hardware.md).
+
+## Host text slot (two lines, pushed over raw HID)
+
+Channel `0x12`: `TEXT_SET` (0x01, line 0 + clears line 1), `TEXT_CLEAR`
+(0x02), `TEXT_SET_LINE` (0x03, `[line][icon][ASCII…]`), `TEXT_PLAYBACK`
+(0x04). One line per packet — 32 raw-HID bytes leave ~27 for text, and that
+constraint is what let the design skip offsets/commits/framing. Torn updates
+are harmless; the producer polls every 3 s.
+
+- **The two lines have different budgets**: line 0 sits beside the 14px
+  transport-icon gutter → 19 chars; line 1 starts at `TEXT_X2` → 21.
+  `DISPLAY_TEXT_MAX_L0/_L1` in display.h, mirrored by `MAXLEN` in
+  `hostagent/ak820text.py`. The producer puts the ARTIST on line 0 and the
+  TITLE on line 1 (title gets the wider line).
+- Single-line text keeps the adaptive size: ≤ `TEXT_BIG_MAX` (11) chars uses
+  the 20px face.
+- Icons: `0 none, 1 play, 2 pause, 3 stop` — icon IDs, not "media state".
+- Non-ASCII becomes `?` in firmware; the host transliterates first.
+- **Expires after 3 min** (`DISPLAY_TEXT_TIMEOUT_MS`) so a dead agent leaves
+  a blank slot, not last night's track.
+- **Optimistic play/pause**: `KC_MEDIA_PLAY_PAUSE` flips the icon
+  immediately; the next host poll overwrites with truth. Returns `true` (the
+  key must reach the host) and does not touch the liveness stamp.
+- **NOT A BUG: a track from hours ago is usually correct** — the producer
+  pushes on `paused` too, so an open player keeps reporting its last track.
+  The expiry only fires when nothing refreshes the slot.
+- No scrolling, deliberately: a marquee would keep the flash→LCD DMA busy at
+  10 Hz — the same resource the eeconfig-write freeze was about.
+
+**Host side** (`hostagent/`, outside the QMK clone): `ak820text.py` (dumb
+pipe), `nowplaying-macos.sh` (polls Spotify/Music every 3 s; checks
+`is running` first so it doesn't launch the app). Installed as a LaunchAgent
+(`com.jdlien.ak820pro.nowplaying.plist`, KeepAlive + ThrottleInterval 30; log
+`~/Library/Logs/ak820pro-nowplaying.log`). AppleScript needs Automation
+permission — under launchd the consent prompt may not surface and queries
+silently return empty. AppleScript, not MediaRemote: app-specific (no
+browser/YouTube media) but stable across OS versions; a Windows producer
+could use SMTC and send the same bytes.
+
+## Playback position (replaces the clock while playing)
+
+`2:34/18:45` in the clock band from `TEXT_PLAYBACK`
+(`[state][pos16][dur16]`, whole seconds). The firmware advances the timer on
+the 1 Hz tick; the host re-asserts absolute position each poll. Only the
+PLAYING state takes the band; the media key **freezes** it immediately
+(`display_playback_key()`) — position doesn't change while paused, so the
+held value stays correct. Expires after 20 s (`PLAYBACK_TIMEOUT_MS`). Font
+drops to 13px only past an hour (`H:MM:SS` doesn't fit at 20px); the 20px
+cell borrows one row from the gap below — `CLOCK_BAND_H 23` must cover
+everything either owner draws.
+
+⚠️ **Duration units differ by app: Music reports SECONDS, Spotify
+MILLISECONDS.** Wrong handling shows a 3-min track as 3 s and looks exactly
+like a firmware bug. ⚠️ Browser media is invisible (no scripting
+dictionary); the only route is the private MediaRemote framework,
+deliberately not used.
+
+## The animation slot (stock, orphaned, empty)
+
+`Fn`+`Delete` (`ANIM_TOG`) plays full-screen frames from external flash
+(`ANIM_BASE 0x540000`, 32 KB stride, 100 ms/frame, ceiling 244 frames).
+While running it owns the SPI bus — dashboard suspended, RTC polling stopped
+(the bit-banged RTC I2C shares port A with the flash SPI pins).
+
+On this board the header reads **zero frames** (probed via `flash crc`:
+header CRC = CRC of 256 zero bytes, with orphaned stock frame data below it),
+so it is a no-op — `anim_toggle()` reads the header BEFORE pausing the
+dashboard (it used to blink the screen black for ~1 s doing nothing). There
+is NO validation beyond the zero count; a bad header paints garbage.
+Provision with `mkanim.py` (GIF → blob) if ever wanted; the region is below
+`FLASH_ASSET_BASE`, so `ak820ctl` needs `--unlock` to write it.
