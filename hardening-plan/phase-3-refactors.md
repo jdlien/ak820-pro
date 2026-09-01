@@ -147,6 +147,21 @@ and `draw_text_slot`. Make it explicit:
 - Behaviour targets stay exactly as documented: hint outranks everything
   while active; `CONNECTED` holds ~3 s then releases; overlay borrows, host
   text returns; wired mode shows nothing from the conn producer.
+- **Invariants from the 2026-09-01 shadow-corruption fixes (b75507a600,
+  d770b64937) — the arbiter must preserve these:**
+  (a) *A shadow may only claim "already painted" for pixels still on the
+  panel.* Three owners overlap inside the 14px gutter (icon x0..11, param
+  overlay from x4, line 1 from x2); with a diffing renderer, one owner's
+  clear landing on another's pixels is PERMANENT damage, not flicker — the
+  diff never repaints what it thinks is present. Every clear goes through
+  `band_clear()`, which invalidates any overlapping shadow; keep that as
+  the single clear path and a fourth owner is covered automatically.
+  (b) *Icon-first ordering is load-bearing in both directions* — neither
+  pure ordering is safe; the overlap is handled explicitly
+  (`icon_clobbered`). Do not "fix" by reordering.
+  (c) *The glyph pump stays on the main loop (~390 Hz)*, never the 10 Hz
+  tick (measured: 2 s/line at 10 Hz), and composing lines in RAM is
+  strictly worse (spi1_rw is a spiExchange per BYTE; 5.9 KB SRAM).
 
 ## 3.5 Opportunistic, same files, separate commits
 

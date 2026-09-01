@@ -14,4 +14,45 @@ entry says what to do and what "pass" looks like. Build artifacts are in
       normal — proves a script-built binary from the committed patches
       branch is flightworthy. Everything later builds on this.
 
-(Phase 1+ entries are appended as their code lands.)
+## Phase 1 — watchdog + health (commit a4382c747c)
+
+Flash the newest **instrumented** artifact first for the tests, then the
+daily one to live on. `./scripts/consolelog.sh` in one terminal for the
+console tests.
+
+- [ ] **Normal boot, no spurious resets.** Flash instrumented; use the board
+      normally ~10 min including some VIA edits and RGB adjustment.
+      **Pass:** `python3 hostagent/ak820health.py` shows
+      `wdt_consecutive_resets 0`, `wdt_fired_last_boot False`, and no
+      `[health]` anomalies in the console log.
+- [ ] **Watchdog catches a wedge.** `python3 -c "import sys;
+      sys.path.insert(0,'hostagent'); from ak820health import open_device;
+      h=open_device(); h.write(bytes([0,0x07,0x13,0x7E,1]+[0]*27))"`
+      — the board wedges silently (typing dead).
+      **Pass:** it comes back BY ITSELF in ~12 s (measure it — if ~2x off,
+      the WDTPRE encoding assumption in watchdog.c is wrong; halve/double
+      WDT_TC). Console shows `[wdt] reset recovery: consecutive=1`;
+      ak820health shows `wdt_fired_last_boot True`.
+- [ ] **Reset near a flash write.** Same command with mode `2` instead
+      of `1`. **Pass:** board self-recovers; afterwards VIA still shows the
+      correct keymap, the BT slot memory survives, and RGB settings are
+      sane — i.e. the interrupted-write recovery left the EEPROM store
+      usable. (kb-config pad byte 0 gets toggled by the test; harmless.)
+- [ ] **Degraded-mode escape.** Run the mode-1 wedge 3x in a row without a
+      power cycle. **Pass:** after the 3rd reset the board boots with
+      `wdt_degraded True` and stops resetting; a power cycle (slider off
+      ~10 s) clears it back to normal.
+- [ ] **Bootloader interaction.** With instrumented flashed, `Fn`+`Esc` →
+      bootloader; leave it sitting for 60 s. **Pass:** it STAYS in the
+      bootloader (0x7140, no self-reset — proves wdgStop before the jump
+      works), then flash normally and the board comes back.
+- [ ] **Soak.** `launchctl unload ~/Library/LaunchAgents/com.jdlien.ak820pro.nowplaying.plist`,
+      then `python3 scripts/soak.py --seconds 300`. **Pass:** `SOAK PASS`,
+      worst loop gap well under 60 ms. Reload the agent after.
+- [ ] **RTC trim note:** each WDT reset costs the (unpersisted) divider trim
+      — expect the clock to re-converge for a few minutes after the reset
+      tests. Phase 4 persists it.
+- [ ] Finish by flashing the newest **daily** artifact; quick re-run of the
+      first checklist item's checks.
+
+(Phase 2+ entries are appended as their code lands.)

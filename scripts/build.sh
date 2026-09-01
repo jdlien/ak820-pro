@@ -13,7 +13,7 @@ if (( $# > 1 )); then echo "usage: build.sh [daily|instrumented]" >&2; exit 2; f
 FLAVOR="${1:-daily}"
 case "$FLAVOR" in
   daily)        FLAGS=() ;;
-  instrumented) FLAGS=(-e CONSOLE_ENABLE=yes -e EXTRAFLAGS=-DLOOPGAP_INSTRUMENT) ;;
+  instrumented) FLAGS=(-e CONSOLE_ENABLE=yes -e "EXTRAFLAGS=-DLOOPGAP_INSTRUMENT -DWDT_TEST_HOOKS") ;;
   *) echo "usage: build.sh [daily|instrumented]" >&2; exit 2 ;;
 esac
 command -v xxd >/dev/null || { echo "ERROR: xxd not found" >&2; exit 1; }
