@@ -85,6 +85,24 @@ flashed artifact names the commit it came from.
 - `SonixFlasherC`: confirm still on `fpb/fix_for_macos_tahoe` and the binary
   still links libusb (`nm sonixflasher | grep -c libusb` > 0).
 
+## Execution record (2026-09-01)
+
+Done. Codex-reviewed (10 findings, see `scratchpad` transcript summary in the
+phase-0 commit messages); fixes applied: build lock around compile+copy,
+provenance captured before the build and re-checked after, structural checks
+enforced (SP + reset vector + USB descriptor `0C45:8009 bcd 0100`, artifact
+deleted on failure), arg/dependency validation. Both flavors built from tip
+and verified genuinely different (console strings present only in
+instrumented). Deliberate deviations from the phase text:
+
+- **No note prepended to the `.diff` files** — leading text risks breaking
+  `git apply`; `PATCHES.md` beside them is the authoritative note instead.
+- **The recovery bundle is delta, not standalone** (requires the upstream
+  `5bed8690` object) — acceptable while upstream/fork exist; the flattened
+  backup diff is the self-contained fallback.
+- Flash + normal-boot verification of a script-built binary is on the
+  hardware checklist (`HARDWARE-CHECKLIST.md`), not yet performed.
+
 ## Deliverables
 
 - [ ] Loop-gap probe committed.

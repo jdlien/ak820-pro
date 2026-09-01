@@ -16,3 +16,4 @@ __pycache__/
 # See assets-src/FONTS.md
 assets-src/*.ttf
 assets-src/*.otf
+ak820pro-builds/out/

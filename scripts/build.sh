@@ -9,8 +9,16 @@
 # that path is shared and whoever compiles last owns it (see CLAUDE.md).
 set -euo pipefail
 
-WORK="$(cd "$(dirname "$0")/.." && pwd)"
+if (( $# > 1 )); then echo "usage: build.sh [daily|instrumented]" >&2; exit 2; fi
 FLAVOR="${1:-daily}"
+case "$FLAVOR" in
+  daily)        FLAGS=() ;;
+  instrumented) FLAGS=(-e CONSOLE_ENABLE=yes -e EXTRAFLAGS=-DLOOPGAP_INSTRUMENT) ;;
+  *) echo "usage: build.sh [daily|instrumented]" >&2; exit 2 ;;
+esac
+command -v xxd >/dev/null || { echo "ERROR: xxd not found" >&2; exit 1; }
+
+WORK="$(cd "$(dirname "$0")/.." && pwd)"
 source "$WORK/env.sh"
 REPO="$QMK_HOME"
 OUT="$WORK/ak820pro-builds/out"
@@ -30,29 +38,43 @@ if [[ -n "$(git -C "$REPO/lib/chibios-contrib" status --porcelain)" ]]; then
   exit 1
 fi
 
-case "$FLAVOR" in
-  daily)        FLAGS=() ;;
-  instrumented) FLAGS=(-e CONSOLE_ENABLE=yes -e EXTRAFLAGS=-DLOOPGAP_INSTRUMENT) ;;
-  *) echo "usage: build.sh [daily|instrumented]" >&2; exit 2 ;;
-esac
+# Identity is captured BEFORE the build and re-checked after: a checkout that
+# changes mid-build would otherwise stamp the artifact with the wrong source.
+state() { echo "$(git -C "$REPO" rev-parse HEAD):$(git -C "$REPO" status --porcelain --untracked-files=no | shasum | cut -c1-8)"; }
+pre_state=$(state)
+hash=$(git -C "$REPO" rev-parse --short HEAD)
+dirty=""
+[[ -n "$(git -C "$REPO" status --porcelain --untracked-files=no)" ]] && dirty="-dirty"
+
+# qmk compile writes ONE shared output path; a lock serialises compile+copy so
+# two invocations cannot interleave and mislabel each other's binary.
+LOCK="$WORK/.build.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  echo "ERROR: another build holds $LOCK (stale? rmdir it if no build is running)" >&2
+  exit 1
+fi
+trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 
 cd "$REPO"
 qmk compile -kb a_jazz/ak820pro -km via "${FLAGS[@]}"
 
-hash=$(git -C "$REPO" rev-parse --short HEAD)
-dirty=""
-[[ -n "$(git -C "$REPO" status --porcelain --untracked-files=no)" ]] && dirty="-dirty"
+[[ "$(state)" == "$pre_state" ]] || { echo "ERROR: repo changed during the build; artifact provenance unreliable — rebuild." >&2; exit 1; }
+
 stamp=$(date +%Y%m%d-%H%M%S)
 mkdir -p "$OUT"
 dest="$OUT/via-$FLAVOR-$hash$dirty-$stamp.bin"
 cp "$REPO/a_jazz_ak820pro_via.bin" "$dest"
 
-# Structural sanity (CLAUDE.md "Verifying a build"): initial SP and reset vector.
+# Structural checks (CLAUDE.md "Verifying a build") -- ENFORCED, not advisory:
+# initial SP, reset vector, and the 0C45:8009 bcd 0100 USB device descriptor.
 sp=$(xxd -l4 -e "$dest" | awk '{print $2}')
 rv=$(xxd -s4 -l4 -e "$dest" | awk '{print $2}')
-if [[ "$sp" != "20000400" || "$rv" != "00000191" ]]; then
-  echo "WARNING: vector table unexpected (SP=0x$sp reset=0x$rv; want 0x20000400/0x00000191)" >&2
-fi
+usb=$(xxd -p -c0 "$dest" | grep -c "450c09800001" || true)
+fail=0
+[[ "$sp" == "20000400" ]] || { echo "FAIL: initial SP 0x$sp != 0x20000400" >&2; fail=1; }
+[[ "$rv" == "00000191" ]] || { echo "FAIL: reset vector 0x$rv != 0x00000191" >&2; fail=1; }
+[[ "$usb" -ge 1 ]] || { echo "FAIL: USB descriptor 0C45:8009 bcd 0100 not found" >&2; fail=1; }
+if (( fail )); then rm -f "$dest"; echo "Structural checks FAILED; artifact removed." >&2; exit 1; fi
 
 echo "BUILD OK: $dest"
 echo "flash:    $WORK/flash.sh \"$dest\"   # dumps+restores the VIA keymap around the flash"
