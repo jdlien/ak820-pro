@@ -88,7 +88,11 @@ brightness through the raw setter and must not clobber the stored level;
 the WDT test hook's poke moved to bit 7 of the brightness byte (reads as
 unset → self-heals) since the RTC period now owns the old pad byte; and the
 trim persist follows the incremental any-sane-value policy (Codex #15),
-not a settle detector. Hardware verification is on the checklist.
+not a settle detector. Hardware verification is on the checklist. **Accepted regression** (Codex
+phase-4 review #2): a BT slot change followed by power loss inside the ~5 s
+settle window boots into the previous slot -- the old code persisted the
+slot immediately. Judged acceptable: one keypress recovers, and the
+uniform write policy is what keeps flash writes rare and guarded.
 
 ## 4.3 Documentation close-out (whole plan)
 

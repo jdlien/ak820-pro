@@ -21,6 +21,22 @@ the workspace; the handoff explains the device.
 
 ## Current state (as of 2026-08-29) — QMK IS FLASHED AND RUNNING
 
+**2026-09-01: the hardening project (phases 0-5) is code-complete.** See
+`hardening-plan/` (plan, findings, per-phase execution records) and
+`hardening-plan/HARDWARE-CHECKLIST.md` for what still needs on-hardware
+verification. Headlines: a ~12 s hardware watchdog with reset-loop escape and
+boot-cause breadcrumbs (watchdog.c; test hooks in instrumented builds);
+unified health counters over raw HID channel 0x13 (`hostagent/ak820health.py`,
+`scripts/soak.py`, `scripts/bt_faults.py`); the board code split into modules;
+the CH582F pending-action machinery unified with fault injection; nothing
+blocks the main loop on the glyph queue any more; the RTC trim and LCD
+brightness persist; the ChibiOS patches are commits on the pinned submodule
+branch (`PATCHES.md`); builds go through `scripts/build.sh`
+(daily|instrumented, provenance-named artifacts in `ak820pro-builds/out/`,
+flash the printed file via `flash.sh`); and the LCD panel variant is a
+compile flag (`AK820PRO_LCD_VARIANT_FPB`).
+
+
 - Build environment on this Mac (Gizmo, macOS Tahoe 26.6.2, Apple Silicon): **done and verified**.
 - **QMK VIA firmware flashed successfully** on 2026-08-28. Flash verification
   checksum OK; the board rebooted on its own into QMK.
@@ -411,7 +427,12 @@ the trim absorbs 820 ppm easily.
 that varies part to part and with temperature. 33600 is right for this board and
 would start another unit further off than the nominal 32000 does. The durable fix
 is **persisting the converged period** -- one eeconfig field written when the trim
-settles -- which works for any unit and makes the seed irrelevant. Not yet built.
+settles -- which works for any unit and makes the seed irrelevant.
+**BUILT 2026-09-01 (hardening phase 4, commit 08aecac174):** the trim now
+persists any accepted sane value after 10 min uptime when it moves >= 32 ticks
+from what is stored (kb_eeconfig, coalesced deferred write), and rtc_init
+prefers the stored period over RTC_PERIOD_INITIAL, which is now only a
+fresh-EEPROM fallback.
 
 **Post-sync phase is a fixed offset that DIFFERS PER SYNC**: measured +67 ms in
 one run and -229 ms in another, each with near-zero internal spread. That is the
@@ -471,8 +492,13 @@ move mattered and the `MCTRL` gotcha that makes it work.
   mostly-blank panel and is genuinely too dim against real content: the lit
   pixels are a small fraction of the area, so they carry the whole impression.
   Middle of the range is the better compromise and is still far below stock.
-- **Not persisted.** Every kb-eeconfig write is an internal-flash program/erase,
-  i.e. the thing that wedges this board. Change the default in `config.h`.
+- **PERSISTED since 2026-09-01** (hardening phase 4): Fn+PgUp/PgDn changes
+  are stored via kb_eeconfig's coalesced deferred flush (~5 s settle; every
+  program drains in-flight LCD DMA via backing_store_pre_write_hook, which is
+  what made this safe -- the old "never persist" rule predated that hook).
+  The bootloader splash forces max brightness through the RAW setter, which
+  deliberately does not persist. `DISPLAY_BRIGHTNESS_DEFAULT` is now only the
+  fresh-EEPROM fallback.
 
 **Minimum brightness is 1 tick, so a dimmer floor needs a LONGER period, which
 lowers the switching rate.** That is now the *whole* trade — period against
@@ -2250,6 +2276,16 @@ keyboard regresses. Check `git status` before touching that repo.
 looking for local changes. `git status` in `qmk_firmware-ak820pro/` is the only
 reliable inventory.
 
+**⚠️ TABLE PREDATES THE 2026-09-01 HARDENING REFACTOR (phases 0-5).** The
+board code was split into modules (bt_ui, kb_eeconfig, consumer_mod,
+param_overlay, indicators, hid_protocol, watchdog, health -- ak820pro.c is
+down to ~570 lines of init/dispatch/instruments), a hardware watchdog and
+raw-HID health counters (channel 0x13) were added, the ChibiOS patches became
+COMMITS on the pinned submodule branch, and everything below is committed --
+"uncommitted local edits" is no longer this tree's model. Git history on
+`ak820pro-jdlien` and `hardening-plan/` in this repo are authoritative; the
+table remains as a map of WHAT exists and WHY, not WHERE it lives:
+
 Inside `keyboards/a_jazz/ak820pro/`:
 
 | File | Change | Why |
@@ -2321,7 +2357,19 @@ is the black clear-to-background being inverted. Both symptoms, one cause.
 `LCD_OFF_X 1` / `LCD_OFF_Y 2` did **not** need adjusting after the 180° flip —
 verified on hardware, pixels reach every edge with no garbage band.
 
-#### RGB field rate — why those three constants move together
+#### RGB field rate — ⚠️ SECTION SUPERSEDED 2026-08-31/09-01
+
+**The freq-product coupling this section documents WAS FIXED** by
+`SN32F2XX_RGB_PWM_FREQ` (commit cba2c1e19e adds the define to
+drivers/led/sn32f2xx.c; config.h pins the clock at 4.8 MHz). The four UI step
+sizes are now FREE -- `SPD_STEP` is 4, `HUE_STEP` 8, `SAT_STEP` 32 -- and
+changing them no longer touches the 1046 Hz field rate. The step-trading
+tables below describe the OLD constraint; do not re-derive trades from them.
+The field-rate math, the periodticks/val-ceiling trap, and the
+don't-raise-the-ISR-rate guidance further down remain true. Original section
+kept for the measurements:
+
+#### RGB field rate — why those three constants moved together (HISTORICAL)
 
 `drivers/led/sn32f2xx.c` lights the 18 hardware rows (6 key rows × R,B,G) one at
 a time, one row per PWM period, so a key's three colour channels fire in separate

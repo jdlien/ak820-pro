@@ -97,3 +97,25 @@ the README ground rules.
 - [ ] LCD variant flag + README symptom mapping.
 - [ ] Recovery-first public README.
 - [ ] License/attribution notes; branding line.
+
+## Execution record (2026-09-01)
+
+Software parts done: the `AK820PRO_LCD_VARIANT_FPB` compile flag (both
+variants build; symptom mapping in the readme), the recovery-first
+"Jackrabbit fork" section prepended to `keyboards/a_jazz/ak820pro/readme.md`
+(stock-image warning, bootloader-looks-dead, Tahoe libusb trap, EEPROM
+erase, submodule build, provisioning order, mode-index oddity, attribution
++ bunny-mark line, no-warranty scope), and the companion toolchain made
+reachable: `jdlien/time-util-ak820pro` forked and the `ak820pro-local`
+branch (ak820ctl edits + the shipped asset sources incl. `flash_assets.bin`)
+pushed, alongside the already-public `jdlien/qmk_firmware` and
+`jdlien/ChibiOS-Contrib` forks.
+
+Remaining for JD (deliberate):
+
+- Decide whether the WORKSPACE repo (`jdlien/ak820-pro` -- CLAUDE.md, the
+  plan, hostagent with absolute paths) stays private; the plan says it
+  should. Everything a stranger needs lives in the three public forks.
+- A final personal-data eyeball of the public readme/branches before
+  announcing anywhere.
+- The hardware checklist, which gates calling any of this "verified".

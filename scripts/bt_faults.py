@@ -122,9 +122,12 @@ def main():
     BT1, BT2, BT3, PAIR = 0x31, 0x32, 0x33, 0x51
 
     def a6(self=t):
+        """(count, params) -- battery polls are excluded firmware-side, so the
+        count is an EXACT observable and immune to trace-ring saturation."""
         r = self.xfer([SET_VALUE, HEALTH, 0x7C])
+        cnt = r[3] | (r[4] << 8)
         n = r[5]
-        return [b for b in r[6:6 + n] if b != 0x53]
+        return cnt, list(r[6:6 + n])
 
     def drive(op, arg=0):
         t.xfer([SET_VALUE, HEALTH, 0x7B, op, arg])
@@ -135,47 +138,55 @@ def main():
         if not cond:
             t.failures.append(name)
 
-    # Make the driver consider the module alive: the cold-boot select retry
-    # (500 ms, uncapped, while !module_alive) would otherwise pollute every
-    # trace assertion below. An injected ACK token sets module_alive exactly
-    # as a real one would.
+    # Determinism: the LIVE module answers A6 commands even in wired mode and
+    # its interleaved 5B frames would race these assertions -- mute real RX so
+    # the parser sees only injected bytes. The injected ACK sets module_alive,
+    # or the cold-boot select retry (500 ms, uncapped) would pollute counts.
+    drive(4, 1)
     t.inject([0x61, 0x0D, 0x0A])
 
     print("8. select goes out; 5B 33 stops the retry (never re-select an attempting module)")
     drive(1, BT2)
-    check("A6 32 sent on select", a6()[-1:] == [BT2])
+    c0, tr = a6()
+    check("A6 32 sent on select", tr[-1:] == [BT2])
     t.inject(frame(0x5B, 0x33))
-    before = a6()
+    c1, _ = a6()
     time.sleep(2.0)   # past the 1.5 s retry cadence
-    check("no retry after 5B 33", a6() == before)
+    c2, _ = a6()
+    check("no retry after 5B 33", c2 == c1)
 
     print("9. select retry: 5B 23 refires immediately, clock refires at 1.5 s")
     drive(1, BT3)
-    n0 = len(a6())
+    c0, _ = a6()
     t.inject(frame(0x5B, 0x23))
-    check("5B 23 event refire", a6()[-1:] == [BT3] and len(a6()) >= n0 + 1)
-    n1 = len(a6())
+    c1, tr = a6()
+    check("5B 23 event refire", c1 == c0 + 1 and tr[-1] == BT3)
     time.sleep(1.7)
-    check("timed retry fired", len(a6()) >= n1 + 1 and a6()[-1] == BT3)
+    c2, tr = a6()
+    check("timed retry fired", c2 == c1 + 1 and tr[-1] == BT3)
 
     print("10. pair retries until 5B 31 confirms")
     drive(2)
-    check("A6 51 sent", a6()[-1] == PAIR)
+    c0, tr = a6()
+    check("A6 51 sent", tr[-1] == PAIR)
     time.sleep(1.0)   # ~2 retries at 400 ms
-    check("pair retrying", a6()[-2:] == [PAIR, PAIR])
+    c1, tr = a6()
+    check("pair retrying", c1 >= c0 + 2 and tr[-2:] == [PAIR, PAIR])
     t.inject(frame(0x5B, 0x31))   # confirmed -> PAIRING state, retry stops
-    before = a6()
+    c2, _ = a6()
     time.sleep(1.0)
-    check("retry stops on 5B 31", a6() == before)
+    c3, _ = a6()
+    check("retry stops on 5B 31", c3 == c2)
 
     print("11. cancel-pairing bounce: a DIFFERENT slot first, then the target")
     # state is PAIRING from test 10; selecting BT2 must bounce via BT1
     drive(1, BT2)
     time.sleep(1.0)   # bounce fires the real select after 700 ms
-    tail = a6()[-2:]
-    check("bounce order [other, target]", tail == [BT1, BT2])
+    _, tr = a6()
+    check("bounce order [other, target]", tr[-2:] == [BT1, BT2])
 
-    drive(3)   # cancel: leave the driver idle for the slider to restore
+    drive(3)     # cancel: leave the driver idle
+    drive(4, 0)  # un-mute real module traffic
 
     t.h.close()
     if t.failures:
