@@ -1868,6 +1868,56 @@ Single channel makes rainbow **structurally impossible**, at any frequency.
 `ROW_CHANNELS 1` is untested here and rgb_matrix effects would render only their
 red component.
 
+### RGB effects: what is enabled, and the board-local one
+
+`solid_color` `alphas_mods` **`RAINFALL`** `cycle_all` `cycle_left_right`
+`cycle_up_down` `rainbow_moving_chevron` `cycle_pinwheel` `jellybean_raindrops`
+`typing_heatmap`
+
+**Alphas/Mods needed LED FLAGS, not just enabling.** All 81 LEDs shipped as
+`KEYLIGHT` with zero `MODIFIER`, so the effect would have painted everything one
+colour and looked exactly like `solid_color`. The split in `keyboard.json`
+(`flags: 5` = `KEYLIGHT|MODIFIER`) was derived from the keymap: 48 alphas
+(letters, digits, punctuation, space) against 33 frame keys — Esc, F-row, Del,
+Bspc, Home, Tab, PgUp, Caps, Enter, PgDn, Shifts, Ctrl/GUI/Alt/Fn, arrows.
+
+**The second colour is the SPEED value.** `alpha_mods_anim.h` does
+`hsv.h += rgb_matrix_config.speed`, because a static effect has no animation to
+speed up. So `Fn`+`-`/`=` is the second-colour dial with no custom keycode, and
+`fmt_speed()` reports `2nd +180` in that mode — a "Speed %" readout there would
+name the wrong quantity entirely.
+
+**`RAINFALL` is board-local** (`rgb_matrix_kb.inc`, `RGB_MATRIX_CUSTOM_KB = yes`).
+Per-LED brightness + hue, decaying each frame, with a random LED seeded to full
+on a timer. **Speed sets the DROP RATE, not the decay** — more raindrops rather
+than shorter ones.
+
+It exists because no stock effect fades a random key out. `PIXEL_RAIN` sets ONE
+LED per interval (half the time to black) and leaves the rest lit until they are
+picked again — a static scatter, not rain. `STARLIGHT`/`STARLIGHT_SMOOTH` keep
+the whole board lit on a shared or per-LED sine. **Do not swap RAINFALL back out
+for one of those expecting the same look.**
+
+**⚠️ Two traps when adding effects:**
+
+1. **Custom effects are `RGB_MATRIX_CUSTOM_<NAME>` in the enum**, not
+   `RGB_MATRIX_<NAME>` (`rgb_matrix.h` prefixes them). The resulting error names
+   the identifier, which reads like `RGB_MATRIX_CUSTOM_KB` being unset — it is
+   not; check `.build/obj_*/cflags.txt` before rebuilding anything.
+2. **Reactive effects (`splash`, `solid_reactive*`) need `RGB_MATRIX_KEYPRESSES`
+   in `config.h`.** `splash_anim.h` is wrapped in
+   `#ifdef RGB_MATRIX_KEYREACTIVE_ENABLED`, which `rgb_matrix_types.h` defines
+   only from `RGB_MATRIX_KEYPRESSES`. Enabling the effect in `keyboard.json`
+   alone compiles it out **silently** — no warning, just absent from the cycle.
+   Splash was tried and rejected on looks; the define came back out with it, so
+   it is not costing per-keypress work for no consumer.
+
+**Verifying an effect really got built: `nm` LIES.** Most effect functions are
+`static` and called once, so they inline away and leave no symbol —
+`PIXEL_RAIN` showed nothing while `JELLYBEAN_RAINDROPS` showed a `T`. The real
+proof is that a `case RGB_MATRIX_*:` referencing it compiles under `-Werror`,
+since that enum member exists only when `RGB_MATRIX_EFFECT()` expands.
+
 ### Known quirks
 
 **⚠️ THE HANG IS A CRAWL, NOT A DEAD CPU — the entry below is WRONG about the
