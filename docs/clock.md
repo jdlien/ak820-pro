@@ -100,8 +100,10 @@ the ILRC varies part to part and with temperature.
 
 **Reflashing ERASES the emulated EEPROM**, stored period included. With the
 host attached, the SOF loop re-converges in **~4 min** (7-12 ms/s drift
-early on); standalone, the legacy trim climb takes ~10-15 min. **Designed,
-not a fault.**
+early on); standalone, the legacy trim gets inside the 2 s deadband in
+~10-15 min but full half-step convergence takes **hours** (each ≥ 300 s
+window halves the remaining error — which is exactly why the SOF loop
+exists). **Designed, not a fault.**
 
 ## The timekeeper (host side)
 
