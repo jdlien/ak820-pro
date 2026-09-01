@@ -2466,20 +2466,34 @@ costs backlight switching rate (417 → 208 Hz) but no field rate at all.
 Do **not** reach for `periodticks` to get there — it would undo the dimming
 granularity that is the whole reason `freq` was raised instead.
 
-### The ChibiOS patches are working-tree edits
+### The ChibiOS patches are COMMITTED on a submodule branch (2026-09-01)
 
-Six `.diff` files in `keyboards/a_jazz/ak820pro/` are applied by hand into
-`lib/chibios-contrib/`. They are **not committed**, so **any `git submodule
-update` silently discards them** and the build breaks in confusing ways. Order
-matters — `spi_flash_dma` must follow `spi_fifo_pump` (same LLD file), and
-`efl_ramtext` is required for VIA:
+The hand-applied diffs are now **seven commits** on `lib/chibios-contrib`
+branch **`ak820pro-patches`** (from the upstream pin `5bed8690`), and the
+superproject gitlink pins that tip — `git submodule update` now detaches to
+the *patched* commit instead of silently destroying working-tree edits. See
+`keyboards/a_jazz/ak820pro/PATCHES.md` (authoritative). The `.diff` files
+stay as documentation/recovery.
+
+**There are SEVEN patches, not the six older notes said** —
+`spi_dma_abort.diff` (2026-08-31, blit-timeout work) was never added to the
+old list or the setup-script loop. Order:
 
 ```
-hardware_pwm → i2c_fallback → rtc_lld → spi_fifo_pump → spi_flash_dma → efl_ramtext
+hardware_pwm → i2c_fallback → rtc_lld → spi_fifo_pump → spi_flash_dma → spi_dma_abort → efl_ramtext
 ```
 
-Reapply with the loop in `ak820pro-builds/ak820pro-mac-setup.sh` step 5, which
-is idempotent (it reverse-checks each patch before applying).
+The branch exists locally and in
+`ak820pro-builds/chibios-ak820pro-patches.bundle` (recovery:
+`git fetch <bundle> ak820pro-patches`); flattened state in
+`ak820pro-builds/chibios-applied-state-backup-2026-09-01.diff`. The
+setup-script reapply loop (step 5) is superseded — and lists only six.
+
+Build with `scripts/build.sh [daily|instrumented]`, which refuses to build
+if the submodule is off the pinned commit or dirty, and writes a
+provenance-named binary to `ak820pro-builds/out/` so the shared
+`$QMK_HOME/a_jazz_ak820pro_via.bin` hazard no longer applies to flashing —
+flash the per-build file via `flash.sh`.
 
 ### ⚠️ TWO SESSIONS CANNOT SHARE THIS TREE SAFELY — the binary path is shared
 
@@ -2513,11 +2527,11 @@ Other shared resources that conflict the same way:
 | `qmk console` | EXCLUSIVE; a second instance retries in a tight loop |
 | raw HID (`0xFF60`/`0x61`) | `ak820ctl`, VIA and the media poller all want it |
 | `flash_assets.bin` + `flash_assets.h` | must change together or the panel renders garbage |
-| the six ChibiOS `.diff` patches | uncommitted working-tree edits; a `git checkout` in that tree eats them |
+| the seven ChibiOS patches | committed on `ak820pro-patches` since 2026-09-01; keep the submodule on that branch |
 
-**Do not `git checkout` in `qmk_firmware-ak820pro/` to resolve a conflict.** That
-silently discards the hand-applied ChibiOS patches and the build breaks in
-confusing ways later.
+**A `git checkout` in `lib/chibios-contrib` no longer destroys the patches**
+(they are commits now), but the submodule must stay on `ak820pro-patches` —
+`scripts/build.sh` refuses to build otherwise.
 
 ### Verifying a build
 
@@ -2599,7 +2613,8 @@ before believing it.
   coupling to the asset set.
 - `keymaps/via/` — four layers: `WINBASE`, `WINFN`, `MACBASE`, `MACFN`.
   `QK_BOOT` on Fn+Esc, `ANIM_TOG` on Fn+Delete, encoder exposed as a VIA knob.
-- `*.diff` × 6 — the ChibiOS patches described above.
+- `*.diff` × 7 — the ChibiOS patches, now committed on the submodule branch;
+  see `PATCHES.md` beside them.
 - `docs/LCD_FLASH_LAYER.md`, `docs/LCD_DMA_BRANCHES.md`
 - `rules.mk` — contains two stale claims (RTC "does not work", a `mkraw.py` path
   that does not exist there). See handoff §2.

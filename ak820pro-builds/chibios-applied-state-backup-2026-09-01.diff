@@ -1,0 +1,1496 @@
+diff --git a/os/hal/lib/fallback/I2C/hal_i2c_lld.c b/os/hal/lib/fallback/I2C/hal_i2c_lld.c
+index f01acce8..798dd91f 100644
+--- a/os/hal/lib/fallback/I2C/hal_i2c_lld.c
++++ b/os/hal/lib/fallback/I2C/hal_i2c_lld.c
+@@ -95,17 +95,11 @@ static inline void i2c_delay(I2CDriver *i2cp) {
+ }
+ 
+ static inline msg_t i2c_check_arbitration(I2CDriver *i2cp) {
+-#if (SW_I2C_USE_OPENDRAIN == FALSE)
+-  palSetLineMode(i2cp->config->sda, PAL_MODE_INPUT);
+-#endif
+   i2c_delay(i2cp);
+   if (palReadLine(i2cp->config->sda) == PAL_LOW) {
+     i2cp->errors |= I2C_ARBITRATION_LOST;
+     return MSG_RESET;
+   }
+-#if (SW_I2C_USE_OPENDRAIN == FALSE)
+-  palSetLineMode(i2cp->config->sda, PAL_MODE_OUTPUT_PUSHPULL);
+-#endif
+   return MSG_OK;
+ }
+ 
+@@ -121,9 +115,6 @@ static inline msg_t i2c_check_timeout(I2CDriver *i2cp) {
+ }
+ 
+ static msg_t i2c_wait_clock(I2CDriver *i2cp) {
+-#if (SW_I2C_USE_OPENDRAIN == FALSE)
+-  palSetLineMode(i2cp->config->scl, PAL_MODE_INPUT);
+-#endif
+   i2c_delay(i2cp);
+ 
+   while (palReadLine(i2cp->config->scl) == PAL_LOW) {
+@@ -133,9 +124,6 @@ static msg_t i2c_wait_clock(I2CDriver *i2cp) {
+     }
+     i2c_delay(i2cp);
+   }
+-#if (SW_I2C_USE_OPENDRAIN == FALSE)
+-  palSetLineMode(i2cp->config->scl, PAL_MODE_OUTPUT_PUSHPULL);
+-#endif
+   return MSG_OK;
+ }
+ 
+@@ -213,7 +201,10 @@ static msg_t i2c_write_bit(I2CDriver *i2cp, unsigned bit) {
+ static msg_t i2c_read_bit(I2CDriver *i2cp) {
+   msg_t bit;
+ #if (SW_I2C_USE_OPENDRAIN == FALSE)
+-  palSetLineMode(i2cp->config->sda, PAL_MODE_INPUT);
++  /* Release SDA (input + pull-up) so the slave can drive it. */
++  palSetLineMode(i2cp->config->sda, PAL_MODE_INPUT_PULLUP);
++#else
++  palSetLine(i2cp->config->sda);
+ #endif
+   i2c_delay(i2cp);
+   palSetLine(i2cp->config->scl);
+@@ -225,9 +216,13 @@ static msg_t i2c_read_bit(I2CDriver *i2cp) {
+ 
+   bit = palReadLine(i2cp->config->sda);
+ #if (SW_I2C_USE_OPENDRAIN == FALSE)
++  /* Switch back to output for next write (keep SCL low during transition). */
++  palClearLine(i2cp->config->scl);
++  palClearLine(i2cp->config->sda);  /* Pre-set output register low */
+   palSetLineMode(i2cp->config->sda, PAL_MODE_OUTPUT_PUSHPULL);
+-#endif
++#else
+   palClearLine(i2cp->config->scl);
++#endif
+   i2c_delay(i2cp);
+ 
+   return bit;
+@@ -347,8 +342,20 @@ void i2c_lld_init(void) {
+  */
+ void i2c_lld_start(I2CDriver *i2cp) {
+ 
+-  /* Does nothing.*/
+-  (void)i2cp;
++  /* Initialize pins to idle state (both high). */
++#if (SW_I2C_USE_OPENDRAIN == FALSE)
++  /* Push-pull mode: start as outputs, both high. */
++  palSetLine(i2cp->config->sda);
++  palSetLine(i2cp->config->scl);
++  palSetLineMode(i2cp->config->sda, PAL_MODE_OUTPUT_PUSHPULL);
++  palSetLineMode(i2cp->config->scl, PAL_MODE_OUTPUT_PUSHPULL);
++#else
++  /* Open-drain mode: configure as inputs with external pull-ups. */
++  palSetLineMode(i2cp->config->sda, PAL_MODE_INPUT);
++  palSetLineMode(i2cp->config->scl, PAL_MODE_INPUT);
++  palSetLine(i2cp->config->sda);
++  palSetLine(i2cp->config->scl);
++#endif
+ }
+ 
+ /**
+diff --git a/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.c b/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.c
+index c7771f95..90c6d489 100644
+--- a/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.c
++++ b/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.c
+@@ -38,9 +38,15 @@
+  * @brief   PWMD1 driver identifier.
+  * @note    The driver PWMD1 allocates the complex timer CT16B1 when enabled.
+  */
++#    if SN32_PWM_USE_CT16B0 || defined(__DOXYGEN__)
++PWMDriver PWMD0;
++#    endif
+ #    if SN32_PWM_USE_CT16B1 || defined(__DOXYGEN__)
+ PWMDriver PWMD1;
+ #    endif
++#    if SN32_PWM_USE_CT16B2 || defined(__DOXYGEN__)
++PWMDriver PWMD2;
++#    endif
+ 
+ /*===========================================================================*/
+ /* Driver local variables and types.                                         */
+@@ -54,6 +60,19 @@ PWMDriver PWMD1;
+ /* Driver interrupt handlers.                                                */
+ /*===========================================================================*/
+ 
++#    if SN32_PWM_USE_CT16B0 || defined(__DOXYGEN__)
++#        if !defined(SN32_CT16B0_SUPPRESS_ISR)
++#            if !defined(SN32_CT16B0_HANDLER)
++#                error "SN32_CT16B0_HANDLER not defined"
++#            endif
++OSAL_IRQ_HANDLER(SN32_CT16B0_HANDLER) {
++    OSAL_IRQ_PROLOGUE();
++    pwm_lld_serve_interrupt(&PWMD0);
++    OSAL_IRQ_EPILOGUE();
++}
++#        endif
++#    endif     /* SN32_PWM_USE_CT16B0 */
++
+ #    if SN32_PWM_USE_CT16B1 || defined(__DOXYGEN__)
+ #        if !defined(SN32_CT16B1_SUPPRESS_ISR)
+ #            if !defined(SN32_CT16B1_HANDLER)
+@@ -71,9 +90,66 @@ OSAL_IRQ_HANDLER(SN32_CT16B1_HANDLER) {
+ 
+     OSAL_IRQ_EPILOGUE();
+ }
+-#        endif /* !defined(SN32_CT16B0_SUPPRESS_ISR) */
++#        endif /* !defined(SN32_CT16B1_SUPPRESS_ISR) */
+ #    endif     /* SN32_PWM_USE_CT16B1 */
+ 
++#    if SN32_PWM_USE_CT16B2 || defined(__DOXYGEN__)
++#        if !defined(SN32_CT16B2_SUPPRESS_ISR)
++#            if !defined(SN32_CT16B2_HANDLER)
++#                error "SN32_CT16B2_HANDLER not defined"
++#            endif
++OSAL_IRQ_HANDLER(SN32_CT16B2_HANDLER) {
++    OSAL_IRQ_PROLOGUE();
++    pwm_lld_serve_interrupt(&PWMD2);
++    OSAL_IRQ_EPILOGUE();
++}
++#        endif
++#    endif     /* SN32_PWM_USE_CT16B2 */
++
++/*===========================================================================*/
++/* Driver local functions.                                                   */
++/*===========================================================================*/
++
++/**
++ * @brief   Whether a timer packs enable / IO-enable / mode into a single
++ *          PWMCTRL register (protected by the 0x5A PWM key), rather than using
++ *          the separate PWMENB / PWMIOENB registers.
++ * @details On SN32F280/F290 only CT16B1 has PWMENB/PWMIOENB; CT16B0/B2/B5 do
++ *          not, and configure everything through PWMCTRL. On other devices the
++ *          classic PWMENB/PWMIOENB model applies to all timers.
++ */
++static inline bool pwm_lld_pwmctrl_only(const PWMDriver *pwmp) {
++#    if (defined(SN32F280) || defined(SN32F290))
++#        if SN32_PWM_USE_CT16B1
++    return pwmp != &PWMD1;
++#        else
++    (void)pwmp;
++    return true;
++#        endif
++#    else
++    (void)pwmp;
++    return false;
++#    endif
++}
++
++/* PWMCTRL (n=0,2,5) bit layout: PWMnEN at bit n, PWMnMODE at bit (4 + 2n),
++   PWMnIOEN at bit (20 + n), and the 0x5A write key in bits [31:24]. */
++#    define CT16_PWMCTRLONLY_EN(n)    (1u << (n))
++#    define CT16_PWMCTRLONLY_MODE(n, mode) ((uint32_t)(mode) << (4 + 2 * (n)))
++#    define CT16_PWMCTRLONLY_IOEN(n)  (1u << (20 + (n)))
++/* In the n=0,2,5 MCTRL register the PWM cycle-length register is MR9, whose
++   reset-enable (MR9RST) is bit 22 -- not at the regular (n%10)*3 position. */
++#    define CT16_PWMCTRLONLY_MR9RST   (1u << 22)
++
++/**
++ * @brief   Index of the match register that sets the PWM cycle length (period).
++ * @details CT16B1 uses MR[channels] (MR12). CT16B0/B2/B5 have only MR0-3 for the
++ *          duty outputs plus a dedicated MR9 for the cycle length.
++ */
++static inline uint8_t pwm_lld_period_mr(const PWMDriver *pwmp) {
++    return pwm_lld_pwmctrl_only(pwmp) ? 9 : pwmp->channels;
++}
++
+ /*===========================================================================*/
+ /* Driver exported functions.                                                */
+ /*===========================================================================*/
+@@ -84,10 +160,19 @@ OSAL_IRQ_HANDLER(SN32_CT16B1_HANDLER) {
+  * @notapi
+  */
+ void pwm_lld_init(void) {
++    /* Driver initialization. Each timer records its own channel count so the rest
++     * of the driver can use pwmp->channels instead of a single global. */
++#    if SN32_PWM_USE_CT16B0
++    pwmObjectInit(&PWMD0);
++    PWMD0.channels = SN32_CT16B0_CHANNELS - 1;
++#    endif
+ #    if SN32_PWM_USE_CT16B1
+-    /* Driver initialization.*/
+     pwmObjectInit(&PWMD1);
+-    PWMD1.channels = PWM_CHANNELS;
++    PWMD1.channels = SN32_CT16B1_CHANNELS - 1;
++#    endif
++#    if SN32_PWM_USE_CT16B2
++    pwmObjectInit(&PWMD2);
++    PWMD2.channels = SN32_CT16B2_CHANNELS - 1;
+ #    endif
+ }
+ 
+@@ -109,6 +194,17 @@ void pwm_lld_start(PWMDriver *pwmp) {
+ 
+     if (pwmp->state == PWM_STOP) {
+         /* Clock activation and timer reset.*/
++#    if SN32_PWM_USE_CT16B0
++        if (&PWMD0 == pwmp) {
++            sys1EnableCT16B0();
++            sys1ResetCT16B0();
++            CT16B0_ResetTimer();
++#        if !defined(SN32_CT16B0_SUPPRESS_ISR)
++            nvicEnableVector(SN32_CT16B0_NUMBER, SN32_PWM_CT16B0_IRQ_PRIORITY);
++#        endif
++            pwmp->clock = PWM_CLK;
++        }
++#    endif
+ #    if SN32_PWM_USE_CT16B1
+         if (&PWMD1 == pwmp) {
+             sys1EnableCT16B1();
+@@ -120,12 +216,23 @@ void pwm_lld_start(PWMDriver *pwmp) {
+             pwmp->clock = PWM_CLK;
+         }
+ #    endif
++#    if SN32_PWM_USE_CT16B2
++        if (&PWMD2 == pwmp) {
++            sys1EnableCT16B2();
++            sys1ResetCT16B2();
++            CT16B2_ResetTimer();
++#        if !defined(SN32_CT16B2_SUPPRESS_ISR)
++            nvicEnableVector(SN32_CT16B2_NUMBER, SN32_PWM_CT16B2_IRQ_PRIORITY);
++#        endif
++            pwmp->clock = PWM_CLK;
++        }
++#    endif
+ 
+ #    if (defined(SN32F240B) || defined(SN32F240C))
+         /* PFPA - Map all PWM outputs to their PWM A pins */
+         SN_PFPA->CT16B1 = 0x00000000;
+         /* PFPA assignment for PWM B-pin mapping.*/
+-        for (uint8_t i = 0; i < PWM_CHANNELS; i++) {
++        for (uint8_t i = 0; i < pwmp->channels; i++) {
+             if (pwmp->config->channels[i].pfpamsk != 0) {
+                 SN_PFPA->CT16B1 |= (1 << i);
+             }
+@@ -133,29 +240,46 @@ void pwm_lld_start(PWMDriver *pwmp) {
+ #    endif
+ 
+         /* Channel PWM mode selection and polarities setup.*/
+-        pwmctrl                                = 0;
+-        pwmctrl2                               = 0;
+-        pwmen                                  = 0;
+-        pwmioen                                = 0;
+-        volatile uint32_t *pwmctrl_registers[] = {&pwmctrl, &pwmctrl2};
+-        for (uint8_t i = 0; i < PWM_CHANNELS; i++) {
+-            switch (pwmp->config->channels[i].mode & PWM_OUTPUT_MASK) {
+-                case PWM_OUTPUT_ACTIVE_LOW:
+-                    *pwmctrl_registers[(i > 15) ? 1 : 0] |= mskCT16_PWMnMODE_1(i);
+-                    pwmen |= mskCT16_PWMnEN_EN(i);
+-                    pwmioen |= mskCT16_PWMnIOEN_EN(i);
+-                    break;
+-                case PWM_OUTPUT_ACTIVE_HIGH:
+-                    *pwmctrl_registers[(i > 15) ? 1 : 0] |= mskCT16_PWMnMODE_2(i);
+-                    pwmen |= mskCT16_PWMnEN_EN(i);
+-                    pwmioen |= mskCT16_PWMnIOEN_EN(i);
+-                    break;
++        if (pwm_lld_pwmctrl_only(pwmp)) {
++            /* CT16B0/B2/B5 (F280/F290): enable, IO-enable and mode all live in the
++               single PWMCTRL register, and the write needs the 0x5A PWM key. */
++            uint32_t pwmctrl_only = CT16_PWM_KEY;
++            for (uint8_t i = 0; i < pwmp->channels; i++) {
++                switch (pwmp->config->channels[i].mode & PWM_OUTPUT_MASK) {
++                    case PWM_OUTPUT_ACTIVE_LOW:
++                        pwmctrl_only |= CT16_PWMCTRLONLY_EN(i) | CT16_PWMCTRLONLY_IOEN(i) | CT16_PWMCTRLONLY_MODE(i, CT16_PWMnMODE_1);
++                        break;
++                    case PWM_OUTPUT_ACTIVE_HIGH:
++                        pwmctrl_only |= CT16_PWMCTRLONLY_EN(i) | CT16_PWMCTRLONLY_IOEN(i) | CT16_PWMCTRLONLY_MODE(i, CT16_PWMnMODE_2);
++                        break;
++                }
++            }
++            SN32_CT_PWM_SET(pwmp, pwm.PWMCTRL, pwmctrl_only);
++        } else {
++            pwmctrl                                = 0;
++            pwmctrl2                               = 0;
++            pwmen                                  = 0;
++            pwmioen                                = 0;
++            volatile uint32_t *pwmctrl_registers[] = {&pwmctrl, &pwmctrl2};
++            for (uint8_t i = 0; i < pwmp->channels; i++) {
++                switch (pwmp->config->channels[i].mode & PWM_OUTPUT_MASK) {
++                    case PWM_OUTPUT_ACTIVE_LOW:
++                        *pwmctrl_registers[(i > 15) ? 1 : 0] |= mskCT16_PWMnMODE_1(i);
++                        pwmen |= mskCT16_PWMnEN_EN(i);
++                        pwmioen |= mskCT16_PWMnIOEN_EN(i);
++                        break;
++                    case PWM_OUTPUT_ACTIVE_HIGH:
++                        *pwmctrl_registers[(i > 15) ? 1 : 0] |= mskCT16_PWMnMODE_2(i);
++                        pwmen |= mskCT16_PWMnEN_EN(i);
++                        pwmioen |= mskCT16_PWMnIOEN_EN(i);
++                        break;
++                }
+             }
++            SN32_CT_PWM_SET(pwmp, pwm.PWMCTRL, pwmctrl);
++            SN32_CT_PWM_SET(pwmp, pwm.PWMCTRL2, pwmctrl2);
++            SN32_CT_PWM_SET(pwmp, pwm.PWMENB, pwmen);
++            SN32_CT_PWM_SET(pwmp, pwm.PWMIOENB, pwmioen);
+         }
+-        SN32_CT_PWM_SET(pwmp, pwm.PWMCTRL, pwmctrl);
+-        SN32_CT_PWM_SET(pwmp, pwm.PWMCTRL2, pwmctrl2);
+-        SN32_CT_PWM_SET(pwmp, pwm.PWMENB, pwmen);
+-        SN32_CT_PWM_SET(pwmp, pwm.PWMIOENB, pwmioen);
+     } else {
+         /* Driver re-configuration scenario, it must be stopped first.*/
+         SN32_CT_PWM_SET(pwmp, config.TMRCTRL, CT16_CEN_DIS); /* Timer disabled.*/
+@@ -171,21 +295,28 @@ void pwm_lld_start(PWMDriver *pwmp) {
+                       ((psc + 1) * pwmp->config->frequency) == pwmp->clock,
+                   "invalid frequency");
+     SN32_CT_PWM_SET(pwmp, config.PRE, psc);
+-    SN32_CT_PWM_SET(pwmp, MR[PWM_CHANNELS], pwmp->period - 1);
++    uint8_t period_mr = pwm_lld_period_mr(pwmp);
++    SN32_CT_PWM_SET(pwmp, MR[period_mr], pwm_lld_mr_value(pwmp, pwmp->period - 1));
+ 
+ #    if SN32_PWM_USE_ONESHOT || defined(__DOXYGEN__)
+     volatile uint32_t *mctrl_registers[] = {SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL2), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL3)};
+     // Determine which MCTRL register to use
+-    volatile uint32_t *reg = mctrl_registers[MCTRL_INDEX];
++    volatile uint32_t *reg = mctrl_registers[pwmp->channels / 10];
+     if (reg != NULL) {
+-        *reg |= mskCT16_MRnSTOP_EN(PWM_CHANNELS);
++        *reg |= mskCT16_MRnSTOP_EN(pwmp->channels);
+     }
+ #    elif !defined(SN32_PWM_NO_RESET)
+-    volatile uint32_t *mctrl_registers[] = {SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL2), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL3)};
+-    // Determine which MCTRL register to use
+-    volatile uint32_t *reg = mctrl_registers[MCTRL_INDEX];
+-    if (reg != NULL) {
+-        *reg |= mskCT16_MRnRST_EN(PWM_CHANNELS);
++    if (pwm_lld_pwmctrl_only(pwmp)) {
++        /* CT16B0/B2/B5: enable MR9 reset in MCTRL; the write needs the 0x5A key. */
++        uint32_t mctrl = (SN32_CT_PWM_GET(pwmp, match.MCTRL) & 0x00FFFFFF) | CT16_PWM_KEY | CT16_PWMCTRLONLY_MR9RST;
++        SN32_CT_PWM_SET(pwmp, match.MCTRL, mctrl);
++    } else {
++        volatile uint32_t *mctrl_registers[] = {SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL2), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL3)};
++        // Determine which MCTRL register to use
++        volatile uint32_t *reg = mctrl_registers[pwmp->channels / 10];
++        if (reg != NULL) {
++            *reg |= mskCT16_MRnRST_EN(pwmp->channels);
++        }
+     }
+ #    endif
+     SN32_CT_PWM_AND(pwmp, irq.IC, mskCT_IC_Clear(SN32_CT16B1_MAX_CHANNELS)); /* Clear pending IRQs.*/
+@@ -207,6 +338,14 @@ void pwm_lld_stop(PWMDriver *pwmp) {
+         SN32_CT_PWM_SET(pwmp, config.TMRCTRL, CT16_CEN_DIS);                     /* Timer disabled.    */
+         SN32_CT_PWM_AND(pwmp, irq.IC, mskCT_IC_Clear(SN32_CT16B1_MAX_CHANNELS)); /* Clear pending IRQs.*/
+ 
++#    if SN32_PWM_USE_CT16B0
++        if (&PWMD0 == pwmp) {
++#        if !defined(SN32_CT16B0_SUPPRESS_ISR)
++            nvicDisableVector(SN32_CT16B0_NUMBER);
++#        endif
++            sys1DisableCT16B0();
++        }
++#    endif
+ #    if SN32_PWM_USE_CT16B1
+         if (&PWMD1 == pwmp) {
+ #        if !defined(SN32_CT16B1_SUPPRESS_ISR)
+@@ -214,6 +353,14 @@ void pwm_lld_stop(PWMDriver *pwmp) {
+ #        endif
+             sys1DisableCT16B1();
+         }
++#    endif
++#    if SN32_PWM_USE_CT16B2
++        if (&PWMD2 == pwmp) {
++#        if !defined(SN32_CT16B2_SUPPRESS_ISR)
++            nvicDisableVector(SN32_CT16B2_NUMBER);
++#        endif
++            sys1DisableCT16B2();
++        }
+ #    endif
+     }
+ }
+@@ -232,10 +379,15 @@ void pwm_lld_stop(PWMDriver *pwmp) {
+  * @notapi
+  */
+ void pwm_lld_enable_channel(PWMDriver *pwmp, pwmchannel_t channel, pwmcnt_t width) {
+-    if (channel < PWM_CHANNELS) {
++    if (channel < pwmp->channels) {
+         /* Changing channel duty cycle on the fly.*/
+-        SN32_CT_PWM_SET(pwmp, MR[channel], width);
+-        SN32_CT_PWM_OR(pwmp, pwm.PWMIOENB, mskCT16_PWMnIOEN_EN(channel));
++        SN32_CT_PWM_SET(pwmp, MR[channel], pwm_lld_mr_value(pwmp, width));
++        if (pwm_lld_pwmctrl_only(pwmp)) {
++            /* IO-enable lives in PWMCTRL; re-supply the key so the write sticks. */
++            SN32_CT_PWM_OR(pwmp, pwm.PWMCTRL, CT16_PWM_KEY | CT16_PWMCTRLONLY_IOEN(channel));
++        } else {
++            SN32_CT_PWM_OR(pwmp, pwm.PWMIOENB, mskCT16_PWMnIOEN_EN(channel));
++        }
+     }
+ }
+ 
+@@ -252,9 +404,16 @@ void pwm_lld_enable_channel(PWMDriver *pwmp, pwmchannel_t channel, pwmcnt_t widt
+  * @notapi
+  */
+ void pwm_lld_disable_channel(PWMDriver *pwmp, pwmchannel_t channel) {
+-    if (channel < PWM_CHANNELS) {
++    if (channel < pwmp->channels) {
+         SN32_CT_PWM_OR(pwmp, irq.IC, mskCT16_MRnIC(channel));
+-        SN32_CT_PWM_AND(pwmp, pwm.PWMIOENB, ~mskCT16_PWMnIOEN_EN(channel));
++        if (pwm_lld_pwmctrl_only(pwmp)) {
++            /* Clear the IOEN bit in PWMCTRL while re-supplying the key (a plain
++               AND would drop the key and be ignored). */
++            uint32_t v = (SN32_CT_PWM_GET(pwmp, pwm.PWMCTRL) & ~CT16_PWMCTRLONLY_IOEN(channel)) | CT16_PWM_KEY;
++            SN32_CT_PWM_SET(pwmp, pwm.PWMCTRL, v);
++        } else {
++            SN32_CT_PWM_AND(pwmp, pwm.PWMIOENB, ~mskCT16_PWMnIOEN_EN(channel));
++        }
+     }
+ }
+ 
+@@ -270,9 +429,9 @@ void pwm_lld_disable_channel(PWMDriver *pwmp, pwmchannel_t channel) {
+ void pwm_lld_enable_periodic_notification(PWMDriver *pwmp) {
+     volatile uint32_t *mctrl_registers[] = {SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL2), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL3)};
+     // Determine which MCTRL register to use
+-    volatile uint32_t *reg = mctrl_registers[MCTRL_INDEX];
++    volatile uint32_t *reg = mctrl_registers[pwmp->channels / 10];
+     if (reg != NULL) {
+-        *reg |= mskCT16_MRnIE_EN(PWM_CHANNELS);
++        *reg |= mskCT16_MRnIE_EN(pwmp->channels);
+     }
+ }
+ 
+@@ -288,9 +447,9 @@ void pwm_lld_enable_periodic_notification(PWMDriver *pwmp) {
+ void pwm_lld_disable_periodic_notification(PWMDriver *pwmp) {
+     volatile uint32_t *mctrl_registers[] = {SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL2), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL3)};
+     // Determine which MCTRL register to use
+-    volatile uint32_t *reg = mctrl_registers[MCTRL_INDEX];
++    volatile uint32_t *reg = mctrl_registers[pwmp->channels / 10];
+     if (reg != NULL) {
+-        *reg &= ~mskCT16_MRnIE_EN(PWM_CHANNELS);
++        *reg &= ~mskCT16_MRnIE_EN(pwmp->channels);
+     }
+ }
+ 
+@@ -308,7 +467,7 @@ void pwm_lld_disable_periodic_notification(PWMDriver *pwmp) {
+ void pwm_lld_enable_channel_notification(PWMDriver *pwmp, pwmchannel_t channel) {
+     volatile uint32_t *mctrl_registers[] = {SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL2), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL3)};
+     // Determine which MCTRL register to use
+-    volatile uint32_t *reg = mctrl_registers[MCTRL_INDEX];
++    volatile uint32_t *reg = mctrl_registers[pwmp->channels / 10];
+     if (reg != NULL) {
+         *reg |= mskCT16_MRnIE_EN(channel);
+     }
+@@ -328,7 +487,7 @@ void pwm_lld_enable_channel_notification(PWMDriver *pwmp, pwmchannel_t channel)
+ void pwm_lld_disable_channel_notification(PWMDriver *pwmp, pwmchannel_t channel) {
+     volatile uint32_t *mctrl_registers[] = {SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL2), SN32_CT_PWM_GET_ADDR(pwmp, match.MCTRL3)};
+     // Determine which MCTRL register to use
+-    volatile uint32_t *reg = mctrl_registers[MCTRL_INDEX];
++    volatile uint32_t *reg = mctrl_registers[pwmp->channels / 10];
+     if (reg != NULL) {
+         *reg &= ~mskCT16_MRnIE_EN(channel);
+     }
+@@ -349,10 +508,10 @@ void pwm_lld_serve_interrupt(PWMDriver *pwmp) {
+ 
+     ris = SN32_CT_PWM_GET(pwmp, irq.RIS);
+     SN32_CT_PWM_SET(pwmp, irq.IC, ris);
+-    for (int i = 0; i < PWM_CHANNELS; i++) {
++    for (int i = 0; i < pwmp->channels; i++) {
+         if (((ris & mskCT16_MRnIF(i)) != 0) && (pwmp->config->channels[i].callback != NULL)) pwmp->config->channels[i].callback(pwmp);
+     }
+-    if (((ris & mskCT16_MRnIF(PWM_CHANNELS)) != 0) && (pwmp->config->callback != NULL)) pwmp->config->callback(pwmp);
++    if (((ris & mskCT16_MRnIF(pwmp->channels)) != 0) && (pwmp->config->callback != NULL)) pwmp->config->callback(pwmp);
+ }
+ 
+ #endif /* HAL_USE_PWM */
+diff --git a/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.h b/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.h
+index 195a6346..2126797a 100644
+--- a/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.h
++++ b/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.h
+@@ -63,6 +63,23 @@
+ #if !defined(SN32_PWM_CT16B1_IRQ_PRIORITY) || defined(__DOXYGEN__)
+ #define SN32_PWM_CT16B1_IRQ_PRIORITY         2
+ #endif
++
++/**
++ * @brief   PWMD0 (CT16B0) / PWMD2 (CT16B2) enable switches + IRQ priorities.
++ * @note    Small SN32 timers used to widen the PWM channel count beyond CT16B1.
++ */
++#if !defined(SN32_PWM_USE_CT16B0) || defined(__DOXYGEN__)
++#define SN32_PWM_USE_CT16B0                  FALSE
++#endif
++#if !defined(SN32_PWM_CT16B0_IRQ_PRIORITY) || defined(__DOXYGEN__)
++#define SN32_PWM_CT16B0_IRQ_PRIORITY         2
++#endif
++#if !defined(SN32_PWM_USE_CT16B2) || defined(__DOXYGEN__)
++#define SN32_PWM_USE_CT16B2                  FALSE
++#endif
++#if !defined(SN32_PWM_CT16B2_IRQ_PRIORITY) || defined(__DOXYGEN__)
++#define SN32_PWM_CT16B2_IRQ_PRIORITY         2
++#endif
+ /** @} */
+ 
+ /*===========================================================================*/
+@@ -73,7 +90,7 @@
+ #error "CT16B1 not present in the selected device"
+ #endif
+ 
+-#if !SN32_PWM_USE_CT16B1
++#if !SN32_PWM_USE_CT16B0 && !SN32_PWM_USE_CT16B1 && !SN32_PWM_USE_CT16B2
+ #error "PWM driver activated but no CT peripheral assigned"
+ #endif
+ 
+@@ -209,64 +226,130 @@ struct PWMDriver {
+ /*===========================================================================*/
+ /* Driver macros.                                                            */
+ /*===========================================================================*/
++/* Per-timer accessor variants. The dispatchers below fan out to every enabled
++ * timer; only the one matching `timer` acts (the C compiler still type-checks all
++ * branches, which is fine because every SN32 CT16 struct shares the same
++ * config/match/pwm/irq sub-structs). Multi-timer support (CT16B0/B1/B2) is required
++ * for boards whose PWM axis exceeds one timer's channel count (e.g. SN32F290). */
++#if SN32_PWM_USE_CT16B0
++#define SN32_CT_PWM_SET_CT16B0(timer, field, value)       \
++  do { if ((timer) == &PWMD0) (SN32_CT16B0)->field = (value); } while (0)
++#else
++#define SN32_CT_PWM_SET_CT16B0(timer, field, value)  do { } while (0)
++#endif
+ #if SN32_PWM_USE_CT16B1
+ #define SN32_CT_PWM_SET_CT16B1(timer, field, value)       \
+   do { if ((timer) == &PWMD1) (SN32_CT16B1)->field = (value); } while (0)
+ #else
+-#define SN32_CT_PWM_SET_CT16B1(timer, field, value)       \
+-  do { } while (0)
++#define SN32_CT_PWM_SET_CT16B1(timer, field, value)  do { } while (0)
++#endif
++#if SN32_PWM_USE_CT16B2
++#define SN32_CT_PWM_SET_CT16B2(timer, field, value)       \
++  do { if ((timer) == &PWMD2) (SN32_CT16B2)->field = (value); } while (0)
++#else
++#define SN32_CT_PWM_SET_CT16B2(timer, field, value)  do { } while (0)
+ #endif
+ 
+ #define SN32_CT_PWM_SET(timer, field, value)        \
+   do {                                               \
++    SN32_CT_PWM_SET_CT16B0(timer, field, value);     \
+     SN32_CT_PWM_SET_CT16B1(timer, field, value);     \
++    SN32_CT_PWM_SET_CT16B2(timer, field, value);     \
+   } while (0)
+ 
++#if SN32_PWM_USE_CT16B0
++#define SN32_CT_PWM_OR_CT16B0(timer, field, value)        \
++  do { if ((timer) == &PWMD0) (SN32_CT16B0)->field |= (value); } while (0)
++#else
++#define SN32_CT_PWM_OR_CT16B0(timer, field, value)  do { } while (0)
++#endif
+ #if SN32_PWM_USE_CT16B1
+ #define SN32_CT_PWM_OR_CT16B1(timer, field, value)        \
+   do { if ((timer) == &PWMD1) (SN32_CT16B1)->field |= (value); } while (0)
+ #else
+-#define SN32_CT_PWM_OR_CT16B1(timer, field, value)        \
+-  do { } while (0)
++#define SN32_CT_PWM_OR_CT16B1(timer, field, value)  do { } while (0)
++#endif
++#if SN32_PWM_USE_CT16B2
++#define SN32_CT_PWM_OR_CT16B2(timer, field, value)        \
++  do { if ((timer) == &PWMD2) (SN32_CT16B2)->field |= (value); } while (0)
++#else
++#define SN32_CT_PWM_OR_CT16B2(timer, field, value)  do { } while (0)
+ #endif
+ 
+ #define SN32_CT_PWM_OR(timer, field, value)         \
+   do {                                              \
++    SN32_CT_PWM_OR_CT16B0(timer, field, value);     \
+     SN32_CT_PWM_OR_CT16B1(timer, field, value);     \
++    SN32_CT_PWM_OR_CT16B2(timer, field, value);     \
+   } while (0)
+ 
++#if SN32_PWM_USE_CT16B0
++#define SN32_CT_PWM_AND_CT16B0(timer, field, value)        \
++  do { if ((timer) == &PWMD0) (SN32_CT16B0)->field &= (value); } while (0)
++#else
++#define SN32_CT_PWM_AND_CT16B0(timer, field, value)  do { } while (0)
++#endif
+ #if SN32_PWM_USE_CT16B1
+ #define SN32_CT_PWM_AND_CT16B1(timer, field, value)        \
+   do { if ((timer) == &PWMD1) (SN32_CT16B1)->field &= (value); } while (0)
+ #else
+-#define SN32_CT_PWM_AND_CT16B1(timer, field, value)        \
+-  do { } while (0)
++#define SN32_CT_PWM_AND_CT16B1(timer, field, value)  do { } while (0)
++#endif
++#if SN32_PWM_USE_CT16B2
++#define SN32_CT_PWM_AND_CT16B2(timer, field, value)        \
++  do { if ((timer) == &PWMD2) (SN32_CT16B2)->field &= (value); } while (0)
++#else
++#define SN32_CT_PWM_AND_CT16B2(timer, field, value)  do { } while (0)
+ #endif
+ 
+ #define SN32_CT_PWM_AND(timer, field, value)         \
+   do {                                              \
++    SN32_CT_PWM_AND_CT16B0(timer, field, value);     \
+     SN32_CT_PWM_AND_CT16B1(timer, field, value);     \
++    SN32_CT_PWM_AND_CT16B2(timer, field, value);     \
+   } while (0)
+ 
++#if SN32_PWM_USE_CT16B0
++#define SN32_CT_PWM_GET_CT16B0(timer, cmd) ((timer) == &PWMD0 ? (SN32_CT16B0)->cmd : 0)
++#else
++#define SN32_CT_PWM_GET_CT16B0(timer, cmd) (0)
++#endif
+ #if SN32_PWM_USE_CT16B1
+-#define SN32_CT_PWM_GET_CT16B1(timer, cmd) \
+-  ((timer) == &PWMD1 ? (SN32_CT16B1)->cmd : 0)
++#define SN32_CT_PWM_GET_CT16B1(timer, cmd) ((timer) == &PWMD1 ? (SN32_CT16B1)->cmd : 0)
+ #else
+ #define SN32_CT_PWM_GET_CT16B1(timer, cmd) (0)
+ #endif
++#if SN32_PWM_USE_CT16B2
++#define SN32_CT_PWM_GET_CT16B2(timer, cmd) ((timer) == &PWMD2 ? (SN32_CT16B2)->cmd : 0)
++#else
++#define SN32_CT_PWM_GET_CT16B2(timer, cmd) (0)
++#endif
+ 
++/* Only the matching timer contributes; the others yield 0. */
+ #define SN32_CT_PWM_GET(timer, cmd) \
+-  (SN32_CT_PWM_GET_CT16B1(timer, cmd))
++  (SN32_CT_PWM_GET_CT16B0(timer, cmd) + SN32_CT_PWM_GET_CT16B1(timer, cmd) + SN32_CT_PWM_GET_CT16B2(timer, cmd))
+ 
++#if SN32_PWM_USE_CT16B0
++#define SN32_CT_PWM_GET_ADDR_CT16B0(timer, cmd) ((timer) == &PWMD0 ? &(SN32_CT16B0)->cmd : NULL)
++#else
++#define SN32_CT_PWM_GET_ADDR_CT16B0(timer, cmd) (NULL)
++#endif
+ #if SN32_PWM_USE_CT16B1
+-#define SN32_CT_PWM_GET_ADDR_CT16B1(timer, cmd) \
+-  ((timer) == &PWMD1 ? &(SN32_CT16B1)->cmd : NULL)
++#define SN32_CT_PWM_GET_ADDR_CT16B1(timer, cmd) ((timer) == &PWMD1 ? &(SN32_CT16B1)->cmd : NULL)
+ #else
+ #define SN32_CT_PWM_GET_ADDR_CT16B1(timer, cmd) (NULL)
+ #endif
++#if SN32_PWM_USE_CT16B2
++#define SN32_CT_PWM_GET_ADDR_CT16B2(timer, cmd) ((timer) == &PWMD2 ? &(SN32_CT16B2)->cmd : NULL)
++#else
++#define SN32_CT_PWM_GET_ADDR_CT16B2(timer, cmd) (NULL)
++#endif
+ 
+-#define SN32_CT_PWM_GET_ADDR(timer, cmd) \
+-  (SN32_CT_PWM_GET_ADDR_CT16B1(timer, cmd))
++/* First non-NULL (i.e. the matching timer) wins. */
++#define SN32_CT_PWM_GET_ADDR(timer, cmd)                                          \
++  (SN32_CT_PWM_GET_ADDR_CT16B0(timer, cmd) != NULL ? SN32_CT_PWM_GET_ADDR_CT16B0(timer, cmd) : \
++   SN32_CT_PWM_GET_ADDR_CT16B1(timer, cmd) != NULL ? SN32_CT_PWM_GET_ADDR_CT16B1(timer, cmd) : \
++   SN32_CT_PWM_GET_ADDR_CT16B2(timer, cmd))
+ 
+ /**
+  * @brief   Changes the period of the PWM peripheral.
+@@ -285,7 +368,7 @@ struct PWMDriver {
+  * @notapi
+  */
+ #define pwm_lld_change_period(pwmp, period)                                 \
+-  SN32_CT_PWM_SET((pwmp), MR[PWM_CHANNELS], ((period) - 1))
++  SN32_CT_PWM_SET((pwmp), MR[(pwmp)->channels], pwm_lld_mr_value((pwmp), ((period) - 1)))
+ 
+ /**
+  * @brief   Changes the timer counter of the PWM peripheral.
+@@ -306,9 +389,37 @@ struct PWMDriver {
+ /* External declarations.                                                    */
+ /*===========================================================================*/
+ 
++#if SN32_PWM_USE_CT16B0 && !defined(__DOXYGEN__)
++extern PWMDriver PWMD0;
++#endif
+ #if SN32_PWM_USE_CT16B1 && !defined(__DOXYGEN__)
+ extern PWMDriver PWMD1;
+ #endif
++#if SN32_PWM_USE_CT16B2 && !defined(__DOXYGEN__)
++extern PWMDriver PWMD2;
++#endif
++
++/**
++ * @brief   Returns the value to write into a match (MR) register.
++ * @details On SN32F280/F290 the match registers of every CT16 timer *except*
++ *          CT16B1 are write-protected and require the PWM key (0x5A in the top
++ *          byte) to accept a new value; CT16B1's MR registers are not protected.
++ *          On other devices no key is needed. Writing the key on the small
++ *          timers is what makes their period/duty updates actually take effect.
++ */
++static inline uint32_t pwm_lld_mr_value(const PWMDriver *pwmp, uint32_t value) {
++#if (defined(SN32F280) || defined(SN32F290))
++#if SN32_PWM_USE_CT16B1
++  if (pwmp == &PWMD1) {
++    return value;
++  }
++#endif
++  return CT16_PWM_UNLOCK(value);
++#else
++  (void)pwmp;
++  return value;
++#endif
++}
+ 
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.c b/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.c
+index 70953468..753a3cd3 100644
+--- a/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.c
++++ b/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.c
+@@ -1,5 +1,5 @@
+ /*
+-    Copyright (C) 2025 Dimitris Mantzouranis
++    Copyright (C) 2026 Dimitris Mantzouranis
+ 
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+@@ -13,14 +13,10 @@
+     See the License for the specific language governing permissions and
+     limitations under the License.
+ */
+-/*
+-   Concepts and parts of this file have been contributed by Uladzimir Pylinsky
+-   aka barthess.
+- */
+ 
+ /**
+  * @file    RTC/hal_rtc_lld.c
+- * @brief   SN32 RTC subsystem low level driver header.
++ * @brief   SN32 RTC subsystem low level driver source.
+  *
+  * @addtogroup RTC
+  * @{
+@@ -47,6 +43,13 @@ RTCDriver RTCD1;
+ /* Driver local variables and types.                                         */
+ /*===========================================================================*/
+ 
++/**
++ * @brief   Software-maintained RTC time.
++ * @note    The SN32 RTC only provides a periodic second interrupt. Absolute
++ *          time is maintained entirely in software.
++ */
++static volatile time_t rtc_time;
++
+ /*===========================================================================*/
+ /* Driver local functions.                                                   */
+ /*===========================================================================*/
+@@ -75,20 +78,20 @@ static time_t rtc_encode(const RTCDateTime *timespec) {
+  *
+  * @notapi
+  */
+-static void rtc_decode(uint32_t tv_sec,
++static void rtc_decode(time_t tv_sec,
+                        uint32_t tv_msec,
+                        RTCDateTime *timespec) {
+   struct tm tim;
+   struct tm *t;
+-  const time_t time = (const time_t)tv_sec;   /* Could be 64 bits.*/
+ 
+   /* If the conversion is successful the function returns a pointer
+      to the object the result was written into.*/
+ #if defined(__GNUC__) || defined(__CC_ARM)
+-  t = localtime_r(&time, &tim);
++  t = localtime_r(&tv_sec, &tim);
+   osalDbgAssert(t != NULL, "conversion failed");
+ #else
+-  t = localtime(&time);
++  t = localtime(&tv_sec);
++  osalDbgAssert(t != NULL, "conversion failed");
+   memcpy(&tim, t, sizeof(struct tm));
+ #endif
+ 
+@@ -112,8 +115,13 @@ OSAL_IRQ_HANDLER(SN32_RTC_HANDLER) {
+   flags = RTCD1.rtc->RIS;
+   RTCD1.rtc->IC = flags;
+ 
+-  if (flags & mskRTC_SECIF)
+-    RTCD1.callback(&RTCD1, RTC_EVENT_SECOND);
++  if (flags & mskRTC_SECIF) {
++    rtc_time++;
++
++    if (RTCD1.callback != NULL) {
++      RTCD1.callback(&RTCD1, RTC_EVENT_SECOND);
++    }
++  }
+ 
+   OSAL_IRQ_EPILOGUE();
+ }
+@@ -134,6 +142,7 @@ void rtc_lld_init(void) {
+ 
+   /* RTC pointer initialization.*/
+   RTCD1.rtc = SN_RTC;
++  rtc_time = (time_t)0;
+ 
+   /* Clock activation.*/
+   sys1EnableRTC();
+@@ -141,6 +150,18 @@ void rtc_lld_init(void) {
+   /* All interrupts initially disabled.*/
+   RTCD1.rtc->IE = 0;
+ 
++#if SN32_RTC_CLK_SOURCE == SN32_RTC_CLK_SRC_XTAL
++  RTCD1.rtc->CLKS |= 1U;
++#else
++  RTCD1.rtc->CLKS &= ~1U;
++#endif
++
++  /*
++   * Configure a 1 Hz period.
++   * The Sonix RTC is a periodic counter rather than a calendar RTC.
++   */
++  rtc_lld_set_period(&RTCD1, SN32_RTC_PERIOD_DEFAULT);
++
+   /* Callback initially disabled.*/
+   RTCD1.callback = NULL;
+ 
+@@ -162,9 +183,13 @@ void rtc_lld_init(void) {
+  * @notapi
+  */
+ void rtc_lld_set_time(RTCDriver *rtcp, const RTCDateTime *timespec) {
+-  time_t tv_sec = rtc_encode(timespec);
++  syssts_t sts;
+ 
+-  rtcSN32SetSec(rtcp, tv_sec);
++  (void)rtcp;
++
++  sts = osalSysGetStatusAndLockX();
++  rtc_time = rtc_encode(timespec);
++  osalSysRestoreStatusX(sts);
+ }
+ 
+ /**
+@@ -177,12 +202,19 @@ void rtc_lld_set_time(RTCDriver *rtcp, const RTCDateTime *timespec) {
+  * @notapi
+  */
+ void rtc_lld_get_time(RTCDriver *rtcp, RTCDateTime *timespec) {
+-  uint32_t tv_sec;
++  syssts_t sts;
++  time_t t;
+ 
+-  rtcSN32GetSec(rtcp, &tv_sec);
+-  rtc_decode(tv_sec, 0, timespec);
++  (void)rtcp;
++
++  sts = osalSysGetStatusAndLockX();
++  t = rtc_time;
++  osalSysRestoreStatusX(sts);
++
++  rtc_decode(t, 0, timespec);
+ }
+ 
++
+ /**
+  * @brief   Enables or disables RTC callbacks.
+  * @details This function enables or disables callbacks, use a @p NULL pointer
+@@ -220,55 +252,55 @@ void rtc_lld_set_callback(RTCDriver *rtcp, rtccb_t callback) {
+ }
+ 
+ /**
+- * @brief   Get seconds from RTC.
++ * @brief   Set RTC second counter period.
++ * @details The period value controls the number of RTC clock cycles before
++ *          a second event is generated.
++ * @note    The SN32 RTC period register is limited to 20 bits.
++ *          Values exceeding the maximum are silently clamped.
+  * @note    The function can be called from any context.
+  *
+  * @param[in] rtcp      pointer to RTC driver structure
+- * @param[out] tv_sec   pointer to seconds value
++ * @param[in] period    second counter reload value
+  *
+- * @api
++ * @notapi
+  */
+-void rtcSN32GetSec(RTCDriver *rtcp, uint32_t *tv_sec) {
+-  uint32_t time_frac;
++void rtc_lld_set_period(RTCDriver *rtcp, uint32_t period) {
+   syssts_t sts;
+ 
+-  osalDbgCheck((NULL != tv_sec) && (NULL != rtcp));
++  if (period > SN32_RTC_PERIOD_MAX) {
++    period = SN32_RTC_PERIOD_MAX;
++  }
+ 
+-  /* Entering a reentrant critical zone.*/
+   sts = osalSysGetStatusAndLockX();
+ 
+-  *tv_sec = rtcp->rtc->SECCNT;
++  rtcp->period = period;
++  rtcp->rtc->SECCNTV = period;
+ 
+-  /* Leaving a reentrant critical zone.*/
+   osalSysRestoreStatusX(sts);
+ }
+ 
+ /**
+- * @brief   Set seconds in RTC.
+- * @note    The function can be called from any context.
++ * @brief   Gets RTC second counter period.
+  *
+  * @param[in] rtcp      pointer to RTC driver structure
+- * @param[in] tv_sec    seconds value
+  *
+- * @api
++ * @return              the current RTC period value.
++ *
++ * @notapi
+  */
+-void rtcSN32SetSec(RTCDriver *rtcp, uint32_t tv_sec) {
++uint32_t rtc_lld_get_period(RTCDriver *rtcp) {
++  uint32_t period;
+   syssts_t sts;
+ 
+-  osalDbgCheck(NULL != rtcp);
+-
+-  /* Entering a reentrant critical zone.*/
+   sts = osalSysGetStatusAndLockX();
+ 
+-  uint32_t reg_value = rtcp->rtc->SECCNTV;    // Read current value
+-  reg_value &= ~0xFFFFF;                      // Clear the lower 20 bits
+-  reg_value |= ((tv_sec >> 16) & 0xFFFFF);    // Set the new 20-bit value
+-  rtcp->rtc->SECCNTV = reg_value;             // Write back the updated value
++  period = rtcp->period;
+ 
+-  /* Leaving a reentrant critical zone.*/
+   osalSysRestoreStatusX(sts);
++
++  return period;
+ }
+ 
+ #endif /* HAL_USE_RTC */
+ 
+-/** @} */
++/** @} */
+\ No newline at end of file
+diff --git a/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.h b/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.h
+index 9b088636..a7f50e51 100644
+--- a/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.h
++++ b/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.h
+@@ -1,5 +1,5 @@
+ /*
+-    Copyright (C) 2025 Dimitris Mantzouranis
++    Copyright (C) 2026 Dimitris Mantzouranis
+ 
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+@@ -30,6 +30,16 @@
+ /*===========================================================================*/
+ /* Driver constants.                                                         */
+ /*===========================================================================*/
++#define SN32_RTC_PERIOD_MAX       ((1U << 20) - 1U)
++#define SN32_RTC_CLK_SRC_ILRC     0U
++#define SN32_RTC_CLK_SRC_XTAL     1U
++#define SN32_RTC_CLK_SOURCE       SN32_RTC_CLK_SRC_ILRC
++
++#if SN32_RTC_CLK_SOURCE == SN32_RTC_CLK_SRC_ILRC
++#    define SN32_RTC_PERIOD_DEFAULT    (32000UL)
++#else
++#    define SN32_RTC_PERIOD_DEFAULT    (32768UL)
++#endif
+ 
+ /**
+  * @name    Implementation capabilities
+@@ -103,9 +113,11 @@ typedef struct hal_rtc_alarm {
+  */
+ #define rtc_lld_driver_fields                                               \
+   /* Pointer to the RTC registers block.*/                                  \
+-  RTC_TypeDef               *rtc;                                           \
++  SN_RTC_Type               *rtc;                                           \
+   /* Callback pointer.*/                                                    \
+-  rtccb_t           callback
++  rtccb_t                   callback;                                       \
++  /* Reload value for the 1Hz second generator. */                          \
++  uint32_t                  period;
+ 
+ /*===========================================================================*/
+ /* Driver macros.                                                            */
+@@ -125,8 +137,8 @@ extern "C" {
+   void rtc_lld_set_time(RTCDriver *rtcp, const RTCDateTime *timespec);
+   void rtc_lld_get_time(RTCDriver *rtcp, RTCDateTime *timespec);
+   void rtc_lld_set_callback(RTCDriver *rtcp, rtccb_t callback);
+-  void rtcSN32GetSec(RTCDriver *rtcp, uint32_t *tv_sec);
+-  void rtcSN32SetSec(RTCDriver *rtcp, uint32_t tv_sec);
++  void rtc_lld_set_period(RTCDriver *rtcp, uint32_t period);
++  uint32_t rtc_lld_get_period(RTCDriver *rtcp);
+ #ifdef __cplusplus
+ }
+ #endif
+@@ -135,4 +147,4 @@ extern "C" {
+ 
+ #endif /* HAL_RTC_LLD_H */
+ 
+-/** @} */
++/** @} */
+\ No newline at end of file
+diff --git a/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.c b/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.c
+index 38aa7d7c..bfe27a5c 100644
+--- a/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.c
++++ b/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.c
+@@ -56,11 +56,19 @@ SPIDriver SPID1;
+ /* Driver local functions.                                                   */
+ /*===========================================================================*/
+ 
++/* SN32 SPI TX/RX FIFO depth (words). Both FIFOs are 8 entries deep. */
++#define SN32_SPI_FIFO_DEPTH 8U
++
+ static void spi_lld_configure(SPIDriver *spip) {
+   spip->spi->CTRL0 = spip->config->ctrl0;
+   spip->spi->CTRL0_b.SELDIS = SPI_SELECT_MODE != SPI_SELECT_MODE_LLD;
+   spip->spi->CTRL0_b.MS = spip->config->slave;
+   spip->spi->CTRL0_b.SDODIS = false;
++  /* Fire the RX threshold IRQ as soon as one word is available. The handler
++     drains the whole FIFO per call, so a low threshold still yields few IRQs
++     under load (bytes accumulate during IRQ latency) while guaranteeing the
++     final short batch is always delivered -- no RX-timeout tail handling. */
++  spip->spi->CTRL0_b.RXFIFOTH = 0;
+ 
+   spip->spi->CTRL1 = (uint32_t)spip->config->ctrl1;
+ 
+@@ -80,23 +88,206 @@ static void spi_lld_configure(SPIDriver *spip) {
+   spip->spi->CTRL0_b.SPIEN = true;
+ }
+ 
++/* Top up the TX FIFO. Bytes are pushed while data remains, the TX FIFO has
++   room, and no more than a FIFO's worth are outstanding (txidx - rxidx) -- the
++   latter caps RX fill so it can never overflow, which would drop words and
++   stall the rxidx==count completion test. Priming the FIFO (vs one byte per
++   IRQ) keeps SCLK continuously clocked; that idle-gap removal is the main win. */
++static inline void spi_fifo_fill(SPIDriver *spip) {
++  while (spip->txidx < spip->count &&
++         (spip->txidx - spip->rxidx) < SN32_SPI_FIFO_DEPTH &&
++         !spip->spi->STAT_b.TX_FULL) {
++    spip->spi->DATA = spip->txbuf ? spip->txbuf[spip->txidx] : 0x00;
++    spip->txidx++;
++  }
++}
++
+ static inline void spi_lld_irq_handler(SPIDriver *spip) {
+-  if (spip->spi->RIS_b.RXFIFOTHIF) {
+-    chSysLockFromISR();
+-    uint16_t data = spip->spi->DATA;
++  if (spip->spi->RIS_b.RXFIFOTHIF || !spip->spi->STAT_b.RX_EMPTY) {
++    /* Drain every word the RX FIFO accumulated since the last interrupt. */
++    while (!spip->spi->STAT_b.RX_EMPTY) {
++      uint16_t data = spip->spi->DATA;
++      if (spip->rxbuf && spip->rxidx < spip->count) {
++        spip->rxbuf[spip->rxidx] = data;
++      }
++      spip->rxidx++;
++    }
+     spip->spi->IC_b.RXFIFOTHIC = true;
+-    chSysUnlockFromISR();
+ 
+-    if (spip->rxbuf) spip->rxbuf[spip->idx] = data;
+-
+-    if (++(spip->idx) >= spip->count) {
++    if (spip->rxidx >= spip->count) {
+       __spi_isr_complete_code(spip);
+     } else {
+-      spip->spi->DATA = spip->txbuf ? spip->txbuf[spip->idx] : 0x00;
++      /* Keep the pipeline full for the remainder of the transfer. */
++      spi_fifo_fill(spip);
++    }
++  }
++}
++
++/*===========================================================================*/
++/* SN32 SPI-to-SPI flash->LCD DMA extension.                                  */
++/*===========================================================================*/
++/* The SPI-to-SPI DMA registers live on SPI0 itself (DMACTRL/DMACNT/DMAHTCNT,
++ * completion via SPI0's DMATCIF/DMAHTIF). They are absent from the minimal
++ * sn32_spi.h view, so this uses the vendor SN_SPI0 map. Completion is dispatched
++ * from SN32_SPI0_HANDLER below -- no application-provided vector. */
++#if defined(SN32_SPI0_FLASH_DMA)
++
++static spi_sn32_dma_cb_t sn32_dma_cb;
++static volatile bool     sn32_dma_busy = false;
++/* The flash-source SPI instance borrowed for the DMA (SPI1). Held for Step 2,
++ * when SPID1 is spiStart()ed and we must keep its driver handler from running
++ * during the transfer.
++ *
++ * IMPORTANT: do NOT mask the source's RXFIFOTHIE to do that -- on the SN32 the
++ * RX-threshold event that RXFIFOTHIE enables is ALSO what triggers the SPI1->SPI0
++ * DMA request. Clearing it stalls the DMA (it never fires, never completes, and
++ * SPI0 is left in DMA mode -> the next spiSend hangs). The correct isolation,
++ * once SPID1 is live, is nvicDisableVector(SN32_SPI1_NUMBER) for the DMA window
++ * (keeps the threshold event -> keeps the DMA trigger, just skips the handler),
++ * re-enabled on completion. Until SPID1 is started its vector is already off,
++ * so this instance is currently only recorded, not touched. */
++static SPIDriver        *sn32_dma_flash = NULL;
++
++/* SPI0 in DMA-ready config: 8-bit words (command phase), mode 0, 24 MHz, data
++ * fetch delay, re-latched by FRESET. Matches the hand-tuned bare-metal setup. */
++static void sn32_flash_dma_config(void) {
++  /* QP's spiStop() gates the SPI0 clock between flushes; re-enable it. */
++  sys1EnableSPI0();
++  /* Wipe the driver's leftover CTRL0/CTRL1 (spiStop does not clear them) so no
++     stale DL/threshold/MDIV bits survive into the DMA config. */
++  SN_SPI0->CTRL0 = 0;
++  SN_SPI0->CTRL1 = 0;
++  SN_SPI0->CTRL0_b.MS     = 0;
++  SN_SPI0->CTRL0_b.SDODIS = 0;
++  SN_SPI0->CTRL0_b.DL     = 7;       /* 8-bit */
++  SN_SPI0->CTRL0_b.SELDIS = 1;
++  SN_SPI0->CTRL1_b.MLSB   = 0;
++  SN_SPI0->CTRL1_b.CPOL   = 0;       /* mode 0 */
++  SN_SPI0->CTRL1_b.CPHA   = 0;
++  SN_SPI0->CLKDIV_b.DIV   = 0;       /* 24 MHz */
++  SN_SPI0->DFDLY_b.DFETCH_EN = 1;
++  SN_SPI0->CTRL0_b.FRESET = 0b11;
++  SN_SPI0->CTRL0_b.SPIEN  = 1;
++}
++
++void spiSN32FlashDmaPrepare(SPIDriver *lcd, SPIDriver *flash, uint32_t len) {
++  (void)lcd;
++  /* Borrow the source instance for the DMA window. Do NOT touch its RXFIFOTHIE:
++     that bit gates the SPI1 RX-threshold event that triggers the DMA request, so
++     clearing it would stall the transfer. Instead disable its NVIC vector -- the
++     threshold event (and thus the DMA trigger) stays live, but the driver's
++     SN32_SPI1_HANDLER won't dispatch and race the DMA draining the RX FIFO. The
++     command phase (raw READ+addr the caller clocks next) also relies on the
++     vector being off. Re-enabled in sn32_flash_dma_isr() on completion. */
++  sn32_dma_flash = flash;
++#if SN32_SPI_USE_SPI1 == TRUE
++  if (flash == &SPID1) {
++    nvicDisableVector(SN32_SPI1_NUMBER);
++  }
++#endif
++  sn32_flash_dma_config();
++  SN_SPI0->CTRL0_b.FRESET = 0b11;
++  SN_SPI0->DMACTRL_b.DMAEN = 0;
++  SN_SPI0->DMACTRL_b.DIR   = 0;              /* SPI1(flash) -> SPI0(LCD) */
++  SN_SPI0->DMACNT_b.CNT    = len - 1;
++  SN_SPI0->DMAHTCNT_b.HTCNT = (len - 1) / 2;
++  /* SPI0 stays 8-bit here so the caller can send the panel window + flash
++     READ+addr command before the pixel stream starts. */
++}
++
++void spiSN32FlashDmaFire(SPIDriver *lcd, spi_sn32_dma_cb_t cb) {
++  (void)lcd;
++  sn32_dma_cb   = cb;
++  sn32_dma_busy = true;
++  SN_SPI0->IC = 0x3F;
++  SN_SPI0->CTRL0_b.DL = 0xF;                 /* 16-bit words (one RGB565 pixel) */
++  SN_SPI0->IE = (1u << 5) | (1u << 4);       /* DMATCIE | DMAHTIE */
++  nvicClearPending(SN32_SPI0_NUMBER);
++  nvicEnableVector(SN32_SPI0_NUMBER, SN32_SPI_SPI0_IRQ_PRIORITY);
++  SN_SPI0->DMACTRL_b.DMAEN = 1;              /* completion -> SN32_SPI0_HANDLER */
++}
++
++bool spiSN32FlashDmaBusy(SPIDriver *lcd) {
++  (void)lcd;
++  return sn32_dma_busy;
++}
++
++/* Abort an in-flight flash->LCD DMA and put BOTH controllers back exactly where
++ * a normal completion would leave them.
++ *
++ * A caller that has waited out its bound cannot simply declare the blit done:
++ * spiSN32FlashDmaPrepare() DISABLES SPI1's NVIC vector for the DMA window, and
++ * only the completion path re-enables it. Tearing down without that leaves SPI1
++ * permanently deaf, so the next flash read never completes and the board wedges
++ * harder than the stall being recovered from -- observed on hardware
++ * 2026-08-30, total silence within two seconds of an otherwise-successful
++ * recovery.
++ *
++ * Order matters: stop the DMA engine BEFORE resetting the source FIFO, or the
++ * sink is left armed waiting on data that will never arrive. */
++void spiSN32FlashDmaAbort(SPIDriver *lcd) {
++  (void)lcd;
++  if (!sn32_dma_busy) {
++    return;
++  }
++  SN_SPI0->DMACTRL_b.DMAEN = 0;              /* engine off first */
++  SN_SPI0->IC = 0x3F;
++  nvicClearPending(SN32_SPI0_NUMBER);
++  SN_SPI0->CTRL0_b.DL = 7;                   /* back to 8-bit */
++  /* Same hand-back to FIFO mode the completion path performs, or a subsequent
++     spiSend on the panel would never complete. */
++  SN_SPI0->CTRL0_b.RXFIFOTH = 0;
++  SN_SPI0->IE = 0b0100;                      /* RXFIFOTHIE */
++#if SN32_SPI_USE_SPI1 == TRUE
++  if (sn32_dma_flash == &SPID1) {
++    SN_SPI1->CTRL0_b.FRESET = 0b11;
++    SN_SPI1->IC = 0x3F;
++    nvicClearPending(SN32_SPI1_NUMBER);
++    nvicEnableVector(SN32_SPI1_NUMBER, SN32_SPI_SPI1_IRQ_PRIORITY);
++  }
++#endif
++  sn32_dma_flash = NULL;
++  sn32_dma_busy  = false;
++  sn32_dma_cb    = NULL;                     /* the caller does its own teardown */
++}
++
++/* Dispatched from the SPI0 handler when a DMA flag is pending. Returns true if
++ * it consumed the interrupt (so the FIFO handler is skipped). */
++static bool sn32_flash_dma_isr(void) {
++  uint32_t ris = SN_SPI0->RIS;
++  SN_SPI0->IC = 0x3F;
++  if (ris & (1u << 5)) {                     /* DMATCIF: transfer complete */
++    /* Let the last word finish shifting out before tearing down. */
++    for (uint32_t g = 0; g < 200000u &&
++         (!SN_SPI0->STAT_b.TX_EMPTY || SN_SPI0->STAT_b.BUSY); g++) { }
++    SN_SPI0->DMACTRL_b.DMAEN = 0;
++    SN_SPI0->CTRL0_b.DL = 7;                 /* back to 8-bit */
++    /* Hand SPI0 back to the driver's FIFO mode: the DMA arm left the RX-threshold
++       IRQ disabled (IE = DMA bits), so a subsequent spiSend would never complete.
++       QP-driven callers re-run spiStart per flush and don't need this; callers
++       that drive the driver directly between DMAs (e.g. a bare-metal dashboard)
++       do. Restoring the driver's IE here is harmless for the former. */
++    SN_SPI0->CTRL0_b.RXFIFOTH = 0;
++    SN_SPI0->IE = 0b0100;                    /* RXFIFOTHIE */
++#if SN32_SPI_USE_SPI1 == TRUE
++    if (sn32_dma_flash == &SPID1) {
++      /* Flush any stale RX + pending flag so handing the vector back doesn't
++         spuriously dispatch the idle driver handler, then re-enable it. */
++      SN_SPI1->CTRL0_b.FRESET = 0b11;
++      SN_SPI1->IC = 0x3F;
++      nvicClearPending(SN32_SPI1_NUMBER);
++      nvicEnableVector(SN32_SPI1_NUMBER, SN32_SPI_SPI1_IRQ_PRIORITY);
+     }
++#endif
++    sn32_dma_flash = NULL;
++    sn32_dma_busy = false;
++    if (sn32_dma_cb) sn32_dma_cb();          /* caller drops flash/panel CS */
+   }
++  return true;                               /* DMAHTIF: consumed, nothing to do */
+ }
+ 
++#endif /* SN32_SPI0_FLASH_DMA */
++
+ /*===========================================================================*/
+ /* Driver interrupt handlers.                                                */
+ /*===========================================================================*/
+@@ -105,7 +296,11 @@ static inline void spi_lld_irq_handler(SPIDriver *spip) {
+ OSAL_IRQ_HANDLER(SN32_SPI0_HANDLER) {
+   OSAL_IRQ_PROLOGUE();
+ 
+-  spi_lld_irq_handler(&SPID0);
++#if defined(SN32_SPI0_FLASH_DMA)
++  /* Service a pending flash->LCD DMA completion; else fall through to FIFO. */
++  if (!((SPID0.spi->RIS & 0x30U) && sn32_flash_dma_isr()))  /* DMAHTIF|DMATCIF */
++#endif
++    spi_lld_irq_handler(&SPID0);
+ 
+   OSAL_IRQ_EPILOGUE();
+ }
+@@ -290,9 +485,12 @@ msg_t spi_lld_exchange(SPIDriver *spip, size_t n,
+   spip->txbuf = txbuf;
+   spip->rxbuf = rxbuf;
+   spip->count = n;
+-  spip->idx = 0;
++  spip->rxidx = 0;
++  spip->txidx = 0;
+ 
+-  spip->spi->DATA = spip->txbuf ? spip->txbuf[0] : 0x00;
++  /* Prime the TX FIFO so SCLK runs continuously; the RX threshold IRQ then
++     drains completed words and refills. */
++  spi_fifo_fill(spip);
+ 
+   return HAL_RET_SUCCESS;
+ }
+@@ -348,7 +546,7 @@ msg_t spi_lld_stop_transfer(SPIDriver *spip, size_t *sizep) {
+   SPI_FIFO_FRESET(spip);
+ 
+   if (sizep != NULL) {
+-    *sizep = spip->count - spip->idx;
++    *sizep = spip->count - spip->rxidx;
+   }
+ 
+   return HAL_RET_SUCCESS;
+diff --git a/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.h b/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.h
+index 27c75f70..8b244c10 100644
+--- a/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.h
++++ b/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.h
+@@ -156,7 +156,8 @@
+   uint8_t                   *rxbuf;                                         \
+   const uint8_t             *txbuf;                                         \
+   uint32_t                  count;                                          \
+-  uint32_t                  idx;
++  uint32_t                  rxidx;                                          \
++  uint32_t                  txidx;
+ 
+ /**
+  * @brief   Low level fields of the SPI configuration structure.
+@@ -179,10 +180,34 @@ extern SPIDriver SPID0;
+ extern SPIDriver SPID1;
+ #endif
+ 
++#if defined(SN32_SPI0_FLASH_DMA) || defined(__DOXYGEN__)
++/* SN32-specific SPI-to-SPI flash->LCD DMA extension.
++ *
++ * The SN32 "DMA" is the EBI SPI1(RX)->SPI0(TX) engine: peripheral-to-peripheral,
++ * no RAM source, so it does not fit the standard hal_spi buffer API. This extra
++ * entrypoint lets an application stream flash-resident pixels straight to the
++ * panel while still using this driver for normal (CPU/FIFO) SPI0 transfers.
++ *
++ * Usage (SPI0 = the LCD sink):
++ *   spiSN32FlashDmaPrepare(&SPID0, &SPID1, len); // SPI0 sink + SPI1 source borrowed
++ *   ...caller sets the panel window and clocks the flash READ+addr on SPI1...
++ *   spiSN32FlashDmaFire(&SPID0, cb);       // flip to 16-bit words, arm; non-blocking
++ * `cb` runs in the SPI0 ISR at transfer-complete, after the bus drains and the
++ * DMA/16-bit mode are torn down; use it to deassert the flash/panel CS lines.
++ * Completion is dispatched by this driver's SPI0 handler (no app-side vector). */
++typedef void (*spi_sn32_dma_cb_t)(void);
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+   void spi_lld_init(void);
++#if defined(SN32_SPI0_FLASH_DMA)
++  void spiSN32FlashDmaPrepare(SPIDriver *lcd, SPIDriver *flash, uint32_t len);
++  void spiSN32FlashDmaFire(SPIDriver *lcd, spi_sn32_dma_cb_t cb);
++  bool spiSN32FlashDmaBusy(SPIDriver *lcd);
++  void spiSN32FlashDmaAbort(SPIDriver *lcd);
++#endif
+   msg_t spi_lld_start(SPIDriver *spip);
+   void spi_lld_stop(SPIDriver *spip);
+ #if (SPI_SELECT_MODE == SPI_SELECT_MODE_LLD) || defined(__DOXYGEN__)
+diff --git a/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.c b/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.c
+index 5277a2e9..faa2485c 100644
+--- a/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.c
++++ b/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.c
+@@ -57,6 +57,16 @@
+ #define ST_RESET_CLOCK()                    sys1ResetCT16B1()
+ #define ST_INIT_CLOCK()                     CT16B1_ResetTimer()
+ 
++#elif SN32_ST_USE_TIMER == SN32_TIM_CT16B5
++
++#if !SN32_HAS_CT16B5
++#error "CT16B5 not present in the selected device"
++#endif
++
++#define ST_ENABLE_CLOCK()                   sys1EnableCT16B5()
++#define ST_RESET_CLOCK()                    sys1ResetCT16B5()
++#define ST_INIT_CLOCK()                     CT16B5_ResetTimer()
++
+ #else
+ #error "SN32_ST_USE_TIMER specifies an unsupported timer"
+ #endif
+diff --git a/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.h b/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.h
+index 796b7d33..b34ee42e 100644
+--- a/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.h
++++ b/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.h
+@@ -32,6 +32,7 @@
+ /*===========================================================================*/
+ #define SN32_TIM_CT16B0 0
+ #define SN32_TIM_CT16B1 1
++#define SN32_TIM_CT16B5 5
+ 
+ /*===========================================================================*/
+ /* Driver pre-compile time settings.                                         */
+@@ -92,6 +93,17 @@
+ #define SN32_ST_TIM                         SN32_CT16B1
+ #define ST_LLD_NUM_ALARMS                   1
+ 
++#elif SN32_ST_USE_TIMER == SN32_TIM_CT16B5
++
++#if defined(SN32_CT16B5_IS_USED)
++#error "ST requires CT16B5 but the timer is already used"
++#else
++#define SN32_CT16B5_IS_USED
++#endif
++
++#define SN32_ST_TIM                         SN32_CT16B5
++#define ST_LLD_NUM_ALARMS                   1
++
+ #else
+ #error "SN32_ST_USE_TIMER specifies an unsupported timer"
+ #endif
+@@ -199,7 +211,7 @@ static inline void st_lld_start_alarm(systime_t abstime) {
+ 
+   /* Save the alarm time in a timer register.  This is needed only to make
+    * st_lld_get_alarm() work. */
+-#if ((defined(SN32F280) || defined(SN32F290)) && SN32_ST_USE_TIMER == SN32_TIM_CT16B0)
++#if ((defined(SN32F280) || defined(SN32F290)) && (SN32_ST_USE_TIMER == SN32_TIM_CT16B0 || SN32_ST_USE_TIMER == SN32_TIM_CT16B5))
+   SN32_ST_TIM->MR[0] = CT16_PWM_UNLOCK(((uint32_t)abstime & SN32_CT16_TC_LIMIT));
+ #else
+   SN32_ST_TIM->MR[0] = ((uint32_t)abstime & SN32_CT16_TC_LIMIT);
+diff --git a/os/hal/ports/SN32/SN32F290/hal_efl_lld.c b/os/hal/ports/SN32/SN32F290/hal_efl_lld.c
+index cd257b32..1c7297c5 100644
+--- a/os/hal/ports/SN32/SN32F290/hal_efl_lld.c
++++ b/os/hal/ports/SN32/SN32F290/hal_efl_lld.c
+@@ -27,6 +27,39 @@
+ 
+ #include "hal.h"
+ 
++/* Flash program/erase must keep executing while the flash array is busy, so
++ * these routines and their busy-wait are linked into .ramtext (copied to SRAM by
++ * crt0). Running from flash here stalls instruction/vector fetch during the
++ * program/erase, delaying the SPI0 DMA completion IRQ enough to lose a WFI-idle
++ * wakeup on the flash-LCD branches. See keyboards/a_jazz/ak820pro readme. */
++#define SN32_EFL_RAMFUNC __attribute__((section(".ramtext"), noinline, used))
++
++/* Mask interrupts across the window where the flash array is BUSY.
++ *
++ * The .ramtext move above keeps these routines executing while the array is
++ * busy, but it does nothing for interrupt handlers -- the vector table and
++ * every ISR still live in flash. The AK820 Pro runs ~18,800 RGB row
++ * interrupts/s plus a 20 kHz GPT tick, so an interrupt landing inside a
++ * program window is not unlikely, it is essentially certain; the CPU then
++ * fetches a vector and handler out of an array that is mid-program.
++ *
++ * That is the residual hang: board dead, one LED row stuck lit (the row ISR
++ * being one of the victims), recoverable only by a power cycle. Draining the
++ * LCD DMA first -- backing_store_pre_write_hook() on the board side -- was
++ * necessary but not sufficient, because the DMA was never the whole story.
++ *
++ * SCOPE IS DELIBERATE: this masks the per-line PROGRAM window only, which is
++ * tens of microseconds. Sector ERASE is left alone on purpose -- it is
++ * milliseconds, and masking that long starves UART2, which on this board
++ * carries the CH582F link and is the one peripheral where being late means
++ * LOSING DATA (see the interrupt priority table). Trading a rare hang for
++ * routinely corrupted Bluetooth frames would be a bad deal.
++ *
++ * PRIMASK is saved and restored rather than blindly re-enabled, so this is
++ * safe if a caller is already inside a critical section. */
++#define SN32_EFL_CRIT_ENTER()  uint32_t _efl_primask = __get_PRIMASK(); __disable_irq()
++#define SN32_EFL_CRIT_EXIT()   __set_PRIMASK(_efl_primask)
++
+ #if (HAL_USE_EFL == TRUE) || defined(__DOXYGEN__)
+ 
+ /*===========================================================================*/
+@@ -82,7 +115,7 @@ static inline void sn32_flash_clear_status(EFlashDriver *eflp) {
+   eflp->flash->STATUS_b.ERR = 0;
+ }
+ 
+-static inline void sn32_flash_wait_busy(EFlashDriver *eflp) {
++static SN32_EFL_RAMFUNC void sn32_flash_wait_busy(EFlashDriver *eflp) {
+ 
+   /* Wait for busy bit clear.*/
+   while ((eflp->flash->STATUS & SN32_FLASH_STATUS_BUSY) != 0U) {
+@@ -225,7 +258,7 @@ flash_error_t efl_lld_read(void *instance, flash_offset_t offset,
+  * @notapi
+  */
+ 
+-flash_error_t efl_lld_program(void *instance, flash_offset_t offset,
++SN32_EFL_RAMFUNC flash_error_t efl_lld_program(void *instance, flash_offset_t offset,
+                               size_t n, const uint8_t *pp) {
+     EFlashDriver *devp = (EFlashDriver *)instance;
+     flash_error_t err = FLASH_NO_ERROR;
+@@ -294,9 +327,15 @@ flash_error_t efl_lld_program(void *instance, flash_offset_t offset,
+         devp->flash->DATA = word0;
+         devp->flash->DATA = word1;
+ 
+-        // Trigger programming
+-        sn32_flash_start_pgm(devp);
+-        sn32_flash_wait_busy(devp);
++        // Trigger programming. Interrupts are masked for exactly the busy
++        // window: any handler taken here would fetch from the array being
++        // programmed. See SN32_EFL_CRIT_ENTER above.
++        {
++            SN32_EFL_CRIT_ENTER();
++            sn32_flash_start_pgm(devp);
++            sn32_flash_wait_busy(devp);
++            SN32_EFL_CRIT_EXIT();
++        }
+ 
+         if (devp->flash->STATUS & SN32_FLASH_STATUS_ERROR) {
+             sn32_flash_clear_status(devp);
+@@ -348,7 +387,7 @@ flash_error_t efl_lld_start_erase_all(void *instance) {
+  *
+  * @notapi
+  */
+-flash_error_t efl_lld_start_erase_sector(void *instance,
++SN32_EFL_RAMFUNC flash_error_t efl_lld_start_erase_sector(void *instance,
+                                          flash_sector_t sector) {
+   EFlashDriver *devp = (EFlashDriver *)instance;
+ 
+diff --git a/os/hal/ports/SN32/SN32F290/platform.mk b/os/hal/ports/SN32/SN32F290/platform.mk
+index 5c86ada8..1307a38c 100644
+--- a/os/hal/ports/SN32/SN32F290/platform.mk
++++ b/os/hal/ports/SN32/SN32F290/platform.mk
+@@ -29,6 +29,7 @@ include ${CHIBIOS_CONTRIB}/os/hal/ports/SN32/LLD/SN32F2xx/I2C/driver.mk
+ include ${CHIBIOS_CONTRIB}/os/hal/ports/SN32/LLD/SN32F2xx/WDT/driver.mk
+ include ${CHIBIOS_CONTRIB}/os/hal/ports/SN32/LLD/SN32F2xx/UART/driver.mk
+ include ${CHIBIOS_CONTRIB}/os/hal/ports/SN32/LLD/SN32F2xx/ADC/driver.mk
++include ${CHIBIOS_CONTRIB}/os/hal/ports/SN32/LLD/SN32F2xx/RTC/driver.mk
+ 
+ # Shared variables
+ ALLCSRC += $(PLATFORMSRC_CONTRIB)
