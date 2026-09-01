@@ -12,8 +12,13 @@ session flawless by eye, tx_drops 0, coalescing never engaged; counters
 from session 1 lost to the slider power-cycle -- see CLAUDE.md). Stray-g
 display bug found via BT overlay, root-caused (unknown-vs-empty shadow
 conflation), fixed + hardware-verified as 5812cd49ab (now the live daily).
-STILL OPEN: BT slot-memory across power cycle (casual check), the passive
-RTC-trim persistence observation, and the keystroke-miss hunt (BACKLOG.md).
+BT slot-memory ✓ (2026-09-01, JD:
+slot 2 survives a power cycle via the deferred flush). LED row-flash
+artifact ✓ fixed and verified (sweeps + 15 forced writes). Clock
+re-convergence after reflash understood and documented (not a fault).
+**Every checklist item is now verified.** Remaining work lives in
+BACKLOG.md as run-when-needed items (keystroke-miss hunt protocol, LCD
+health readout, SECCNTV phase nicety).
 
 Steps that need JD at the keyboard. Software work proceeds ahead of these;
 nothing is flashed without you. Run top to bottom when convenient — each
