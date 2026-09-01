@@ -160,6 +160,25 @@ Two concrete, cheap, potentially high-value items in `ch582f_ajazz.c`:
 - `cppcheck` over `keyboards/a_jazz/ak820pro/` — cheap, occasionally finds
   real RMW/size bugs; expect noise, timebox it.
 
+## Execution record (2026-09-01)
+
+All three audits ran (parallel fork agents, findings verified with quoted
+code): `findings-concurrency.md`, `findings-bounded-wait.md`,
+`findings-input-validation.md`. Static pass (2.5): cppcheck + -Wextra both
+effectively clean — intentional CRC fallthrough, signature-required unused
+params, two host-model false positives; nothing actionable beyond phase-3
+cosmetics. Fix-now items landed as commit c2b0bd4b9c (RTC validation +
+honest reply, malformed-frame counter wired, TX nearly-full coalescing for
+A1/A3, FIFO comment corrected, two concurrency one-liners). Notable audit
+corrections to the plan's own assumptions: the RX FIFO was never disabled
+(the LLD always enables it — the evaluate-enabling item is moot), and the
+RTC 1 Hz callback is a sixth execution context the table missed. The four
+over-budget blocking draw paths (gq_flush ~52 ms worst case, playback
+relayout, clock force-repaint, lock band) are dispositioned into phase 3's
+band-arbiter work; peer commit 831cc67703 already per-slot-diffs the lock
+band. Accept-and-document items are recorded in the findings files rather
+than CLAUDE.md for now — the phase-4 doc close-out consolidates.
+
 ## Deliverables
 
 - [ ] `findings-concurrency.md`, `findings-bounded-wait.md`,

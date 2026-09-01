@@ -55,4 +55,27 @@ console tests.
 - [ ] Finish by flashing the newest **daily** artifact; quick re-run of the
       first checklist item's checks.
 
-(Phase 2+ entries are appended as their code lands.)
+## Phase 2 — audit fixes (commit c2b0bd4b9c)
+
+Rides along with the phase-1 flash (same artifacts). Additional checks:
+
+- [ ] **BT regression pass for the TX coalescing change.** In BT mode, type
+      a sustained fast burst; verify no stuck keys, no missed releases, and
+      `[ch582]`/health `tx_drops` stays 0. The coalescing only engages when
+      the ring is nearly full, so normal typing must be byte-identical to
+      before.
+- [ ] **Clock set still works:** `ak820ctl clock --no-wait` (wired), panel
+      time correct — confirms the new RTC validation accepts real dates.
+- [ ] **Malformed counter stays 0** in normal use (wired and BT):
+      `ak820health.py` → `rx_malformed 0`. A nonzero here with healthy
+      typing means the heuristic is too eager — report, don't ignore.
+- [ ] **(Optional, advanced) asset re-provision during an instrumented
+      soak**: start `soak.py`, then run an `ak820ctl flash write` of the
+      current `flash_assets.bin` concurrently is NOT possible (one raw-HID
+      owner) — instead: stop the soak, provision normally, power-cycle,
+      re-run the soak, confirming provisioning + the new firmware coexist.
+- [ ] **Record baselines into CLAUDE.md** after the first clean instrumented
+      session: typical `[health]` line, worst loop gap, scan band — the
+      numbers a future session compares against.
+
+(Phase 3+ entries are appended as their code lands.)
