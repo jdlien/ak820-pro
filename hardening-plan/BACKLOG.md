@@ -1,8 +1,17 @@
 # Backlog — known, accepted, or deferred items
 
-## Red LED-row flash during/after RGB adjustment (JD, 2026-09-01)
+## ~~Red LED-row flash during/after RGB adjustment~~ — FIXED 2026-09-01 (6ca0102941)
 
-**Symptom:** holding an RGB adjust key (e.g. Fn+Up), a row of red LEDs
+**Resolution:** the driver's own `EFLD1.state != FLASH_PGM` guard skipped
+the row ADVANCE during flash programming but left the current mux row
+energized, so the masked program windows froze that row at its live colour
+slot for the whole multi-ms write (~18x brightness: red one time, green
+another). The FLASH_PGM branch now de-selects every mux pin (ISR-safe GPIO
+writes; `sn32f2xx_blank()` is NOT ISR-safe under hardware PWM). Verified by
+JD: long hue/brightness sweeps, no pops and no perceptible darkening. The
+proposed-fix notes below are historical.
+
+**Symptom (historical):** holding an RGB adjust key (e.g. Fn+Up), a row of red LEDs
 flashes briefly. Longstanding, cosmetic.
 
 **Root cause (understood, not guessed):** the settled eeconfig write fires
