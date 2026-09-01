@@ -60,7 +60,9 @@ CONSOLE_LOG = os.path.expanduser("~/Library/Logs/ak820pro-console.log")
 
 
 def report(payload):
-    return bytes([0x00] + payload + [0x00] * (31 - len(payload)))
+    # 33 bytes: report id + full 32-byte report -- one short and macOS
+    # quietly drops the write.
+    return bytes([0x00] + payload + [0x00] * (32 - len(payload)))
 
 
 class Soak:
@@ -81,8 +83,14 @@ class Soak:
             self.misses += 1
         return None
 
-    def send(self, payload):  # write-only (text)
+    def send(self, payload):
+        """Nominally write-only (text) -- but VIA ECHOES every packet, and an
+        unread echo left queued desynchronises the next transaction's reply.
+        So consume the echo: every push is a transaction on a shared handle.
+        (ak820text.py gets away without reading because it closes its handle,
+        discarding the queue -- a one-open-per-push luxury a soak can't afford.)"""
         self.h.write(report(payload))
+        self.h.read(32, 300)
 
     def ping(self):
         return self.xfer([VIA_GET_PROTOCOL], VIA_GET_PROTOCOL) is not None
@@ -113,6 +121,9 @@ class Soak:
         self.send([SET_VALUE, TEXT_CHANNEL, TEXT_SET_LINE, line, 0] + list(body))
 
     def health(self):
+        # Belt and braces: drain any stray queued reply before a framed read.
+        while self.h.read(32, 20):
+            pass
         return read_health(self.h)
 
     def discover_effects(self, limit=60):
@@ -204,7 +215,14 @@ def main():
                 next_["fx"] = now + (15.0 if fx in dwell else 4.0)
             if now >= next_["health"]:
                 next_["health"] = now + 5.0
-                h = s.health()
+                try:
+                    h = s.health()
+                except SystemExit:
+                    # A garbled reply mid-soak is a failed poll, not a reason
+                    # to bail past the restore block (which an earlier version
+                    # did, stranding the stress values on the board).
+                    fails.append(f"health poll failed at {el:.1f}s")
+                    break
                 if h["blit_timeouts"] > base["blit_timeouts"]:
                     fails.append(f"blit timeout at {el:.1f}s: {h['blit_timeouts']}")
                 if (h["wdt_consecutive_resets"] > base["wdt_consecutive_resets"]

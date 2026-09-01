@@ -34,7 +34,9 @@ class T:
         self.failures = []
 
     def xfer(self, payload):
-        self.h.write(bytes([0x00] + payload + [0x00] * (31 - len(payload))))
+        # 33 bytes on the wire: report id + the full 32-byte report. One byte
+        # short and macOS quietly drops the write (learned the hard way).
+        self.h.write(bytes([0x00] + payload + [0x00] * (32 - len(payload))))
         rep = self.h.read(32, 1000)
         if not rep or rep[0] != SET_VALUE:
             raise SystemExit("no reply (instrumented build? wired mode?)")
