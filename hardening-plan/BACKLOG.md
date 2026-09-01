@@ -49,3 +49,17 @@ wear-leveling sector erases blocking the main loop 50-300 ms, rare and
 irregular. Protocol: instrumented build + consolelog.sh + normal typing;
 the [stall] line attributes any >=4 ms gap to flash/blit/i2c the moment it
 happens. Run when it next "feels bad".
+
+## Slider power asymmetry + host-switch key clearing (2026-09-01, Rachel + JD)
+
+Measured: wired->BT does NOT reboot; BT->wired reboots EVERY time (power-
+source switchover; direction-asymmetric ride-through). The boot reset cause
+is now readable -- HC_CONN reply byte 7 carries raw RSTST (bit2 = LVD
+brownout, bit4 = POR) -- read it after a BT->cable flip to name the reset.
+
+Held-key-across-host-switch: QMK's handle_host_changed() verifiably never
+clears report state (Rachel, from source), but the predicted stuck key did
+NOT reproduce on macOS. clear_keyboard() now runs before the route flips
+anyway (bt_ui_mode_slider). Upstream issue DEFERRED until the consequence
+reproduces on some host (try Windows) -- the source-level observation alone
+is thin receipts.
