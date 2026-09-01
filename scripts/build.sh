@@ -56,6 +56,7 @@ fi
 trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 
 cd "$REPO"
+python3 "$WORK/scripts/check_via_sync.py"   # enum <-> via.json index match
 qmk compile -kb a_jazz/ak820pro -km via "${FLAGS[@]}"
 
 [[ "$(state)" == "$pre_state" ]] || { echo "ERROR: repo changed during the build; artifact provenance unreliable — rebuild." >&2; exit 1; }
