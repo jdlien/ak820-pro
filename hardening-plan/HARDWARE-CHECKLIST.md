@@ -1,5 +1,16 @@
 # Hardware verification checklist
 
+**2026-09-01 session results:** phase 0 flash ✓; WDT wedge/mode-2/degraded
+✓ (12.3 s recovery, prescaler confirmed, EEPROM sane after
+write-adjacent reset, degraded latch + cold-power-off clear ✓); bootloader
+60 s dwell ✓ + flash-after-dwell ✓; bt_faults 18/18 ✓; 300 s soak PASS ✓;
+clock set ✓; brightness persistence ✓ (JD); general feel pass ✓ (JD, "no
+new issues"; known red-row flash recorded in BACKLOG.md). Daily build
+34409ab8be flashed and verified (health clean, test hooks absent, WDT
+armed). REMAINING: the BT items -- typing burst (coalescing regression),
+slot memory across power cycle, BT feel -- and the passive RTC-trim
+persistence observation.
+
 Steps that need JD at the keyboard. Software work proceeds ahead of these;
 nothing is flashed without you. Run top to bottom when convenient — each
 entry says what to do and what "pass" looks like. Build artifacts are in
