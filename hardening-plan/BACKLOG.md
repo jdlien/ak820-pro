@@ -8,7 +8,8 @@ energized, so the masked program windows froze that row at its live colour
 slot for the whole multi-ms write (~18x brightness: red one time, green
 another). The FLASH_PGM branch now de-selects every mux pin (ISR-safe GPIO
 writes; `sn32f2xx_blank()` is NOT ISR-safe under hardware PWM). Verified by
-JD: long hue/brightness sweeps, no pops and no perceptible darkening. The
+JD: long hue/brightness sweeps AND 15 host-forced EEPROM writes at 1 Hz --
+no pops and no perceptible darkening. The
 proposed-fix notes below are historical.
 
 **Symptom (historical):** holding an RGB adjust key (e.g. Fn+Up), a row of red LEDs
