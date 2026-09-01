@@ -101,4 +101,24 @@ so the verification is "everything still works", plus the BT fault matrix:
       — ALL FAULT TESTS PASS. Then toggle the mode slider to restore real
       link state.
 
-(Phase 4 entries are appended as its code lands.)
+## Phase 4 — persistence (commit 08aecac174)
+
+- [ ] **Brightness survives a power cycle:** set a non-default level with
+      Fn+PgUp/PgDn, wait ~6 s (the settle window), slider off ~10 s, back
+      on. **Pass:** the level is what you set, not `LCD 56%`.
+- [ ] **BT slot still remembered** (now via the deferred flush): select
+      slot 2, wait ~6 s, power cycle in BT mode → reconnects to slot 2.
+- [ ] **RTC trim persists:** run wired ≥ 10 min (instrumented build:
+      `[rtc] trim` lines should be rare/absent thanks to the 33600 seed;
+      if a trim fires after the 10 min mark it persists). Power cycle,
+      then watch the first 15 min of console: **zero** `[rtc]` trim/snap
+      lines means the stored seed took. (First boot after this flash still
+      uses RTC_PERIOD_INITIAL until one post-10-min trim runs.)
+- [ ] **Fresh-block fallback:** nothing to do unless you ever
+      `eeconfig_init` -- then defaults return and re-persist on use.
+- [ ] **Re-run the phase-1 mode-2 WDT test** once after this flash: the
+      interrupted-write recovery now protects four live fields; confirm
+      slot/brightness/period all read back sane after the reset.
+
+All software phases are complete; whatever remains above is the hardware
+gate for the whole plan.

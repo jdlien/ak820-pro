@@ -78,6 +78,18 @@ without re-dimming), not robustness. If the phase-2 audit leaves any doubt
 about the flash-write path, **drop this item** — 4.1 has real value; 4.2 is
 optional.
 
+## Execution record (2026-09-01)
+
+Implemented as commit 08aecac174. Deviations from the phase text, all
+deliberate: the BT profile write moved into the same coalesced deferred
+flush (finding 14) rather than staying immediate; the brightness persist
+hooks the user-gesture paths only, because the bootloader splash forces max
+brightness through the raw setter and must not clobber the stored level;
+the WDT test hook's poke moved to bit 7 of the brightness byte (reads as
+unset → self-heals) since the RTC period now owns the old pad byte; and the
+trim persist follows the incremental any-sane-value policy (Codex #15),
+not a settle detector. Hardware verification is on the checklist.
+
 ## 4.3 Documentation close-out (whole plan)
 
 - Update CLAUDE.md: new module map, the WDT and its test procedure, the
