@@ -1079,6 +1079,55 @@ wrappers break between OS versions. **Windows is better here**:
 browsers register SMTC sessions, so YouTube works. The firmware is
 platform-agnostic — a Windows producer sends the same bytes, no reflash.
 
+### How the text band paints: a DMA pump and a cell diff
+
+The band used to repaint by issuing **one blocking flash->LCD DMA per glyph**
+on the loop that also scans the matrix. A two-line update measured **~53 ms** --
+enough to swallow a keystroke. The media poller is what made it frequent enough
+to notice, which is why "starting the poller breaks typing" was the symptom.
+
+Two independent fixes, and **the order they are understood in matters**:
+
+**1. Keep the DMA, drop the wait.** `lcd_draw_flash_glyph_try()` arms one glyph
+and returns; `display_blit_pump()` drives it from `housekeeping_task_kb()` at
+**main-loop rate (~390 Hz)**, outside the 10 Hz block. A line lands in ~50 ms of
+wall clock and ~0 ms of CPU -- each iteration either arms a transfer or returns
+on a single `lcd_blit_busy()` compare.
+
+> ⚠️ **One glyph per HOUSEKEEPING tick was tried first and looked identical on
+> paper.** At 10 Hz a 20-glyph line takes **2 seconds** and visibly crawls in
+> letter by letter. The granularity was never wrong; **the clock was.** If the
+> band ever crawls again, check which hook the pump is on before changing
+> anything else.
+
+**2. Do not clear before repainting.** A glyph blit paints its **whole cell
+including the background**, so overwriting a cell fully replaces it. The band
+diffs against a shadow of what is on the panel and blits only the cells whose
+character changed -- `Bright 25%` -> `Bright 26%` is **one glyph, not a wipe and
+eleven**. Clearing is confined to three cases: cells a shorter string vacates, a
+line that moved or changed font, and a line being retired.
+
+**The wipe WAS the flicker.** The band sat empty for the whole paint interval,
+three times over while a held key stepped the value. This is the same technique
+the clock has always used, which is exactly why the clock never flickered while
+this band did -- worth noting, because two builds were spent making the repaint
+*faster* when the fix was to make it *smaller*.
+
+**⚠️ COMPOSING THE LINE IN RAM AND BLITTING IT ONCE IS WORSE -- do not
+re-derive it.** It is the obvious "elegant" answer and it is wrong on this
+hardware: `flash_read_bytes()` pulls every pixel through `spi1_rw()`, which is a
+full **`spiExchange()` driver call PER BYTE** -- ~5.5 KB of them for a single
+12-char line at 20px. That converts a transfer the DMA does for free into a
+CPU-bound loop, i.e. exactly backwards for a board where the display must never
+compete with the matrix scan. It also cost **5.9 KB of SRAM** (RAM went 28% ->
+48%) for the line buffer.
+
+Measured after both changes: **252 typed characters, zero drops, zero blit
+timeouts**, with the poller pushing -- against 5 dropped from 215 before.
+
+**`[lcd] blit timeout` remains the health signal.** Zero under load means the
+pump is not fighting the bus.
+
 ### Playback position replaces the clock while playing
 
 `2:34/18:45` in the clock band, from `TEXT_PLAYBACK` (0x04) —
