@@ -31,9 +31,10 @@ paths.
 | [docs/hardware.md](docs/hardware.md) | Slider power quirk, bootloader, build/flash, watchdog+health, hang history, diagnostics |
 
 Project history: `hardening-plan/` (2026-09-01 refactor: plan, findings,
-per-phase records, `HARDWARE-CHECKLIST.md` — all verified — and `BACKLOG.md`).
-ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`. Active
-sub-second clock-sync work: `clock-sync-plan/PLAN.md` (peer session).
+per-phase records, `HARDWARE-CHECKLIST.md` — all verified — and `BACKLOG.md`);
+`clock-sync-plan/` (2026-09-01 sub-second clock sync, phases 0-3 implemented:
+plan + measured results). ChibiOS patch inventory:
+`keyboards/a_jazz/ak820pro/PATCHES.md`.
 
 ## Current state (2026-09-01)
 
@@ -47,6 +48,10 @@ machinery unified with fault injection, nothing blocking the main loop on the
 glyph queue, and BT slot / LCD brightness / RTC trim persisted. Long-standing
 LED row-flash artifact fixed; stray-glyph display bug fixed. LED field rate
 1046 Hz; matrix scan ~390-400 Hz; BT at 0.042 ACK timeouts/frame.
+**Sub-second clock sync implemented the same day** (phases 0-3): host syncs
+land within ~3 ms, a USB-SOF frequency loop disciplines the ILRC, offsets
+slew instead of jumping, and a no-host reboot self-acquires to ~±15 ms —
+see [docs/clock.md](docs/clock.md).
 
 ## Build & flash
 
@@ -61,8 +66,8 @@ via.json/enum sync; it refuses a dirty or off-pin tree. `flash.sh` preserves
 the VIA keymap across the flash (the erase would destroy it) and refuses to
 flash if the backup fails. Enter the bootloader with `Fn`+`Esc`.
 **A flash erases the emulated EEPROM**: VIA keymap (restored by flash.sh),
-BT slot, LCD brightness, and the persisted RTC trim (clock re-converges
-~10-15 min — designed, not a fault).
+BT slot, LCD brightness, and the persisted RTC period (the SOF loop
+re-converges in ~4 min with the host attached — designed, not a fault).
 
 Toolchain: xpack `arm-none-eabi-gcc` 13.3.1, venv `qmk` CLI, Homebrew
 `hidapi`. `SonixFlasherC` must be built `USE_LIBUSB=1` (see
