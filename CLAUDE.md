@@ -2733,6 +2733,23 @@ normal, not a fault.
 Rollback to stock is the same command with the v1.13 image, but **requires the
 pin short again** — `Fn`+`ESC` disappears the moment you leave QMK.
 
+### ⚠️ FLIPPING THE SLIDER OUT OF BT POWER-CYCLES THE BOARD — even with the cable in
+
+Discovered 2026-09-01 (the bunny splash appeared on a BT→cable flip with the
+cable connected the whole time). In the BT position the MCU runs from the
+BATTERY even when USB is attached; the flip to cable is a power-source
+switchover that resets the MCU. Consequences:
+
+- **Every RAM state is lost on the flip**: health counters, the RTC divider
+  trim (until its persisted value takes over), the WDT consecutive-reset
+  counter. You CANNOT capture a BT session's health counters by flipping to
+  wired and reading — they die in the flip. (Backlog: an on-LCD health
+  readout, the only way to see counters while in BT mode.)
+- There is no "off" slider position on this unit (older notes say bt/off/
+  cable — wrong). Cold power-off = cable position + unplug ~10 s.
+- The old "board is battery-backed, pulling the cable doesn't cold-boot it"
+  note is true only in the WIRELESS positions.
+
 ### Checking USB state
 
 `system_profiler SPUSBDataType` returns **empty** under this agent's sandbox —

@@ -7,9 +7,13 @@ write-adjacent reset, degraded latch + cold-power-off clear ✓); bootloader
 clock set ✓; brightness persistence ✓ (JD); general feel pass ✓ (JD, "no
 new issues"; known red-row flash recorded in BACKLOG.md). Daily build
 34409ab8be flashed and verified (health clean, test hooks absent, WDT
-armed). REMAINING: the BT items -- typing burst (coalescing regression),
-slot memory across power cycle, BT feel -- and the passive RTC-trim
-persistence observation.
+armed). BT typing burst ✓ (2nd
+session flawless by eye, tx_drops 0, coalescing never engaged; counters
+from session 1 lost to the slider power-cycle -- see CLAUDE.md). Stray-g
+display bug found via BT overlay, root-caused (unknown-vs-empty shadow
+conflation), fixed + hardware-verified as 5812cd49ab (now the live daily).
+STILL OPEN: BT slot-memory across power cycle (casual check), the passive
+RTC-trim persistence observation, and the keystroke-miss hunt (BACKLOG.md).
 
 Steps that need JD at the keyboard. Software work proceeds ahead of these;
 nothing is flashed without you. Run top to bottom when convenient — each

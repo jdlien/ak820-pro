@@ -31,3 +31,21 @@ build reads ~375 Hz. Judge scan-rate bands per flavor.
 
 The fault suite's byte soup legitimately raises rx_malformed (by ~5 per
 run) for the remainder of that boot. Normal-use expectation is 0 growth.
+
+## On-LCD health readout (BT-mode diagnostics)
+
+Raw-HID replies don't come back in BT mode, and flipping the slider to read
+them wired POWER-CYCLES the board (see CLAUDE.md), wiping the counters. The
+only way to diagnose a BT session is to show the counters ON THE PANEL --
+e.g. a magic-key or Fn-combo that paints tx_sent/timeouts/drops/gap into
+the text band for a few seconds. Small, uses display_set_param_status-like
+plumbing.
+
+## Keystroke-miss hunt (transport-independent)
+
+JD perceives occasional missed keystrokes on BOTH transports; tonight's BT
+bursts measured clean (drops 0, coalescing never engaged). Prime suspect:
+wear-leveling sector erases blocking the main loop 50-300 ms, rare and
+irregular. Protocol: instrumented build + consolelog.sh + normal typing;
+the [stall] line attributes any >=4 ms gap to flash/blit/i2c the moment it
+happens. Run when it next "feels bad".
