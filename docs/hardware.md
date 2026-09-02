@@ -138,7 +138,7 @@ period). Instrumented builds add test hooks: `HC_STALL 0x7E` (wedge),
   shared handle queues an unread echo that desynchronises the next reply —
   drain before reading.
 
-The full verification record is `history/hardening-plan/HARDWARE-CHECKLIST.md` (all
+The full verification record is `history/hardening/HARDWARE-CHECKLIST.md` (all
 items green, 2026-09-01); run-when-needed items live in
 `plans/BACKLOG.md`.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CH582F fault-injection tests (hardening phase 3.2).
 
-Replays the wire captures from history/hardening-plan/findings-ch582-states.md
+Replays the wire captures from history/hardening/findings-ch582-states.md
 against the REAL parser via the HC_INJECT hook, and asserts the resulting
 state via HC_CONN. Needs the INSTRUMENTED build (WDT_TEST_HOOKS), wired
 mode, and a quiet interface (no VIA, poller unloaded).

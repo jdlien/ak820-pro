@@ -4,9 +4,10 @@ Code: `rtc/rtc.c`, `rtc/rtc_lld` additions via the `rtc_lld` ChibiOS patch.
 
 > **Sub-second clock sync is IMPLEMENTED** (2026-09-01, phases 0-3: firmware
 > commits 6b05be68e3, cc786793ec, f7d3d97e11). Design:
-> `history/clock-sync-plan/PLAN.md`; measured results and hardware facts:
-> `history/clock-sync-plan/phase-0-facts.md`, `phase-1-2-results.md`,
-> `phase-3-results.md`. Read those before changing anything under `rtc/`.
+> Measured results and hardware facts: `history/clock-sync/phase-0-facts.md`,
+> `phase-1-2-results.md`, `phase-3-results.md`. Read those before changing
+> anything under `rtc/`. (The design plan and its five review rounds were
+> retired once implemented; `git log` has them if the reasoning is ever needed.)
 
 ## Architecture
 
@@ -117,7 +118,7 @@ pages 1-4 (sync/frequency/slew/PCF-writer state).
 
 Host sync requires the USB cable (the HID interface has to exist) but
 **the slider position does not matter** — raw-HID replies return over USB
-in any mode (commit 4b86d95014; `history/clock-sync-plan/phase-0-facts.md` F1). A
+in any mode (commit 4b86d95014; `history/clock-sync/phase-0-facts.md` F1). A
 board left unplugged for days drifts at the PCF's ~5 s/day; the
 on-enumeration sync catches it as soon as it is plugged back in.
 

@@ -133,7 +133,7 @@ picks the base, so a per-key remap usually needs doing on both 0 and 2.
 | [`assets-src/`](assets-src/) | Font atlas and splash generators |
 | [`scripts/`](scripts/) | Soak harness, BT fault injection, console log, VIA sync check |
 | [`plans/`](plans/) | Live: known defects, and designed-but-unbuilt features |
-| [`history/`](history/) | Completed projects, kept for their reasoning |
+| [`history/`](history/) | Measured results and audit findings worth keeping |
 | `qmk_firmware-ak820pro/` | The firmware (cloned by `setup.sh`, gitignored here) |
 
 The firmware source is the [`ak820pro-jdlien`](https://github.com/jdlien/qmk_firmware/tree/ak820pro-jdlien)

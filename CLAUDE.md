@@ -30,7 +30,7 @@ submodule sits on our `ak820pro-patches` branch.
 | [docs/hardware.md](docs/hardware.md) | Slider power quirk, bootloader, build/flash, watchdog+health, hang history, diagnostics |
 
 Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
-Completed projects and their reasoning: [`history/`](history/).
+Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
 ## Current state (2026-09-01)
@@ -47,7 +47,8 @@ fixed. LED field rate 1046 Hz; matrix scan ~390-400 Hz; BT at 0.042 ACK
 timeouts/frame. Sub-second clock sync implemented the same day (phases 0-3):
 host syncs land within ~3 ms, a USB-SOF loop disciplines the ILRC, offsets slew
 instead of jumping — see [docs/clock.md](docs/clock.md). The repo was
-restructured the same day into a clone-and-build package (`history/packaging-plan/`).
+restructured the same day into a clone-and-build package: `setup.sh` +
+`deps.lock`, and a README that assumes no context.
 
 ## Build & flash
 
