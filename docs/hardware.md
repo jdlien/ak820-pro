@@ -57,8 +57,8 @@ post-flash reboot lands back in it.
 ## Building
 
 ```sh
-scripts/build.sh daily          # console off — what the board lives on
-scripts/build.sh instrumented   # console + LOOPGAP_INSTRUMENT + WDT_TEST_HOOKS
+build.sh daily          # console off — what the board lives on
+build.sh instrumented   # console + LOOPGAP_INSTRUMENT + WDT_TEST_HOOKS
 ```
 
 Writes a provenance-named binary to `ak820pro-builds/out/`
@@ -138,9 +138,9 @@ period). Instrumented builds add test hooks: `HC_STALL 0x7E` (wedge),
   shared handle queues an unread echo that desynchronises the next reply —
   drain before reading.
 
-The full verification record is `hardening-plan/HARDWARE-CHECKLIST.md` (all
+The full verification record is `history/hardening-plan/HARDWARE-CHECKLIST.md` (all
 items green, 2026-09-01); run-when-needed items live in
-`hardening-plan/BACKLOG.md`.
+`plans/BACKLOG.md`.
 
 ## The hang, historically (fixed; recipes kept)
 

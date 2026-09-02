@@ -22,7 +22,7 @@ keystrokes, not "channel connect"; `5C` is battery percent, not brightness).
   measured 2026-08-28). Fixed by overriding `bluetooth_send_raw_hid()` to
   send over USB (`ch582f_ajazz.c`, commit 4b86d95014, 2026-08-29; round-trips
   re-verified in the BT position 2026-09-01 — see
-  `clock-sync-plan/phase-0-facts.md` F1). So `ak820ctl`, VIA and
+  `history/clock-sync-plan/phase-0-facts.md` F1). So `ak820ctl`, VIA and
   `ak820keymap.py` work in any mode; only an unplugged cable (no HID
   interface) blocks them. Ignore older "wired mode required" notes.
 - **UART2 must be the highest interrupt priority** — it is the only peripheral

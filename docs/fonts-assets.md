@@ -150,3 +150,52 @@ average — nearest-neighbour shreds the ear strokes. 0.640 aspect: **do not
 stretch it.** Original fpb splash kept at
 `assets-src/sonixqmk-original-splash.png`. There is also a bootloader splash
 (shown for the few ms before a flash).
+
+## The flash memory map, and the GIF animation slot
+
+Verified against `graphics/lcd_bus.h` and `lcd_bus.c` rather than any upstream
+document, because the upstream ones disagree with each other here.
+
+| Constant | Value |
+|---|---|
+| `FLASH_ASSET_BASE` | `0x0CE0000` (3.12 MB, erased since manufacture, always writable) |
+| `ANIM_BASE` | `0x540000` |
+| `ANIM_HDR` / `ANIM_STRIDE` | `0x100` / `0x8000` |
+| Max frames | 243 |
+| Unlockable stock slots | `0x1AA000`, `0x200000`, `0x38B000`, `0x540000` |
+
+Provisioning the asset image:
+
+```sh
+cd time-util-ak820pro/assets
+# edit the PNGs, keeping each image's dimensions
+python3 mkraw.py --flash                    # -> flash_assets.bin + flash_assets.h
+cd ..
+./ak820ctl info                             # JEDEC id + writable base -- must answer
+./ak820ctl flash write 0x0CE0000 assets/flash_assets.bin
+```
+
+Takes effect on the next boot; `flash write` erases, streams, then CRC32-verifies
+on the device. Changing only *pixels* needs no firmware rebuild. Adding,
+removing or reordering assets changes `flash_assets.h`, which must be copied into
+the firmware tree and rebuilt — that is the one firmware↔asset coupling:
+
+```sh
+cp assets/flash_assets.h ../qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/res/
+```
+
+A GIF animation goes in the separate animation slot, which needs `--unlock`:
+
+```sh
+python3 assets/mkanim.py myloop.gif -o assets/myloop.bin   # --fit cover|contain
+./ak820ctl flash write 0x540000 assets/myloop.bin --unlock
+```
+
+Toggle it on the board with `Fn`+`Delete` (`ANIM_TOG`). Playback is a fixed
+~100 ms/frame, so a GIF authored at another rate plays faster or slower —
+`mkanim.py` prints both durations. Flashing is refused while an animation is
+playing; toggle it off first. The stock LCD-asset region is never writable.
+
+> fpb's v1.14 note about stock animation slots moving to `0x1AA000`/`0x38B000`
+> describes STOCK firmware. QMK defines its own `ANIM_BASE = 0x540000`, so
+> `0x540000` is what applies here.
