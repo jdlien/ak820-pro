@@ -1,6 +1,21 @@
 # Clock format: 24h / 12h (stacked AM-PM glyph) / off — plan
 
-Status: **PLAN, 2026-09-01.** Not built. A display-only feature; it does
+Status: **IMPLEMENTED 2026-09-01**, hardware-verified, with these
+deviations from the plan below (details in docs/display.md):
+- AM/PM colour is `#CCCCCC` (RGB565 `0xCE79`), not mid grey: mid grey was
+  near-illegible at 5×7 on the panel.
+- The letters are one 5×16 RAM tile via `lcd_blit_ram`, not `lcd_fill_rect`
+  runs: the runs measured ~24 ms (per-rectangle SPI window overhead).
+- A format change relayouts through the diff path instead of forcing a
+  band wipe (the wipe was a visible flash); `queue_line`'s moved path now
+  clears only vacated columns when the row and face are unchanged.
+- A fourth mode, **date** (`Sep 1, 2026`, 20px face), was added the same
+  day; the cycle is 24h → 12h → off → date.
+- kb block 4 → 5 bytes with `EECONFIG_KB_DATA_VERSION` 2 (QMK validates by
+  version, not size).
+- Open: one unexplained watchdog reset on the daily build minutes after
+  first use; not reproduced (docs/hardware.md).
+Originally: A display-only feature; it does
 not touch the clock-sync machinery (rtc/*), which sets the time — this
 only changes how the clock band draws it.
 

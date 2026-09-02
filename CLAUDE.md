@@ -90,7 +90,8 @@ firmware.
 `Fn`+`←/→` hue · `Fn`+`↑/↓` brightness · `Fn`+`6/7` saturation · `Fn`+`X`
 RGB on/off · `Fn`+`\` next effect · `Fn`+`-/=` speed (or 2nd colour on
 Alphas/Mods) · `Fn`+`PgUp/PgDn` LCD brightness · `Fn`+`Home` LCD toggle ·
-`Fn`+`Esc` bootloader · `Fn`+`Delete` ANIM_TOG. BT keys are inert in wired
+`Fn`+`Esc` bootloader · `Fn`+`Delete` ANIM_TOG · `Fn`+`C` clock format
+(24h / 12h+AM-PM / off / date, persisted). BT keys are inert in wired
 mode. `Fn`+`P` (pair) is unbound by default.
 
 ## Critical warnings (details in the docs)

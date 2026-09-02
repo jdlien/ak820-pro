@@ -220,6 +220,57 @@ silently return empty. AppleScript, not MediaRemote: app-specific (no
 browser/YouTube media) but stable across OS versions; a Windows producer
 could use SMTC and send the same bytes.
 
+## Clock band format: 24h / 12h / off / date (`Fn`+`C`, persisted)
+
+`Fn`+`C` (`CLK_MODE`, also assignable in VIA) cycles **24h → 12h → off →
+date**; the param overlay confirms (`Clock 12h`). Stored in kb_eeconfig as
+the fifth byte (`clock_mode+1`, block grown from 4 to 5 with a data-version
+bump, 2026-09-01; the enum is append-only because the value is persisted).
+Display-only: `rtc/` still keeps the time.
+
+- **date** is `Sep 1, 2026` in the 20px face (the 30px atlas has only
+  digits and the colon); 12 cells max, redrawn at midnight. The comma is a
+  full 10 px cell — monospace, and the band's diff scheme assumes
+  `x + i×advance`, so per-glyph kerning is deliberately not attempted. A
+  two-line time+date mode was considered and **does not fit**: a 20px cell
+  (23 rows) over a 13px cell (14 rows) is 37 rows in a 23-row band.
+- **A format change relayouts, it does not wipe.** The first version forced
+  a whole-band clear and the digits arrived one per main-loop pass — a
+  visible black flash (the wipe-was-the-flicker lesson again). Now
+  `queue_line`'s *moved* path clears only the columns the old run vacates
+  when the row and face are unchanged, so the old digits stay up until each
+  cell is overwritten; what remains is a ~30 ms left-to-right ripple. Only
+  an owner change (playback) still clears the band whole, and that single
+  clear now marks the slot known-empty (`shadow_mark_empty`) instead of
+  letting the unknown path clear the full width a second time.
+
+- **12h** drops the leading zero (`H:MM:SS`, 7 cells for 1-9, 8 for 10-12)
+  and adds a **6 px stacked `A`/`M` or `P`/`M`** in light grey (`#CCCCCC`, a hair off white: mid grey was near-illegible at 5×7) right of the
+  digits: 1 px bearing + 5 px ink, two 5×7 capitals with a 2-row gap,
+  centred on the digits' 22 rows. That is how it fits: 8 cells + glyph is
+  126 of 128 columns, and the layout sits 2 px left of centre so the ink
+  stays out of the bezel-clipped columns 126-127.
+- **The letters are rasterised from 5×7 bitmaps into one 5×16 RAM tile
+  and pushed with a single `lcd_blit_ram`**: the atlases cannot draw grey,
+  and a new atlas PNG would shift asset ids (fonts-assets.md). Two stacked
+  6×14 Cozette cells would also be 28 rows in a 22-row face. ⚠️ The first
+  version drew them as ~28 `lcd_fill_rect` runs like the padlock, and the
+  profiled build put that at **~24 ms for 160 pixels** — every rectangle
+  pays an 11-byte window command sent byte by byte through `spiSend`. The
+  tile is one window and one send; the 12h transition went from 40 ms to
+  7 ms. Prefer a RAM tile over rectangle runs for anything bigger than the
+  padlock.
+- **The glyph is outside the glyph queue's shadow**, so it keeps its own
+  (`ampm`: x, letter). It is cleared before it moves (7↔8 cells at 9:59:59
+  → 10:00:00), flips (noon, midnight) or goes away — a handful of times a
+  day; the per-second path never touches it. Its clear never invalidates
+  the clock run's shadow because the glyph starts exactly where the run
+  ends and the overlap test is half-open. Every whole-band clear goes
+  through `clock_band_clear()` so the two shadows cannot disagree.
+- **off** clears the band once; the playback timer still takes it while
+  playing. A forced clock-band repaint (mode or owner change) now paints on
+  the next 10 Hz tick instead of waiting for the second edge.
+
 ## Playback position (replaces the clock while playing)
 
 `2:34/18:45` in the clock band from `TEXT_PLAYBACK`

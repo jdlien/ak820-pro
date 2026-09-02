@@ -167,6 +167,14 @@ both fixes are in and the watchdog now caps the blast radius of any sibling.
    bounded ~250 ms, prints `[lcd] blit timeout #N` — zero under load means
    the cause is gone; a climbing count means recovery is covering for it.
 
+**Open item (2026-09-01):** one genuine watchdog reset (`WDT reset x1`,
+health `wdt_fired_last_boot`) on the daily build, minutes after the first
+use of the new `Fn`+`C` clock-format key. Never reproduced across ~90 min
+of console-attached use with the profiled instrumented build (all four
+modes, mode cycling, heavy typing, host-injected band-owner flips); health
+showed nothing before or after. If it recurs, the `[stall]` line's site
+attribution (below) is the first thing to read.
+
 **Diagnostic recipe for any future hang:**
 
 - `ak820ctl info` (raw-HID round-trip) is the liveness probe. USB
@@ -195,7 +203,14 @@ Kill everything, then retest. Process lessons, both self-inflicted: never
 flash three changes in one build (nothing to bisect), and never fix the
 environment AND revert the firmware in one step (destroys the evidence).
 **Reproduce first, bisect second.** For a suspected miss over BT, the
-passive tripwire is `loop_gap_max` in the health counters; instrumented
+passive tripwire is `loop_gap_max` in the health counters (the `[stall]`
+line on the instrumented build also carries `hk=` — the worst 10 Hz block —
+and `site=name:ms`, the worst sub-task of that block: `LOOP_SITE()` in
+`ak820pro.c`/`display.c`. ⚠️ **Sites live inside the 10 Hz block only.**
+Wrapping the four per-pass calls too cost ~2 ms per pass on this MCU —
+scan rate fell from ~270 Hz to ~175 Hz with the console attached and
+keystrokes were felt to drop. An instrument that costs 2 ms a pass is the
+fault it is looking for); instrumented
 builds attribute stalls via `[stall]` prints.
 
 ## Input quirks (USB-level)
