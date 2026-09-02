@@ -1,24 +1,28 @@
 #!/bin/zsh
-# build.sh [daily|instrumented] — build the AK820 Pro VIA firmware with provenance.
+# build.sh [daily|instrumented|fpb] — build the AK820 Pro VIA firmware with provenance.
 #
 # daily        (default): console off, probes compiled out — what lives on the board.
 # instrumented: console on + LOOPGAP_INSTRUMENT — for soak runs and debugging.
+# fpb:          daily, but for the OTHER LCD panel revision — the one that comes
+#               up upside down and colour-inverted on the default build. Shipped
+#               in releases alongside the default so a stranger has both.
 #
 # Output: ak820pro-builds/out/via-<flavor>-<shorthash>[-dirty]-<timestamp>.bin
 # Flash the per-build file it prints, never $QMK_HOME/a_jazz_ak820pro_via.bin —
 # that path is shared and whoever compiles last owns it (see CLAUDE.md).
 set -euo pipefail
 
-if (( $# > 1 )); then echo "usage: build.sh [daily|instrumented]" >&2; exit 2; fi
+if (( $# > 1 )); then echo "usage: build.sh [daily|instrumented|fpb]" >&2; exit 2; fi
 FLAVOR="${1:-daily}"
 case "$FLAVOR" in
   daily)        FLAGS=() ;;
   instrumented) FLAGS=(-e CONSOLE_ENABLE=yes -e "EXTRAFLAGS=-DLOOPGAP_INSTRUMENT -DWDT_TEST_HOOKS") ;;
-  *) echo "usage: build.sh [daily|instrumented]" >&2; exit 2 ;;
+  fpb)          FLAGS=(-e "EXTRAFLAGS=-DAK820PRO_LCD_VARIANT_FPB") ;;
+  *) echo "usage: build.sh [daily|instrumented|fpb]" >&2; exit 2 ;;
 esac
 command -v xxd >/dev/null || { echo "ERROR: xxd not found" >&2; exit 1; }
 
-WORK="$(cd "$(dirname "$0")/.." && pwd)"
+WORK="$(cd "$(dirname "$0")" && pwd)"
 source "$WORK/env.sh"
 REPO="$QMK_HOME"
 OUT="$WORK/ak820pro-builds/out"

@@ -1,0 +1,36 @@
+# AK820 Pro — pinned build dependencies.
+#
+# setup.sh clones each of these and REFUSES TO CONTINUE if a clone's HEAD does
+# not match the sha here. Pins are commits, never patch files: hand-applied
+# diffs are what phase 0 of the hardening project abolished, because a single
+# `git submodule update` silently destroyed them and the resulting binary
+# looked fine.
+#
+# Format:  name  url  branch  sha
+# Lines starting with # and blank lines are ignored.
+#
+# To move a pin: update the sha here, re-run ./setup.sh, rebuild, re-verify on
+# hardware. Do not edit a clone in place and leave this file behind -- that is
+# the silently-wrong-binary failure mode build.sh exists to catch.
+
+# The firmware. Carries keyboards/a_jazz/ak820pro/ plus four core files
+# (drivers/led/sn32f2xx.c+.h, quantum/rgb_matrix/rgb_matrix.c,
+# platforms/chibios/.../wear_leveling_efl.c) -- all weak-hooked or no-op for
+# other boards. Everything else in the tree is upstream QMK.
+qmk_firmware-ak820pro  https://github.com/jdlien/qmk_firmware.git  ak820pro-jdlien  f7d3d97e114abe6b9d8a4310804c64065d9393ff
+
+# ak820ctl (clock + flash provisioning) and the asset pipeline (mkraw.py,
+# mkanim.py). MUST be this fork's branch, not fpb/main: main has no --bias
+# support, which the timekeeper agent drives, and the failure is silent.
+time-util-ak820pro  https://github.com/jdlien/time-util-ak820pro.git  ak820pro-local  7f92889fa0d565e9fef8100caa6cd407538593b1
+
+# The flasher. fpb's fork, NOT SonixQMK/main: main fails on macOS Tahoe while
+# looking identical. Must be built USE_LIBUSB=1 -- a plain build also looks
+# identical and also fails. See docs/hardware.md.
+SonixFlasherC  https://github.com/fpb/SonixFlasherC.git  fix_for_macos_tahoe  661431ebb61333436bebed4c2e2c7e56841c4a67
+
+# NOT CLONED HERE, recorded for reference: lib/chibios-contrib is a submodule of
+# the firmware repo, pinned by its gitlink and carrying the seven ChibiOS
+# patches as commits (see keyboards/a_jazz/ak820pro/PATCHES.md). setup.sh
+# initializes it via `make git-submodule`; build.sh enforces gitlink == HEAD.
+#   https://github.com/jdlien/ChibiOS-Contrib.git  ak820pro-patches  94b5cb45ad8965d4fd0c8ee6272b1e4b989f7d82

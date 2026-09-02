@@ -17,3 +17,4 @@ __pycache__/
 assets-src/*.ttf
 assets-src/*.otf
 ak820pro-builds/out/
+ak820pro-builds/release/
