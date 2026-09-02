@@ -13,12 +13,13 @@ Loop every 15 s:
 
 Every transaction shells out to ak820ctl so exactly one process owns the
 raw-HID interface at a time; failures (VIA holding it, no reply) are logged
-and retried next round. Log: ~/Library/Logs/ak820pro-clocksync.log
+and retried next round. Log: ~/Library/Logs/ak820pro-timekeeper.log
 """
 import json, os, re, subprocess, sys, time
 
-CTL  = os.path.expanduser("~/code/ak820-pro/time-util-ak820pro/ak820ctl")
-LOG  = os.path.expanduser("~/Library/Logs/ak820pro-clocksync.log")
+AK820_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CTL  = os.environ.get("AK820_CTL") or os.path.join(AK820_ROOT, "time-util-ak820pro", "ak820ctl")
+LOG  = os.path.expanduser("~/Library/Logs/ak820pro-timekeeper.log")
 BIAS_STATE = os.path.expanduser("~/.ak820ctl-bias.json")
 SYNC_INTERVAL = 300      # s (5 min: keeps |offset| < 20 ms even during the ILRC warm-up drift)
 BIAS_INTERVAL = 900      # s of continuity before a bias re-measurement (>= 600 for +-3 ppm)

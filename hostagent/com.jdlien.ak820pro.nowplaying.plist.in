@@ -11,7 +11,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/jdlien/code/ak820-pro/hostagent/nowplaying-macos.sh</string>
+        <string>@AK820_ROOT@/hostagent/nowplaying-macos.sh</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -29,9 +29,9 @@
     <integer>30</integer>
 
     <key>StandardOutPath</key>
-    <string>/Users/jdlien/Library/Logs/ak820pro-nowplaying.log</string>
+    <string>@HOME@/Library/Logs/ak820pro-nowplaying.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/jdlien/Library/Logs/ak820pro-nowplaying.log</string>
+    <string>@HOME@/Library/Logs/ak820pro-nowplaying.log</string>
 
     <key>ProcessType</key>
     <string>Background</string>

@@ -9,7 +9,8 @@
 # Needs the USB cable. Works in any dip-switch position: raw-HID replies are
 # routed over USB regardless of the active host driver.
 set -u
-CTL="${CTL:-/Users/jdlien/code/ak820-pro/time-util-ak820pro/ak820ctl}"
+AK820_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CTL="${CTL:-$AK820_ROOT/time-util-ak820pro/ak820ctl}"
 SAMPLES="${1:-5}"
 
 for n in $(seq 1 "$SAMPLES"); do

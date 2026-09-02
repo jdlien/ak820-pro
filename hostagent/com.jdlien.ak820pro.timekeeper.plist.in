@@ -10,8 +10,8 @@
          bias for ak820ctl. Replaces com.jdlien.ak820pro.clocksync. -->
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/jdlien/code/ak820-pro/venv/bin/python3</string>
-        <string>/Users/jdlien/code/ak820-pro/hostagent/ak820-timekeeper.py</string>
+        <string>@AK820_ROOT@/venv/bin/python3</string>
+        <string>@AK820_ROOT@/hostagent/ak820-timekeeper.py</string>
     </array>
 
     <key>KeepAlive</key>
@@ -22,9 +22,9 @@
     <true/>
 
     <key>StandardOutPath</key>
-    <string>/Users/jdlien/Library/Logs/ak820pro-timekeeper.log</string>
+    <string>@HOME@/Library/Logs/ak820pro-timekeeper.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/jdlien/Library/Logs/ak820pro-timekeeper.log</string>
+    <string>@HOME@/Library/Logs/ak820pro-timekeeper.log</string>
 
     <key>ProcessType</key>
     <string>Background</string>

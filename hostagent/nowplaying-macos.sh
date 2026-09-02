@@ -34,7 +34,8 @@ trap 'rm -rf "$LOCK"' EXIT INT TERM
 # ---------------------------------------------------------------------------
 
 set -u
-PY="${PY:-/Users/jdlien/code/ak820-pro/venv/bin/python}"
+AK820_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PY="${PY:-$AK820_ROOT/venv/bin/python}"
 PUSH="$(dirname "$0")/ak820text.py"
 INTERVAL="${INTERVAL:-3}"     # seconds; 1s is wasteful and can make Spotify sluggish
 # Seconds between unconditional re-pushes. Two jobs, and the SHORTER one sets it:
@@ -81,6 +82,27 @@ duration_of() {   # $1 = app -> whole seconds
   else                          awk -v d="$d" 'BEGIN{printf "%d", d}'
   fi
 }
+
+# One-time Automation probe. Every getter above sends osascript stderr to
+# /dev/null, so a TCC denial (errAEEventNotPermitted, -1743) is indistinguishable
+# from "nothing is playing" -- the agent runs forever, pushes nothing, and logs
+# nothing. Probe once, loudly, then carry on: KeepAlive would just restart us.
+probe_automation() {
+  local app err
+  for app in Spotify Music; do
+    err="$(osascript -e "application \"$app\" is running" 2>&1 >/dev/null)"
+    case "$err" in
+      *-1743*|*"not allowed"*|*"Not authorized"*|*"not authorised"*)
+        echo "$(date '+%H:%M:%S') AUTOMATION DENIED for $app: $err"
+        echo "  Grant it under System Settings > Privacy & Security > Automation."
+        echo "  A LaunchAgent often cannot raise the prompt itself: run"
+        echo "  hostagent/nowplaying-macos.sh once from a terminal to trigger it."
+        return 1 ;;
+    esac
+  done
+  echo "$(date '+%H:%M:%S') automation ok; polling every ${INTERVAL}s"
+}
+probe_automation || true
 
 last=""
 while true; do

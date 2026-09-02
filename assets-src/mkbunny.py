@@ -11,11 +11,20 @@ Downsampling is an AREA AVERAGE, not nearest-neighbour: 612x792 -> ~90x116 is a
 grey edge values it produces cost nothing, since the target is RGB565 anyway.
 """
 import sys, os, zlib, struct
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) if False else "/Users/jdlien/code/ak820-pro/time-util-ak820pro/assets")
+AK820_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(AK820_ROOT, "time-util-ak820pro", "assets"))
 from mkraw import decode_png
 
-SRC = "/Users/jdlien/Library/Mobile Documents/com~apple~CloudDocs/Projects/Bunny Logo/1x/Artboard 1.png"
-DST = "/Users/jdlien/code/ak820-pro/time-util-ak820pro/assets/sonixqmk.png"
+# The bunny artwork is JD's and is not in this repo (see UPSTREAM-CONTRIBUTIONS.md
+# -- personal branding, deliberately not shipped). Point BUNNY_SRC at any
+# black-ink-on-transparent PNG to build your own splash.
+SRC = os.environ.get("BUNNY_SRC") or os.path.expanduser(
+    "~/Library/Mobile Documents/com~apple~CloudDocs/Projects/Bunny Logo/1x/Artboard 1.png")
+DST = os.environ.get("BUNNY_DST") or os.path.join(
+    AK820_ROOT, "time-util-ak820pro", "assets", "sonixqmk.png")
+if not os.path.exists(SRC):
+    sys.exit(f"source artwork not found: {SRC}\n"
+             f"set BUNNY_SRC=/path/to/artwork.png to use your own")
 OUT_W = OUT_H = 128
 TARGET_H = 116          # leave a margin: the LCD is recessed and the bezel clips edges
 
