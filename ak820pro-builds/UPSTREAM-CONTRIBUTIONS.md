@@ -279,8 +279,8 @@ default:
 - **LCD dashboard**: battery icon with charging bolt, lock/layer band, three-icon
   connection strip, wireless status band (`Pair with:` / `AK820 5.1-N`,
   `Connecting`, `Link failed` ⟷ `Hold Fn+E 2s`).
-- **Backlight dimming**: software PWM on `PANEL_BKL` (A16), 12 perceptually-spaced
-  levels. Note hardware PWM on that pin is **impossible** — `P0.16`'s only
+- **Backlight dimming**: software PWM on `PANEL_BKL` (A16), 24 perceptually-spaced
+  levels with hold-to-repeat. Note hardware PWM on that pin is **impossible** — `P0.16`'s only
   alternate function is `CT16B5_CAP0`, a capture input. Verified in the datasheet.
 - **Host text slot**: `TEXT_CHANNEL 0x12`, one raw-HID packet, arbitrary line
   pushed from the host. Plus `hostagent/` producers.

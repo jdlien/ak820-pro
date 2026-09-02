@@ -94,10 +94,22 @@ capture input. Do not re-investigate.** The PWM ticks from CT16B3 (GPTD4) at
 20 kHz — see [leds.md](leds.md) for the timer setup and the `MCTRL` gotcha.
 
 - `BKL_PWM_TICKS 48` → 417 Hz switching, floor 2.1%. Levels are perceptually
-  spaced: `{0,1,2,3,5,8,12,18,27,48}`, indices 0..9.
-- **The `Fn`+`PgUp`/`PgDn` readout is the LEVEL INDEX** (`level*100/9`), not
-  the duty — level 5 shows `LCD 56%` but is duty 8/48 ≈ 17%. The two numbers
+  spaced: `{0,1,2,3,4,5,6,7,8,9,10,11,12,14,16,18,20,23,26,29,33,37,42,48}`,
+  indices 0..23 (was 10 levels until 2026-09-02).
+- **Why 24 and not more, and why the period is untouched.** Duty is an integer
+  count of ticks, so 48 ticks is 49 possible duties and every level must be a
+  distinct one — these 24 are. Steps run 1.09–1.17× above duty 6, against
+  1.5–1.78× for the old table. The bottom three (`1→2` +100%, `2→3` +50%,
+  `3→4` +33%) **cannot be closed at 48 ticks** — no integer exists between
+  them. Doing so needs a longer `BKL_PWM_TICKS`, which lowers the switching
+  rate (96 ticks → 1% floor at 208 Hz). **That was rejected deliberately: a
+  flicker risk is a worse defect than a coarse first step.**
+- **The `Fn`+`PgUp`/`PgDn` readout is the LEVEL INDEX** (`level*100/23`), not
+  the duty — level 12 shows `LCD 52%` but is duty 12/48 = 25%. The two numbers
   are meant to diverge; do not "fix" one to match.
+- **Hold to sweep.** `SCR_UP`/`SCR_DN` are in the shared hold-to-repeat
+  (`param_repeat_*` in `param_overlay.c`, formerly `rgb_repeat_*` — it stopped
+  being RGB-only on 2026-09-02). 24 levels is too many to tap through.
 - **Persisted since 2026-09-01** via kb_eeconfig's coalesced ~5 s deferred
   flush (safe because every flash program drains in-flight LCD DMA first —
   the old "never persist" rule predated that hook).
