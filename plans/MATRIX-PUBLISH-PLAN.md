@@ -172,10 +172,21 @@ are not comparable — `docs/hardware.md` records why):
 - **This is the input path on a daily-driver keyboard.** A bug means the owner
   cannot type to fix it. Escape hatch: stock firmware image (see `README.md`,
   SHA256 recorded) and `flash.sh`, which backs up and restores the VIA keymap.
-- Higher effective sample rate means **more raw edges reaching debounce**, which
-  could surface switch chatter that the slow sampling was accidentally masking.
-  If phantom or doubled keys appear after this, that is the likely cause, and it
-  is information about switch condition rather than a regression in the fix.
+- ~~Higher effective sample rate could surface switch chatter the slow sampling
+  was masking.~~ **RETRACTED, and it is backwards.** Bounce rejection requires
+  RE-SAMPLING inside the debounce window. Today a row's raw bits only change
+  every ~18 ms while `debounce()` runs every ~2.9 ms with a 5 ms per-key
+  counter (`sym_defer_pk.c`: transfer when `counter <= elapsed_time`), so the
+  debouncer spends its window confirming that a STALE value — one it is not
+  re-reading and which cannot change — has not changed. **Bounce rejection is
+  currently a no-op; all the 5 ms buys is latency.** After this fix, ~1 ms
+  sampling puts ~5 samples inside the window and debounce becomes operative for
+  the first time. So the fix SUPPRESSES chatter rather than surfacing it.
+
+  Residual, correctly framed: bounce is a solved problem. If it survives a
+  functioning 5 ms per-key debounce, the switch is faulty — replace it, or raise
+  `DEBOUNCE` deliberately with switch traces. Do not treat that as a regression
+  in this change.
 - Any change to `sn32f2xx.c` affects a shared QMK core driver. Keep it behind
   the existing board-selected path and weak hooks.
 
@@ -201,7 +212,10 @@ are not comparable — `docs/hardware.md` records why):
    flash programming, or `current_key_row >= ROWS_PER_HAND`)? Should there be a
    staleness fallback that publishes an incomplete snapshot rather than none?
 4. What breaks if `matrix_locked`/`first_scanned` is removed?
-5. Does a ~17× increase in effective per-key sample rate change debounce
-   behaviour in a way that needs `DEBOUNCE` retuning?
+5. Confirm or refute: is per-key bounce rejection currently a NO-OP because a
+   row's raw bits are stale between fresh samples (~18 ms) while the debounce
+   window is 5 ms — i.e. does the fix make `sym_defer_pk` operative rather than
+   risk surfacing chatter? If so, does `DEBOUNCE 5` remain the right value once
+   ~5 samples actually fall inside the window?
 6. Anything else on this path that loses or reorders keystrokes and is not
    already recorded in `plans/INPUT-PATH-PLAN.md` §2 or `docs/hardware.md`?
