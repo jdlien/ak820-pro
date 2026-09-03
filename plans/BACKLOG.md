@@ -131,3 +131,62 @@ interface only for the length of one call, and `install-agents.sh` refuses to
 install a second clock agent. Worth remembering before adding any third host
 tool that polls: the interface is exclusive, and the failure mode looks like a
 firmware fault rather than a host one.
+
+## Status-band text uses synchronous per-glyph blits — measured, NOT a defect
+
+`draw_locks()`, `draw_battery()` and `draw_conn_number()` paint through
+`lcd_draw_flash_text()`, which is synchronous and issues **one LCD operation per
+glyph** — a window command, a flash read and a DMA arm each, all of which dwarf
+the ~460 bytes of a 10×23 cell. The clock and host-text bands do not do this;
+they queue through `display_blit_pump()` at one glyph per main-loop pass.
+
+**Measured 2026-09-03, page closed, over the cable, ~10 Caps Lock presses:**
+
+```
+count_ge_25ms        0        blit_gap_max_ms   22
+count_ge_10ms       19        key_presses       54
+```
+
+**22 ms, and that is under the line that matters.** A stall shorter than the
+shortest keypress (25 ms) cannot lose a press — the key is still down when the
+loop catches up. So this costs latency, never a keystroke, and it does not need
+fixing on those grounds. The prediction that it "has been costing a stall on
+every Caps press" was wrong; the measurement is what corrected it.
+
+It exceeds 25 ms in exactly one place: the **Fn+D debug-page exit**, which forces
+a full repaint after clearing, so `draw_locks` paints CAPS *and* WIN *and* the
+slot text instead of only the indicator that changed. ~30 ms, on a deliberate
+keypress, on a feature added the same day.
+
+### If it is ever worth doing
+
+Route the status band's text through `queue_line()` like the clock band already
+does. That removes the last >25 ms stall on the board and would also cut the
+19 sub-10 ms hitches.
+
+**Weigh the risk honestly.** This is shared dashboard code that runs constantly,
+and it was broken twice on 2026-09-03 while chasing this same class of problem —
+once badly enough to hang the board and trip the watchdog (`8dc74f7015`,
+reverted). The remaining exposure is one keystroke, only if a press begins *and*
+ends inside ~30 ms, only when dismissing a diagnostics page. That is a poor
+trade for touching this subsystem without a plan.
+
+Related, larger, same file: `display.c` is ~2,200 lines carrying ten owners
+(clock, playback, text band, battery, locks, connection strip, backlight,
+splash, glyph queue, shadow diffing, debug page). The queue and its shadow
+machinery are a self-contained subsystem with real invariants and would be much
+safer behind their own boundary.
+
+### Two comments in this tree document code that does not exist
+
+Both cost real time on 2026-09-03 by being believed:
+
+- **`lcd_draw_flash_text_staged()`** — declared in `lcd_bus.h`, recommended by
+  name in the host-text band's comments as the fix for exactly this problem, and
+  **has no definition anywhere in the tree**. Using it is a link error.
+- **`display_set_param_status()` "draws ~12 blocking DMA blits"** — stale. It
+  copies a string and sets `text_dirty`; the band draws through the glyph queue.
+  Both sites are now annotated with which part is historical.
+
+A file that confidently documents something untrue is worse than one that
+documents nothing.
