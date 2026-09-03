@@ -19,6 +19,7 @@ Usage:
 the read times out even with the cable plugged in. Set the dip switch to cable.
 """
 import argparse, json, os, sys, time
+import venv_bootstrap  # noqa: F401 -- re-execs under the repo venv if hid is missing
 import hid
 
 VID, PID = 0x0C45, 0x8009

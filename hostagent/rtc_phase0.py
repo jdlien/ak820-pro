@@ -18,6 +18,7 @@ the clock phase / PCF registers on purpose: run `ak820ctl clock` afterwards.
 Wire layouts mirror keyboards/a_jazz/ak820pro/rtc/rtc.c rtc_status_fill().
 """
 import statistics, struct, sys, time
+import venv_bootstrap  # noqa: F401 -- re-execs under the repo venv if hid is missing
 import hid
 
 VID, PID = 0x0C45, 0x8009

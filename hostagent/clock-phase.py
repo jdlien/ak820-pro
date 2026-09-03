@@ -10,6 +10,7 @@ Polls over raw HID directly rather than spawning ak820ctl per sample -- process
 spawn is tens of ms, which would swamp the thing being measured.
 """
 import sys, time
+import venv_bootstrap  # noqa: F401 -- re-execs under the repo venv if hid is missing
 import hid
 
 VID, PID = 0x0C45, 0x8009

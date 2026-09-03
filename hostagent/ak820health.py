@@ -19,6 +19,7 @@ Exit 0 always when the read works; interpreting the numbers is the caller's
 job (scripts/soak.py does thresholds).
 """
 import argparse, json, struct, sys
+import venv_bootstrap  # noqa: F401 -- re-execs under the repo venv if hid is missing
 import hid
 
 VID, PID = 0x0C45, 0x8009
@@ -189,21 +190,6 @@ def main():
                 print(f"{k:24} {d[k]}")
             # >=25 ms is the only class that can LOSE a press: contact lasts
             # 25-80 ms, so anything shorter ends with the key still down.
-            if a.rows:
-                n = d["matrix_rows"]
-                print()
-                print(f"{'row_samples':24} {d['row_samples'][:n]}")
-                print(f"{'row_gap_max_ms':24} {d['row_gap_max_ms']}  (row {d['row_gap_max_row']})")
-                for k in ("raw_edges", "consumes", "cooked_changes"):
-                    print(f"{k:24} {d[k]}")
-                s_ = d["row_samples"][:n]
-                if s_ and min(s_) and d.get("consumes"):
-                    print(f"\n  per-row sample rate is consumes/{n} on average; "
-                          f"spread {min(s_)}-{max(s_)} "
-                          f"({'FAIR' if max(s_) <= min(s_)*1.25 else 'UNEVEN -- some keys looked at less often'})")
-                if d.get("raw_edges") and d.get("key_presses"):
-                    print(f"  raw_edges {d['raw_edges']} vs key_presses {d['key_presses']} "
-                          f"(expect ~2x: a press and a release are two raw edges)")
             if d["count_ge_25ms_nonflash"]:
                 print(f"\n  ** {d['count_ge_25ms_nonflash']} UNEXPLAINED stall(s) "
                       ">= 25 ms -- long enough to lose a keystroke **")
@@ -213,6 +199,49 @@ def main():
             else:
                 print("\n  no stall >= 25 ms since reset "
                       "(shorter stalls delay a press, they cannot drop it)")
+
+        # NOT nested under --stalls: `--rows` alone must print the row page.
+        # It used to be, so `ak820health.py --rows` silently read the page and
+        # showed nothing -- which is the exact invocation you reach for when you
+        # think you just dropped a keystroke.
+        if a.rows:
+            n = d["matrix_rows"]
+            print()
+            print(f"{'row_samples':24} {d['row_samples'][:n]}")
+            print(f"{'row_gap_max_ms':24} {d['row_gap_max_ms']}  (row {d['row_gap_max_row']})")
+            for k in ("raw_edges", "consumes", "cooked_changes"):
+                print(f"{k:24} {d[k]}")
+            s_ = d["row_samples"][:n]
+            # row_samples is a uint16_t in the firmware and the page is full at
+            # 28 bytes, so it cannot be widened without restructuring. At the
+            # post-fix ~217 samples/s/row it WRAPS EVERY ~5 MINUTES, so the
+            # absolute counts only mean something right after --reset.
+            #
+            # The rows track each other to within ~1 count, so they wrap within
+            # a moment of each other -- but a read landing in that moment sees
+            # e.g. 65535 and 0 and would report a catastrophic imbalance on a
+            # perfectly healthy board. Undo the straddle before comparing.
+            if s_ and max(s_) - min(s_) > 32768:
+                s_ = [v + 65536 if v < 32768 else v for v in s_]
+            if s_:
+                even = max(s_) <= min(s_) * 1.25
+                print(f"\n  spread {min(s_)}-{max(s_)} "
+                      f"({'EVEN' if even else 'UNEVEN -- some keys looked at less often'})"
+                      f"  [uint16, wraps every ~5 min -- --reset first for absolute counts]")
+            # The whole point of the page. Sampling must be fast against a
+            # 25-80 ms keypress; the one-row publish bug read 156-169 ms here.
+            g = d["row_gap_max_ms"]
+            if g >= 25:
+                print(f"  ** worst gap {g} ms on row {d['row_gap_max_row']} -- "
+                      "a keypress can END inside that window and never be seen **")
+            elif g >= 10:
+                print(f"  worst gap {g} ms -- elevated; healthy is single-digit")
+            else:
+                print(f"  worst gap {g} ms -- healthy "
+                      "(a 25-80 ms press gets sampled several times)")
+            if d.get("key_presses"):
+                print(f"  raw_edges {d['raw_edges']} vs key_presses {d['key_presses']} "
+                      f"(expect ~2x: a press and a release are two raw edges)")
 
 
 if __name__ == "__main__":

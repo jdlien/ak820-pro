@@ -41,6 +41,7 @@ Usage: soak.py [--seconds 300]
 import argparse, os, random, string, subprocess, sys, time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hostagent"))
+import venv_bootstrap  # noqa: E402,F401 -- re-execs under the repo venv if hid is missing
 import hid  # noqa: E402
 from ak820health import (read_health, read_stalls, reset_counters,  # noqa: E402
                          open_device)

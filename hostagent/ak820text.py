@@ -13,6 +13,7 @@ Usage:
     ak820text.py --clear
 """
 import argparse, sys
+import venv_bootstrap  # noqa: F401 -- re-execs under the repo venv if hid is missing
 import hid
 
 VID, PID = 0x0C45, 0x8009
