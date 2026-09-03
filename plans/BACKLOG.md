@@ -32,6 +32,23 @@ the matrix stays dark after the write. Verify whether `rgb_callback` /
 the driver's row advance reconfigures modes per cycle, or add an explicit
 re-init after the write. Needs a hardware round-trip -- do not ship blind.
 
+## Row-ISR body: the one lever that lifts scan rate, main loop and field rate together (measured 2026-09-03)
+
+`rgb_callback` re-arms its PWM counter at its END, so its period is (body +
+~70 µs) and the body sets everything downstream. Health page 4
+(`ak820health.py --isr`): 3,876 ISR/s, body **188 µs mean** (160 µs LED-only,
+261 µs with the row scan), **72.8% of the CPU**. Where it goes: 15
+`pwmDisableChannel` + 15 `pwmEnableChannel` through the ChibiOS API at ~5 µs
+each (osalSysLock/Unlock, driver dispatch, RMW on PWMIOENB/PWMCTRL), 18 row-pin
+writes, and a ~85–100 µs row scan whose `select_row`/`unselect_row` go through
+`palSetLineMode` (slow on SN32). Direct register writes and a pre-computed
+IOENB mask per row would plausibly halve the body; the row scan could drive the
+row pin without a mode change. Every 10 µs off the body is ~+4% ISR rate, i.e.
++4% field rate AND +4% per-row sampling AND a proportionally faster main loop.
+Not for now: it is a rewrite of a shared core driver on the input path of a
+daily driver, and the owner's constraint is "any flickering is a non-option".
+Measure with `--isr` before and after; the observer effect of the hooks is nil.
+
 ## Scan-rate observation
 
 Instrumented builds read ~230-310 Hz (console + probes overhead); the daily

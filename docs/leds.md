@@ -41,7 +41,11 @@ forced two rounds of step-trading. **That coupling is FIXED**:
 The timer's arithmetic — **NOT the real field rate.** Measured 2026-09-03 at
 **215 Hz** (health page 4): `rgb_callback` re-arms the counter at its END, so
 its own ~188 µs body sets the period. See "CPU budget" below and
-`docs/hardware.md`.
+`docs/hardware.md`. **Derived baseline, never measurable again:** before the
+2026-09-03 matrix publish fix the ISR scanned a row ~344 times/s instead of
+~1,292, which solves (160 µs body, ~84 µs scan, ~70 µs overhead) to ~4,220
+ISR/s → **~235 Hz**. The fix cost ~8% of field rate; the owner reports no
+flicker.
 
 ```
 field rate = eff_clock / periodticks / 18 rows = 4.8e6 / 255 / 18 = 1046 Hz

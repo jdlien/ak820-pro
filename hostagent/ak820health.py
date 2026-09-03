@@ -10,9 +10,10 @@ Snapshot, little-endian:
     u8 wdt_consecutive_resets, u8 flags (bit0 wdt-fired-last-boot,
     bit1 wdt-degraded)
 
-Needs the dip switch in WIRED mode -- raw-HID replies route through the
-active host driver, exactly like ak820ctl. The counters accumulate in every
-mode; only reading them out needs the cable path.
+Needs the USB cable. The slider position does NOT matter: raw-HID replies
+return over USB in every mode (board commit 4b86d95014) -- older notes that
+demanded "wired mode" describe pre-fix firmware. The counters accumulate in
+every mode; with no host attached the LCD debug page (Fn+D) is the readout.
 
 Pages 2-4 (--stalls, --rows, --isr) are documented in firmware health.h.
 
