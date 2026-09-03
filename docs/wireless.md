@@ -184,3 +184,55 @@ its framing is unverified on the wire, and module storage cannot be read back.
 Capture what stock firmware sends before ever attempting a rename. The pairing
 overlay shows the exact advertised string on purpose — it is what to look for
 in the phone's list.
+
+## The 50% `tx_timeouts` rate is a mistuned deadline, not a broken link
+
+`ak820health.py` shows roughly half of all module frames timing out — 352 of 711
+at one reading. It looks alarming and is not, but the reason is worth writing
+down because two of the numbers involved are easy to misread.
+
+**Measured 2026-09-03, wired mode, over 60 s:** `tx_sent` +12, `tx_timeouts` +6,
+`tx_drops` **+0**.
+
+- **12 frames per minute is exactly the 5-second battery poll** (`A6 53`,
+  `CH582_BATTERY_POLL_MS`). In wired mode that is the *only* thing on the link:
+  QMK's `host.c` routes reports to `bt_driver` only while Bluetooth is the active
+  connection host, so keystrokes never reach `ch582_send_keyboard_report()`. Do
+  not read `tx_sent` as keystroke traffic.
+- **`tx_drops` is 0, so nothing is ever lost.** A frame is only dropped after
+  `CH582_TX_MAX_RETRIES` (8) consecutive timeouts. Every frame is ACKed; about
+  half need one 10 ms retransmit first.
+- **`tx_*` are SINCE BOOT.** `health_reset()` cannot clear them — they live in
+  the CH582 driver behind `ch582_tx_stats()` with no reset hook. Comparing them
+  against freshly-reset counters like `consumes` or `key_presses` gives nonsense
+  ratios. (Done once, in this session, before it was noticed.)
+
+So in wired mode the entire cost of the 50% is that a battery poll is sometimes
+10 ms late, and nothing is waiting on it.
+
+**It would matter over Bluetooth**, where every keystroke is a frame and the
+code comment at `ch582_tx_pump()` already warns that ACK loss shows up as
+throughput collapse — you can out-type the link — rather than as mild latency.
+The 24-deep queue and newest-supersedes coalescing absorb a lot, but a 10 ms
+stall on half of ~10 frames/s at speed is real.
+
+**Likely cause: `CH582_TX_ACK_TIMEOUT_MS` (10) sits at the module's actual
+turnaround.** A deadline tuned to the mean trips on roughly half the samples,
+which is what an exact 6-of-12 looks like. **Do not just raise the constant** —
+measure first: record `timer_elapsed(tx_sent_time)` in `ch582_tx_ack()`, keep a
+max and an over-8 ms count, expose them on a health page, then set the deadline
+above the observed 99th percentile. The pages are full at 28 bytes, so this
+needs an `HC_GET4`.
+
+### ⚠️ Unresolved: two comments disagree about what `61 0D 0A` is
+
+`ch582_task()`'s header comment calls it a *"periodic IDLE HEARTBEAT ... emitted
+while connected too"*. The parser 130 lines below calls it *"the per-frame ACK
+the module returns for what we send ... silent at idle"* — and treats it as the
+ACK that releases the in-flight frame.
+
+Both cannot be true, and which one is right changes the diagnosis above: if it is
+also periodic, a heartbeat can spuriously release a frame the module never
+actually acknowledged, and the send/ACK pairing is looser than the retry logic
+assumes. Settle it with a logic analyzer at idle with nothing queued before
+tuning the timeout.
