@@ -233,10 +233,23 @@ Two consequences:
 - **`scan_rate` is a free, always-on regression metric** for main-loop cost.
   `scripts/soak.py` gates on the idle baseline being >= 320 Hz.
 
-⚠️ **Compare like with like.** At rest this board reads **334-372 Hz** across
-sessions; under soak load it drops to ~270. Historical figures of 390-400
-(CLAUDE.md) and 375 (BACKLOG.md) do not record their conditions, so an apparent
-drift against them is not evidence of a regression. `display_set_power(false)`
+⚠️ **The noise floor is ~6%; do not chase drift inside it.** Measured
+2026-09-02 at rest, LCD on: **356-378 Hz**, and two blocks taken five minutes
+apart under IDENTICAL conditions differed by 5 Hz. Under soak load it drops to
+~270.
+
+A controlled A/B settled what the host agents cost: agents stopped 371-378
+(mean ~374), agents running with music playing 366-375 (mean ~371), agents
+stopped again 367-370 (mean ~369). **The agents cost ~3 Hz** — the earlier
+guess that host-driven LCD traffic explained a ~16 Hz gap was WRONG, and the
+A/B disproved it.
+
+Historical figures of 390-400 (CLAUDE.md) and 375 (BACKLOG.md) record no
+conditions, and the gap to today's readings is one to two sampling intervals
+wide. **No regression is demonstrable**, and a flash bisect against these
+numbers would be measuring noise. If a real regression is ever suspected, the
+only valid method is an A/B of two builds back-to-back in ONE session with
+many samples each — never a comparison against a recorded historical figure. `display_set_power(false)`
 does NOT stop drawing — it only forces the backlight duty to 0 — so "LCD off" is
 not a way to isolate display cost either.
 
