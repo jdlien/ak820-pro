@@ -170,6 +170,18 @@ def main():
         print(f"baseline: {base}")
         # Phase-1 gate: measure THIS run, not everything since boot.
         s.reset_stalls()
+
+        # Scan rate IS the main-loop iteration rate -- measured 2026-09-02,
+        # passes/s vs scan_rate ratio 0.997. So this is a direct read on
+        # per-pass cost, and any new per-pass work shows up here 1:1.
+        #
+        # Checked on the BASELINE, at rest, not at the end: the soak's own load
+        # drives it to ~270 by design, which says nothing about the firmware.
+        # At rest this board reads 334-372 across sessions; 320 is below the
+        # observed spread without tolerating a real regression.
+        if base["scan_rate"] and base["scan_rate"] < 320:
+            fails.append(f"idle scan rate {base['scan_rate']} Hz < 320 floor -- "
+                         "per-pass work has grown (scan rate == main-loop rate)")
         if base["wdt_degraded"]:
             print("WARNING: watchdog is DEGRADED (>=3 consecutive resets) -- "
                   "power cycle before a real soak")

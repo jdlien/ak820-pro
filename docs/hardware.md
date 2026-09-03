@@ -213,6 +213,33 @@ keystrokes were felt to drop. An instrument that costs 2 ms a pass is the
 fault it is looking for); instrumented
 builds attribute stalls via `[stall]` prints.
 
+## Scan rate IS the main-loop rate
+
+Measured 2026-09-02: over 20.4 s, 7549 main-loop passes (371/s) against a
+reported `scan_rate` of 372 Hz — **ratio 0.997**.
+
+The matrix is scanned in the ROW ISR (`shared_matrix_scan_keys`,
+`drivers/led/sn32f2xx.c`), which latches into `shared_matrix` and holds it until
+`matrix_scan_custom()` consumes it behind the `matrix_scanned` gate. The ISR
+produces faster than the loop consumes, so **the loop is the limit**.
+
+Two consequences:
+
+- **Any per-pass work costs scan rate 1:1.** This is the real basis for keeping
+  instrumentation inside the 10 Hz block. (The "~2 ms per pass for timer reads"
+  figure that originally justified that rule does not survive arithmetic —
+  `timer_read32` is ~5-10 us — and was measured with the console attached,
+  never isolated. The rule is right; its stated reason was not.)
+- **`scan_rate` is a free, always-on regression metric** for main-loop cost.
+  `scripts/soak.py` gates on the idle baseline being >= 320 Hz.
+
+⚠️ **Compare like with like.** At rest this board reads **334-372 Hz** across
+sessions; under soak load it drops to ~270. Historical figures of 390-400
+(CLAUDE.md) and 375 (BACKLOG.md) do not record their conditions, so an apparent
+drift against them is not evidence of a regression. `display_set_power(false)`
+does NOT stop drawing — it only forces the backlight duty to 0 — so "LCD off" is
+not a way to isolate display cost either.
+
 ## Input quirks (USB-level)
 
 **Modified consumer keycodes race the endpoints** (`LSA(KC_VOLU)` on the
