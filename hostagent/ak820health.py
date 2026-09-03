@@ -39,11 +39,28 @@ FIELDS2 = ["count_ge_10ms", "count_ge_25ms", "passes", "flash_writes",
 MARKS = {0: "none", 1: "flash", 2: "blit", 3: "i2c"}
 
 
-def open_device():
-    for d in hid.enumerate(VID, PID):
-        if d.get("usage_page") == USAGE_PAGE and d.get("usage") == USAGE:
-            return hid.Device(path=d["path"])
-    raise SystemExit("raw HID interface not found (wired mode? VIA holding it?)")
+def open_device(tries=12, delay=0.25):
+    """The raw-HID interface is EXCLUSIVE, and the host agents open it briefly
+    every few seconds (timekeeper shells out to ak820ctl; nowplaying opens per
+    push). A single attempt therefore fails often enough to make a passive
+    measurement impractical -- retry across the gaps instead of demanding the
+    agents be stopped, which would itself change what is being measured."""
+    import time
+    last = None
+    for _ in range(tries):
+        for d in hid.enumerate(VID, PID):
+            if d.get("usage_page") == USAGE_PAGE and d.get("usage") == USAGE:
+                try:
+                    return hid.Device(path=d["path"])
+                except Exception as e:            # held by an agent or VIA
+                    last = e
+                    break
+        else:
+            raise SystemExit("raw HID interface not found (board unplugged?)")
+        time.sleep(delay)
+    raise SystemExit(f"raw HID busy after {tries} tries: {last}\n"
+                     "  something is holding it exclusively -- check "
+                     "`hostagent/install-agents.sh --status` and `pgrep -fl qmk`")
 
 
 def read_health(h=None, timeout_ms=500):
