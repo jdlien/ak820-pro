@@ -286,6 +286,39 @@ ISR, publish the complete snapshot) was dropped: scanning in place needs no
 second buffer and no ISR `memcpy`, and the codex/gpt-5.6-sol audit preferred it.
 See `plans/review-codex-sol-matrix-2026-09-03.md`.
 
+### Typing does not degrade sampling; only flash does
+
+Measured 2026-09-03, ~57 s of real typing after `--reset`, no LED or keymap
+changes (so no wear-levelling writes):
+
+```
+loop_gap_max_ms   9        row_gap_max_ms   5  (row 2)
+consumes          18453    row_samples      12524 x6, spread 1
+raw_edges         587      cooked_changes   583
+```
+
+**5 ms under load is the same as 5 ms idle.** Scanning latency is set by the ISR
+and is indifferent to what the main loop is doing, which is the point of moving
+the publish into the ISR. The 15 ms high-water mark seen earlier was
+flash-attributable: it appeared alongside `flash_writes 18` /
+`flash_gap_max_ms 34`, and vanished in a window with no flash write in it.
+
+So the only remaining path that can starve sampling is a flash-programming
+window, where `rgb_callback` deliberately parks the mux (see the FLASH_PGM
+branch in `sn32f2xx.c`). Bounded, understood, and it happens when adjusting LEDs
+or the keymap rather than mid-sentence.
+
+Two useful side results:
+
+- **The ~217 samples/s/row figure is confirmed by an independent clock.**
+  `consumes / scan_rate` gives 57 s; `row_samples / 217` gives 57.7 s. Two
+  unrelated counters agreeing on elapsed time means the per-row rate is real,
+  and that the ISR samples ~4.07 rows per main-loop consume (6 x 12524 / 18453).
+- **The switches are clean.** 587 raw edges produced 583 cooked changes -- per-key
+  debounce rejected 4 transitions in ~294 keypresses. There is no chatter on this
+  board, which retires the "dodgy switches" hypothesis on evidence rather than on
+  the argument that bounce is a solved problem.
+
 ### ⚠️ Still open: the row rate is ~4.8x slower than the timer implies
 
 The timer configuration says 4.8 MHz / 256 ticks = 18,750 ISR/s, the key row
