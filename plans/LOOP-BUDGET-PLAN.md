@@ -168,4 +168,34 @@ Update this section after each unit of work, and push — this plan is expected
 to be resumed on another machine.
 
 - **2026-09-02** — Plan drafted, reviewed by Codex and Fable 5.1, rewritten.
-  Phase 1 approved; Phases 2-4 deferred and gated. Nothing built yet.
+  Phase 1 approved; Phases 2-4 deferred and gated.
+- **2026-09-02** — **Phase 1 BUILT, flashed and verified on hardware**
+  (firmware `20268c273c`). `HC_GET2` + `HC_RESET`, proto v2, counters,
+  unconditional `loop_stall_mark`, `key_presses` on the daily build,
+  `ak820health.py --stalls/--reset`.
+
+  **Exit criteria 1 and 2 ANSWERED.** 400 forced VIA keymap writes in 1.6 s:
+  `flash_writes 400, flash_gap_max_ms 33, blit_gap_max_ms 0, count_ge_25ms 3`
+  against ~3 predicted consolidations.
+  - A consolidation is **~33 ms** — above the 25 ms losing threshold, but an
+    order of magnitude below the 50-300 ms this plan feared. Revise the
+    "Known stall sources" figure accordingly.
+  - An ordinary write is invisible at this resolution (0 ms gaps).
+  - Idle write rate measured at ~5 per ~23 s of normal use, so the ~127 writes
+    needed to trigger one consolidation do not accumulate while typing.
+  - Restoring an IDENTICAL keymap costs 1 write, not ~867 — QMK's eeprom layer
+    skips unchanged bytes. The ~867 seen after a flash is real only because the
+    EEPROM was just erased.
+
+  **A bug the measurement caught, not review:**
+  `backing_store_pre_write_hook()` marked FLASH then called `lcd_blit_wait()`,
+  which overwrote it — every flash stall reported as "blit". Outermost mark now
+  wins. Phase 2 would have been aimed at the display subsystem.
+
+  **Still open: exit criterion 5** — `count_ge_25ms` over a normal working day.
+  That is the number that decides whether Phases 2-4 are ever built. Method:
+  `ak820health.py --reset`, use the keyboard normally, then
+  `ak820health.py --stalls`. Note the agents hold the exclusive raw-HID
+  interface; stop them or accept read failures (see L3 in the Fable review —
+  CLAUDE.md and BACKLOG.md still disagree about whether replies work in BT
+  mode, and 4.4 depends on resolving that).
