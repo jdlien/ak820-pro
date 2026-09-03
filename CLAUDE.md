@@ -50,7 +50,11 @@ worst per-key sampling gap fell from ~169 ms to ~5 ms
 188 µs body (160 µs LED-only, 261 µs with the row scan) — **72.8% of the CPU** —
 not the 18,750/s the timer implies, because it re-arms its counter at its end;
 so the LED field rate is ~215 Hz and the main loop ~335 Hz. Health page 4
-(`ak820health.py --isr`) measures it live.
+(`ak820health.py --isr`) measures it live. **`Fn`+`D` puts the health counters
+on the LCD** for untethered use, with hold-to-reset
+([docs/display.md](docs/display.md)). Everyday firmware measures **zero stalls
+>= 25 ms**, the threshold below which a press cannot be lost; the only thing
+above it is dismissing that debug page (~30 ms, backlogged).
 Sub-second clock sync implemented the same day (phases 0-3):
 host syncs land within ~3 ms, a USB-SOF loop disciplines the ILRC, offsets slew
 instead of jumping — see [docs/clock.md](docs/clock.md). The repo was
@@ -98,8 +102,9 @@ firmware.
 RGB on/off · `Fn`+`\` next effect · `Fn`+`-/=` speed (or 2nd colour on
 Alphas/Mods) · `Fn`+`PgUp/PgDn` LCD brightness · `Fn`+`Home` LCD toggle ·
 `Fn`+`Esc` bootloader · `Fn`+`Delete` ANIM_TOG · `Fn`+`C` clock format
-(24h / 12h+AM-PM / off / date, persisted). BT keys are inert in wired
-mode. `Fn`+`P` (pair) is unbound by default.
+(24h / 12h+AM-PM / off / date, persisted) · `Fn`+`D` debug page (tap
+toggles, HOLD ~800 ms resets the health counters). BT keys are inert in
+wired mode. `Fn`+`P` (pair) is unbound by default.
 
 ## Critical warnings (details in the docs)
 
@@ -116,9 +121,16 @@ mode. `Fn`+`P` (pair) is unbound by default.
   lies; do not "fix" them. → [fonts-assets.md](docs/fonts-assets.md)
 - ⚠️ **If Bluetooth regresses, check the interrupt priority table first**, not
   the ISR rate. → [leds.md](docs/leds.md)
-- ⚠️ **Keyboard feels slow / drops keystrokes? Check the HOST first** — the raw
-  HID interface is exclusive, and a leftover poller starves everything else.
+- ⚠️ **Keyboard feels slow / drops keystrokes?** Read `Fn`+`D` first: `rowgap`
+  (single digits = healthy) and `stall>25` (must be 0) say whether the firmware
+  is even involved. If both are clean, **check the HOST** — the raw HID
+  interface is exclusive and a leftover poller starves everything else.
   `hostagent/install-agents.sh --status`. → [hardware.md](docs/hardware.md)
+- ⚠️ **Drawing to the LCD can eat keystrokes.** `lcd_draw_flash_text()` is
+  synchronous, one LCD operation per glyph (~1.6 ms each); a full-screen
+  `lcd_clear_rect()` blocks ~43 ms. Bulk drawing goes through the glyph queue,
+  and big clears go in bands. Both rules were learned the hard way on
+  2026-09-03. → [display.md](docs/display.md)
 - ⚠️ **Never edit an installed LaunchAgent plist with PlistBuddy** — it silently
   strips the XML comments. Edit `hostagent/*.plist.in` and re-run the installer.
 - ⚠️ **Multiple sessions**: coordinate via SendMessage, claim files, flash only

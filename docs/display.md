@@ -86,6 +86,103 @@ CPU-bound loop, plus 5.9 KB of SRAM.
 - `[lcd] blit timeout` on the console is THE health signal: zero under load
   means the pump is not fighting the bus.
 
+### What drawing actually costs (measured 2026-09-03)
+
+Nobody can budget a repaint without these, and their absence cost a full
+afternoon. **The setup dominates, not the pixels.** Every blit pays a window
+command, a flash read command and a DMA arm, all of which dwarf a glyph's few
+hundred bytes.
+
+| operation | data | blocking cost |
+|---|---|---|
+| one 6×14 glyph, synchronous | 168 B | **~1.6 ms** |
+| one 10×23 glyph, synchronous | 460 B | **~2.5 ms** |
+| full-screen `lcd_clear_rect` | 32 KB | **~43 ms** |
+| one 128×16 clear band | 4 KB | **~5.5 ms** |
+| one glyph via the queue | 168 B | **~0 ms CPU** (one pass of latency) |
+
+Two consequences worth internalising:
+
+- **A page of small text is catastrophic synchronously.** 9 rows × 21 columns is
+  189 glyphs ≈ **300 ms**, for 32 KB of pixels. The first Fn+D debug page did
+  exactly this and made the keyboard untypeable — the owner's bug report was
+  literally mistyped. Anything drawing in bulk goes through the queue.
+- **A big clear is data-bound, and `lcd_clear_rect()` ends in
+  `lcd_blit_wait()`.** A full-screen clear parks the main loop for the whole
+  transfer, for a DMA that needs no CPU at all. **Clear in bands** — 128×16 per
+  main-loop pass keeps every step under the 10 ms leading indicator at identical
+  total wire time.
+
+  > ⚠️ Do NOT "fix" this by arming the DMA and returning
+  > (`lcd_clear_rect_async`, tried and reverted as `8dc74f7015`). It routes
+  > around the pump's stuck-blit recovery and lets a second owner draw over a
+  > restore in progress. **It hung the board and tripped the watchdog.** Smaller
+  > was available the whole time.
+
+### ⚠️ Not every band is queued — the status band still blocks
+
+The asymmetry that makes the table above a trap. The clock band and the host
+text slot queue. **`draw_locks()`, `draw_battery()` and `draw_conn_number()` do
+not** — they call `lcd_draw_flash_text()` directly, which is synchronous and
+one LCD operation per glyph.
+
+Measured cost, page closed, ~10 Caps Lock presses: `blit_gap_max_ms` **22 ms**,
+`count_ge_25ms` **0**. That is *under* the threshold where a press can be lost
+(25 ms, the shortest keypress), so it costs latency and never a keystroke. It is
+**not** a defect and does not need fixing on those grounds — an earlier
+prediction that it "costs a stall on every Caps press" was wrong, and the
+measurement is what corrected it.
+
+It exceeds 25 ms in one place: a **forced** repaint after a clear, where
+`draw_locks` paints every indicator rather than the one that changed (~30 ms).
+See `plans/BACKLOG.md` before touching it.
+
+### ⚠️ `lcd_draw_flash_text_staged()` is declared and does not exist
+
+`lcd_bus.h` declares it and the comments around the host-text band recommend it
+by name for exactly the problem above. **There is no definition anywhere in the
+tree; calling it is a link error.** The reason is three paragraphs up: composing
+in RAM and blitting once was tried and is *worse*, because `flash_read_bytes()`
+is a full `spiExchange()` per byte. The prose was kept, the declaration was kept,
+the implementation was correctly removed.
+
+This was believed and acted on 2026-09-03 before the link error surfaced. A file
+that confidently documents something untrue is worse than one that documents
+nothing — if you remove an implementation, remove its declaration and the
+comments that send people to it.
+
+## The Fn+D debug page
+
+Full-panel diagnostics, nine rows in the 6×14 face, toggled with `Fn`+`D`.
+**Tap toggles; hold ~800 ms resets the counters** (fires under the finger, not on
+release — see `bt_ui.c` for why that distinction matters).
+
+```
+uptime      2m 14s     ISR       73% 3900   ← occupancy + rate; field rate = /18
+rowgap      6ms r1     ← worst gap between looks at one key row. THE loss metric
+stall   25:0 10:3      ← 25 ms can lose a press; 10 ms is the leading indicator
+worst      22ms blit   ← how big, and what caused it (flash/blit/i2c/-)
+scan/s         346     BT drop        0     ← non-zero = a keystroke never sent
+BT t/o    352 49%      battery 100% min 100 ← min answers "is the % real?"
+```
+
+It exists for **untethered** use. With the cable attached `ak820health.py` reads
+all of this and more in any slider position (commit `4b86d95014`); the panel is
+the only readout when no host is attached, and `BT → cable` is a brownout reset,
+so plugging in to investigate destroys the wireless session's counters.
+
+Rendering follows the rules above: composed in RAM, painted **one changed glyph
+per main-loop pass** through `lcd_draw_flash_glyph_try()`, clears banded. It owns
+the panel outright while active (`display_housekeeping_task()` returns early), so
+the dashboard — including `draw_locks` — does not run and cannot be measured
+while the page is up. **The observer suppresses the observed**; measure the
+dashboard over the cable with the page closed.
+
+Known: dismissing it costs ~30 ms (`worst 30ms blit`), because the restore
+forces every status component after clearing. `stall>25` will read roughly "times
+I dismissed this page". Backlogged, not fixed — the fix is shared dashboard code
+that was broken twice in one day.
+
 ## Backlight (software PWM, dimmable, persisted)
 
 `PANEL_BKL` (A16) is a plain GPIO. **Hardware PWM on this pin is impossible —

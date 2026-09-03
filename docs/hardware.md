@@ -187,7 +187,25 @@ attribution (below) is the first thing to read.
   A gap followed by more output is a stall; a gap with nothing after it is a
   death. That one distinction redirected the whole 2026-08-30 investigation.
 
-## ⚠️ Keyboard feels slow / drops keystrokes? CHECK THE HOST FIRST
+## ⚠️ Keyboard feels slow / drops keystrokes? RULE THE FIRMWARE IN OR OUT FIRST
+
+**Press `Fn`+`D` and read two rows.** Since 2026-09-03 the board can answer this
+itself, with no host and no cable:
+
+- **`rowgap`** — worst gap between successive looks at one key row. Single digits
+  is healthy. A press lasts 25–80 ms, so anything approaching 25 ms means a press
+  can begin and end unseen. This read **156–169 ms** before the matrix publish
+  fix, which is what silent keystroke loss looks like on this board.
+- **`stall>25`** — main-loop stalls ≥ 25 ms, flash excluded. **Must be 0.**
+  (Dismissing the debug page itself adds ~30 ms and will show here — known, see
+  `plans/BACKLOG.md`.)
+- **`worst`** — how big the largest gap was and what caused it: `flash` is a
+  wear-levelling consolidation (understood, bounded), `blit` is the LCD, `i2c`
+  the RTC bus. Anything unrecognised is worth reporting.
+
+Hold `Fn`+`D` for ~800 ms to zero them, or `ak820health.py --reset` over the
+cable. **If those rows are clean, the firmware is not losing your keystrokes** —
+and that is a real answer, not a dead end. Go to the host:
 
 2026-08-30: severe keystroke loss wired AND BT, diagnosed as a firmware
 regression — it was **host-side process accumulation** (two `qmk console`
