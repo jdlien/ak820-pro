@@ -192,7 +192,31 @@ to be resumed on another machine.
   which overwrote it — every flash stall reported as "blit". Outermost mark now
   wins. Phase 2 would have been aimed at the display subsystem.
 
-  **Still open: exit criterion 5** — `count_ge_25ms` over a normal working day.
+- **2026-09-02 20:09** — **Exit criteria 3 and 4 ANSWERED; Phase 2 is OFF THE
+  TABLE.** 25 min of normal use with the agents running, including deliberate
+  Caps and Fn hammering: `passes 532215, key_presses 469, count_ge_25ms 0,
+  count_ge_10ms 8, loop_gap_max_mark blit, blit_gap_max_ms 20,
+  flash_writes 1, flash_gap_max_ms 4`.
+  - **`draw_locks` cannot lose a keystroke.** Worst blit-marked gap 20 ms,
+    below the 25 ms threshold. Note JD's layout makes this the strongest
+    possible test: the physical Caps Lock key IS Fn, so the lock-band redraw
+    fires constantly, and it still never crossed the line.
+  - **Criterion 3 (`draw_battery`) closed as not worth measuring.** It fires
+    only on a charge-state change; JD's board is permanently cabled and only
+    changes state on the rare occasion it runs on Bluetooth unplugged. It is
+    also below the threshold anyway.
+  - **The idle flash-write rate is ~1 per 25 min.** At that rate the ~127
+    entries a consolidation needs would take **~53 hours of typing**.
+    Consolidations are therefore driven by FIDDLING (LED tweaks, VIA remaps),
+    not by use.
+  - ⚠️ **Correction to the earlier entry:** the wear-levelling log lives in
+    flash and PERSISTS ACROSS REBOOTS, so "you would need 127 writes while
+    typing" was wrong. Observed directly: after the 400-write test left the log
+    nearly full, a 32 ms consolidation fired during ordinary use from only 5
+    further writes. The trigger and the cause are separated in time — which is
+    exactly why the symptom feels random and unreproducible.
+
+    **Still open: exit criterion 5** — `count_ge_25ms` over a normal working day.
   That is the number that decides whether Phases 2-4 are ever built. Method:
   `ak820health.py --reset`, use the keyboard normally, then
   `ak820health.py --stalls`. Note the agents hold the exclusive raw-HID
