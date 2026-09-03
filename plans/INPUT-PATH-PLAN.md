@@ -1,6 +1,10 @@
 # Input path: what still loses a keystroke, and what to do about it
 
-Status: **DRAFT FOR AUDIT, 2026-09-03.** One change already landed and is
+Status: **AUDITED AND SUPERSEDED IN PART, 2026-09-03.** §1's diagnosis is
+RETRACTED and the ranking below is obsolete — see the progress log at the end.
+Audit: `review-codex-sol-2026-09-03.md`.
+
+Original status: **DRAFT FOR AUDIT, 2026-09-03.** One change already landed and is
 awaiting real-world validation (§1). Everything else is proposed, not built.
 Companion: `LOOP-BUDGET-PLAN.md` (stall measurement, phase 1 + gate built).
 
@@ -138,3 +142,34 @@ Make input capture independent of main-loop timing. Two variants:
    (`ch582f_ajazz.c:532`), and encoder/consumer interactions.
 6. Ranked: what is worth building, and what is not worth the regression risk on
    a daily-driver keyboard?
+
+## Progress log
+
+- **2026-09-03** — Audited by Codex (gpt-5.6-sol). Outcome:
+
+  **§1 RETRACTED.** The `sym_defer_g` swallow is real (QMK tests it) but the
+  claim that fast typing routinely triggers it is wrong: the global timer
+  restarts on a raw STATE CHANGE, not on every scan. Sustaining it needs ~185
+  transitions/s against the 20-30/s real typing produces. An edge case, not the
+  cause. `asym_eager_defer_pk` reverted to **`sym_defer_pk`** — eager turns an
+  isolated noise closure on a worn switch into a phantom tap or false hold.
+
+  **T2a KILLED.** A sticky bitmap cannot represent multiplicity, order or
+  duration; it also does nothing during flash programming, since the ISR skips
+  scanning entirely while `EFLD1.state == FLASH_PGM`.
+
+  **The real defect found by the new instrumentation:** the driver publishes ONE
+  row per `matrix_scan()` call, and the sampled row is set by an aliasing beat
+  between the consume rate (~344 Hz) and the PWM row cycle (~1044 Hz).
+  Measured: 57 samples/s per row (predicted 57), row totals FAIR, but
+  **`row_gap_max_ms` 156-169 ms with `count_ge_25ms` = 0 in every run.** A key
+  can go ~160 ms unsampled with the loop running perfectly. See
+  `docs/hardware.md`.
+
+  **This supersedes the architectural work.** T2b was designed for main-loop
+  stall immunity, and stalls are not happening (`count_ge_25ms_nonflash` 0
+  throughout). The defect is upstream of everything T2b addresses. **Fix ISR
+  publication first** — accumulate a full matrix across one row cycle (~0.96 ms)
+  and publish a complete snapshot — then re-measure. T2b's remaining value
+  (stall immunity, ordering finer than ~1 ms) is small once that lands, and it
+  is not worth the regression risk on a daily driver without evidence.

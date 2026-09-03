@@ -24,7 +24,7 @@ import hid
 VID, PID = 0x0C45, 0x8009
 USAGE_PAGE, USAGE = 0xFF60, 0x61
 SET_VALUE, HEALTH_CHANNEL, HC_GET = 0x07, 0x13, 0x01
-HC_GET2, HC_RESET = 0x04, 0x05      # stall page + counter reset (proto v2)
+HC_GET2, HC_RESET, HC_GET3 = 0x04, 0x05, 0x06   # stall / reset / per-row pages
 
 FIELDS = ["blit_timeouts", "tx_sent", "tx_timeouts", "tx_drops",
           "rx_malformed", "loop_gap_max_ms", "scan_rate",
@@ -38,6 +38,11 @@ FIELDS2 = ["count_ge_10ms", "count_ge_25ms", "passes", "flash_writes",
            "loop_gap_max_mark", "_reserved"]
 
 MARKS = {0: "none", 1: "flash", 2: "blit", 3: "i2c"}
+
+# Page 3: per-row sampling. The driver publishes ONE row per matrix_scan()
+# call, so scan_rate is not a full-matrix refresh rate.
+FIELDS3 = ["row_samples", "row_gap_max_ms", "raw_edges", "consumes",
+           "cooked_changes", "row_gap_max_row", "matrix_rows"]
 
 
 def open_device(tries=12, delay=0.25):
@@ -117,6 +122,24 @@ def read_stalls(h=None, timeout_ms=500):
             h.close()
 
 
+def read_rows(h=None, timeout_ms=500):
+    """Page 3: per-row sampling -- fairness, worst per-row gap, raw edges."""
+    own = h is None
+    if own:
+        h = open_device()
+    try:
+        rep = _txn(h, HC_GET3, timeout_ms)
+        if rep[3] < 4:
+            raise SystemExit(f"firmware health proto v{rep[3]}; page 3 needs v4")
+        v = struct.unpack_from("<7H3I2B", bytes(rep), 4)
+        return {"row_samples": list(v[0:6]), "row_gap_max_ms": v[6],
+                "raw_edges": v[7], "consumes": v[8], "cooked_changes": v[9],
+                "row_gap_max_row": v[10], "matrix_rows": v[11]}
+    finally:
+        if own:
+            h.close()
+
+
 def reset_counters(h=None, timeout_ms=500):
     """Clear the resettable counters. Watchdog counters are boot facts and
     survive deliberately -- a reset must not erase evidence that the board
@@ -136,6 +159,8 @@ def main():
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--reset", action="store_true",
                     help="clear the resettable counters, then exit")
+    ap.add_argument("--rows", action="store_true",
+                    help="per-row sampling: is every key looked at often enough?")
     ap.add_argument("--stalls", action="store_true",
                     help="also show the phase-1 stall counters")
     a = ap.parse_args()
@@ -146,6 +171,8 @@ def main():
     d = read_health()
     if a.stalls:
         d.update(read_stalls())
+    if a.rows:
+        d.update(read_rows())
     if a.json:
         print(json.dumps(d))
     else:
@@ -162,6 +189,21 @@ def main():
                 print(f"{k:24} {d[k]}")
             # >=25 ms is the only class that can LOSE a press: contact lasts
             # 25-80 ms, so anything shorter ends with the key still down.
+            if a.rows:
+                n = d["matrix_rows"]
+                print()
+                print(f"{'row_samples':24} {d['row_samples'][:n]}")
+                print(f"{'row_gap_max_ms':24} {d['row_gap_max_ms']}  (row {d['row_gap_max_row']})")
+                for k in ("raw_edges", "consumes", "cooked_changes"):
+                    print(f"{k:24} {d[k]}")
+                s_ = d["row_samples"][:n]
+                if s_ and min(s_) and d.get("consumes"):
+                    print(f"\n  per-row sample rate is consumes/{n} on average; "
+                          f"spread {min(s_)}-{max(s_)} "
+                          f"({'FAIR' if max(s_) <= min(s_)*1.25 else 'UNEVEN -- some keys looked at less often'})")
+                if d.get("raw_edges") and d.get("key_presses"):
+                    print(f"  raw_edges {d['raw_edges']} vs key_presses {d['key_presses']} "
+                          f"(expect ~2x: a press and a release are two raw edges)")
             if d["count_ge_25ms_nonflash"]:
                 print(f"\n  ** {d['count_ge_25ms_nonflash']} UNEXPLAINED stall(s) "
                       ">= 25 ms -- long enough to lose a keystroke **")

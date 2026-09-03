@@ -213,6 +213,48 @@ keystrokes were felt to drop. An instrument that costs 2 ms a pass is the
 fault it is looking for); instrumented
 builds attribute stalls via `[stall]` prints.
 
+## ⚠️ `scan_rate` is NOT a full-matrix rate — the one-row latch and its beat
+
+**The single most misleading number on this board.** `shared_matrix_scan_keys()`
+(`drivers/led/sn32f2xx.c`) samples ONE row and immediately asserts
+`matrix_scanned`; `matrix_scan_custom()` then copies the whole ROLLING matrix
+and clears the latch. `scan_rate` counts `matrix_scan()` CALLS
+(`quantum/keyboard.c:209`), so with 6 rows a given key is only freshly sampled
+`scan_rate / 6` times a second.
+
+The matrix scan is physically coupled to the RGB row multiplexing: only the row
+the PWM is currently driving can be read. So the row sampled at each consume is
+whichever one the PWM happens to be on.
+
+**That produces an ALIASING BEAT.** Measured 2026-09-03:
+
+| | |
+|---|---|
+| consumes | ~344/s (2.91 ms apart) |
+| full row cycle | ~1044 Hz (0.96 ms) |
+| rows advanced per consume | ~18.2 → **fractional drift ~0.2 rows** |
+| samples per row | **57/s predicted, 57/s measured** |
+| **worst gap between samples of ONE row** | **156-169 ms** |
+
+The sampled row creeps: each row is sampled in a short burst, then ignored for
+a beat period while the phase walks round the others. Row totals therefore look
+perfectly FAIR (spread <4%) while individual gaps are ~9x the mean.
+
+**Consequence: a key can go ~160 ms unsampled on an idle board with the main
+loop running perfectly.** That is 2-6x the duration of a keypress. A press and
+release inside that window is invisible to the matrix, to debounce, and to every
+health counter — `count_ge_25ms` read **0** in all three runs that showed it.
+This is a keystroke-loss mechanism that needs no stall at all, and it is
+invisible to instrumentation that only watches the main loop.
+
+Read it with `ak820health.py --rows` (`row_gap_max_ms`, `row_samples`).
+
+**The fix is at publication, not in the main loop:** accumulate a full matrix in
+the ISR across one row cycle (~0.96 ms) and publish the complete snapshot, so
+every key is sampled every ~1 ms regardless of the consume rate or its phase.
+The all-rows branch already exists in the driver for boards where
+`SN32F2XX_PWM_DIRECTION != DIODE_DIRECTION`; this board takes the one-row path.
+
 ## Scan rate IS the main-loop rate
 
 Measured 2026-09-02: over 20.4 s, 7549 main-loop passes (371/s) against a
