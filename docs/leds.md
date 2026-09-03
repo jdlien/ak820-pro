@@ -38,7 +38,10 @@ forced two rounds of step-trading. **That coupling is FIXED**:
 **4.8 MHz**, and the steps are now free (`SPD_STEP 4`, `HUE_STEP 8`,
 `SAT_STEP 32`). Do not re-derive step trades from old notes.
 
-Current math (still true):
+The timer's arithmetic — **NOT the real field rate.** Measured 2026-09-03 at
+**215 Hz** (health page 4): `rgb_callback` re-arms the counter at its END, so
+its own ~188 µs body sets the period. See "CPU budget" below and
+`docs/hardware.md`.
 
 ```
 field rate = eff_clock / periodticks / 18 rows = 4.8e6 / 255 / 18 = 1046 Hz
@@ -58,24 +61,31 @@ field rate = eff_clock / periodticks / 18 rows = 4.8e6 / 255 / 18 = 1046 Hz
   — `pwm_lld_start` writes `period - 1`, so a full-value channel wrote
   `MR = 255` against a counter resetting at 254: a match that never fires,
   blanking the channel at exactly 100%.
-- More field rate: the next lever is NOT a faster PWM clock alone — the row
-  ISR would hit ~37,600/s, past what this M0 has left. Buy headroom first by
-  halving the GPT tick to 10 kHz (costs backlight switching rate, no field
-  rate).
+- More field rate: the PWM clock is NOT the lever at all. `rgb_callback`
+  re-arms the counter at its END, so its period is (body + ~70 µs), and the
+  body is 160 µs before it even scans a row — 30 `pwmEnable/DisableChannel`
+  calls through the ChibiOS API at ~5 µs each. Measured 2026-09-03: 3,876
+  ISR/s, 215 Hz field rate, 72.8% of the CPU (health page 4,
+  `ak820health.py --isr`). The only way up is a cheaper ISR body (direct
+  register writes instead of the API): a driver rewrite, not a constant.
 
 ## CPU budget (measured)
 
 | Row ISR | Matrix scan | Notes |
 |---|---|---|
 | 2,189/s | 1396 Hz | stock |
-| 18,800/s | **~390-400 Hz** | current, field rate 1046 Hz |
+| 18,800/s | ~390-400 Hz | what the timer arithmetic predicted — never measured |
+| **3,876/s** | **~335 Hz** | **measured 2026-09-03**, health page 4: body 188 µs mean (160 LED-only, 261 with the row scan), **72.8% of CPU**, field rate **215 Hz** |
 
 ~38,800 interrupts/s total with the 20 kHz GPT. Typing feels "nearly
 instant" even over BT — latency is dominated by switch travel and debounce.
 First thing to back off if typing ever regresses: the PWM clock (field rate),
 not anything else.
 
-**The ms timebase runs ~1.2% slow at this load — a saturation canary.** A
+**Retracted 2026-09-03: the ms timebase is NOT slow** — `ak820health.py --isr`
+reports `timebase_vs_wall` 1.0001–1.0004; the system timer is a free-running
+CT16B5 counter and cannot lose ticks. The note that follows is kept for the
+canary logic only. ~~The ms timebase runs ~1.2% slow at this load.~~ A
 `[pwmtick]` instrument reading above 20,000 Hz means `timer_read32()` lost
 systick interrupts (the timer cannot speed up). Benign today (clock and trim
 don't use it; debounce becomes 5.06 ms) — but a rising number is the first
@@ -148,7 +158,8 @@ LINEARLY with field rate, no threshold.
 ```
 field rate   slot gap   fringe @200 deg/s
    121 Hz     2755 µs        33.1'    stock
-  1046 Hz      320 µs         3.8'    current
+  1046 Hz      320 µs         3.8'    the timer's arithmetic — never real
+   215 Hz     1550 µs        18.6'    MEASURED 2026-09-03 (health page 4)
   4000 Hz       83 µs         1.0'    ~invisible — needs ~4x, past this M0
 ```
 

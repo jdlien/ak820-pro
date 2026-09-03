@@ -309,24 +309,36 @@ change said the fix had failed.
 6. **Anything else on the path?** Nothing new surfaced. The one open item is the
    row-rate discrepancy below.
 
-## Still open
+## Resolved 2026-09-03: the row ISR's own cost sets the row rate
 
-**Per-row sampling is ~217/s against 1,041.7/s derived from the timer
-configuration — a factor of ~4.8.** Six independent counters agree to within 4
-counts over 12 s, so the measurement stands and the derivation has a wrong term.
+Measured, not argued. Firmware `d457105af7` adds health page 4 (`HC_GET4`,
+proto v5: `rgb_callback` entries and summed/min/max duration in system ticks, a
+firmware timebase, and a u32 `row_samples_total`), read with
+`ak820health.py --isr`. 20 s idle after `--reset`, host agents stopped:
 
-Leading hypothesis, untested: `rgb_callback` overruns its 53 µs period. It
-disables 35 pins, walks 17 columns calling `pwmEnableChannel`, and scans a matrix
-row, all at 48 MHz. If that costs ~256 µs, the ISR runs back-to-back and its own
-execution time — not the timer — sets the rate. That would also explain the
-otherwise-odd ~330/s main loop on a 48 MHz M0, and it would mean raising
-`SN32F2XX_RGB_PWM_FREQ` buys nothing.
+    isr_per_s 3876   isr_mean_us 187.9   isr_min_us 160.0   isr_max_us 261.3
+    isr_cpu_pct 72.8   row_samples_per_row_per_s 215.3   row_gap_max_ms 6
+    scan_rate 335-339   timebase_vs_wall 1.0001
 
-**Next step is measurement, not analysis:** count `rgb_callback` entries and
-accumulate its duration, expose both on a health page. Two diagnoses on this path
-have already been retracted for reasoning ahead of measurement.
+The hypothesis was right in substance and wrong in one detail: the ISR does not
+"overrun" its period. `rgb_callback` re-arms the PWM counter at its END, so the
+period is (body + ~70 µs) BY DESIGN and any body length sets the rate. 188 µs
+mean gives 258 µs → 3,876/s → 215 samples/s per row. The LED-only slot costs
+160 µs (62% of the CPU on its own); the slot carrying the row scan costs ~261 µs,
+so the scan is ~85–100 µs and ~11% of the CPU. 1046 Hz was never reachable with
+this body: the PWM clock is not the lever, the ISR body is.
 
-This does not affect the fix. 4.6 ms already samples a keypress 5–17 times. But
-if the hypothesis holds there is another ~4.8x available in both scanning and
-main-loop headroom, and an unexplained factor is exactly the shape of the thing
-that hid this bug for so long.
+Derived side result: the publish fix raised the scan rate from ~344/s to
+~1,292/s and therefore lengthened the mean ISR — the field rate went from ~235 Hz
+to 215 Hz, an ~8% drop. No before-measurement exists; the owner reports no
+flicker. Full write-up: `docs/hardware.md`.
+
+In the same commit: the row-gap timer uses `chTimeDiffX()` in ticks (16-bit
+systime at 187.5 kHz wraps at 349 ms; the old int-promoted subtraction only
+filtered wraps by accident of the 0xFFFF cap), the 64-bit divide left the ISR,
+and the driver/health/tool comments no longer claim ~1042 samples/s. Observer
+effect of the new hooks: none measurable (3,874 → 3,876 ISR/s).
+
+Remaining: the soak gate's 320 Hz idle floor sits ~15 Hz under the post-fix idle
+reading (335–339). Leave it until a run actually trips it; lowering a gate on a
+guess is how gates stop meaning anything.

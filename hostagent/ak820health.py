@@ -14,7 +14,9 @@ Needs the dip switch in WIRED mode -- raw-HID replies route through the
 active host driver, exactly like ak820ctl. The counters accumulate in every
 mode; only reading them out needs the cable path.
 
-Usage:  ak820health.py [--json]
+Pages 2-4 (--stalls, --rows, --isr) are documented in firmware health.h.
+
+Usage:  ak820health.py [--json] [--stalls] [--rows] [--isr]
 Exit 0 always when the read works; interpreting the numbers is the caller's
 job (scripts/soak.py does thresholds).
 """
@@ -25,7 +27,7 @@ import hid
 VID, PID = 0x0C45, 0x8009
 USAGE_PAGE, USAGE = 0xFF60, 0x61
 SET_VALUE, HEALTH_CHANNEL, HC_GET = 0x07, 0x13, 0x01
-HC_GET2, HC_RESET, HC_GET3 = 0x04, 0x05, 0x06   # stall / reset / per-row pages
+HC_GET2, HC_RESET, HC_GET3, HC_GET4 = 0x04, 0x05, 0x06, 0x07   # stall / reset / per-row / ISR pages
 
 FIELDS = ["blit_timeouts", "tx_sent", "tx_timeouts", "tx_drops",
           "rx_malformed", "loop_gap_max_ms", "scan_rate",
@@ -40,10 +42,17 @@ FIELDS2 = ["count_ge_10ms", "count_ge_25ms", "passes", "flash_writes",
 
 MARKS = {0: "none", 1: "flash", 2: "blit", 3: "i2c"}
 
-# Page 3: per-row sampling. The driver publishes ONE row per matrix_scan()
-# call, so scan_rate is not a full-matrix refresh rate.
+# Page 3: per-row sampling. Added when the driver still published ONE row per
+# matrix_scan() call (fixed 2026-09-03: every row every ISR cycle). row_samples
+# are u16 and wrap every ~5 min at ~215/s; page 4 carries a u32 total.
 FIELDS3 = ["row_samples", "row_gap_max_ms", "raw_edges", "consumes",
            "cooked_changes", "row_gap_max_row", "matrix_rows"]
+
+# Page 4 (proto v5): the row ISR's own cost. Its period is (duration + ~53 us)
+# because the PWM counter is re-armed at the ISR's END, so duration -- not the
+# timer -- sets the row rate and caps the main loop. Ticks at st_freq per second.
+FIELDS4 = ["isr_entries", "isr_ticks_sum", "isr_ticks_min", "isr_ticks_max",
+           "st_freq", "uptime_ms", "row_samples_total", "_reserved4"]
 
 
 def open_device(tries=12, delay=0.25):
@@ -141,6 +150,48 @@ def read_rows(h=None, timeout_ms=500):
             h.close()
 
 
+def read_isr(h=None, timeout_ms=500):
+    """Page 4: row-ISR entries and duration (ticks), plus a firmware timebase."""
+    own = h is None
+    if own:
+        h = open_device()
+    try:
+        rep = _txn(h, HC_GET4, timeout_ms)
+        if rep[3] < 5:
+            raise SystemExit(f"firmware health proto v{rep[3]}; page 4 needs v5")
+        v = struct.unpack_from("<2I2H4I", bytes(rep), 4)
+        d = dict(zip(FIELDS4, v))
+        d.pop("_reserved4", None)
+        return d
+    finally:
+        if own:
+            h.close()
+
+
+def isr_rates(a, b, wall_s, rows=6):
+    """Derive rates from two page-4 reads. dt comes from the board's own ms
+    timebase; its ratio to the wall clock is reported too, because docs/leds.md
+    records that timebase running slow under ISR load and this makes it a
+    number rather than a memory."""
+    f = b["st_freq"] or 187500
+    m32 = 0xFFFFFFFF
+    dt = ((b["uptime_ms"] - a["uptime_ms"]) & m32) / 1000.0
+    de = (b["isr_entries"] - a["isr_entries"]) & m32
+    dtk = (b["isr_ticks_sum"] - a["isr_ticks_sum"]) & m32
+    drs = (b["row_samples_total"] - a["row_samples_total"]) & m32
+    us = 1e6 / f
+    return {
+        "isr_dt_s": round(dt, 3),
+        "isr_per_s": round(de / dt, 1) if dt else None,
+        "isr_mean_us": round(dtk / de * us, 1) if de else None,
+        "isr_min_us": round(b["isr_ticks_min"] * us, 1) if b["isr_ticks_min"] != 0xFFFF else None,
+        "isr_max_us": round(b["isr_ticks_max"] * us, 1),
+        "isr_cpu_pct": round(dtk / f / dt * 100, 1) if dt else None,
+        "row_samples_per_row_per_s": round(drs / dt / rows, 1) if dt else None,
+        "timebase_vs_wall": round(dt / wall_s, 4) if wall_s else None,
+    }
+
+
 def reset_counters(h=None, timeout_ms=500):
     """Clear the resettable counters. Watchdog counters are boot facts and
     survive deliberately -- a reset must not erase evidence that the board
@@ -164,6 +215,9 @@ def main():
                     help="per-row sampling: is every key looked at often enough?")
     ap.add_argument("--stalls", action="store_true",
                     help="also show the phase-1 stall counters")
+    ap.add_argument("--isr", action="store_true",
+                    help="row-ISR cost: two page-4 reads 2 s apart -> entries/s, "
+                         "mean/min/max us, CPU share")
     a = ap.parse_args()
     if a.reset:
         reset_counters()
@@ -174,6 +228,13 @@ def main():
         d.update(read_stalls())
     if a.rows:
         d.update(read_rows())
+    if a.isr:
+        import time
+        A = read_isr(); tA = time.monotonic()      # open/close per read: the
+        time.sleep(2.0)                             # agents need the interface too
+        B = read_isr(); tB = time.monotonic()
+        d.update(B)
+        d.update(isr_rates(A, B, tB - tA, d.get("matrix_rows", 6)))
     if a.json:
         print(json.dumps(d))
     else:
@@ -242,6 +303,20 @@ def main():
             if d.get("key_presses"):
                 print(f"  raw_edges {d['raw_edges']} vs key_presses {d['key_presses']} "
                       f"(expect ~2x: a press and a release are two raw edges)")
+        if a.isr:
+            print()
+            for k in ("isr_per_s", "isr_mean_us", "isr_min_us", "isr_max_us",
+                      "isr_cpu_pct", "row_samples_per_row_per_s", "timebase_vs_wall"):
+                print(f"{k:24} {d[k]}")
+            # The timer configuration (4.8 MHz / 256 ticks) predicts 18,750
+            # ISR/s and ~1042 samples/s/row; the board measures ~3,870 and
+            # ~215. Not a clock bug: rgb_callback re-arms the PWM counter at
+            # its END, so its period is (ISR duration + ~53 us) and the ISR's
+            # own cost sets the row rate. isr_cpu_pct is the share of the M0
+            # spent inside it -- the ceiling on both scanning and the main loop.
+            print("\n  period = ISR duration + ~53 us (counter re-armed at ISR end), "
+                  "so isr_mean_us sets the row rate;\n  isr_cpu_pct is the M0 share "
+                  "inside the row ISR -- the ceiling on scanning and the main loop")
 
 
 if __name__ == "__main__":

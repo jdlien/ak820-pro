@@ -319,25 +319,57 @@ Two useful side results:
   board, which retires the "dodgy switches" hypothesis on evidence rather than on
   the argument that bounce is a solved problem.
 
-### ⚠️ Still open: the row rate is ~4.8x slower than the timer implies
+### RESOLVED 2026-09-03 — the row ISR's own cost sets the row rate
 
 The timer configuration says 4.8 MHz / 256 ticks = 18,750 ISR/s, the key row
-advancing every third ISR → 6,250 rows/s → **1,041.7 samples/s per row**.
-Measured is **~217/s per row** (six independent counters agreeing to within 4
-counts over 12 s, so the measurement is not in doubt). The LED field rate is
-therefore ~217 Hz, not the 1042 Hz `config.h` claims.
+advancing every third ISR → **1,041.7 samples/s per row**. Measured is ~215/s,
+and the reason is not a clock bug: **`rgb_callback` re-arms the PWM counter at
+its END** (`pwm_lld_change_counter(pwmp, UINT16_MAX)`), so its period is (ISR
+body + ~53 µs of counter time + entry/exit) BY DESIGN, and the body — not the
+timer — sets the rate. Health page 4 (firmware `d457105af7`, weak
+`sn32f2xx_isr_enter_hook()`/`exit_hook()` around the callback body, read with
+`ak820health.py --isr`) measures it directly. 20 s idle after `--reset`, host
+agents stopped:
 
-Leading hypothesis, NOT yet tested: `rgb_callback` overruns its 53 µs period.
-It disables output on 35 pins, walks 17 columns calling `pwmEnableChannel`, and
-scans a matrix row, all at 48 MHz. If that costs ~256 µs the ISR simply runs
-back-to-back and the timer period stops setting the rate — which would also
-explain why the main loop only manages ~330/s on a 48 MHz M0. That would mean
-raising `SN32F2XX_RGB_PWM_FREQ` buys nothing, and that ISR cost, not clock
-configuration, is the ceiling on both scanning and the main loop.
+| | measured |
+|---|---|
+| ISR entries | **3,876/s** |
+| ISR body, mean | 187.9 µs |
+| ISR body, min (LED-only slot) | 160.0 µs |
+| ISR body, max (slot carrying the row scan) | 261.3 µs |
+| CPU share inside the body | **72.8%** |
+| samples per row per second | 215.3 |
+| `row_gap_max_ms` | 6 |
+| `scan_rate` | 335–339 |
+| ms timebase vs wall clock | 1.0001–1.0004 |
 
-Settle it by counting `rgb_callback` entries and accumulating its duration
-before theorising further. Two diagnoses on this path have already been
-retracted for reasoning ahead of measurement.
+Consequences:
+
+- **LED multiplexing alone is 62% of the CPU** (160 µs × 3,876/s): 15
+  `pwmDisableChannel` + 15 `pwmEnableChannel` calls through the ChibiOS API at
+  roughly 5 µs each, plus 18 row-pin writes. The row scan adds ~85–100 µs to one
+  ISR in three (select/unselect go through `palSetLineMode`, slow on SN32):
+  ~11% of the CPU.
+- **1046 Hz was never achievable with this ISR body.** Even a zero-cost scan
+  gives 160 + ~70 = 230 µs → ~4,350/s → ~242 Hz. Raising
+  `SN32F2XX_RGB_PWM_FREQ` buys nothing; the only lever is a cheaper body
+  (direct register writes instead of the API), which is a driver rewrite.
+- **The publish fix lowered the field rate by about 8%.** The row scan used to
+  run ~344 times/s (once per consume), now ~1,292. Solving the same arithmetic
+  for the old scan rate gives ~4,220 ISR/s → ~235 Hz before vs 215 Hz after.
+  Above flicker fusion either way and the owner reports none — but there was
+  no before-measurement, so this is derived, not measured.
+- **The main loop's ~335/s is what 27% of a 48 MHz M0 buys.** Main-loop cost
+  still trades 1:1 against `scan_rate`; the ceiling is the ISR.
+- **Observer effect: none measurable.** The uninstrumented build read 3,874
+  ISR/s from `row_samples`; the instrumented one reads 3,876.
+- **The ms timebase is not slow.** The "~1.2% slow" note in `docs/leds.md`
+  predates the free-running CT16B5 system timer; `timebase_vs_wall` reads
+  1.0001. Retracted there.
+
+Debounce stays marginal at 4.6 ms sampling against a 5 ms window — about one
+re-sample per window. Bounce has not been observed (4 rejections in ~294
+presses, above), so leave `DEBOUNCE 5` alone.
 
 ## Scan rate IS the main-loop rate
 

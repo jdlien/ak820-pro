@@ -33,7 +33,7 @@ Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-09-01)
+## Current state (2026-09-03)
 
 QMK VIA firmware flashed and verified (`0C45:8009`); assets provisioned. The
 hardening project (phases 0-5) is complete and hardware-verified: board code
@@ -43,8 +43,15 @@ kb_eeconfig, bt_ui, consumer_mod, param_overlay, indicators, hid_protocol), a
 on raw-HID channel 0x13, the CH582F pending-action machinery unified with fault
 injection, nothing blocking the main loop on the glyph queue, and BT slot / LCD
 brightness / RTC trim persisted. LED row-flash artifact and stray-glyph bug
-fixed. LED field rate 1046 Hz; matrix scan ~390-400 Hz; BT at 0.042 ACK
-timeouts/frame. Sub-second clock sync implemented the same day (phases 0-3):
+fixed. BT at 0.042 ACK timeouts/frame (BT-mode typing burst). **2026-09-03:
+the matrix publish fix** — the driver scans every row every ISR cycle, and the
+worst per-key sampling gap fell from ~169 ms to ~5 ms
+([docs/hardware.md](docs/hardware.md)). The row ISR measures 3,876/s with a
+188 µs body (160 µs LED-only, 261 µs with the row scan) — **72.8% of the CPU** —
+not the 18,750/s the timer implies, because it re-arms its counter at its end;
+so the LED field rate is ~215 Hz and the main loop ~335 Hz. Health page 4
+(`ak820health.py --isr`) measures it live.
+Sub-second clock sync implemented the same day (phases 0-3):
 host syncs land within ~3 ms, a USB-SOF loop disciplines the ILRC, offsets slew
 instead of jumping — see [docs/clock.md](docs/clock.md). The repo was
 restructured the same day into a clone-and-build package: `setup.sh` +
