@@ -124,6 +124,10 @@ continuous typing creates the exact blind window this is meant to remove.
 mistake costs a corrupted keymap or torn settings on a brownout, and the slider
 makes brownouts routine. Do not touch it to fix an unmeasured event.
 
+**Phase 4 — gates. ✅ BUILT 2026-09-02** (the part that does not depend on 2 or
+3). `scripts/soak.py` now resets the counters at the start and FAILS on
+`count_ge_25ms_nonflash > 0` or `flash_gap_max_ms > 60`. Original text below.
+
 **Phase 4 — gates.** *Gate: after 2 or 3 exist.* The soak as written would fail
 on its own stimulus (~300 keymap + ~150 rgb_save writes per run → 3-4
 consolidations), so thresholds must be attribution-aware: non-flash gaps
@@ -216,7 +220,19 @@ to be resumed on another machine.
     further writes. The trigger and the cause are separated in time — which is
     exactly why the symptom feels random and unreproducible.
 
-    **Still open: exit criterion 5** — `count_ge_25ms` over a normal working day.
+  - **2026-09-02 20:25** — **PHASE 4 GATE BUILT** (firmware `198b4a43dd`,
+  proto v3). `count_ge_25ms` alone could not gate anything: the soak triggers
+  its own consolidations, so the raw count fails on the harness's own stimulus.
+  Added `count_ge_25ms_nonflash` as the discriminator, plus `i2c_gap_max_ms`.
+  Page 2 was full, so per-mark maxima went u32 -> u16.
+  `scripts/soak.py` resets counters at start and FAILS on
+  `count_ge_25ms_nonflash > 0` (an unexplained keystroke-losing stall) or
+  `flash_gap_max_ms > 60` (consolidation regressed past the measured 33 ms).
+  Verified: 90 s soak, 128 flash writes -> ~1 consolidation,
+  `count_ge_25ms 2, count_ge_25ms_nonflash 0, flash_gap_max_ms 32` -> **PASS**.
+  The 32 ms independently reproduces the 33 ms from a different write pattern.
+
+  **Still open: exit criterion 5** — `count_ge_25ms` over a normal working day.
   That is the number that decides whether Phases 2-4 are ever built. Method:
   `ak820health.py --reset`, use the keyboard normally, then
   `ak820health.py --stalls`. Note the agents hold the exclusive raw-HID

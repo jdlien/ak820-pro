@@ -42,7 +42,8 @@ import argparse, os, random, string, subprocess, sys, time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hostagent"))
 import hid  # noqa: E402
-from ak820health import read_health, open_device  # noqa: E402
+from ak820health import (read_health, read_stalls, reset_counters,  # noqa: E402
+                         open_device)
 
 SET_VALUE, TEXT_CHANNEL = 0x07, 0x12
 TEXT_SET_LINE = 0x03
@@ -126,6 +127,16 @@ class Soak:
             pass
         return read_health(self.h)
 
+    def stalls(self):
+        while self.h.read(32, 20):
+            pass
+        return read_stalls(self.h)
+
+    def reset_stalls(self):
+        while self.h.read(32, 20):
+            pass
+        reset_counters(self.h)
+
     def discover_effects(self, limit=60):
         """Set-then-readback probe for enabled effect ids. The firmware
         clamps/ignores disabled indices, so an id that reads back is real."""
@@ -157,6 +168,8 @@ def main():
             sys.exit("FAIL: no liveness at start (wired mode? another holder?)")
         base = s.health()
         print(f"baseline: {base}")
+        # Phase-1 gate: measure THIS run, not everything since boot.
+        s.reset_stalls()
         if base["wdt_degraded"]:
             print("WARNING: watchdog is DEGRADED (>=3 consecutive resets) -- "
                   "power cycle before a real soak")
@@ -258,8 +271,39 @@ def main():
             if end["blit_timeouts"] > base["blit_timeouts"]:
                 fails.append(f"blit timeouts rose {base['blit_timeouts']} -> {end['blit_timeouts']}")
             gap = end["loop_gap_max_ms"]
-            print(f"worst main-loop gap: {gap} ms" +
-                  (" (over 60 ms -- investigate)" if gap > 60 else ""))
+            print(f"worst main-loop gap: {gap} ms")
+
+        # ---- stall gate (LOOP-BUDGET-PLAN phase 4) -----------------------
+        #
+        # The discriminator is count_ge_25ms_NONFLASH, not the raw count. This
+        # soak issues hundreds of synchronous keymap and rgb_save writes by
+        # design, so it TRIGGERS wear-levelling consolidations itself -- three
+        # or four per run. Gating on the raw >=25 ms count would fail on the
+        # harness's own stimulus and teach everyone to ignore it.
+        #
+        # 25 ms is the threshold that matters: contact lasts 25-80 ms, so a
+        # shorter stall ends with the key still down and can only delay a
+        # press, never drop it.
+        try:
+            st = s.stalls()
+        except SystemExit as e:
+            fails.append(f"could not read stall counters: {e}")
+            st = None
+        if st:
+            print(f"stalls: {st}")
+            if st["count_ge_25ms_nonflash"]:
+                fails.append(
+                    f"{st['count_ge_25ms_nonflash']} UNEXPLAINED stall(s) >= 25 ms "
+                    f"(worst blit {st['blit_gap_max_ms']} ms, i2c "
+                    f"{st['i2c_gap_max_ms']} ms) -- long enough to lose a keystroke")
+            # Consolidation is expected here; a REGRESSION in its length is not.
+            # Measured 2026-09-02 on 0091d438fa: 33 ms. 60 leaves headroom for a
+            # slower erase without tolerating the 50-300 ms originally feared.
+            if st["flash_gap_max_ms"] > 60:
+                fails.append(f"flash stall {st['flash_gap_max_ms']} ms > 60 ms budget "
+                             "-- wear-levelling consolidation has regressed")
+            print(f"  ({st['flash_writes']} flash writes -> "
+                  f"~{st['flash_writes'] // 127} consolidation(s) expected)")
         if fails:
             print("\nSOAK FAIL:\n  " + "\n  ".join(fails))
             console_tail()

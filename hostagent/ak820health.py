@@ -33,7 +33,8 @@ FIELDS = ["blit_timeouts", "tx_sent", "tx_timeouts", "tx_drops",
 # Page 2 (LOOP-BUDGET-PLAN phase 1). A SECOND page exists because HC_GET's
 # payload was already exactly full at 28 bytes.
 FIELDS2 = ["count_ge_10ms", "count_ge_25ms", "passes", "flash_writes",
-           "flash_gap_max_ms", "blit_gap_max_ms", "key_presses",
+           "flash_gap_max_ms", "blit_gap_max_ms", "i2c_gap_max_ms",
+           "count_ge_25ms_nonflash", "key_presses",
            "loop_gap_max_mark", "_reserved"]
 
 MARKS = {0: "none", 1: "flash", 2: "blit", 3: "i2c"}
@@ -100,10 +101,13 @@ def read_stalls(h=None, timeout_ms=500):
         h = open_device()
     try:
         rep = _txn(h, HC_GET2, timeout_ms)
-        if rep[3] < 2:
-            raise SystemExit(f"firmware health proto v{rep[3]}; page 2 needs v2 "
-                             "-- flash a build with LOOP-BUDGET-PLAN phase 1")
-        vals = struct.unpack_from("<6IHBB", bytes(rep), 4)
+        # v3 repacked page 2 (u16 maxima + the nonflash discriminator). Same
+        # command, different layout, so a version check is the only thing
+        # standing between a stale board and silently misparsed numbers.
+        if rep[3] < 3:
+            raise SystemExit(f"firmware health proto v{rep[3]}; page 2 needs v3 "
+                             "-- flash the current build")
+        vals = struct.unpack_from("<4I5HBB", bytes(rep), 4)
         d = dict(zip(FIELDS2, vals))
         d["loop_gap_max_mark"] = MARKS.get(d["loop_gap_max_mark"], d["loop_gap_max_mark"])
         d.pop("_reserved", None)
@@ -152,14 +156,18 @@ def main():
         if a.stalls:
             print()
             for k in ("passes", "count_ge_10ms", "count_ge_25ms",
-                      "loop_gap_max_mark", "flash_writes", "flash_gap_max_ms",
-                      "blit_gap_max_ms", "key_presses"):
+                      "count_ge_25ms_nonflash", "loop_gap_max_mark",
+                      "flash_writes", "flash_gap_max_ms", "blit_gap_max_ms",
+                      "i2c_gap_max_ms", "key_presses"):
                 print(f"{k:24} {d[k]}")
             # >=25 ms is the only class that can LOSE a press: contact lasts
             # 25-80 ms, so anything shorter ends with the key still down.
-            if d["count_ge_25ms"]:
-                print(f"\n  ** {d['count_ge_25ms']} stall(s) >= 25 ms -- "
-                      "long enough to lose a keystroke **")
+            if d["count_ge_25ms_nonflash"]:
+                print(f"\n  ** {d['count_ge_25ms_nonflash']} UNEXPLAINED stall(s) "
+                      ">= 25 ms -- long enough to lose a keystroke **")
+            elif d["count_ge_25ms"]:
+                print(f"\n  {d['count_ge_25ms']} stall(s) >= 25 ms, all attributed to "
+                      "flash (wear-levelling consolidation -- understood, bounded)")
             else:
                 print("\n  no stall >= 25 ms since reset "
                       "(shorter stalls delay a press, they cannot drop it)")
