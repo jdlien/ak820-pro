@@ -213,7 +213,12 @@ keystrokes were felt to drop. An instrument that costs 2 ms a pass is the
 fault it is looking for); instrumented
 builds attribute stalls via `[stall]` prints.
 
-## ⚠️ `scan_rate` is NOT a full-matrix rate — the one-row latch and its beat
+## `scan_rate` is NOT a full-matrix rate — the one-row latch and its beat (FIXED)
+
+*Historical as of 2026-09-03 — the mechanism below is fixed; see the end of
+this section. Kept because it is the keystroke-loss mechanism this project
+spent the longest failing to find, and because the reasoning that missed it
+is worth not repeating.*
 
 **The single most misleading number on this board.** `shared_matrix_scan_keys()`
 (`drivers/led/sn32f2xx.c`) samples ONE row and immediately asserts
@@ -249,11 +254,57 @@ invisible to instrumentation that only watches the main loop.
 
 Read it with `ak820health.py --rows` (`row_gap_max_ms`, `row_samples`).
 
-**The fix is at publication, not in the main loop:** accumulate a full matrix in
-the ISR across one row cycle (~0.96 ms) and publish the complete snapshot, so
-every key is sampled every ~1 ms regardless of the consume rate or its phase.
-The all-rows branch already exists in the driver for boards where
-`SN32F2XX_PWM_DIRECTION != DIODE_DIRECTION`; this board takes the one-row path.
+### FIXED 2026-09-03 — scan every row, every cycle
+
+`shared_matrix_scan_keys()` now scans straight into `shared_matrix` on every
+genuine key-row transition instead of once per consume. `matrix_scanned` is
+demoted from a scan GATE to a DIRTY FLAG, and the main loop's compare/copy/clear
+runs under `chSysLock()` so an ISR write cannot land mid-copy. A `rows_seen` mask
+withholds readiness until all six rows have been sampled once after boot.
+
+| | before | after |
+|---|---|---|
+| worst gap between samples of one row | 156–169 ms | **5–7 ms** |
+| samples per row per second | ~57 | **~217** |
+| spread across the six rows over 12 s | 825–897 | **2599–2603** |
+| `scan_rate` | 326–378 | 301–338 |
+| `count_ge_25ms_nonflash` | 0 | 0 |
+
+The spread collapsing from ~70 counts to ~4 is the signature that the aliasing is
+gone: rows are sampled in strict rotation now, not phase-selected. `scan_rate`
+dips slightly because the ISR does ~4x the scanning work per consume; that is the
+intended trade and it is cheap at this magnitude.
+
+**Debounce only starts working here.** `sym_defer_pk`'s 5 ms window previously
+contained at most one sample of any given key, so it re-validated a stale value
+it never re-read — a no-op. At 4.6 ms per-row sampling it can finally observe
+stability. Bounce rejection on this board dates from this commit, not from
+whenever `DEBOUNCE` was set.
+
+The staging-buffer scheme originally proposed (accumulate a whole matrix in the
+ISR, publish the complete snapshot) was dropped: scanning in place needs no
+second buffer and no ISR `memcpy`, and the codex/gpt-5.6-sol audit preferred it.
+See `plans/review-codex-sol-matrix-2026-09-03.md`.
+
+### ⚠️ Still open: the row rate is ~4.8x slower than the timer implies
+
+The timer configuration says 4.8 MHz / 256 ticks = 18,750 ISR/s, the key row
+advancing every third ISR → 6,250 rows/s → **1,041.7 samples/s per row**.
+Measured is **~217/s per row** (six independent counters agreeing to within 4
+counts over 12 s, so the measurement is not in doubt). The LED field rate is
+therefore ~217 Hz, not the 1042 Hz `config.h` claims.
+
+Leading hypothesis, NOT yet tested: `rgb_callback` overruns its 53 µs period.
+It disables output on 35 pins, walks 17 columns calling `pwmEnableChannel`, and
+scans a matrix row, all at 48 MHz. If that costs ~256 µs the ISR simply runs
+back-to-back and the timer period stops setting the rate — which would also
+explain why the main loop only manages ~330/s on a 48 MHz M0. That would mean
+raising `SN32F2XX_RGB_PWM_FREQ` buys nothing, and that ISR cost, not clock
+configuration, is the ceiling on both scanning and the main loop.
+
+Settle it by counting `rgb_callback` entries and accumulating its duration
+before theorising further. Two diagnoses on this path have already been
+retracted for reasoning ahead of measurement.
 
 ## Scan rate IS the main-loop rate
 

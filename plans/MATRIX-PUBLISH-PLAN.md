@@ -1,5 +1,13 @@
 # Fix the one-row matrix publish (the aliasing beat)
 
+> **STATUS: DONE — shipped 2026-09-03, `qmk_firmware@e6cce28858`.**
+> Audited by codex/gpt-5.6-sol (`plans/review-codex-sol-matrix-2026-09-03.md`),
+> which confirmed the mechanism, corrected the arithmetic, and recommended a
+> simpler fix than the staging buffer proposed below. That recommendation is
+> what shipped. **The plan text from here down is the pre-audit proposal, kept
+> unedited as the record; read the Outcome section at the bottom for what was
+> actually built and measured.**
+
 Status: **DRAFT FOR AUDIT, 2026-09-03.** Not built. Written to stand alone —
 assume the reader has no prior context.
 
@@ -219,3 +227,106 @@ are not comparable — `docs/hardware.md` records why):
    ~5 samples actually fall inside the window?
 6. Anything else on this path that loses or reorders keystrokes and is not
    already recorded in `plans/INPUT-PATH-PLAN.md` §2 or `docs/hardware.md`?
+
+---
+
+# Outcome (2026-09-03)
+
+## What shipped, and how it differs from the proposal above
+
+Not the staging buffer. `shared_matrix_scan_keys()` scans **straight into
+`shared_matrix`** on every genuine key-row transition (`last_key != current_key`).
+`matrix_scanned` is demoted from a scan gate to a dirty flag, and the main loop's
+compare/copy/clear in `matrix_scan_custom()` runs under `chSysLock()` /
+`chSysUnlock()` — the pattern `sn32f2xx_flush()` already used — so an ISR write
+cannot land mid-copy. A six-bit `rows_seen` mask withholds readiness until every
+row has been sampled once, so the loop never consumes uninitialised rows at boot.
+
+No second buffer, no ISR `memcpy`, no atomics. The audit's Q3 memory-ordering
+finding was real for the *staging* design but does not apply here: `chSysLock()`
+masks interrupts on Cortex-M0 and carries compiler barriers, so the ISR is atomic
+with respect to the locked copy and reordering inside it cannot be observed.
+
+`matrix_locked` / `first_scanned` (auditor question 4) were removed. They existed
+to keep row coverage fair under the one-row scheme, which no longer exists. The
+binary is byte-identical before and after removing `matrix_locked`, confirming it
+was already unreachable.
+
+## Measured, three 12-second idle runs
+
+| | before | after |
+|---|---|---|
+| worst gap between samples of one row | 156–169 ms | **5–7 ms** |
+| samples per row per second | ~57 | **~217** |
+| spread across the six rows over 12 s | 825–897 | **2599–2603** |
+| `scan_rate` | 326–378 | 301–338 |
+| `count_ge_25ms_nonflash` | 0 | 0 |
+
+The spread collapsing from ~70 counts to ~4 is the real signature: rows are
+sampled in strict rotation now rather than phase-selected. A 25–80 ms keypress is
+now sampled 5–17 times instead of possibly zero.
+
+First real-world check, same day: a 30-second monkeytype run at 118 wpm,
+**294 characters, 100% accuracy, zero incorrect**. Suggestive rather than
+conclusive on its own — at the ~0.5% drop rate originally reported, a clean 294
+is roughly a 1-in-4 event — but it is the direction expected, and repeated clean
+runs compound quickly.
+
+## Instrumentation had to be fixed before the result was visible
+
+Per-row gap timing lived in `input_note_consume()` because, under the old code,
+"time between consumes naming row R" *was* "time between samples of row R". After
+the fix the ISR scans ~4 rows per consume, so the consume-side version refreshed
+only one row's timestamp per consume and reported **159–308 ms — worse than
+before** — while sampling had in fact improved 4x. It moved into
+`input_note_row_scan()`, which runs in the ISR and uses `chVTGetSystemTimeX()`
+(`timer_read32()` takes a lock and must not be called there).
+
+Worth recording as a pattern: **a fix that changes the shape of an event can
+invalidate the instrument built to measure it.** The first reading after this
+change said the fix had failed.
+
+## Auditor questions, answered
+
+1. **Aliasing correct?** Yes, mechanism confirmed. Arithmetic corrected: 4.8 MHz
+   / 256 = 18,750 ISR/s, row advancing every third ISR = 6,250 rows/s = 1,041.667
+   cycles/s. The plan's 6267/s came from rounding 18,750 to 18,800. The audit also
+   correctly flags that the plan's "57/s predicted, 57/s measured" agreement was
+   **tautological** — one row accepted per consume divided six ways — not evidence
+   for the beat model.
+2. **Staging publish sound?** Moot; not built. See above for why the shipped
+   design needs no atomics.
+3. **Starvation risk?** No. Flash programming pauses both advancement and
+   scanning, so the mask resumes afterward; RGB rows equal the six matrix rows on
+   this board, so `current_key_row >= ROWS_PER_HAND` never occurs; RGB-off and
+   animations only change duties. No staleness fallback needed. `rows_seen`
+   implements the audit's "never publish uninitialised unseen rows".
+4. **What breaks without `matrix_locked`/`first_scanned`?** Nothing. Removed.
+5. **Was debounce a no-op?** Yes, and the fix makes it operative rather than
+   surfacing chatter. `DEBOUNCE 5` stays for now — it is the first time it has
+   ever had multiple samples in its window, so it should be observed before being
+   retuned.
+6. **Anything else on the path?** Nothing new surfaced. The one open item is the
+   row-rate discrepancy below.
+
+## Still open
+
+**Per-row sampling is ~217/s against 1,041.7/s derived from the timer
+configuration — a factor of ~4.8.** Six independent counters agree to within 4
+counts over 12 s, so the measurement stands and the derivation has a wrong term.
+
+Leading hypothesis, untested: `rgb_callback` overruns its 53 µs period. It
+disables 35 pins, walks 17 columns calling `pwmEnableChannel`, and scans a matrix
+row, all at 48 MHz. If that costs ~256 µs, the ISR runs back-to-back and its own
+execution time — not the timer — sets the rate. That would also explain the
+otherwise-odd ~330/s main loop on a 48 MHz M0, and it would mean raising
+`SN32F2XX_RGB_PWM_FREQ` buys nothing.
+
+**Next step is measurement, not analysis:** count `rgb_callback` entries and
+accumulate its duration, expose both on a health page. Two diagnoses on this path
+have already been retracted for reasoning ahead of measurement.
+
+This does not affect the fix. 4.6 ms already samples a keypress 5–17 times. But
+if the hypothesis holds there is another ~4.8x available in both scanning and
+main-loop headroom, and an unexplained factor is exactly the shape of the thing
+that hid this bug for so long.
