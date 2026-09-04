@@ -175,6 +175,17 @@ findings, in the order they were established:
    slew's settling; nothing enforces that across the two repos
    (`plans/BACKLOG.md`).
 
+**How far the ILRC actually moves:** the nominal period read 33200–33260 on
+the evening of 2026-09-03, 33429 at 11:00 the next morning and 33516 by noon —
+about **+0.9 % across a day** on one unit at one desk. That is the number
+behind the fast-tracking loop: an oscillator that wanders a percent a day was
+never going to be held by a 20-minute convergence. It is also why the persist
+rate is judged against distance, not time: the period write fires every
+64 ticks of net movement, so `writes ≈ Δperiod / 64` is the clean loop and
+`writes ≫ Δperiod / 64` would mean the ±2-tick dither is straddling a
+threshold — the one way a faster loop could cost flash, fixable with
+hysteresis on the persisted value rather than by slowing the loop.
+
 Also corrected: the "~4 min" post-flash re-convergence is ~20 min in practice,
 because the ±16-tick lock threshold (±480 ppm) switches to 128-s windows early
 and the last dozen ticks then halve once per window.
