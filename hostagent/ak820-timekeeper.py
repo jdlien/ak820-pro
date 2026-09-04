@@ -7,9 +7,16 @@ Loop every 15 s:
     board; a replug too);
   * sync when the loop's own wall-clock gap exceeds 60 s (the Mac slept);
   * sync every SYNC_INTERVAL s regardless;
-  * every BIAS_INTERVAL s of continuous USB continuity, re-measure this Mac's
-    SOF bias from the board's sof_frames_total vs the wall clock and cache it
-    for ak820ctl (`clock --bias`), keyed by the USB controller the board is on.
+  * LEARN the SOF bias from the offset that accumulates between periodic
+    syncs (the NTP way): the board's frequency loop targets f_sof * (1 + bias),
+    so whatever bias makes the residual vanish is the right one, whatever its
+    cause. Half-step per sample, only from a slew-sized residual on a settled
+    loop (period unchanged since the previous sync), written to ak820ctl's
+    cache so the next sync sends it. Before this the bias came from a 15-min
+    frame count against the wall clock, which measured -369..+587 ppm on a
+    controller the phase-0 test had put at +78 +-3 -- and each new value
+    re-steered the clock, giving a 5-minute sawtooth of 150-330 ms
+    (2026-09-03). That measurement now only seeds a cache that has no bias.
 
 Every transaction shells out to ak820ctl so exactly one process owns the
 raw-HID interface at a time; failures (VIA holding it, no reply) are logged
@@ -21,8 +28,17 @@ AK820_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CTL  = os.environ.get("AK820_CTL") or os.path.join(AK820_ROOT, "time-util-ak820pro", "ak820ctl")
 LOG  = os.path.expanduser("~/Library/Logs/ak820pro-timekeeper.log")
 BIAS_STATE = os.path.expanduser("~/.ak820ctl-bias.json")
-SYNC_INTERVAL = 300      # s (5 min: keeps |offset| < 20 ms even during the ILRC warm-up drift)
-BIAS_INTERVAL = 900      # s of continuity before a bias re-measurement (>= 600 for +-3 ppm)
+SYNC_INTERVAL = 300      # s (5 min) once the residual is small
+SYNC_INTERVAL_FAST = 120 # s while the last residual exceeded FAST_ABOVE_MS: the ILRC drifts
+FAST_ABOVE_MS = 60       # hundreds of ppm while the board warms (LED load, room), and the
+                         # board's loop tracks that slowly; syncing 2.5x as often bounds the
+                         # visible sawtooth to ~1/3 of its size until the drift settles
+BIAS_INTERVAL = 900      # s of continuity before a bias re-measurement (seed only, see learn_bias)
+CAP = os.path.expanduser("~/.ak820ctl-cap")   # ak820ctl's "proto lead_ms b_ppm" cache
+LEARN_MIN_ELAPSED = 240  # s between the two syncs a residual is measured across
+LEARN_MAX_BEFORE  = 400  # ms: larger residuals are convergence or a step, not a rate error
+LEARN_GAIN        = 0.5  # half-step, like the board's own loop
+BIAS_LIMIT        = 600  # ppm, matches the firmware's sanity clamp
 LOOP = 15
 SLEEP_GAP = 60
 
@@ -58,11 +74,35 @@ def run_ctl(*args, timeout=30):
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
+def cap_read():
+    """ak820ctl's calibration cache: 'proto lead_ms [b_ppm]'."""
+    try:
+        parts = open(CAP).read().split()
+        d = {"proto": int(parts[0]), "lead": float(parts[1])}
+        if len(parts) >= 3:
+            d["b"] = int(parts[2])
+        return d
+    except Exception:
+        return None
+
+
+def cap_write_bias(b_ppm):
+    c = cap_read()
+    if not c:
+        return False
+    tmp = CAP + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(f"{c['proto']} {c['lead']:.3f} {int(round(b_ppm))}\n")
+    os.replace(tmp, CAP)
+    return True
+
+
 def read_status():
     rc, out = run_ctl("clock", "--read")
     if rc != 0:
         return None
     d = {}
+    m = re.search(r"nominal (\d+)", out);                      d["pnom"] = int(m.group(1)) if m else None
     m = re.search(r"offset board-host ([-+\d.]+) ms", out);     d["offset"] = float(m.group(1)) if m else None
     m = re.search(r"ref_state (\d+)", out);                       d["ref_state"] = int(m.group(1)) if m else None
     m = re.search(r"sof_epoch (\d+)\s+sof_frames_total (\d+)", out)
@@ -73,13 +113,53 @@ def read_status():
 
 
 def sync(reason):
+    """Returns (ok, before_ms, slewing): the residual the board had accumulated
+    since the previous sync, and whether it was corrected by a slew (a step
+    means the clock was unset, far off, or just flashed -- not a rate sample)."""
     rc, out = run_ctl("clock")
     log(f"sync ({reason}): {out.splitlines()[-1] if out else 'no output'}" + ("" if rc == 0 else f" [rc={rc}]"))
-    return rc == 0
+    m = re.search(r"before ([-+\d.]+) ms", out)
+    before = float(m.group(1)) if m else None
+    slewing = "(slewing)" in out and "warning:" not in out
+    return rc == 0, before, slewing
+
+
+def learn_bias(state, reason, before, slewing):
+    """One residual sample per periodic sync. Board behind by `before` ms over
+    `elapsed` s means it runs slow by -before*1000/elapsed ppm; the loop's
+    target is f_sof*(1+b), so lower b by half of that. Gated on: a periodic
+    sync (an enumeration or wake breaks the baseline), a slew-sized residual,
+    the SOF reference in use, and the board's nominal period UNCHANGED since
+    the previous sync -- while its loop is still moving P the residual is
+    convergence, not a rate error, and learning from it would fight the loop."""
+    now = time.monotonic()
+    st = read_status() or {}
+    pnom = st.get("pnom")
+    prev = state.get("learn")
+    if reason != "periodic":
+        state["learn"] = {"t": now, "pnom": pnom}
+        return
+    if prev and pnom and prev.get("pnom") == pnom and before is not None and slewing \
+            and abs(before) <= LEARN_MAX_BEFORE and st.get("ref_state") == 2:
+        elapsed = now - prev["t"]
+        if elapsed >= LEARN_MIN_ELAPSED:
+            e_slow = -before * 1000.0 / elapsed
+            c = cap_read()
+            if c and "b" in c:
+                b_new = max(-BIAS_LIMIT, min(BIAS_LIMIT, c["b"] - LEARN_GAIN * e_slow))
+                if cap_write_bias(b_new):
+                    log(f"bias learned: before {before:+.1f} ms over {elapsed:.0f} s = board {e_slow:+.0f} ppm slow; "
+                        f"b {c['b']:+d} -> {int(round(b_new)):+d} ppm (P {pnom})")
+    state["learn"] = {"t": now, "pnom": pnom}
 
 
 def bias_step(state):
-    """Accumulate continuity; when BIAS_INTERVAL of unbroken epoch has elapsed, compute b."""
+    """SEED ONLY: measure b from the frame count once, for a cache that has no
+    bias. It is too noisy to steer with (see the header); learn_bias() owns the
+    value from then on."""
+    c = cap_read()
+    if c and "b" in c:
+        state.clear(); return
     st = read_status()
     now = time.time()
     if not st or "epoch" not in st:
@@ -107,8 +187,10 @@ def main():
     log("timekeeper start")
     last_loop = time.time()
     last_sync = 0.0
+    interval = SYNC_INTERVAL
     was_present = False
     bias_state = {}
+    learn_state = {}
     while True:
         now = time.time()
         present = hid_present()
@@ -117,12 +199,18 @@ def main():
             reason = "enumerated"
         elif now - last_loop > SLEEP_GAP:
             reason = "wake"
-        elif now - last_sync >= SYNC_INTERVAL:
+        elif now - last_sync >= interval:
             reason = "periodic"
         if present and reason:
             time.sleep(2 if reason == "enumerated" else 0)   # let the board settle after boot
-            if sync(reason):
+            ok, before, slewing = sync(reason)
+            if ok:
                 last_sync = time.time()
+                interval = SYNC_INTERVAL_FAST if (before is not None and abs(before) > FAST_ABOVE_MS) else SYNC_INTERVAL
+                try:
+                    learn_bias(learn_state, reason, before, slewing)
+                except Exception as e:
+                    log(f"bias learn error: {e}")
         if present:
             try:
                 bias_step(bias_state)
@@ -130,6 +218,7 @@ def main():
                 log(f"bias step error: {e}")
         else:
             bias_state.clear()
+            learn_state.clear()
         was_present = present
         last_loop = time.time()
         time.sleep(LOOP)
