@@ -134,11 +134,12 @@ findings, in the order they were established:
    for `ak820ctl` to send on every sync. The values it produced ran
    **−369…+587 ppm** on a controller phase 0 had put at +78 ± 3, and each new
    one re-steered the loop's target by hundreds of ppm. Root cause of the
-   noise: the counter advances by ~1000 in one jump at each RTC tick, and
-   `ak820ctl` aligns its transfers to the second boundary — so a read lands
-   just before or just after the jump, ±1000 frames against any host
-   timestamp, ±1100 ppm over 900 s. **Do not measure frequency from
-   `sof_frames_total` with boundary-aligned reads.** (Six consecutive
+   noise: the counter is only updated in the tick ISR, by ~1000 in one jump
+   per RTC second, so any read lags the true frame count by 0–1000 frames
+   depending on where in the second it lands, and two reads differ by up to
+   ±1000 frames of pure phase noise — ±1100 ppm over 900 s. **Do not measure
+   frequency from `sof_frames_total` against host timestamps** unless the
+   window is hours long or the read is placed mid-second. (Six consecutive
    one-minute windows read −789, −7720, +9638, −6047, −5994, +1722 ppm while
    the Mac's wall clock held +7 ppm against its monotonic clock and NTP said
    +95 ms throughout: the reference was clean, the readout was not.)
