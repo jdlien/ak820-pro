@@ -29,13 +29,23 @@ CTL  = os.environ.get("AK820_CTL") or os.path.join(AK820_ROOT, "time-util-ak820p
 LOG  = os.path.expanduser("~/Library/Logs/ak820pro-timekeeper.log")
 BIAS_STATE = os.path.expanduser("~/.ak820ctl-bias.json")
 SYNC_INTERVAL = 300      # s (5 min) once the residual is small
-SYNC_INTERVAL_FAST = 120 # s while the last residual exceeded FAST_ABOVE_MS: the ILRC drifts
+SYNC_INTERVAL_FAST = 180 # s while the last residual exceeded FAST_ABOVE_MS: the ILRC drifts
 FAST_ABOVE_MS = 60       # hundreds of ppm while the board warms (LED load, room), and the
-                         # board's loop tracks that slowly; syncing 2.5x as often bounds the
-                         # visible sawtooth to ~1/3 of its size until the drift settles
+                         # board's loop tracks that slowly; syncing more often bounds the
+                         # visible sawtooth until the drift settles.
+                         # ⚠️ MUST leave the board's loop a full clean window between syncs:
+                         # a slew writes the period register ~3 times (start, remainder,
+                         # restore) and each write restarts the frequency window. At 120 s
+                         # with the firmware's old 128-s locked window the window NEVER
+                         # completed, the loop froze at a wrong period, the residual stayed
+                         # large, and the interval stayed fast: a +300 ms plateau for six
+                         # hours on 2026-09-04. 180 s leaves ~150 clean seconds -- one old
+                         # window, four of the 32-s windows firmware 8608c4f680 uses.
 BIAS_INTERVAL = 900      # s of continuity before a bias re-measurement (seed only, see learn_bias)
 CAP = os.path.expanduser("~/.ak820ctl-cap")   # ak820ctl's "proto lead_ms b_ppm" cache
-LEARN_MIN_ELAPSED = 240  # s between the two syncs a residual is measured across
+LEARN_MIN_ELAPSED = 90   # s between the two syncs a residual is measured across. Was 240,
+                         # which is longer than the fast interval, so the learner could never
+                         # fire while the residual was large -- the one time it was needed
 LEARN_MAX_BEFORE  = 400  # ms: larger residuals are convergence or a step, not a rate error
 LEARN_GAIN        = 0.25 # low gain: each residual carries the ILRC's wander as noise (see below)
 LEARN_MAX_DP      = 6    # ticks (~180 ppm): the ILRC wanders +-300 ppm on 5-min scales and the board's
