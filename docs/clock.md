@@ -122,6 +122,52 @@ in any mode (commit 4b86d95014; `history/clock-sync/phase-0-facts.md` F1). A
 board left unplugged for days drifts at the PCF's ~5 s/day; the
 on-enumeration sync catches it as soon as it is plugged back in.
 
+## The 5-minute sawtooth, and what the loop is really fighting (2026-09-03)
+
+The clock read ¼–½ s slow by eye. The timekeeper log showed why: every
+periodic sync found the board **150–330 ms behind**, slewed it back, and five
+minutes later it was behind again — for hours, on a converged loop. Three
+findings, in the order they were established:
+
+1. **The host-measured SOF bias was noise.** `bias_step` counted
+   `sof_frames_total` against the wall clock over 15 min and cached the result
+   for `ak820ctl` to send on every sync. The values it produced ran
+   **−369…+587 ppm** on a controller phase 0 had put at +78 ± 3, and each new
+   one re-steered the loop's target by hundreds of ppm. Root cause of the
+   noise: the counter advances by ~1000 in one jump at each RTC tick, and
+   `ak820ctl` aligns its transfers to the second boundary — so a read lands
+   just before or just after the jump, ±1000 frames against any host
+   timestamp, ±1100 ppm over 900 s. **Do not measure frequency from
+   `sof_frames_total` with boundary-aligned reads.** (Six consecutive
+   one-minute windows read −789, −7720, +9638, −6047, −5994, +1722 ppm while
+   the Mac's wall clock held +7 ppm against its monotonic clock and NTP said
+   +95 ms throughout: the reference was clean, the readout was not.)
+2. **The fix is to learn the bias from the residual itself** (NTP's way): the
+   board behind by `before` ms over `elapsed` s is `−before·1000/elapsed` ppm
+   slow, and the loop targets `f_sof·(1+b)`, so the timekeeper moves `b` by a
+   quarter of that per sample (`learn_bias()`), only from a slew-sized residual
+   with the SOF reference in use and the board's period within 6 ticks of the
+   previous sync, and writes it to `ak820ctl`'s cache. The frame-count
+   measurement now only seeds a cache that has no bias. Whatever the bias's
+   true cause, the residual is the observable that matters, and this drives it
+   to zero.
+3. **The ILRC wanders more than the loop can follow.** With the reference
+   proven clean, the board's nominal period still moved
+   33225 → 33198 → 33260 → 33248 → 33236 → 33244 over an hour — a few hundred
+   ppm on 5-minute scales, most visibly after the flash that raised the LED
+   default (more current, warmer board). The loop half-steps on 128-s windows
+   once locked, so it lags a moving target by 100–160 ms per 5 min. Two
+   mitigations shipped host-side: the timekeeper syncs every **120 s while the
+   last residual exceeded 60 ms** (300 s otherwise), and the learner's gate
+   tolerates that wander. The real fix is firmware: shorter locked windows
+   (32 s) and fuller steps when consecutive deltas agree, so the loop follows
+   the oscillator within ~half a minute. Not done; measure with the
+   instrumented build's `[rtc] sof window` lines before tuning.
+
+Also corrected: the "~4 min" post-flash re-convergence is ~20 min in practice,
+because the ±16-tick lock threshold (±480 ppm) switches to 128-s windows early
+and the last dozen ticks then halve once per window.
+
 ## Timebase note
 
 QMK's millisecond timer runs ~1.2% slow under the current interrupt load

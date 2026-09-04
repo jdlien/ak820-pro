@@ -92,7 +92,13 @@ anyway (bt_ui_mode_slider). Upstream issue DEFERRED until the consequence
 reproduces on some host (try Windows) -- the source-level observation alone
 is thin receipts.
 
-## RTC: reflash erases the persisted trim; SECCNTV write costs ~0.5 s phase (2026-09-01)
+## RTC: reflash erases the persisted trim; SECCNTV write costs ~0.5 s phase (2026-09-01) — trim phase loss FIXED
+**Status 2026-09-03:** the SECCNTV phase loss is already gone — every steady-state
+period write happens in the tick ISR at the match since the sub-second work
+(`docs/clock.md`, "Reload ownership"), so the "apply trims at a second boundary"
+idea below is done. What remained was the 5-minute sawtooth, diagnosed and
+mitigated host-side the same day (`docs/clock.md`, "The 5-minute sawtooth");
+the outstanding firmware item is the loop's tracking bandwidth against ILRC wander.
 
 Measured after the flash marathon: board ~4100-6200 ppm slow, halving per
 trim -- RE-CONVERGENCE from the compile-time seed, not a regression. Two
