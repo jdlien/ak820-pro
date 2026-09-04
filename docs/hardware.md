@@ -197,8 +197,8 @@ itself, with no host and no cable:
   can begin and end unseen. This read **156–169 ms** before the matrix publish
   fix, which is what silent keystroke loss looks like on this board.
 - **`stall>25`** — main-loop stalls ≥ 25 ms, flash excluded. **Must be 0.**
-  (Dismissing the debug page itself adds ~30 ms and will show here — known, see
-  `plans/BACKLOG.md`.)
+  (Dismissing the debug page used to add ~30 ms and show here; fixed in
+  `821431e3e4`, measured 0 across several dismissals.)
 - **`worst`** — how big the largest gap was and what caused it: `flash` is a
   wear-levelling consolidation (understood, bounded), `blit` is the LCD, `i2c`
   the RTC bus. Anything unrecognised is worth reporting.

@@ -53,8 +53,9 @@ so the LED field rate is ~215 Hz and the main loop ~335 Hz. Health page 4
 (`ak820health.py --isr`) measures it live. **`Fn`+`D` puts the health counters
 on the LCD** for untethered use, with hold-to-reset
 ([docs/display.md](docs/display.md)). Everyday firmware measures **zero stalls
->= 25 ms**, the threshold below which a press cannot be lost; the only thing
-above it is dismissing that debug page (~30 ms, backlogged).
+>= 25 ms**, the threshold below which a press cannot be lost — including
+dismissing that debug page, which cost ~30 ms until `821431e3e4` staged its
+restore (worst blit now 20 ms, the Caps-on paint).
 Sub-second clock sync implemented the same day (phases 0-3):
 host syncs land within ~3 ms, a USB-SOF loop disciplines the ILRC, offsets slew
 instead of jumping — see [docs/clock.md](docs/clock.md). The repo was

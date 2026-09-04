@@ -133,9 +133,13 @@ Measured cost, page closed, ~10 Caps Lock presses: `blit_gap_max_ms` **22 ms**,
 prediction that it "costs a stall on every Caps press" was wrong, and the
 measurement is what corrected it.
 
-It exceeds 25 ms in one place: a **forced** repaint after a clear, where
-`draw_locks` paints every indicator rather than the one that changed (~30 ms).
-See `plans/BACKLOG.md` before touching it.
+It used to exceed 25 ms in one place: the **forced** repaint on Fn+D exit, where
+`draw_locks(true)` painted every indicator in one pass (~30 ms). **Fixed in
+`821431e3e4`:** the restore now paints the lock band one component per pass,
+and `draw_battery()` no longer clears its whole strip on every level tick.
+Measured after the flash, ~4 min, 682 presses, several Fn+D exits:
+`count_ge_25ms_nonflash` **0**, `blit_gap_max_ms` **20** (the unchanged Caps-on
+path). See `plans/BACKLOG.md` before touching the band further.
 
 ### ⚠️ `lcd_draw_flash_text_staged()` is declared and does not exist
 
@@ -178,10 +182,14 @@ the dashboard — including `draw_locks` — does not run and cannot be measured
 while the page is up. **The observer suppresses the observed**; measure the
 dashboard over the cable with the page closed.
 
-Known: dismissing it costs ~30 ms (`worst 30ms blit`), because the restore
-forces every status component after clearing. `stall>25` will read roughly "times
-I dismissed this page". Backlogged, not fixed — the fix is shared dashboard code
-that was broken twice in one day.
+Dismissing it used to cost ~30 ms (`worst 30ms blit`) because the restore
+forced every status component in one pass; since `821431e3e4` the lock band is
+restored one component per pass and no stage exceeds ~12 ms. Measured: several
+dismissals, `stall>25` stays **0**, `worst` **20 ms** — and that 20 is Caps Lock,
+not the page. While the restore runs, `display_housekeeping_task()` stands aside
+(it gates on `debug_exit_step`); that gate is safe only because the pump is
+called from its own site in `housekeeping_task_kb()` — the gate's comment says
+why, do not fold the pump into the housekeeping task.
 
 ## Backlight (software PWM, dimmable, persisted)
 

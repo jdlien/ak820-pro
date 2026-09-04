@@ -153,23 +153,28 @@ loop catches up. So this costs latency, never a keystroke, and it does not need
 fixing on those grounds. The prediction that it "has been costing a stall on
 every Caps press" was wrong; the measurement is what corrected it.
 
-It exceeds 25 ms in exactly one place: the **Fn+D debug-page exit**, which forces
-a full repaint after clearing, so `draw_locks` paints CAPS *and* WIN *and* the
-slot text instead of only the indicator that changed. ~30 ms, on a deliberate
-keypress, on a feature added the same day.
+It exceeded 25 ms in exactly one place: the **Fn+D debug-page exit**, which forced
+a full repaint after clearing, so `draw_locks` painted CAPS *and* WIN *and* the
+slot text in one pass. ~30 ms, on a deliberate keypress, on a feature added the
+same day. **Fixed the same evening (`821431e3e4`)** without touching the queue:
+the restore stays on its lock stage painting one component per pass, and
+`draw_battery()` stopped clearing its whole 128x22 strip (~7.6 ms) on every
+percent tick. Measured after the flash: `count_ge_25ms_nonflash` 0 across
+several dismissals and 682 presses, `blit_gap_max_ms` 20 (Caps-on, unchanged).
 
 ### If it is ever worth doing
 
 Route the status band's text through `queue_line()` like the clock band already
-does. That removes the last >25 ms stall on the board and would also cut the
-19 sub-10 ms hitches.
+does. With the exit stall gone this would only trim the 10-20 ms Caps/battery
+paints and the sub-10 ms hitches — the queue moves glyphs, not the padlock,
+bar, bolt or clears — so the payoff is latency, not keystrokes.
 
 **Weigh the risk honestly.** This is shared dashboard code that runs constantly,
 and it was broken twice on 2026-09-03 while chasing this same class of problem —
 once badly enough to hang the board and trip the watchdog (`8dc74f7015`,
-reverted). The remaining exposure is one keystroke, only if a press begins *and*
-ends inside ~30 ms, only when dismissing a diagnostics page. That is a poor
-trade for touching this subsystem without a plan.
+reverted). With nothing on the board over 25 ms any more, the remaining exposure
+is zero keystrokes and a few milliseconds of latency. That is a poor trade for
+touching this subsystem without a plan.
 
 Related, larger, same file: `display.c` is ~2,200 lines carrying ten owners
 (clock, playback, text band, battery, locks, connection strip, backlight,
