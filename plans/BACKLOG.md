@@ -49,6 +49,27 @@ Not for now: it is a rewrite of a shared core driver on the input path of a
 daily driver, and the owner's constraint is "any flickering is a non-option".
 Measure with `--isr` before and after; the observer effect of the hooks is nil.
 
+## Clock: the sync interval and the firmware's frequency window must agree, and nothing checks it (2026-09-04)
+
+`sync_interval` (host, `ak820-timekeeper.py`) must exceed `WIN_LOCKED` (firmware,
+`rtc/rtc.c`) plus a slew's settling: a slew writes the period register ~3 times
+and every write restarts the frequency window, so a window longer than the
+clean stretch between syncs never completes and the loop freezes. That is
+exactly what happened 05:30–11:00 on 2026-09-04: a 120-s "fast" interval
+against the then 128-s window froze the loop at a wrong period while the ILRC
+sped up ~0.8 % overnight, the residual stayed at +300 ms per sync, and the
+large residual is what kept the interval fast — the symptom sustained its own
+cause. Both constants were individually reasonable; only their product was
+wrong, and it presented as "the clock is 300 ms off", not as two constants
+disagreeing. Fixed by hand (interval 180 s, window 32 s), which restores the
+convention but not a check.
+
+**Proposed:** expose `WIN_LOCKED` and the slew rate on an `HC_RTC` page and have
+the timekeeper read them at startup and refuse or warn if its interval is too
+short. That turns an unenforceable cross-language, cross-repo comment into a
+runtime check on the only channel that sees both sides; the health version byte
+degrades it gracefully on older firmware.
+
 ## Scan-rate observation
 
 Instrumented builds read ~230-310 Hz (console + probes overhead); the daily

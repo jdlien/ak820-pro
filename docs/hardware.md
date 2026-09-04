@@ -293,6 +293,14 @@ gone: rows are sampled in strict rotation now, not phase-selected. `scan_rate`
 dips slightly because the ISR does ~4x the scanning work per consume; that is the
 intended trade and it is cheap at this magnitude.
 
+**A full night of real use, 2026-09-03 22:25 → 09-04 11:14 (13 h):** 6,845
+presses, `count_ge_25ms` **0**, `count_ge_25ms_nonflash` **0**, `row_gap_max_ms`
+**10** (the post-flash keymap restore; typing never exceeded 7), worst
+non-flash blit 21 ms, 3 flash writes after the restore. Against the 156–169 ms
+gaps measured before the fix in 12-second windows, this is the claim that
+matters: thirteen hours in which nothing on the board could have dropped a
+keystroke.
+
 **Debounce only starts working here.** `sym_defer_pk`'s 5 ms window previously
 contained at most one sample of any given key, so it re-validated a stale value
 it never re-read — a no-op. At 4.6 ms per-row sampling it can finally observe
