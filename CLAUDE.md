@@ -74,7 +74,13 @@ enum sync; it refuses a dirty or off-pin tree. `flash.sh` preserves the VIA
 keymap across the flash and refuses to flash if the backup fails. Bootloader is
 `Fn`+`Esc`. **A flash erases the emulated EEPROM**: VIA keymap (restored by
 flash.sh), BT slot, LCD brightness, persisted RTC period (re-converges in
-~4 min with the host attached — designed, not a fault).
+~4 min with the host attached — designed, not a fault), **and the RGB
+effect/colour, which flash.sh does NOT restore** — every flash reverts the LEDs
+to `keyboard.json`'s `rgb_matrix.default`, so keep that equal to the owner's
+setup (read it back over VIA's lighting channel, `[0x08, 3, 1..4]`, before
+changing it; it was silently reverting on all nine flashes of 2026-09-03 until
+it was made to match). The default keymap is likewise the owner's VIA layout,
+regenerated with `scripts/keymap_to_c.py`, never hand-edited.
 
 ## Working with VIA
 
