@@ -37,7 +37,10 @@ BIAS_INTERVAL = 900      # s of continuity before a bias re-measurement (seed on
 CAP = os.path.expanduser("~/.ak820ctl-cap")   # ak820ctl's "proto lead_ms b_ppm" cache
 LEARN_MIN_ELAPSED = 240  # s between the two syncs a residual is measured across
 LEARN_MAX_BEFORE  = 400  # ms: larger residuals are convergence or a step, not a rate error
-LEARN_GAIN        = 0.5  # half-step, like the board's own loop
+LEARN_GAIN        = 0.25 # low gain: each residual carries the ILRC's wander as noise (see below)
+LEARN_MAX_DP      = 6    # ticks (~180 ppm): the ILRC wanders +-300 ppm on 5-min scales and the board's
+                         # loop follows it a few ticks per window, so "P unchanged" never happens;
+                         # a wider gate plus low gain averages the wander out instead of waiting it out
 BIAS_LIMIT        = 600  # ppm, matches the firmware's sanity clamp
 LOOP = 15
 SLEEP_GAP = 60
@@ -139,8 +142,11 @@ def learn_bias(state, reason, before, slewing):
     if reason != "periodic":
         state["learn"] = {"t": now, "pnom": pnom}
         return
-    if prev and pnom and prev.get("pnom") == pnom and before is not None and slewing \
-            and abs(before) <= LEARN_MAX_BEFORE and st.get("ref_state") == 2:
+    settled = prev and pnom and prev.get("pnom") and abs(prev["pnom"] - pnom) <= LEARN_MAX_DP
+    if prev and pnom and before is not None and slewing and abs(before) <= LEARN_MAX_BEFORE \
+            and st.get("ref_state") == 2 and not settled:
+        log(f"bias hold: P {prev.get('pnom')} -> {pnom} since the last sync (loop still moving); residual {before:+.1f} ms not learned")
+    if settled and before is not None and slewing and abs(before) <= LEARN_MAX_BEFORE and st.get("ref_state") == 2:
         elapsed = now - prev["t"]
         if elapsed >= LEARN_MIN_ELAPSED:
             e_slow = -before * 1000.0 / elapsed
