@@ -162,12 +162,12 @@ Full-panel diagnostics, nine rows in the 6×14 face, toggled with `Fn`+`D`.
 release — see `bt_ui.c` for why that distinction matters).
 
 ```
-uptime      2m 14s     ISR       73% 3900   ← occupancy + rate; field rate = /18
-rowgap      6ms r1     ← worst gap between looks at one key row. THE loss metric
-stall   25:0 10:3      ← 25 ms can lose a press; 10 ms is the leading indicator
-worst      22ms blit   ← how big, and what caused it (flash/blit/i2c/-)
-scan/s         346     BT drop        0     ← non-zero = a keystroke never sent
-BT t/o    352 49%      battery 100% min 100 ← min answers "is the % real?"
+Uptime      2m 14s     ISR       73% 3900   ← occupancy + rate; field rate = /18
+Rowgap      6ms r1     ← worst gap between looks at one key row. THE loss metric
+Stall   25:0 10:3      ← 25 ms can lose a press; 10 ms is the leading indicator
+Worst      22ms blit   ← how big, and what caused it (flash/blit/i2c/-)
+Scan/s         346     BT Drop        0     ← non-zero = a keystroke never sent
+BT T/O    352 49%      Battery 100% min 100 ← min answers "is the % real?"
 ```
 
 It exists for **untethered** use. With the cable attached `ak820health.py` reads
