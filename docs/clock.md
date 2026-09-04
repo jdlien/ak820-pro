@@ -32,12 +32,16 @@ discipline + host time sync; the PCF becomes write-only), **`PCF_LEGACY`**
   longer resets `SECCNT` mid-second (it used to discard the elapsed
   fraction — mean 0.5 s per trim; now < 1.6 ms).
 - **SOF frequency loop**: per RTC second the ISR accumulates the USB frame
-  delta (`FRMNO`); every 32 accepted samples (128 once locked) housekeeping
-  proposes a period with half-step damping, corrected by the host-measured
-  SOF bias (**+78 ppm ± 3 on this Mac's internal controller** — the bias is
-  load-bearing, ~47 ms per 10 min uncorrected; cached per controller ID in
-  `~/.ak820ctl-cap`). Took a fresh-seed clock from 7000 ppm to −66 ppm in
-  18 min.
+  delta (`FRMNO`); every **32** accepted samples housekeeping proposes a
+  period — a half step when the delta's sign disagrees with the previous
+  window's (noise, or the onset of a move), a **full step once two windows
+  agree** (drift: the ILRC wandering, followed within one window) — corrected
+  by the SOF bias the timekeeper **learns from the sync residual** (see "The
+  5-minute sawtooth"; the bias is load-bearing, ~47 ms per 10 min uncorrected;
+  cached in `~/.ak820ctl-cap`). Firmware `8608c4f680`, 2026-09-04: a
+  fresh-seed clock went 33600 → 33520 in **90 s** and then held ±2 ticks; the
+  old 128-s half-step loop took ~20 min. Was: 128-s windows once locked and
+  half steps always, which lagged the wandering ILRC by 100–160 ms per 5 min.
 - **Slew**: on a synced clock, |offset| ≤ 500 ms is slewed at 20 ms/s via
   latency-compensated transient periods — no visible jump (a 204 ms
   correction slewed over N=11 seconds in testing).
@@ -158,12 +162,18 @@ findings, in the order they were established:
    ppm on 5-minute scales, most visibly after the flash that raised the LED
    default (more current, warmer board). The loop half-steps on 128-s windows
    once locked, so it lags a moving target by 100–160 ms per 5 min. Two
-   mitigations shipped host-side: the timekeeper syncs every **120 s while the
+   mitigations shipped host-side: the timekeeper syncs every **180 s while the
    last residual exceeded 60 ms** (300 s otherwise), and the learner's gate
-   tolerates that wander. The real fix is firmware: shorter locked windows
-   (32 s) and fuller steps when consecutive deltas agree, so the loop follows
-   the oscillator within ~half a minute. Not done; measure with the
-   instrumented build's `[rtc] sof window` lines before tuning.
+   tolerates that wander. The firmware fix followed on 2026-09-04
+   (`8608c4f680`): 32-s windows and a full step once two consecutive windows
+   agree in sign, so the loop follows the oscillator within ~half a minute —
+   measured above. ⚠️ The fast interval was 120 s for one night and that
+   FROZE the old 128-s loop: a slew writes the period register ~3 times and
+   each write restarts the window, so the window never saw 128 clean seconds,
+   the residual stayed at +300 ms, and the residual kept the interval fast
+   (05:30–11:00). The sync interval must exceed the firmware's window plus a
+   slew's settling; nothing enforces that across the two repos
+   (`plans/BACKLOG.md`).
 
 Also corrected: the "~4 min" post-flash re-convergence is ~20 min in practice,
 because the ±16-tick lock threshold (±480 ppm) switches to 128-s windows early
