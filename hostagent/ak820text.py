@@ -149,16 +149,26 @@ def open_device():
     _enumeration_deferred().
     """
     global _cached_path, _last_enum, _enum_backoff
+
+    # Sample the AC line on EVERY call, not only when about to enumerate. It is
+    # one syscall and touches no device, and the state machine it drives needs
+    # to SEE the offline->online transition. Sampling only on the enumeration
+    # path meant a whole outage could pass unobserved while cached opens kept
+    # succeeding, so the transition was never recorded and the settle hold never
+    # armed -- which is the one moment it exists for.
+    deferred = _enumeration_deferred()
+
     if _cached_path is not None:
         try:
-            return hid.Device(path=_cached_path)
+            handle = hid.Device(path=_cached_path)
+            _enum_backoff = ENUM_MIN_INTERVAL    # a path that WORKS resets it
+            return handle
         except Exception:
             pass                     # gone, moved, or momentarily held
 
     if _last_enum is not None and time.monotonic() - _last_enum < _enum_backoff:
         raise SystemExit("raw HID interface busy or absent "
                          "(is VIA holding it? close the usevia.app tab)")
-    deferred = _enumeration_deferred()
     if deferred:
         raise SystemExit(f"raw HID interface unavailable; not enumerating ({deferred})")
 
@@ -167,12 +177,21 @@ def open_device():
 
     for d in hid.enumerate(VID, PID):
         if d.get("usage_page") == USAGE_PAGE and d.get("usage") == USAGE:
+            # ⚠️ Reset the backoff only once the open SUCCEEDS. Resetting on
+            # merely finding the interface meant a present-but-held device --
+            # a usevia.app tab, the common case -- reset it on every attempt
+            # and enumerated every 30 s forever, which is the sweep this whole
+            # mechanism exists to avoid.
+            try:
+                handle = hid.Device(path=d["path"])
+            except Exception:
+                break                # present but held: fall through to back off
             _cached_path = d["path"]
-            _enum_backoff = ENUM_MIN_INTERVAL          # found it; reset
-            return hid.Device(path=_cached_path)
+            _enum_backoff = ENUM_MIN_INTERVAL
+            return handle
 
     _enum_backoff = min(_enum_backoff * 2, ENUM_MAX_INTERVAL)
-    raise SystemExit("raw HID interface not found "
+    raise SystemExit("raw HID interface not found or not openable "
                      "(is VIA holding it? close the usevia.app tab)")
 
 
