@@ -12,7 +12,7 @@ Usage:
     ak820text.py "Some text" [--icon play|pause|stop|none]
     ak820text.py --clear
 """
-import argparse, sys
+import argparse, sys, time
 import venv_bootstrap  # noqa: F401 -- re-execs under the repo venv if hid is missing
 import hid
 
@@ -45,14 +45,59 @@ def to_ascii(s):
     return "".join(c if 0x20 <= ord(c) < 0x7F else "?" for c in s)
 
 
+_cached_path = None      # see open_device(); reset whenever an open by path fails
+# None, not 0.0: time.monotonic() counts from boot on Windows, so a zero
+# baseline would refuse the FIRST enumeration for an agent started at logon.
+_last_enum = None
+ENUM_MIN_INTERVAL = 30.0  # s between enumerations, however often opening fails
+
+
 def open_device():
     """The `hid` package (a QMK dependency) exposes hid.Device(path=...), not
     the hidapi-style hid.device()/open_path(). Match on usage page/usage rather
     than vid/pid alone -- the board publishes several HID interfaces and only
-    0xFF60/0x61 is QMK's raw HID."""
+    0xFF60/0x61 is QMK's raw HID.
+
+    ⚠️ The path is CACHED because enumeration is not free or local.
+    hid_enumerate() on Windows walks every HID interface on the machine and
+    OPENS each one to read its attributes -- the VID/PID filter is applied
+    afterwards, so filtering does not spare the other devices. The now-playing
+    agent calls this on every push, so an uncached version pokes every HID
+    device on the system roughly twenty times a minute, forever.
+
+    That is not theoretical here: ../jdrgb/docs/ups-wedge-incident.md records
+    exactly this pattern twice wedging an APC Back-UPS on this machine, while
+    ../jdups held a latched outage it could no longer see the end of and came
+    close to shutting the machine down on healthy mains. Only a physical
+    replug recovered it.
+
+    So: enumerate once, then reopen by path. A replug or a slider flip changes
+    the path and the open fails; that is the one case that re-enumerates.
+
+    Failing to open does NOT prove the board is gone -- an exclusive holder
+    (a usevia.app tab, or ak820ctl mid-sync) looks identical. Re-enumerating on
+    every such failure would put us straight back to enumerating per push for
+    as long as VIA is open, which is precisely the hazardous case, so
+    enumeration is rate-limited and a caller inside the window is told the
+    interface is busy instead.
+    """
+    global _cached_path, _last_enum
+    if _cached_path is not None:
+        try:
+            return hid.Device(path=_cached_path)
+        except Exception:
+            pass                     # gone, moved, or momentarily held
+
+    if _last_enum is not None and time.monotonic() - _last_enum < ENUM_MIN_INTERVAL:
+        raise SystemExit("raw HID interface busy or absent "
+                         "(is VIA holding it? close the usevia.app tab)")
+    _last_enum = time.monotonic()
+    _cached_path = None
+
     for d in hid.enumerate(VID, PID):
         if d.get("usage_page") == USAGE_PAGE and d.get("usage") == USAGE:
-            return hid.Device(path=d["path"])
+            _cached_path = d["path"]
+            return hid.Device(path=_cached_path)
     raise SystemExit("raw HID interface not found "
                      "(is VIA holding it? close the usevia.app tab)")
 
