@@ -25,9 +25,29 @@ and retried next round. Log: ~/Library/Logs/ak820pro-timekeeper.log
 import json, os, re, subprocess, sys, time
 
 AK820_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CTL  = os.environ.get("AK820_CTL") or os.path.join(AK820_ROOT, "time-util-ak820pro", "ak820ctl")
-LOG  = os.path.expanduser("~/Library/Logs/ak820pro-timekeeper.log")
-BIAS_STATE = os.path.expanduser("~/.ak820ctl-bias.json")
+_WIN = os.name == "nt"
+_EXE = ".exe" if _WIN else ""
+CTL  = os.environ.get("AK820_CTL") or os.path.join(AK820_ROOT, "time-util-ak820pro",
+                                                   "ak820ctl" + _EXE)
+
+# ⚠️ ak820ctl finds its calibration cache with getenv("HOME") (ak820ctl.c:225)
+# and falls back to "." when that is unset. Windows does not set HOME at all,
+# and an MSYS2 shell sets it to a POSIX path (/home/user) that a NATIVE binary
+# cannot resolve -- so ak820ctl would scatter .ak820ctl-cap into whatever the
+# current directory happened to be while this agent read %USERPROFILE%. The two
+# would never see the same file and the learned bias would silently never
+# arrive. Pin one home for both: this value is what run_ctl() exports as HOME.
+HOME = (os.environ.get("USERPROFILE") or os.path.expanduser("~")) if _WIN \
+       else os.path.expanduser("~")
+
+if _WIN:
+    # No ~/Library/Logs on Windows; %LOCALAPPDATA% is the conventional spot for
+    # a per-user service log and is writable by a Scheduled Task.
+    _LOGDIR = os.path.join(os.environ.get("LOCALAPPDATA") or HOME, "ak820pro")
+    LOG = os.path.join(_LOGDIR, "ak820pro-timekeeper.log")
+else:
+    LOG = os.path.expanduser("~/Library/Logs/ak820pro-timekeeper.log")
+BIAS_STATE = os.path.join(HOME, ".ak820ctl-bias.json")
 SYNC_INTERVAL = 300      # s (5 min) once the residual is small
 SYNC_INTERVAL_FAST = 180 # s while the last residual exceeded FAST_ABOVE_MS: the ILRC drifts
 FAST_ABOVE_MS = 60       # hundreds of ppm while the board warms (LED load, room), and the
@@ -42,7 +62,7 @@ FAST_ABOVE_MS = 60       # hundreds of ppm while the board warms (LED load, room
                          # hours on 2026-09-04. 180 s leaves ~150 clean seconds -- one old
                          # window, four of the 32-s windows firmware 8608c4f680 uses.
 BIAS_INTERVAL = 900      # s of continuity before a bias re-measurement (seed only, see learn_bias)
-CAP = os.path.expanduser("~/.ak820ctl-cap")   # ak820ctl's "proto lead_ms b_ppm" cache
+CAP = os.path.join(HOME, ".ak820ctl-cap")     # ak820ctl's "proto lead_ms b_ppm" cache
 LEARN_MIN_ELAPSED = 90   # s between the two syncs a residual is measured across. Was 240,
                          # which is longer than the fast interval, so the learner could never
                          # fire while the residual was large -- the one time it was needed
@@ -59,7 +79,14 @@ VID, PID = 0x0C45, 0x8009
 
 
 def log(msg):
-    with open(LOG, "a") as f:
+    # ~/Library/Logs always exists on macOS; %LOCALAPPDATA%\ak820pro does not.
+    d = os.path.dirname(LOG)
+    if d and not os.path.isdir(d):
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError:
+            pass
+    with open(LOG, "a", encoding="utf-8") as f:
         f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
 
 
@@ -73,7 +100,19 @@ def hid_present():
 
 
 def controller_id():
-    """Something that changes when the board moves to another USB controller/hub."""
+    """Something that changes when the board moves to another USB controller/hub.
+
+    The value is compared against itself between polls, never parsed, so any
+    stable-per-port string will do. macOS reads locationID out of ioreg; Windows
+    has no ioreg, but hidapi's device path already encodes the port/hub, which
+    is the same signal from a source both platforms already depend on."""
+    if _WIN:
+        try:
+            import hid
+            paths = sorted(str(d.get("path", "")) for d in hid.enumerate(VID, PID))
+            return "|".join(paths) if paths else "unknown"
+        except Exception:
+            return "unknown"
     try:
         out = subprocess.run(["ioreg", "-p", "IOUSB", "-w0", "-l"], capture_output=True, text=True, timeout=10).stdout
         m = re.search(r'"idProduct" = 32777.*?"locationID" = (\d+)', out, re.S)
@@ -82,8 +121,24 @@ def controller_id():
         return "unknown"
 
 
+# ⚠️ Windows: ak820ctl is a CONSOLE program and this agent runs under
+# pythonw.exe, which has no console -- so every spawn allocates a fresh one and
+# a terminal window flashes on screen and TAKES FOCUS. At 2-3 spawns per sync
+# that is a visible blink every few minutes, and a focus steal mid-keystroke can
+# eat the keypress: the agent for a keyboard would be dropping keys at the OS
+# level. CREATE_NO_WINDOW suppresses the console without hiding output, which
+# still comes back through the pipes. 0 elsewhere -- POSIX ignores it.
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0) if _WIN else 0
+
+
 def run_ctl(*args, timeout=30):
-    r = subprocess.run([CTL, *args], capture_output=True, text=True, timeout=timeout)
+    # HOME is exported explicitly: ak820ctl keys its calibration cache off it,
+    # and on Windows it is either unset or a POSIX path this native binary
+    # cannot use. See the HOME comment at the top.
+    env = dict(os.environ)
+    env["HOME"] = HOME
+    r = subprocess.run([CTL, *args], capture_output=True, text=True,
+                       timeout=timeout, env=env, creationflags=_NO_WINDOW)
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
