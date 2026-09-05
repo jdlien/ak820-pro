@@ -223,7 +223,7 @@ Both cost real time on 2026-09-03 by being believed:
 A file that confidently documents something untrue is worse than one that
 documents nothing.
 
-## Timekeeper: one unexplained restart and a 13-minute sync gap (2026-09-05, Windows)
+## Timekeeper: a 13-minute sync gap, and why it still matters (2026-09-05, Windows)
 
 **Symptom.** The Windows timekeeper Scheduled Task logged `timekeeper start` at
 15:11:46 with no corresponding stop, and no periodic syncs between 14:58:04 and
@@ -231,15 +231,33 @@ that restart -- 13 minutes with a 300 s cadence, so two syncs are missing. The
 board free-ran and was **+1042.5 ms** out by the time it resynced, corrected as
 a *step* rather than a slew because it exceeded the slew threshold.
 
-Of the five starts that day four are accounted for (install, the
-CREATE_NO_WINDOW fix, and the share-mode experiment). This one is not.
+There were five starts that day; the other four were deliberate restarts
+during development (install, the CREATE_NO_WINDOW fix, the share-mode
+experiment).
 
-**Not diagnosed.** Plausibly teardown of the Claude Code session that had
-issued `Start-ScheduledTask`, but a Scheduled Task should not be parented to
-the shell that started it, and the task's own restart policy (999 restarts,
-1 minute apart) would have restarted it far sooner than 13 minutes. No error
-precedes the gap: the agent only writes on entry, so a mid-loop death leaves no
-marker.
+**Cause: the host bugchecked.** Confirmed from the System event log after the
+fact -- an earlier draft of this entry speculated about Claude Code session
+teardown, which was wrong.
+
+| | |
+|---|---|
+| 14:58:04 | last sync before the gap |
+| **15:02:56** | unexpected shutdown; **BugCheck `0x0000001A` (MEMORY_MANAGEMENT)**, dump at `C:\WINDOWS\MEMORY.DMP` |
+| 15:10:30 | boot |
+| 15:11:46 | `timekeeper start` -- 76 s after boot, i.e. at logon |
+
+So the agent did not die; the machine did. The task's at-logon trigger brought
+it back correctly and it resynced on its own. Nothing here is an agent defect,
+and the restart policy never needed to fire.
+
+⚠️ Not being investigated here -- `0x1A` is a **kernel** memory-management
+fault, and these agents are user-mode HID I/O, which cannot directly cause one.
+Stated carefully though: user-mode I/O *can* exercise a driver that then
+faults, and a concurrent-HID-open experiment (two processes opening the raw
+interface at once, `plans/AK820-AGENT-PLAN.md`) ran roughly five minutes
+earlier. The dump names the faulting module and settles it; a separate
+investigation owns that. Suspicion at the time was a third-party Bluetooth
+utility.
 
 **Two reasons it is worth keeping.**
 
@@ -252,8 +270,13 @@ marker.
   raised. Evidence for the daemon's observability requirement: *last successful
   sync* has to be a first-class readout, not liveness.
 
-**Next step if it recurs:** log on exit as well as entry, and check the Task
-Scheduler operational event log around the gap.
+**Kept anyway**, because the two observations above stand on their own: the
+instrument cannot see a whole-second error, and `-Status` reports Running while
+nothing is being synced. Both are requirements on the Rust daemon regardless of
+what caused this particular outage.
+
+**If a gap recurs with no bugcheck:** log on exit as well as entry, and check
+the Task Scheduler operational log.
 
 ## Host tooling still enumerates HID; only ak820text was fixed (2026-09-05)
 
