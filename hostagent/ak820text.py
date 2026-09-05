@@ -12,7 +12,7 @@ Usage:
     ak820text.py "Some text" [--icon play|pause|stop|none]
     ak820text.py --clear
 """
-import argparse, sys, time
+import argparse, os, sys, time
 import venv_bootstrap  # noqa: F401 -- re-execs under the repo venv if hid is missing
 import hid
 
@@ -49,7 +49,73 @@ _cached_path = None      # see open_device(); reset whenever an open by path fai
 # None, not 0.0: time.monotonic() counts from boot on Windows, so a zero
 # baseline would refuse the FIRST enumeration for an agent started at logon.
 _last_enum = None
-ENUM_MIN_INTERVAL = 30.0  # s between enumerations, however often opening fails
+ENUM_MIN_INTERVAL = 30.0   # s before the first retry
+ENUM_MAX_INTERVAL = 300.0  # s ceiling; a held device is a persistent condition
+_enum_backoff = ENUM_MIN_INTERVAL
+
+MAINS_SETTLE = 60.0        # s after mains returns before enumerating again
+_ac_was_offline = False
+_ac_returned_at = None
+
+
+def _ac_offline():
+    """True only when Windows explicitly reports the AC line as offline.
+
+    On this machine the UPS presents as the system battery, so ACLineStatus
+    goes to 0 on a power failure. 255 means "unknown" -- what a desktop with no
+    battery at all reports -- and must NOT be treated as offline, or a machine
+    with no battery would defer enumeration forever.
+
+    One syscall, no device I/O: it touches nothing on the USB bus.
+    """
+    if os.name != "nt":
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class SYSTEM_POWER_STATUS(ctypes.Structure):
+            _fields_ = [("ACLineStatus", ctypes.c_ubyte),
+                        ("BatteryFlag", ctypes.c_ubyte),
+                        ("BatteryLifePercent", ctypes.c_ubyte),
+                        ("SystemStatusFlag", ctypes.c_ubyte),
+                        ("BatteryLifeTime", wintypes.DWORD),
+                        ("BatteryFullLifeTime", wintypes.DWORD)]
+
+        status = SYSTEM_POWER_STATUS()
+        if not ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(status)):
+            return False
+        return status.ACLineStatus == 0
+    except Exception:
+        return False        # never let a power query stop the agent working
+
+
+def _enumeration_deferred():
+    """Why enumeration should wait, or None if it may proceed.
+
+    ⚠️ The dangerous window is not enumeration in general -- it is enumeration
+    while the UPS is mid-transfer. ../jdups measured both 2026-08-03 wedges
+    landing within seconds of MAINS RETURNING, while the UPS was transferring
+    back and Windows' own battery driver was querying it too; enumeration on
+    steady mains has never hurt it. A power blip can also make this board
+    re-enumerate, which invalidates our cached path and would otherwise have us
+    walking every HID interface at exactly the worst moment.
+
+    So: hold off while AC is offline AND for MAINS_SETTLE after it returns,
+    which is the half a "stop while on battery" rule would get wrong -- it
+    would release precisely at the instant of transfer-back.
+    """
+    global _ac_was_offline, _ac_returned_at
+    if _ac_offline():
+        _ac_was_offline = True
+        _ac_returned_at = None
+        return "AC offline"
+    if _ac_was_offline:                      # offline -> online transition
+        _ac_was_offline = False
+        _ac_returned_at = time.monotonic()
+    if _ac_returned_at is not None and time.monotonic() - _ac_returned_at < MAINS_SETTLE:
+        return "mains returned less than %.0f s ago" % MAINS_SETTLE
+    return None
 
 
 def open_device():
@@ -77,27 +143,35 @@ def open_device():
     Failing to open does NOT prove the board is gone -- an exclusive holder
     (a usevia.app tab, or ak820ctl mid-sync) looks identical. Re-enumerating on
     every such failure would put us straight back to enumerating per push for
-    as long as VIA is open, which is precisely the hazardous case, so
-    enumeration is rate-limited and a caller inside the window is told the
-    interface is busy instead.
+    as long as VIA is open, which is precisely the hazardous case. A held
+    device is a PERSISTENT condition, so the retry backs off exponentially
+    rather than at a flat cadence, and never runs during a UPS transfer -- see
+    _enumeration_deferred().
     """
-    global _cached_path, _last_enum
+    global _cached_path, _last_enum, _enum_backoff
     if _cached_path is not None:
         try:
             return hid.Device(path=_cached_path)
         except Exception:
             pass                     # gone, moved, or momentarily held
 
-    if _last_enum is not None and time.monotonic() - _last_enum < ENUM_MIN_INTERVAL:
+    if _last_enum is not None and time.monotonic() - _last_enum < _enum_backoff:
         raise SystemExit("raw HID interface busy or absent "
                          "(is VIA holding it? close the usevia.app tab)")
+    deferred = _enumeration_deferred()
+    if deferred:
+        raise SystemExit(f"raw HID interface unavailable; not enumerating ({deferred})")
+
     _last_enum = time.monotonic()
     _cached_path = None
 
     for d in hid.enumerate(VID, PID):
         if d.get("usage_page") == USAGE_PAGE and d.get("usage") == USAGE:
             _cached_path = d["path"]
+            _enum_backoff = ENUM_MIN_INTERVAL          # found it; reset
             return hid.Device(path=_cached_path)
+
+    _enum_backoff = min(_enum_backoff * 2, ENUM_MAX_INTERVAL)
     raise SystemExit("raw HID interface not found "
                      "(is VIA holding it? close the usevia.app tab)")
 

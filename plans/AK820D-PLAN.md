@@ -130,6 +130,23 @@ So, following `../jdrgb/src/hid.rs`:
 4. Cache the path; reopen by path. Re-derive only when an open fails, and
    rate-limit that, for the reason in `ak820text.py`'s `open_device()`.
 
+**Two refinements from ../jdups (2026-09-05), already implemented in the Python
+agent and required here too:**
+
+- **Back the retry off exponentially**, 30 s doubling to a 300 s ceiling, not a
+  flat cadence. A held device is a *persistent* condition; jdups changed its own
+  reopen loop for the same reason.
+- **Gate re-enumeration on `GetSystemPowerStatus`.** jdups' measurements of both
+  2026-08-03 wedges put them within seconds of **mains returning**, while the
+  UPS was transferring back and Windows' battery driver was querying it too —
+  enumeration on steady mains has never hurt it. So the rule is not "stop while
+  on battery", which would release at exactly the wrong instant: hold off while
+  `ACLineStatus == 0` **and for 60 s after it returns to 1**. One syscall, no
+  device I/O. `255` is "unknown" (a desktop with no battery) and must not be
+  treated as offline. This matters because a power blip can itself make the
+  board re-enumerate, invalidating the cached path and otherwise sending us
+  walking every HID interface at the worst possible moment.
+
 **Open the device per transaction, not for the daemon's lifetime,** and with
 `FILE_SHARE_READ | FILE_SHARE_WRITE`. Holding it open would mean VIA can never
 connect while the daemon runs, which is a worse experience than the contention
