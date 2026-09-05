@@ -8,6 +8,11 @@ SonixFlasherC/
 # Build artifacts: large, disposable, regenerable.
 xpack-arm-none-eabi-gcc-13.3.1-1.1/
 venv/
+# Windows needs two more: venv-mingw64 (MSYS2 python, builds the firmware -- the
+# name is load-bearing, see env.sh) and venv-win (native python, the host agents
+# -- winsdk has no mingw wheel). Both are disposable and rebuilt by setup.sh.
+venv-mingw64/
+venv-win/
 
 .DS_Store
 __pycache__/
