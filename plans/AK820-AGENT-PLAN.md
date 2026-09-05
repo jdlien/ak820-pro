@@ -344,6 +344,71 @@ trigger it was captured.
   check that actually matters: a botched cancellation shows up later, as a dead
   handle or a buffer the kernel wrote into after we dropped it.
 
+### ⚠️ The finding that changes a design assumption: correlation is not sufficient
+
+Captured during the unplug run, while `ak820 watch` held a handle and wrote
+nothing but flash reads — eight reports arrived at once on channel `0x10`:
+
+```
++8 drained: [0x10/0x02, 0x10/0x02, 0x10/0x02, 0x10/0x02, 0x10/0x02,
+             0x10/0x03, 0x10/0x02, 0x10/0x02]
+```
+
+Five `RTC_GET_TIME`, one `RTC_SET_TIME_MS`, then two more GETs. That is the
+**timekeeper agent's entire clock transaction** — the five min-RTT measurement
+GETs, the SET, the verify GET and the learner's status read, exactly as
+[AK820-AGENT-CLOCK-TRANSACTION.md](AK820-AGENT-CLOCK-TRANSACTION.md) describes
+it — broadcast into a foreign process's read queue.
+
+This is a worse hazard than the text echo, and the difference matters:
+
+| | Text echo | Foreign clock reply |
+|---|---|---|
+| Shape | Obviously not a clock reply | A **valid** `RTC_GET_TIME` reply |
+| `ak820ctl`'s protocol-version check | Rejects it | **Passes** — proto is 2 |
+| `match_reply` on channel + command | Rejects it | **Accepts** it |
+| Failure mode | Detectable | **Silently wrong measurement** |
+
+Nothing in the bytes distinguishes another process's GET reply from ours. Taking
+theirs means pairing *their* board sample with *our* `t0`/`t1` timestamps — a
+wrong offset with a plausible RTT, fed straight into the lead learner. Ordering
+cannot fix it and neither can correlation.
+
+Consequences:
+
+- **"One owner" is load-bearing, not tidiness.** The plan already said a
+  one-shot CLI clock SET invalidates the learner baseline; this is sharper —
+  a concurrent clock **read** can silently corrupt a measurement. The process
+  mutex and the serialized executor are the mitigation, and there is no
+  cheaper one.
+- ⚠️ **Phase 3a's shadow mode is unsafe as originally written**, and now for a
+  second reason on top of the review's. Running a Rust reader alongside the
+  Python oracle means each can consume the other's replies. Deterministic
+  replay is not merely the better method; concurrent live comparison would
+  measure interference.
+- The only wire-level fix would be a nonce or sequence byte in the protocol,
+  i.e. a firmware change. Not proposed now — single ownership is sufficient and
+  free — but it is the answer if concurrent clock clients ever become a
+  requirement.
+
+### Unplug during a live transaction
+
+Captured in the same run:
+
+```
+ok     jedec 0x856017
+lost   HID write failed: The device is not connected. (0x8007048F)
+closed no AK820 Pro (0C45:8009) is present ...    ... x10
+open   \\?\HID#VID_0C45&PID_8009&MI_01#e&12502fcc&0&0000#{...}
+ok     jedec 0x856017
+```
+
+The device vanishing under an open handle surfaces on the **write**, as
+`ERROR_DEVICE_NOT_CONNECTED` (`0x8007048F`, Win32 1167) — a distinct, classifiable
+code, not a timeout and not a generic failure. Phase 4's state machine can map it
+directly. Recovery was clean: absent for ~5 s, then reopened on the same path and
+answered correctly.
+
 **Presence, cold.** With the cable out: `ak820 list` reads *28 HID interfaces
 present, 0 of them this board's* against 33 and 5 with it in, and `ak820 watch`
 gave 120 consecutive polls over 60 s all reporting `Absent` with the right
@@ -351,13 +416,9 @@ message — no hang, no timeout, nothing unrelated opened. Replugging returned t
 **same** device path (`e&12502fcc`), which is worth knowing for phase 4: a path
 surviving a reconnect means a path cannot be used as a generation marker.
 
-**Not yet done, and honestly outstanding:**
-
-- **Unplug during a live transaction.** The cold-absent path above is proven,
-  but which OS error surfaces when the device vanishes under an *open handle*
-  is not established, and the presence state machine in phase 4 wants it.
-- **VIA against a live transaction.** The two Python agents are a heavier
-  concurrency load, but they are not the same program.
+**Not yet done, and honestly outstanding:** VIA against a live transaction. The
+two Python agents are a heavier concurrency load, but they are not the same
+program.
 
 Round-trip latency is **~5–18 ms**, higher than the single-digit figure assumed
 when the request budget was set; not a problem at a 300 s sync interval, but

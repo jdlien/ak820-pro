@@ -21,6 +21,29 @@
 //! arrives. It fails safe only by accident -- a text echo lands a bogus value in
 //! `rep[11]` and the protocol-version check refuses to act. `ak820health.py`
 //! validates its header and is the model followed here.
+//!
+//! # ⚠️ Correlation is necessary and **not sufficient**
+//!
+//! Captured 2026-09-05 while this crate held a handle and wrote nothing but
+//! flash reads: eight reports arrived on channel `0x10` -- five `RTC_GET_TIME`,
+//! one `RTC_SET_TIME_MS`, then two more GETs. That is the *timekeeper agent's*
+//! whole clock transaction, broadcast into our queue.
+//!
+//! Read what that means carefully, because it is worse than the text-echo case
+//! and it is not fixed by anything in this module. A foreign **text** echo is
+//! recognisably not a clock reply, so [`match_reply`] discards it. A foreign
+//! **`RTC_GET_TIME` reply is a well-formed `RTC_GET_TIME` reply** -- right
+//! channel, right command, right protocol version, plausible fields. Nothing in
+//! these bytes distinguishes it from the answer to *our* GET. Two processes
+//! issuing the same command produce interchangeable replies, and taking theirs
+//! means computing an offset from a board sample paired with our timestamps:
+//! a silently wrong measurement rather than a detectable error.
+//!
+//! So this module makes cross-channel confusion impossible, which is what it
+//! can do with the wire as it stands. Same-command confusion needs either a
+//! single owner of the interface -- the daemon's whole reason for existing --
+//! or a nonce in the protocol, which would be a firmware change. Do not read
+//! the correlation below as making concurrent clock clients safe.
 
 /// Report size the firmware expects, excluding the leading report id.
 pub const REPORT_LEN: usize = 32;
