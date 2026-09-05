@@ -17,9 +17,11 @@ set -u
 cd "$(dirname "$0")" || exit 1
 source ./env.sh                          # must be sourced from the repo root
 
-# `hid` lives in the venv only. env.sh puts venv/bin on PATH, but pin it the way
-# nowplaying-macos.sh does so this still works if PATH is not what we expect.
-PY="${PY:-$AK820_ROOT/venv/bin/python}"
+# `hid` lives in the venv only. env.sh puts the venv's bin on PATH, but pin it
+# the way nowplaying-macos.sh does so this still works if PATH is not what we
+# expect. $AK820_VENV, not a literal "venv": the directory name is
+# platform-specific (see env.sh).
+PY="${PY:-$AK820_VENV/bin/python}"
 [ -x "$PY" ] || PY=python3
 
 FW="" ; BACKUP=1
@@ -33,12 +35,27 @@ done
 FW="${FW:-$QMK_HOME/a_jazz_ak820pro_via.bin}"
 [ -f "$FW" ] || { echo "no such firmware: $FW"; exit 1; }
 
-BOOTLOADER='"idProduct" = 28992'         # 0x7140
-RUNNING='"idProduct" = 32777'            # 0x8009
-usb() { ioreg -p IOUSB -w0 -l 2>/dev/null | grep -q "$1"; }
+BOOTLOADER=0x7140
+RUNNING=0x8009
+# Ask hidapi rather than ioreg: the Sonix bootloader and QMK are both HID
+# devices, so one enumerate answers on every platform. `ioreg -p IOUSB` was
+# macOS-only and was the single thing that stopped this script running under
+# MSYS2, which is the Windows build environment (see docs/hardware.md).
+usb() { "$PY" -c 'import hid,sys; sys.exit(0 if hid.enumerate(0x0C45, int(sys.argv[1],16)) else 1)' "$1" 2>/dev/null; }
+
+# BSD stat (macOS) and GNU stat (MSYS2, Linux) share no flags, and they cannot
+# be probed by trying one first: GNU's -f means --file-system, so it SUCCEEDS
+# and prints block counts instead of failing through to the -c form. Branch on
+# the platform instead. Both print "<when>  (<n> bytes)".
+fstat() {
+    case "$(uname -s)" in
+        Darwin|*BSD*) stat -f '%Sm  (%z bytes)' "$1" 2>/dev/null ;;
+        *)            stat -c '%y  (%s bytes)' "$1" 2>/dev/null ;;
+    esac || echo '(unknown)'
+}
 
 echo "firmware : $FW"
-stat -f "built    : %Sm  (%z bytes)  <- confirm this is your build" "$FW"
+echo "built    : $(fstat "$FW")  <- confirm this is your build"
 echo
 
 # qmk console claims the HID interface exclusively; a second instance spins in a
@@ -54,7 +71,7 @@ if [ "$BACKUP" = 1 ]; then
         # is, because restoring a stale keymap silently is worse than not doing it.
         if [ -f "$KEYMAP" ]; then
             echo "== already in the bootloader -- cannot dump =="
-            stat -f "   using existing backup from %Sm" "$KEYMAP"
+            echo "   using existing backup from $(fstat "$KEYMAP")"
             echo "   (if you have changed the keymap since, Ctrl-C, leave the"
             echo "    bootloader by replugging, and re-run to capture it)"
             echo
@@ -89,7 +106,7 @@ echo "bootloader detected (0C45:7140)"
 # Detached on purpose: interrupting sonixflasher mid-write leaves the board
 # erased, and an impatient timeout has done exactly that here before.
 echo "== flashing =="
-LOG="$(mktemp -t ak820flash)"
+LOG="$(mktemp "${TMPDIR:-/tmp}/ak820flash.XXXXXX")"   # -t differs BSD vs GNU
 nohup ./SonixFlasherC/sonixflasher --vidpid 0c45/7140 --file "$FW" > "$LOG" 2>&1 &
 FPID=$!
 wait $FPID
