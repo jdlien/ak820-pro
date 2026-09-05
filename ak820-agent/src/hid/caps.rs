@@ -6,10 +6,13 @@
 //!
 //! The split matters for the reason [`super::path`] explains: the device path
 //! is documented as **opaque**, so matching it chooses what to *open*, and the
-//! device itself has to agree before we choose what to *write to*. The board
-//! puts four collections behind one VID/PID -- the keyboard, the consumer
-//! controls, VIA's own, and ours -- and three of them would accept a write and
-//! do something we did not intend with it.
+//! device itself has to agree before we choose what to *write to*. Measured
+//! 2026-09-05, this board puts **five** collections behind one VID/PID -- a
+//! boot keyboard, an NKRO keyboard, system control, consumer control, and ours
+//! -- and every one of the other four would accept a write and do something we
+//! did not intend with it. (VIA is not among them: it rides on our raw-HID
+//! interface, which is why VIA contention is about *replies*, not about the
+//! open.)
 //!
 //! [`device`]: super::device
 
@@ -40,6 +43,11 @@ pub enum Reject {
     /// The right collection could not carry our protocol. A 32-byte command
     /// truncated into a shorter report is a malformed command, not a short one.
     ReportLen { input: u16, output: u16 },
+    /// It opened and then would not answer `HidD_GetAttributes` or produce
+    /// preparsed data at all. Distinct from every variant above, because those
+    /// say what the device *is* and this one says it would not say -- and a
+    /// device that will not describe itself is the last thing to write to.
+    Silent,
 }
 
 impl std::fmt::Display for Reject {
@@ -60,6 +68,7 @@ impl std::fmt::Display for Reject {
                 f,
                 "reports are {input}/{output} bytes in/out, not the {WIRE_LEN} this protocol needs"
             ),
+            Reject::Silent => write!(f, "the device would not say what it is"),
         }
     }
 }
@@ -243,6 +252,19 @@ mod tests {
             read_only.check(VID, PID),
             Err(Reject::ReportLen { output: 0, .. })
         ));
+    }
+
+    /// A device that will not describe itself must not be reported as one that
+    /// described itself as nothing: `0000:0000` is a real-looking answer, and
+    /// somebody reading the log would go looking for a device that has it.
+    #[test]
+    fn silence_is_its_own_rejection() {
+        assert_eq!(Reject::Silent.to_string(), "the device would not say what it is");
+        assert_ne!(
+            Reject::Silent,
+            Reject::Attributes { vid: 0, pid: 0 },
+            "these must not be spelled the same way"
+        );
     }
 
     /// The messages end up in front of an owner with one keyboard and no

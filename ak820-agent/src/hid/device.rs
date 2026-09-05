@@ -39,7 +39,7 @@ use windows::Win32::Storage::FileSystem::{
 use windows::Win32::System::IO::{CancelIoEx, GetOverlappedResult, OVERLAPPED};
 use windows::Win32::System::Threading::{CreateEventW, ResetEvent, WaitForSingleObject};
 
-use super::caps::Identity;
+use super::caps::{Identity, Reject};
 use super::path;
 use super::{Drained, Error};
 use crate::proto::{self, Channel, REPORT_LEN, Verdict};
@@ -228,29 +228,23 @@ impl Interface {
             source,
         })?;
 
-        let device = |handle, event, identity| Device {
-            handle,
-            event,
-            identity,
-            text: self.text.clone(),
+        // Close on every failure below. The device is ours by the time it is
+        // open, but a handle left behind on a rejected collection is a handle
+        // still receiving that collection's input reports.
+        let reject = |why| {
+            unsafe { CloseHandle(handle).ok() };
+            Err(Error::Incompatible {
+                path: self.text.clone(),
+                why,
+            })
         };
 
         let identity = match identify(handle) {
             Some(id) => id,
-            None => {
-                unsafe { CloseHandle(handle).ok() };
-                return Err(Error::Incompatible {
-                    path: self.text.clone(),
-                    why: super::caps::Reject::Attributes { vid: 0, pid: 0 },
-                });
-            }
+            None => return reject(Reject::Silent),
         };
         if let Err(why) = identity.check(self.want.0, self.want.1) {
-            unsafe { CloseHandle(handle).ok() };
-            return Err(Error::Incompatible {
-                path: self.text.clone(),
-                why,
-            });
+            return reject(why);
         }
 
         // Without this the driver keeps a small input queue and drops reports
@@ -269,7 +263,12 @@ impl Interface {
             }
         };
 
-        Ok(device(handle, event, identity))
+        Ok(Device {
+            handle,
+            event,
+            identity,
+            text: self.text.clone(),
+        })
     }
 
     /// Ask what this collection is without taking access to it.
@@ -298,7 +297,7 @@ impl Interface {
         unsafe { CloseHandle(handle).ok() };
         got.ok_or_else(|| Error::Incompatible {
             path: self.text.clone(),
-            why: super::caps::Reject::Attributes { vid: 0, pid: 0 },
+            why: Reject::Silent,
         })
     }
 }
