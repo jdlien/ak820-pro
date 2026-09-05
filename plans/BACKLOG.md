@@ -250,14 +250,20 @@ So the agent did not die; the machine did. The task's at-logon trigger brought
 it back correctly and it resynced on its own. Nothing here is an agent defect,
 and the restart policy never needed to fire.
 
-⚠️ Not being investigated here -- `0x1A` is a **kernel** memory-management
-fault, and these agents are user-mode HID I/O, which cannot directly cause one.
-Stated carefully though: user-mode I/O *can* exercise a driver that then
-faults, and a concurrent-HID-open experiment (two processes opening the raw
-interface at once, `plans/AK820-AGENT-PLAN.md`) ran roughly five minutes
-earlier. The dump names the faulting module and settles it; a separate
-investigation owns that. Suspicion at the time was a third-party Bluetooth
-utility.
+**Root cause, from the kernel dump** (analysed in a separate session; bucket
+`0x1a_31_nt!MiApplyCompressedFixups`, crash time 15:03:01 by the dump, five
+seconds later than the event log's write): a third-party utility launched a WPF
+process, and the kernel faulted while re-basing the shared NGEN image
+`PresentationFramework.ni.dll` for it -- `NtCreateSection` ->
+`MiShareExistingControlArea` -> ... -> `MiApplyCompressedFixups`, decoding its
+own compressed relocation stream from paged pool and running off the end of a
+4 KB page. Working theory there is a transient RAM or bus read error.
+
+**Nothing of ours is in the stack**: no `hidclass`, `HIDUSB`, `kbdhid` or
+`mouhid`, no I/O manager at all, no Bluetooth. A concurrent-HID-open experiment
+of ours had ended about five minutes earlier and was explicitly checked and
+ruled out; it is recorded here only so the coincidence is not rediscovered as a
+suspicion later.
 
 **Two reasons it is worth keeping.**
 
