@@ -314,6 +314,14 @@ note: discarded 2 report(s) that answered another request:
 
 Channel `0x12` is text; `0x04` is `TEXT_PLAYBACK` and `0x02` is `TEXT_CLEAR` —
 the *now-playing agent's* writes, echoed to a process that had written nothing.
+
+**And it is not a rare race — it is a cadence.** `ak820 watch 120`, two
+requests a second with media playing: **240/240 correct**, with **44 foreign
+reports drained**, arriving on the now-playing agent's own rhythm — a
+`TEXT_PLAYBACK` echo every ~3 s and a `TEXT_CLEAR` every ~30 s. Every text
+update that agent makes lands in our read queue. So the traffic that would feed
+`ak820ctl`'s `xfer()` a wrong reply is present continuously whenever something
+is playing, not occasionally under load.
 ⚠️ Note what `ak820ctl`'s `xfer()` would have done with the first of those as
 the answer to `FC_INFO`: `rep[3]` is the playback state byte, so state 0 reads
 as `FS_OK`, and it would have printed a **JEDEC id decoded from a track
@@ -336,12 +344,24 @@ trigger it was captured.
   check that actually matters: a botched cancellation shows up later, as a dead
   handle or a buffer the kernel wrote into after we dropped it.
 
-**Not yet done, and honestly outstanding:** VIA itself has not been opened
-against a live transaction (the two Python agents are a stronger concurrency
-load but not the same program), and unplug-during-transaction is a physical test
-still to run. Round-trip latency is **~5–18 ms**, higher than the single-digit
-figure assumed when the request budget was set; not a problem at a 300 s sync
-interval, but worth remembering before anything gets built on a tight one.
+**Presence, cold.** With the cable out: `ak820 list` reads *28 HID interfaces
+present, 0 of them this board's* against 33 and 5 with it in, and `ak820 watch`
+gave 120 consecutive polls over 60 s all reporting `Absent` with the right
+message — no hang, no timeout, nothing unrelated opened. Replugging returned the
+**same** device path (`e&12502fcc`), which is worth knowing for phase 4: a path
+surviving a reconnect means a path cannot be used as a generation marker.
+
+**Not yet done, and honestly outstanding:**
+
+- **Unplug during a live transaction.** The cold-absent path above is proven,
+  but which OS error surfaces when the device vanishes under an *open handle*
+  is not established, and the presence state machine in phase 4 wants it.
+- **VIA against a live transaction.** The two Python agents are a heavier
+  concurrency load, but they are not the same program.
+
+Round-trip latency is **~5–18 ms**, higher than the single-digit figure assumed
+when the request budget was set; not a problem at a 300 s sync interval, but
+worth remembering before anything gets built on a tight one.
 
 Carry over the sibling's cancellation discipline: `CancelIoEx` *requests*
 cancellation — buffers and `OVERLAPPED` must stay alive until completion, or a
