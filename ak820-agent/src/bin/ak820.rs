@@ -27,6 +27,11 @@ fn main() -> ExitCode {
         ["list", "--caps"] => list(true),
         ["info"] => info(),
         ["selftest"] => selftest(),
+        ["watch"] => watch(20),
+        ["watch", secs] => secs
+            .parse()
+            .map_err(|_| format!("not a number of seconds: {secs}"))
+            .and_then(watch),
         ["--help"] | ["help"] | [] => {
             usage();
             return ExitCode::SUCCESS;
@@ -55,6 +60,7 @@ fn usage() {
          \x20 ak820 list --caps    ... and what each one says once opened\n\
          \x20 ak820 info           flash id + writable base\n\
          \x20 ak820 selftest       exercise the cancellation path and recover\n\
+         \x20 ak820 watch [secs]   narrate presence; unplug the cable to see it\n\
          \n\
          Provisioning stays in ak820ctl. Nothing here erases or writes flash."
     );
@@ -120,6 +126,72 @@ fn info() -> Result<(), String> {
         info.asset_base
     );
     report_drained(&drained);
+    Ok(())
+}
+
+/// Ask the board the same question twice a second and narrate what happens.
+///
+/// A diagnostic, **not** the presence state machine the plan calls for -- it
+/// reopens on any failure rather than distinguishing absent from busy from
+/// unresponsive. What it is for is watching a transition happen: unplug the
+/// cable while this runs and the sequence of outcomes is the evidence for how
+/// a vanishing device actually presents itself, which is the one thing about
+/// the transport that cannot be established by reasoning about it.
+///
+/// It deliberately holds the handle across requests, which the daemon will not
+/// do. That is the point: it is the only way to see what an open handle does
+/// when the device underneath it goes away.
+fn watch(seconds: u64) -> Result<(), String> {
+    use std::time::{Duration, Instant};
+
+    let until = Instant::now() + Duration::from_secs(seconds);
+    let mut held: Option<Device> = None;
+    let mut last = String::new();
+    let mut repeats = 0usize;
+
+    while Instant::now() < until {
+        let line = match held.as_ref() {
+            None => match device::open_board() {
+                Ok(dev) => {
+                    let line = format!("open   {}", dev.path());
+                    held = Some(dev);
+                    line
+                }
+                Err(e) => format!("closed {e}"),
+            },
+            Some(dev) => match flash::read_info(dev) {
+                Ok((info, drained)) => {
+                    let note = if drained.is_empty() {
+                        String::new()
+                    } else {
+                        format!("  (+{} drained: {drained:?})", drained.len())
+                    };
+                    format!("ok     jedec 0x{:06X}{note}", info.jedec)
+                }
+                Err(e) => {
+                    held = None; // whatever happened, this handle is finished
+                    format!("lost   {e}")
+                }
+            },
+        };
+
+        // Collapse repeats so a transition is legible instead of buried in a
+        // hundred identical lines.
+        if line == last {
+            repeats += 1;
+        } else {
+            if repeats > 0 {
+                println!("       ... x{}", repeats + 1);
+            }
+            println!("{line}");
+            last = line;
+            repeats = 0;
+        }
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    if repeats > 0 {
+        println!("       ... x{}", repeats + 1);
+    }
     Ok(())
 }
 
