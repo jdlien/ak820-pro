@@ -52,7 +52,7 @@ def load_keycode_names():
                    key=lambda p: [int(x) if x.isdigit() else x
                                   for x in re.findall(r"\d+|[a-z]+", os.path.basename(p))])
     for f in files:
-        with open(f) as fh:
+        with open(f, encoding="utf-8") as fh:
             spec = hjson.load(fh)
         for k, v in spec.get("keycodes", {}).items():
             if not isinstance(v, dict) or "key" not in v:
@@ -64,7 +64,7 @@ def load_keycode_names():
 
 def load_board_enums():
     """Custom keycodes (QK_KB_0 + i) and layer names from ak820pro.h."""
-    src = open(os.path.join(KB, "ak820pro.h")).read()
+    src = open(os.path.join(KB, "ak820pro.h"), encoding="utf-8").read()
     src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
     src = re.sub(r"//[^\n]*", "", src)
     m = re.search(r"enum ak820pro_keycodes\s*\{(.*?)\}", src, re.S)
@@ -167,7 +167,7 @@ def boot_reachable(dump, namer):
 
 
 def render(dump, namer):
-    kb = json.load(open(os.path.join(KB, "keyboard.json")))
+    kb = json.load(open(os.path.join(KB, "keyboard.json"), encoding="utf-8"))
     order = [tuple(e["matrix"]) for e in kb["layouts"][LAYOUT]["layout"]]
     L, R, C = dump["layers"], dump["rows"], dump["cols"]
     raw = bytes.fromhex(dump["keymap"])
@@ -211,7 +211,7 @@ def main():
     ap.add_argument("dump", help="JSON from `ak820keymap.py dump`")
     ap.add_argument("--write", action="store_true", help="rewrite keymaps[] and encoder_map[] in keymap.c")
     a = ap.parse_args()
-    dump = json.load(open(a.dump))
+    dump = json.load(open(a.dump, encoding="utf-8"))
     namer = Namer()
     keymaps_c, enc_c = render(dump, namer)
     if namer.unknown:
@@ -228,14 +228,16 @@ def main():
         print(keymaps_c); print(); print(enc_c)
         return
 
-    src = open(KEYMAP).read()
+    src = open(KEYMAP, encoding="utf-8").read()
     k0 = src.index("const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {")
     k1 = src.index("\n};", k0) + len("\n};")
     src = src[:k0] + keymaps_c + src[k1:]
     e0 = src.index("const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {")
     e1 = src.index("\n};", e0) + len("\n};")
     src = src[:e0] + enc_c + src[e1:]
-    open(KEYMAP, "w").write(src)
+    # newline="\n": the default would translate to CRLF on Windows and rewrite
+    # every line of keymap.c, burying the real keymap change in a whole-file diff.
+    open(KEYMAP, "w", encoding="utf-8", newline="\n").write(src)
     print(f"rewrote {os.path.relpath(KEYMAP, ROOT)} from {a.dump} (saved {dump.get('saved')})")
 
 

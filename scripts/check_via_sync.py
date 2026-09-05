@@ -15,7 +15,7 @@ KB = os.path.join(os.path.dirname(__file__), "..",
 
 
 def enum_count(header):
-    src = open(header).read()
+    src = open(header, encoding="utf-8").read()
     m = re.search(r"enum ak820pro_keycodes \{(.*?)AK820PRO_SAFE_RANGE", src, re.S)
     if not m:
         sys.exit("check_via_sync: could not find ak820pro_keycodes enum")
@@ -27,7 +27,7 @@ def enum_count(header):
 
 def main():
     n_enum, names = enum_count(os.path.join(KB, "ak820pro.h"))
-    via = json.load(open(os.path.join(KB, "via.json")))
+    via = json.load(open(os.path.join(KB, "via.json"), encoding="utf-8"))
     n_via = len(via["customKeycodes"])
     if n_enum != n_via:
         sys.exit(f"check_via_sync: FAIL -- ak820pro_keycodes has {n_enum} entries "
