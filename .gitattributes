@@ -24,3 +24,10 @@ env.sh          text eol=lf
 # deps.lock is parsed line-by-line by setup.sh: a CRLF blank line reads as
 # "\r", not "", so the comment/blank skip misses it and it tries to clone "".
 deps.lock       text eol=lf
+
+# The Rust host agent. Cargo and rustc are native Windows tools and do not care,
+# but the rest of this repo is pinned to LF and a mixed tree makes every diff
+# noisy for no reason.
+*.rs            text eol=lf
+*.toml          text eol=lf
+Cargo.lock      text eol=lf
