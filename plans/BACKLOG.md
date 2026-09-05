@@ -1,5 +1,39 @@
 # Backlog — known, accepted, or deferred items
 
+## ⚠️ Concurrent raw-HID use breaks VIA, and has been all along (2026-09-05)
+
+**Symptom the owner sees:** VIA's console fills with `Receiving incorrect
+response for command`, and lighting or keymap changes appear not to take.
+
+**Cause.** Windows delivers HID input reports to every open handle, so any
+other process talking to the board injects replies into VIA's stream. Measured
+with VIA's own log: it asked `CUSTOM_MENU_SET_VALUE` and received
+`07 11 01 00 85 60 17 CE` — an `FC_INFO` reply meant for another process — and
+also `07 12 04 00`, the **now-playing agent's** `TEXT_PLAYBACK` echo. That agent
+writes every ~3 s, so this is a near-certainty during any VIA session.
+
+⚠️ **One injected report desyncs VIA persistently.** After the first bad pair,
+every subsequent command received the *previous* command's echo; the stream
+does not resynchronise on its own.
+
+⚠️ **The writes still land.** The board executes and echoes each command — VIA
+loses the confirmation, not the write. So a change made during a desync has
+probably applied even though VIA reported an error, and VIA's displayed state
+may then disagree with the board. Read values back (lighting is
+`[0x08, 3, 1..4]`) rather than trusting the UI afterwards.
+
+**Workaround now:** stop the host agents before a VIA session —
+`hostagent/install-agents-windows.ps1 -Status` shows them.
+
+**Fix, proposed for `ak820-agent` phase 4** and recorded in
+[AK820-AGENT-PLAN.md](AK820-AGENT-PLAN.md#️-via-coexistence-the-broadcast-is-bidirectional-and-via-is-the-victim):
+VIA's traffic is unmistakable in the daemon's drain log — leading id
+`0x07`/`0x08`/`0x09` on QMK lighting channel `0x03`, which none of our four
+channels can collide with — so the daemon can defer non-urgent work while VIA
+is active. A clock sync has 300 s of slack and no reason to spend it stepping
+on somebody's UI. That would make the daemon **better** for VIA than the Python
+agents it replaces.
+
 ## ~~Red LED-row flash during/after RGB adjustment~~ — FIXED 2026-09-01 (6ca0102941)
 
 **Resolution:** the driver's own `EFLD1.state != FLASH_PGM` guard skipped
@@ -268,6 +302,11 @@ bytes of mismatch, and flipping those three bits back matches the on-disk
 `.reloc` block exactly. The other 1,106 page streams in the block are intact.
 Recommendation to the owner was MemTest86 and the ASUS 2402 BIOS.
 
+**Status 2026-09-05:** the owner is applying the BIOS update. ⚠️ The flash
+prohibition below is **not** lifted by the BIOS update alone — it is lifted by a
+clean **MemTest86** pass, because the evidence was three bit flips in one cache
+line and only a memory test can speak to that. Until then the rule stands.
+
 **Nothing of ours is in the stack**: no `hidclass`, `HIDUSB`, `kbdhid` or
 `mouhid`, no I/O manager at all, no Bluetooth. A concurrent-HID-open experiment
 of ours had ended about five minutes earlier and was explicitly checked and
@@ -343,5 +382,8 @@ were running hard, and enumeration on steady mains has never hurt it. But
 [AK820-AGENT-CLOCK-PARITY.md](AK820-AGENT-CLOCK-PARITY.md) phase 3a**, which
 deliberately runs the oracle harder and longer than normal operation.
 
-The Rust agent removes the class entirely: Configuration Manager listing opens
-nothing, and only this board's own interfaces are ever opened.
+The Rust agent removes the class entirely, and as of 2026-09-05 this is built
+rather than intended: `ak820-agent`'s discovery reads the Configuration
+Manager's own records and opens nothing. `ak820 list` prints the ratio it
+avoids — **33 HID interfaces present, 5 of them this board's** — and at most
+one of those five is ever opened.

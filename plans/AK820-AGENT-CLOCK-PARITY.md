@@ -167,6 +167,24 @@ agent and diffing decisions. The review dismantled it, correctly:
 - The current logs cannot support the diff anyway: they lack complete gate
   inputs, timestamps, cache state and state transitions.
 
+⚠️ **And a fifth reason, measured 2026-09-05, which is decisive on its own.**
+Windows delivers HID input reports to *every* open handle. A Rust process that
+held a handle and wrote nothing but flash reads received the Python
+timekeeper's **entire clock transaction** — five `RTC_GET_TIME`, the
+`RTC_SET_TIME_MS`, the verify GET and the status read.
+
+A foreign `RTC_GET_TIME` reply is a **well-formed `RTC_GET_TIME` reply**: right
+channel, right command, protocol version 2, plausible fields. No amount of
+request/reply correlation can tell it from the answer to one's own GET, so a
+shadow reader can consume the oracle's replies and pair *their* board sample
+with *its own* `t0`/`t1` — and the oracle can consume the shadow's. Two live
+readers do not merely produce different inputs; **they corrupt each other's
+measurements**, silently and in both directions.
+
+So a concurrent live comparison would be measuring interference, not parity.
+Replay is not the better method here, it is the only sound one. See
+[AK820-AGENT-PLAN.md](AK820-AGENT-PLAN.md#️-the-finding-that-changes-a-design-assumption-correlation-is-not-sufficient).
+
 ### 3a — deterministic differential replay
 
 Capture from the oracle: wall **and** monotonic timestamps, presence

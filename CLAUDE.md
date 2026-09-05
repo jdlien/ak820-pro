@@ -32,8 +32,10 @@ submodule sits on our `ak820pro-patches` branch.
 Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
 
 **In progress: `ak820-agent/`** — a Rust rewrite of the two Windows host agents
-as one daemon. Read [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
-first; it carries the phase gates and three findings that are load-bearing.
+as one daemon. **Phase 0 complete 2026-09-05**: discovery, the `CreateFileW`
+transport and `ak820 info`, 49 tests, gate met in full. Read
+[`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
+first; it carries the phase gates and the findings that are load-bearing.
 Its two companions are part of the plan, not background:
 [`AK820-AGENT-CLOCK-PARITY.md`](plans/AK820-AGENT-CLOCK-PARITY.md) (the Python
 scheduler and bias learner) and
@@ -43,7 +45,7 @@ scheduler and bias learner) and
 [`review-codex-ak820d-2026-09-05.md`](plans/review-codex-ak820d-2026-09-05.md)
 is the review that reshaped all three.
 
-Three things from that work that bite outside it:
+Four things from that work that bite outside it:
 
 - ⚠️ **Windows delivers HID input reports to EVERY open handle** (measured
   2026-09-05). A process that wrote nothing received another process's text
@@ -51,12 +53,26 @@ Three things from that work that bite outside it:
   cannot correlate a reply to a request — **validate every read against the
   command it answers**. `ak820ctl`'s `xfer()` does not, and fails safe only by
   accident via the protocol-version field.
+- ⚠️ **Correlation is not enough for the clock, and this is the one that
+  surprises.** A foreign `RTC_GET_TIME` reply is a *well-formed*
+  `RTC_GET_TIME` reply — right channel, right command, protocol version 2,
+  plausible fields — so no header check can tell it from your own. Taking it
+  pairs someone else's board sample with your timestamps: a wrong offset with a
+  plausible RTT, silently. **Exactly one process may run clock transactions at
+  a time**; that, not the framing, is what makes the clock correct.
 - ⚠️ **Never enumerate HID.** `hid_enumerate` opens every HID device on the
   machine; that wedged a UPS on this machine
   (`../jdrgb/docs/ups-wedge-incident.md`). `ak820text.py` is fixed; the
   timekeeper and `ak820ctl` are not — see `plans/BACKLOG.md`.
-- The raw-HID interface is **shareable**, not exclusive — the old "VIA holding
-  it" advice describes contention over *replies*, not over the open.
+- ⚠️ The raw-HID interface is **shareable**, not exclusive — the old "VIA
+  holding it" advice describes contention over *replies*, not over the open.
+  And that contention **breaks VIA, not you**: measured 2026-09-05, VIA
+  received another process's reply, rejected it, and then stayed
+  **persistently off by one** for the rest of the session. The now-playing
+  agent does this every ~3 s. **Pause the host agents before using VIA**
+  (`hostagent/install-agents-windows.ps1 -Status` to see them), and read
+  lighting values back over `[0x08, 3, 1..4]` rather than trusting VIA's UI
+  after an error — the board executes the writes, VIA only loses the replies.
 
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
@@ -208,7 +224,22 @@ weak-hooked/no-op for other boards.
 (`windows` pinned `=0.62.2`; the blocking async spelling is `.join()`, not
 `.get()`). Two binaries because a PE has one subsystem: `ak820-agent.exe` is
 windows-subsystem so it can never flash a console, `ak820.exe` is a console CLI.
-Built test-first; `cargo test` from that directory.
+Built test-first; `cargo test` from that directory (49 tests).
+
+Phase 0 is done and its CLI is the evidence — run these before touching the
+transport, they need no arguments and take under a second each:
+
+```sh
+cd ak820-agent && cargo build            # then target/debug/ak820.exe
+ak820 list            # 33 HID interfaces present, 5 of them this board's
+ak820 list --caps     # the five collections; exactly one passes
+ak820 info            # must equal `ak820ctl info` byte for byte
+ak820 selftest        # cancellation: abort, complete-anyway, and recovery
+ak820 watch [secs]    # narrate presence + what the drain discards
+```
+
+`watch` is the one to reach for when something looks like contention: its drain
+lines name whose traffic is landing on our handle.
 
 **Host tools** — `hostagent/` (`ak820text.py`, `nowplaying-macos.sh`,
 `ak820keymap.py`, `ak820health.py`, `ak820-timekeeper.py`, the LaunchAgent

@@ -327,7 +327,7 @@ it to take effect.
 |---|---|
 | [`docs/`](docs/) | The six topic docs — wireless, display, fonts/assets, clock, LEDs, hardware. Read the one for what you are touching. |
 | [`hostagent/`](hostagent/) | Clock sync, now-playing, keymap backup, health counters |
-| [`ak820-agent/`](ak820-agent/) | **In progress** — Rust rewrite of the two Windows host agents as one daemon. Not yet shipped; use `hostagent/` |
+| [`ak820-agent/`](ak820-agent/) | **In progress** — Rust rewrite of the two Windows host agents as one daemon. Phase 0 (HID transport, `ak820 list`/`info`/`selftest`/`watch`) is done; the clock and now-playing halves are not. **Not yet shipped — use `hostagent/`** |
 | [`assets-src/`](assets-src/) | Font atlas and splash generators |
 | [`scripts/`](scripts/) | Soak harness, BT fault injection, console log, VIA sync check |
 | [`plans/`](plans/) | Live: known defects, and designed-but-unbuilt features |

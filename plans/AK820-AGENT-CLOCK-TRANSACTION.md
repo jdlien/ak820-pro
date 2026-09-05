@@ -61,6 +61,30 @@ ten syncs**. Port this expression literally.
 `board_sod = hour*3600 + min*60 + sec + frac`, and day wrap is
 `if d > 43200: d -= 86400; if d < -43200: d += 86400`.
 
+## ⚠️ Before porting any of this: `xfer()` cannot tell whose reply it got
+
+Measured 2026-09-05. Windows delivers HID input reports to **every** open
+handle, and a process holding one received this whole transaction — five
+`RTC_GET_TIME`, the `RTC_SET_TIME_MS`, the verify GET, the status read —
+without having written a single clock command.
+
+`xfer()` returns the first report that arrives. For a *text* echo that fails
+safe by accident, because `rep[11]` lands a bogus protocol version and the
+version check refuses to act. **For a clock reply it does not fail at all**: a
+foreign `RTC_GET_TIME` reply has the right channel, the right command, protocol
+version 2 and entirely plausible fields. It is accepted, and the arithmetic
+below then pairs *another process's* board sample with *this* process's `t0`
+and `t1`.
+
+The result is not an error. It is a wrong `off` with a plausible `rtt`, which
+may well win the min-RTT selection precisely *because* it did not include our
+own round trip — and it flows straight into the lead learner and the cache.
+
+Correlation does not fix this and cannot; two processes issuing the same
+command produce interchangeable replies. **The only fix at this layer is that
+exactly one process performs clock transactions at a time.** A port that keeps
+the arithmetic below perfect and drops that property is not a correct port.
+
 ## One GET
 
 ```

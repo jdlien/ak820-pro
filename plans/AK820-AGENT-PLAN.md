@@ -1,10 +1,10 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PHASE 0 IN PROGRESS, 2026-09-05.** Planned and revised the same day
+Status: **PHASE 0 COMPLETE, 2026-09-05.** Planned and revised the same day
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
-(gpt-6-astra, xhigh), then started.
+(gpt-6-astra, xhigh), then built and gated the same day.
 
-Built so far, crate at `ak820-agent/`, 46 tests passing:
+Crate at `ak820-agent/`, **49 tests**, `cargo test` from that directory:
 
 - `hid::path` — bounded path matching, so discovery narrows to this board
   before opening anything. Test corpus includes the real measured path, the
@@ -22,8 +22,23 @@ Built so far, crate at `ak820-agent/`, 46 tests passing:
 - `flash` — `FC_INFO` only, and deliberately nothing else; provisioning stays
   in `ak820ctl`.
 
-**The phase-0 gate is met** — see [Phase 0 evidence](#phase-0-evidence-2026-09-05).
-Next: phase 1 (`text.rs`, `smtc.rs`, `--probe`).
+**The phase-0 gate is met in full** — see
+[Phase 0 evidence](#phase-0-evidence-2026-09-05). Four CLI commands exist and
+are the evidence: `ak820 list [--caps]`, `info`, `selftest`, `watch [secs]`.
+
+⚠️ **Read these two before writing phase 1**, because they moved design
+decisions rather than confirming them:
+
+- [Correlation is necessary and not sufficient](#️-the-finding-that-changes-a-design-assumption-correlation-is-not-sufficient)
+  — a foreign `RTC_GET_TIME` reply is indistinguishable from ours, so a
+  concurrent clock *read* silently corrupts a measurement. Single ownership is
+  load-bearing, and phase 3a's shadow mode is dead.
+- [VIA coexistence is bidirectional](#️-via-coexistence-the-broadcast-is-bidirectional-and-via-is-the-victim)
+  — our replies reach VIA and desync it persistently, and the Python agents
+  have been doing this all along.
+
+**Next: phase 1** — `text.rs`, `smtc.rs`, `--probe`, gated on captured media
+fixtures. Nothing in phase 1 needs the hardware until its gate.
 
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.
@@ -264,7 +279,7 @@ environment underneath it.
 
 | # | Work | Gate |
 |---|---|---|
-| 0 | HID discovery, transport, `ak820 info` | Same JEDEC id and writable base as `ak820ctl info`; **plus** wrong-interface and malformed-report rejection, timeout/unplug/cancellation, traced opens showing nothing unrelated was touched, and VIA coexistence measured. |
+| 0 ✅ | HID discovery, transport, `ak820 info` | Same JEDEC id and writable base as `ak820ctl info`; **plus** wrong-interface and malformed-report rejection, timeout/unplug/cancellation, traced opens showing nothing unrelated was touched, and VIA coexistence measured. — **all met 2026-09-05**, [evidence](#phase-0-evidence-2026-09-05). |
 | 1 | `text.rs`, `smtc.rs`, `--probe` | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
 | 2 | Clock read | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) |
 | 3 | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. |
