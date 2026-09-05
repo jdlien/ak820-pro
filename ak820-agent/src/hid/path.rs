@@ -28,6 +28,19 @@ pub const PID: u16 = 0x8009;
 pub const USAGE_PAGE: u16 = 0xFF60;
 pub const USAGE: u16 = 0x61;
 
+/// Split the Configuration Manager's `REG_MULTI_SZ`-shaped answer into paths.
+///
+/// `CM_Get_Device_Interface_ListW` fills one buffer with NUL-separated strings
+/// terminated by a second NUL, and the buffer it sizes is usually longer than
+/// the data, so the tail is zero padding rather than a run of empty paths.
+/// Empty entries are dropped for that reason, not out of tidiness.
+pub fn split_multi_sz(buf: &[u16]) -> Vec<String> {
+    buf.split(|&c| c == 0)
+        .filter(|s| !s.is_empty())
+        .map(String::from_utf16_lossy)
+        .collect()
+}
+
 /// Does this interface path name the given vendor and product?
 ///
 /// Requires the `vid_xxxx&pid_xxxx` pair to appear as a **bounded token** in
@@ -56,6 +69,34 @@ pub fn matches_device(path: &str, vid: u16, pid: u16) -> bool {
 /// and would change silently if that changed.
 pub fn is_raw_hid_hint(path: &str) -> bool {
     path.to_ascii_lowercase().contains("&mi_01")
+}
+
+/// The hardware-id field of a device-interface path, lowercased.
+///
+/// `\\?\HID#VID_0C45&PID_8009&MI_01#e&12502fcc&0&0000#{guid}` has four
+/// `#`-separated fields; this is the second, `vid_0c45&pid_8009&mi_01`. The
+/// *third* is the device-instance id, and it deliberately is not used here: one
+/// board's collections each carry a different instance, so instances cannot
+/// tell one keyboard's several interfaces from several keyboards.
+pub fn hardware_id(path: &str) -> Option<String> {
+    let field = path.split('#').nth(1)?;
+    (!field.is_empty()).then(|| field.to_ascii_lowercase())
+}
+
+/// Candidate paths that name the same interface more than once.
+///
+/// One keyboard cannot expose the same interface and collection twice, so a
+/// repeat means a **second identical keyboard**. That is the case the plan says
+/// to refuse and report rather than pick a side in, and deciding it from the
+/// path list costs nothing and opens nothing.
+pub fn duplicate_interfaces<'a>(paths: &[&'a str]) -> Vec<&'a str> {
+    let ids: Vec<Option<String>> = paths.iter().map(|p| hardware_id(p)).collect();
+    paths
+        .iter()
+        .zip(&ids)
+        .filter(|(_, id)| id.is_some() && ids.iter().filter(|other| *other == *id).count() > 1)
+        .map(|(p, _)| *p)
+        .collect()
 }
 
 /// Candidate interfaces for this board, best guess first.
@@ -154,6 +195,59 @@ mod tests {
         assert_eq!(got.len(), 3, "the UPS must not be a candidate");
         assert_eq!(got[0], REAL, "MI_01 must be tried first");
         assert!(!got.iter().any(|p| p.contains("051D")));
+    }
+
+    #[test]
+    fn hardware_id_is_the_second_field() {
+        assert_eq!(
+            hardware_id(REAL).as_deref(),
+            Some("vid_0c45&pid_8009&mi_01")
+        );
+        assert_eq!(
+            hardware_id(CONSUMER_IF).as_deref(),
+            Some("vid_0c45&pid_8009&mi_02&col02"),
+            "the collection index is part of the interface's identity"
+        );
+        assert_eq!(hardware_id("nothing-shaped-like-a-path"), None);
+    }
+
+    /// One board's collections all differ, so nothing is a duplicate -- and the
+    /// instance ids differing between them is exactly why instances cannot be
+    /// used for this.
+    #[test]
+    fn one_keyboards_collections_are_not_duplicates() {
+        let paths = [REAL, KEYBOARD_IF, CONSUMER_IF];
+        assert!(duplicate_interfaces(&paths).is_empty());
+    }
+
+    /// Two of the same keyboard: the same interface, a different instance. The
+    /// case the plan says to refuse rather than pick a side in.
+    #[test]
+    fn a_second_identical_keyboard_is_a_duplicate() {
+        let second = r"\\?\HID#VID_0C45&PID_8009&MI_01#f&7ac31d02&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}";
+        let paths = [REAL, KEYBOARD_IF, second];
+        let dupes = duplicate_interfaces(&paths);
+        assert_eq!(dupes.len(), 2, "both must be reported, not one chosen");
+        assert!(dupes.contains(&REAL) && dupes.contains(&second));
+    }
+
+    #[test]
+    fn multi_sz_splits_and_ignores_the_zero_padding() {
+        let mut buf: Vec<u16> = Vec::new();
+        for p in [REAL, KEYBOARD_IF] {
+            buf.extend(p.encode_utf16());
+            buf.push(0);
+        }
+        buf.push(0); // the terminating NUL of the multi-sz
+        buf.extend([0u16; 40]); // ... and the slack the sizing call left us
+        let got = split_multi_sz(&buf);
+        assert_eq!(got, vec![REAL.to_string(), KEYBOARD_IF.to_string()]);
+    }
+
+    #[test]
+    fn multi_sz_of_nothing_is_no_paths() {
+        assert!(split_multi_sz(&[]).is_empty());
+        assert!(split_multi_sz(&[0, 0]).is_empty());
     }
 
     #[test]

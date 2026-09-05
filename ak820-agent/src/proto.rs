@@ -2,7 +2,9 @@
 //!
 //! Every command is one 32-byte report, `[SET_VALUE][channel][command][..]`.
 //! The report id (`0x00`) is prepended on the wire and stripped by the device,
-//! so a written buffer is 33 bytes and a read one is 32.
+//! so a written buffer is 33 bytes and a read one comes back 33 bytes with a
+//! leading zero -- see [`normalize_input`], which is where that asymmetry is
+//! handled once instead of at every call site.
 //!
 //! ⚠️ **A read must be matched to its request.** Measured on this machine
 //! 2026-09-05: Windows delivers HID input reports to *every open handle*, so a
@@ -22,6 +24,12 @@
 
 /// Report size the firmware expects, excluding the leading report id.
 pub const REPORT_LEN: usize = 32;
+
+/// What Windows actually moves for one report: [`REPORT_LEN`] plus the report
+/// id. The HID collection carries no report-id item, so the id is always
+/// `0x00`, and both `InputReportByteLength` and `OutputReportByteLength` are
+/// this.
+pub const WIRE_LEN: usize = REPORT_LEN + 1;
 
 /// VIA's "custom set value" id, which every one of our channels rides on.
 pub const SET_VALUE: u8 = 0x07;
@@ -48,13 +56,13 @@ impl Channel {
 ///
 /// Panics if the payload cannot fit, which is a programming error rather than a
 /// runtime condition -- every command in this protocol is far shorter.
-pub fn frame(channel: Channel, command: u8, body: &[u8]) -> [u8; REPORT_LEN + 1] {
+pub fn frame(channel: Channel, command: u8, body: &[u8]) -> [u8; WIRE_LEN] {
     assert!(
         body.len() + 3 <= REPORT_LEN,
         "payload {} bytes exceeds the {REPORT_LEN}-byte report",
         body.len() + 3
     );
-    let mut buf = [0u8; REPORT_LEN + 1];
+    let mut buf = [0u8; WIRE_LEN];
     buf[1] = SET_VALUE;
     buf[2] = channel.id();
     buf[3] = command;
@@ -65,55 +73,120 @@ pub fn frame(channel: Channel, command: u8, body: &[u8]) -> [u8; REPORT_LEN + 1]
 /// Why a report is not the reply we are waiting for.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Mismatch {
-    /// Shorter than a full report: truncated or a different collection.
+    /// Not a full report: truncated, or a different collection entirely.
     TooShort,
-    /// The firmware says it does not handle this command.
-    Unhandled,
+    /// A numbered report from something else sharing the handle. Ours is
+    /// always id `0x00`.
+    ReportId(u8),
     /// Someone else's traffic, or our own echo on another channel.
     OtherChannel { channel: u8, command: u8 },
     /// Right channel, different command -- e.g. a text echo while we await a set.
     OtherCommand { command: u8 },
+    /// Right channel and command, but the leading id is neither `SET_VALUE` nor
+    /// `ID_UNHANDLED`. Not a shape this firmware produces.
+    BadHeader(u8),
+}
+
+/// Strip the report id Windows prepends, and refuse anything that is not one of
+/// our reports.
+///
+/// ⚠️ Getting this off by one is invisible: every field shifts a byte and still
+/// parses as plausible numbers. `hidapi` stripped the id itself when it was
+/// zero, which is why the C tool never had to think about it and why a direct
+/// Win32 port must.
+pub fn normalize_input(raw: &[u8]) -> Result<&[u8], Mismatch> {
+    match raw.len() {
+        WIRE_LEN if raw[0] == 0 => Ok(&raw[1..]),
+        WIRE_LEN => Err(Mismatch::ReportId(raw[0])),
+        // A driver reporting 32-byte reports would hand back the payload alone.
+        // Not what this board does; accepted rather than silently mangled.
+        REPORT_LEN => Ok(raw),
+        _ => Err(Mismatch::TooShort),
+    }
 }
 
 /// Is `report` the reply to `(channel, command)`?
 ///
-/// Returns `Err(Mismatch)` for anything else so the caller can log what it
-/// discarded; a silent drop would hide exactly the cross-talk this exists for.
+/// Takes a report with the id already stripped. Returns `Err(Mismatch)` for
+/// anything else so the caller can log what it discarded; a silent drop would
+/// hide exactly the cross-talk this exists for.
+///
+/// ⚠️ Channel and command are checked **before** the leading id, and that order
+/// is load-bearing. The firmware's unhandled path sets `data[0] = 0xFF` and
+/// echoes the rest of the buffer untouched (`hid_protocol.c`,
+/// `raw_hid_receive`), so an `0xFF` report still names the command it refused.
+/// Checking `0xFF` first would let *another process's* rejected command abort
+/// our wait.
 pub fn match_reply(report: &[u8], channel: Channel, command: u8) -> Result<(), Mismatch> {
     if report.len() < REPORT_LEN {
         return Err(Mismatch::TooShort);
     }
-    if report[0] == ID_UNHANDLED {
-        return Err(Mismatch::Unhandled);
-    }
-    if report[0] != SET_VALUE || report[1] != channel.id() {
+    if report[1] != channel.id() {
         return Err(Mismatch::OtherChannel {
             channel: report[1],
             command: report[2],
         });
     }
     if report[2] != command {
-        return Err(Mismatch::OtherCommand {
-            command: report[2],
-        });
+        return Err(Mismatch::OtherCommand { command: report[2] });
     }
-    Ok(())
+    match report[0] {
+        SET_VALUE | ID_UNHANDLED => Ok(()),
+        other => Err(Mismatch::BadHeader(other)),
+    }
+}
+
+/// What to do with one report that arrived while we were waiting for a reply.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Verdict<'a> {
+    /// Our answer: the 32-byte report, id stripped.
+    Reply(&'a [u8]),
+    /// Not ours. Discard it and keep waiting -- do **not** take it as the
+    /// answer, and do not give up.
+    Drain(Mismatch),
+    /// Ours, and the firmware says it does not handle this command. Waiting
+    /// longer cannot help.
+    Unhandled,
+}
+
+/// The whole read-side decision in one place: normalize, correlate, classify.
+///
+/// This is what the transport loop drives. Keeping it a pure function over
+/// bytes is what lets every cross-talk case be tested without a device.
+pub fn classify<'a>(raw: &'a [u8], channel: Channel, command: u8) -> Verdict<'a> {
+    let report = match normalize_input(raw) {
+        Ok(r) => r,
+        Err(m) => return Verdict::Drain(m),
+    };
+    match match_reply(report, channel, command) {
+        Err(m) => Verdict::Drain(m),
+        Ok(()) if report[0] == ID_UNHANDLED => Verdict::Unhandled,
+        Ok(()) => Verdict::Reply(report),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// A 32-byte report as the firmware sees it.
     fn report(bytes: &[u8]) -> Vec<u8> {
         let mut r = vec![0u8; REPORT_LEN];
         r[..bytes.len()].copy_from_slice(bytes);
         r
     }
 
+    /// The same report as Windows hands it back: report id 0 in front.
+    fn wire(bytes: &[u8]) -> Vec<u8> {
+        let mut r = vec![0u8; WIRE_LEN];
+        r[1..1 + bytes.len()].copy_from_slice(bytes);
+        r
+    }
+
     #[test]
     fn frame_puts_the_report_id_first_and_pads() {
         let f = frame(Channel::Text, 0x03, &[0, 1, b'H']);
-        assert_eq!(f.len(), 33);
+        assert_eq!(f.len(), WIRE_LEN);
         assert_eq!(&f[..7], &[0x00, 0x07, 0x12, 0x03, 0x00, 0x01, b'H']);
         assert!(f[7..].iter().all(|&b| b == 0), "tail must be zero padded");
     }
@@ -162,15 +235,34 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unhandled_and_short_reports() {
-        let unhandled = report(&[ID_UNHANDLED, 0x10, 0x02]);
-        assert_eq!(
-            match_reply(&unhandled, Channel::Rtc, 0x02),
-            Err(Mismatch::Unhandled)
-        );
+    fn a_short_report_is_never_a_reply() {
         assert_eq!(
             match_reply(&[0x07, 0x10, 0x02], Channel::Rtc, 0x02),
             Err(Mismatch::TooShort)
+        );
+    }
+
+    /// Our own command coming back refused: correlated, and fatal rather than
+    /// something to keep waiting through.
+    #[test]
+    fn our_own_unhandled_reply_is_fatal() {
+        let unhandled = report(&[ID_UNHANDLED, 0x10, 0x02]);
+        assert_eq!(match_reply(&unhandled, Channel::Rtc, 0x02), Ok(()));
+        assert_eq!(classify(&unhandled, Channel::Rtc, 0x02), Verdict::Unhandled);
+    }
+
+    /// Why the id check comes last. The firmware echoes the buffer and only
+    /// overwrites `data[0]`, so someone else's refused command still carries
+    /// their channel -- and must be drained, not mistaken for ours failing.
+    #[test]
+    fn another_processs_unhandled_echo_is_drained_not_fatal() {
+        let theirs = wire(&[ID_UNHANDLED, 0x12, 0x03]);
+        assert_eq!(
+            classify(&theirs, Channel::Rtc, 0x02),
+            Verdict::Drain(Mismatch::OtherChannel {
+                channel: 0x12,
+                command: 0x03
+            })
         );
     }
 
@@ -179,5 +271,62 @@ mod tests {
         let health = report(&[0x07, 0x13, 0x01, 0x05]);
         assert!(match_reply(&health, Channel::Health, 0x01).is_ok());
         assert!(match_reply(&health, Channel::Text, 0x01).is_err());
+    }
+
+    #[test]
+    fn normalize_strips_the_report_id() {
+        let w = wire(&[0x07, 0x10, 0x02, 0x63]);
+        assert_eq!(normalize_input(&w).unwrap()[..4], [0x07, 0x10, 0x02, 0x63]);
+    }
+
+    /// A numbered report from another collection sharing the handle. Ours is
+    /// always id 0, so a non-zero id is by definition not our traffic.
+    #[test]
+    fn normalize_rejects_a_foreign_report_id() {
+        let mut w = wire(&[0x07, 0x10, 0x02]);
+        w[0] = 0x05;
+        assert_eq!(normalize_input(&w), Err(Mismatch::ReportId(0x05)));
+    }
+
+    #[test]
+    fn normalize_rejects_a_short_read() {
+        assert_eq!(normalize_input(&[0u8; 8]), Err(Mismatch::TooShort));
+        assert_eq!(normalize_input(&[]), Err(Mismatch::TooShort));
+    }
+
+    /// The point of `classify`: it takes the wire form, not a stripped one.
+    #[test]
+    fn classify_takes_the_wire_form() {
+        let w = wire(&[0x07, 0x11, 0x01, 0x00, 0xEF, 0x40, 0x18]);
+        assert!(matches!(
+            classify(&w, Channel::Flash, 0x01),
+            Verdict::Reply(r) if r[4] == 0xEF
+        ));
+    }
+
+    /// The measured cross-talk, end to end through the classifier.
+    #[test]
+    fn classify_drains_the_measured_text_echo() {
+        let echo = wire(&[
+            0x07, 0x12, 0x03, 0x00, 0x01, b'W', b'R', b'I', b'T', b'E', b'R', b'X',
+        ]);
+        assert_eq!(
+            classify(&echo, Channel::Rtc, 0x02),
+            Verdict::Drain(Mismatch::OtherChannel {
+                channel: 0x12,
+                command: 0x03
+            })
+        );
+    }
+
+    /// Neither 0x07 nor 0xFF on our own channel and command: not a shape the
+    /// firmware emits, so it is noise rather than an answer.
+    #[test]
+    fn classify_refuses_an_unrecognised_header() {
+        let odd = wire(&[0x42, 0x10, 0x02]);
+        assert_eq!(
+            classify(&odd, Channel::Rtc, 0x02),
+            Verdict::Drain(Mismatch::BadHeader(0x42))
+        );
     }
 }

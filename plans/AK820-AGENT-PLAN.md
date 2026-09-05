@@ -4,17 +4,26 @@ Status: **PHASE 0 IN PROGRESS, 2026-09-05.** Planned and revised the same day
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
 (gpt-6-astra, xhigh), then started.
 
-Built so far (`115524b`), crate at `ak820-agent/`, 17 tests passing:
+Built so far, crate at `ak820-agent/`, 46 tests passing:
 
 - `hid::path` — bounded path matching, so discovery narrows to this board
   before opening anything. Test corpus includes the real measured path, the
   board's other collections, its bootloader PID, and the sibling projects' UPS
-  and Aura paths as devices that must never match.
-- `proto` — framing and `match_reply`, the reply correlation the broadcast
-  finding below made mandatory.
+  and Aura paths as devices that must never match. Also `multi_sz` splitting
+  and the two-identical-keyboards check, both decided from strings.
+- `proto` — framing, report-id normalization, and `classify`: the whole
+  read-side decision as one pure function, which the broadcast finding below
+  made mandatory.
+- `hid::caps` — the post-open identity check, against the board's five real
+  collections.
+- `hid::device` — the `CreateFileW` transport: Configuration Manager discovery,
+  overlapped I/O, `CancelIoEx` discipline, pre-drain, and the correlate-or-drain
+  request loop.
+- `flash` — `FC_INFO` only, and deliberately nothing else; provisioning stays
+  in `ak820ctl`.
 
-Next in phase 0: the `CreateFileW` transport (overlapped I/O, `CancelIoEx`
-discipline), then `ak820 info`, then the phase-0 gate.
+**The phase-0 gate is met** — see [Phase 0 evidence](#phase-0-evidence-2026-09-05).
+Next: phase 1 (`text.rs`, `smtc.rs`, `--probe`).
 
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.
@@ -262,6 +271,77 @@ environment underneath it.
 | 4 | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. |
 | 5 | Health | Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. |
 | 6 | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. |
+
+### Phase 0 evidence (2026-09-05)
+
+All of it on this machine, with **both Python agents running**, so every number
+below was taken under the contention the design is about.
+
+| Gate item | Result |
+|---|---|
+| Same JEDEC id and writable base as `ak820ctl info` | **byte for byte identical**: `flash jedec id : 0x856017` / `writable from  : 0xCE0000`. The base independently equals `FLASH_ASSET_BASE` (`0x0CE0000`) in `graphics/lcd_bus.h`, so the decode is cross-checked against the firmware source as well as against the C tool. `0x856017` is Puya, 64 Mbit — consistent with an asset base 3.12 MB into an 8 MB chip. |
+| Wrong-interface rejection | The board presents **five** collections; `ak820 list --caps` opens each and the checker accepts exactly one. Measured usages now replace the guessed fixtures in `hid::caps`. |
+| Malformed-report rejection | Report-id, short-read, wrong-header and wrong-channel cases are unit tests over the real byte patterns. |
+| Timeout / cancellation | Both branches exercised, below. |
+| Traced opens | `33 HID interfaces present, 5 of them this board's; opening none`. `hidapi` would have opened all 33 — including the UPS — to answer the same question. |
+| Coexistence | 30/30 consecutive `info` runs correct while both Python agents ran. |
+
+**The board's five collections, measured** (`ak820 list --caps`):
+
+| Interface | Usage | Reports in/out | |
+|---|---|---|---|
+| `MI_01` | `FF60`/`61` | 33/33 | **ours** |
+| `MI_00` | `0001`/`06` | 9/2 | boot keyboard |
+| `MI_02&Col01` | `0001`/`80` | 3/0 | system control |
+| `MI_02&Col02` | `000C`/`01` | 3/0 | consumer |
+| `MI_02&Col03` | `0001`/`06` | **32**/2 | NKRO keyboard |
+
+⚠️ That last row is why the usage-page check cannot be traded for a
+report-size one: the NKRO keyboard's input reports are **32 bytes**, the same
+size as one of ours with the report id stripped, so they pass
+`proto::normalize_input`'s tolerant branch. Only the usage says it is a
+keyboard. Pinned as a test.
+
+**The broadcast finding reproduced by the Rust transport.** One of the 30 `info`
+runs found two reports already queued on our handle before we had written
+anything:
+
+```
+note: discarded 2 report(s) that answered another request:
+  queued before we asked: channel 0x12 command 0x04
+  queued before we asked: channel 0x12 command 0x02
+```
+
+Channel `0x12` is text; `0x04` is `TEXT_PLAYBACK` and `0x02` is `TEXT_CLEAR` —
+the *now-playing agent's* writes, echoed to a process that had written nothing.
+⚠️ Note what `ak820ctl`'s `xfer()` would have done with the first of those as
+the answer to `FC_INFO`: `rep[3]` is the playback state byte, so state 0 reads
+as `FS_OK`, and it would have printed a **JEDEC id decoded from a track
+position**. The protocol-version check that saves the clock path does not exist
+here. This is no longer a hypothesis about `xfer()`; the traffic that would
+trigger it was captured.
+
+**Cancellation, both branches** (`ak820 selftest`, 8 runs):
+
+- *Completed between the wait expiring and the cancel landing* — a 1 ms budget
+  against a ~5–18 ms round trip, 8/8. Reported as the answer it is, not
+  flattened into a timeout. Flattening it would mean re-sending a write that
+  already went out.
+- *Genuinely aborted* — `drain()` on an idle queue, where nothing but the
+  cancellation can complete the read. Returns in **3–6 ms**, so `CancelIoEx`
+  does land on a pending HID read and a nominal timeout cannot become an
+  unbounded shutdown wait. Every request runs this, so the abort path is
+  exercised continuously rather than only when something is wrong.
+- *Recovery* — the next full request returns the identical answer, which is the
+  check that actually matters: a botched cancellation shows up later, as a dead
+  handle or a buffer the kernel wrote into after we dropped it.
+
+**Not yet done, and honestly outstanding:** VIA itself has not been opened
+against a live transaction (the two Python agents are a stronger concurrency
+load but not the same program), and unplug-during-transaction is a physical test
+still to run. Round-trip latency is **~5–18 ms**, higher than the single-digit
+figure assumed when the request budget was set; not a problem at a 300 s sync
+interval, but worth remembering before anything gets built on a tight one.
 
 Carry over the sibling's cancellation discipline: `CancelIoEx` *requests*
 cancellation — buffers and `OVERLAPPED` must stay alive until completion, or a
