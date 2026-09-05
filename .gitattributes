@@ -1,0 +1,26 @@
+# Shell scripts MUST keep LF endings.
+#
+# The Windows build environment is MSYS2 (see docs/hardware.md): its bash and
+# zsh both fail on CRLF with `$'\r': command not found`, which looks like a
+# corrupt script rather than a line-ending problem. Git's core.autocrlf=true --
+# a common global setting on Windows -- rewrites them to CRLF on checkout, so
+# a fresh clone breaks build.sh and flash.sh before they ever run. Pin them.
+*.sh            text eol=lf
+*.bash          text eol=lf
+env.sh          text eol=lf
+
+# The host scripts are invoked directly via their shebang on macOS/Linux.
+*.py            text eol=lf
+
+# LaunchAgent templates are consumed by macOS launchd.
+*.plist.in      text eol=lf
+
+# Firmware/asset binaries and build artifacts: never touched.
+*.bin           binary
+*.png           binary
+*.ttf           binary
+*.otf           binary
+
+# deps.lock is parsed line-by-line by setup.sh: a CRLF blank line reads as
+# "\r", not "", so the comment/blank skip misses it and it tries to clone "".
+deps.lock       text eol=lf
