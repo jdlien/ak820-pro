@@ -1,8 +1,20 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PLANNED 2026-09-05, revised the same day** against
-[review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
-(gpt-6-astra, xhigh). Nothing built.
+Status: **PHASE 0 IN PROGRESS, 2026-09-05.** Planned and revised the same day
+against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
+(gpt-6-astra, xhigh), then started.
+
+Built so far (`115524b`), crate at `ak820-agent/`, 17 tests passing:
+
+- `hid::path` — bounded path matching, so discovery narrows to this board
+  before opening anything. Test corpus includes the real measured path, the
+  board's other collections, its bootloader PID, and the sibling projects' UPS
+  and Aura paths as devices that must never match.
+- `proto` — framing and `match_reply`, the reply correlation the broadcast
+  finding below made mandatory.
+
+Next in phase 0: the `CreateFileW` transport (overlapped I/O, `CancelIoEx`
+discipline), then `ak820 info`, then the phase-0 gate.
 
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.

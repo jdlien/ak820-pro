@@ -222,3 +222,65 @@ Both cost real time on 2026-09-03 by being believed:
 
 A file that confidently documents something untrue is worse than one that
 documents nothing.
+
+## Timekeeper: one unexplained restart and a 13-minute sync gap (2026-09-05, Windows)
+
+**Symptom.** The Windows timekeeper Scheduled Task logged `timekeeper start` at
+15:11:46 with no corresponding stop, and no periodic syncs between 14:58:04 and
+that restart -- 13 minutes with a 300 s cadence, so two syncs are missing. The
+board free-ran and was **+1042.5 ms** out by the time it resynced, corrected as
+a *step* rather than a slew because it exceeded the slew threshold.
+
+Of the five starts that day four are accounted for (install, the
+CREATE_NO_WINDOW fix, and the share-mode experiment). This one is not.
+
+**Not diagnosed.** Plausibly teardown of the Claude Code session that had
+issued `Start-ScheduledTask`, but a Scheduled Task should not be parented to
+the shell that started it, and the task's own restart policy (999 restarts,
+1 minute apart) would have restarted it far sooner than 13 minutes. No error
+precedes the gap: the agent only writes on entry, so a mid-loop death leaves no
+marker.
+
+**Two reasons it is worth keeping.**
+
+- It is a real instance of the whole-second blind spot recorded in
+  [AK820-AGENT-CLOCK-PARITY.md](AK820-AGENT-CLOCK-PARITY.md):
+  `clock-phase.py` recovers sub-second phase only, so it would have reported
+  this ~1.04 s error as roughly +42 ms.
+- `-Status` reported **Running** throughout, which is exactly the
+  "task running can coexist with hours of failed syncs" gap the Codex review
+  raised. Evidence for the daemon's observability requirement: *last successful
+  sync* has to be a first-class readout, not liveness.
+
+**Next step if it recurs:** log on exit as well as entry, and check the Task
+Scheduler operational event log around the gap.
+
+## Host tooling still enumerates HID; only ak820text was fixed (2026-09-05)
+
+**Why it matters.** `hid_enumerate` on Windows opens **every** HID device on the
+machine to read its attributes; the VID/PID filter is applied afterwards and
+spares none of them. `../jdrgb/docs/ups-wedge-incident.md` records that pattern
+twice wedging an APC Back-UPS here.
+
+`hostagent/ak820text.py` was fixed (`61038c6`, `b31acd9`): cached path,
+exponential backoff, and a `GetSystemPowerStatus` gate that holds off while AC
+is offline and for 60 s after it returns -- the window jdups measured both
+wedges in. **The rest was not.** Still enumerating:
+
+| Source | Frequency |
+|---|---|
+| `ak820-timekeeper.py` `hid_present()` | every `LOOP` (15 s) |
+| `ak820-timekeeper.py` `controller_id()` (Windows) | every loop while the cache has no bias |
+| `ak820ctl` — **every invocation**, including `clock --bias` | 2-3 per sync |
+| `clock-phase.py`, `ak820health.py` | per run |
+
+Roughly 8 enumerations a minute, continuously, plus the per-sync ones.
+
+**Accepted for now** on jdups' own evidence: it saw no trouble in the window we
+were running hard, and enumeration on steady mains has never hurt it. But
+⚠️ **fix the timekeeper's two before any long capture run for
+[AK820-AGENT-CLOCK-PARITY.md](AK820-AGENT-CLOCK-PARITY.md) phase 3a**, which
+deliberately runs the oracle harder and longer than normal operation.
+
+The Rust agent removes the class entirely: Configuration Manager listing opens
+nothing, and only this board's own interfaces are ever opened.

@@ -94,8 +94,8 @@ git clone https://github.com/jdlien/ak820-pro && cd ak820-pro
 MinGW 64-bit* shell — not Git Bash, not PowerShell — and run the same three
 commands; `setup.sh` installs the MSYS2 packages it needs. Flashing needs **no
 Zadig/WinUSB driver**: the Sonix bootloader is a plain HID device there, and
-the `USE_LIBUSB=1` flag below is a macOS-only workaround. The clock and
-now-playing agents are macOS LaunchAgents and are not installed on Windows.
+the `USE_LIBUSB=1` flag below is a macOS-only workaround. The host agents run
+on Windows too, as Scheduled Tasks — see below.
 The four Windows-specific traps — CRLF, the venv's name, `PATH` order, and
 that libusb flag — are written up in
 [docs/hardware.md](docs/hardware.md#building-and-flashing-on-windows-msys2).
@@ -130,10 +130,13 @@ Two small background agents, on both macOS and Windows:
 
 Run `./setup.sh` first — both agents live in the repo's venv.
 
-> **One holder at a time.** The board's raw-HID interface is *exclusive*. If a
-> usevia.app tab is open it owns the interface and the agents cannot push; the
-> logs will say so. Close the tab (or stop the agents) before using VIA. This
-> has twice been mistaken for a firmware fault.
+> **Close usevia.app before relying on the agents, and vice versa.** Not because
+> the interface is exclusive — measured 2026-09-05, two processes *can* open and
+> write to it at once. The problem is replies: Windows delivers HID input
+> reports to **every open handle**, so with two clients talking, each can be
+> handed the other's reply. The agents log this as a failed or garbled push.
+> (Tested between two hidapi clients; VIA itself was not tested directly.)
+> Contention here has twice been mistaken for a firmware fault.
 
 ### macOS
 
@@ -238,10 +241,10 @@ to hand it the definition once.
   Safari do not implement.
 - **Plug the USB cable in.** The slider position does not matter — raw-HID
   replies come back over USB in every mode.
-- If you installed the host agents, **stop them first**. The board's raw-HID
-  interface is exclusive, so the clock/now-playing agents and VIA cannot both
-  hold it; symptoms are VIA failing to connect, or the agents logging push
-  failures. See [the host agents](#the-host-agents-clock-sync--now-playing) for
+- If you installed the host agents, **stop them first**. Not because the
+  interface is exclusive — it is not — but because Windows hands every open
+  handle every reply, so two clients talking at once can each receive the
+  other's. Symptoms are VIA misbehaving, or the agents logging failed pushes. See [the host agents](#the-host-agents-clock-sync--now-playing) for
   the `--uninstall` / `-Uninstall` commands, or just stop the tasks temporarily.
 
 **Where the definition file is**
@@ -324,6 +327,7 @@ it to take effect.
 |---|---|
 | [`docs/`](docs/) | The six topic docs — wireless, display, fonts/assets, clock, LEDs, hardware. Read the one for what you are touching. |
 | [`hostagent/`](hostagent/) | Clock sync, now-playing, keymap backup, health counters |
+| [`ak820-agent/`](ak820-agent/) | **In progress** — Rust rewrite of the two Windows host agents as one daemon. Not yet shipped; use `hostagent/` |
 | [`assets-src/`](assets-src/) | Font atlas and splash generators |
 | [`scripts/`](scripts/) | Soak harness, BT fault injection, console log, VIA sync check |
 | [`plans/`](plans/) | Live: known defects, and designed-but-unbuilt features |

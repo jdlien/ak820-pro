@@ -30,6 +30,34 @@ submodule sits on our `ak820pro-patches` branch.
 | [docs/hardware.md](docs/hardware.md) | Slider power quirk, bootloader, build/flash, watchdog+health, hang history, diagnostics |
 
 Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
+
+**In progress: `ak820-agent/`** — a Rust rewrite of the two Windows host agents
+as one daemon. Read [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
+first; it carries the phase gates and three findings that are load-bearing.
+Its two companions are part of the plan, not background:
+[`AK820-AGENT-CLOCK-PARITY.md`](plans/AK820-AGENT-CLOCK-PARITY.md) (the Python
+scheduler and bias learner) and
+[`AK820-AGENT-CLOCK-TRANSACTION.md`](plans/AK820-AGENT-CLOCK-TRANSACTION.md)
+(`ak820ctl`'s transaction, where the precision actually lives —
+**the clock oracle is Python PLUS the pinned C utility**).
+[`review-codex-ak820d-2026-09-05.md`](plans/review-codex-ak820d-2026-09-05.md)
+is the review that reshaped all three.
+
+Three things from that work that bite outside it:
+
+- ⚠️ **Windows delivers HID input reports to EVERY open handle** (measured
+  2026-09-05). A process that wrote nothing received another process's text
+  echo, and a clock GET after a text write returned the text echo. Ordering
+  cannot correlate a reply to a request — **validate every read against the
+  command it answers**. `ak820ctl`'s `xfer()` does not, and fails safe only by
+  accident via the protocol-version field.
+- ⚠️ **Never enumerate HID.** `hid_enumerate` opens every HID device on the
+  machine; that wedged a UPS on this machine
+  (`../jdrgb/docs/ups-wedge-incident.md`). `ak820text.py` is fixed; the
+  timekeeper and `ak820ctl` are not — see `plans/BACKLOG.md`.
+- The raw-HID interface is **shareable**, not exclusive — the old "VIA holding
+  it" advice describes contention over *replies*, not over the open.
+
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
@@ -149,8 +177,9 @@ wired mode. `Fn`+`P` (pair) is unbound by default.
   the ISR rate. → [leds.md](docs/leds.md)
 - ⚠️ **Keyboard feels slow / drops keystrokes?** Read `Fn`+`D` first: `rowgap`
   (single digits = healthy) and `stall>25` (must be 0) say whether the firmware
-  is even involved. If both are clean, **check the HOST** — the raw HID
-  interface is exclusive and a leftover poller starves everything else.
+  is even involved. If both are clean, **check the HOST** — a leftover poller
+  starves everything else. (Contention, not exclusivity: the interface is
+  shareable; replies are what collide. Measured 2026-09-05.)
   `hostagent/install-agents.sh --status`. → [hardware.md](docs/hardware.md)
 - ⚠️ **Drawing to the LCD can eat keystrokes.** `lcd_draw_flash_text()` is
   synchronous, one LCD operation per glyph (~1.6 ms each); a full-screen
@@ -174,6 +203,12 @@ Four core files outside `keyboards/` carry local commits —
 blanking, flush lock), `quantum/rgb_matrix/rgb_matrix.c` (flush-allowed hook),
 `platforms/chibios/.../wear_leveling_efl.c` (pre-write hook) — all
 weak-hooked/no-op for other boards.
+
+**Windows daemon (in progress)** — `ak820-agent/`, Rust, one direct dependency
+(`windows` pinned `=0.62.2`; the blocking async spelling is `.join()`, not
+`.get()`). Two binaries because a PE has one subsystem: `ak820-agent.exe` is
+windows-subsystem so it can never flash a console, `ak820.exe` is a console CLI.
+Built test-first; `cargo test` from that directory.
 
 **Host tools** — `hostagent/` (`ak820text.py`, `nowplaying-macos.sh`,
 `ak820keymap.py`, `ak820health.py`, `ak820-timekeeper.py`, the LaunchAgent
