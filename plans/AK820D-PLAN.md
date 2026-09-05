@@ -28,7 +28,9 @@ In order of how much they matter:
    only to run Python. An owner who takes prebuilt firmware from Releases
    currently **cannot run the agents at all**.
 3. **Footprint.** Measured 2026-09-05: **32.7 MB across 4 processes**, 3.1
-   CPU-seconds in 25 minutes. Target: one process, ~4 MB.
+   CPU-seconds in 25 minutes. A probe binary that actually reads SMTC, built
+   with the siblings' size profile, is **117 KB** -- so the target is one
+   process well under 1 MB, not the ~4 MB first estimated.
 
 **Not a reason: speed.** These agents are idle. The only runtime win is that
 in-process work replaces an `ak820ctl` spawn per sync.
@@ -122,17 +124,44 @@ open the device independently.
 measure/SET/verify sequence, or a text update batch — not one report. Open
 before taking transmission-sensitive timestamps and close promptly after.
 
-⚠️ **`FILE_SHARE_READ | FILE_SHARE_WRITE` explicitly permits concurrent opens**,
-and Chromium's HID service uses the same flags. So "holding it open means VIA
-can never connect" is **not established** for Windows; it was inferred from
-contention observed elsewhere. **Test it on this machine** and let the result
-choose between short transactions and a held handle. Short transactions remain
-the default either way.
+### Measured 2026-09-05: the interface is NOT exclusive, and replies broadcast
 
-⚠️ **The firmware echoes text commands** (`hid_protocol.c`). If text and clock
-operations ever share an open, an unread text echo must never be decoded as a
-clock reply. One process does not solve this automatically: the wire layer needs
-report-length/ID normalization, header validation, and stale-reply draining.
+The review was right that "holding it open means VIA can never connect" was
+inferred, not established. Tested on this machine, and the result is more
+interesting than either answer:
+
+| Experiment | Result |
+|---|---|
+| Second process opens the same path while another holds it | **succeeds** |
+| Second process writes concurrently | **succeeds** |
+| Process that wrote **nothing** reads while another process writes | **receives the other process's reply** |
+
+The third row is the important one. A listener that never wrote received
+`07 12 03 00 01 57 52 49 54 45 52 58` — the echo of a *different* process's
+text command, payload `WRITERX`. **Windows delivers HID input reports to every
+open handle.**
+
+Consequences, and they are design-level:
+
+- **Sharing is not the problem; correlation is.** Nothing is gained by holding
+  the handle, and holding it is actively worse: while VIA is open the daemon's
+  read queue fills with VIA's replies. Short transactions stay the design, now
+  for a measured reason rather than an assumed one.
+- ⚠️ **Every read must be matched to its request** — channel and command bytes —
+  and non-matching reports **drained and discarded**, not consumed as the
+  answer. Ordering alone cannot correlate: another process's reply can land
+  between our write and our read. This is stronger than the review's
+  same-handle echo concern, which was about our own writes.
+- The same experiment showed the echo hazard first-hand within one handle: a
+  clock GET issued after a text write returned the **text echo**, not the clock
+  reply.
+
+⚠️ `ak820ctl`'s `xfer()` does **no** request/reply matching — it returns the
+first report that arrives. It fails *safe* only by accident: a text echo puts a
+bogus value in `rep[11]`, and the protocol-version check then refuses to act.
+The Rust port must validate properly rather than inherit that luck. `ak820health.py`
+already does it correctly (`rep[0] == SET_VALUE && rep[1] == HEALTH_CHANNEL`)
+and is the model — though it raises rather than draining and retrying.
 
 ### Media must not be able to stall the clock
 
@@ -151,13 +180,24 @@ outstanding work, and a defined recovery path after session or broker loss —
 
 The `windows` crate, not `windows-sys` as in `../jdrgb` and `../jdups`: SMTC is
 WinRT and `windows-sys` has no WinRT projection. Hand-rolled WinRT ABI machinery
-is needless risk. **Pin the version** — the async spelling is version-dependent
-(`.join()` / `.await`, not the `.get()` an earlier draft assumed). "One
-dependency" means one *direct* dependency; it has supporting crates.
+is needless risk.
 
-Measure the release binary **with SMTC linked and exercised**, plus steady-state
-private bytes and handle/thread growth. A phase-0 HID-only size says nothing
-about WinRT, and mixing in `windows-sys` is not a demonstrated size fix.
+**Measured 2026-09-05** with a throwaway probe that actually reads SMTC, built
+with the siblings' size profile (`opt-level="z"`, `lto`, `codegen-units=1`,
+`panic="abort"`, `strip`), on rustc 1.97.0 MSVC:
+
+| | |
+|---|---|
+| Version | **`windows 0.62.2`** — pin it |
+| Direct deps | 1; **15 packages total** (`windows-core`, `-future`, `-strings`, `-result`, `-collections`, `-numerics`, `-link`, `-threading`, plus proc-macro machinery) |
+| Blocking async spelling | **`.join()`** — `.get()` does **not** exist here; an earlier draft assumed it and does not compile |
+| Release binary, SMTC linked **and exercised** | **117 KB** |
+
+117 KB against 32.7 MB of Python settles the size question: the crate is
+metadata-driven, so unused APIs cost nothing and there is no reason to mix in
+`windows-sys`. The remaining size/footprint work is steady-state private bytes
+and handle/thread growth under the SMTC worker, which a one-shot probe cannot
+show.
 
 ### ⚠️ HID discovery: open nothing you did not mean to
 
