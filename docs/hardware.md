@@ -106,6 +106,161 @@ Flash the per-build artifact from `ak820pro-builds/out/`, never the shared
   clone must stay on fpb's `fix_for_macos_tahoe` branch, and the branch
   alone is not sufficient — the flag is.
 
+## Building and flashing on Windows (MSYS2)
+
+Verified 2026-09-04 on Windows 11 Pro 26200: `setup.sh`, `build.sh` and the
+structural checks all pass, and two clean builds of the same commit came out
+byte-identical (`e504bf9d…`, 262,144 bytes).
+
+**Run everything from the "MSYS2 MinGW 64-bit" shell** — not Git Bash, not
+PowerShell, not the plain MSYS or UCRT64 shells. `setup.sh` refuses anything
+else, because `qmk_cli` does. `setup.sh` installs the MSYS2 packages itself
+(`make`, `gcc`, `pkg-config`, `hidapi`, `zsh` for build.sh's shebang, `vim`
+for `xxd`, `diffutils` for `cmp`, and the `python-*` packages that carry
+compiled extensions), then behaves exactly as it does on macOS.
+
+Four Windows-only traps, all of which look like something else:
+
+- ⚠️ **CRLF makes the build impossible, and says only "working tree is
+  dirty".** Git-for-Windows is usually configured `core.autocrlf=true` and
+  checks the clones out with CRLF. MSYS2 ships its **own** git with its own
+  `HOME` (`/home/$USER`, not `C:/Users/$USER`), never sees that setting, and
+  so reports every file as modified — 2,092 of them in `lib/chibios-contrib`
+  alone. `build.sh` refuses a dirty submodule, so it can never succeed.
+  `setup.sh`'s `normalize_eol` pins each clone to LF and renormalizes one that
+  was checked out wrong, but only when line endings are the *sole* difference.
+  `.gitattributes` pins this repo's own `*.sh` and `deps.lock`; a CRLF
+  `deps.lock` reads a blank line as `"\r"` and makes setup.sh try to clone `""`.
+- ⚠️ **The venv must be named `venv-mingw64`.** `qmk_cli/script_qmk.py` gates
+  the whole CLI on `'mingw64' in sys.executable`, so a venv called `venv` is
+  rejected with "It seems you are not using the MINGW64 terminal" even when it
+  *is* MSYS2's own mingw64 python. `env.sh` exports `$AK820_VENV`; nothing
+  should hardcode `venv` any more.
+- ⚠️ **The arm toolchain goes LAST on `PATH`, not first.** The win32-x64 xpack
+  build ships its own `libgcc_s_seh-1.dll`, `libstdc++-6.dll`,
+  `libwinpthread-1.dll` and `libzstd.dll` alongside the compilers. Ahead of
+  `/mingw64/bin` they shadow MSYS2's, and the **native** gcc's `cc1.exe` then
+  fails to load — exiting non-zero while printing *nothing*, so `make` reports
+  a bare `Error 1`. It breaks sonixflasher and ak820ctl while the firmware
+  build, which wants those DLLs, keeps working. The `arm-none-eabi-*` names are
+  unique, and Windows loads a program's DLLs from its own directory first, so
+  putting the toolchain last costs nothing.
+- ⚠️ **Do NOT build sonixflasher with `USE_LIBUSB=1` here.** That is the macOS
+  Tahoe workaround. The Makefile's Windows branch links hidapi + setupapi, and
+  the Sonix bootloader enumerates as an ordinary HID device — so there is **no
+  Zadig/WinUSB driver swap** needed to flash, which is the step that makes a
+  first flash on Windows look impossible.
+
+`flash.sh` is cross-platform: it asks hidapi whether `0x7140` (bootloader) or
+`0x8009` (QMK) is present rather than `ioreg`, and branches BSD/GNU `stat`
+(GNU's `-f` means `--file-system`, so it *succeeds* with the wrong output
+instead of failing through — do not probe it by trying one first).
+
+### The host agents on Windows (Scheduled Tasks)
+
+Ported and verified 2026-09-05. Installed with PowerShell, not the MSYS2 shell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File hostagent\install-agents-windows.ps1
+                                                    [-Status] [-Uninstall]
+```
+
+Two per-user Scheduled Tasks under `\ak820pro\`, logging to
+`%LOCALAPPDATA%\ak820pro\`. Three things about them are requirements rather
+than preferences:
+
+- They run as the **interactive user**, never SYSTEM and never "whether the
+  user is logged on or not". SMTC media sessions belong to a user session, so a
+  SYSTEM task sees no media at all.
+- They launch under `pythonw.exe`, so no console flashes at every logon — which
+  also means `stdout` goes nowhere and a crash would be invisible. Both agents
+  therefore log to a file (`--log` for now-playing; the timekeeper knows its
+  own path). A missing `import os` made now-playing exit 1 on launch with an
+  empty log, and only `-Status`' `result 0x1` showed it at all.
+- The settings explicitly set `-DontStopIfGoingOnBatteries`: the default stops
+  the task on battery, which would silently kill clock sync on a laptop.
+- ⚠️ **Every `subprocess` spawn needs `CREATE_NO_WINDOW`.** `ak820ctl` is a
+  console program and the agent runs under `pythonw.exe`, which has none — so
+  Windows allocates a fresh console per spawn and **a terminal window flashes
+  up and takes focus**. `run_ctl()` fires 2-3 times per sync (`clock`, then
+  `clock --read`), i.e. a blink every few minutes. A focus steal mid-keystroke
+  can eat the keypress, so without this flag the agent for a *keyboard* drops
+  keys at the OS level — a failure that looks exactly like the firmware faults
+  the rest of this document is about, and is not one. The flag suppresses the
+  console only; piped stdout/stderr still come back normally. `venv_bootstrap`
+  carries it too, for the same reason (it probes `python.exe`).
+
+**Why there are two venvs.** The now-playing agent reads SMTC through `winsdk`,
+which has no mingw wheel and wants MSVC to build, so it cannot live in
+`venv-mingw64`. Native CPython has a prebuilt wheel. Hence `venv-win`, created
+by setup.sh step 2b from whatever native python it can find (`$AK820_WIN_PYTHON`,
+then `py -3`, then pyenv-win / python.org). `venv_bootstrap.py` now picks the
+venv that actually *provides* the module asked for, rather than the first that
+exists — otherwise every agent re-exec landed in venv-mingw64, which can never
+have winsdk.
+
+**⚠️ ak820ctl must be linked statically on Windows.** A default mingw build
+depends on `/mingw64/bin/libhidapi-0.dll` and dies with STATUS_DLL_NOT_FOUND
+(exit `-1073741515`, no message) anywhere MSYS2 is not on `PATH` — which is
+exactly how a Scheduled Task runs it. setup.sh passes `CFLAGS=-static` and a
+static `HID_LIBS` as make command-line overrides, so the pinned clone is
+untouched.
+
+**⚠️ ak820ctl keys its calibration cache off `getenv("HOME")`**
+(`ak820ctl.c:225`), falling back to `"."`. Windows sets no `HOME`, and MSYS2
+sets a POSIX one a native binary cannot resolve — so ak820ctl would scatter
+`.ak820ctl-cap` into whatever the working directory was while the timekeeper
+read `%USERPROFILE%`. The two would never meet and the learned SOF bias would
+silently never arrive. `run_ctl()` exports one agreed `HOME` for both.
+
+### What the now-playing agent can see
+
+Windows has a real OS-level media API — `GlobalSystemMediaTransportControlsSessionManager`
+("SMTC", Win10 1809+), the same source the volume-key flyout reads. Apps
+register a session and it is read uniformly, so there is **no per-app code**,
+unlike the mac agent's AppleScript for Spotify and Music. Browsers register
+sessions, so YouTube and web players work too.
+
+`--probe` lists every session and is the answer to "why doesn't X show up?":
+
+```
+venv-win\Scripts\python.exe hostagent\nowplaying-windows.py --probe
+```
+
+Measured 2026-09-05:
+
+| App | Session | Metadata | Timeline |
+|---|---|---|---|
+| foobar2000 2.24.6 (stock components) | yes | title + artist | **no** — 0s/0s |
+| Apple Music (Store) | yes | yes | yes |
+
+foobar2000 registering at all corrects the older advice that it needs a
+plug-in; v2 gained this. But it publishes no timeline properties, so the
+playback progress readout stays blank for foobar while text and icon work.
+Checked while the session was actually `PLAYING`, not merely paused — it is a
+real gap in foobar's SMTC integration, not a stale-session artifact. Recovering
+a position for foobar specifically means going outside SMTC (its `foo_beefweb`
+HTTP API exposes one), which buys back the timer at the cost of the first
+piece of per-app code in this agent.
+An app that registers nothing is invisible here and no change to the agent can
+fix that — it is an app-side plug-in question.
+
+**The icon can look inverted, and it is not the agent.** `KC_MEDIA_PLAY_PAUSE`
+calls `display_toggle_play_icon()` (display.c:1684) so the glyph flips
+instantly on the keypress instead of waiting for the host's next poll. With no
+agent running nothing ever corrects that guess, so one media-key press leaves
+it backwards until something re-asserts the truth. The agent does that within
+one poll (3 s), and unconditionally every 30 s.
+
+**The board is only as good as this PC's clock.** `ak820ctl clock` lands the
+board within a few ms of the *host*; Windows' own w32time defaults to a
+32768 s (~9 h) poll and was measured 20 ms off NTP here. Check with
+`w32tm /stripchart /computer:time.windows.com /samples:5 /dataonly`, and
+measure the board itself with `hostagent/clock-phase.py`, which reports the
+phase error directly (+15.9 ms, spread 1.5 ms, on the day this was written).
+A large correction is **slewed, not jumped** — a 1.8 s error spends a while
+visibly converging, which reads as "the clock is half a second slow".
+
 ## Watchdog + health (2026-09-01 hardening)
 
 **Watchdog** (`watchdog.c`): SN_WDT off the ILRC, ~12 s timeout —

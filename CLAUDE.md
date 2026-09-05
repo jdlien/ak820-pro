@@ -70,6 +70,25 @@ restructured the same day into a clone-and-build package: `setup.sh` +
 ./flash.sh ak820pro-builds/out/<the printed artifact>
 ```
 
+Works on macOS and on Windows from the **MSYS2 MinGW 64-bit shell** (only that
+shell — `qmk_cli` refuses the others). Windows has four traps that all present
+as something else, and every one of them costs an hour if you meet it cold:
+CRLF checkouts make `build.sh` see a permanently dirty submodule; the venv must
+be named `venv-mingw64` (use `$AK820_VENV`, never a literal `venv`); the xpack
+arm toolchain must come **last** on `PATH` or its bundled DLLs make the native
+gcc fail silently; and `USE_LIBUSB=1` is macOS-only — on Windows the bootloader
+is plain HID, so no Zadig. All four are written up in
+[docs/hardware.md](docs/hardware.md#building-and-flashing-on-windows-msys2).
+
+Windows host agents are Scheduled Tasks, installed from **PowerShell**:
+`hostagent/install-agents-windows.ps1 [-Status] [-Uninstall]`. They need
+`venv-win` (native python) — `venv-mingw64` can never hold `winsdk`, so
+`venv_bootstrap.py` picks the venv that *provides* the module, not the first
+that exists. Two traps that fail silently: **ak820ctl must be linked static**
+on Windows (a Scheduled Task has no MSYS2 on `PATH`), and it keys its
+calibration cache off `getenv("HOME")`, which Windows does not set — the
+timekeeper exports one agreed `HOME` so both see the same file.
+
 `build.sh` enforces the submodule pin, structural binary checks and via.json /
 enum sync; it refuses a dirty or off-pin tree. `flash.sh` preserves the VIA
 keymap across the flash and refuses to flash if the backup fails. Bootloader is
