@@ -257,13 +257,45 @@ process, and the kernel faulted while re-basing the shared NGEN image
 `PresentationFramework.ni.dll` for it -- `NtCreateSection` ->
 `MiShareExistingControlArea` -> ... -> `MiApplyCompressedFixups`, decoding its
 own compressed relocation stream from paged pool and running off the end of a
-4 KB page. Working theory there is a transient RAM or bus read error.
+4 KB page.
+
+**It is persistent RAM corruption, not a transient read.** Three single-bit
+flips in ONE 64-byte cache line of kernel paged pool -- phys `0xe638f808c` bit
+3, `0xe638f8094` bit 2, `0xe638f80ac` bit 7 -- inside the relocation stream for
+page `0x13ed000`. Decoding the corrupted stream with the kernel's exact
+semantics reproduces both the bugcheck and the scribbled target page with zero
+bytes of mismatch, and flipping those three bits back matches the on-disk
+`.reloc` block exactly. The other 1,106 page streams in the block are intact.
+Recommendation to the owner was MemTest86 and the ASUS 2402 BIOS.
 
 **Nothing of ours is in the stack**: no `hidclass`, `HIDUSB`, `kbdhid` or
 `mouhid`, no I/O manager at all, no Bluetooth. A concurrent-HID-open experiment
 of ours had ended about five minutes earlier and was explicitly checked and
 ruled out; it is recorded here only so the coincidence is not rediscovered as a
 suspicion later.
+
+### ⚠️ Consequence for this repo: do not flash from a machine with bad RAM
+
+A bit flip in a firmware image between `build.sh` and the board would not be
+caught by anything in the current pipeline. `sonixflasher` reports
+`Flash Verification Checksum: OK` by comparing the board against **what it
+sent**, so a buffer corrupted before transmission verifies perfectly. The
+structural checks in `build.sh` (initial SP, reset vector, USB descriptor) only
+sample three places and would miss a flip anywhere else in the 256 KB image.
+There is no read-back path to compare against: the stock firmware cannot be
+read off the board, and neither can ours.
+
+Until the memory is cleared, either do not flash, or verify the artifact by
+hash before flashing. **Reproducible builds make that easy and are the reason
+this is checkable at all**: two clean builds of the same commit are
+byte-identical, measured 2026-09-05.
+
+    sha256sum ak820pro-builds/out/via-daily-<hash>-*.bin   # must all agree
+
+Checked after the fault was identified, with no errors: `git fsck --full
+--strict` on this repo (every object SHA verifies, so no flip reached git),
+a clean working tree, and all three clean builds of `8608c4f6` still hashing to
+`e504bf9dddc91dd1...`.
 
 **Two reasons it is worth keeping.**
 
