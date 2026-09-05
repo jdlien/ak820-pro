@@ -451,8 +451,7 @@ impl Device {
                 Ok(Outcome::Done(n)) => {
                     seen.push(match proto::normalize_input(&buf[..n]) {
                         Ok(r) => Drained::Stale {
-                            channel: r[1],
-                            command: r[2],
+                            header: [r[0], r[1], r[2]],
                         },
                         Err(m) => Drained::StaleUnreadable(m),
                     });

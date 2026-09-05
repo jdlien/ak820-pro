@@ -296,8 +296,9 @@ fn report_drained(drained: &[Drained]) {
     );
     for d in drained {
         match d {
-            Drained::Stale { channel, command } => eprintln!(
-                "  queued before we asked: channel {channel:#04X} command {command:#04X}"
+            Drained::Stale { header: h } => eprintln!(
+                "  queued before we asked: {:02X} {:02X} {:02X}",
+                h[0], h[1], h[2]
             ),
             Drained::StaleUnreadable(m) => eprintln!("  queued before we asked: {m:?}"),
             Drained::Foreign(m) => eprintln!("  arrived while waiting: {m:?}"),

@@ -23,8 +23,10 @@ use crate::proto::Mismatch;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Drained {
     /// Already queued when we wrote, so it answers something that happened
-    /// before our request, whatever it contains.
-    Stale { channel: u8, command: u8 },
+    /// before our request, whatever it contains. Raw first three bytes, for
+    /// the reason [`Mismatch::NotOurs`] gives: a foreign report's bytes are
+    /// not a channel and a command.
+    Stale { header: [u8; 3] },
     /// Queued before our write, and not one of our reports at all.
     StaleUnreadable(Mismatch),
     /// Arrived while we were waiting, and answered someone else.

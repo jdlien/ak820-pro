@@ -44,6 +44,20 @@
 //! single owner of the interface -- the daemon's whole reason for existing --
 //! or a nonce in the protocol, which would be a firmware change. Do not read
 //! the correlation below as making concurrent clock clients safe.
+//!
+//! # ⚠️ And it protects us, not them
+//!
+//! The broadcast is bidirectional. Captured from VIA's own error console the
+//! same day: VIA asked `CUSTOM_MENU_SET_VALUE` and received
+//! `07 11 01 00 85 60 17 CE` -- **our** `FC_INFO` reply -- which it rejected as
+//! "Receiving incorrect response for command". Worse, one injected report
+//! desyncs it persistently: every command after that got the *previous*
+//! command's echo.
+//!
+//! Nothing in this module can prevent that; correlation is a read-side defence
+//! and the damage is on the other side of the wire. The only mitigation is not
+//! transacting while VIA is open -- see the phase-4 proposal in
+//! plans/AK820-AGENT-PLAN.md, which uses the drain log as a VIA detector.
 
 /// Report size the firmware expects, excluding the leading report id.
 pub const REPORT_LEN: usize = 32;
@@ -101,8 +115,16 @@ pub enum Mismatch {
     /// A numbered report from something else sharing the handle. Ours is
     /// always id `0x00`.
     ReportId(u8),
-    /// Someone else's traffic, or our own echo on another channel.
-    OtherChannel { channel: u8, command: u8 },
+    /// Not our channel -- someone else's traffic entirely.
+    ///
+    /// ⚠️ Carries the raw first three bytes rather than naming them, and that
+    /// is deliberate. For our own framing they are
+    /// `[SET_VALUE, channel, command]`, but a report from **VIA** is
+    /// `[command_id, ...]` on VIA's own layout, where byte 1 is a QMK
+    /// lighting channel and byte 2 a value id. Calling those "channel" and
+    /// "command" in a log invents a channel this firmware does not have --
+    /// which is exactly the wrong turn a reader takes at 2 a.m.
+    NotOurs { header: [u8; 3] },
     /// Right channel, different command -- e.g. a text echo while we await a set.
     OtherCommand { command: u8 },
     /// Right channel and command, but the leading id is neither `SET_VALUE` nor
@@ -145,9 +167,8 @@ pub fn match_reply(report: &[u8], channel: Channel, command: u8) -> Result<(), M
         return Err(Mismatch::TooShort);
     }
     if report[1] != channel.id() {
-        return Err(Mismatch::OtherChannel {
-            channel: report[1],
-            command: report[2],
+        return Err(Mismatch::NotOurs {
+            header: [report[0], report[1], report[2]],
         });
     }
     if report[2] != command {
@@ -240,9 +261,8 @@ mod tests {
         ]);
         assert_eq!(
             match_reply(&echo, Channel::Rtc, 0x02),
-            Err(Mismatch::OtherChannel {
-                channel: 0x12,
-                command: 0x03
+            Err(Mismatch::NotOurs {
+                header: [0x07, 0x12, 0x03]
             }),
             "a text echo must never be read as a clock reply"
         );
@@ -282,9 +302,8 @@ mod tests {
         let theirs = wire(&[ID_UNHANDLED, 0x12, 0x03]);
         assert_eq!(
             classify(&theirs, Channel::Rtc, 0x02),
-            Verdict::Drain(Mismatch::OtherChannel {
-                channel: 0x12,
-                command: 0x03
+            Verdict::Drain(Mismatch::NotOurs {
+                header: [ID_UNHANDLED, 0x12, 0x03]
             })
         );
     }
@@ -335,11 +354,48 @@ mod tests {
         ]);
         assert_eq!(
             classify(&echo, Channel::Rtc, 0x02),
-            Verdict::Drain(Mismatch::OtherChannel {
-                channel: 0x12,
-                command: 0x03
+            Verdict::Drain(Mismatch::NotOurs {
+                header: [0x07, 0x12, 0x03]
             })
         );
+    }
+
+    /// ⚠️ Captured from VIA's own error log, 2026-09-05. VIA rides the same
+    /// `0x07` id we do -- our channels were chosen to sit above QMK's lighting
+    /// channels precisely so the byte after it separates us -- and this is what
+    /// its custom-menu traffic looks like arriving on our handle. Byte 1 is a
+    /// QMK lighting channel, not one of ours, so it drains.
+    #[test]
+    fn classify_drains_vias_custom_menu_traffic() {
+        // CUSTOM_MENU_SET_VALUE on the RGB matrix channel, value id 1.
+        let via_set = wire(&[0x07, 0x03, 0x01, 0xA9]);
+        assert_eq!(
+            classify(&via_set, Channel::Flash, 0x01),
+            Verdict::Drain(Mismatch::NotOurs {
+                header: [0x07, 0x03, 0x01]
+            })
+        );
+        // CUSTOM_MENU_SAVE -- a different leading id entirely.
+        let via_save = wire(&[0x09, 0x03]);
+        assert_eq!(
+            classify(&via_save, Channel::Flash, 0x01),
+            Verdict::Drain(Mismatch::NotOurs {
+                header: [0x09, 0x03, 0x00]
+            })
+        );
+    }
+
+    /// The other direction, and the one VIA actually complained about: this is
+    /// **our** FC_INFO reply, which VIA received and rejected as
+    /// "Receiving incorrect response for command". Nothing in this crate can
+    /// stop that -- the fix is not transacting while VIA is open.
+    #[test]
+    fn our_own_reply_is_what_via_saw() {
+        let ours = wire(&[0x07, 0x11, 0x01, 0x00, 0x85, 0x60, 0x17, 0xCE]);
+        assert!(matches!(
+            classify(&ours, Channel::Flash, 0x01),
+            Verdict::Reply(_)
+        ));
     }
 
     /// Neither 0x07 nor 0xFF on our own channel and command: not a shape the

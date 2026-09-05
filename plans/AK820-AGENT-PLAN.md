@@ -391,6 +391,57 @@ Consequences:
   free — but it is the answer if concurrent clock clients ever become a
   requirement.
 
+### ⚠️ VIA coexistence: the broadcast is bidirectional, and VIA is the victim
+
+Measured 2026-09-05 with usevia.app open on the Design tab and the owner
+changing lighting values, while `ak820 watch` did flash reads twice a second.
+
+**Our side was fine.** Every request succeeded — including six consecutive
+windows that drained **25, 13, 24, 48, 64 and 50** foreign reports, ~224 in
+about three seconds. VIA's custom-menu traffic saturates `DRAIN_LIMIT` (32) and
+spills into the in-flight drain, which is why both bounds exist; correctness
+never depended on the pre-drain finishing.
+
+**VIA's side was not fine.** From VIA's own error console:
+
+| VIA's command | Response VIA received | Whose it actually was |
+|---|---|---|
+| `7 3 1 169` set | `07 11 01 00 85 60 17 CE` | **our `FC_INFO` reply** |
+| `9 3` save | `07 03 01 A9` | VIA's own previous echo |
+| `7 3 1 168` set | `09 03` | VIA's own save echo |
+| `7 3 1 123` set | `07 12 04 00` | **the now-playing agent's `TEXT_PLAYBACK`** |
+| `9 3` save | `07 11 01 00 85 60 17 CE` | our `FC_INFO` again |
+
+Three things this establishes that nothing else had:
+
+1. **The broadcast is bidirectional.** We knew foreign replies arrive on our
+   handle. This is the reciprocal: *our* reply was delivered to VIA, which
+   rejected it with `Receiving incorrect response for command`. Correlation
+   protects us from them; nothing in this crate protects them from us.
+2. **One injected report desyncs VIA persistently.** After the first bad pair,
+   every subsequent command received the *previous* command's echo — the stream
+   stays off by one rather than resynchronising. A single daemon transaction
+   during a VIA session can spoil the rest of that session.
+3. ⚠️ **This is not new, and it is not the Rust tool's doing.** `07 12 04` is
+   `TEXT_PLAYBACK` from the *Python* now-playing agent, which writes every ~3 s.
+   VIA on this machine has been unreliable whenever the agents run; it simply
+   was never attributed. That reframes the whole issue — it is an argument
+   **for** single ownership, not a cost of it.
+
+⚠️ Note also what the board did with those commands: it *executed* them and
+echoed them. VIA lost the confirmations, not the writes. So a lighting change
+made during a desync may well have applied even though VIA reported an error —
+and VIA's displayed state may then disagree with the board's. Read the values
+back (`[0x08, 3, 1..4]`) rather than trusting the UI after this happens.
+
+**Proposal for phase 4, not built now.** The drain log is a free VIA detector:
+its traffic is unmistakable as `NotOurs { header: [0x07|0x08|0x09, 0x03, _] }`,
+QMK's lighting channel, which none of our four channels can collide with. A
+daemon that sees it can defer non-urgent work — a clock sync has 300 seconds of
+slack and no reason to spend it stepping on somebody's UI. That would make the
+daemon *better* for VIA than the Python agents it replaces, rather than merely
+no worse.
+
 ### Unplug during a live transaction
 
 Captured in the same run:
