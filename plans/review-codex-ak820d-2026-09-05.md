@@ -5,7 +5,8 @@ sandbox with full disk read (so it could also read `../jdrgb` and `../jdups`).
 186,752 tokens. Reviewing [AK820D-PLAN.md](AK820D-PLAN.md) and
 [AK820D-CLOCK-PARITY.md](AK820D-CLOCK-PARITY.md) before any code was written.
 
-Verbatim below. Findings acted on are tracked in the plan documents; the two
+The plan documents were renamed to `AK820-AGENT-*.md` after this review; the
+paths it cites were correct when it ran. Verbatim below. Findings acted on are tracked in the plan documents; the two
 live bugs it found in `hostagent/ak820text.py` (finding 8) were fixed
 separately.
 

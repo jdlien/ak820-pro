@@ -1,0 +1,55 @@
+[package]
+name = "ak820-agent"
+version = "0.1.0"
+edition = "2021"
+description = "Clock sync and now-playing for the AJAZZ AK820 Pro LCD (Windows)"
+
+[lib]
+name = "ak820_agent"
+path = "src/lib.rs"
+
+# Two binaries because a PE has exactly one subsystem, the same reason ../jdrgb
+# and ../jdups split theirs. The daemon must NOT be a console app: that is what
+# makes a flashing console window impossible by construction rather than
+# dependent on remembering CREATE_NO_WINDOW at every spawn site. The CLI must
+# be one, or its exit code and stdout are lost to the calling shell.
+[[bin]]
+name = "ak820"
+path = "src/bin/ak820.rs"
+
+[[bin]]
+name = "ak820-agent"
+path = "src/bin/ak820-agent.rs"
+
+# ONE direct dependency (15 packages resolved). `windows`, not the `windows-sys`
+# the sibling projects use: SMTC is WinRT and windows-sys carries no WinRT
+# projection. Pinned -- the blocking async spelling is version-dependent, and in
+# 0.62 it is `.join()`; `.get()` does not exist. Measured 2026-09-05: 117 KB
+# release binary with SMTC linked and exercised.
+#
+# NOT hidapi, deliberately, as in both siblings: its enumeration opens every HID
+# device on the machine, which is what wedged a UPS here. See
+# ../jdrgb/docs/ups-wedge-incident.md and plans/AK820-AGENT-PLAN.md.
+[dependencies.windows]
+version = "=0.62.2"
+features = [
+    "Win32_Foundation",                          # HANDLE, GetLastError, CloseHandle
+    "Win32_Devices_DeviceAndDriverInstallation", # CM_Get_Device_Interface_ListW -- opens nothing
+    "Win32_Devices_HumanInterfaceDevice",        # HidD_/HidP_ on the one device we open
+    "Win32_Storage_FileSystem",                  # CreateFileW/ReadFile/WriteFile
+    "Win32_System_IO",                           # OVERLAPPED, CancelIoEx, GetOverlappedResult
+    "Win32_System_Threading",                    # CreateEventW, WaitForSingleObject
+    "Win32_Security",                            # CreateMutexW takes SECURITY_ATTRIBUTES
+    "Win32_System_Console",                      # the CLI half
+    # WinRT, for the media half (phase 1).
+    "Media_Control",
+    "Foundation",
+    "Foundation_Collections",
+]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,4 +1,4 @@
-# ak820d — one Windows daemon for the clock and the LCD text — plan
+# ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
 Status: **PLANNED 2026-09-05, revised the same day** against
 [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
@@ -9,9 +9,9 @@ macOS keeps its LaunchAgents and its Python, unchanged.
 
 Companion documents, both of which are part of this plan:
 
-- **[AK820D-CLOCK-PARITY.md](AK820D-CLOCK-PARITY.md)** — the Python scheduler
+- **[AK820-AGENT-CLOCK-PARITY.md](AK820-AGENT-CLOCK-PARITY.md)** — the Python scheduler
   and SOF-bias learner.
-- **[AK820D-CLOCK-TRANSACTION.md](AK820D-CLOCK-TRANSACTION.md)** — `ak820ctl`'s
+- **[AK820-AGENT-CLOCK-TRANSACTION.md](AK820-AGENT-CLOCK-TRANSACTION.md)** — `ak820ctl`'s
   clock transaction, where the precision actually lives. **The oracle is Python
   plus the pinned C utility.**
 
@@ -45,7 +45,7 @@ interactive — never in an unattended daemon); the diagnostics; the macOS agent
 
 ## Settled
 
-- Windows only. The crate lives in this repo at `ak820d/`, because the wire
+- Windows only. The crate lives in this repo at `ak820-agent/`, because the wire
   protocol is firmware-versioned. Python remains the clock oracle. No tray, no
   icon.
 
@@ -84,7 +84,7 @@ gets pinned in a test**, per `../jdups/CLAUDE.md`.
 ## Architecture
 
 ```
-ak820d/
+ak820-agent/
   Cargo.toml
   src/
     lib.rs
@@ -95,11 +95,11 @@ ak820d/
     smtc.rs       media session worker
     health.rs     counters
     bin/
-      ak820d.rs   daemon -- windows subsystem
-      ak820.rs    CLI    -- console subsystem
+      ak820-agent.rs   daemon -- windows subsystem
+      ak820.rs         CLI    -- console subsystem
 ```
 
-Two binaries because a PE has one subsystem. `ak820d.exe` has **no console
+Two binaries because a PE has one subsystem. `ak820-agent.exe` has **no console
 ever**, which makes the console-flash bug impossible by construction rather than
 dependent on remembering `CREATE_NO_WINDOW`. `ak820.exe` is a console app so
 exit codes and stdout survive.
@@ -112,7 +112,7 @@ instance mutex**. The plan must answer, and the implementation must handle:
 | Case | Behaviour |
 |---|---|
 | second daemon instance | refused by the named mutex |
-| `ak820.exe` while the daemon runs | routed through the daemon, or refused with a clear message |
+| `ak820.exe` while `ak820-agent.exe` runs | routed through the daemon, or refused with a clear message |
 | retained C/Python diagnostics | documented as requiring the daemon paused |
 | VIA opening before / during / after a transaction | transaction fails cleanly and retries; no wedged state |
 
@@ -278,8 +278,12 @@ firmware staging/commit for a real atomic update.
 
 ## Open
 
-- Naming: `ak820d` + `ak820` matches the existing `ak820ctl`/`ak820text`/
-  `ak820health` family rather than the siblings' `jd*`.
+- ~~Naming~~ **SETTLED**: package and directory `ak820-agent`, binaries
+  `ak820-agent.exe` (daemon) and `ak820.exe` (CLI). "Agent" is already this
+  project's own word (README, `install-agents*.ps1`, both Scheduled Task
+  names), and `../jdups` already ships a `jdups-agent` binary for exactly this
+  role. `ak820d` was dropped: `d`-for-daemon is a Unix idiom in a Windows-only
+  program.
 - Whether `ak820.exe` eventually absorbs `ak820ctl`'s clock subcommand, leaving
   the C tool purely for provisioning. Decide before phase 5.
 - Config file, or compiled-in constants? Start with none.

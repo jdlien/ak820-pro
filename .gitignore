@@ -23,3 +23,6 @@ assets-src/*.ttf
 assets-src/*.otf
 ak820pro-builds/out/
 ak820pro-builds/release/
+
+# Rust build output for the Windows host agent.
+ak820-agent/target/

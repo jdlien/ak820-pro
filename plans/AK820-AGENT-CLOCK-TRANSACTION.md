@@ -2,7 +2,7 @@
 
 Status: **REFERENCE, written 2026-09-05.** Transcribed from
 `time-util-ak820pro/ak820ctl.c` (pinned at `7f92889f`) after the Codex review
-pointed out that [AK820D-CLOCK-PARITY.md](AK820D-CLOCK-PARITY.md) documented
+pointed out that [AK820-AGENT-CLOCK-PARITY.md](AK820-AGENT-CLOCK-PARITY.md) documented
 only the Python scheduler and omitted the component that actually delivers the
 precision.
 

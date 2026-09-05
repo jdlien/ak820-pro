@@ -1,4 +1,4 @@
-# ak820d clock parity — what the Rust port must not change
+# ak820-agent clock parity — what the Rust port must not change
 
 Status: **REFERENCE, written 2026-09-05, corrected the same day** against the
 Codex review ([review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md),
@@ -9,7 +9,7 @@ against it rather than reasoned about.
 > ⚠️ **This is half the contract.** The scheduler and the SOF-bias learner live
 > in Python; the precision — five GETs, min-RTT selection, the fraction formula,
 > SET packet construction and the outbound-lead learner — lives in
-> `ak820ctl.c`. See **[AK820D-CLOCK-TRANSACTION.md](AK820D-CLOCK-TRANSACTION.md)**.
+> `ak820ctl.c`. See **[AK820-AGENT-CLOCK-TRANSACTION.md](AK820-AGENT-CLOCK-TRANSACTION.md)**.
 > The oracle is Python **plus** the pinned C utility. Reproducing everything
 > below perfectly while getting the C half wrong still injects milliseconds on
 > every SET.
