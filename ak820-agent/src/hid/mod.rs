@@ -47,7 +47,7 @@ pub enum Drained {
 /// and then manufactures a spurious sync when access returns.
 ///
 /// [`plans/AK820-AGENT-PLAN.md`]: https://github.com/jdlien/ak820-pro
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Error {
     /// Nothing on this machine names our VID/PID. Unplugged, powered down, or
     /// the slider is not on `cable`.

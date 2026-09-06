@@ -209,12 +209,24 @@ impl BoardTime {
         1.0 - (per + 1.0 - self.seccnt as f64) / (nominal + 1.0)
     }
 
-    /// Local seconds-of-day on the board, fractional. `None` if unset.
+    /// Local seconds-of-day on the board, fractional. `None` if unset — **and
+    /// `None` if negative**, which the C's `get_offset` reads the same way
+    /// (`board_sod() < 0` → `-2`, "clock unset": skipped, and still fine to
+    /// set).
+    ///
+    /// Negative is reachable, not theoretical: during a slowing slew the
+    /// firmware programs an active period *longer* than the nominal one
+    /// (`rtc.c`), so the fraction formula goes below zero for a small count,
+    /// and at `00:00:00` there is nothing to add it to. The phase-2 audit's
+    /// finding 2; the first version checked only the set flag and reported a
+    /// −21.9 ms sample the C would have skipped.
     pub fn seconds_of_day(&self) -> Option<f64> {
-        self.set.then(|| {
-            self.hour as f64 * 3600.0 + self.minute as f64 * 60.0 + self.second as f64
-                + self.fraction()
-        })
+        if !self.set {
+            return None;
+        }
+        let sod = self.hour as f64 * 3600.0 + self.minute as f64 * 60.0 + self.second as f64
+            + self.fraction();
+        (sod >= 0.0).then_some(sod)
     }
 
     /// Is this a version we are willing to act on?
@@ -472,6 +484,16 @@ mod tests {
                  offset board-host +2365966.0 ms  rtt 4.0 ms  flags 0x00  ref_state 0  sync_age 0 min  last_host_offset 0 ms\n\
                  sof_epoch 0  sof_frames_total 0  bias_in_use 0 ppm\n",
             ),
+            // The phase-2 audit's finding 2: 00:00:00, count 100, active
+            // period 33422 against a nominal 32767 -- a negative fraction the
+            // C reports as unset.
+            (
+                "07 10 02 01 1A 09 06 00 00 00 00 02 64 00 00 00 8E 82 FF 7F 00 00 00 00 00 00 00 00 00 00 00 00",
+                0.005,
+                4.0,
+                "device 2026-09-06 00:00:00-0.017  (cnt 100 / period 33422, nominal 32767)\n\
+                 device clock not set\n",
+            ),
         ];
         for (hex, host_mid_sod, rtt_ms, expect) in CAPTURED {
             let raw: Vec<u8> = hex
@@ -557,6 +579,25 @@ mod tests {
         let with_zero = decode(&reply(true, (0, 0, 0), 9000, p, 0, false)).unwrap();
         let explicit = decode(&reply(true, (0, 0, 0), 9000, p, p, false)).unwrap();
         assert_eq!(with_zero.fraction(), explicit.fraction());
+    }
+
+    /// The phase-2 audit's finding 2, with its exact fields: a lengthened
+    /// active period just after midnight makes the seconds-of-day negative,
+    /// and the C reads that as unset. So does this now. The C harness prints
+    /// `device clock not set` for these bytes — pinned in
+    /// `read_lines_match_the_c_for_captured_replies`.
+    #[test]
+    fn a_negative_seconds_of_day_is_read_as_unset_like_the_c() {
+        let b = decode(&reply(true, (0, 0, 0), 100, 33422, 32767, false)).unwrap();
+        assert!(b.set);
+        assert!((b.fraction() - -0.016937255859375).abs() < 1e-12);
+        assert_eq!(b.seconds_of_day(), None);
+        // one second later the same fraction is a fine reading
+        let later = decode(&reply(true, (0, 0, 1), 100, 33422, 32767, false)).unwrap();
+        assert!((later.seconds_of_day().unwrap() - (1.0 - 0.016937255859375)).abs() < 1e-12);
+        // and exactly zero is set, not negative -- the oracle's 2365966 case
+        let zero = decode(&reply(true, (0, 0, 0), 0, 0, 0, false)).unwrap();
+        assert_eq!(zero.seconds_of_day(), Some(0.0));
     }
 
     #[test]
@@ -673,6 +714,20 @@ mod tests {
         let m = select(&[sample(1.0, -3.0), sample(2.0, -1.0)]).unwrap();
         assert_eq!(m.rtt_ms, -3.0);
         assert!((m.uncertainty_ms - ((0.0 - -3.0) / 2.0 + 0.5)).abs() < 1e-9);
+    }
+
+    /// ⚠️ A declared divergence — the phase-2 audit's finding 7. The C starts
+    /// `rtt_min` at `1e9` and takes a sample only if `rtt < rtt_min`, so a
+    /// burst whose every round trip is at least 1e9 ms (eleven days) counts as
+    /// `good` yet selects nothing: `best_off` stays 0 and the printed rtt is
+    /// the verify's. Here such a sample is selected. Reaching it needs an
+    /// eleven-day wall-clock jump inside one GET, and matching it would push
+    /// a sentinel through `Measurement`'s public type. On record, not ported.
+    #[test]
+    fn an_eleven_day_round_trip_is_selected_where_the_c_would_skip_it() {
+        let m = select(&[sample(123.0, 1e9)]).unwrap();
+        assert_eq!(m.offset_ms, 123.0, "the C would report before +0.0 here");
+        assert_eq!(m.rtt_ms, 1e9);
     }
 
     /// Ties keep the first, matching the C's strict `<` comparison.

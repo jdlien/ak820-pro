@@ -35,7 +35,8 @@
 //!
 //! Saves go through a temporary file and a rename, which is what the Python
 //! timekeeper does (`cap_write_bias`) and the C does not. The bytes written are
-//! the same; a crash mid-write leaves the old file rather than a truncated one.
+//! the same, `\r\n` included; a crash mid-write leaves the old file rather than
+//! a truncated one.
 
 use std::path::{Path, PathBuf};
 
@@ -121,15 +122,21 @@ pub fn parse(text: &str) -> Cap {
     }
 }
 
-/// `cap_save`'s bytes: `"%d %.3f %d\n"` with a bias, `"%d %.3f\n"` without.
+/// `cap_save`'s bytes: `"%d %.3f %d\n"` with a bias, `"%d %.3f\n"` without —
+/// **and the `\n` is `\r\n` on disk.** The C opens the file in text mode
+/// (`fopen(..., "w")`) and so does the Python timekeeper, and on Windows both
+/// translate; the installed cache ends in `0D 0A`. The first version of this
+/// wrote a bare `\n`, which every parser tolerates and the byte-for-byte claim
+/// did not survive — the phase-2 audit's finding 5. This crate is Windows
+/// only, so the translation is spelled out rather than made conditional.
 ///
 /// Rust's `{:.3}` and the CRT's `%.3f` both print the exact binary value
 /// correctly rounded, ties to even; the tests pin the ties (`0.0625` → `0.062`)
 /// because that agreement is what makes the file interchangeable.
 pub fn format(cap: &Cap) -> String {
     match cap.bias_ppm {
-        Some(b) => format!("{} {:.3} {}\n", cap.proto, cap.lead_ms, b),
-        None => format!("{} {:.3}\n", cap.proto, cap.lead_ms),
+        Some(b) => format!("{} {:.3} {}\r\n", cap.proto, cap.lead_ms, b),
+        None => format!("{} {:.3}\r\n", cap.proto, cap.lead_ms),
     }
 }
 
@@ -401,51 +408,51 @@ mod tests {
     /// file's contents, what `cap_load` returned, and what `cap_save` then
     /// wrote back. Not one of these was reasoned out.
     const ORACLE: &[(&str, Cap, &str)] = &[
-        ("", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\n"),
-        ("\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\n"),
-        ("2 2.354 -25\n", Cap { proto: 2, lead_ms: 2.354, bias_ppm: Some(-25) }, "2 2.354 -25\n"),
-        ("2 1.5\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\n"),
+        ("", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\r\n"),
+        ("\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\r\n"),
+        ("2 2.354 -25\n", Cap { proto: 2, lead_ms: 2.354, bias_ppm: Some(-25) }, "2 2.354 -25\r\n"),
+        ("2 1.5\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\r\n"),
         // ⚠️ one field: proto WAS read as 2 and is reset to 0 anyway.
-        ("2\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\n"),
-        ("abc\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\n"),
-        ("2 abc\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\n"),
+        ("2\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\r\n"),
+        ("abc\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\r\n"),
+        ("2 abc\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\r\n"),
         // lead out of range resets the lead only; proto survives.
-        ("2 12.0\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\n"),
-        ("2 -0.5 10\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(10) }, "2 1.500 10\n"),
+        ("2 12.0\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\r\n"),
+        ("2 -0.5 10\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(10) }, "2 1.500 10\r\n"),
         // the range is inclusive at both ends
-        ("2 10\n", Cap { proto: 2, lead_ms: 10.0, bias_ppm: None }, "2 10.000\n"),
-        ("2 0\n", Cap { proto: 2, lead_ms: 0.0, bias_ppm: None }, "2 0.000\n"),
+        ("2 10\n", Cap { proto: 2, lead_ms: 10.0, bias_ppm: None }, "2 10.000\r\n"),
+        ("2 0\n", Cap { proto: 2, lead_ms: 0.0, bias_ppm: None }, "2 0.000\r\n"),
         // a bias out of range is dropped from the file on the next save
-        ("2 1.5 601\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\n"),
-        ("2 1.5 -601\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\n"),
-        ("2 1.5 -600\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(-600) }, "2 1.500 -600\n"),
-        ("2 1.5 600\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(600) }, "2 1.500 600\n"),
+        ("2 1.5 601\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\r\n"),
+        ("2 1.5 -601\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\r\n"),
+        ("2 1.5 -600\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(-600) }, "2 1.500 -600\r\n"),
+        ("2 1.5 600\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(600) }, "2 1.500 600\r\n"),
         // %d reads "12" and stops at the dot. Python's int("12.5") would
         // raise and cap_read() return None; the C is the file's owner.
-        ("2 1.5 12.5\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(12) }, "2 1.500 12\n"),
-        ("2 1.5 5 extra\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(5) }, "2 1.500 5\n"),
-        ("0 1.5\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\n"),
-        ("  2   2.354   -25  ", Cap { proto: 2, lead_ms: 2.354, bias_ppm: Some(-25) }, "2 2.354 -25\n"),
-        ("2 inf\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\n"),
-        ("2 -inf\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\n"),
-        ("2 1e1\n", Cap { proto: 2, lead_ms: 10.0, bias_ppm: None }, "2 10.000\n"),
-        ("2 1e-3 7\n", Cap { proto: 2, lead_ms: 0.001, bias_ppm: Some(7) }, "2 0.001 7\n"),
+        ("2 1.5 12.5\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(12) }, "2 1.500 12\r\n"),
+        ("2 1.5 5 extra\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(5) }, "2 1.500 5\r\n"),
+        ("0 1.5\n", Cap { proto: 0, lead_ms: 1.5, bias_ppm: None }, "0 1.500\r\n"),
+        ("  2   2.354   -25  ", Cap { proto: 2, lead_ms: 2.354, bias_ppm: Some(-25) }, "2 2.354 -25\r\n"),
+        ("2 inf\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\r\n"),
+        ("2 -inf\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\r\n"),
+        ("2 1e1\n", Cap { proto: 2, lead_ms: 10.0, bias_ppm: None }, "2 10.000\r\n"),
+        ("2 1e-3 7\n", Cap { proto: 2, lead_ms: 0.001, bias_ppm: Some(7) }, "2 0.001 7\r\n"),
         // an unknown version loads fine; refusing it is the transaction's job
-        ("3 4.5 7\n", Cap { proto: 3, lead_ms: 4.5, bias_ppm: Some(7) }, "3 4.500 7\n"),
-        ("2 1.5 abc\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\n"),
-        ("2 1.5 +25\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(25) }, "2 1.500 25\n"),
-        ("2\t2.5\t-25\n", Cap { proto: 2, lead_ms: 2.5, bias_ppm: Some(-25) }, "2 2.500 -25\n"),
-        ("2 2.354 -25 garbage\n", Cap { proto: 2, lead_ms: 2.354, bias_ppm: Some(-25) }, "2 2.354 -25\n"),
-        ("-1 1.5\n", Cap { proto: -1, lead_ms: 1.5, bias_ppm: None }, "-1 1.500\n"),
-        ("2 1.5 -0\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(0) }, "2 1.500 0\n"),
-        ("2 .5 7\n", Cap { proto: 2, lead_ms: 0.5, bias_ppm: Some(7) }, "2 0.500 7\n"),
-        ("2 5. 7\n", Cap { proto: 2, lead_ms: 5.0, bias_ppm: Some(7) }, "2 5.000 7\n"),
-        ("2 1.5 007\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(7) }, "2 1.500 7\n"),
+        ("3 4.5 7\n", Cap { proto: 3, lead_ms: 4.5, bias_ppm: Some(7) }, "3 4.500 7\r\n"),
+        ("2 1.5 abc\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\r\n"),
+        ("2 1.5 +25\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(25) }, "2 1.500 25\r\n"),
+        ("2\t2.5\t-25\n", Cap { proto: 2, lead_ms: 2.5, bias_ppm: Some(-25) }, "2 2.500 -25\r\n"),
+        ("2 2.354 -25 garbage\n", Cap { proto: 2, lead_ms: 2.354, bias_ppm: Some(-25) }, "2 2.354 -25\r\n"),
+        ("-1 1.5\n", Cap { proto: -1, lead_ms: 1.5, bias_ppm: None }, "-1 1.500\r\n"),
+        ("2 1.5 -0\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(0) }, "2 1.500 0\r\n"),
+        ("2 .5 7\n", Cap { proto: 2, lead_ms: 0.5, bias_ppm: Some(7) }, "2 0.500 7\r\n"),
+        ("2 5. 7\n", Cap { proto: 2, lead_ms: 5.0, bias_ppm: Some(7) }, "2 5.000 7\r\n"),
+        ("2 1.5 007\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(7) }, "2 1.500 7\r\n"),
         // %d reads the "0" of "0x10" and stops at the x
-        ("2 1.5 0x10\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(0) }, "2 1.500 0\n"),
+        ("2 1.5 0x10\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: Some(0) }, "2 1.500 0\r\n"),
         // overflow saturates rather than wrapping
-        ("99999999999 1.5\n", Cap { proto: 2147483647, lead_ms: 1.5, bias_ppm: None }, "2147483647 1.500\n"),
-        ("2 1.5 99999999999\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\n"),
+        ("99999999999 1.5\n", Cap { proto: 2147483647, lead_ms: 1.5, bias_ppm: None }, "2147483647 1.500\r\n"),
+        ("2 1.5 99999999999\n", Cap { proto: 2, lead_ms: 1.5, bias_ppm: None }, "2 1.500\r\n"),
     ];
 
     #[test]
@@ -467,7 +474,7 @@ mod tests {
     fn the_real_cache_round_trips() {
         let c = parse("2 2.354 -25\n");
         assert_eq!(c, cap(2, 2.354, Some(-25)));
-        assert_eq!(format(&c), "2 2.354 -25\n");
+        assert_eq!(format(&c), "2 2.354 -25\r\n");
     }
 
     /// ⚠️ Divergence, deliberate. The C keeps NaN (both of `lead < 0` and
@@ -475,8 +482,8 @@ mod tests {
     /// it to `time_t`, and writes `2 nan` back — measured. Here it resets.
     #[test]
     fn nan_resets_to_the_default_where_the_c_would_keep_it() {
-        assert_eq!(parse("2 nan\n"), cap(2, 1.5, None));
-        assert_eq!(parse("2 -nan(0x1) 7\n"), cap(2, 1.5, Some(7)));
+        assert_eq!(parse("2 nan\r\n"), cap(2, 1.5, None));
+        assert_eq!(parse("2 -nan(0x1) 7\r\n"), cap(2, 1.5, Some(7)));
     }
 
     /// ⚠️ Divergence, deliberate. `%lf` accepts hexadecimal floats, so the C
@@ -485,21 +492,21 @@ mod tests {
     /// bias. No writer of this file emits hex floats.
     #[test]
     fn hex_floats_are_not_read_as_the_c_would() {
-        assert_eq!(parse("2 0x1p-1 7\n"), cap(2, 0.0, None));
+        assert_eq!(parse("2 0x1p-1 7\r\n"), cap(2, 0.0, None));
     }
 
     #[test]
     fn an_incomplete_exponent_is_left_for_the_next_directive() {
         // "1e" is 1, then %d fails on "e".
-        assert_eq!(parse("2 1e 7\n"), cap(2, 1.0, None));
-        assert_eq!(parse("2 1e+ 7\n"), cap(2, 1.0, None));
-        assert_eq!(parse("2 1E2\n"), cap(2, 1.5, None)); // 100 is out of range
+        assert_eq!(parse("2 1e 7\r\n"), cap(2, 1.0, None));
+        assert_eq!(parse("2 1e+ 7\r\n"), cap(2, 1.0, None));
+        assert_eq!(parse("2 1E2\r\n"), cap(2, 1.5, None)); // 100 is out of range
     }
 
     #[test]
     fn a_bare_sign_is_not_a_number() {
-        assert_eq!(parse("+ 1.5\n"), cap(0, 1.5, None));
-        assert_eq!(parse("2 - 7\n"), cap(0, 1.5, None));
+        assert_eq!(parse("+ 1.5\r\n"), cap(0, 1.5, None));
+        assert_eq!(parse("2 - 7\r\n"), cap(0, 1.5, None));
     }
 
     #[test]
@@ -533,15 +540,15 @@ mod tests {
             (2.3544999999999998, "2.354"),
             (2.3545000000000003, "2.355"),
         ] {
-            assert_eq!(format(&cap(2, lead, None)), format!("2 {text}\n"), "lead {lead:e}");
+            assert_eq!(format(&cap(2, lead, None)), format!("2 {text}\r\n"), "lead {lead:e}");
         }
     }
 
     #[test]
     fn the_two_write_forms() {
-        assert_eq!(format(&cap(2, 0.5, Some(600))), "2 0.500 600\n");
-        assert_eq!(format(&cap(2, 0.5, Some(-600))), "2 0.500 -600\n");
-        assert_eq!(format(&cap(0, 1.5, None)), "0 1.500\n");
+        assert_eq!(format(&cap(2, 0.5, Some(600))), "2 0.500 600\r\n");
+        assert_eq!(format(&cap(2, 0.5, Some(-600))), "2 0.500 -600\r\n");
+        assert_eq!(format(&cap(0, 1.5, None)), "0 1.500\r\n");
     }
 
     // -- the file ---------------------------------------------------------
@@ -566,14 +573,28 @@ mod tests {
     fn a_file_round_trips_and_leaves_no_temporary_behind() {
         let f = FileCache::at(scratch("roundtrip"));
         f.save(&cap(2, 2.854, Some(-25))).unwrap();
-        assert_eq!(std::fs::read_to_string(f.path()).unwrap(), "2 2.854 -25\n");
+        assert_eq!(std::fs::read_to_string(f.path()).unwrap(), "2 2.854 -25\r\n");
         assert_eq!(f.load(), cap(2, 2.854, Some(-25)));
         let mut tmp = f.path().as_os_str().to_owned();
         tmp.push(".tmp");
         assert!(!Path::new(&tmp).exists(), "the temporary must be renamed away");
         // and a second save replaces, not appends
         f.save(&cap(2, 1.0, None)).unwrap();
-        assert_eq!(std::fs::read_to_string(f.path()).unwrap(), "2 1.000\n");
+        assert_eq!(std::fs::read_to_string(f.path()).unwrap(), "2 1.000\r\n");
+    }
+
+    /// The installed cache on this machine ends in `0D 0A` (read raw on
+    /// 2026-09-06); so must ours, or "byte for byte" is a figure of speech.
+    /// Every parser involved also accepts a bare `\n`, which is why the first
+    /// version got away with one.
+    #[test]
+    fn a_saved_file_ends_in_crlf_like_the_installed_one() {
+        let f = FileCache::at(scratch("crlf"));
+        f.save(&cap(2, 3.294, Some(-26))).unwrap();
+        let bytes = std::fs::read(f.path()).unwrap();
+        assert_eq!(bytes, b"2 3.294 -26\r\n");
+        assert_eq!(f.load(), cap(2, 3.294, Some(-26)));
+        assert_eq!(parse("2 3.294 -26\r\n"), cap(2, 3.294, Some(-26)), "a bare LF still parses");
     }
 
     #[test]

@@ -62,6 +62,14 @@
 //! function does not resynchronise itself: whether to spend a quarter second
 //! recovering is the scheduler's decision.
 //!
+//! A verify that fails is not fatal — the SET happened, the cache is written,
+//! the line prints `after +0.0` as the C's does — but its error is kept
+//! **typed** in the outcome, because [`hid::Error::Stuck`] needs a different
+//! recovery from a timeout and a string cannot say which (the phase-2 audit's
+//! finding 4). For the same reason, what was discarded on the way accumulates
+//! in the caller's `discarded` across the whole transaction, success or
+//! failure; a failing request's own discards travel inside its error.
+//!
 //! [`resynchronise`]: crate::hid::exchange::resynchronise
 
 use std::fmt;
@@ -226,9 +234,9 @@ pub struct Outcome {
     /// The verify GET's round trip, when a reply arrived at all.
     pub verify_rtt_ms: Option<f64>,
     /// Why the verify produced nothing, if it did not. Not fatal in the C
-    /// either: the line still prints, with `after +0.0`.
-    pub verify_error: Option<String>,
-    pub drained: Vec<Drained>,
+    /// either: the line still prints, with `after +0.0`. Typed, so that a
+    /// caller can tell an abandoned handle from a silent board.
+    pub verify_error: Option<hid::Error>,
 }
 
 /// What the Python timekeeper's `sync()` extracts from the printed output.
@@ -330,16 +338,22 @@ impl fmt::Display for Outcome {
 /// `cmd_clock(NULL, 0)`: the whole transaction.
 ///
 /// `budget` is per request, as the C's `hid_read_timeout` is; a transaction is
-/// at most seven of them.
+/// at most eight of them — five GETs, a SET and its one retry, the verify.
+///
+/// `discarded` collects every report thrown away by a request that succeeded,
+/// across the whole transaction, whichever way it ends. It is the caller's
+/// because a failed transaction has discards too, and they are the only
+/// direct evidence that another process is talking to the same board.
 pub fn run(
     wire: &impl Wire,
     outstanding: &Outstanding,
     host: &impl Host,
     cache: &impl Cache,
     budget: Duration,
+    discarded: &mut Vec<Drained>,
 ) -> Result<Outcome, Error> {
     let mut cap = cache.load();
-    let mut drained = Vec::new();
+    let drained = discarded;
 
     // Measure: five GETs, keep the min-RTT sample. No reply aborts; an
     // unexpected version stops the burst; an unset clock is skipped and the
@@ -399,7 +413,7 @@ pub fn run(
             drained.extend(got.drained);
             (got.sample.map(|s| s.offset_ms), Some(got.rtt_ms), None)
         }
-        Err(e) => (None, None, Some(e.to_string())),
+        Err(e) => (None, None, Some(e)),
     };
 
     let cache_saved = cache.save(&cap);
@@ -414,7 +428,6 @@ pub fn run(
         after_ms,
         verify_rtt_ms,
         verify_error,
-        drained,
     })
 }
 
@@ -509,7 +522,8 @@ mod tests {
         let host = happy_host();
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let out = run(&wire, &Outstanding::new(), &host, &cache, budget()).unwrap();
+        let mut discarded = Vec::new();
+        let out = run(&wire, &Outstanding::new(), &host, &cache, budget(), &mut discarded).unwrap();
 
         // Seven commands: five GETs, one SET, one verify GET.
         let written = wire.written();
@@ -546,13 +560,13 @@ mod tests {
         assert!((out.cap.lead_ms - 2.854).abs() < 1e-3);
         assert_eq!(out.cap.proto, 2);
         assert_eq!(out.cap.bias_ppm, Some(-25));
-        assert_eq!(cache.saved(), vec!["2 2.854 -25\n".to_string()]);
+        assert_eq!(cache.saved(), vec!["2 2.854 -25\r\n".to_string()]);
         assert_eq!(out.cache_saved, Ok(()));
 
         // The verify.
         assert!((out.after_ms.unwrap() - 1.0).abs() < 1e-3);
         assert!(out.verify_error.is_none());
-        assert!(out.drained.is_empty());
+        assert!(discarded.is_empty());
 
         // And the line, byte for byte.
         assert_eq!(out.line(), HAPPY_LINE);
@@ -594,7 +608,6 @@ mod tests {
             after_ms: Some(8.55),
             verify_rtt_ms: Some(4.1),
             verify_error: None,
-            drained: vec![],
         };
         assert_eq!(
             out.line(),
@@ -673,7 +686,6 @@ mod tests {
             after_ms: Some(0.0),
             verify_rtt_ms: Some(4.0),
             verify_error: None,
-            drained: vec![],
         };
         assert_eq!(out.as_reported().before_ms, Some(60.0));
         out.measurement.as_mut().unwrap().offset_ms = 60.06;
@@ -693,13 +705,13 @@ mod tests {
         let host = happy_host();
         let cache = MemCache::absent();
 
-        let out = run(&wire, &Outstanding::new(), &host, &cache, budget()).unwrap();
+        let out = run(&wire, &Outstanding::new(), &host, &cache, budget(), &mut Vec::new()).unwrap();
         assert!(out.measurement.is_none());
         assert_eq!(out.status, SetStatus::Stepped);
         assert!(!out.lead_learned);
         assert_eq!(out.cap.lead_ms, 1.5, "the default lead, untouched");
         assert_eq!(out.cap.bias_ppm, None);
-        assert_eq!(cache.saved(), vec!["2 1.500\n".to_string()]);
+        assert_eq!(cache.saved(), vec!["2 1.500\r\n".to_string()]);
         // the bias byte pair is the sentinel
         assert_eq!(&wire.written()[5][14..16], &[0xFF, 0x7F]);
         assert_eq!(
@@ -728,7 +740,7 @@ mod tests {
         );
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let out = run(&wire, &Outstanding::new(), &host, &cache, budget()).unwrap();
+        let out = run(&wire, &Outstanding::new(), &host, &cache, budget(), &mut Vec::new()).unwrap();
         assert_eq!(out.set_attempts, 2);
         let written = wire.written();
         assert_eq!(written.len(), 8);
@@ -748,7 +760,7 @@ mod tests {
         let wire = Fake::new(script(&replies));
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let err = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget()).unwrap_err();
+        let err = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget(), &mut Vec::new()).unwrap_err();
         assert!(matches!(err, Error::Busy), "{err}");
         assert_eq!(err.to_string(), "firmware busy (stale read) twice -- try again");
         let sets = wire.written().iter().filter(|w| w[3] == SET_TIME_MS).count();
@@ -765,7 +777,7 @@ mod tests {
         let wire = Fake::new(script(&replies));
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let err = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget()).unwrap_err();
+        let err = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget(), &mut Vec::new()).unwrap_err();
         assert!(matches!(err, Error::Rejected));
         assert_eq!(err.to_string(), "firmware rejected the set (validation)");
         assert_eq!(wire.written().len(), 6);
@@ -781,10 +793,10 @@ mod tests {
         let wire = Fake::new(script(&[legacy]));
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let err = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget()).unwrap_err();
+        let err = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget(), &mut Vec::new()).unwrap_err();
         assert!(matches!(err, Error::LegacyFirmware));
         assert_eq!(wire.written().len(), 1, "one GET, then the burst stops");
-        assert_eq!(cache.saved(), vec!["0 2.354 -25\n".to_string()]);
+        assert_eq!(cache.saved(), vec!["0 2.354 -25\r\n".to_string()]);
     }
 
     #[test]
@@ -794,7 +806,7 @@ mod tests {
         let wire = Fake::new(script(&[odd]));
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let err = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget()).unwrap_err();
+        let err = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget(), &mut Vec::new()).unwrap_err();
         assert!(matches!(err, Error::UnknownProtocol(3)));
         assert_eq!(err.to_string(), "unknown RTC protocol version 3 -- refusing to act");
         assert_eq!(wire.written().len(), 1);
@@ -812,7 +824,7 @@ mod tests {
         let outstanding = Outstanding::new();
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let err = run(&wire, &outstanding, &happy_host(), &cache, Duration::from_millis(30))
+        let err = run(&wire, &outstanding, &happy_host(), &cache, Duration::from_millis(30), &mut Vec::new())
             .unwrap_err();
         assert!(matches!(err, Error::Hid(hid::Error::Timeout { .. })), "{err}");
         assert_eq!(wire.written().len(), 3);
@@ -829,11 +841,11 @@ mod tests {
         let wire = Fake::new(script(&replies));
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let out = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget()).unwrap();
+        let out = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget(), &mut Vec::new()).unwrap();
         assert!(out.measurement.unwrap().was_slewing);
         assert!(!out.lead_learned);
         assert_eq!(out.cap.lead_ms, 2.354);
-        assert_eq!(cache.saved(), vec!["2 2.354 -25\n".to_string()]);
+        assert_eq!(cache.saved(), vec!["2 2.354 -25\r\n".to_string()]);
         assert!(out.line().ends_with("lead now 2.35 ms, bias sent (slewing)"));
     }
 
@@ -858,7 +870,7 @@ mod tests {
         );
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let out = run(&wire, &Outstanding::new(), &host, &cache, budget()).unwrap();
+        let out = run(&wire, &Outstanding::new(), &host, &cache, budget(), &mut Vec::new()).unwrap();
         assert_eq!(out.status, SetStatus::Stepped);
         assert!(!out.lead_learned);
         assert!((out.after_ms.unwrap() - 13.0).abs() < 1e-3);
@@ -894,7 +906,7 @@ mod tests {
         let wire = Fake::new(script(&replies));
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let out = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget()).unwrap();
+        let out = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget(), &mut Vec::new()).unwrap();
         assert_eq!(out.status, SetStatus::Other(2));
         assert!(out.lead_learned);
         assert!(out.line().ends_with("bias sent"));
@@ -912,10 +924,10 @@ mod tests {
         let outstanding = Outstanding::new();
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let out = run(&wire, &outstanding, &happy_host(), &cache, Duration::from_millis(30)).unwrap();
+        let out = run(&wire, &outstanding, &happy_host(), &cache, Duration::from_millis(30), &mut Vec::new()).unwrap();
         assert_eq!(out.after_ms, None);
         assert_eq!(out.verify_rtt_ms, None);
-        assert!(out.verify_error.is_some());
+        assert!(matches!(out.verify_error, Some(hid::Error::Timeout { .. })), "{:?}", out.verify_error);
         assert_eq!(outstanding.all(), vec![(0x10, GET_TIME)]);
         assert_eq!(
             out.line(),
@@ -933,13 +945,13 @@ mod tests {
         replies.push(set_reply(0, 0));
         replies.push(get_reply(true, (11, 6, 41), 303, 0));
         let wire = Fake::new(script(&replies));
-        let out = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), budget()).unwrap();
+        let out = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), budget(), &mut Vec::new()).unwrap();
         assert!((out.rtt_ms() - 4.0).abs() < 1e-3);
         // and with no verify reply either, zero
         let mut reads = script(&replies[..6]);
         reads.push(None);
         let wire = Fake::new(reads);
-        let out = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), Duration::from_millis(30)).unwrap();
+        let out = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), Duration::from_millis(30), &mut Vec::new()).unwrap();
         assert_eq!(out.rtt_ms(), 0.0);
     }
 
@@ -949,7 +961,7 @@ mod tests {
         let mut replies = happy_replies();
         replies[6][11] = 0;
         let wire = Fake::new(script(&replies));
-        let out = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), budget()).unwrap();
+        let out = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), budget(), &mut Vec::new()).unwrap();
         assert!(out.after_ms.is_some());
     }
 
@@ -959,7 +971,7 @@ mod tests {
     fn a_failed_cache_write_is_reported() {
         let wire = Fake::new(script(&happy_replies()));
         let cache = MemCache::with("2 2.354 -25\n").failing_saves();
-        let out = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget()).unwrap();
+        let out = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget(), &mut Vec::new()).unwrap();
         assert_eq!(out.cache_saved, Err("disk full".into()));
         assert!((out.cap.lead_ms - 2.854).abs() < 1e-3);
     }
@@ -977,14 +989,14 @@ mod tests {
         let outstanding = Outstanding::new();
         let cache = MemCache::with("2 2.354 -25\n");
 
-        let err = run(&wire, &outstanding, &happy_host(), &cache, Duration::from_millis(30))
+        let err = run(&wire, &outstanding, &happy_host(), &cache, Duration::from_millis(30), &mut Vec::new())
             .unwrap_err();
         assert!(matches!(err, Error::Hid(hid::Error::Timeout { .. })), "{err}");
         assert_eq!(outstanding.all(), vec![(0x10, SET_TIME_MS)]);
         assert!(cache.saved().is_empty(), "nothing is learned from a set that got no answer");
 
         let again = Fake::new(script(&happy_replies()));
-        let err = run(&again, &outstanding, &happy_host(), &cache, budget()).unwrap_err();
+        let err = run(&again, &outstanding, &happy_host(), &cache, budget(), &mut Vec::new()).unwrap_err();
         assert!(matches!(err, Error::Hid(hid::Error::Unresolved { command: SET_TIME_MS, .. })), "{err}");
         assert_eq!(again.written().len(), 5, "the GETs went out; the SET was refused");
         assert!(cache.saved().is_empty());
@@ -993,7 +1005,43 @@ mod tests {
         let quiet = Fake::new(vec![None, None]);
         crate::hid::exchange::resynchronise(&quiet, &outstanding, budget()).unwrap();
         let third = Fake::new(script(&happy_replies()));
-        assert!(run(&third, &outstanding, &happy_host(), &cache, budget()).is_ok());
+        assert!(run(&third, &outstanding, &happy_host(), &cache, budget(), &mut Vec::new()).is_ok());
+    }
+
+    /// The phase-2 audit's finding 4: a verify that fails with the one error
+    /// reopening cannot fix must say so in a type, not a string. The set
+    /// happened and the cache is written, as the C would; the scheduler then
+    /// needs to know the handle is gone for good.
+    #[test]
+    fn a_stuck_verify_keeps_its_typed_error() {
+        // five GETs and the SET are twelve reads; the verify's first read
+        // (its pre-drain) is where the cancellation fails to land
+        let wire = Fake::new(script(&happy_replies())).stuck_after(12);
+        let cache = MemCache::with("2 2.354 -25\n");
+        let out = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget(), &mut Vec::new()).unwrap();
+        assert!(matches!(out.verify_error, Some(hid::Error::Stuck)), "{:?}", out.verify_error);
+        assert_eq!(out.after_ms, None);
+        assert_eq!(cache.saved().len(), 1);
+        assert!(out.line().contains("after +0.0 ms"));
+    }
+
+    /// Discards from requests that succeeded survive a later failure: they
+    /// are the only direct evidence of another process on the board, and a
+    /// failed transaction is exactly when that evidence matters.
+    #[test]
+    fn discards_accumulate_across_a_failed_transaction() {
+        let replies = happy_replies();
+        let mut reads = vec![None, report(TEXT_CLEAR_ECHO), report(&replies[0])]; // GET 1, with an echo
+        reads.push(None);
+        reads.push(report(&replies[1])); // GET 2 clean
+        reads.push(None); // GET 3: silence
+        let wire = Fake::new(reads);
+        let mut discarded = Vec::new();
+        let err = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), Duration::from_millis(30), &mut discarded)
+            .unwrap_err();
+        assert!(matches!(err, Error::Hid(hid::Error::Timeout { .. })));
+        assert_eq!(discarded.len(), 1, "GET 1's echo is still on record");
+        assert!(matches!(discarded[0], Drained::Foreign(_)));
     }
 
     /// A dirty queue refuses the request before anything is sent, and the
@@ -1001,7 +1049,7 @@ mod tests {
     #[test]
     fn a_flooded_queue_refuses_before_the_first_get() {
         let wire = Fake::new(vec![report(TEXT_CLEAR_ECHO); DRAIN_LIMIT + 1]);
-        let err = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), budget()).unwrap_err();
+        let err = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::absent(), budget(), &mut Vec::new()).unwrap_err();
         assert!(matches!(err, Error::Hid(hid::Error::Dirty { .. })), "{err}");
         assert!(wire.written().is_empty());
     }
@@ -1028,9 +1076,10 @@ mod tests {
         reads.push(report(&replies[5]));
         reads.extend(script(&replies[6..]));
         let wire = Fake::new(reads);
-        let out = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::with("2 2.354 -25\n"), budget()).unwrap();
-        assert_eq!(out.drained.len(), 1, "the echo was discarded, not decoded");
-        assert!(matches!(out.drained[0], Drained::Foreign(_)));
+        let mut discarded = Vec::new();
+        let out = run(&wire, &Outstanding::new(), &happy_host(), &MemCache::with("2 2.354 -25\n"), budget(), &mut discarded).unwrap();
+        assert_eq!(discarded.len(), 1, "the echo was discarded, not decoded");
+        assert!(matches!(discarded[0], Drained::Foreign(_)));
         assert_eq!(out.line(), HAPPY_LINE);
 
         // the oracle

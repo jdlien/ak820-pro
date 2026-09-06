@@ -12,6 +12,7 @@
  *     PATH="/c/msys64/mingw64/bin:$PATH" gcc -O2 -o clock_oracle scripts/clock_oracle.c
  *     ./clock_oracle                         # the cache and printf tables
  *     ./clock_oracle decode <32 hex bytes> <host_mid_sod> <rtt_ms>
+ *     ./clock_oracle localtime <secs>...     # the oracle CRT's localtime()
  *
  * ⚠️ mingw64's bin must come FIRST on PATH or the xpack arm toolchain's DLLs
  * make gcc fail silently with no output (CLAUDE.md, "Building and flashing on
@@ -26,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 /* ---- cap_load / cap_save, verbatim, with the path parameterised ---------- */
 typedef struct { int proto; double lead_ms; int b_ppm; int has_bias; } cap_t;
@@ -65,20 +67,49 @@ static double board_sod(const unsigned char *rep) {
 static double wrap_day(double d) { if (d > 43200) d -= 86400; if (d < -43200) d += 86400; return d; }
 
 /* ---- the tables ---------------------------------------------------------- */
+/* The saved file is read back in BINARY mode and printed with \r and \n
+ * escaped, so the table shows the bytes on disk. cap_save's fopen(..., "w") is
+ * text mode, which on Windows writes \r\n -- a text-mode read-back would have
+ * translated it away and shown a bare \n (the phase-2 audit's finding 5). */
+static void print_raw(void) {
+    unsigned char buf[128]; FILE *f = fopen(PATH, "rb");
+    size_t n = f ? fread(buf, 1, sizeof buf, f) : 0; if (f) fclose(f);
+    for (size_t i = 0; i < n; i++) {
+        if (buf[i] == '\r') fputs("\\r", stdout);
+        else if (buf[i] == '\n') fputs("\\n", stdout);
+        else putchar(buf[i]);
+    }
+    putchar('\n');
+}
 static void show(const char *content) {
     FILE *f = fopen(PATH, "w"); fputs(content, f); fclose(f);
     cap_t c = cap_load();
     printf("LOAD %-28s => proto=%d lead=%.17g b=%d has_bias=%d\n",
            content, c.proto, c.lead_ms, c.b_ppm, c.has_bias);
     cap_save(c);
-    char buf[128] = {0}; f = fopen(PATH, "r"); if (fgets(buf, sizeof buf, f) == NULL) buf[0] = 0; fclose(f);
-    printf("     resave                      => %s", buf);
+    printf("     resave                      => "); print_raw();
 }
 static void save(int proto, double lead, int b, int has) {
     cap_t c = { proto, lead, b, has };
     cap_save(c);
-    char buf[128] = {0}; FILE *f = fopen(PATH, "r"); if (fgets(buf, sizeof buf, f) == NULL) buf[0] = 0; fclose(f);
-    printf("SAVE proto=%d lead=%.17g b=%d has=%d => %s", proto, lead, b, has, buf);
+    printf("SAVE proto=%d lead=%.17g b=%d has=%d => ", proto, lead, b, has); print_raw();
+}
+
+/* ---- localtime: what the oracle's CRT makes of an epoch second ------------ */
+/* `clock_oracle localtime <secs>...` prints one line per instant from the
+ * same localtime() ak820ctl calls (mingw -> msvcrt.dll!_localtime64). The Rust
+ * test in clock/host.rs loads that very function from msvcrt.dll instead of
+ * needing this, but this is the check a reader can run by hand. */
+static int localtime_mode(int argc, char **argv) {
+    for (int i = 2; i < argc; i++) {
+        time_t t = (time_t)strtoll(argv[i], NULL, 10);
+        struct tm *lt = localtime(&t);
+        if (!lt) { printf("%lld NULL\n", (long long)t); continue; }
+        printf("%lld %04d-%02d-%02d %d %02d:%02d:%02d\n", (long long)t,
+               lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_wday,
+               lt->tm_hour, lt->tm_min, lt->tm_sec);
+    }
+    return 0;
 }
 static int tables(void) {
     const char *files[] = {
@@ -155,5 +186,6 @@ static int decode(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     if (argc > 1 && !strcmp(argv[1], "decode")) return decode(argc, argv);
+    if (argc > 1 && !strcmp(argv[1], "localtime")) return localtime_mode(argc, argv);
     return tables();
 }

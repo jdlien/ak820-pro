@@ -34,8 +34,7 @@ fn main() -> ExitCode {
         ["selftest"] => selftest(),
         ["probe"] => probe(),
         ["lighting"] => lighting(),
-        ["clock"] => clock(false),
-        ["clock", "--raw"] => clock(true),
+        ["clock", flags @ ..] => clock(flags),
         ["watch"] => watch(20),
         ["watch", secs] => secs
             .parse()
@@ -72,7 +71,8 @@ fn usage() {
          \x20 ak820 watch [secs]   narrate presence; unplug the cable to see it\n\
          \x20 ak820 probe          what SMTC sees; needs no keyboard\n\
          \x20 ak820 lighting       RGB values read back off the board\n\
-         \x20 ak820 clock [--raw]  the RTC, as `ak820ctl clock --read` prints it\n\
+         \x20 ak820 clock [--raw]  the RTC, as `ak820ctl clock --read` prints it;\n\
+         \x20                      refuses while the Python timekeeper task runs (--anyway overrides)\n\
          \n\
          Provisioning stays in ak820ctl: it is the only thing that erases flash.\n\
          Setting the clock stays in the daemon: one owner, or the learner is wrong."
@@ -131,6 +131,7 @@ fn list(caps: bool) -> Result<(), String> {
 /// The output is byte-for-byte `ak820ctl info`, so the phase-0 gate is a diff
 /// rather than a reading exercise.
 fn info() -> Result<(), String> {
+    contention_notice();
     let dev: Device = device::open_board().map_err(|e| e.to_string())?;
     let (info, drained) = flash::read_info(&dev).map_err(|e| e.to_string())?;
     println!("flash jedec id : 0x{:06X}", info.jedec);
@@ -152,19 +153,35 @@ fn info() -> Result<(), String> {
 /// lead baseline — the plan routes such requests *through* the daemon, which
 /// does not exist yet.
 ///
-/// ⚠️ Correlation cannot tell another process's GET reply from ours (see the
-/// `clock` module header), so with the Python timekeeper running this can,
-/// rarely, print an offset computed from *its* board sample against our
-/// timestamps. For a printed diagnostic that is a wrong number on screen, the
-/// same exposure `ak820ctl clock --read` has. It must never be how a learner
-/// gets its input.
+/// ⚠️ **The interference runs both ways, and the other way is the one that
+/// matters.** Correlation cannot tell another process's GET reply from ours,
+/// so with the Python timekeeper running, our reply can land in *its* read —
+/// `ak820ctl`'s `xfer()` takes the first report that arrives — and become one
+/// of its five measurement samples, paired with its timestamps, able to win its
+/// min-RTT selection. That feeds its SET and both learners. A wrong number on
+/// *our* screen is the lesser half; the first version of this comment said
+/// only that, and the phase-2 audit's P1 corrected it. So this command refuses
+/// while the `AK820Pro-timekeeper` task is `Running` (asked of the Task
+/// Scheduler, which opens nothing), unless `--anyway` accepts one possibly
+/// spoiled sync. Phase 4 replaces this with routing through the daemon.
 ///
 /// `--raw` adds the 32 reply bytes, the host seconds-of-day at the transaction
 /// midpoint and the round trip, which is what `scripts/clock_oracle.c decode`
 /// takes to produce the C's rendering of the same reply — the phase-2 gate.
-fn clock(raw: bool) -> Result<(), String> {
+fn clock(flags: &[&str]) -> Result<(), String> {
     use ak820_agent::clock::{self, host::SystemHost, transaction};
     use ak820_agent::hid::device::REQUEST_TIMEOUT;
+
+    let mut raw = false;
+    let mut anyway = false;
+    for flag in flags {
+        match *flag {
+            "--raw" => raw = true,
+            "--anyway" => anyway = true,
+            other => return Err(format!("clock: unknown flag {other}; flags are --raw and --anyway")),
+        }
+    }
+    clock_ownership(anyway)?;
 
     let dev = device::open_board().map_err(|e| e.to_string())?;
     let got = transaction::read_once(&dev, dev.outstanding(), &SystemHost, REQUEST_TIMEOUT)
@@ -193,6 +210,62 @@ fn clock(raw: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Refuse a clock read beside a running Python timekeeper, unless told to
+/// accept the consequence. See [`clock`].
+fn clock_ownership(anyway: bool) -> Result<(), String> {
+    use ak820_agent::task;
+    match task::timekeeper_running() {
+        Ok(Some(true)) if anyway => {
+            eprintln!(
+                "warning: the {} task is running; this read can become one of its measurement \
+                 samples and spoil that sync (--anyway given)",
+                task::TIMEKEEPER
+            );
+            Ok(())
+        }
+        Ok(Some(true)) => Err(format!(
+            "the {} task is running. Its ak820ctl takes the first report that arrives, so this \
+             read's reply can become one of its five measurement samples and corrupt that sync \
+             and what it learns. Stop it first:\n\
+             \x20 Stop-ScheduledTask -TaskPath '{}\\' -TaskName {}\n\
+             or pass --anyway to accept one possibly spoiled sync.",
+            task::TIMEKEEPER,
+            task::FOLDER,
+            task::TIMEKEEPER
+        )),
+        Ok(_) => Ok(()),
+        Err(e) if anyway => {
+            eprintln!("warning: could not ask the Task Scheduler ({e}); proceeding on --anyway");
+            Ok(())
+        }
+        Err(e) => Err(format!(
+            "could not establish that the {} task is stopped ({e}); pass --anyway to proceed \
+             regardless",
+            task::TIMEKEEPER
+        )),
+    }
+}
+
+/// One line on stderr when the Python timekeeper is running, for the commands
+/// that talk to the board on other channels.
+///
+/// Milder than [`clock_ownership`] on purpose. A flash or lighting reply of
+/// ours taken by `ak820ctl` as a clock reply fails its protocol-version check
+/// — or, for `FC_INFO`, reads as protocol 0 and provokes one legacy
+/// whole-second set. One spoiled sync, self-correcting five minutes later,
+/// and the phase-0 measurements were deliberately taken under exactly this
+/// contention. Worth saying; not worth refusing.
+fn contention_notice() {
+    use ak820_agent::task;
+    if let Ok(Some(true)) = task::timekeeper_running() {
+        eprintln!(
+            "note: the {} task is running; a reply of ours landing in its read can spoil one of \
+             its syncs",
+            task::TIMEKEEPER
+        );
+    }
+}
+
 /// Ask the board the same question twice a second and narrate what happens.
 ///
 /// A diagnostic, **not** the presence state machine the plan calls for -- it
@@ -208,6 +281,7 @@ fn clock(raw: bool) -> Result<(), String> {
 fn watch(seconds: u64) -> Result<(), String> {
     use std::time::{Duration, Instant};
 
+    contention_notice();
     let until = Instant::now() + Duration::from_secs(seconds);
     let mut held: Option<Device> = None;
     let mut last = String::new();
@@ -340,6 +414,7 @@ fn probe() -> Result<(), String> {
 fn lighting() -> Result<(), String> {
     use ak820_agent::via;
 
+    contention_notice();
     let dev = device::open_board().map_err(|e| e.to_string())?;
     let l = via::read_lighting(&dev).map_err(|e| e.to_string())?;
 
@@ -390,6 +465,7 @@ fn selftest() -> Result<(), String> {
     use ak820_agent::proto::Channel;
     use std::time::{Duration, Instant};
 
+    contention_notice();
     let dev = device::open_board().map_err(|e| e.to_string())?;
     println!("open           : {}", dev.path());
 

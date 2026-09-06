@@ -296,7 +296,11 @@ pub fn exchange(
 /// "correct".
 ///
 /// `prepare` runs exactly once, only if the request is actually going to be
-/// transmitted, and is handed the instant `ak820ctl` would call `t0`.
+/// transmitted, and is handed the instant `ak820ctl` would call `t0`. Its
+/// timing contract: a timestamp and a body, microseconds. It runs *inside*
+/// the budget, and the deadline is checked again after it — a body that took
+/// longer than the budget to build is not sent (the phase-2 audit's finding
+/// 3: the expired-operation rule has to hold across user code too).
 pub fn exchange_prepared(
     wire: &impl Wire,
     outstanding: &Outstanding,
@@ -344,6 +348,12 @@ pub fn exchange_prepared(
     // deliberate improvement to the measurement is a separate change from
     // reproducing it.
     let body = prepare(Instant::now());
+    // ⚠️ Re-check the deadline: `prepare` ran user code. The allowance for
+    // the write is what is left *now*, not what was left before it.
+    let left = deadline.saturating_duration_since(Instant::now());
+    if left.is_zero() {
+        return Err(Error::Timeout { drained });
+    }
     let frame = proto::frame(channel, command, &body);
     // From here on the board has the command, whatever happens to our read, so
     // the handle owes an answer until one arrives.
@@ -896,15 +906,39 @@ mod tests {
         assert!(outstanding.is_empty());
     }
 
-    /// A lost command noted twice is one debt, not two.
+    /// A lost command asked again is refused before it could be noted twice,
+    /// so through `exchange` the debt list never holds a duplicate; `note()`'s
+    /// own check covers any other caller. (The first version of this test
+    /// resynchronised between the two losses and so proved neither — the
+    /// phase-2 audit noticed.)
     #[test]
-    fn the_same_lost_command_is_one_debt() {
+    fn a_lost_command_asked_again_is_refused_and_still_one_debt() {
         let outstanding = Outstanding::new();
-        let _ = exchange(&Fake::new(vec![None]), &outstanding, Channel::Rtc, 0x02, &[], Duration::from_millis(20), |_| {});
-        let quiet = Fake::new(vec![None, None]);
-        resynchronise(&quiet, &outstanding, Duration::from_secs(2)).unwrap();
-        let _ = exchange(&Fake::new(vec![None]), &outstanding, Channel::Rtc, 0x02, &[], Duration::from_millis(20), |_| {});
+        let short = Duration::from_millis(20);
+        let _ = exchange(&Fake::new(vec![None]), &outstanding, Channel::Rtc, 0x02, &[], short, |_| {});
+        let err = exchange(&Fake::new(vec![None]), &outstanding, Channel::Rtc, 0x02, &[], short, |_| {})
+            .unwrap_err();
+        assert!(matches!(err, Error::Unresolved { .. }));
         assert_eq!(outstanding.all(), vec![(0x10, 0x02)]);
+        outstanding.note(Channel::Rtc, 0x02);
+        assert_eq!(outstanding.all(), vec![(0x10, 0x02)], "note() deduplicates on its own");
+    }
+
+    /// Finding 3 of the phase-2 audit: the expired-operation rule holds
+    /// across `prepare`. A body that took longer than the budget to build is
+    /// not transmitted, and nothing is owed for it.
+    #[test]
+    fn a_body_prepared_after_the_deadline_is_not_transmitted() {
+        let fake = Fake::new(vec![None, report(INFO_REPLY)]);
+        let outstanding = Outstanding::new();
+        let err = exchange_prepared(&fake, &outstanding, Channel::Flash, 0x01, Duration::from_millis(20), |_| {
+            std::thread::sleep(Duration::from_millis(50));
+            vec![]
+        })
+        .unwrap_err();
+        assert!(matches!(err, Error::Timeout { .. }), "{err:?}");
+        assert!(fake.written().is_empty(), "nothing may go out after the budget");
+        assert!(outstanding.is_empty(), "nothing left, so nothing is owed");
     }
 
     /// A successful exchange owes nothing afterwards.

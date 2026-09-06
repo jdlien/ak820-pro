@@ -13,12 +13,16 @@
 //!   midnight wrap is [`super::wrap_day`]'s job rather than date arithmetic's.
 //!
 //! [`SystemHost`] uses `GetSystemTimePreciseAsFileTime` for the first and
-//! `SystemTimeToTzSpecificLocalTime` for the second. The CRT that `ak820ctl`
-//! links implements `localtime` from the same Windows time-zone data, and a
-//! test below sweeps the two against each other. ⚠️ One stated assumption:
-//! the CRTs honour a `TZ` environment variable and Win32 does not. Nothing in
-//! this project sets one, the Scheduled Task environment has none, and the
-//! parity test would fail loudly on a machine where one is set.
+//! `SystemTimeToTzSpecificLocalTime` for the second. Two sweeps below check
+//! that against C runtimes, hourly across the firmware's years: one against
+//! the UCRT's `_localtime64_s`, which this test binary links, and one against
+//! **`msvcrt.dll`'s `_localtime64`, loaded by name** — because that, per
+//! `ak820ctl.exe`'s import table, is the function mingw's `localtime` resolves
+//! to, and the phase-2 audit rightly said the UCRT sweep alone was not an
+//! oracle comparison. ⚠️ One stated assumption: the CRTs honour a `TZ`
+//! environment variable and Win32 does not. Nothing in this project sets one,
+//! the Scheduled Task environment has none, and both sweeps would fail loudly
+//! on a machine where one is set.
 
 #[cfg(test)]
 use std::cell::{Cell, RefCell};
@@ -299,6 +303,44 @@ mod tests {
         while t < end {
             assert_eq!(SystemHost.local(t), crt_local(t), "at {t}");
             t += 3600 + 1; // an odd step, so minutes and seconds vary too
+            checked += 1;
+        }
+        assert!(checked > 600_000);
+    }
+
+    /// The oracle's own CRT: `ak820ctl.exe` imports `msvcrt.dll!_localtime64`
+    /// (its import table, 2026-09-06), so this loads that function by name and
+    /// sweeps it the same way. Unlike the UCRT one above, this is the
+    /// comparison the word "oracle" was being used for.
+    #[test]
+    fn local_time_agrees_with_the_oracles_msvcrt_localtime() {
+        use windows::core::{s, w};
+        use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
+
+        type Localtime64 = unsafe extern "C" fn(*const i64) -> *const Tm;
+        let module = unsafe { LoadLibraryW(w!("msvcrt.dll")) }.expect("msvcrt.dll is inbox");
+        let sym = unsafe { GetProcAddress(module, s!("_localtime64")) }.expect("_localtime64");
+        let localtime64: Localtime64 = unsafe { std::mem::transmute(sym) };
+
+        let start = 1_767_225_600i64; // 2026-01-01T00:00:00Z
+        let end = 4_070_908_800i64; // 2099-01-01T00:00:00Z
+        let mut t = start;
+        let mut checked = 0;
+        while t < end {
+            let tm = unsafe { localtime64(&t) };
+            assert!(!tm.is_null(), "msvcrt localtime({t}) returned NULL");
+            let tm = unsafe { &*tm };
+            let theirs = lt(
+                tm.year + 1900,
+                (tm.mon + 1) as u8,
+                tm.mday as u8,
+                tm.wday as u8,
+                tm.hour as u8,
+                tm.min as u8,
+                tm.sec as u8,
+            );
+            assert_eq!(SystemHost.local(t), theirs, "at {t}");
+            t += 3600 + 1;
             checked += 1;
         }
         assert!(checked > 600_000);

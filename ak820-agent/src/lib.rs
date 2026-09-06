@@ -7,5 +7,6 @@ pub mod flash;
 pub mod hid;
 pub mod proto;
 pub mod smtc;
+pub mod task;
 pub mod text;
 pub mod via;
