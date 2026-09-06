@@ -297,7 +297,10 @@ pub struct Measurement {
 /// fold every scheduling hiccup into the answer.
 pub fn select(samples: &[Sample]) -> Option<Measurement> {
     let mut best: Option<Sample> = None;
-    let mut rtt_max = f64::NEG_INFINITY;
+    // Zero, as the C initialises it — not negative infinity. The two differ
+    // only when every round trip is negative, which a wall-clock step during
+    // the burst can produce, and then the C's `U` is what the oracle prints.
+    let mut rtt_max = 0.0f64;
     let mut was_slewing = false;
     let mut good = 0usize;
 
@@ -659,6 +662,17 @@ mod tests {
         let m = select(&[sample(1.0, 4.0), slewed, sample(1.0, 6.0)]).unwrap();
         assert!(m.was_slewing, "even though the min-RTT sample was not slewing");
         assert_eq!(m.rtt_ms, 4.0, "but it is still the sample we trust");
+    }
+
+    /// The round trip is a wall-clock difference in both the C and the port,
+    /// so a clock step backwards mid-burst yields a negative one. The C's
+    /// `rtt_max` starts at zero, so its `U` is `(0 - rtt_min) / 2 + 0.5`;
+    /// starting from negative infinity would print a different `U`.
+    #[test]
+    fn a_negative_round_trip_measures_u_against_zero_like_the_c() {
+        let m = select(&[sample(1.0, -3.0), sample(2.0, -1.0)]).unwrap();
+        assert_eq!(m.rtt_ms, -3.0);
+        assert!((m.uncertainty_ms - ((0.0 - -3.0) / 2.0 + 0.5)).abs() < 1e-9);
     }
 
     /// Ties keep the first, matching the C's strict `<` comparison.

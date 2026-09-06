@@ -129,32 +129,57 @@ pub const RESYNC_SETTLE: Duration = Duration::from_millis(250);
 /// bytes to catch it, so the only defence is remembering that A is unaccounted
 /// for and refusing to ask the same question again until it is.
 ///
-/// Per handle, and `Cell` rather than an atomic because a handle is
+/// ⚠️ A **set** of debts, not the most recent one. The first version held a
+/// single slot, which the next transmitted command overwrote: a lost GET
+/// followed by a lost SET forgot the GET, and a third request could then be
+/// answered by the first one's straggler. Found 2026-09-06 while pinning the
+/// clock transaction's behaviour after a lost SET. Debts are retired only by
+/// [`resynchronise`], which observes an empty queue twice with a settle in
+/// between — never by a later request merely succeeding.
+///
+/// Per handle, and `RefCell` rather than a lock because a handle is
 /// deliberately owned by one thread.
 #[derive(Default, Debug)]
-pub struct Outstanding(std::cell::Cell<Option<(u8, u8)>>);
+pub struct Outstanding(std::cell::RefCell<Vec<(u8, u8)>>);
 
 impl Outstanding {
     pub fn new() -> Outstanding {
         Outstanding::default()
     }
 
-    /// The command that is unaccounted for, if any.
-    pub fn get(&self) -> Option<(u8, u8)> {
-        self.0.get()
+    /// Every command still owed an answer, oldest first.
+    pub fn all(&self) -> Vec<(u8, u8)> {
+        self.0.borrow().clone()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.0.borrow().is_empty()
+    }
+
+    /// The board has (or may have) this command; an answer is owed.
     fn note(&self, channel: Channel, command: u8) {
-        self.0.set(Some((channel.id(), command)));
+        let key = (channel.id(), command);
+        let mut debts = self.0.borrow_mut();
+        if !debts.contains(&key) {
+            debts.push(key);
+        }
     }
 
+    /// This command's answer arrived, or the command provably never left.
+    fn forget(&self, channel: Channel, command: u8) {
+        self.0
+            .borrow_mut()
+            .retain(|&key| key != (channel.id(), command));
+    }
+
+    /// Everything accounted for — only [`resynchronise`] may say so.
     fn clear(&self) {
-        self.0.set(None);
+        self.0.borrow_mut().clear();
     }
 
-    /// Would a reply to this command be confusable with the outstanding one?
+    /// Would a reply to this command be confusable with one still owed?
     fn conflicts(&self, channel: Channel, command: u8) -> bool {
-        self.0.get() == Some((channel.id(), command))
+        self.0.borrow().contains(&(channel.id(), command))
     }
 }
 
@@ -329,7 +354,7 @@ pub fn exchange_prepared(
             // Cancelled before it left, so nothing is owed. Treating a write
             // that never went out as outstanding would refuse the next attempt
             // for no reason.
-            outstanding.clear();
+            outstanding.forget(channel, command);
             return Err(Error::Io {
                 op: "write",
                 source: windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(
@@ -341,7 +366,10 @@ pub fn exchange_prepared(
 
     let answered = collect(wire, channel, command, deadline, drained);
     if answered.is_ok() {
-        outstanding.clear();
+        // This command's debt only. Any other still owed stays owed: a reply
+        // to *this* question says nothing about whether an earlier, different
+        // one is still on its way.
+        outstanding.forget(channel, command);
     }
     answered
 }
@@ -743,8 +771,8 @@ mod tests {
         .unwrap_err();
         assert!(matches!(err, Error::Timeout { .. }));
         assert_eq!(
-            outstanding.get(),
-            Some((0x10, 0x02)),
+            outstanding.all(),
+            vec![(0x10, 0x02)],
             "the board still owes an answer to a command it received"
         );
 
@@ -778,7 +806,7 @@ mod tests {
             Duration::from_millis(20),
             |_| {},
         );
-        assert!(outstanding.get().is_some());
+        assert!(!outstanding.is_empty());
 
         let b = Fake::new(vec![None, report(INFO_REPLY)]);
         let reply = exchange(&b, &outstanding, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
@@ -805,7 +833,7 @@ mod tests {
         let late = Fake::new(vec![None, report(&[0x07, 0x10, 0x02, 0x01]), None]);
         let seen = resynchronise(&late, &outstanding, Duration::from_secs(2)).unwrap();
         assert_eq!(seen.len(), 1, "the late reply is evidence, not noise");
-        assert_eq!(outstanding.get(), None);
+        assert!(outstanding.is_empty());
 
         let b = Fake::new(vec![None, report(&[0x07, 0x10, 0x02, 0x09])]);
         assert!(exchange(&b, &outstanding, Channel::Rtc, 0x02, &[], budget(), |_| {}).is_ok());
@@ -830,10 +858,53 @@ mod tests {
         let noisy = Fake::new(vec![report(TEXT_ECHO); DRAIN_LIMIT + 1]);
         assert!(resynchronise(&noisy, &outstanding, Duration::from_secs(2)).is_err());
         assert_eq!(
-            outstanding.get(),
-            Some((0x10, 0x02)),
+            outstanding.all(),
+            vec![(0x10, 0x02)],
             "an unproven queue does not settle a debt"
         );
+    }
+
+    /// ⚠️ Two consecutive lost commands are **both** remembered. A single-slot
+    /// version forgot the first when the second was transmitted, so a third
+    /// request matching the first could be answered by its straggler. An
+    /// unrelated command still goes through, a success retires only its own
+    /// debt, and only resynchronising retires the rest.
+    #[test]
+    fn two_consecutive_lost_commands_are_both_remembered() {
+        let outstanding = Outstanding::new();
+        let short = Duration::from_millis(20);
+
+        let _ = exchange(&Fake::new(vec![None]), &outstanding, Channel::Rtc, 0x02, &[], short, |_| {});
+        let _ = exchange(&Fake::new(vec![None]), &outstanding, Channel::Rtc, 0x03, &[], short, |_| {});
+        assert_eq!(outstanding.all(), vec![(0x10, 0x02), (0x10, 0x03)]);
+
+        // both questions are refused ...
+        for command in [0x02u8, 0x03] {
+            let b = Fake::new(vec![None, report(&[0x07, 0x10, command, 0x01])]);
+            let err = exchange(&b, &outstanding, Channel::Rtc, command, &[], budget(), |_| {}).unwrap_err();
+            assert!(matches!(err, Error::Unresolved { channel: 0x10, .. }), "{err:?}");
+            assert!(b.written().is_empty());
+        }
+        // ... an unrelated one is not, and its success retires nothing else
+        let flash = Fake::new(vec![None, report(INFO_REPLY)]);
+        exchange(&flash, &outstanding, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
+        assert_eq!(outstanding.all(), vec![(0x10, 0x02), (0x10, 0x03)]);
+
+        // and a resynchronisation retires both
+        let quiet = Fake::new(vec![None, None]);
+        resynchronise(&quiet, &outstanding, Duration::from_secs(2)).unwrap();
+        assert!(outstanding.is_empty());
+    }
+
+    /// A lost command noted twice is one debt, not two.
+    #[test]
+    fn the_same_lost_command_is_one_debt() {
+        let outstanding = Outstanding::new();
+        let _ = exchange(&Fake::new(vec![None]), &outstanding, Channel::Rtc, 0x02, &[], Duration::from_millis(20), |_| {});
+        let quiet = Fake::new(vec![None, None]);
+        resynchronise(&quiet, &outstanding, Duration::from_secs(2)).unwrap();
+        let _ = exchange(&Fake::new(vec![None]), &outstanding, Channel::Rtc, 0x02, &[], Duration::from_millis(20), |_| {});
+        assert_eq!(outstanding.all(), vec![(0x10, 0x02)]);
     }
 
     /// A successful exchange owes nothing afterwards.
@@ -842,7 +913,7 @@ mod tests {
         let outstanding = Outstanding::new();
         let fake = Fake::new(vec![None, report(INFO_REPLY)]);
         exchange(&fake, &outstanding, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
-        assert_eq!(outstanding.get(), None);
+        assert!(outstanding.is_empty());
     }
 
     /// A write that never left owes nothing either — the board never saw it.
@@ -851,7 +922,7 @@ mod tests {
         let outstanding = Outstanding::new();
         let fake = Fake::idle().writes_time_out();
         let _ = exchange(&fake, &outstanding, Channel::Flash, 0x01, &[], budget(), |_| {});
-        assert_eq!(outstanding.get(), None);
+        assert!(outstanding.is_empty());
     }
 
     /// A truncated report is noise, not a short answer.

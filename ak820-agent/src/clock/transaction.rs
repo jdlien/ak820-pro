@@ -57,8 +57,10 @@
 //!
 //! A GET that times out leaves an outstanding `RTC_GET_TIME` on the handle,
 //! and the next GET — this transaction's or the next one's — is refused until
-//! the caller [`resynchronise`]s. This function does not do that itself:
-//! whether to spend a quarter second recovering is the scheduler's decision.
+//! the caller [`resynchronise`]s; a SET that times out does the same for the
+//! next SET, after that transaction's GETs have already gone out. This
+//! function does not resynchronise itself: whether to spend a quarter second
+//! recovering is the scheduler's decision.
 //!
 //! [`resynchronise`]: crate::hid::exchange::resynchronise
 
@@ -814,7 +816,7 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, Error::Hid(hid::Error::Timeout { .. })), "{err}");
         assert_eq!(wire.written().len(), 3);
-        assert_eq!(outstanding.get(), Some((0x10, GET_TIME)));
+        assert_eq!(outstanding.all(), vec![(0x10, GET_TIME)]);
         assert!(cache.saved().is_empty());
     }
 
@@ -914,7 +916,7 @@ mod tests {
         assert_eq!(out.after_ms, None);
         assert_eq!(out.verify_rtt_ms, None);
         assert!(out.verify_error.is_some());
-        assert_eq!(outstanding.get(), Some((0x10, GET_TIME)));
+        assert_eq!(outstanding.all(), vec![(0x10, GET_TIME)]);
         assert_eq!(
             out.line(),
             "clock set (sub-second): before +8.0 ms, after +0.0 ms, rtt 2.0 ms, U ~3.0 ms, lead now 2.85 ms, bias sent (slewing)"
@@ -960,6 +962,38 @@ mod tests {
         let out = run(&wire, &Outstanding::new(), &happy_host(), &cache, budget()).unwrap();
         assert_eq!(out.cache_saved, Err("disk full".into()));
         assert!((out.cap.lead_ms - 2.854).abs() < 1e-3);
+    }
+
+    /// A SET with no reply aborts too, and leaves a SET debt: the next
+    /// transaction's five GETs are a different question and go through, but
+    /// its SET is refused until the handle is resynchronised — so a lost SET
+    /// cannot be followed by one whose reply might be the old one's.
+    #[test]
+    fn a_silent_set_leaves_a_debt_that_refuses_the_next_set() {
+        let replies = happy_replies();
+        let mut reads = script(&replies[..5]);
+        reads.push(None); // the SET's drain, then silence
+        let wire = Fake::new(reads);
+        let outstanding = Outstanding::new();
+        let cache = MemCache::with("2 2.354 -25\n");
+
+        let err = run(&wire, &outstanding, &happy_host(), &cache, Duration::from_millis(30))
+            .unwrap_err();
+        assert!(matches!(err, Error::Hid(hid::Error::Timeout { .. })), "{err}");
+        assert_eq!(outstanding.all(), vec![(0x10, SET_TIME_MS)]);
+        assert!(cache.saved().is_empty(), "nothing is learned from a set that got no answer");
+
+        let again = Fake::new(script(&happy_replies()));
+        let err = run(&again, &outstanding, &happy_host(), &cache, budget()).unwrap_err();
+        assert!(matches!(err, Error::Hid(hid::Error::Unresolved { command: SET_TIME_MS, .. })), "{err}");
+        assert_eq!(again.written().len(), 5, "the GETs went out; the SET was refused");
+        assert!(cache.saved().is_empty());
+
+        // and once resynchronised, the same script runs clean
+        let quiet = Fake::new(vec![None, None]);
+        crate::hid::exchange::resynchronise(&quiet, &outstanding, budget()).unwrap();
+        let third = Fake::new(script(&happy_replies()));
+        assert!(run(&third, &outstanding, &happy_host(), &cache, budget()).is_ok());
     }
 
     /// A dirty queue refuses the request before anything is sent, and the

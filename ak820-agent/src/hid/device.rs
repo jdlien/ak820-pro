@@ -440,12 +440,14 @@ impl Device {
         self.drain_until(Instant::now() + DRAIN_BUDGET)
     }
 
-    /// A command this handle transmitted and never got an answer to.
+    /// Every command this handle transmitted and never got an answer to,
+    /// oldest first.
     ///
-    /// While this is set, asking the same question again is refused: the old
+    /// While one is listed, asking that question again is refused: the old
     /// reply is still owed and would be indistinguishable from the new one.
-    pub fn unanswered(&self) -> Option<(u8, u8)> {
-        self.outstanding.get()
+    /// Only [`Device::resynchronise`] retires them.
+    pub fn unanswered(&self) -> Vec<(u8, u8)> {
+        self.outstanding.all()
     }
 
     /// Account for an unanswered command so the handle can be used again.

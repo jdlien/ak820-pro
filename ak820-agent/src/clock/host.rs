@@ -15,7 +15,10 @@
 //! [`SystemHost`] uses `GetSystemTimePreciseAsFileTime` for the first and
 //! `SystemTimeToTzSpecificLocalTime` for the second. The CRT that `ak820ctl`
 //! links implements `localtime` from the same Windows time-zone data, and a
-//! test below sweeps the two against each other.
+//! test below sweeps the two against each other. ⚠️ One stated assumption:
+//! the CRTs honour a `TZ` environment variable and Win32 does not. Nothing in
+//! this project sets one, the Scheduled Task environment has none, and the
+//! parity test would fail loudly on a machine where one is set.
 
 #[cfg(test)]
 use std::cell::{Cell, RefCell};
