@@ -259,6 +259,13 @@ and why the oracle printed what it did.
 | a `0xFF` unhandled echo of our own SET: `st = rep[3]` read off the echoed request | the transaction aborts | unreachable on matching firmware; recorded so nobody restores it as parity |
 | `cap_save` before the verify GET | after it | unobservable; the outcome carries the saved value |
 | `%d` reads `12.5` as `12` | same as the C | ⚠️ the *Python* oracle's `int("12.5")` raises here, so the two oracles already disagree; the file's owner wins |
+| `rtt_min` starts at `1e9`, so a burst whose every round trip is ≥ 1e9 ms is `good` yet selects nothing (`before +0.0`, the verify's rtt printed) | the sample is selected | an eleven-day wall-clock jump inside one GET; matching it would push a sentinel through `Measurement`'s public type (phase-2 audit, finding 7) |
+
+Matched after the audit said they were not: a **negative** board
+seconds-of-day (a slowing slew's lengthened active period, read at `00:00:00`)
+is now unset, as `board_sod() < 0` makes it in the C; and the cache file's
+bytes are now identical **including the `\r\n`** the C's and Python's
+text-mode writes put there.
 
 Kept although an improvement is obvious: the round trip is a **wall-clock**
 difference (`now_s()` twice), so a wall-clock step during a GET produces the

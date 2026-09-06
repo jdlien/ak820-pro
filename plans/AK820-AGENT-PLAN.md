@@ -1,10 +1,10 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PHASES 0 AND 1 COMPLETE AND AUDITED; PHASE 2 GATED, ITS AUDIT OWED; PHASE 3'S CODE WRITTEN AHEAD OF ITS GATE** (2026-09-06). Planned and revised
+Status: **PHASES 0, 1 AND 2 COMPLETE, GATED AND AUDITED; PHASE 3'S CODE WRITTEN AHEAD OF ITS GATE** (2026-09-06). Planned and revised
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
 (gpt-6-astra, xhigh), then built and gated phase by phase.
 
-Crate at `ak820-agent/`, **225 unit tests plus a 2,309-case parity fixture**;
+Crate at `ak820-agent/`, **235 unit tests plus a 2,309-case parity fixture**;
 `cargo test` from that directory.
 
 - `hid::path` — bounded path matching, so discovery narrows to this board
@@ -74,14 +74,13 @@ rather than confirming them:
 - [Phase 0 audit disposition](#phase-0-audit--disposition-2026-09-06) — what an
   independent read found in the transport, and what is still owed.
 
-**Phase 2 is gated** (2026-09-06) — the fake wire, the clock read, and
-`ak820 clock [--raw]`. Three captured replies render byte-identically through
-the pinned C and the port; see [Phase 2 evidence](#phase-2-evidence-2026-09-06).
-⚠️ **Its audit is owed**: the run stopped on the owner's Codex usage limit
-mid-review, with no findings delivered — see
-[Phase 2 audit disposition](#phase-2-audit--disposition-2026-09-06) for the
-transcript and the exact command to re-run. Under the standing rule the phase
-is not done until that has happened.
+**Phase 2 is gated and audited** (2026-09-06) — the fake wire, the clock read,
+and `ak820 clock [--raw]`. Three captured replies render byte-identically
+through the pinned C and the port; see
+[Phase 2 evidence](#phase-2-evidence-2026-09-06). The audit took two runs (the
+first hit the owner's Codex usage limit) and found a P1 in the CLI's clock
+read, three P2s and three P3s — all acted on, one declined with its reason —
+see [Phase 2 audit disposition](#phase-2-audit--disposition-2026-09-06).
 
 **Phase 3's code is written ahead of its gate:** the whole clock transaction —
 SET packet, `0xFE` retry, lead learner, capability cache, the reported line —
@@ -340,7 +339,7 @@ environment underneath it.
 |---|---|---|
 | 0 ✅ | HID discovery, transport, `ak820 info` | Same JEDEC id and writable base as `ak820ctl info`; **plus** wrong-interface and malformed-report rejection, timeout/unplug/cancellation, traced opens showing nothing unrelated was touched, and VIA coexistence measured. — **all met 2026-09-05**, [evidence](#phase-0-evidence-2026-09-05). |
 | 1 ✅ | `text/`, `smtc/`, `ak820 probe` | **Met 2026-09-06.** Captured competing sessions, the current-session tiebreak, absent metadata and timeline, a track change, Unicode folding and both line budgets — three real captures pinned as tests, plus a 2,309-case folding fixture. | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
-| 2 ✅ gate · audit owed | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) — **Met 2026-09-06**: three captured replies, plus the SET-reply-as-GET bytes behind the oracle's own bad line, render byte-identically through the pinned C and the port. [Evidence](#phase-2-evidence-2026-09-06). |
+| 2 ✅ | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) — **Met 2026-09-06**: three captured replies, plus the SET-reply-as-GET bytes behind the oracle's own bad line, render byte-identically through the pinned C and the port. [Evidence](#phase-2-evidence-2026-09-06). |
 | 3 ~ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **Code and C-transaction fixtures done 2026-09-06** (`clock::transaction`, `set`, `lead`, `cache`); the scheduler, the replay and the takeover are open. |
 | 4 | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. |
 | 5 | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command — the firmware echoes the requested page in byte 3, so a foreign reply for another page would otherwise be decoded with this page's layout. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. |
@@ -705,24 +704,25 @@ be designed alongside the scheduler.
 
 ### Phase 2 audit — disposition (2026-09-06)
 
-**Incomplete. No findings were delivered, and none are recorded as absent.**
+Full report: [review-codex-phase2-2026-09-06.md](review-codex-phase2-2026-09-06.md).
 
-The run — the standing command, gpt-6-astra at xhigh, read-only with full disk
-read — was launched at 06:53 and stopped after ~109k tokens on the owner's
-Codex usage limit (`try again at 10:02 AM`). Its transcript and the prompt it
-was given are kept verbatim in
-[review-codex-phase2-2026-09-06.md](review-codex-phase2-2026-09-06.md). Before
-it stopped it had read the transaction against the C and reported, in its own
-interim words, that *"the normal-path arithmetic and packet layout match the C
-so far"*, and named what it was about to check next: whether unresolved
-requests survive later commands, whether SET preparation can stall after
-timestamping, and what the CRT fixtures actually prove. Those three are
-exactly the boundaries an audit earns its keep on, and they were not reached.
-As in phase 1, its shell could not start, so it worked from file reads.
+**Two runs.** The first, launched at 06:53, stopped after ~109k tokens on the
+owner's Codex usage limit with no findings delivered, having read the
+transaction against the C, reported that *"the normal-path arithmetic and
+packet layout match the C so far"*, and named three boundaries it was about
+to check: whether unresolved requests survive later commands, whether SET
+preparation can stall after timestamping, and what the CRT fixtures actually
+prove. The owner reset the limit and the session was **resumed** later the
+same morning on its own id, told which commits had landed meanwhile, and it
+finished: seven findings and three corrections, ~208k tokens in all. Both
+transcripts are in the review file. As in phase 1, its shell could not start,
+so it worked from file reads, import tables and its own arithmetic — and it
+was the import tables that produced finding 6.
 
-Two of the three were re-read by the author in the meantime and pinned, which
-is not a substitute for the audit and is recorded so the audit can start from
-them rather than at zero:
+Between the two runs the author re-read the three named boundaries, which is
+where the single-slot `Outstanding` bug below was found. It is recorded here
+as what it was — a starting point the audit then verified and went past — not
+as a substitute:
 
 - **Unresolved requests across commands — and a real bug in the phase-1
   fix.** Writing the test for a lost SET found that `Outstanding` held a
@@ -739,7 +739,9 @@ them rather than at zero:
   a lost SET lets the next transaction's five GETs out and then refuses its
   SET until the handle is resynchronised. A timed-out GET aborts before any
   SET; a timed-out verify leaves a GET debt that refuses the next
-  transaction's first GET. In every case the cache is not written.
+  transaction's first GET. The cache is not written when the burst or the SET
+  fails; it **is** written when only the verify fails, because the SET
+  happened — the audit caught this bullet saying otherwise.
 - **Stalling after the timestamp.** Between `t_enc` and `WriteFile` there is
   `split_target`, one `localtime` (two user-mode Win32 conversions) and the
   twelve-byte body; the C has the same `localtime` in the same place.
@@ -751,9 +753,35 @@ them rather than at zero:
   does not; nothing here sets one, and the parity sweep would fail loudly on a
   machine that does.
 
-**To finish the phase:** re-run the command in the review file after the quota
-resets, save the verbatim output over that file, and replace this section with
-the disposition table.
+**Every finding of the resumed run, and what was done:**
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 | P1 — `ak820 clock` can corrupt the **running Python timekeeper**: our GET reply reaches its handle, its `xfer()` takes the first report that arrives, and ours becomes one of its five measurement samples paired with *its* timestamps — able to win its min-RTT selection and feed its SET and both learners. The CLI's comment had called this "a wrong number on screen". | **Fixed.** `ak820 clock` asks the Task Scheduler — the COM API, language-independent, opens nothing — whether `\ak820pro\AK820Pro-timekeeper` is `Running`, and refuses with the `Stop-ScheduledTask` line unless `--anyway` accepts one possibly spoiled sync. `info`, `selftest`, `watch` and `lighting` print a one-line note instead: their replies fail the C's protocol-version check or, for `FC_INFO`, provoke one legacy whole-second set, rather than feeding a learner, and the phase-0 measurements were deliberately taken under that contention (none of the 237 syncs logged since shows a spoiled one — exposure, not proof). The comment now says what the audit said. Phase 4 replaces this with routing through the daemon; `src/task.rs` is the piece its self-install needs regardless. |
+| 2 | P2 — a **negative board seconds-of-day** (an active period longer than nominal during a slowing slew, read at `00:00:00`) was taken as a sample where the C's `board_sod() < 0` reads it as unset | **Fixed.** `seconds_of_day()` is `None` below zero. The audit's exact fields are a test, and their bytes are a fifth row of the captured-reply gate, which the C harness renders as `device clock not set`. |
+| 3 | P2 — `exchange_prepared` computed the write allowance **before** `prepare` and never re-checked it, so a body built after the deadline was still transmitted | **Fixed.** The deadline is re-checked after `prepare`; a body that overran is not sent and nothing is owed. The callback's timing contract is stated. Test: a 50 ms prepare against a 20 ms budget writes nothing. |
+| 4 | P2 — a failed verify's error was flattened to a string, so `Stuck` (abandon the handle for good) was indistinguishable from a timeout; and discards from earlier successful requests vanished when a later one failed | **Fixed.** `verify_error: Option<hid::Error>` (`hid::Error` is now `Clone`), and `run` takes a caller-owned `discarded` accumulator that survives the transaction's outcome either way. Tests for a `Stuck` verify and for a burst's discards outliving its failure. |
+| 5 | P3 — "byte for byte" was false for the cache: the C and Python write **`\r\n`** on Windows (the installed file ends `0D 0A`), the port wrote `\n`, and the harness's text-mode read-back translated the difference away | **Fixed.** `format()` writes `\r\n`; the harness reads back in binary and prints the bytes escaped; the fixture table carries `\r\n`; a test reads a saved file raw. Every parser involved still accepts a bare `\n`. |
+| 6 | P3 — the `localtime` sweep compared against the UCRT's `_localtime64_s`, while `ak820ctl.exe`'s import table names **`msvcrt.dll!_localtime64`**, a different CRT | **Fixed.** A second sweep loads `msvcrt.dll` and calls that very function by name, hourly across 2026–2099; the header says what each sweep proves. The harness gains a `localtime` mode for the check by hand. |
+| 7 | P3 — the C's `rtt_min = 1e9` sentinel: a burst whose every round trip is ≥ 1e9 ms counts as `good` yet selects nothing, where the port selects the sample | **Declined, and declared.** Reaching it needs an eleven-day wall-clock jump inside one GET, and matching it would push a sentinel through `Measurement`'s public type. Pinned as a test saying what the C would do, and a row in the transaction document's divergence table. |
+| – | Doc: this section's bullet said the cache is unwritten "in every case"; a failed verify writes it | **Fixed**, above. |
+| – | Doc: `run` promised "at most seven requests"; a `0xFE` retry makes eight | **Fixed.** |
+| – | Test: `the_same_lost_command_is_one_debt` resynchronised between its two losses and would have passed without `note()`'s deduplication | **Fixed.** Replaced by one in which the second identical loss is refused and the list stays one long, plus a direct `note()` call. |
+
+**Found sound by the audit, on record:** the revised debt set; GET/SET
+framing, whole-report checks, foreign-command rejection, the status tail's
+offsets and signedness; the fraction arithmetic, nominal-zero fallback,
+midnight wrap, min-RTT selection and the zero `rtt_max`; SET truncation, the
+ms clamp, flags, bias byte order, `0x7FFF`, and the fresh timestamp on the
+retry; the lead learner's sign, gain, clamps and gates; finite-value printed
+rounding and `as_reported()`; cache parsing of everything the C or Python
+produce and the temporary-file replacement; the host conversions' pointer
+lifetimes; no new HID enumeration and no CLI route to a SET; no new
+cancellation-lifetime defect. Its one caveat is kept as is: an extreme `i64`
+into `SystemHost::local` can overflow, which the C's `localtime` would answer
+with `NULL` and a dereference.
+
+**Phase 2 is done**: gate met, audit complete, every finding dispositioned.
 
 ### Every phase ends with an external audit
 

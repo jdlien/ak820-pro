@@ -32,10 +32,9 @@ submodule sits on our `ak820pro-patches` branch.
 Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
 
 **In progress: `ak820-agent/`** — a Rust rewrite of the two Windows host agents
-as one daemon. **Phases 0 and 1 complete and audited; phase 2 gated with its
-audit owed (the run hit the owner's Codex quota); phase 3's code — the whole
-clock transaction — written ahead of its gate** (2026-09-06). 225 unit tests
-plus a 2,309-case parity fixture. Read
+as one daemon. **Phases 0, 1 and 2 complete and audited; phase 3's code —
+the whole clock transaction — written ahead of its gate** (2026-09-06).
+235 unit tests plus a 2,309-case parity fixture. Read
 [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
 first; it carries the phase gates and the findings that are load-bearing.
 Its two companions are part of the plan, not background:
@@ -232,7 +231,7 @@ weak-hooked/no-op for other boards.
 (`windows` pinned `=0.62.2`; the blocking async spelling is `.join()`, not
 `.get()`). Two binaries because a PE has one subsystem: `ak820-agent.exe` is
 windows-subsystem so it can never flash a console, `ak820.exe` is a console CLI.
-Built test-first; `cargo test` from that directory (225 tests + 3 integration).
+Built test-first; `cargo test` from that directory (235 tests + 3 integration).
 
 The CLI is the evidence for phases 0–2 — **every command is read-only**; run
 these before touching the transport, they need no arguments and take under a
@@ -252,8 +251,12 @@ ak820 clock [--raw]   # the RTC, printed as `ak820ctl clock --read` prints it
 
 `watch` is the one to reach for when something looks like contention: its drain
 lines name whose traffic is landing on our handle. There is deliberately **no
-CLI clock set**: one owner of the clock, or the lead learner is wrong
-(`plans/AK820-AGENT-PLAN.md`, phase 2 evidence).
+CLI clock set**: one owner of the clock, or the lead learner is wrong. ⚠️ And
+**`ak820 clock` refuses while the Python timekeeper task is running** — our
+GET reply lands in its `ak820ctl`'s read and becomes one of *its* measurement
+samples (the phase-2 audit's P1). `--anyway` accepts one possibly spoiled
+sync; the other commands only print a note, because their replies fail the
+C's version check rather than feed its learner.
 
 ⚠️ **The clock fixtures come from the C, not from reading the C.**
 `scripts/clock_oracle.c` is the pinned `ak820ctl.c` clock code verbatim; its
