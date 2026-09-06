@@ -30,13 +30,15 @@ use windows::Win32::Devices::HumanInterfaceDevice::{
 };
 use windows::Win32::Foundation::{
     CloseHandle, ERROR_IO_PENDING, ERROR_OPERATION_ABORTED, GENERIC_READ, GENERIC_WRITE, HANDLE,
-    WAIT_OBJECT_0,
+    WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 use windows::Win32::Storage::FileSystem::{
     CreateFileW, FILE_FLAG_OVERLAPPED, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, ReadFile,
     WriteFile,
 };
-use windows::Win32::System::IO::{CancelIoEx, GetOverlappedResult, OVERLAPPED};
+use windows::Win32::System::IO::{
+    CancelIoEx, GetOverlappedResult, GetOverlappedResultEx, OVERLAPPED,
+};
 use windows::Win32::System::Threading::{CreateEventW, ResetEvent, WaitForSingleObject};
 
 use super::caps::{Identity, Reject};
@@ -54,7 +56,28 @@ const WRITE_TIMEOUT_MS: u32 = 1000;
 pub const REQUEST_TIMEOUT: Duration = Duration::from_millis(2000);
 
 /// Per-read slice of that budget.
-const READ_SLICE_MS: u32 = 250;
+const READ_SLICE: Duration = Duration::from_millis(250);
+
+/// How long a refused-to-land cancellation is given before the device is
+/// declared stuck and its buffer abandoned to the kernel.
+///
+/// Generous, because reaching it is a permanent decision: the measured idle
+/// cancel returns in 3–6 ms, so a second is roughly two hundred times the
+/// observed worst case and anything past it is a driver that is not coming
+/// back.
+const CANCEL_GRACE_MS: u32 = 1000;
+
+/// How long [`Device::drain`] may spend clearing the queue when the caller
+/// gave no deadline of its own.
+const DRAIN_BUDGET: Duration = Duration::from_millis(250);
+
+/// Milliseconds for a Win32 timeout argument, clamped rather than truncated.
+///
+/// ⚠️ `as u32` on a large `u128` wraps, which would turn a long timeout into a
+/// short one — the failure that looks like a flaky device.
+fn ms(d: Duration) -> u32 {
+    d.as_millis().min(u32::MAX as u128) as u32
+}
 
 /// How long a pre-drain read waits before concluding the queue is empty.
 ///
@@ -180,6 +203,10 @@ fn list_hid_paths() -> Result<Vec<String>, Error> {
 /// raw pointer inside `HANDLE` makes the compiler enforce the second half.
 pub struct Device {
     handle: HANDLE,
+    /// Set when a cancellation failed to land inside its grace period, after
+    /// which the handle can never be used or closed again. `Cell` rather than
+    /// an atomic because `Device` is deliberately `!Sync`.
+    stuck: std::cell::Cell<bool>,
     /// One manual-reset event, reused by every transfer. The `OVERLAPPED` that
     /// points at it is a local in each call, and nothing outlives an in-flight
     /// transfer -- see the cancel path in [`Device::transfer`].
@@ -265,6 +292,7 @@ impl Interface {
 
         Ok(Device {
             handle,
+            stuck: std::cell::Cell::new(false),
             event,
             identity,
             text: self.text.clone(),
@@ -379,15 +407,69 @@ impl Device {
         body: &[u8],
         budget: Duration,
     ) -> Result<Reply, Error> {
+        self.request_at(channel, command, body, budget, |_| {})
+    }
+
+    /// As [`Device::request`], but the caller is handed the instant the command
+    /// actually went onto the wire.
+    ///
+    /// ⚠️ This exists because the clock contract cannot be expressed without
+    /// it. `t0; request(GET); t1` measures the **pre-drain** as well as the
+    /// round trip, and the drain is unbounded from the caller's point of view:
+    /// a VIA flood can make it several milliseconds. The midpoint of that wider
+    /// interval is not the transmission midpoint, so the offset it yields is
+    /// wrong by half the drain -- silently, and in the direction that looks
+    /// like a real clock error.
+    ///
+    /// The callback fires **after** draining and immediately before the write
+    /// returns, so a caller can take `t0` where the NTP arithmetic actually
+    /// needs it. Phase 2 will build the SET side on this; see finding 3 of
+    /// `plans/review-codex-phase0-2026-09-06.md`.
+    pub fn request_at(
+        &self,
+        channel: Channel,
+        command: u8,
+        body: &[u8],
+        budget: Duration,
+        on_send: impl FnOnce(Instant),
+    ) -> Result<Reply, Error> {
+        // ⚠️ The budget is checked BEFORE anything is transmitted. An expired
+        // operation that still writes can change the board -- set a clock, move
+        // the text band -- after the scheduler has given up on it, which is the
+        // one outcome a timeout must never produce.
+        let deadline = Instant::now()
+            .checked_add(budget)
+            .ok_or(Error::Timeout { drained: Vec::new() })?;
+        if budget.is_zero() {
+            return Err(Error::Timeout { drained: Vec::new() });
+        }
+
         // Anything already queued predates our write and cannot be our answer,
         // so clearing it first keeps the budget for reports that might be.
-        // Deliberately before the write: for a clock transaction this is time
-        // spent outside the measured interval.
-        let mut drained = self.drain();
+        // Deliberately before the write: this is time spent outside the
+        // interval a clock measurement brackets.
+        let (mut drained, queue) = self.drain_until(deadline);
+
+        // ⚠️ Finding 2 of the 2026-09-06 audit. A drain that stopped early has
+        // NOT established an empty queue, and the reports still in it can carry
+        // our own channel and command from an earlier request. Accepting one
+        // would pair an old board sample with new timestamps -- the exact
+        // silent corruption single ownership exists to prevent -- so a request
+        // that cannot start clean does not start.
+        if queue != Queue::Empty {
+            return Err(Error::Dirty { queue, drained });
+        }
+
+        let left = deadline.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return Err(Error::Timeout { drained });
+        }
 
         let frame = proto::frame(channel, command, body);
-        match self.transfer(Op::Write(&frame), WRITE_TIMEOUT_MS)? {
-            Outcome::Done(_) => {}
+        let write_ms = ms(left.min(Duration::from_millis(WRITE_TIMEOUT_MS as u64)));
+        match self.transfer(Op::Write(frame.to_vec()), write_ms)? {
+            Outcome::Wrote(_) => on_send(Instant::now()),
+            Outcome::Read(..) => unreachable!("a write cannot complete as a read"),
             Outcome::TimedOut => {
                 return Err(Error::Io {
                     op: "write",
@@ -398,19 +480,15 @@ impl Device {
             }
         }
 
-        let deadline = Instant::now() + budget;
-        let mut buf = vec![0u8; self.identity.input_len as usize];
         loop {
             let left = deadline.saturating_duration_since(Instant::now());
             if left.is_zero() {
                 return Err(Error::Timeout { drained });
             }
-            let slice = (left.as_millis() as u32).min(READ_SLICE_MS).max(1);
-            let n = match self.transfer(Op::Read(&mut buf), slice)? {
-                Outcome::Done(n) => n,
-                Outcome::TimedOut => continue,
+            let Some(buf) = self.read_once(ms(left.min(READ_SLICE)))? else {
+                continue;
             };
-            match proto::classify(&buf[..n], channel, command) {
+            match proto::classify(&buf, channel, command) {
                 Verdict::Reply(report) => {
                     let mut out = [0u8; REPORT_LEN];
                     out.copy_from_slice(&report[..REPORT_LEN]);
@@ -430,64 +508,117 @@ impl Device {
         }
     }
 
-    /// Empty the driver's queue of anything that arrived before we asked.
+    /// Empty the driver's queue of anything that arrived before we asked, and
+    /// **say whether it actually got empty**.
     ///
-    /// Errors are swallowed on purpose: a failure to drain is not a failure of
-    /// the request that follows, and the request loop discards stragglers
-    /// anyway. What this buys is that the discards happen off the clock.
+    /// ⚠️ Finding 2 of the 2026-09-06 audit. The old version returned only what
+    /// it discarded, so a caller could not tell "the queue is clean" from "I
+    /// gave up after 32 reports". The driver holds 64, so giving up left as
+    /// many as 32 in place — and one of those can be a **stale reply carrying
+    /// our own channel and command** from an earlier request. The next request
+    /// would then be answered by it instantly, pairing an old board sample with
+    /// new timestamps. For a clock GET that is a wrong offset with a plausible
+    /// RTT: exactly the silent corruption this layer exists to prevent.
     ///
-    /// ⚠️ This is also, incidentally, the proof that a cancelled read cannot
-    /// hang. On an idle queue the first read here has nothing to complete it,
-    /// so `CancelIoEx` is the only thing that can, and the call still returns
-    /// in about [`DRAIN_TIMEOUT_MS`]. Every request runs it, so the abort path
-    /// is exercised continuously rather than only when something goes wrong --
-    /// which is what stops "a nominal timeout became an unbounded shutdown
-    /// wait" from being a thing that could quietly become true.
-    pub fn drain(&self) -> Vec<Drained> {
+    /// So the outcome is part of the result, and [`Device::request_at`] refuses
+    /// to transmit unless it is [`Queue::Empty`].
+    pub fn drain_until(&self, deadline: Instant) -> (Vec<Drained>, Queue) {
         let mut seen = Vec::new();
-        let mut buf = vec![0u8; self.identity.input_len as usize];
         for _ in 0..DRAIN_LIMIT {
-            match self.transfer(Op::Read(&mut buf), DRAIN_TIMEOUT_MS) {
-                Ok(Outcome::Done(n)) => {
-                    seen.push(match proto::normalize_input(&buf[..n]) {
-                        Ok(r) => Drained::Stale {
-                            header: [r[0], r[1], r[2]],
-                        },
-                        Err(m) => Drained::StaleUnreadable(m),
-                    });
-                }
-                _ => break,
+            if Instant::now() >= deadline {
+                return (seen, Queue::OutOfTime);
+            }
+            match self.read_once(DRAIN_TIMEOUT_MS) {
+                // A read that times out is the only positive evidence the queue
+                // is empty: there was nothing for the kernel to hand back.
+                Ok(None) => return (seen, Queue::Empty),
+                Ok(Some(buf)) => seen.push(match proto::normalize_input(&buf) {
+                    Ok(r) => Drained::Stale {
+                        header: [r[0], r[1], r[2]],
+                    },
+                    Err(m) => Drained::StaleUnreadable(m),
+                }),
+                Err(_) => return (seen, Queue::Unreadable),
             }
         }
-        seen
+        (seen, Queue::MoreWaiting)
+    }
+
+    /// Drain with the default allowance, for callers with no deadline of their
+    /// own.
+    pub fn drain(&self) -> (Vec<Drained>, Queue) {
+        self.drain_until(Instant::now() + DRAIN_BUDGET)
+    }
+
+    /// One read, or `Ok(None)` if nothing arrived in time.
+    fn read_once(&self, timeout_ms: u32) -> Result<Option<Vec<u8>>, Error> {
+        match self.transfer(Op::Read(self.identity.input_len as usize), timeout_ms)? {
+            Outcome::Read(mut buf, n) => {
+                buf.truncate(n);
+                Ok(Some(buf))
+            }
+            Outcome::Wrote(_) => unreachable!("a read cannot complete as a write"),
+            Outcome::TimedOut => Ok(None),
+        }
     }
 
     /// One overlapped transfer, started and finished inside this call.
     ///
-    /// The `OVERLAPPED` lives on this stack frame, so the one thing that must
-    /// never happen is returning while the kernel could still write to it. On a
-    /// timeout that means `CancelIoEx` **and then** a blocking
-    /// `GetOverlappedResult`: cancellation is a request, and the I/O is only
-    /// certainly finished once that returns.
+    /// ⚠️ The buffer and the `OVERLAPPED` live in a heap [`Pending`], not on
+    /// this stack frame, and that is finding 4 of the 2026-09-06 audit.
+    /// `CancelIoEx` **requests** cancellation; Microsoft is explicit that it is
+    /// not guaranteed. The previous code answered that with a blocking
+    /// `GetOverlappedResult`, which is memory-safe but unbounded — a cancel
+    /// that never lands parks the executor for good, inside the very function
+    /// whose job is to have a deadline.
+    ///
+    /// So the wait is bounded, and the case that creates is handled rather than
+    /// wished away: if the operation is *still* pending after the grace period,
+    /// its memory can never be released, because the kernel may write to it at
+    /// any later moment. The `Pending` is **leaked deliberately**, the device is
+    /// marked stuck, and every later call refuses. Leaking a few dozen bytes
+    /// once is the cheap outcome here; freeing them is a use-after-free, and
+    /// waiting forever is a hung daemon.
     fn transfer(&self, op: Op, timeout_ms: u32) -> Result<Outcome, Error> {
+        if self.stuck.get() {
+            return Err(Error::Stuck);
+        }
+        let name = op.name();
+        let mut pending = Box::new(Pending {
+            ov: OVERLAPPED {
+                hEvent: self.event,
+                ..Default::default()
+            },
+            buf: match &op {
+                Op::Write(data) => data.clone(),
+                Op::Read(len) => vec![0u8; *len],
+            },
+        });
+
         unsafe {
             ResetEvent(self.event).map_err(|source| Error::Io {
                 op: "event reset",
                 source,
             })?;
 
-            let mut ol = OVERLAPPED {
-                hEvent: self.event,
-                ..Default::default()
-            };
-
-            // Named before the match, which consumes `op`: a read needs its
-            // buffer by `&mut`, and casting that away to keep the name would be
-            // writing through a shared reference.
-            let name = op.name();
-            let started = match op {
-                Op::Write(buf) => WriteFile(self.handle, Some(buf), None, Some(&mut ol)),
-                Op::Read(buf) => ReadFile(self.handle, Some(buf), None, Some(&mut ol)),
+            // The kernel keeps writing to these after the call returns, which
+            // is what the heap allocation above is for; the slices are rebuilt
+            // from raw parts so the borrow does not outlive the statement.
+            let ptr = pending.buf.as_mut_ptr();
+            let len = pending.buf.len();
+            let started = match &op {
+                Op::Write(_) => WriteFile(
+                    self.handle,
+                    Some(std::slice::from_raw_parts(ptr, len)),
+                    None,
+                    Some(&mut pending.ov),
+                ),
+                Op::Read(_) => ReadFile(
+                    self.handle,
+                    Some(std::slice::from_raw_parts_mut(ptr, len)),
+                    None,
+                    Some(&mut pending.ov),
+                ),
             };
             if let Err(source) = started {
                 if source.code() != HRESULT::from_win32(ERROR_IO_PENDING.0) {
@@ -497,57 +628,125 @@ impl Device {
 
             let mut moved: u32 = 0;
             if WaitForSingleObject(self.event, timeout_ms) != WAIT_OBJECT_0 {
-                let _ = CancelIoEx(self.handle, Some(&ol));
-                // Blocking, deliberately, and not optional: until this returns
-                // the kernel may still write to `ol` and to the caller's
-                // buffer, and both die with this stack frame.
-                return match GetOverlappedResult(self.handle, &ol, &mut moved, true) {
+                let _ = CancelIoEx(self.handle, Some(&pending.ov));
+                return match GetOverlappedResultEx(
+                    self.handle,
+                    &pending.ov,
+                    &mut moved,
+                    CANCEL_GRACE_MS,
+                    false,
+                ) {
                     // Three outcomes, and they are not the same thing. The
                     // transfer may have finished normally in the window between
                     // the wait expiring and the cancel landing; calling that a
                     // timeout would mean re-sending a write that already went
                     // out, or discarding a reply that did arrive.
-                    Ok(()) => Ok(Outcome::Done(moved as usize)),
+                    Ok(()) => Ok(op.finish(pending, moved as usize)),
                     Err(source)
-                        if source.code()
-                            == HRESULT::from_win32(ERROR_OPERATION_ABORTED.0) =>
+                        if source.code() == HRESULT::from_win32(ERROR_OPERATION_ABORTED.0) =>
                     {
                         Ok(Outcome::TimedOut)
+                    }
+                    Err(source) if source.code() == HRESULT::from_win32(WAIT_TIMEOUT.0) => {
+                        // The cancel did not land inside the grace period. The
+                        // kernel still owns this buffer, so it has to outlive
+                        // us — permanently.
+                        self.stuck.set(true);
+                        Box::leak(pending);
+                        Err(Error::Stuck)
                     }
                     Err(source) => Err(Error::Io { op: name, source }),
                 };
             }
-            GetOverlappedResult(self.handle, &ol, &mut moved, true)
+            GetOverlappedResult(self.handle, &pending.ov, &mut moved, true)
                 .map_err(|source| Error::Io { op: name, source })?;
-            Ok(Outcome::Done(moved as usize))
+            Ok(op.finish(pending, moved as usize))
+        }
+    }
+}
+
+/// A transfer's buffer and `OVERLAPPED`, on the heap so they can outlive the
+/// call that started them when a cancellation refuses to land.
+struct Pending {
+    ov: OVERLAPPED,
+    buf: Vec<u8>,
+}
+
+/// What the pre-drain established about the driver's queue.
+///
+/// ⚠️ Only [`Queue::Empty`] is safe to start a request on. Every other value
+/// means "there may still be a report in there that would answer the command I
+/// am about to send", and such a report is indistinguishable from a real reply.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Queue {
+    /// A read timed out with nothing to hand back. The only positive evidence.
+    Empty,
+    /// [`DRAIN_LIMIT`] reports came out and more may remain.
+    MoreWaiting,
+    /// The deadline passed mid-drain.
+    OutOfTime,
+    /// A read failed, so nothing was established either way.
+    Unreadable,
+}
+
+impl std::fmt::Display for Queue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Queue::Empty => write!(f, "empty"),
+            Queue::MoreWaiting => {
+                write!(f, "still held reports after {DRAIN_LIMIT} were discarded")
+            }
+            Queue::OutOfTime => write!(f, "could not be cleared within the budget"),
+            Queue::Unreadable => write!(f, "could not be read"),
         }
     }
 }
 
 /// A transfer that finished, or one that ran out of time. A timeout is not an
 /// error here because only the caller knows what it means: for a read inside
-/// [`Device::request`] it is simply "nothing yet", for a write it is a fault.
+/// [`Device::request_at`] it is simply "nothing yet", for a write it is a fault.
 enum Outcome {
-    Done(usize),
+    /// Bytes written. Not inspected: a short HID write is not a thing the class
+    /// driver does, and the report length is fixed by the descriptor.
+    Wrote(#[allow(dead_code)] usize),
+    Read(Vec<u8>, usize),
     TimedOut,
 }
 
-enum Op<'a> {
-    Write(&'a [u8]),
-    Read(&'a mut [u8]),
+/// What to transfer. Owns its data, because [`Device::transfer`] has to be able
+/// to hand ownership to the kernel indefinitely — see its `Pending` note.
+enum Op {
+    Write(Vec<u8>),
+    Read(usize),
 }
 
-impl Op<'_> {
+impl Op {
     fn name(&self) -> &'static str {
         match self {
             Op::Write(_) => "write",
             Op::Read(_) => "read",
         }
     }
+
+    /// Take the completed buffer back out of its heap home.
+    fn finish(&self, pending: Box<Pending>, moved: usize) -> Outcome {
+        match self {
+            Op::Write(_) => Outcome::Wrote(moved),
+            Op::Read(_) => Outcome::Read(pending.buf, moved),
+        }
+    }
 }
 
 impl Drop for Device {
     fn drop(&mut self) {
+        // ⚠️ A stuck device has an operation the kernel still owns, pointing
+        // at a buffer and an event we deliberately leaked. Closing the handle
+        // would complete that I/O on our terms rather than the driver's, so the
+        // handle and the event are leaked too. One process-lifetime leak of two
+        // handles beats a race with the kernel over freed memory.
+        if self.stuck.get() {
+            return;
+        }
         unsafe {
             CloseHandle(self.event).ok();
             CloseHandle(self.handle).ok();

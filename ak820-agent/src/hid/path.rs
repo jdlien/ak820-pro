@@ -41,23 +41,81 @@ pub fn split_multi_sz(buf: &[u16]) -> Vec<String> {
         .collect()
 }
 
+/// Split a device-interface path into its four `#`-separated fields, if it has
+/// the shape the Configuration Manager produces for a HID interface.
+///
+/// `\\?\HID#VID_0C45&PID_8009&MI_01#e&12502fcc&0&0000#{4d1e55b2-...}` is
+/// `[r"\\?\HID", "vid_0c45&pid_8009&mi_01", "e&12502fcc&0&0000", "{4d1e55b2-...}"]`.
+/// Anything else -- a different enumerator, a missing field, an extra one --
+/// returns `None` and is refused rather than pattern-matched hopefully.
+///
+/// Lowercased, because the Configuration Manager is not consistent about case
+/// and neither is the registry. This machine returns `MI_01` uppercase and
+/// `Col02` mixed, in the same list.
+fn fields(path: &str) -> Option<[String; 4]> {
+    let lower = path.to_ascii_lowercase();
+    let mut parts = lower.split('#');
+    let prefix = parts.next()?;
+    // `\\?\HID` is the only enumerator these come from. Refusing others is the
+    // point: an unexpected shape is exactly when structural assumptions break.
+    if prefix != r"\\?\hid" {
+        return None;
+    }
+    let hardware = parts.next()?.to_string();
+    let instance = parts.next()?.to_string();
+    let class = parts.next()?.to_string();
+    if parts.next().is_some() || hardware.is_empty() {
+        return None;
+    }
+    Some([prefix.to_string(), hardware, instance, class])
+}
+
+/// The hardware-id field, lowercased, or `None` if the path is not one we
+/// recognise.
+///
+/// ⚠️ This is the only field whose contents describe the *device*. The third
+/// field is the device-instance id, which is largely vendor-chosen text, and
+/// the fourth is the interface class GUID.
+pub fn hardware_id(path: &str) -> Option<String> {
+    fields(path).map(|f| f[1].clone())
+}
+
 /// Does this interface path name the given vendor and product?
 ///
-/// Requires the `vid_xxxx&pid_xxxx` pair to appear as a **bounded token** in
-/// the hardware-id portion -- delimited by `#` or `&`, not merely contained.
-/// A bare `contains()` would accept a longer id that happens to embed ours
-/// (`VID_10C45`), and Bluetooth-attached HID paths, which carry no `VID_`
-/// field in this form, simply never match. Case-insensitive: the Configuration
-/// Manager is not consistent about case and neither is the registry.
+/// ⚠️ **The pair must appear in the hardware-id field**, as a whole token
+/// delimited by `&`. Two separate mistakes are possible here and this has made
+/// both:
+///
+/// 1. A bare `contains()` accepts a longer id that embeds ours -- `VID_10C45`.
+/// 2. A delimiter-checked search of the **whole path** accepts our ids
+///    appearing anywhere, including the device-instance field, which is not a
+///    statement about what the device is.
+///
+/// The second one is not hypothetical. The 2026-09-06 audit produced this,
+/// and the previous implementation matched it:
+///
+/// ```text
+/// \\?\HID#VID_051D&PID_0002#VID_0C45&PID_8009#{4d1e55b2-f16f-11cf-88cb-001111000030}
+/// ```
+///
+/// That is the **UPS's** hardware id with our ids sitting in the instance
+/// field -- precisely the device this filter exists to never open, and the
+/// post-open attribute check cannot help because the damage is the open.
+///
+/// Bluetooth-attached HID paths carry no `VID_` field in this form and so never
+/// match, which is correct: this board is USB.
 pub fn matches_device(path: &str, vid: u16, pid: u16) -> bool {
-    let lower = path.to_ascii_lowercase();
-    let needle = format!("vid_{vid:04x}&pid_{pid:04x}");
-    let Some(at) = lower.find(&needle) else {
+    let Some(hardware) = hardware_id(path) else {
         return false;
     };
-    let before_ok = at == 0 || matches!(lower.as_bytes()[at - 1], b'#' | b'&' | b'\\');
+    let needle = format!("vid_{vid:04x}&pid_{pid:04x}");
+    let Some(at) = hardware.find(&needle) else {
+        return false;
+    };
+    // Within the hardware id, fields are `&`-separated: `vid_x&pid_y&mi_01`.
+    let before_ok = at == 0;
     let after = at + needle.len();
-    let after_ok = after == lower.len() || matches!(lower.as_bytes()[after], b'#' | b'&');
+    let after_ok = after == hardware.len() || hardware.as_bytes()[after] == b'&';
     before_ok && after_ok
 }
 
@@ -68,19 +126,9 @@ pub fn matches_device(path: &str, vid: u16, pid: u16) -> bool {
 /// interface number depends on which USB features the firmware was built with
 /// and would change silently if that changed.
 pub fn is_raw_hid_hint(path: &str) -> bool {
-    path.to_ascii_lowercase().contains("&mi_01")
-}
-
-/// The hardware-id field of a device-interface path, lowercased.
-///
-/// `\\?\HID#VID_0C45&PID_8009&MI_01#e&12502fcc&0&0000#{guid}` has four
-/// `#`-separated fields; this is the second, `vid_0c45&pid_8009&mi_01`. The
-/// *third* is the device-instance id, and it deliberately is not used here: one
-/// board's collections each carry a different instance, so instances cannot
-/// tell one keyboard's several interfaces from several keyboards.
-pub fn hardware_id(path: &str) -> Option<String> {
-    let field = path.split('#').nth(1)?;
-    (!field.is_empty()).then(|| field.to_ascii_lowercase())
+    // Field-restricted for the same reason `matches_device` is: `&mi_01`
+    // appearing in an instance id says nothing about the interface.
+    hardware_id(path).is_some_and(|h| h.split('&').any(|f| f == "mi_01"))
 }
 
 /// Candidate paths that name the same interface more than once.
@@ -133,6 +181,23 @@ mod tests {
         assert!(is_raw_hid_hint(REAL));
     }
 
+    /// ⚠️ Measured on this machine: two of the board's five real paths carry a
+    /// `\KBD` suffix after the class GUID — the legacy keyboard-device alias.
+    /// It lands inside the fourth field, so the four-field shape still holds,
+    /// but a stricter parse demanding the path END at the GUID would reject two
+    /// of this board's own collections. Pinned because tightening the filter is
+    /// exactly when that would get broken.
+    #[test]
+    fn accepts_the_live_paths_that_carry_a_kbd_suffix() {
+        const WITH_KBD: &str = r"\\?\HID#VID_0C45&PID_8009&MI_02&Col03#e&11870df6&0&0002#{4d1e55b2-f16f-11cf-88cb-001111000030}\KBD";
+        assert!(matches_device(WITH_KBD, VID, PID));
+        assert!(!is_raw_hid_hint(WITH_KBD), "Col03 is the NKRO keyboard");
+        assert_eq!(
+            hardware_id(WITH_KBD).as_deref(),
+            Some("vid_0c45&pid_8009&mi_02&col03")
+        );
+    }
+
     #[test]
     fn accepts_the_boards_other_collections() {
         // They are ours; the usage-page check after opening rejects them, not this.
@@ -164,6 +229,54 @@ mod tests {
         let boot = r"\\?\HID#VID_0C45&PID_7140#6&aabbccdd&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}";
         assert!(!matches_device(boot, VID, PID));
         assert!(matches_device(boot, 0x0C45, 0x7140));
+    }
+
+    /// ⚠️ The 2026-09-06 audit's counterexample, and the reason the match is
+    /// restricted to the hardware-id field. This is the **UPS** -- the exact
+    /// device this module exists to never open -- with our ids sitting in the
+    /// device-instance field, where they say nothing about what the device is.
+    /// The delimiter-checked whole-path search that preceded this accepted it.
+    #[test]
+    fn rejects_our_ids_planted_in_the_instance_field() {
+        let planted =
+            r"\\?\HID#VID_051D&PID_0002#VID_0C45&PID_8009#{4d1e55b2-f16f-11cf-88cb-001111000030}";
+        assert!(
+            !matches_device(planted, VID, PID),
+            "our ids outside the hardware-id field are not our device"
+        );
+        assert!(
+            matches_device(planted, 0x051D, 0x0002),
+            "... and the hardware id still says whose it really is"
+        );
+    }
+
+    /// The same trick against the interface hint, which orders what gets opened
+    /// first.
+    #[test]
+    fn rejects_an_interface_hint_planted_in_the_instance_field() {
+        let planted =
+            r"\\?\HID#VID_0C45&PID_8009&MI_00#e&mi_01&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}";
+        assert!(matches_device(planted, VID, PID), "it is still our board");
+        assert!(
+            !is_raw_hid_hint(planted),
+            "but MI_00 is the keyboard, whatever the instance field says"
+        );
+    }
+
+    /// Shapes that are not a HID interface path at all. Refused rather than
+    /// parsed hopefully -- an unexpected form is exactly when the structural
+    /// assumptions above stop holding.
+    #[test]
+    fn rejects_paths_that_are_not_hid_interface_paths() {
+        for odd in [
+            r"\\?\USB#VID_0C45&PID_8009#x#{g}",          // wrong enumerator
+            r"\\?\HID#VID_0C45&PID_8009#x",              // too few fields
+            r"\\?\HID#VID_0C45&PID_8009#x#{g}#extra",    // too many
+            r"\\?\HID##VID_0C45&PID_8009#{g}",           // empty hardware id
+            r"HID#VID_0C45&PID_8009&MI_01#x#{g}",        // no prefix
+        ] {
+            assert!(!matches_device(odd, VID, PID), "{odd}");
+        }
     }
 
     #[test]

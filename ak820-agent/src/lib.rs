@@ -5,3 +5,5 @@
 pub mod flash;
 pub mod hid;
 pub mod proto;
+pub mod smtc;
+pub mod text;

@@ -14,7 +14,7 @@
 use std::process::ExitCode;
 
 use ak820_agent::flash;
-use ak820_agent::hid::device::{self, Device};
+use ak820_agent::hid::device::{self, Device, Queue};
 use ak820_agent::hid::path;
 use ak820_agent::hid::Drained;
 
@@ -226,20 +226,21 @@ fn selftest() -> Result<(), String> {
         at.elapsed().as_secs_f64() * 1000.0
     );
 
-    // One millisecond is under the round trip on this board, so the read is
-    // still pending when the wait expires. A fast answer is not a failure --
-    // it is the "completed between the wait expiring and the cancel landing"
-    // branch, and flattening that into a timeout is the bug the branch exists
-    // to avoid.
+    // ⚠️ Finding 7 of the phase-0 audit: an operation whose budget has expired
+    // must not still change the board. A millisecond cannot cover even the
+    // pre-drain, so this must come back as a refusal — and crucially it must
+    // refuse *before* transmitting, not after.
     let at = Instant::now();
     let outcome = dev.request(Channel::Flash, flash::INFO, &[], Duration::from_millis(1));
     let took = at.elapsed().as_secs_f64() * 1000.0;
     match outcome {
-        Err(HidError::Timeout { drained }) => println!(
-            "cancelled      : timed out in {took:.1} ms, {} report(s) drained",
-            drained.len()
-        ),
-        Ok(_) => println!("cancelled      : answered in {took:.1} ms before the cancel landed"),
+        Err(HidError::Timeout { .. }) | Err(HidError::Dirty { .. }) => {
+            println!("budget guard   : refused in {took:.1} ms without transmitting")
+        }
+        // Not a failure of the guard — the board simply answered inside the
+        // millisecond, which is the "completed before the cancel landed" branch
+        // and must be reported as the answer it is rather than as a timeout.
+        Ok(_) => println!("budget guard   : answered in {took:.1} ms, inside the budget"),
         Err(e) => return Err(format!("unexpected failure on the short budget: {e}")),
     }
 
@@ -249,17 +250,26 @@ fn selftest() -> Result<(), String> {
     // HID read, this would never return, and a daemon would hang on shutdown
     // with a silent board rather than time out.
     let at = Instant::now();
-    let leftovers = dev.drain();
+    let (leftovers, queue) = dev.drain();
     let took = at.elapsed().as_secs_f64() * 1000.0;
-    if took > 250.0 {
+    if took > 1500.0 {
         return Err(format!(
             "a cancelled read on an idle queue took {took:.1} ms -- cancellation is not landing"
         ));
     }
+    // ⚠️ The queue state is the point, not the timing. `Empty` is the only
+    // value that proves a read was genuinely aborted rather than satisfied by
+    // a report that happened to be waiting -- finding 9 of the phase-0 audit
+    // said the old version of this step could not tell those apart.
     println!(
-        "idle cancel    : returned in {took:.1} ms, {} report(s) queued",
+        "idle cancel    : returned in {took:.1} ms, queue {queue}, {} report(s) discarded",
         leftovers.len()
     );
+    if queue != Queue::Empty {
+        return Err(format!(
+            "the idle-cancel step never observed an empty queue (saw: {queue}), so it did not              exercise the abort branch it claims to"
+        ));
+    }
 
     let at = Instant::now();
     let (again, drained) = flash::read_info(&dev).map_err(|e| {

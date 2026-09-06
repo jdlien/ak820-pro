@@ -76,6 +76,21 @@ pub enum Error {
     /// The firmware answered, naming our own command, and said it does not
     /// handle it. Retrying cannot help; this is a version mismatch.
     Unhandled { channel: u8, command: u8 },
+    /// The driver's queue could not be established as empty, so the request was
+    /// **not sent**.
+    ///
+    /// ⚠️ Refusing is the point. A leftover report can carry our own channel
+    /// and command from an earlier request, and there is nothing in the bytes
+    /// to tell it from a fresh reply — so sending anyway risks answering a new
+    /// question with an old measurement.
+    Dirty {
+        queue: device::Queue,
+        drained: Vec<Drained>,
+    },
+    /// A cancellation did not complete inside its grace period, so this device
+    /// has an operation the kernel still owns. Its buffer, event and handle are
+    /// leaked deliberately and it can never be used again.
+    Stuck,
 }
 
 impl std::fmt::Display for Error {
@@ -112,6 +127,16 @@ impl std::fmt::Display for Error {
                 f,
                 "the firmware does not handle command {command:#04X} on channel {channel:#04X} \
                  -- flashed from a different tree?"
+            ),
+            Error::Dirty { queue, drained } => write!(
+                f,
+                "not sent: the reply queue {queue} after discarding {} report(s), so a stale \
+                 reply could have answered it",
+                drained.len()
+            ),
+            Error::Stuck => write!(
+                f,
+                "a cancelled HID operation never completed; this handle is abandoned"
             ),
         }
     }

@@ -41,6 +41,8 @@ features = [
     "Win32_System_Threading",                    # CreateEventW, WaitForSingleObject
     "Win32_Security",                            # CreateMutexW takes SECURITY_ATTRIBUTES
     "Win32_System_Console",                      # the CLI half
+    "Win32_System_WinRT",                        # RoInitialize on the media thread
+    "Win32_System_SystemInformation",            # GetSystemTimePreciseAsFileTime
     # WinRT, for the media half (phase 1).
     "Media_Control",
     "Foundation",
