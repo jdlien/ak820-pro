@@ -1,9 +1,10 @@
 # A tag `v*` becomes a GitHub Release carrying the agent zip and its sha256
-# sums. The firmware artifacts for the same tag are uploaded by hand afterwards
-# (`gh release upload v… ak820pro-builds/out/… via.json`): the pinned MSYS2
-# toolchain in deps.lock is not something to reproduce on a runner, and the
-# repo's reproducible-build habit -- three clean builds hashing identically --
-# is the check that matters there.
+# sums. The firmware artifacts for the same tag are uploaded afterwards by
+# `scripts/release-firmware.sh <tag>` from a checkout at the tag: the pinned
+# MSYS2 toolchain in deps.lock is not something to reproduce on a runner, and
+# the repo's reproducible-build habit -- clean builds of one commit hashing
+# identically -- is the check that matters there. That script refuses a dirty
+# clone, an unpinned commit, or a -dirty artifact.
 name: release
 
 on:

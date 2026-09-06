@@ -119,6 +119,11 @@ restructured the same day into a clone-and-build package: `setup.sh` +
 ./flash.sh ak820pro-builds/out/<the printed artifact>
 ```
 
+**Releasing:** `git tag -a vX.Y.Z` and push it; CI builds the agent zip into
+a GitHub Release, then `scripts/release-firmware.sh vX.Y.Z` (from a checkout
+at the tag) uploads this machine's firmware artifacts to it -- a clean build
+of deps.lock's pinned commit only, never a `-dirty` one.
+
 Works on macOS and on Windows from the **MSYS2 MinGW 64-bit shell** (only that
 shell — `qmk_cli` refuses the others). Windows has four traps that all present
 as something else, and every one of them costs an hour if you meet it cold:
