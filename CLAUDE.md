@@ -135,16 +135,22 @@ timekeeper exports one agreed `HOME` so both see the same file.
 
 `build.sh` enforces the submodule pin, structural binary checks and via.json /
 enum sync; it refuses a dirty or off-pin tree. `flash.sh` preserves the VIA
-keymap across the flash and refuses to flash if the backup fails. Bootloader is
-`Fn`+`Esc`. **A flash erases the emulated EEPROM**: VIA keymap (restored by
-flash.sh), BT slot, LCD brightness, persisted RTC period (re-converges in
-~4 min with the host attached — designed, not a fault), **and the RGB
-effect/colour, which flash.sh does NOT restore** — every flash reverts the LEDs
-to `keyboard.json`'s `rgb_matrix.default`, so keep that equal to the owner's
-setup (read it back over VIA's lighting channel, `[0x08, 3, 1..4]`, before
-changing it; it was silently reverting on all nine flashes of 2026-09-03 until
-it was made to match). The default keymap is likewise the owner's VIA layout,
-regenerated with `scripts/keymap_to_c.py`, never hand-edited.
+keymap **and the RGB lighting** across the flash; it refuses to flash if the
+keymap backup fails, and only warns if the lighting backup does. Bootloader is
+`Fn`+`Esc`. **A flash erases the emulated EEPROM**: VIA keymap and RGB
+effect/colour (both restored by flash.sh), BT slot, LCD brightness, persisted
+RTC period (re-converges in ~4 min with the host attached — designed, not a
+fault). The default keymap is the owner's VIA layout, regenerated with
+`scripts/keymap_to_c.py`, never hand-edited.
+
+⚠️ **The RGB restore is new as of 2026-09-06** —
+`hostagent/ak820lighting.py` (`show` / `dump` / `restore`), backup at
+`~/Documents/ak820pro-lighting.json`, over VIA's own lighting channel
+`[0x08, 3, 1..4]`. Before it, every flash silently reverted the LEDs to
+`keyboard.json`'s `rgb_matrix.default` — unnoticed through all nine flashes of
+2026-09-03. Keeping that default near the owner's setup is still worth doing as
+a backstop, because `--no-backup` and a missing backup file both fall back to
+it. On Windows `ak820 lighting` reads the same values without enumerating HID.
 
 ## Working with VIA
 

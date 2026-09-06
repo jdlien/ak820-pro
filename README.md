@@ -47,14 +47,23 @@ spacebar — put the mode slider in `cable`, cold-boot with the pins shorted
 
 **4. Flashing erases the emulated EEPROM** — VIA keymap, RGB settings, LCD
 brightness, BT slot, and the persisted RTC trim. `flash.sh` backs up and
-restores the VIA keymap for you. BT slot, LCD brightness and the RTC trim
-re-converge on their own (the clock takes a few minutes with a host attached).
+restores **both the VIA keymap and the RGB lighting** for you. BT slot, LCD
+brightness and the RTC trim re-converge on their own (the clock takes a few
+minutes with a host attached).
 
-⚠️ **RGB is the exception: nothing restores it.** Every flash reverts the LEDs
-to `rgb_matrix.default` in `keyboards/a_jazz/ak820pro/keyboard.json` and leaves
-them there. If your lighting differs from that default, note it before you
-flash — or set the default to match, which is what keeps it from silently
-reverting on every single flash.
+The lighting backup lands in `~/Documents/ak820pro-lighting.json`, and you can
+drive it by hand:
+
+```sh
+hostagent/ak820lighting.py show      # board vs backup
+hostagent/ak820lighting.py dump      # save what the board has now
+hostagent/ak820lighting.py restore   # put it back
+```
+
+⚠️ **Historical, and worth knowing if you flash an older checkout:** nothing
+restored RGB until 2026-09-06, so every flash reverted the LEDs to
+`rgb_matrix.default` in `keyboards/a_jazz/ak820pro/keyboard.json`. That went
+unnoticed through nine flashes in one day.
 
 ---
 

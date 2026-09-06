@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
-# Flash the AK820 Pro, preserving the VIA keymap across the erase.
+# Flash the AK820 Pro, preserving the VIA keymap and the RGB lighting across
+# the erase.
 #
 # Flashing erases the emulated EEPROM, so the VIA keymap goes with it. This
 # dumps it first, flashes, then writes it back -- the manual step that used to
 # follow every single flash.
+#
+# ⚠️ The LIGHTING is the same problem and went unnoticed far longer. Nothing
+# restored it, so every flash silently reverted the LEDs to `rgb_matrix.default`
+# in keyboard.json -- through all nine flashes of 2026-09-03 before anyone
+# noticed. The advice since was "keep that default equal to your setup", which
+# is a rule a human has to remember; this is the version the script does.
 #
 # Usage:
 #   ./flash.sh [firmware.bin] [--no-backup]
@@ -64,6 +71,7 @@ pkill -f "qmk console" 2>/dev/null && echo "stopped a running qmk console"
 
 # --- 1. back up the keymap while QMK is still running ----------------------
 KEYMAP="${KEYMAP:-$HOME/Documents/ak820pro-keymap.json}"
+LIGHTING="${LIGHTING:-$HOME/Documents/ak820pro-lighting.json}"
 if [ "$BACKUP" = 1 ]; then
     if usb "$BOOTLOADER"; then
         # Already in the bootloader: QMK is gone, so there is nothing to read.
@@ -90,6 +98,22 @@ if [ "$BACKUP" = 1 ]; then
             echo "  Re-run with --no-backup to flash anyway and lose the keymap."
             exit 1
         fi
+        echo
+    fi
+
+    # Lighting, same story as the keymap. Not fatal if it fails: losing the
+    # lighting is annoying, losing the keymap is not, so this warns where the
+    # keymap refuses. In the bootloader there is nothing to read and an
+    # existing backup is used as-is.
+    if ! usb "$BOOTLOADER"; then
+        echo "== backing up the RGB lighting =="
+        "$PY" hostagent/ak820lighting.py dump "$LIGHTING" || {
+            echo "  lighting backup FAILED -- flashing anyway, but the LEDs will"
+            echo "  come back as keyboard.json's rgb_matrix.default."
+        }
+        echo
+    elif [ -f "$LIGHTING" ]; then
+        echo "   lighting: using existing backup from $(fstat "$LIGHTING")"
         echo
     fi
 fi
@@ -127,6 +151,19 @@ if [ "$BACKUP" = 1 ]; then
         "$PY" hostagent/ak820keymap.py restore "$KEYMAP" && break
         [ "$try" = 3 ] && { echo "restore failed -- run it by hand once the board settles:";
                             echo "  $PY hostagent/ak820keymap.py restore"; exit 1; }
+        sleep 4
+    done
+
+    # After the keymap, because the keymap is the one worth failing over. A
+    # lighting restore that does not take leaves the LEDs on the firmware
+    # default, which is visible and fixable by hand.
+    echo "== restoring the RGB lighting =="
+    for try in 1 2 3; do
+        "$PY" hostagent/ak820lighting.py restore "$LIGHTING" && break
+        [ "$try" = 3 ] && {
+            echo "  lighting restore failed -- run it by hand once the board settles:"
+            echo "    $PY hostagent/ak820lighting.py restore"
+        }
         sleep 4
     done
 fi
