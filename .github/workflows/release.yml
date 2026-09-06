@@ -37,7 +37,10 @@ jobs:
           Compress-Archive -Path $dir -DestinationPath "$dir.zip" -Force
           $sums = Get-FileHash -Algorithm SHA256 "$dir.zip", "$dir\ak820.exe", "$dir\ak820-agent.exe" |
             ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path -Leaf $_.Path) }
-          Set-Content -Path sha256sums.txt -Value $sums
+          # LF, not CRLF: `sha256sum -c` in Git Bash and on macOS chokes on a
+          # carriage return in every filename (v0.1.0 shipped that way and was
+          # re-uploaded by hand).
+          [IO.File]::WriteAllText("sha256sums.txt", ($sums -join "`n") + "`n")
           Get-Content sha256sums.txt
           .\target\release\ak820.exe --version
       - name: release
