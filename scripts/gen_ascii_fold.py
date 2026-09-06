@@ -151,6 +151,34 @@ def main() -> int:
         lines.append(f'    "{chunk}",')
     lines += ["];".replace("];", ");"), ""]
 
+    # ⚠️ Python's str.strip() uses str.isspace(), which is NOT the same set as
+    # Rust's char::is_whitespace(). Python additionally treats the C0
+    # separators U+001C..U+001F as space; Rust does not, because they lack the
+    # Unicode White_Space property.
+    #
+    # That difference is not cosmetic here. An artist field of "\x1c" is empty
+    # to Python and one character to Rust -- and `Snapshot::lines` puts the
+    # title on the NARROW row when the artist is empty and the wide row when it
+    # is not. So a stray separator would move the title to a different row and
+    # change its budget. Generated for the same reason the fold table is.
+    spaces = [
+        cp
+        for cp in range(0x110000)
+        if not (0xD800 <= cp <= 0xDFFF) and chr(cp).isspace()
+    ]
+    lines += [
+        f"/// Every codepoint Python's `str.isspace()` accepts. {len(spaces)} of them.",
+        "///",
+        "/// Rust's `char::is_whitespace` is *nearly* this set but omits",
+        "/// U+001C..U+001F, which Python strips and we therefore must too.",
+        f"pub const PY_SPACE: [char; {len(spaces)}] = [",
+    ]
+    for i in range(0, len(spaces), 8):
+        lines.append(
+            "    " + " ".join(f"'\\u{{{cp:X}}}'," for cp in spaces[i : i + 8])
+        )
+    lines += ["];", ""]
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(lines), encoding="utf-8", newline="\n")
     print(f"{OUT}: {len(entries)} codepoints, {len(blob)} bytes of text")

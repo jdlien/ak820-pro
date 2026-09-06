@@ -21,6 +21,8 @@
 
 mod fold_table;
 
+pub use fold_table::PY_SPACE;
+
 /// Commands on the text channel, matching `hid_protocol.c`.
 pub const SET: u8 = 0x01;
 pub const CLEAR: u8 = 0x02;

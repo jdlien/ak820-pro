@@ -17,7 +17,7 @@
 
 pub mod worker;
 
-use crate::text::{Icon, Line};
+use crate::text::{Icon, Line, MAX_LEN};
 
 /// The subset of `GlobalSystemMediaTransportControlsSessionPlaybackStatus`
 /// that changes what we do.
@@ -36,16 +36,27 @@ pub enum Status {
 
 /// Where a session says it is in the track.
 ///
-/// Seconds, already converted from WinRT's `TimeSpan`. `age_s` is how long ago
-/// SMTC last touched this timeline, which the extrapolation below needs.
+/// ⚠️ **Raw 100 ns ticks, not seconds, and that is a correctness fix rather
+/// than a style choice.** Python subtracts `timedelta` values — exact integer
+/// arithmetic — and only then converts to seconds. Converting each endpoint to
+/// `f64` first and subtracting loses the low bits, and the loss lands exactly
+/// where it hurts: a 245-second track starting at 11.001 s came out as
+/// `244.99999999999997`, which truncates to **244**. An off-by-one on an
+/// entirely ordinary track, found by the phase-1 audit.
+///
+/// Subtracting ticks is exact for any value this protocol can carry, so the
+/// truncation below is the only rounding that happens.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Timeline {
-    pub start_s: f64,
-    pub end_s: f64,
-    pub position_s: f64,
+    pub start_ticks: i64,
+    pub end_ticks: i64,
+    pub position_ticks: i64,
     /// Seconds since `LastUpdatedTime`, or `None` if the session reports none.
     pub age_s: Option<f64>,
 }
+
+/// 100 ns ticks per second — WinRT's `TimeSpan` and `DateTime` unit.
+pub const TICKS_PER_SEC: i64 = 10_000_000;
 
 /// One SMTC session, already read out of WinRT.
 #[derive(Clone, Debug, PartialEq)]
@@ -160,14 +171,21 @@ pub fn choose(sessions: &[SessionFacts]) -> Option<&SessionFacts> {
         .min_by_key(|s| rank(s).expect("filtered"))
 }
 
-/// Truncate toward zero and clamp at zero, as Python's `max(0, int(x))` does.
-fn secs(v: f64) -> u32 {
+/// Whole seconds from a tick difference, truncated toward zero and clamped at
+/// zero — Python's `max(0, int(delta.total_seconds()))`, without the float.
+///
+/// Integer division in Rust truncates toward zero, which is what `int()` does,
+/// so negative inputs agree too before the clamp takes them to zero.
+fn secs(ticks: i64) -> u32 {
+    (ticks / TICKS_PER_SEC).clamp(0, u32::MAX as i64) as u32
+}
+
+/// The same, for the one value that genuinely is a float: the age of a reading.
+fn secs_f(v: f64) -> u32 {
     if !v.is_finite() || v <= 0.0 {
         return 0;
     }
-    // `as` saturates at u32::MAX for anything larger, which is well past any
-    // track and gets clamped again by the 16-bit wire field.
-    v.trunc() as u32
+    v.trunc().min(u32::MAX as f64) as u32
 }
 
 /// Where the chosen session is in its track.
@@ -184,13 +202,13 @@ fn secs(v: f64) -> u32 {
 /// session reporting a zero `LastUpdatedTime` lands in 1601). Either way,
 /// trust the position as read.
 fn position(timeline: &Timeline, playing: bool) -> (u32, u32) {
-    let dur = secs(timeline.end_s - timeline.start_s);
-    let mut pos = secs(timeline.position_s - timeline.start_s);
+    let dur = secs(timeline.end_ticks.saturating_sub(timeline.start_ticks));
+    let mut pos = secs(timeline.position_ticks.saturating_sub(timeline.start_ticks));
 
     if playing {
         if let Some(age) = timeline.age_s {
             if (0.0..600.0).contains(&age) {
-                pos = pos.saturating_add(secs(age));
+                pos = pos.saturating_add(secs_f(age));
             }
         }
     }
@@ -345,9 +363,9 @@ mod tests {
     #[test]
     fn position_and_duration_are_relative_to_start() {
         let snap = playing_with(Timeline {
-            start_s: 10.0,
-            end_s: 250.0,
-            position_s: 40.0,
+            start_ticks: 10 * TICKS_PER_SEC,
+            end_ticks: 250 * TICKS_PER_SEC,
+            position_ticks: 40 * TICKS_PER_SEC,
             age_s: None,
         });
         assert_eq!((snap.pos_s, snap.dur_s), (30, 240));
@@ -357,9 +375,9 @@ mod tests {
     #[test]
     fn an_empty_timeline_reads_as_no_progress() {
         let snap = playing_with(Timeline {
-            start_s: 0.0,
-            end_s: 0.0,
-            position_s: 0.0,
+            start_ticks: 0 * TICKS_PER_SEC,
+            end_ticks: 0 * TICKS_PER_SEC,
+            position_ticks: 0 * TICKS_PER_SEC,
             age_s: Some(1.0),
         });
         assert_eq!((snap.pos_s, snap.dur_s), (1, 0));
@@ -377,9 +395,9 @@ mod tests {
     #[test]
     fn a_stale_position_is_extrapolated_while_playing() {
         let snap = playing_with(Timeline {
-            start_s: 0.0,
-            end_s: 300.0,
-            position_s: 100.0,
+            start_ticks: 0 * TICKS_PER_SEC,
+            end_ticks: 300 * TICKS_PER_SEC,
+            position_ticks: 100 * TICKS_PER_SEC,
             age_s: Some(4.7),
         });
         assert_eq!(snap.pos_s, 104, "4.7 s truncates to 4, not rounds to 5");
@@ -389,9 +407,9 @@ mod tests {
     fn a_paused_position_is_never_extrapolated() {
         let mut s = session("app", Status::Paused, true);
         s.timeline = Some(Timeline {
-            start_s: 0.0,
-            end_s: 300.0,
-            position_s: 100.0,
+            start_ticks: 0 * TICKS_PER_SEC,
+            end_ticks: 300 * TICKS_PER_SEC,
+            position_ticks: 100 * TICKS_PER_SEC,
             age_s: Some(120.0),
         });
         assert_eq!(snapshot(&[s]).pos_s, 100, "paused time does not pass");
@@ -404,9 +422,9 @@ mod tests {
     fn an_implausible_age_is_not_trusted() {
         for age in [-0.1, -3600.0, 600.0, 1e9] {
             let snap = playing_with(Timeline {
-                start_s: 0.0,
-                end_s: 300.0,
-                position_s: 100.0,
+                start_ticks: 0 * TICKS_PER_SEC,
+                end_ticks: 300 * TICKS_PER_SEC,
+                position_ticks: 100 * TICKS_PER_SEC,
                 age_s: Some(age),
             });
             assert_eq!(snap.pos_s, 100, "age {age} must not be applied");
@@ -414,9 +432,9 @@ mod tests {
         // ... and the boundaries that ARE trusted.
         for (age, want) in [(0.0, 100), (599.9, 699)] {
             let snap = playing_with(Timeline {
-                start_s: 0.0,
-                end_s: 1000.0,
-                position_s: 100.0,
+                start_ticks: 0 * TICKS_PER_SEC,
+                end_ticks: 1000 * TICKS_PER_SEC,
+                position_ticks: 100 * TICKS_PER_SEC,
                 age_s: Some(age),
             });
             assert_eq!(snap.pos_s, want);
@@ -426,9 +444,9 @@ mod tests {
     #[test]
     fn extrapolation_cannot_run_past_the_end_of_the_track() {
         let snap = playing_with(Timeline {
-            start_s: 0.0,
-            end_s: 120.0,
-            position_s: 118.0,
+            start_ticks: 0 * TICKS_PER_SEC,
+            end_ticks: 120 * TICKS_PER_SEC,
+            position_ticks: 118 * TICKS_PER_SEC,
             age_s: Some(30.0),
         });
         assert_eq!(snap.pos_s, 120, "clamped to the duration, not 148");
@@ -439,9 +457,9 @@ mod tests {
     #[test]
     fn a_position_before_the_start_reads_as_zero() {
         let snap = playing_with(Timeline {
-            start_s: 50.0,
-            end_s: 300.0,
-            position_s: 10.0,
+            start_ticks: 50 * TICKS_PER_SEC,
+            end_ticks: 300 * TICKS_PER_SEC,
+            position_ticks: 10 * TICKS_PER_SEC,
             age_s: None,
         });
         assert_eq!(snap.pos_s, 0);
@@ -450,24 +468,72 @@ mod tests {
     #[test]
     fn a_backwards_timeline_has_no_duration() {
         let snap = playing_with(Timeline {
-            start_s: 300.0,
-            end_s: 10.0,
-            position_s: 300.0,
+            start_ticks: 300 * TICKS_PER_SEC,
+            end_ticks: 10 * TICKS_PER_SEC,
+            position_ticks: 300 * TICKS_PER_SEC,
             age_s: None,
         });
         assert_eq!(snap.dur_s, 0);
     }
 
-    /// Garbage in a float field must not panic or wrap.
+    /// Extreme tick values must saturate rather than overflow. `i64::MIN` is
+    /// the interesting one: negating it panics in debug, and
+    /// `MAX - MIN` overflows, so both differences go through `saturating_sub`.
     #[test]
-    fn nonsense_timeline_values_are_survivable() {
+    fn extreme_tick_values_are_survivable() {
         let snap = playing_with(Timeline {
-            start_s: f64::NAN,
-            end_s: f64::INFINITY,
-            position_s: f64::NEG_INFINITY,
+            start_ticks: i64::MIN,
+            end_ticks: i64::MAX,
+            position_ticks: i64::MIN,
             age_s: Some(f64::NAN),
         });
+        assert_eq!(snap.pos_s, 0, "position is at the start, so no progress");
+        assert_eq!(snap.dur_s, u32::MAX, "an absurd duration clamps, not wraps");
+
+        let snap = playing_with(Timeline {
+            start_ticks: i64::MAX,
+            end_ticks: i64::MIN,
+            position_ticks: 0,
+            age_s: None,
+        });
         assert_eq!((snap.pos_s, snap.dur_s), (0, 0));
+    }
+
+    /// A NaN age must not be applied, and must not panic on the way to being
+    /// rejected.
+    #[test]
+    fn a_nonsense_age_is_ignored() {
+        for age in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let snap = playing_with(Timeline {
+                start_ticks: 0,
+                end_ticks: 300 * TICKS_PER_SEC,
+                position_ticks: 100 * TICKS_PER_SEC,
+                age_s: Some(age),
+            });
+            assert_eq!(snap.pos_s, 100, "age {age} must not move the position");
+        }
+    }
+
+    /// ⚠️ The off-by-one the phase-1 audit found. Converting each endpoint to
+    /// `f64` seconds and subtracting gives `244.99999999999997` for this
+    /// perfectly ordinary track, which truncates to 244. Python subtracts
+    /// `timedelta`s first, so it gets 245; integer ticks get 245 too.
+    #[test]
+    fn an_ordinary_track_does_not_lose_a_second_to_floating_point() {
+        let start = 11_001_000 * 10; // 11.001 s, in ticks
+        let snap = playing_with(Timeline {
+            start_ticks: start,
+            end_ticks: start + 245 * TICKS_PER_SEC,
+            position_ticks: start,
+            age_s: None,
+        });
+        assert_eq!(snap.dur_s, 245, "the float path gave 244 here");
+
+        // And the float path really would have: keep the witness in the test
+        // so a future "simplification" back to seconds fails rather than
+        // silently losing a second again.
+        let as_float = (start + 245 * TICKS_PER_SEC) as f64 / 1e7 - start as f64 / 1e7;
+        assert_eq!(as_float.trunc() as u32, 244);
     }
 
     // -- what reaches the panel -------------------------------------------
@@ -523,6 +589,46 @@ mod tests {
         assert_eq!(reports[0].1, vec![0, 1, b'A']);
         assert_eq!(reports[1].1, vec![1, 1, b'B']);
         assert_eq!(reports[2].1, vec![1, 0, 61, 0, 245]);
+    }
+
+    /// ⚠️ **Captured from this machine, 2026-09-06**, via `ak820 probe` — a
+    /// real Apple Music session, paused mid-track. Worth pinning whole because
+    /// it exercises four things at once that synthetic cases test separately:
+    /// an em dash in real metadata, both line budgets biting, a paused icon,
+    /// and a timeline whose reading is minutes stale.
+    #[test]
+    fn a_captured_apple_music_session_reaches_the_wire_intact() {
+        let session = SessionFacts {
+            app_id: "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App".into(),
+            status: Status::Paused,
+            title: "Warriors of the Wasteland".into(),
+            artist: "Michael Oakley \u{2014} Prologue".into(),
+            timeline: Some(Timeline {
+                start_ticks: 0,
+                end_ticks: 235 * TICKS_PER_SEC,
+                position_ticks: 187 * TICKS_PER_SEC,
+                // 331.7 s: inside the 600 s trust window, so the ONLY reason it
+                // is not applied is that the session is paused.
+                age_s: Some(331.7),
+            }),
+            is_current: true,
+        };
+        let snap = snapshot(&[session]);
+        assert_eq!(snap.icon, Icon::Pause);
+        assert_eq!((snap.pos_s, snap.dur_s), (187, 235));
+        assert_eq!(
+            snap.playback(),
+            (false, 0, 0),
+            "paused: the band goes back to the clock"
+        );
+
+        let reports = reports(&snap);
+        // The em dash transliterates to '-', and the artist fills row 0 exactly.
+        assert_eq!(&reports[0].1[2..], b"Michael Oakley - Pr");
+        assert_eq!(reports[0].1.len() - 2, MAX_LEN[0]);
+        // The title takes the wider row and is cut two characters later.
+        assert_eq!(&reports[1].1[2..], b"Warriors of the Waste");
+        assert_eq!(reports[1].1.len() - 2, MAX_LEN[1]);
     }
 
     /// Position changing must not count as a text change, or the band would be

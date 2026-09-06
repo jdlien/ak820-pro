@@ -231,9 +231,9 @@ fn probe() -> Result<(), String> {
         println!("  artist   : {:?}", s.artist);
         match &s.timeline {
             Some(t) => println!(
-                "  timeline : {:.0}s / {:.0}s, updated {}",
-                t.position_s - t.start_s,
-                t.end_s - t.start_s,
+                "  timeline : {}s / {}s, updated {}",
+                (t.position_ticks - t.start_ticks) / smtc::TICKS_PER_SEC,
+                (t.end_ticks - t.start_ticks) / smtc::TICKS_PER_SEC,
                 match t.age_s {
                     Some(a) => format!("{a:.1}s ago"),
                     None => "never".into(),

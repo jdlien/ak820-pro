@@ -61,6 +61,20 @@ pub const POLL_INTERVAL: Duration = Duration::from_secs(3);
 /// 100-nanosecond ticks per second — WinRT's `TimeSpan` and `DateTime` unit.
 const TICKS_PER_SEC: f64 = 10_000_000.0;
 
+/// Trim exactly what Python's `str.strip()` trims.
+///
+/// ⚠️ Not `str::trim()`. Rust's `char::is_whitespace` follows the Unicode
+/// White_Space property; Python's `str.isspace()` additionally accepts the C0
+/// separators U+001C..U+001F. The difference decides whether an artist field
+/// containing only a stray separator is **empty**, and
+/// [`Snapshot::lines`](super::Snapshot::lines) puts the title on the narrow row
+/// when the artist is empty and the wide row when it is not. So a control
+/// character would silently move the title to a different row with a different
+/// budget. The set is generated alongside the fold table.
+fn py_trim(s: &str) -> &str {
+    s.trim_matches(|c| crate::text::PY_SPACE.contains(&c))
+}
+
 /// Initialize WinRT on the current thread as an MTA, for as long as the guard
 /// lives.
 ///
@@ -114,11 +128,12 @@ fn status_of(session: &Session) -> Status {
 
 fn timeline_of(session: &Session) -> Option<Timeline> {
     let t = session.GetTimelineProperties().ok()?;
-    let secs = |v: windows::Foundation::TimeSpan| v.Duration as f64 / TICKS_PER_SEC;
+    // Raw ticks: the differences are taken as integers, because doing it in
+    // floating point loses an off-by-one on ordinary tracks. See `Timeline`.
     Some(Timeline {
-        start_s: secs(t.StartTime().ok()?),
-        end_s: secs(t.EndTime().ok()?),
-        position_s: secs(t.Position().ok()?),
+        start_ticks: t.StartTime().ok()?.Duration,
+        end_ticks: t.EndTime().ok()?.Duration,
+        position_ticks: t.Position().ok()?.Duration,
         age_s: t.LastUpdatedTime().ok().and_then(|d| age_seconds(d.UniversalTime)),
     })
 }
@@ -137,8 +152,17 @@ pub fn read_sessions() -> windows::core::Result<Vec<SessionFacts>> {
         .ok();
 
     let sessions = manager.GetSessions()?;
-    let mut out = Vec::with_capacity(sessions.Size().unwrap_or(0) as usize);
-    for session in sessions {
+    // ⚠️ Indexed rather than iterated. `IVectorView`'s `IntoIterator` panics on
+    // an underlying COM failure, and a session list can change under us: an app
+    // closing between `Size` and `GetAt` is ordinary, not exceptional. A panic
+    // here would take down the worker thread and stop media updates for the
+    // life of the process, so a vanished entry is skipped instead.
+    let count = sessions.Size().unwrap_or(0);
+    let mut out = Vec::with_capacity(count as usize);
+    for i in 0..count {
+        let Ok(session) = sessions.GetAt(i) else {
+            continue;
+        };
         let app_id = session
             .SourceAppUserModelId()
             .map(|h| h.to_string())
@@ -155,8 +179,8 @@ pub fn read_sessions() -> windows::core::Result<Vec<SessionFacts>> {
             status: status_of(&session),
             // Trimmed here, still Unicode: folding happens at the line budget,
             // and Python trims before it folds too.
-            title: title.trim().to_string(),
-            artist: artist.trim().to_string(),
+            title: py_trim(&title).to_string(),
+            artist: py_trim(&artist).to_string(),
             timeline: timeline_of(&session),
             app_id,
         })
@@ -234,31 +258,40 @@ fn run(state: Arc<Mutex<State>>, interval: Duration) {
     let _apartment = match Apartment::enter() {
         Ok(a) => a,
         Err(e) => {
+            let message = format!("WinRT unavailable: {e}");
             let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
             s.failures += 1;
-            s.last_error = Some(format!("WinRT unavailable: {e}"));
+            s.last_error = Some(message);
             return;
         }
     };
 
     loop {
-        let result = read_sessions();
+        // ⚠️ Everything expensive happens BEFORE the lock is taken, including
+        // formatting the error. `windows::core::Error::to_string` can make COM
+        // calls to fetch `IErrorInfo`, and doing that under the mutex would
+        // block `latest()` -- which the scheduler calls -- on the very media
+        // subsystem this thread exists to stay out of the way of.
+        let outcome = match read_sessions() {
+            Ok(sessions) => Ok(super::snapshot(&sessions)),
+            Err(e) => Err(e.to_string()),
+        };
         {
             let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
             s.polls += 1;
-            match result {
-                Ok(sessions) => {
-                    s.snapshot = super::snapshot(&sessions);
+            match outcome {
+                Ok(snapshot) => {
+                    s.snapshot = snapshot;
                     s.updated = Some(Instant::now());
                     s.last_error = None;
                 }
-                Err(e) => {
+                Err(message) => {
                     // Keep the previous snapshot. A broker that blinks should
                     // not blank the panel; the staleness clock is what says
                     // something is wrong, and the keepalive will expire the
                     // firmware's text slot if it stays wrong.
                     s.failures += 1;
-                    s.last_error = Some(e.to_string());
+                    s.last_error = Some(message);
                 }
             }
         }
@@ -298,6 +331,36 @@ mod tests {
         );
         // And it must land inside the window `super::position` will trust.
         assert!((0.0..600.0).contains(&age.max(0.0)));
+    }
+
+    /// ⚠️ The trim mismatch the phase-1 audit found. Rust's `trim` follows
+    /// Unicode White_Space; Python's `strip` also takes U+001C..U+001F. An
+    /// artist of just a separator is therefore empty to Python and non-empty to
+    /// `trim` — and that decides which row the **title** lands on, and so which
+    /// character budget it gets.
+    #[test]
+    fn trimming_matches_pythons_strip_not_rusts() {
+        for sep in ['\u{1c}', '\u{1d}', '\u{1e}', '\u{1f}'] {
+            let s = sep.to_string();
+            assert!(
+                !s.trim().is_empty(),
+                "precondition: Rust's trim leaves {sep:?}"
+            );
+            assert!(
+                py_trim(&s).is_empty(),
+                "but Python strips it, so we must too"
+            );
+        }
+    }
+
+    #[test]
+    fn trimming_still_handles_ordinary_whitespace() {
+        assert_eq!(py_trim("  Sigur R\u{f3}s \t\n"), "Sigur R\u{f3}s");
+        assert_eq!(py_trim("\u{a0}\u{3000}x\u{2009}"), "x");
+        assert_eq!(py_trim(""), "");
+        assert_eq!(py_trim("   "), "");
+        // Inner whitespace is untouched -- only the ends are trimmed.
+        assert_eq!(py_trim(" a  b "), "a  b");
     }
 
     /// The apartment guard must be re-enterable within a process: `probe` uses
