@@ -1,11 +1,11 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PHASE 0 COMPLETE (audited, gate reopened and reclosed 2026-09-06);
-PHASE 1 WRITTEN.** Planned and revised the same day
+Status: **PHASE 0 COMPLETE (audited 2026-09-06); PHASE 1 WRITTEN AND AUDITED;
+PHASE 2 STARTED.** Planned and revised the same day
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
 (gpt-6-astra, xhigh), then built and gated the same day.
 
-Crate at `ak820-agent/`, **98 unit tests plus a 2,158-case parity fixture**;
+Crate at `ak820-agent/`, **148 unit tests plus a 2,309-case parity fixture**;
 `cargo test` from that directory.
 
 - `hid::path` — bounded path matching, so discovery narrows to this board
@@ -29,6 +29,11 @@ Crate at `ak820-agent/`, **98 unit tests plus a 2,158-case parity fixture**;
   `ak820text.to_ascii` itself.
 - `smtc` — session ranking and timeline arithmetic (pure), plus a WinRT worker
   on its own MTA thread so a media stall cannot reach the clock loop.
+- `hid::exchange` — the request loop over a two-method `Wire` trait, with a
+  scripted fake. This is where the drain rule, reply correlation and the
+  unanswered-command rule are actually *tested*.
+- `clock` — the measurement half: GET decode, the fraction formula, midnight
+  wrap, min-RTT selection.
 
 **The phase-0 gate is met in full** — see
 [Phase 0 evidence](#phase-0-evidence-2026-09-05) for the measurements and
@@ -55,11 +60,15 @@ rather than confirming them:
 - [Phase 0 audit disposition](#phase-0-audit--disposition-2026-09-06) — what an
   independent read found in the transport, and what is still owed.
 
-**Next: phase 2**, and it starts with the audit's finding 9 — a **fake I/O
-backend**, so the request loop, the cancellation branches, drain exhaustion and
-late replies are testable without a keyboard. Every remaining doubt in the
-disposition table is one a fake backend would settle. Then the clock read, on
-the prepared-transaction API finding 3 asks for.
+**Phase 2 has started.** Done: the **fake wire** the phase-0 audit asked for
+(`hid::exchange`, so the request loop and cancellation branches are testable
+without a keyboard), and the **clock read** — decode, the fraction formula,
+`wrap_day`, min-RTT selection — ported expression by expression from the C.
+
+**Next: the clock transaction** — the SET packet, the `0xFE` retry, the lead
+learner and the capability cache, per
+[AK820-AGENT-CLOCK-TRANSACTION.md](AK820-AGENT-CLOCK-TRANSACTION.md). It needs
+no hardware until its gate.
 
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.
@@ -539,6 +548,28 @@ It reopened the gate, correctly. Every finding and what was done about it:
 cancellation comment claiming an unbounded wait could not happen. Comments that
 confidently describe a safety property are exactly where an audit pays for
 itself, because nobody re-derives them afterwards.
+
+### Phase 1 audit — disposition (2026-09-06)
+
+Full report: [review-codex-phase1-2026-09-06.md](review-codex-phase1-2026-09-06.md).
+It also **re-checked the phase-0 fixes**, which is where findings 3 and the
+`request_at` correction came from.
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 | P1 — `IVectorView::into_iter` calls `First().unwrap()`, so a COM failure panics; with `panic = "abort"` that kills the whole process | **Fixed.** Indexed `Size`/`GetAt` with per-entry skip. A session vanishing between the two calls is ordinary — an app closing — not exceptional. |
+| 2 | P1 — the worker formatted errors and built snapshots **under the publication mutex**, and `windows::core::Error::to_string` makes COM calls, so a media stall could park the scheduler in `latest()` | **Fixed.** Everything expensive — the read, the snapshot, the error string, and dropping the WinRT objects — happens before the lock is taken. |
+| 3 | P1 — an unanswered command still contaminates the next identical one: cancelling our *read* does not cancel the board's *command* | **Fixed.** `Outstanding` records a transmitted-and-unanswered command per handle; an identical request is refused with `Error::Unresolved` until an explicit `resynchronise` (drain, settle, drain, both empty) accounts for it. Five tests, including the exact four-step sequence. |
+| 4 | P2 — `Error::Stuck` was flattened into `Queue::Unreadable`, so a reopen-on-failure caller would abandon a handle per cycle rather than once | **Fixed.** `Queue::Stuck` is its own outcome and propagates as `Error::Stuck`, which reopening is documented not to remedy. |
+| 5 | P2 — converting timestamps to `f64` before subtracting loses a second on ordinary tracks | **Fixed.** `Timeline` carries raw ticks. Reproduced against CPython first (245 vs 244); the test keeps the witness so a revert to seconds fails loudly. |
+| 6 | P2 — metadata was fetched for **every** session before ranking, so an unrelated stalled app delays the poll and republishes an old position with a fresh timestamp | **Fixed.** `read_current` ranks on the cheap fields and fetches metadata for the winner only, and the observation instant is taken next to the read rather than at publication. `read_sessions` remains as the explicit diagnostic path for `probe`. |
+| 7 | P2 — Rust `trim` ≠ Python `strip`, which can change **which row** the title lands on | **Fixed.** Whitespace set generated from Python alongside the fold table. |
+| 8 | P2 — folding parity is tied to an unpinned Python Unicode version, and the fixture drew its inputs from the table, so a missing entry removed its own test | **Fixed by construction.** The generator now verifies the table against the oracle across **all 1,112,064 scalar values**, independently of the table's own contents, and fails if they disagree. The fixture gains ~150 codepoints the table does *not* contain, and the Unicode version is pinned into the generated file so a regeneration on a different Python is a visible diff. ⚠️ The version *contract* across producers — macOS `hostagent/` picks whatever `python3` it finds — is real and remains open; noted for phase 6. |
+| 9 | P2 — `Apartment` was `Send`, so its `RoUninitialize` could run on the wrong thread | **Fixed.** `PhantomData<Rc<()>>`, with a `compile_fail` doctest that proves moving it no longer compiles. |
+
+**Not fixed, and stated rather than quietly carried:** the WinRT waits are still
+unbounded (`windows-future` 0.3.2 has only `join()`). The reasoning and its cost
+are in `smtc/worker.rs`'s header; the audit did not dispute it.
 
 ### Every phase ends with an external audit
 

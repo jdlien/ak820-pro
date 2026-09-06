@@ -81,15 +81,24 @@ fn py_trim(s: &str) -> &str {
 /// ⚠️ Multi-threaded on purpose. An STA needs a message pump to dispatch
 /// completions, and a worker thread that blocks in `join()` without one would
 /// deadlock against its own callback.
-pub struct Apartment(());
+/// ⚠️ Deliberately **not** `Send`. `RoUninitialize` must balance
+/// `RoInitialize` **on the same thread**, and without the marker below this
+/// compiles and is wrong:
+///
+/// ```compile_fail
+/// # use ak820_agent::smtc::worker::Apartment;
+/// let apartment = Apartment::enter().unwrap();
+/// std::thread::spawn(move || drop(apartment));   // uninitializes the wrong thread
+/// ```
+///
+/// The `Rc` is never constructed; it is there only because it is the standard
+/// way to spell "this type stays where it was made".
+pub struct Apartment(std::marker::PhantomData<std::rc::Rc<()>>);
 
 impl Apartment {
-    /// `RO_E_CHANGED_MODE` means somebody already initialized this thread with
-    /// a different model. That is not our failure and not ours to undo, so the
-    /// guard records that it must not uninitialize.
     pub fn enter() -> windows::core::Result<Apartment> {
         unsafe { RoInitialize(RO_INIT_MULTITHREADED) }?;
-        Ok(Apartment(()))
+        Ok(Apartment(std::marker::PhantomData))
     }
 }
 
@@ -138,7 +147,78 @@ fn timeline_of(session: &Session) -> Option<Timeline> {
     })
 }
 
-/// Read every session SMTC knows about.
+/// Ask each session only what ranking needs, then fill in the winner.
+///
+/// ⚠️ Finding 6 of the phase-1 audit, and a parity fix as well as a liveness
+/// one. Python fetches metadata and the timeline **only for the session it
+/// picks**; reading them for every app means an unrelated stopped application
+/// can stall the poll — and while it does, the published snapshot carries a
+/// position from before the stall with a *fresh* timestamp on it, so the health
+/// report says all is well.
+///
+/// `try_get_media_properties_async` is the expensive call and it is now made
+/// once per poll rather than once per app.
+pub fn read_current() -> windows::core::Result<(Option<SessionFacts>, Instant)> {
+    let manager = Manager::RequestAsync()?.join()?;
+    let current_id = manager
+        .GetCurrentSession()
+        .and_then(|s| s.SourceAppUserModelId())
+        .map(|h| h.to_string())
+        .ok();
+
+    let sessions = manager.GetSessions()?;
+    let count = sessions.Size().unwrap_or(0);
+
+    // Cheap pass: playback status and identity only, which is all `rank` reads.
+    let mut cheap = Vec::with_capacity(count as usize);
+    let mut handles = Vec::with_capacity(count as usize);
+    for i in 0..count {
+        let Ok(session) = sessions.GetAt(i) else {
+            continue;
+        };
+        let app_id = session
+            .SourceAppUserModelId()
+            .map(|h| h.to_string())
+            .unwrap_or_default();
+        cheap.push(SessionFacts {
+            is_current: current_id.as_deref() == Some(app_id.as_str()) && !app_id.is_empty(),
+            status: status_of(&session),
+            title: String::new(),
+            artist: String::new(),
+            timeline: None,
+            app_id,
+        });
+        handles.push(session);
+    }
+
+    let Some(winner) = super::choose(&cheap) else {
+        return Ok((None, Instant::now()));
+    };
+    let at = cheap
+        .iter()
+        .position(|s| std::ptr::eq(s, winner))
+        .expect("chosen from this list");
+
+    // Expensive pass: exactly one session. The observation instant is taken
+    // here, next to the read, rather than at publication -- a slow call must
+    // not make a stale position look fresh.
+    let mut facts = cheap.swap_remove(at);
+    let session = &handles[at];
+    let observed = Instant::now();
+    if let Ok(props) = session.TryGetMediaPropertiesAsync().and_then(|op| op.join()) {
+        facts.title = py_trim(&props.Title().map(|h| h.to_string()).unwrap_or_default()).to_string();
+        facts.artist =
+            py_trim(&props.Artist().map(|h| h.to_string()).unwrap_or_default()).to_string();
+    }
+    facts.timeline = timeline_of(session);
+    Ok((Some(facts), observed))
+}
+
+/// Read every session SMTC knows about, metadata and all.
+///
+/// ⚠️ The **diagnostic** path, for `ak820 probe`, and deliberately separate from
+/// [`read_current`]: answering "why doesn't this app show up?" requires asking
+/// every app, which is exactly the cost the polling path must not pay.
 ///
 /// Individual failures are absorbed rather than propagated: a session can exist
 /// before its metadata arrives, and one unreadable app must not blind us to the
@@ -271,18 +351,25 @@ fn run(state: Arc<Mutex<State>>, interval: Duration) {
         // formatting the error. `windows::core::Error::to_string` can make COM
         // calls to fetch `IErrorInfo`, and doing that under the mutex would
         // block `latest()` -- which the scheduler calls -- on the very media
-        // subsystem this thread exists to stay out of the way of.
-        let outcome = match read_sessions() {
-            Ok(sessions) => Ok(super::snapshot(&sessions)),
+        // subsystem this thread exists to stay out of the way of. The WinRT
+        // objects are all dropped here too, for the same reason: releasing a
+        // COM object is a call.
+        let outcome = match read_current() {
+            Ok((chosen, observed)) => Ok((
+                super::snapshot(chosen.as_slice()),
+                observed,
+            )),
             Err(e) => Err(e.to_string()),
         };
         {
             let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
             s.polls += 1;
             match outcome {
-                Ok(snapshot) => {
+                Ok((snapshot, observed)) => {
                     s.snapshot = snapshot;
-                    s.updated = Some(Instant::now());
+                    // The instant the winner was READ, not the instant we got
+                    // the lock. A slow poll must age its own snapshot.
+                    s.updated = Some(observed);
                     s.last_error = None;
                 }
                 Err(message) => {

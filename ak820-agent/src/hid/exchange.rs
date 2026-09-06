@@ -74,6 +74,14 @@ pub enum Queue {
     OutOfTime,
     /// A read failed, so nothing was established either way.
     Unreadable,
+    /// A cancellation refused to land, so the device is abandoned.
+    ///
+    /// ⚠️ Distinct from [`Queue::Unreadable`] on purpose. Collapsing the two
+    /// loses [`Error::Stuck`], and a caller that reopens on any failure would
+    /// then abandon a fresh buffer, event and handle on **every** cycle rather
+    /// than once — the phase-1 audit's finding 4. Sticky, and reopening is not
+    /// a remedy for it.
+    Stuck,
 }
 
 impl std::fmt::Display for Queue {
@@ -85,6 +93,7 @@ impl std::fmt::Display for Queue {
             }
             Queue::OutOfTime => write!(f, "could not be cleared within the budget"),
             Queue::Unreadable => write!(f, "could not be read"),
+            Queue::Stuck => write!(f, "belongs to an abandoned handle"),
         }
     }
 }
@@ -94,6 +103,103 @@ impl std::fmt::Display for Queue {
 pub struct Reply {
     pub report: [u8; REPORT_LEN],
     pub drained: Vec<Drained>,
+}
+
+/// How long a resynchronisation waits for a late reply to show up.
+///
+/// Generously more than the 5–18 ms round trip measured on this board, because
+/// the cost of waiting is one pause on a path that only runs after something
+/// already went wrong, and the cost of not waiting is taking a stale sample.
+pub const RESYNC_SETTLE: Duration = Duration::from_millis(250);
+
+/// A command that was **transmitted and never answered**.
+///
+/// ⚠️ Finding 3 of the phase-1 audit, and the half of finding 2 that refusing a
+/// dirty queue does not cover. Cancelling our host-side read does not cancel
+/// the firmware's command: the board will still answer it, whenever it gets
+/// round to it. So this sequence loses:
+///
+/// 1. `GET` A is transmitted and times out.
+/// 2. `GET` B's pre-drain observes an empty queue — truthfully; A's reply has
+///    not arrived yet.
+/// 3. B is transmitted.
+/// 4. A's reply arrives and satisfies B's channel and command exactly.
+///
+/// B then gets A's board sample against B's timestamps. There is nothing in the
+/// bytes to catch it, so the only defence is remembering that A is unaccounted
+/// for and refusing to ask the same question again until it is.
+///
+/// Per handle, and `Cell` rather than an atomic because a handle is
+/// deliberately owned by one thread.
+#[derive(Default, Debug)]
+pub struct Outstanding(std::cell::Cell<Option<(u8, u8)>>);
+
+impl Outstanding {
+    pub fn new() -> Outstanding {
+        Outstanding::default()
+    }
+
+    /// The command that is unaccounted for, if any.
+    pub fn get(&self) -> Option<(u8, u8)> {
+        self.0.get()
+    }
+
+    fn note(&self, channel: Channel, command: u8) {
+        self.0.set(Some((channel.id(), command)));
+    }
+
+    fn clear(&self) {
+        self.0.set(None);
+    }
+
+    /// Would a reply to this command be confusable with the outstanding one?
+    fn conflicts(&self, channel: Channel, command: u8) -> bool {
+        self.0.get() == Some((channel.id(), command))
+    }
+}
+
+/// Account for an unanswered command, so the handle can be used again.
+///
+/// Drains, waits [`RESYNC_SETTLE`] for a straggler, then drains again, and
+/// requires **both** passes to end with an empty queue. Anything discarded is
+/// returned, because a late reply arriving here is the evidence that the
+/// refusal was doing real work.
+///
+/// This is deliberately a separate, explicit step rather than something
+/// `exchange` does quietly: a caller that has just lost a measurement should
+/// decide whether to spend a quarter second recovering, and a clock scheduler
+/// wants to know it happened.
+pub fn resynchronise(
+    wire: &impl Wire,
+    outstanding: &Outstanding,
+    budget: Duration,
+) -> Result<Vec<Drained>, Error> {
+    let deadline = Instant::now()
+        .checked_add(budget)
+        .ok_or(Error::Timeout { drained: Vec::new() })?;
+
+    let (mut seen, queue) = drain_until(wire, deadline);
+    if queue == Queue::Stuck {
+        return Err(Error::Stuck);
+    }
+    if queue != Queue::Empty {
+        return Err(Error::Dirty { queue, drained: seen });
+    }
+
+    // Give the board time to produce the straggler, then check again.
+    let settle = RESYNC_SETTLE.min(deadline.saturating_duration_since(Instant::now()));
+    std::thread::sleep(settle);
+
+    let (more, queue) = drain_until(wire, deadline);
+    seen.extend(more);
+    match queue {
+        Queue::Empty => {
+            outstanding.clear();
+            Ok(seen)
+        }
+        Queue::Stuck => Err(Error::Stuck),
+        _ => Err(Error::Dirty { queue, drained: seen }),
+    }
 }
 
 /// Empty the queue of anything that arrived before we asked, and say whether it
@@ -112,6 +218,9 @@ pub fn drain_until(wire: &impl Wire, deadline: Instant) -> (Vec<Drained>, Queue)
                 },
                 Err(m) => Drained::StaleUnreadable(m),
             }),
+            // Stuck is preserved rather than flattened: it is the one read
+            // failure that reopening cannot fix.
+            Err(Error::Stuck) => return (seen, Queue::Stuck),
             Err(_) => return (seen, Queue::Unreadable),
         }
     }
@@ -137,12 +246,22 @@ pub fn drain_until(wire: &impl Wire, deadline: Instant) -> (Vec<Drained>, Queue)
 ///    until the budget runs out.
 pub fn exchange(
     wire: &impl Wire,
+    outstanding: &Outstanding,
     channel: Channel,
     command: u8,
     body: &[u8],
     budget: Duration,
     on_send: impl FnOnce(Instant),
 ) -> Result<Reply, Error> {
+    // ⚠️ Before anything else: has this exact question already been asked and
+    // left unanswered? If so its reply is still coming, and it would satisfy
+    // this request's matcher perfectly. See `Outstanding`.
+    if outstanding.conflicts(channel, command) {
+        return Err(Error::Unresolved {
+            channel: channel.id(),
+            command,
+        });
+    }
     let deadline = Instant::now()
         .checked_add(budget)
         .ok_or(Error::Timeout { drained: Vec::new() })?;
@@ -151,8 +270,12 @@ pub fn exchange(
     }
 
     let (drained, queue) = drain_until(wire, deadline);
-    if queue != Queue::Empty {
-        return Err(Error::Dirty { queue, drained });
+    match queue {
+        Queue::Empty => {}
+        // An abandoned handle is not a dirty queue; it is a dead device, and
+        // saying so is what stops a caller reopening in a loop.
+        Queue::Stuck => return Err(Error::Stuck),
+        _ => return Err(Error::Dirty { queue, drained }),
     }
 
     let left = deadline.saturating_duration_since(Instant::now());
@@ -170,19 +293,30 @@ pub fn exchange(
     // deliberate improvement to the measurement is a separate change from
     // reproducing it.
     on_send(Instant::now());
+    // From here on the board has the command, whatever happens to our read, so
+    // the handle owes an answer until one arrives.
+    outstanding.note(channel, command);
     match wire.write_report(&frame, left.min(WRITE_TIMEOUT))? {
         Sent::Yes => {}
         Sent::TimedOut => {
+            // Cancelled before it left, so nothing is owed. Treating a write
+            // that never went out as outstanding would refuse the next attempt
+            // for no reason.
+            outstanding.clear();
             return Err(Error::Io {
                 op: "write",
                 source: windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(
                     windows::Win32::Foundation::ERROR_OPERATION_ABORTED.0,
                 )),
-            })
+            });
         }
     }
 
-    collect(wire, channel, command, deadline, drained)
+    let answered = collect(wire, channel, command, deadline, drained);
+    if answered.is_ok() {
+        outstanding.clear();
+    }
+    answered
 }
 
 /// Read until something answers `(channel, command)` or the deadline passes.
@@ -234,6 +368,7 @@ mod tests {
         writes: RefCell<Vec<Vec<u8>>>,
         write_result: Sent,
         fail_reads_after: RefCell<Option<usize>>,
+        fail_with_stuck: RefCell<bool>,
         reads_done: RefCell<usize>,
     }
 
@@ -244,6 +379,7 @@ mod tests {
                 writes: RefCell::new(Vec::new()),
                 write_result: Sent::Yes,
                 fail_reads_after: RefCell::new(None),
+                fail_with_stuck: RefCell::new(false),
                 reads_done: RefCell::new(0),
             }
         }
@@ -252,6 +388,12 @@ mod tests {
         }
         fn failing_after(self, n: usize) -> Fake {
             *self.fail_reads_after.borrow_mut() = Some(n);
+            self
+        }
+        /// Fail with the one error reopening cannot fix.
+        fn stuck_after(self, n: usize) -> Fake {
+            *self.fail_reads_after.borrow_mut() = Some(n);
+            *self.fail_with_stuck.borrow_mut() = true;
             self
         }
         fn writes_time_out(mut self) -> Fake {
@@ -276,7 +418,16 @@ mod tests {
             };
             if let Some(n) = *self.fail_reads_after.borrow() {
                 if done > n {
-                    return Err(Error::Stuck);
+                    return Err(if *self.fail_with_stuck.borrow() {
+                        Error::Stuck
+                    } else {
+                        Error::Io {
+                            op: "read",
+                            source: windows::core::Error::from_hresult(
+                                windows::core::HRESULT(-1),
+                            ),
+                        }
+                    });
                 }
             }
             Ok(self.reads.borrow_mut().pop_front().flatten())
@@ -332,6 +483,25 @@ mod tests {
         assert_eq!(queue, Queue::Unreadable);
     }
 
+    /// ⚠️ Finding 4 of the phase-1 audit: a stuck cancellation must not be
+    /// flattened into a generic read failure. A caller that reopens on any
+    /// failure would otherwise abandon a fresh buffer, event and handle on
+    /// every cycle, rather than once.
+    #[test]
+    fn an_abandoned_handle_is_distinguishable_from_a_bad_read() {
+        let fake = Fake::idle().stuck_after(0);
+        let (_, queue) = drain_until(&fake, Instant::now() + budget());
+        assert_eq!(queue, Queue::Stuck, "must not collapse into Unreadable");
+
+        let fake = Fake::idle().stuck_after(0);
+        let err = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap_err();
+        assert!(
+            matches!(err, Error::Stuck),
+            "a dead device is not a dirty queue: {err:?}"
+        );
+        assert!(fake.written().is_empty());
+    }
+
     #[test]
     fn an_expired_deadline_stops_the_drain() {
         let fake = Fake::new(vec![report(TEXT_ECHO); 100]);
@@ -345,7 +515,7 @@ mod tests {
     #[test]
     fn a_clean_exchange_returns_the_reply() {
         let fake = Fake::new(vec![None, report(INFO_REPLY)]);
-        let reply = exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
+        let reply = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
         assert_eq!(&reply.report[..8], INFO_REPLY);
         assert!(reply.drained.is_empty());
         assert_eq!(fake.written().len(), 1);
@@ -361,7 +531,7 @@ mod tests {
             report(TEXT_ECHO),
             report(INFO_REPLY),   // finally ours
         ]);
-        let reply = exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
+        let reply = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
         assert_eq!(&reply.report[..8], INFO_REPLY);
         assert_eq!(reply.drained.len(), 2, "both foreign reports must be recorded");
         assert!(matches!(reply.drained[0], Drained::Foreign(_)));
@@ -377,7 +547,7 @@ mod tests {
         reads.push(report(INFO_REPLY)); // the stale one, still queued
         let fake = Fake::new(reads);
 
-        let err = exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap_err();
+        let err = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap_err();
         assert!(
             matches!(err, Error::Dirty { queue: Queue::MoreWaiting, .. }),
             "expected a refusal, got {err:?}"
@@ -392,7 +562,7 @@ mod tests {
     #[test]
     fn a_zero_budget_transmits_nothing() {
         let fake = Fake::idle();
-        let err = exchange(&fake, Channel::Text, 0x01, &[], Duration::ZERO, |_| {}).unwrap_err();
+        let err = exchange(&fake, &Outstanding::new(), Channel::Text, 0x01, &[], Duration::ZERO, |_| {}).unwrap_err();
         assert!(matches!(err, Error::Timeout { .. }));
         assert!(fake.written().is_empty(), "nothing may go out after the budget");
     }
@@ -400,7 +570,7 @@ mod tests {
     #[test]
     fn an_unrepresentable_budget_is_refused_rather_than_panicking() {
         let fake = Fake::idle();
-        let err = exchange(&fake, Channel::Text, 0x01, &[], Duration::MAX, |_| {}).unwrap_err();
+        let err = exchange(&fake, &Outstanding::new(), Channel::Text, 0x01, &[], Duration::MAX, |_| {}).unwrap_err();
         assert!(matches!(err, Error::Timeout { .. }));
         assert!(fake.written().is_empty());
     }
@@ -410,6 +580,7 @@ mod tests {
         let fake = Fake::new(vec![None, report(TEXT_ECHO)]);
         let err = exchange(
             &fake,
+            &Outstanding::new(),
             Channel::Flash,
             0x01,
             &[],
@@ -429,7 +600,7 @@ mod tests {
     #[test]
     fn a_write_that_times_out_is_an_io_error_not_a_silent_success() {
         let fake = Fake::idle().writes_time_out();
-        let err = exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap_err();
+        let err = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap_err();
         assert!(matches!(err, Error::Io { op: "write", .. }), "{err:?}");
     }
 
@@ -438,7 +609,7 @@ mod tests {
     #[test]
     fn our_own_unhandled_reply_ends_the_exchange() {
         let fake = Fake::new(vec![None, report(&[0xFF, 0x11, 0x01])]);
-        let err = exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap_err();
+        let err = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap_err();
         assert!(matches!(
             err,
             Error::Unhandled {
@@ -456,7 +627,7 @@ mod tests {
             report(&[0xFF, 0x12, 0x03]),
             report(INFO_REPLY),
         ]);
-        let reply = exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
+        let reply = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
         assert_eq!(&reply.report[..8], INFO_REPLY);
     }
 
@@ -471,7 +642,7 @@ mod tests {
         let fake = Fake::new(vec![report(TEXT_ECHO), None, report(INFO_REPLY)]);
         let entered = Instant::now();
         let mut sent_at = None;
-        exchange(&fake, Channel::Flash, 0x01, &[], budget(), |t| sent_at = Some(t)).unwrap();
+        exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |t| sent_at = Some(t)).unwrap();
         let sent_at = sent_at.expect("on_send must fire when a command goes out");
         assert!(sent_at >= entered);
         assert!(sent_at <= Instant::now());
@@ -484,7 +655,7 @@ mod tests {
     fn nothing_is_written_before_on_send_fires() {
         let fake = Fake::new(vec![None, report(INFO_REPLY)]);
         let mut written_when_called = None;
-        exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {
+        exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {
             written_when_called = Some(fake.written().len());
         })
         .unwrap();
@@ -499,15 +670,147 @@ mod tests {
     fn on_send_never_fires_when_nothing_was_transmitted() {
         let fake = Fake::new(vec![report(TEXT_ECHO); DRAIN_LIMIT + 1]);
         let mut fired = false;
-        let _ = exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| fired = true);
+        let _ = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| fired = true);
         assert!(!fired, "a refused request has no transmission instant");
+    }
+
+    /// ⚠️ Finding 3 of the phase-1 audit, reproduced. This is the sequence the
+    /// exhausted-drain refusal does **not** catch, because at step 2 the queue
+    /// genuinely is empty — the late reply simply has not arrived yet.
+    #[test]
+    fn a_late_reply_cannot_answer_the_next_identical_request() {
+        let outstanding = Outstanding::new();
+
+        // 1. GET A goes out and times out with nothing to show for it.
+        let a = Fake::new(vec![None]);
+        let err = exchange(
+            &a,
+            &outstanding,
+            Channel::Rtc,
+            0x02,
+            &[],
+            Duration::from_millis(20),
+            |_| {},
+        )
+        .unwrap_err();
+        assert!(matches!(err, Error::Timeout { .. }));
+        assert_eq!(
+            outstanding.get(),
+            Some((0x10, 0x02)),
+            "the board still owes an answer to a command it received"
+        );
+
+        // 2-4. GET B would find an empty queue, transmit, and be satisfied by
+        // A's straggler. It must be refused before any of that.
+        let b = Fake::new(vec![None, report(&[0x07, 0x10, 0x02, 0x01])]);
+        let err = exchange(&b, &outstanding, Channel::Rtc, 0x02, &[], budget(), |_| {}).unwrap_err();
+        assert!(
+            matches!(err, Error::Unresolved { channel: 0x10, command: 0x02 }),
+            "expected a refusal, got {err:?}"
+        );
+        assert!(
+            b.written().is_empty(),
+            "nothing may go out while an identical question is unanswered"
+        );
+    }
+
+    /// A different question is not confusable with the outstanding one, so it
+    /// is allowed through — refusing everything would make one lost reply
+    /// disable the whole handle.
+    #[test]
+    fn an_unrelated_command_is_still_allowed() {
+        let outstanding = Outstanding::new();
+        let a = Fake::new(vec![None]);
+        let _ = exchange(
+            &a,
+            &outstanding,
+            Channel::Rtc,
+            0x02,
+            &[],
+            Duration::from_millis(20),
+            |_| {},
+        );
+        assert!(outstanding.get().is_some());
+
+        let b = Fake::new(vec![None, report(INFO_REPLY)]);
+        let reply = exchange(&b, &outstanding, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
+        assert_eq!(&reply.report[..8], INFO_REPLY);
+    }
+
+    /// Resynchronising accounts for the straggler and reopens the handle to the
+    /// question it was refusing.
+    #[test]
+    fn resynchronising_clears_the_debt_and_reports_what_arrived() {
+        let outstanding = Outstanding::new();
+        let a = Fake::new(vec![None]);
+        let _ = exchange(
+            &a,
+            &outstanding,
+            Channel::Rtc,
+            0x02,
+            &[],
+            Duration::from_millis(20),
+            |_| {},
+        );
+
+        // The straggler turns up during the settle, then the queue is empty.
+        let late = Fake::new(vec![None, report(&[0x07, 0x10, 0x02, 0x01]), None]);
+        let seen = resynchronise(&late, &outstanding, Duration::from_secs(2)).unwrap();
+        assert_eq!(seen.len(), 1, "the late reply is evidence, not noise");
+        assert_eq!(outstanding.get(), None);
+
+        let b = Fake::new(vec![None, report(&[0x07, 0x10, 0x02, 0x09])]);
+        assert!(exchange(&b, &outstanding, Channel::Rtc, 0x02, &[], budget(), |_| {}).is_ok());
+    }
+
+    /// A resync that cannot establish a clean queue leaves the debt in place
+    /// rather than clearing it hopefully.
+    #[test]
+    fn a_failed_resync_does_not_clear_the_debt() {
+        let outstanding = Outstanding::new();
+        let a = Fake::new(vec![None]);
+        let _ = exchange(
+            &a,
+            &outstanding,
+            Channel::Rtc,
+            0x02,
+            &[],
+            Duration::from_millis(20),
+            |_| {},
+        );
+
+        let noisy = Fake::new(vec![report(TEXT_ECHO); DRAIN_LIMIT + 1]);
+        assert!(resynchronise(&noisy, &outstanding, Duration::from_secs(2)).is_err());
+        assert_eq!(
+            outstanding.get(),
+            Some((0x10, 0x02)),
+            "an unproven queue does not settle a debt"
+        );
+    }
+
+    /// A successful exchange owes nothing afterwards.
+    #[test]
+    fn a_completed_exchange_leaves_no_debt() {
+        let outstanding = Outstanding::new();
+        let fake = Fake::new(vec![None, report(INFO_REPLY)]);
+        exchange(&fake, &outstanding, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
+        assert_eq!(outstanding.get(), None);
+    }
+
+    /// A write that never left owes nothing either — the board never saw it.
+    #[test]
+    fn a_write_that_never_left_owes_nothing() {
+        let outstanding = Outstanding::new();
+        let fake = Fake::idle().writes_time_out();
+        let _ = exchange(&fake, &outstanding, Channel::Flash, 0x01, &[], budget(), |_| {});
+        assert_eq!(outstanding.get(), None);
     }
 
     /// A truncated report is noise, not a short answer.
     #[test]
     fn a_short_read_is_discarded_rather_than_decoded() {
         let fake = Fake::new(vec![None, Some(vec![0x00, 0x07, 0x11]), report(INFO_REPLY)]);
-        let reply = exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
+        let reply = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
         assert_eq!(&reply.report[..8], INFO_REPLY);
         assert_eq!(reply.drained.len(), 1);
     }
@@ -516,7 +819,7 @@ mod tests {
     #[test]
     fn the_transmitted_frame_is_the_protocols_frame() {
         let fake = Fake::new(vec![None, report(INFO_REPLY)]);
-        exchange(&fake, Channel::Text, 0x03, &[0x01, 0x02], budget(), |_| {}).unwrap_err();
+        exchange(&fake, &Outstanding::new(), Channel::Text, 0x03, &[0x01, 0x02], budget(), |_| {}).unwrap_err();
         let sent = &fake.written()[0];
         assert_eq!(sent.len(), proto::WIRE_LEN);
         assert_eq!(&sent[..6], &[0x00, 0x07, 0x12, 0x03, 0x01, 0x02]);

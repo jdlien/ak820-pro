@@ -17,7 +17,7 @@
 
 pub mod worker;
 
-use crate::text::{Icon, Line, MAX_LEN};
+use crate::text::{Icon, Line};
 
 /// The subset of `GlobalSystemMediaTransportControlsSessionPlaybackStatus`
 /// that changes what we do.
@@ -625,10 +625,10 @@ mod tests {
         let reports = reports(&snap);
         // The em dash transliterates to '-', and the artist fills row 0 exactly.
         assert_eq!(&reports[0].1[2..], b"Michael Oakley - Pr");
-        assert_eq!(reports[0].1.len() - 2, MAX_LEN[0]);
+        assert_eq!(reports[0].1.len() - 2, Line::WithIcon.budget());
         // The title takes the wider row and is cut two characters later.
         assert_eq!(&reports[1].1[2..], b"Warriors of the Waste");
-        assert_eq!(reports[1].1.len() - 2, MAX_LEN[1]);
+        assert_eq!(reports[1].1.len() - 2, Line::FullWidth.budget());
     }
 
     /// Position changing must not count as a text change, or the band would be

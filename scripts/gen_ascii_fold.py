@@ -95,6 +95,40 @@ def fold(cp: int) -> str:
     return "".join(c for c in unicodedata.normalize("NFKD", ch) if ord(c) < 0x80)
 
 
+def check_against_oracle(entries):
+    """Verify the table over EVERY scalar value, not just the ones in it.
+
+    ⚠️ The phase-1 audit's finding 8. The parity fixture imports the real
+    `to_ascii`, which is right, but it draws its exhaustive inputs from *this
+    table's own entries* — so a codepoint missing from the table also removes
+    its own test case, and the fixture passes. Only a sweep that does not
+    consult the table can catch an omission.
+
+    Cheap enough to do unconditionally: about a million calls, a few seconds.
+    """
+    to_ascii, _, _ = real_to_ascii()
+    table = dict(entries)
+    wrong = []
+    for cp in range(0x110000):
+        if 0xD800 <= cp <= 0xDFFF:
+            continue
+        want = to_ascii(chr(cp))
+        if cp < 0x80:
+            # Handled in Rust, not by the table: printable passes through and
+            # everything else becomes '?'.
+            got = chr(cp) if 0x20 <= cp < 0x7F else "?"
+        else:
+            got = table.get(cp, "")
+        if got != want:
+            wrong.append((hex(cp), want, got))
+    if wrong:
+        raise SystemExit(
+            f"table disagrees with ak820text.to_ascii on {len(wrong)} codepoint(s); "
+            f"first few: {wrong[:5]}"
+        )
+    return len(range(0x110000)) - 0x800
+
+
 def main() -> int:
     entries = []
     for cp in range(0x80, 0x110000):
@@ -105,6 +139,9 @@ def main() -> int:
         folded = fold(cp)
         if folded:
             entries.append((cp, folded))
+
+    checked = check_against_oracle(entries)
+    print(f"verified {checked} scalar values against ak820text.to_ascii")
 
     blob = "".join(text for _, text in entries)
     offsets, at = [], 0
@@ -220,6 +257,15 @@ def write_parity(entries):
     # exhaustive half: it proves the table is right entry by entry.
     for cp, _ in entries:
         cases.append(chr(cp))
+    # ⚠️ And codepoints the table does NOT contain, sampled across the range
+    # where a missing entry is most likely. The exhaustive half above draws its
+    # inputs from the table itself, so an omission removes its own test case and
+    # the fixture still passes -- the phase-1 audit's finding 8.
+    # `check_against_oracle` is the real defence; this stops the *fixture* from
+    # being purely self-confirming.
+    known = dict(entries)
+    absent = [cp for cp in range(0x80, 0x3000) if cp not in known]
+    cases += [chr(cp) for cp in absent[:: max(1, len(absent) // 150)]]
     # And a codepoint from each of the ranges that fold to NOTHING, which the
     # table cannot get wrong by having a bad entry -- only by having one it
     # should not.
@@ -256,6 +302,18 @@ def write_parity(entries):
         f"//! Unicode {unicodedata.unidata_version}, CPython {sys.version.split()[0]}.",
         "",
         "use ak820_agent::text;",
+        "",
+        "/// ⚠️ The Unicode version this table was built against.",
+        "///",
+        "/// Parity is only defined **within a Unicode version**. Python 3.14 ships",
+        "/// Unicode 16, which gives U+1CCD6 a compatibility decomposition to `A`",
+        "/// where Unicode 15 has none -- so the same title would fold differently",
+        "/// under the two producers. `hostagent/` on macOS picks whatever python3",
+        "/// it finds, so this is a real contract and not a theoretical one.",
+        "///",
+        "/// Regenerating on a different Python changes this line, which makes the",
+        "/// version change a visible diff rather than a silent behaviour change.",
+        f'pub const UNICODE_VERSION: &str = "{unicodedata.unidata_version}";',
         "",
         f"/// `(input, what Python's to_ascii returns)`. {len(cases)} cases.",
         f"const CASES: [(&str, &str); {len(cases)}] = [",

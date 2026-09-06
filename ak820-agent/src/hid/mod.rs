@@ -91,6 +91,12 @@ pub enum Error {
         queue: exchange::Queue,
         drained: Vec<Drained>,
     },
+    /// The same command was transmitted earlier and never answered, so its
+    /// reply is still owed and would be indistinguishable from this one's.
+    ///
+    /// Call `resynchronise` to account for it. Refusing is the point: see
+    /// [`exchange::Outstanding`].
+    Unresolved { channel: u8, command: u8 },
     /// A cancellation did not complete inside its grace period, so this device
     /// has an operation the kernel still owns. Its buffer, event and handle are
     /// leaked deliberately and it can never be used again.
@@ -137,6 +143,10 @@ impl std::fmt::Display for Error {
                 "not sent: the reply queue {queue} after discarding {} report(s), so a stale \
                  reply could have answered it",
                 drained.len()
+            ),
+            Error::Unresolved { channel, command } => write!(
+                f,
+                "command {command:#04X} on channel {channel:#04X} was sent earlier and never                  answered; its reply would be indistinguishable from this one's, so the handle                  must be resynchronised first"
             ),
             Error::Stuck => write!(
                 f,

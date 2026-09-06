@@ -43,7 +43,7 @@ use windows::Win32::System::Threading::{CreateEventW, ResetEvent, WaitForSingleO
 
 use super::caps::{Identity, Reject};
 use super::path;
-pub use super::exchange::{Queue, Reply};
+pub use super::exchange::{Outstanding, Queue, Reply};
 use super::exchange::{self, Sent, Wire};
 
 use super::{Drained, Error};
@@ -191,6 +191,9 @@ pub struct Device {
     /// which the handle can never be used or closed again. `Cell` rather than
     /// an atomic because `Device` is deliberately `!Sync`.
     stuck: std::cell::Cell<bool>,
+    /// A command sent on this handle whose reply never arrived. See
+    /// [`Outstanding`].
+    outstanding: Outstanding,
     /// One manual-reset event, reused by every transfer. The `OVERLAPPED` that
     /// points at it is a local in each call, and nothing outlives an in-flight
     /// transfer -- see the cancel path in [`Device::transfer`].
@@ -266,6 +269,7 @@ impl Interface {
         Ok(Device {
             handle,
             stuck: std::cell::Cell::new(false),
+            outstanding: Outstanding::new(),
             event,
             identity,
             text: self.text.clone(),
@@ -380,7 +384,7 @@ impl Device {
         body: &[u8],
         budget: Duration,
     ) -> Result<Reply, Error> {
-        exchange::exchange(self, channel, command, body, budget, |_| {})
+        exchange::exchange(self, &self.outstanding, channel, command, body, budget, |_| {})
     }
 
     /// As [`Device::request`], but the caller is handed the instant the command
@@ -401,7 +405,7 @@ impl Device {
         budget: Duration,
         on_send: impl FnOnce(Instant),
     ) -> Result<Reply, Error> {
-        exchange::exchange(self, channel, command, body, budget, on_send)
+        exchange::exchange(self, &self.outstanding, channel, command, body, budget, on_send)
     }
 
     /// Empty the driver's queue, and say whether it actually got empty.
@@ -413,6 +417,19 @@ impl Device {
     /// own.
     pub fn drain(&self) -> (Vec<Drained>, Queue) {
         self.drain_until(Instant::now() + DRAIN_BUDGET)
+    }
+
+    /// A command this handle transmitted and never got an answer to.
+    ///
+    /// While this is set, asking the same question again is refused: the old
+    /// reply is still owed and would be indistinguishable from the new one.
+    pub fn unanswered(&self) -> Option<(u8, u8)> {
+        self.outstanding.get()
+    }
+
+    /// Account for an unanswered command so the handle can be used again.
+    pub fn resynchronise(&self, budget: Duration) -> Result<Vec<Drained>, Error> {
+        exchange::resynchronise(self, &self.outstanding, budget)
     }
 
     /// One overlapped transfer, started and finished inside this call.
