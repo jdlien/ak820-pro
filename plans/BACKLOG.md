@@ -302,10 +302,28 @@ bytes of mismatch, and flipping those three bits back matches the on-disk
 `.reloc` block exactly. The other 1,106 page streams in the block are intact.
 Recommendation to the owner was MemTest86 and the ASUS 2402 BIOS.
 
-**Status 2026-09-05:** the owner is applying the BIOS update. ⚠️ The flash
-prohibition below is **not** lifted by the BIOS update alone — it is lifted by a
-clean **MemTest86** pass, because the evidence was three bit flips in one cache
-line and only a memory test can speak to that. Until then the rule stands.
+### ✅ CLEARED 2026-09-06 — the machine is stable, and flashing is allowed again
+
+The owner applied the **ASUS 2402 BIOS** plus tuning tweaks, then ran a **clean
+MemTest86 pass** and about **five hours of y-cruncher** without error. That is
+the clearance this item was waiting for: a memory test is the only thing that
+speaks to three bit flips in one cache line, and a five-hour stress run covers
+the load-dependent case a short pass would not.
+
+**The do-not-flash rule below is lifted.** It is kept, struck through, because
+the *reasoning* in it is not about this machine — it is a permanent property of
+the flashing pipeline, and the next person to ask "would a corrupted image be
+caught?" deserves the answer.
+
+⚠️ **Keep the hash habit anyway.** Not because the RAM is suspect now, but
+because `sonixflasher` verifies against **what it sent**, so nothing downstream
+of `build.sh` can catch a corrupted buffer — on any machine, ever. Reproducible
+builds make the check free:
+
+    sha256sum ak820pro-builds/out/via-daily-<hash>-*.bin   # must all agree
+
+**Historical status:** during 2026-09-05 the rule stood, and the phase-0
+`ak820-agent` work was done entirely without flashing.
 
 **Nothing of ours is in the stack**: no `hidclass`, `HIDUSB`, `kbdhid` or
 `mouhid`, no I/O manager at all, no Bluetooth. A concurrent-HID-open experiment
@@ -313,7 +331,7 @@ of ours had ended about five minutes earlier and was explicitly checked and
 ruled out; it is recorded here only so the coincidence is not rediscovered as a
 suspicion later.
 
-### ⚠️ Consequence for this repo: do not flash from a machine with bad RAM
+### ~~⚠️ Consequence for this repo: do not flash from a machine with bad RAM~~ — lifted 2026-09-06
 
 A bit flip in a firmware image between `build.sh` and the board would not be
 caught by anything in the current pipeline. `sonixflasher` reports
@@ -324,8 +342,8 @@ sample three places and would miss a flip anywhere else in the 256 KB image.
 There is no read-back path to compare against: the stock firmware cannot be
 read off the board, and neither can ours.
 
-Until the memory is cleared, either do not flash, or verify the artifact by
-hash before flashing. **Reproducible builds make that easy and are the reason
+~~Until the memory is cleared, either do not flash, or verify the artifact by
+hash before flashing.~~ **Reproducible builds make that easy and are the reason
 this is checkable at all**: two clean builds of the same commit are
 byte-identical, measured 2026-09-05.
 

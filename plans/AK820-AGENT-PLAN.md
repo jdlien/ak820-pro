@@ -287,6 +287,11 @@ environment underneath it.
 | 5 | Health | Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. |
 | 6 | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. |
 
+**Every row above also ends with a codex audit** — see
+[Every phase ends with an external audit](#every-phase-ends-with-an-external-audit).
+The gate proves the phase does what it claims; the audit looks for what nobody
+thought to claim.
+
 ### Phase 0 evidence (2026-09-05)
 
 All of it on this machine, with **both Python agents running**, so every number
@@ -489,6 +494,40 @@ program.
 Round-trip latency is **~5–18 ms**, higher than the single-digit figure assumed
 when the request budget was set; not a problem at a 300 s sync interval, but
 worth remembering before anything gets built on a tight one.
+
+### Every phase ends with an external audit
+
+**Standing rule, added 2026-09-06 at the owner's request.** A phase is not done
+when its gate passes — it is done when its gate passes *and* an independent
+model has read the code it produced.
+
+```sh
+codex exec -m gpt-6-astra -c model_reasoning_effort=xhigh \
+  -c 'sandbox_permissions=["disk-full-read-access"]' -s read-only "<prompt>"
+```
+
+Read-only, and full disk read so it can compare against `../jdrgb` and
+`../jdups`, which carry the same author's prior Win32 HID code.
+
+Why this earns its place rather than being ceremony: the *plan* review
+([review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)) found
+things a self-review had not — that the parity document omitted `ak820ctl`
+entirely, and that the proposed shadow mode could pass while broken. Both were
+structural, and both were invisible from inside the work. Code has the same
+property, more so.
+
+Give the audit the load-bearing constraints explicitly (never enumerate HID;
+correlate every read; correlation is not sufficient for the clock; `CancelIoEx`
+lifetimes), because a reviewer who does not know them will spend its effort
+rediscovering them instead of testing them. Ask it to say plainly when it finds
+nothing serious — an audit that always produces findings is one that invents
+them.
+
+Keep each audit's verbatim output in `plans/` as
+`review-codex-phase<N>-<date>.md`, and record in the phase's own section which
+findings were acted on and which were declined, with the reason. A declined
+finding with a reason is a decision; a declined finding without one is a bug
+waiting to be rediscovered.
 
 Carry over the sibling's cancellation discipline: `CancelIoEx` *requests*
 cancellation — buffers and `OVERLAPPED` must stay alive until completion, or a
