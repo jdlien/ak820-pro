@@ -974,21 +974,28 @@ millisecond apart can still straddle a 100 ms tick. Batching is the measured
 mitigation, not a proof. Either define an observable acceptance criterion or add
 firmware staging/commit for a real atomic update.
 
-## Still to specify before coding
+## Specified and built (was "still to specify before coding")
 
-- **Cache ownership and migration** — native path, importing existing lead/bias,
-  malformed-cache handling, atomic replacement, CLI interaction, and rollback
-  compatibility with `ak820ctl` while it remains installed.
-- **Observability** — bounded logs, startup failures, version/protocol identity,
-  last successful clock and media operations, and a degraded-state report.
-  "Task running" can coexist with hours of failed syncs.
-- **Text normalization** — Python does punctuation substitution plus NFKD and
-  ASCII filtering; Rust's std has no NFKD. Choose an implementation and pin
-  output fixtures.
-- **Task lifecycle** — preserve what `hostagent/install-agents-windows.ps1`
-  already gets right: interactive user, both battery settings, unlimited
-  execution time, restart policy, duplicate prevention, and stopping the old
-  processes during migration.
+- **Cache ownership and migration** — the same file `ak820ctl` and the Python
+  timekeeper share, `%USERPROFILE%\.ak820ctl-cap`, read by `fscanf`'s rules
+  and written byte for byte including CRLF, through a temporary and a rename;
+  the existing lead and bias are simply read. Rollback to `ak820ctl` needs
+  nothing. (`clock::cache`; the phase-2 audit's findings 5 and the divergence
+  table.)
+- **Observability** — a bounded log (rotated at 1 MB), the first line naming
+  the build and the protocols it speaks, presence transitions rather than
+  per-poll noise, and an atomic status file with the last media push, the
+  last clock sync line, the foreign-report count and the cache's lead and
+  bias, printed by `ak820 status` beside the tasks' states. "Task running"
+  no longer has to stand in for health.
+- **Text normalization** — phase 1: the fold table generated from Python's
+  own `unicodedata` and verified across every scalar value.
+- **Task lifecycle** — `ak820 install` registers from an XML document pinned
+  against the PowerShell installer's own exported task (interactive token,
+  logon trigger, both battery settings, no time limit, restart 999 at one
+  minute, ignore new instances, start when available), stops the old
+  processes and waits for their mutexes to be released, and `uninstall`
+  reverses it.
 
 ## Open
 
@@ -998,6 +1005,9 @@ firmware staging/commit for a real atomic update.
   names), and `../jdups` already ships a `jdups-agent` binary for exactly this
   role. `ak820d` was dropped: `d`-for-daemon is a Unix idiom in a Windows-only
   program.
-- Whether `ak820.exe` eventually absorbs `ak820ctl`'s clock subcommand, leaving
-  the C tool purely for provisioning. Decide before phase 5.
+- ~~Whether `ak820.exe` eventually absorbs `ak820ctl`'s clock subcommand~~
+  **Half settled 2026-09-06**: `ak820 clock` is `ak820ctl clock --read`, and
+  refuses beside whichever process owns the clock. The *set* is the daemon's
+  and will not be a CLI command — one owner, or the learner is wrong. What
+  stays in `ak820ctl`: provisioning, and `clock --bias` as a manual override.
 - Config file, or compiled-in constants? Start with none.

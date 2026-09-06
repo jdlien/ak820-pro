@@ -179,11 +179,14 @@ while the agent is running** is silent again until the next restart. Low
 priority — revocation mid-run is rare — but the fix is cheap: have `state_of()`
 distinguish an empty result from an error and log the first one it sees.
 
-### The Windows host path is untested
+### ~~The Windows host path is untested~~ — ran 2026-09-05, superseded 2026-09-06
 
-`hostagent/nowplaying-windows.py` exists and has never been run. `setup.sh` and
-the README are scoped to macOS and say so. Either test it on Windows or drop it;
-an untested file that looks supported is worse than an honest gap.
+`hostagent/nowplaying-windows.py` ran as a Scheduled Task from 2026-09-05
+23:00 and is the oracle the Rust daemon's media loop was ported from. On
+Windows the daemon (`ak820 install`) now replaces it: `install` unregisters
+the Python task, and if the PowerShell installer re-registers it the Python
+agent exits at once because the daemon holds its mutex. The file stays as
+the reference implementation and the rollback.
 
 ### `ak820ctl` and the timekeeper both open the raw-HID interface
 
@@ -405,3 +408,9 @@ rather than intended: `ak820-agent`'s discovery reads the Configuration
 Manager's own records and opens nothing. `ak820 list` prints the ratio it
 avoids — **33 HID interfaces present, 5 of them this board's** — and at most
 one of those five is ever opened.
+
+**2026-09-06:** the Python now-playing agent is retired on this machine (the
+daemon has its job), which removes `ak820text.py`'s share. The timekeeper's
+two enumerations per loop remain until the clock moves to the daemon
+(`ak820 install --clock`, the plan's phase 4b), after which nothing on this
+machine enumerates HID except a hand-run `ak820ctl` or `clock-phase.py`.
