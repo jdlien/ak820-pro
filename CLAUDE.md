@@ -33,8 +33,9 @@ Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
 
 **In progress: `ak820-agent/`** — a Rust rewrite of the two Windows host agents
 as one daemon. **Phases 0, 1 and 2 complete and audited; phase 3's code —
-the whole clock transaction — written ahead of its gate** (2026-09-06).
-235 unit tests plus a 2,309-case parity fixture. Read
+the whole clock transaction — written ahead of its gate; phase 4a live: the
+daemon owns now-playing on this machine, the Python timekeeper still owns
+the clock** (2026-09-06). 260 unit tests plus a 2,309-case parity fixture. Read
 [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
 first; it carries the phase gates and the findings that are load-bearing.
 Its two companions are part of the plan, not background:
@@ -125,9 +126,15 @@ gcc fail silently; and `USE_LIBUSB=1` is macOS-only — on Windows the bootloade
 is plain HID, so no Zadig. All four are written up in
 [docs/hardware.md](docs/hardware.md#building-and-flashing-on-windows-msys2).
 
-Windows host agents are Scheduled Tasks, installed from **PowerShell**:
-`hostagent/install-agents-windows.ps1 [-Status] [-Uninstall]`. They need
-`venv-win` (native python) — `venv-mingw64` can never hold `winsdk`, so
+Windows host agents are Scheduled Tasks under `\ak820pro\`. **As of
+2026-09-06 now-playing is the Rust daemon** (`ak820 install` / `status` /
+`uninstall`, task `AK820Pro-agent`, log and status file in
+`%LOCALAPPDATA%\ak820pro\`), and **the clock is still the Python timekeeper**,
+installed from **PowerShell**:
+`hostagent/install-agents-windows.ps1 [-Status] [-Uninstall]`. That installer
+also re-registers the Python now-playing task; it then exits at once because
+the daemon holds its mutex, which is the intended outcome. The Python agents
+need `venv-win` (native python) — `venv-mingw64` can never hold `winsdk`, so
 `venv_bootstrap.py` picks the venv that *provides* the module, not the first
 that exists. Two traps that fail silently: **ak820ctl must be linked static**
 on Windows (a Scheduled Task has no MSYS2 on `PATH`), and it keys its
@@ -231,11 +238,15 @@ weak-hooked/no-op for other boards.
 (`windows` pinned `=0.62.2`; the blocking async spelling is `.join()`, not
 `.get()`). Two binaries because a PE has one subsystem: `ak820-agent.exe` is
 windows-subsystem so it can never flash a console, `ak820.exe` is a console CLI.
-Built test-first; `cargo test` from that directory (235 tests + 3 integration).
+Built test-first; `cargo test` from that directory (260 tests + 3 integration).
+`cargo build --release` gives static-CRT binaries (`.cargo/config.toml`); a
+`v*` tag builds the Releases zip in CI (`.github/workflows/release.yml`).
 
-The CLI is the evidence for phases 0–2 — **every command is read-only**; run
-these before touching the transport, they need no arguments and take under a
-second each:
+The daemon side: `ak820 install [--in-place]` / `uninstall` / `status`, and
+`ak820 --version` for which build and which protocols. The CLI is the evidence
+for phases 0–2 — **every other command reads the board and never writes it**;
+run these before touching the transport, they need no arguments and take under
+a second each:
 
 ```sh
 cd ak820-agent && cargo build            # then target/debug/ak820.exe

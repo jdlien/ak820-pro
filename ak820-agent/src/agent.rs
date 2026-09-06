@@ -47,6 +47,10 @@ use crate::status::{self, Status};
 /// How long opens pause after a cancellation that never landed.
 pub const ABANDON_BACKOFF: Duration = Duration::from_secs(60);
 
+/// How long the first cycle waits for the media worker's first poll, so the
+/// first push is the real state rather than a clear followed by the track.
+pub const FIRST_POLL_GRACE: Duration = Duration::from_secs(2);
+
 /// Where the board is, as far as the last cycle could tell.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Presence {
@@ -189,6 +193,17 @@ pub fn run(opts: Options) -> Result<(), String> {
         started: logfile::stamp(&SystemHost),
         ..Status::default()
     };
+
+    // The Python agent read SMTC synchronously, so its first push was the
+    // true state. The worker publishes asynchronously, and the first live run
+    // pushed a CLEAR before its first poll had landed, then the track four
+    // seconds later — a blink of the band on every start. So give the first
+    // poll a moment; a media broker that takes longer than this is what the
+    // worker's health counters are for.
+    let deadline = Instant::now() + FIRST_POLL_GRACE;
+    while worker.latest().1.polls == 0 && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(50));
+    }
 
     loop {
         let (snapshot, health) = worker.latest();

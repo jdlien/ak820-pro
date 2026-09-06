@@ -293,7 +293,7 @@ fn contention_notice() {
 ///
 /// Writes to the Task Scheduler and the profile directory; never to the board.
 fn install(flags: &[&str]) -> Result<(), String> {
-    use ak820_agent::{agent, task};
+    use ak820_agent::{agent, instance, task};
     use std::time::Duration;
 
     let mut in_place = false;
@@ -323,10 +323,11 @@ fn install(flags: &[&str]) -> Result<(), String> {
     let dir = agent::default_dir();
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
 
-    // A running daemon holds its exe open; stop it before copying over it.
+    // A running daemon holds its exe open; stop it before copying over it —
+    // and wait until it has actually gone, which its mutex tells us.
     if task::info(task::FOLDER, task::AGENT)?.is_some() {
         task::stop(task::FOLDER, task::AGENT)?;
-        std::thread::sleep(Duration::from_millis(500));
+        wait_released(instance::AGENT, Duration::from_secs(10))?;
     }
 
     let (bin_dir, daemon) = if in_place {
@@ -356,6 +357,11 @@ fn install(flags: &[&str]) -> Result<(), String> {
             dir.display()
         );
     }
+    // ⚠️ Stopping a task ends its process asynchronously. The first live
+    // install started the daemon while the Python agent still held the
+    // now-playing mutex, and the daemon refused to start exactly as designed.
+    // So: do not start until the name is free.
+    wait_released(instance::NOWPLAYING, Duration::from_secs(10))?;
     if task::info(task::FOLDER, task::TIMEKEEPER)?.is_some() {
         println!(
             "left the Python task {} alone: the clock stays with it until the Rust port passes its gate",
@@ -388,6 +394,32 @@ fn install(flags: &[&str]) -> Result<(), String> {
 
 fn env_var(name: &str) -> Result<String, String> {
     std::env::var(name).map_err(|_| format!("{name} is not set in the environment"))
+}
+
+/// Wait until nobody holds a named mutex — i.e. until the process that did
+/// has exited — by claiming it and letting it go. A stopped Scheduled Task's
+/// process takes a moment to die; a copy over its exe, or a daemon start that
+/// needs its name, has to wait for that moment.
+fn wait_released(name: &str, timeout: std::time::Duration) -> Result<(), String> {
+    use ak820_agent::instance::Instance;
+    let until = std::time::Instant::now() + timeout;
+    loop {
+        match Instance::claim(&[name]) {
+            Ok(held) => {
+                drop(held);
+                return Ok(());
+            }
+            Err(_) if std::time::Instant::now() < until => {
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            Err(e) => {
+                return Err(format!(
+                    "{e}; it did not exit within {} s of being stopped",
+                    timeout.as_secs()
+                ))
+            }
+        }
+    }
 }
 
 /// Stop and unregister the daemon's task. Binaries and logs stay.

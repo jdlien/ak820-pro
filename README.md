@@ -175,7 +175,32 @@ hostagent/nowplaying-macos.sh
 
 ### Windows
 
-The installer is **PowerShell**, not the MSYS2 shell you built the firmware in:
+Now-playing is a small native daemon, `ak820-agent`, with nothing to install
+but itself — no Python, no runtime, no driver, no admin rights. Take the zip
+from [Releases](https://github.com/jdlien/ak820-pro/releases) (or build it:
+`cd ak820-agent && cargo build --release`), unzip anywhere, and from a
+terminal in that folder:
+
+```powershell
+ak820 install        # copies itself to %LOCALAPPDATA%\ak820pro\bin, registers a per-user
+                     # Scheduled Task (\ak820pro\AK820Pro-agent) at logon, starts it now
+ak820 status         # is it running, what did it last push, and when
+ak820 uninstall      # stop and remove the task (binaries and logs stay)
+ak820 probe          # what Windows' media API sees, if the LCD shows nothing
+```
+
+The daemon reads **SMTC**, Windows' own media-session API — the one behind the
+volume-key flyout — so it needs no per-app support at all. Spotify, Apple Music,
+foobar2000 and **any browser** (YouTube and web players included) all appear
+through one interface. An app missing from `ak820 probe`'s list registers no
+SMTC session, which no change to the agent can fix. Two measured quirks:
+**foobar2000** reports title and artist but no timeline, so it gets no progress
+timer; **Apple Music** reports everything.
+
+**The clock is still the Python timekeeper's job** until the Rust port passes
+its gate (`plans/AK820-AGENT-PLAN.md`). Its installer is **PowerShell**, not the
+MSYS2 shell you built the firmware in, and it needs `./setup.sh` to have made
+`venv-win`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File hostagent\install-agents-windows.ps1
@@ -183,32 +208,24 @@ powershell -ExecutionPolicy Bypass -File hostagent\install-agents-windows.ps1 -S
 powershell -ExecutionPolicy Bypass -File hostagent\install-agents-windows.ps1 -Uninstall
 ```
 
-No admin rights needed. It registers two per-user Scheduled Tasks under
-`\ak820pro\`, starts them immediately so you need not log out, and re-runs them
-at every logon. Logs:
+It registers two per-user Scheduled Tasks under `\ak820pro\`, the timekeeper
+and the older Python now-playing agent. `ak820 install` stops and removes the
+Python now-playing task, since the daemon replaces it, and leaves the
+timekeeper alone; if the PowerShell installer is re-run afterwards, the Python
+now-playing agent starts, finds the daemon holding its mutex, and exits — so
+the two never write to the board at once. Logs, all in one place:
 
 ```
-%LOCALAPPDATA%\ak820pro\ak820pro-timekeeper.log
-%LOCALAPPDATA%\ak820pro\ak820pro-nowplaying.log
+%LOCALAPPDATA%\ak820pro\ak820-agent.log          the daemon
+%LOCALAPPDATA%\ak820pro\ak820-agent.status       what it last did (ak820 status prints it)
+%LOCALAPPDATA%\ak820pro\ak820pro-timekeeper.log  the clock
 ```
-
-nowplaying reads **SMTC**, Windows' own media-session API — the one behind the
-volume-key flyout — so it needs no per-app support at all. Spotify, Apple Music,
-foobar2000 and **any browser** (YouTube and web players included) all appear
-through one interface. To see exactly what Windows is exposing:
-
-```powershell
-venv-win\Scripts\python.exe hostagent\nowplaying-windows.py --probe
-```
-
-An app missing from that list registers no SMTC session, which no change to the
-agent can fix. Two measured quirks: **foobar2000** reports title and artist but
-no timeline, so it gets no progress timer; **Apple Music** reports everything.
 
 ### Checking it worked
 
-Both platforms: `--status` / `-Status` should show each agent running, and the
-timekeeper log should show a sync within a minute or so, like
+Both platforms: `--status` / `-Status` (and `ak820 status` on Windows) should
+show each agent running, and the timekeeper log should show a sync within a
+minute or so, like
 
 ```
 sync (enumerated): clock set (sub-second): before -4.3 ms, after -4.0 ms, ...

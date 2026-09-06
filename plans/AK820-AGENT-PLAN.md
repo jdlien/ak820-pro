@@ -148,6 +148,44 @@ zero tags** while the README already sends readers to the Releases page for
 firmware — so the tag workflow is needed for a promise that predates the
 agent.
 
+### Phase 4a evidence (2026-09-06, live on this machine)
+
+`ak820 install` from a release build at 07:50: copied both exes to
+`%LOCALAPPDATA%\ak820pro\bin`, stopped and unregistered `AK820Pro-nowplaying`,
+left `AK820Pro-timekeeper` alone, registered `AK820Pro-agent` from the XML
+and started it. Then two things the first run taught:
+
+- **The mutex fence caught a real race.** `Stop-ScheduledTask` ends the
+  Python process asynchronously, and the daemon was started while that
+  process still held `Global\ak820pro-nowplaying`. The daemon refused to start
+  — `not starting: ak820pro-nowplaying is already running (named mutex
+  held)`, exit 2 — exactly as designed, and the scheduler's restart policy
+  would have brought it up a minute later. `install` now waits for the name
+  to be released before starting the daemon, and before copying over a
+  running daemon's exe on an upgrade.
+- **The first push blinked.** The worker publishes asynchronously, so the
+  first cycle pushed a `CLEAR` before the first poll had landed, then the
+  track four seconds later. The Python read synchronously and never did
+  that. The first cycle now waits up to two seconds for the first poll.
+
+After the reinstall: `AK820Pro-agent Running`, the status file updating every
+three seconds, `board present`, the paused track on the panel
+(`pause Michael Oakley — Prologue - Prologue`, an em dash folded on the
+wire), `foreign_reports 0`, and the Python timekeeper syncing on its usual
+five-minute cadence with the daemon live beside it.
+
+**Still to be observed by the owner** (the 4a gate's remaining items): a
+track change, a pause and resume, going idle, and an unplug and replug,
+each visible on the panel and in `ak820 status`. The rest of the gate — the
+scheduler's restart on failure, logon start, battery — is the same task
+definition the Python agents ran under for a day, pinned element for element.
+
+**Two more things the daemon deliberately does differently from the Python
+agent, both improvements rather than parity:** it logs presence transitions
+rather than a warning every three seconds while the cable is out, and a
+handle whose cancellation never lands pauses opens for a minute rather than
+leaking one per cycle.
+
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.
 
