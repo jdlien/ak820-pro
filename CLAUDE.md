@@ -32,8 +32,8 @@ submodule sits on our `ak820pro-patches` branch.
 Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
 
 **In progress: `ak820-agent/`** — a Rust rewrite of the two Windows host agents
-as one daemon. **Phase 0 complete 2026-09-05**: discovery, the `CreateFileW`
-transport and `ak820 info`, 49 tests, gate met in full. Read
+as one daemon. **Phases 0 and 1 complete and audited; phase 2 started**
+(2026-09-06). 150 unit tests plus a 2,309-case parity fixture. Read
 [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
 first; it carries the phase gates and the findings that are load-bearing.
 Its two companions are part of the plan, not background:
@@ -224,7 +224,7 @@ weak-hooked/no-op for other boards.
 (`windows` pinned `=0.62.2`; the blocking async spelling is `.join()`, not
 `.get()`). Two binaries because a PE has one subsystem: `ak820-agent.exe` is
 windows-subsystem so it can never flash a console, `ak820.exe` is a console CLI.
-Built test-first; `cargo test` from that directory (49 tests).
+Built test-first; `cargo test` from that directory (150 tests + 3 integration).
 
 Phase 0 is done and its CLI is the evidence — run these before touching the
 transport, they need no arguments and take under a second each:
@@ -234,12 +234,20 @@ cd ak820-agent && cargo build            # then target/debug/ak820.exe
 ak820 list            # 33 HID interfaces present, 5 of them this board's
 ak820 list --caps     # the five collections; exactly one passes
 ak820 info            # must equal `ak820ctl info` byte for byte
-ak820 selftest        # cancellation: abort, complete-anyway, and recovery
+ak820 selftest        # budget guard, idle cancel, and recovery
 ak820 watch [secs]    # narrate presence + what the drain discards
+ak820 probe           # what SMTC sees; touches no keyboard at all
 ```
 
 `watch` is the one to reach for when something looks like contention: its drain
 lines name whose traffic is landing on our handle.
+
+⚠️ **Two generated files, one command regenerates both:**
+`python scripts/gen_ascii_fold.py` writes `ak820-agent/src/text/fold_table.rs`
+and `ak820-agent/tests/ascii_fold_parity.rs`. Never hand-edit either. The
+generator checks the table against `ak820text.py`'s own `to_ascii` across all
+1,112,064 scalar values and refuses to write if they disagree -- so a Python
+carrying a different Unicode version fails loudly instead of drifting.
 
 **Host tools** — `hostagent/` (`ak820text.py`, `nowplaying-macos.sh`,
 `ak820keymap.py`, `ak820health.py`, `ak820-timekeeper.py`, the LaunchAgent

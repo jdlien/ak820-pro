@@ -1,11 +1,10 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PHASE 0 COMPLETE (audited 2026-09-06); PHASE 1 WRITTEN AND AUDITED;
-PHASE 2 STARTED.** Planned and revised the same day
+Status: **PHASES 0 AND 1 COMPLETE AND AUDITED; PHASE 2 STARTED** (2026-09-06). Planned and revised the same day
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
 (gpt-6-astra, xhigh), then built and gated the same day.
 
-Crate at `ak820-agent/`, **148 unit tests plus a 2,309-case parity fixture**;
+Crate at `ak820-agent/`, **150 unit tests plus a 2,309-case parity fixture**;
 `cargo test` from that directory.
 
 - `hid::path` — bounded path matching, so discovery narrows to this board
@@ -41,13 +40,19 @@ Crate at `ak820-agent/`, **148 unit tests plus a 2,309-case parity fixture**;
 independent read found afterwards. Five CLI commands are the evidence:
 `ak820 list [--caps]`, `info`, `selftest`, `watch [secs]`, `probe`.
 
-**Phase 1 is written and audited** (2026-09-06) — `text/`, `smtc/`,
+**Phase 1 is written, audited and gated** (2026-09-06) — `text/`, `smtc/`,
 `ak820 probe`. Folding parity is verified against `ak820text.to_ascii` across
-**every** scalar value at generation time, not just the ones in the table.
-Its gate is nearly closed: one captured Apple Music session is pinned, which
-covers an em dash in real metadata, both line budgets, a paused icon and a
-stale timeline at once. Still wanted before closing it: **competing** sessions
-and a track change, both of which need two apps playing.
+**every** scalar value at generation time, not just the ones in the table, and
+three captures from this desktop are pinned as tests:
+
+- a paused Apple Music session — an em dash in real metadata, both line
+  budgets, and a timeline read 331 s stale;
+- **Apple Music and foobar2000 playing at once** — the competing-session case,
+  where both are `Playing` so the current-session tiebreak is the only thing
+  deciding. foobar2000 turned out to show both of its documented gaps together:
+  a `0s/0s` timeline *and* no `LastUpdatedTime` at all;
+- **a real track change**, whose new artist arrived 40 characters long with an
+  ampersand and an em dash against a 19-character row.
 
 ⚠️ **Read these before writing phase 2**, because they moved design decisions
 rather than confirming them:
@@ -156,11 +161,12 @@ ak820-agent/
   Cargo.toml
   src/
     lib.rs
-    hid/          discovery (open nothing), transport, serialized executor
+    hid/          path (open nothing), caps, device (Win32), exchange (the
+                  request loop, over a Wire trait, with a scripted fake)
     proto.rs      channels, packet builders, reply validation
     clock/        transaction (C contract) + scheduler/learner (Python contract)
-    text.rs       line/icon/playback packets, ASCII folding
-    smtc.rs       media session worker
+    text/         line/icon/playback packets, ASCII folding + generated table
+    smtc/         ranking and timeline (pure) + worker (WinRT, own MTA thread)
     health.rs     counters
     bin/
       ak820-agent.rs   daemon -- windows subsystem
@@ -312,8 +318,8 @@ environment underneath it.
 | # | Work | Gate |
 |---|---|---|
 | 0 ✅ | HID discovery, transport, `ak820 info` | Same JEDEC id and writable base as `ak820ctl info`; **plus** wrong-interface and malformed-report rejection, timeout/unplug/cancellation, traced opens showing nothing unrelated was touched, and VIA coexistence measured. — **all met 2026-09-05**, [evidence](#phase-0-evidence-2026-09-05). |
-| 1 ~ | `text.rs`, `smtc.rs`, `--probe` | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
-| 2 | Clock read | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) |
+| 1 ✅ | `text/`, `smtc/`, `ak820 probe` | **Met 2026-09-06.** Captured competing sessions, the current-session tiebreak, absent metadata and timeline, a track change, Unicode folding and both line budgets — three real captures pinned as tests, plus a 2,309-case folding fixture. | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
+| 2 ~ | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) |
 | 3 | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. |
 | 4 | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. |
 | 5 | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command — the firmware echoes the requested page in byte 3, so a foreign reply for another page would otherwise be decoded with this page's layout. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. |

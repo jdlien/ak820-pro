@@ -631,6 +631,120 @@ mod tests {
         assert_eq!(reports[1].1.len() - 2, Line::FullWidth.budget());
     }
 
+    /// ⚠️ **Captured 2026-09-06 with Apple Music and foobar2000 both playing**,
+    /// via `ak820 probe`. The competing-session case, from a real desktop
+    /// rather than a construction — and foobar2000 turns out to exhibit both of
+    /// its documented gaps at once: a timeline of `0s/0s` *and* no
+    /// `LastUpdatedTime` at all.
+    ///
+    /// Both sessions are `Playing`, so the tiebreak is the only thing deciding,
+    /// and it must pick the system's current session.
+    #[test]
+    fn a_captured_pair_of_competing_sessions_picks_the_current_one() {
+        let apple = SessionFacts {
+            app_id: "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App".into(),
+            status: Status::Playing,
+            title: "Warriors of the Wasteland".into(),
+            artist: "Michael Oakley \u{2014} Prologue".into(),
+            timeline: Some(Timeline {
+                start_ticks: 0,
+                end_ticks: 235 * TICKS_PER_SEC,
+                position_ticks: 230 * TICKS_PER_SEC,
+                age_s: Some(0.3),
+            }),
+            is_current: true,
+        };
+        let foobar = SessionFacts {
+            app_id: "foobar2000.exe".into(),
+            status: Status::Playing,
+            title: "Remember (ESCM 12' Mix)".into(),
+            artist: "BT".into(),
+            // Registers a session, reports 0s/0s, and never sets an update
+            // time. `age_seconds` returning None for a zero timestamp is what
+            // keeps that out of the extrapolation.
+            timeline: Some(Timeline {
+                start_ticks: 0,
+                end_ticks: 0,
+                position_ticks: 0,
+                age_s: None,
+            }),
+            is_current: false,
+        };
+
+        let snap = snapshot(&[apple.clone(), foobar.clone()]);
+        assert_eq!(snap.title, "Warriors of the Wasteland");
+        assert_eq!(snap.icon, Icon::Play);
+        assert_eq!((snap.pos_s, snap.dur_s), (230, 235), "0.3 s of age truncates to 0");
+        // state 1, pos 0x00E6 = 230, dur 0x00EB = 235 -- big-endian, as captured.
+        assert_eq!(
+            reports(&snap)[2].1,
+            vec![1, 0x00, 0xE6, 0x00, 0xEB]
+        );
+
+        // Order must not decide it: the same pair listed the other way round
+        // still picks Apple Music, because `is_current` is the tiebreak rather
+        // than position in the list.
+        assert_eq!(
+            snapshot(&[foobar.clone(), apple.clone()]).title,
+            "Warriors of the Wasteland"
+        );
+
+        // ⚠️ And the counterfactual that matters: pause the current session and
+        // the *other* one wins, however foreground Apple Music is. This is the
+        // rule that stopped an empty band being shown while foobar held a track.
+        let paused_apple = SessionFacts {
+            status: Status::Paused,
+            ..apple
+        };
+        let snap = snapshot(&[paused_apple, foobar]);
+        assert_eq!(snap.title, "Remember (ESCM 12' Mix)");
+        assert_eq!(
+            snap.playback(),
+            (false, 0, 0),
+            "foobar reports no duration, so no progress bar"
+        );
+    }
+
+    /// ⚠️ **A real track change, captured 2026-09-06** — the same Apple Music
+    /// session before and after it rolled to the next track. Both strings are
+    /// as SMTC reported them.
+    ///
+    /// The second artist is the adversarial one and it arrived by itself: 40
+    /// characters, an ampersand, and an em dash, against a 19-character row.
+    #[test]
+    fn a_captured_track_change_is_detected_and_truncates_sanely() {
+        let before = Snapshot {
+            icon: Icon::Play,
+            artist: "Michael Oakley \u{2014} Prologue".into(),
+            title: "Warriors of the Wasteland".into(),
+            playing: true,
+            pos_s: 230,
+            dur_s: 235,
+        };
+        let after = Snapshot {
+            artist: "Michael Oakley & Missing Words \u{2014} Prologue".into(),
+            title: "Memory of You".into(),
+            pos_s: 36,
+            dur_s: 255,
+            ..before.clone()
+        };
+
+        assert!(
+            before.text_differs(&after),
+            "a track change must repaint the band"
+        );
+
+        let rows = reports(&after);
+        assert_eq!(
+            &rows[0].1[2..],
+            b"Michael Oakley & Mi",
+            "40 characters cut to the narrow row's 19, em dash folded on the way"
+        );
+        assert_eq!(&rows[1].1[2..], b"Memory of You");
+        // Still playing, so the readout follows the new track's timeline.
+        assert_eq!(rows[2].1, vec![1, 0x00, 0x24, 0x00, 0xFF]);
+    }
+
     /// Position changing must not count as a text change, or the band would be
     /// rewritten every poll for nothing.
     #[test]

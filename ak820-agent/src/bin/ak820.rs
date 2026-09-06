@@ -4,12 +4,17 @@
 //! called it. Its sibling `ak820-agent.exe` is windows-subsystem for the
 //! opposite reason: a daemon that cannot have a console cannot flash one.
 //!
-//! Phase 0 is four commands, and their whole job is to make the transport
-//! provable: `list` says what discovery found without opening anything,
-//! `list --caps` says what those interfaces are, `info` puts one correlated
-//! request/reply on the wire and prints an answer that must equal
-//! `ak820ctl info`, and `selftest` exercises the cancellation path and then
-//! checks the handle still works.
+//! ⚠️ **Every command here is read-only.** Nothing writes to the board, and
+//! nothing touches flash at all — provisioning stays in `ak820ctl`, which is
+//! the only thing that erases.
+//!
+//! Their job is to make the layers underneath provable: `list` says what
+//! discovery found without opening anything, `list --caps` says what those
+//! interfaces are, `info` puts one correlated request/reply on the wire and
+//! prints an answer that must equal `ak820ctl info`, `selftest` exercises the
+//! budget guard and the cancellation path and then checks the handle still
+//! works, `watch` narrates presence across an unplug, and `probe` reports what
+//! SMTC sees without involving the keyboard at all.
 
 use std::process::ExitCode;
 
@@ -55,7 +60,7 @@ fn main() -> ExitCode {
 
 fn usage() {
     println!(
-        "ak820 -- AJAZZ AK820 Pro host tool (phase 0)\n\
+        "ak820 -- AJAZZ AK820 Pro host tool -- all read-only\n\
          \n\
          \x20 ak820 list           interfaces this board owns; opens nothing\n\
          \x20 ak820 list --caps    ... and what each one says once opened\n\
@@ -64,7 +69,7 @@ fn usage() {
          \x20 ak820 watch [secs]   narrate presence; unplug the cable to see it\n\
          \x20 ak820 probe          what SMTC sees; needs no keyboard\n\
          \n\
-         Provisioning stays in ak820ctl. Nothing here erases or writes flash."
+         Provisioning stays in ak820ctl: it is the only thing that erases flash."
     );
 }
 
