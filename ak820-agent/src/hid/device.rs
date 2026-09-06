@@ -408,6 +408,27 @@ impl Device {
         exchange::exchange(self, &self.outstanding, channel, command, body, budget, on_send)
     }
 
+    /// As [`Device::request_at`], but the body is built inside the call, after
+    /// the drain and immediately before the write — see
+    /// [`exchange::exchange_prepared`]. The clock SET needs this: the timestamp
+    /// it carries has to be taken as late as possible.
+    pub fn request_prepared(
+        &self,
+        channel: Channel,
+        command: u8,
+        budget: Duration,
+        prepare: impl FnOnce(Instant) -> Vec<u8>,
+    ) -> Result<Reply, Error> {
+        exchange::exchange_prepared(self, &self.outstanding, channel, command, budget, prepare)
+    }
+
+    /// This handle's accounting of unanswered commands, for code that drives
+    /// [`exchange`] directly — a whole transaction — rather than one request
+    /// at a time through the methods above.
+    pub fn outstanding(&self) -> &Outstanding {
+        &self.outstanding
+    }
+
     /// Empty the driver's queue, and say whether it actually got empty.
     pub fn drain_until(&self, deadline: Instant) -> (Vec<Drained>, Queue) {
         exchange::drain_until(self, deadline)

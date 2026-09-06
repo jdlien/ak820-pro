@@ -22,8 +22,24 @@
 //!
 //! Exactly one process may run clock transactions at a time. That, not the
 //! framing, is what makes the clock correct.
+//!
+//! ## Layout
+//!
+//! - here: the GET reply, the fraction formula, `wrap_day`, min-RTT selection,
+//!   and the `clock --read` rendering
+//! - [`host`]: the wall clock and `localtime`, behind a trait
+//! - [`set`]: the SET packet and its reply
+//! - [`lead`]: the outbound-lead learner
+//! - [`cache`]: `$HOME/.ak820ctl-cap`, byte for byte
+//! - [`transaction`]: the whole of `ak820ctl clock`, over the fake wire
 
-use crate::proto::Channel;
+pub mod cache;
+pub mod host;
+pub mod lead;
+pub mod set;
+pub mod transaction;
+
+use crate::proto::{Channel, REPORT_LEN};
 
 pub const CHANNEL: Channel = Channel::Rtc;
 pub const GET_TIME: u8 = 0x02;
@@ -61,14 +77,31 @@ pub struct BoardTime {
     /// The board is slewing, so it is moving ~20 ms/s and is not a calibration
     /// sample.
     pub slewing: bool,
+    /// The whole flags byte, as `clock --read` prints it: bit 0 host-synced,
+    /// bit 1 slewing, bit 2 acquisition done, bit 3 PCF backoff, bit 4 stale.
+    pub flags: u8,
+    /// The offset the firmware saw at its last host set, ms.
+    pub last_host_offset_ms: i16,
+    /// The SOF bias the firmware is applying, ppm.
+    pub bias_in_use_ppm: i16,
+    /// The firmware's reference state; `2` is what the Python bias learner
+    /// requires before it will learn.
+    pub ref_state: u8,
+    /// Minutes since the last host set, saturating at 255.
+    pub sync_age_min: u8,
+    /// Incremented when the SOF reference restarts; the bias seed resets on it.
+    pub sof_epoch: u8,
+    /// USB frames counted since the epoch began — the bias seed's numerator.
+    pub sof_frames_total: u32,
 }
 
 /// Decode a 32-byte `RTC_GET_TIME` reply.
 ///
-/// Byte offsets are the firmware's, and every multi-byte field here is
-/// **little-endian** — unlike the flash channel's big-endian ids.
+/// Byte offsets are the firmware's (`rtc_status_fill`, page 1), and every
+/// multi-byte field here is **little-endian** — unlike the flash channel's
+/// big-endian ids. The whole report is required: the C reads up to `[31]`.
 pub fn decode(report: &[u8]) -> Option<BoardTime> {
-    if report.len() < 21 {
+    if report.len() < REPORT_LEN {
         return None;
     }
     Some(BoardTime {
@@ -85,10 +118,69 @@ pub fn decode(report: &[u8]) -> Option<BoardTime> {
         active_period: u16::from_le_bytes([report[16], report[17]]),
         nominal_period: u16::from_le_bytes([report[18], report[19]]),
         slewing: report[20] & 0x02 != 0,
+        flags: report[20],
+        last_host_offset_ms: i16::from_le_bytes([report[21], report[22]]),
+        bias_in_use_ppm: i16::from_le_bytes([report[23], report[24]]),
+        ref_state: report[25],
+        sync_age_min: report[26],
+        sof_epoch: report[27],
+        sof_frames_total: u32::from_le_bytes([report[28], report[29], report[30], report[31]]),
     })
 }
 
+/// `ak820ctl clock --read`'s stdout for a decoded reply, byte for byte.
+///
+/// `measured` is `(offset_ms, rtt_ms)` when the clock was set, which is what
+/// decides whether the second and third lines are printed; the C prints the
+/// `device` line first either way and then says `device clock not set`.
+///
+/// The Python timekeeper parses this (`read_status`): `nominal`, `offset
+/// board-host`, `ref_state`, `sof_epoch`/`sof_frames_total` and `flags`. So the
+/// format is an interface, and the phase-2 gate compares this rendering of
+/// captured replies against the C's.
+pub fn read_lines(board: &BoardTime, measured: Option<(f64, f64)>) -> String {
+    let mut out = format!(
+        "device {:04}-{:02}-{:02} {:02}:{:02}:{:02}{:+.3}  (cnt {} / period {}, nominal {})\n",
+        board.year,
+        board.month,
+        board.day,
+        board.hour,
+        board.minute,
+        board.second,
+        board.fraction_as_printed(),
+        board.seccnt,
+        board.active_period,
+        board.nominal_period
+    );
+    match measured {
+        None => out.push_str("device clock not set\n"),
+        Some((offset_ms, rtt_ms)) => {
+            out.push_str(&format!(
+                "offset board-host {offset_ms:+.1} ms  rtt {rtt_ms:.1} ms  flags 0x{:02x}  ref_state {}  sync_age {} min  last_host_offset {} ms\n",
+                board.flags, board.ref_state, board.sync_age_min, board.last_host_offset_ms
+            ));
+            out.push_str(&format!(
+                "sof_epoch {}  sof_frames_total {}  bias_in_use {} ppm\n",
+                board.sof_epoch, board.sof_frames_total, board.bias_in_use_ppm
+            ));
+        }
+    }
+    out
+}
+
 impl BoardTime {
+    /// The fraction as `cmd_clock_read` **prints** it, which is not quite
+    /// [`BoardTime::fraction`]: the C recomputes it inline without the
+    /// `nominal == 0 → active` fallback that `board_sod` applies. On firmware
+    /// reporting no nominal period the printed fraction would be nonsense while
+    /// the offset on the next line stayed right. This firmware always reports
+    /// one, so the two agree; the quirk is reproduced so the lines still match
+    /// if that ever changes.
+    pub fn fraction_as_printed(&self) -> f64 {
+        1.0 - (self.active_period as f64 + 1.0 - self.seccnt as f64)
+            / (self.nominal_period as f64 + 1.0)
+    }
+
     /// The fraction of the current second that has elapsed.
     ///
     /// ⚠️ **This is not the obvious formula, and the obvious one is wrong.**
@@ -260,6 +352,13 @@ mod tests {
         r[16..18].copy_from_slice(&active.to_le_bytes());
         r[18..20].copy_from_slice(&nominal.to_le_bytes());
         r[20] = if slewing { 0x02 } else { 0 };
+        // the status tail, page 1 of rtc_status_fill
+        r[21..23].copy_from_slice(&(-7i16).to_le_bytes()); // last_host_offset
+        r[23..25].copy_from_slice(&(-25i16).to_le_bytes()); // bias in use
+        r[25] = 2; // ref_state
+        r[26] = 4; // sync_age_min
+        r[27] = 3; // sof_epoch
+        r[28..32].copy_from_slice(&123_456_789u32.to_le_bytes());
         r
     }
 
@@ -275,12 +374,124 @@ mod tests {
         assert_eq!(b.nominal_period, 32768);
         assert!(!b.slewing);
         assert!(b.understood());
+        assert_eq!(b.flags, 0);
+        assert_eq!(b.last_host_offset_ms, -7);
+        assert_eq!(b.bias_in_use_ppm, -25);
+        assert_eq!(b.ref_state, 2);
+        assert_eq!(b.sync_age_min, 4);
+        assert_eq!(b.sof_epoch, 3);
+        assert_eq!(b.sof_frames_total, 123_456_789);
     }
 
     #[test]
     fn a_short_report_decodes_to_nothing() {
         assert!(decode(&[0u8; 20]).is_none());
+        assert!(decode(&[0u8; 31]).is_none(), "the C reads up to [31]");
         assert!(decode(&[]).is_none());
+    }
+
+    #[test]
+    fn the_signed_tail_fields_are_signed() {
+        let mut r = reply(true, (0, 0, 0), 0, 1, 1, false);
+        r[21..23].copy_from_slice(&1042i16.to_le_bytes());
+        r[23..25].copy_from_slice(&(-600i16).to_le_bytes());
+        let b = decode(&r).unwrap();
+        assert_eq!(b.last_host_offset_ms, 1042);
+        assert_eq!(b.bias_in_use_ppm, -600);
+    }
+
+    /// The `--read` rendering the Python timekeeper parses, for a synthetic
+    /// reply. Captured replies are compared against the C harness in
+    /// `read_lines_match_the_c_for_captured_replies`.
+    #[test]
+    fn read_lines_render_like_the_c() {
+        let b = decode(&reply(true, (13, 45, 7), 1234, 32767, 32768, true)).unwrap();
+        let text = read_lines(&b, Some((-5.64, 4.02)));
+        assert_eq!(
+            text,
+            "device 2026-09-06 13:45:07+0.038  (cnt 1234 / period 32767, nominal 32768)\n\
+             offset board-host -5.6 ms  rtt 4.0 ms  flags 0x02  ref_state 2  sync_age 4 min  last_host_offset -7 ms\n\
+             sof_epoch 3  sof_frames_total 123456789  bias_in_use -25 ppm\n"
+        );
+        let unset = decode(&reply(false, (0, 0, 0), 0, 32767, 32768, false)).unwrap();
+        assert_eq!(
+            read_lines(&unset, None),
+            "device 2026-09-06 00:00:00+0.000  (cnt 0 / period 32767, nominal 32768)\n\
+             device clock not set\n"
+        );
+    }
+
+    /// ⚠️ **The phase-2 gate: identical captured replies decode identically.**
+    ///
+    /// Three consecutive `RTC_GET_TIME` replies captured with
+    /// `ak820 clock --raw` on 2026-09-06 06:45:52–54, with the host midpoint
+    /// and round trip that command printed, rendered by the pinned C
+    /// (`scripts/clock_oracle.c decode`, which is `cmd_clock_read` verbatim).
+    /// The Rust rendering of the same 32 bytes must match to the byte. The
+    /// fourth row is the board's SET reply decoded as a GET reply — the bytes
+    /// behind the oracle's `+2365966.0 ms` line; see `transaction`.
+    ///
+    /// The host values are `--raw`'s `{:.17}` output verbatim, so that the C
+    /// and this test parse the identical decimal; hence the precision lint.
+    #[test]
+    #[allow(clippy::excessive_precision)]
+    fn read_lines_match_the_c_for_captured_replies() {
+        const CAPTURED: &[(&str, f64, f64, &str)] = &[
+            (
+                "07 10 02 01 1A 09 06 07 06 2D 34 02 5B 1F 00 00 8B 82 8B 82 05 0A 00 E6 FF 02 01 B5 37 C5 E9 02",
+                24352.23825216293334961,
+                4.14156913757324219,
+                "device 2026-09-06 06:45:52+0.240  (cnt 8027 / period 33419, nominal 33419)\n\
+                 offset board-host +1.9 ms  rtt 4.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset 10 ms\n\
+                 sof_epoch 181  sof_frames_total 48874807  bias_in_use -26 ppm\n",
+            ),
+            (
+                "07 10 02 01 1A 09 06 07 06 2D 35 02 E1 23 00 00 8B 82 8B 82 05 0A 00 E6 FF 02 01 B5 1F C9 E9 02",
+                24353.27172446250915527,
+                5.23328781127929688,
+                "device 2026-09-06 06:45:53+0.275  (cnt 9185 / period 33419, nominal 33419)\n\
+                 offset board-host +3.1 ms  rtt 5.2 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset 10 ms\n\
+                 sof_epoch 181  sof_frames_total 48875807  bias_in_use -26 ppm\n",
+            ),
+            (
+                "07 10 02 01 1A 09 06 07 06 2D 36 02 F7 29 00 00 8B 82 8B 82 05 0A 00 E6 FF 02 01 B5 07 CD E9 02",
+                24354.31800699234008789,
+                6.66928291320800781,
+                "device 2026-09-06 06:45:54+0.321  (cnt 10743 / period 33419, nominal 33419)\n\
+                 offset board-host +3.4 ms  rtt 6.7 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset 10 ms\n\
+                 sof_epoch 181  sof_frames_total 48876807  bias_in_use -26 ppm\n",
+            ),
+            (
+                "07 10 03 01 F6 FF 00 00 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+                84034.034,
+                4.0,
+                "device 2246-255-00 00:00:00+0.000  (cnt 0 / period 0, nominal 0)\n\
+                 offset board-host +2365966.0 ms  rtt 4.0 ms  flags 0x00  ref_state 0  sync_age 0 min  last_host_offset 0 ms\n\
+                 sof_epoch 0  sof_frames_total 0  bias_in_use 0 ppm\n",
+            ),
+        ];
+        for (hex, host_mid_sod, rtt_ms, expect) in CAPTURED {
+            let raw: Vec<u8> = hex
+                .split(' ')
+                .map(|h| u8::from_str_radix(h, 16).unwrap())
+                .collect();
+            let board = decode(&raw).unwrap();
+            let measured = board
+                .seconds_of_day()
+                .map(|sod| (offset_ms(sod, *host_mid_sod), *rtt_ms));
+            assert_eq!(&read_lines(&board, measured), expect, "reply {hex}");
+        }
+    }
+
+    /// The printed fraction skips `board_sod`'s zero-nominal fallback. Pinned
+    /// so the rendering keeps matching the C rather than being "fixed".
+    #[test]
+    fn the_printed_fraction_keeps_the_cs_quirk() {
+        let b = decode(&reply(true, (0, 0, 0), 9000, 32767, 0, false)).unwrap();
+        assert!((b.fraction() - 9000.0 / 32768.0).abs() < 1e-12);
+        assert!((b.fraction_as_printed() - (1.0 - (32768.0 - 9000.0))).abs() < 1e-9);
+        let same = decode(&reply(true, (0, 0, 0), 9000, 32767, 32767, false)).unwrap();
+        assert_eq!(same.fraction(), same.fraction_as_printed());
     }
 
     #[test]

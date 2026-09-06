@@ -34,6 +34,8 @@ fn main() -> ExitCode {
         ["selftest"] => selftest(),
         ["probe"] => probe(),
         ["lighting"] => lighting(),
+        ["clock"] => clock(false),
+        ["clock", "--raw"] => clock(true),
         ["watch"] => watch(20),
         ["watch", secs] => secs
             .parse()
@@ -69,8 +71,11 @@ fn usage() {
          \x20 ak820 selftest       exercise the cancellation path and recover\n\
          \x20 ak820 watch [secs]   narrate presence; unplug the cable to see it\n\
          \x20 ak820 probe          what SMTC sees; needs no keyboard\n\
+         \x20 ak820 lighting       RGB values read back off the board\n\
+         \x20 ak820 clock [--raw]  the RTC, as `ak820ctl clock --read` prints it\n\
          \n\
-         Provisioning stays in ak820ctl: it is the only thing that erases flash."
+         Provisioning stays in ak820ctl: it is the only thing that erases flash.\n\
+         Setting the clock stays in the daemon: one owner, or the learner is wrong."
     );
 }
 
@@ -134,6 +139,57 @@ fn info() -> Result<(), String> {
         info.asset_base
     );
     report_drained(&drained);
+    Ok(())
+}
+
+/// One `RTC_GET_TIME`, decoded and printed exactly as `ak820ctl clock --read`
+/// prints it, so the two can be compared on a live board.
+///
+/// **Read-only, and deliberately so.** The SET half of the transaction is
+/// implemented in `clock::transaction` and proven against the fake wire; it is
+/// not reachable from this CLI. Every command here is read-only, and a
+/// one-shot SET from outside the daemon would also invalidate the daemon's
+/// lead baseline — the plan routes such requests *through* the daemon, which
+/// does not exist yet.
+///
+/// ⚠️ Correlation cannot tell another process's GET reply from ours (see the
+/// `clock` module header), so with the Python timekeeper running this can,
+/// rarely, print an offset computed from *its* board sample against our
+/// timestamps. For a printed diagnostic that is a wrong number on screen, the
+/// same exposure `ak820ctl clock --read` has. It must never be how a learner
+/// gets its input.
+///
+/// `--raw` adds the 32 reply bytes, the host seconds-of-day at the transaction
+/// midpoint and the round trip, which is what `scripts/clock_oracle.c decode`
+/// takes to produce the C's rendering of the same reply — the phase-2 gate.
+fn clock(raw: bool) -> Result<(), String> {
+    use ak820_agent::clock::{self, host::SystemHost, transaction};
+    use ak820_agent::hid::device::REQUEST_TIMEOUT;
+
+    let dev = device::open_board().map_err(|e| e.to_string())?;
+    let got = transaction::read_once(&dev, dev.outstanding(), &SystemHost, REQUEST_TIMEOUT)
+        .map_err(|e| e.to_string())?;
+    if !got.board.understood() {
+        return Err(format!(
+            "RTC protocol version {} -- this tool speaks only version {} (ak820ctl clock --read would fall back to its legacy read)",
+            got.board.proto,
+            clock::PROTO_VERSION
+        ));
+    }
+    print!(
+        "{}",
+        clock::read_lines(&got.board, got.sample.map(|s| (s.offset_ms, got.rtt_ms)))
+    );
+    if raw {
+        let hex: Vec<String> = got.report.iter().map(|b| format!("{b:02X}")).collect();
+        println!("raw {}", hex.join(" "));
+        println!("host_mid_sod {:.17}", got.host_mid_sod);
+        println!("rtt_ms {:.17}", got.rtt_ms);
+    }
+    report_drained(&got.drained);
+    if got.sample.is_none() {
+        return Err("the board's clock is not set (ak820ctl clock --read exits 1 here too)".into());
+    }
     Ok(())
 }
 

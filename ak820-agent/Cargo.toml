@@ -43,6 +43,7 @@ features = [
     "Win32_System_Console",                      # the CLI half
     "Win32_System_WinRT",                        # RoInitialize on the media thread
     "Win32_System_SystemInformation",            # GetSystemTimePreciseAsFileTime
+    "Win32_System_Time",                         # FileTimeToSystemTime + SystemTimeToTzSpecificLocalTime: the clock's localtime()
     # WinRT, for the media half (phase 1).
     "Media_Control",
     "Foundation",

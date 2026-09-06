@@ -253,6 +253,33 @@ pub fn exchange(
     budget: Duration,
     on_send: impl FnOnce(Instant),
 ) -> Result<Reply, Error> {
+    exchange_prepared(wire, outstanding, channel, command, budget, |at| {
+        on_send(at);
+        body.to_vec()
+    })
+}
+
+/// As [`exchange`], but the body is **built after the drain**, immediately
+/// before the write.
+///
+/// ⚠️ This is the prepared-transaction API that finding 3 of the phase-0 audit
+/// asked for, and the clock SET cannot be expressed without it. That packet
+/// says "at the instant this was received, true time was `t + ms`", so `t` has
+/// to be read as late as possible. A body built before the pre-drain carries
+/// the drain's whole duration — unbounded from the caller's point of view — as
+/// a lead error, in exactly the direction the lead learner would then
+/// "correct".
+///
+/// `prepare` runs exactly once, only if the request is actually going to be
+/// transmitted, and is handed the instant `ak820ctl` would call `t0`.
+pub fn exchange_prepared(
+    wire: &impl Wire,
+    outstanding: &Outstanding,
+    channel: Channel,
+    command: u8,
+    budget: Duration,
+    prepare: impl FnOnce(Instant) -> Vec<u8>,
+) -> Result<Reply, Error> {
     // ⚠️ Before anything else: has this exact question already been asked and
     // left unanswered? If so its reply is still coming, and it would satisfy
     // this request's matcher perfectly. See `Outstanding`.
@@ -283,7 +310,6 @@ pub fn exchange(
         return Err(Error::Timeout { drained });
     }
 
-    let frame = proto::frame(channel, command, body);
     // ⚠️ **Before** the write, not after it, and this is parity rather than
     // preference. `ak820ctl` takes `t0` immediately before `hid_write` and `t1`
     // after the read returns, then uses the midpoint. Timestamping write
@@ -292,7 +318,8 @@ pub fn exchange(
     // to the oracle by half the write, straight into the lead learner. A
     // deliberate improvement to the measurement is a separate change from
     // reproducing it.
-    on_send(Instant::now());
+    let body = prepare(Instant::now());
+    let frame = proto::frame(channel, command, &body);
     // From here on the board has the command, whatever happens to our read, so
     // the handle owes an answer until one arrives.
     outstanding.note(channel, command);
@@ -355,14 +382,19 @@ fn collect(
     }
 }
 
+/// A scripted [`Wire`], shared by every test in the crate that drives the
+/// request loop — the clock transaction runs against it too.
 #[cfg(test)]
-mod tests {
+pub mod fake {
     use super::*;
     use std::cell::RefCell;
 
     /// A scripted device. Each `reads` entry is one answer to `read_report`:
     /// `Some(bytes)` is a report, `None` is a timeout, and running off the end
     /// keeps timing out.
+    ///
+    /// Remember that every request pre-drains, so a script for one clean
+    /// request is `[None, reply]`, not `[reply]`.
     pub struct Fake {
         reads: RefCell<std::collections::VecDeque<Option<Vec<u8>>>>,
         writes: RefCell<Vec<Vec<u8>>>,
@@ -373,7 +405,7 @@ mod tests {
     }
 
     impl Fake {
-        fn new(reads: Vec<Option<Vec<u8>>>) -> Fake {
+        pub fn new(reads: Vec<Option<Vec<u8>>>) -> Fake {
             Fake {
                 reads: RefCell::new(reads.into()),
                 writes: RefCell::new(Vec::new()),
@@ -383,25 +415,35 @@ mod tests {
                 reads_done: RefCell::new(0),
             }
         }
-        fn idle() -> Fake {
+        pub fn idle() -> Fake {
             Fake::new(vec![])
         }
-        fn failing_after(self, n: usize) -> Fake {
+        pub fn failing_after(self, n: usize) -> Fake {
             *self.fail_reads_after.borrow_mut() = Some(n);
             self
         }
         /// Fail with the one error reopening cannot fix.
-        fn stuck_after(self, n: usize) -> Fake {
+        pub fn stuck_after(self, n: usize) -> Fake {
             *self.fail_reads_after.borrow_mut() = Some(n);
             *self.fail_with_stuck.borrow_mut() = true;
             self
         }
-        fn writes_time_out(mut self) -> Fake {
+        pub fn writes_time_out(mut self) -> Fake {
             self.write_result = Sent::TimedOut;
             self
         }
-        fn written(&self) -> Vec<Vec<u8>> {
+        /// Every frame written, in order, report id included.
+        pub fn written(&self) -> Vec<Vec<u8>> {
             self.writes.borrow().clone()
+        }
+        /// How many reads have been attempted, timeouts included.
+        pub fn reads_done(&self) -> usize {
+            *self.reads_done.borrow()
+        }
+        /// Scripted reads never consumed — a test that expected more requests
+        /// than happened can see it.
+        pub fn unread(&self) -> usize {
+            self.reads.borrow().len()
         }
     }
 
@@ -435,11 +477,17 @@ mod tests {
     }
 
     /// A wire report: report id 0, then the payload.
-    fn report(bytes: &[u8]) -> Option<Vec<u8>> {
+    pub fn report(bytes: &[u8]) -> Option<Vec<u8>> {
         let mut r = vec![0u8; proto::WIRE_LEN];
         r[1..1 + bytes.len()].copy_from_slice(bytes);
         Some(r)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fake::*;
+    use super::*;
 
     const INFO_REPLY: &[u8] = &[0x07, 0x11, 0x01, 0x00, 0x85, 0x60, 0x17, 0xCE];
     /// The now-playing agent's echo, measured on this machine.
@@ -813,6 +861,57 @@ mod tests {
         let reply = exchange(&fake, &Outstanding::new(), Channel::Flash, 0x01, &[], budget(), |_| {}).unwrap();
         assert_eq!(&reply.report[..8], INFO_REPLY);
         assert_eq!(reply.drained.len(), 1);
+    }
+
+    // -- the prepared body ------------------------------------------------
+
+    /// Inside `prepare`, the drain's reads have already happened and nothing
+    /// has been written: two stale reports plus the empty read that proves
+    /// the queue clear, then the body, then the write.
+    #[test]
+    fn the_body_is_built_after_the_drain_and_before_the_write() {
+        let fake = Fake::new(vec![
+            report(TEXT_ECHO),
+            report(TEXT_ECHO),
+            None,
+            report(INFO_REPLY),
+        ]);
+        let mut seen = None;
+        exchange_prepared(&fake, &Outstanding::new(), Channel::Flash, 0x01, budget(), |_| {
+            seen = Some((fake.reads_done(), fake.written().len()));
+            vec![0xAA, 0xBB]
+        })
+        .unwrap();
+        assert_eq!(seen, Some((3, 0)));
+        assert_eq!(&fake.written()[0][..6], &[0x00, 0x07, 0x11, 0x01, 0xAA, 0xBB]);
+    }
+
+    /// A refused request — dirty queue, or an identical command still owed —
+    /// never asks for a body, so a clock SET's timestamp is never taken for a
+    /// packet that will not leave.
+    #[test]
+    fn nothing_is_prepared_for_a_request_that_is_refused() {
+        let fake = Fake::new(vec![report(TEXT_ECHO); DRAIN_LIMIT + 1]);
+        let mut prepared = false;
+        let _ = exchange_prepared(&fake, &Outstanding::new(), Channel::Rtc, 0x03, budget(), |_| {
+            prepared = true;
+            vec![]
+        });
+        assert!(!prepared);
+
+        let outstanding = Outstanding::new();
+        let a = Fake::new(vec![None]);
+        let _ = exchange(&a, &outstanding, Channel::Rtc, 0x03, &[], Duration::from_millis(20), |_| {});
+        let b = Fake::new(vec![None]);
+        let mut prepared = false;
+        let err = exchange_prepared(&b, &outstanding, Channel::Rtc, 0x03, budget(), |_| {
+            prepared = true;
+            vec![]
+        })
+        .unwrap_err();
+        assert!(matches!(err, Error::Unresolved { .. }));
+        assert!(!prepared);
+        assert!(b.written().is_empty());
     }
 
     /// The command really is framed the way the firmware parses it.
