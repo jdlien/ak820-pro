@@ -27,6 +27,7 @@ fn main() -> ExitCode {
         ["list", "--caps"] => list(true),
         ["info"] => info(),
         ["selftest"] => selftest(),
+        ["probe"] => probe(),
         ["watch"] => watch(20),
         ["watch", secs] => secs
             .parse()
@@ -61,6 +62,7 @@ fn usage() {
          \x20 ak820 info           flash id + writable base\n\
          \x20 ak820 selftest       exercise the cancellation path and recover\n\
          \x20 ak820 watch [secs]   narrate presence; unplug the cable to see it\n\
+         \x20 ak820 probe          what SMTC sees; needs no keyboard\n\
          \n\
          Provisioning stays in ak820ctl. Nothing here erases or writes flash."
     );
@@ -191,6 +193,74 @@ fn watch(seconds: u64) -> Result<(), String> {
     }
     if repeats > 0 {
         println!("       ... x{}", repeats + 1);
+    }
+    Ok(())
+}
+
+/// Every media session Windows can see, and what we would make of them.
+///
+/// **Touches no keyboard at all** — it is the answer to "why doesn't <app> show
+/// up on the LCD?", and the answer is usually that the app registers no SMTC
+/// session, which is an app-side plug-in question rather than anything this
+/// program can fix.
+///
+/// It also prints the chosen session and the exact bytes that would go on the
+/// wire, so the ranking rules and the ASCII folding can be checked against a
+/// real desktop rather than only against fixtures.
+fn probe() -> Result<(), String> {
+    use ak820_agent::smtc;
+
+    let sessions = smtc::worker::poll_once().map_err(|e| format!("SMTC unavailable: {e}"))?;
+    if sessions.is_empty() {
+        println!("No SMTC sessions at all. Start playback in an app and re-run.");
+        println!("An app that never appears here registers no session, which is an");
+        println!("app-side question rather than something this agent can reach.");
+        return Ok(());
+    }
+
+    println!("{} SMTC session(s):\n", sessions.len());
+    for s in &sessions {
+        let rank = match smtc::rank(s) {
+            Some((0, _)) => "candidate (playing)",
+            Some(_) => "candidate (paused)",
+            None => "not a candidate",
+        };
+        println!("  app      : {}{}", s.app_id, if s.is_current { "   <- current session" } else { "" });
+        println!("  status   : {:?}  -- {rank}", s.status);
+        println!("  title    : {:?}", s.title);
+        println!("  artist   : {:?}", s.artist);
+        match &s.timeline {
+            Some(t) => println!(
+                "  timeline : {:.0}s / {:.0}s, updated {}",
+                t.position_s - t.start_s,
+                t.end_s - t.start_s,
+                match t.age_s {
+                    Some(a) => format!("{a:.1}s ago"),
+                    None => "never".into(),
+                }
+            ),
+            None => println!("  timeline : (none reported)"),
+        }
+        println!();
+    }
+
+    let snap = smtc::snapshot(&sessions);
+    if snap.is_idle() {
+        println!("chosen   : none -- the band would be cleared");
+        return Ok(());
+    }
+    println!("chosen   : {:?} {:?}", snap.icon, snap.title);
+    println!("           {} / {} s", snap.pos_s, snap.dur_s);
+    println!("\nwhat would go on the wire:");
+    for (command, body) in smtc::reports(&snap) {
+        let frame = ak820_agent::proto::frame(ak820_agent::proto::Channel::Text, command, &body);
+        let hex: Vec<String> = frame[..12].iter().map(|b| format!("{b:02X}")).collect();
+        let text: String = body
+            .iter()
+            .skip(2)
+            .map(|&b| if (0x20..0x7F).contains(&b) { b as char } else { '.' })
+            .collect();
+        println!("  {} ...   {text:?}", hex.join(" "));
     }
     Ok(())
 }
