@@ -184,6 +184,17 @@ from `before`). The likeliest cause is a different asymmetry between this
 transport's write and read paths, which the min-RTT selection sees differently
 from a single sample. Open in [BACKLOG.md](BACKLOG.md).
 
+**The firmware's stall counters, the reason the health keys exist.** The
+unexplained ≥25 ms count sat at 12 from 08:39 to 14:39 under the Python and
+read 16 at 15:31, 51 minutes into the daemon's ownership; the ≥10 ms count
+rose by 25 in that window against 26 in the six hours before. A 7-minute poll
+of the counters every 5 s bracketing the 15:36:46 sync — a whole transaction,
+the status read, the media pushes and 267 key presses — saw **no movement at
+all**, so a sync does not add a stall and neither does ordinary typing. The
+four remain unattributed; that window also held the daemon's restart, the
+installer tests and several hand-run health reads. `health_stall_ge_25ms_nonflash`
+in the status file is the running comparison from here on.
+
 Not yet exercised: suspend/resume and battery, and the rollback itself. The
 rollback's *refusals* are: the PowerShell installer run against the
 clock-owning daemon threw its refusal before touching anything, and its
