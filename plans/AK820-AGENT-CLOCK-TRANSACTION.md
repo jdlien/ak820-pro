@@ -201,3 +201,74 @@ Fixtures, not live hardware, for all of this:
 7. Cache round-trip: short file, out-of-range lead, out-of-range bias, absent
    file, and the two write forms.
 8. The reported line reproduced byte for byte, because Python parses it.
+
+## Port status (2026-09-06): proven, and where
+
+All eight, over the fake wire (`hid::exchange::fake`), a scripted host clock
+(`clock::host::FakeHost`) and an in-memory cache (`clock::cache::MemCache`).
+The fixtures are the **pinned C's own output**, produced by
+`scripts/clock_oracle.c` — the functions above copied verbatim and compiled
+with the mingw64 gcc that builds `ak820ctl.exe` — rather than a reading of the
+C.
+
+| # | Proven by |
+|---|---|
+| 1 | `clock::tests::inside_a_shortened_period_the_naive_fraction_would_be_wrong`; and `read_lines_match_the_c_for_captured_replies` — three real replies rendered identically by the C and the port |
+| 2 | `clock::tests::midnight_wraps_both_ways`, `the_wrap_boundary_is_exactly_half_a_day` |
+| 3 | `clock::tests::the_lowest_round_trip_wins`, `uncertainty_is_half_the_spread_plus_a_half`, `any_slewing_sample_flags_the_whole_burst`; end to end in `transaction::tests::a_clean_transaction_end_to_end` (rtts 4, 6, 2, 5, 7 → the third, `U = 3.0`) |
+| 4 | `clock::set::tests::the_packet_for_a_known_target` (all fifteen bytes), `milliseconds_are_little_endian_and_clamped`, `an_unknown_bias_is_the_sentinel_not_zero`, `a_negative_bias_is_twos_complement_little_endian` |
+| 5 | `clock::lead::tests`, one test per gate and per clamp |
+| 6 | `transaction::tests::a_stale_read_retries_the_set_once_with_a_fresh_timestamp` (the retry carries a **new** `t_enc`), `a_stale_read_twice_fails_without_a_third_attempt`, `a_rejected_set_is_not_retried` |
+| 7 | `clock::cache::tests::parse_matches_the_c_on_every_oracle_row` and `resaving_what_was_loaded_matches_the_c_byte_for_byte` — forty inputs through the real `fscanf`; plus `the_lead_prints_like_printf_percent_point_3f` for the ties |
+| 8 | `transaction::tests::the_line_matches_one_the_oracle_actually_logged` (a line from the timekeeper's log), `the_formats_round_like_printf` (the CRT's `%+.1f` / `%.2f` on the boundary values), `python_sees_the_rounded_before_not_the_measured_one` |
+
+The two couplings called out above are types, not comments:
+`Outcome::as_reported()` derives `before` and `slewing` **from the printed
+text** by Python's own rules — regex for one, the two substring tests for the
+other — so a scheduler port cannot accidentally decide on the full-precision
+value.
+
+### ⚠️ `xfer()` did it, and the log shows it
+
+The hazard described under "Before porting any of this" has an instance in the
+oracle's own log. On 2026-09-05 at 23:20:34 the timekeeper recorded
+
+```
+warning: residual +2365966.0 ms exceeds 3U -- lead still calibrating, or a slew is in progress
+```
+
+`+2365966.0 ms = (86400 − 84034.034) × 1000`: a board seconds-of-day of
+exactly zero against a host at 23:20:34.034. A SET reply has every time field
+zeroed, so decoded **as a GET** it reads as a set clock at 00:00:00 with
+`cnt = per = pnom = 0` — seconds-of-day zero, exactly. So: the SET's `xfer()`
+took a foreign report (a now-playing echo with `0` at `[3]`, read as "stepped",
+`o' = 0`), and the verify GET took the board's **real SET reply** — same
+channel, command byte unchecked. Nothing was learned only because `st == 0`
+closed the lead gate, and Python saw `slewing = False` only because the
+warning fired. `scripts/clock_oracle.c decode` reproduces the number from those
+bytes; `transaction::tests::the_oracles_2365966_ms_line_reproduced` pins what
+the port does with the same traffic (drains the echo, takes both real replies)
+and why the oracle printed what it did.
+
+### Where the port deliberately differs
+
+| The C | The port | Why |
+|---|---|---|
+| a `nan` lead passes both range checks (NaN compares false), is used as `t_enc + nan/1000`, and is written back as `nan` | reset to 1.5, like `inf` | the C's path is undefined behaviour at `(time_t)` |
+| `%lf` reads hexadecimal floats | the scan stops at the `x` | no writer of the file emits one |
+| a `0xFF` unhandled echo of our own SET: `st = rep[3]` read off the echoed request | the transaction aborts | unreachable on matching firmware; recorded so nobody restores it as parity |
+| `cap_save` before the verify GET | after it | unobservable; the outcome carries the saved value |
+| `%d` reads `12.5` as `12` | same as the C | ⚠️ the *Python* oracle's `int("12.5")` raises here, so the two oracles already disagree; the file's owner wins |
+
+Kept although an improvement is obvious: the round trip is a **wall-clock**
+difference (`now_s()` twice), so a wall-clock step during a GET produces the
+same nonsense in both. A monotonic RTT is a change to land after parity is
+proven, not before.
+
+### Not ported
+
+The legacy whole-second set (`cmd_clock_legacy`), taken when the board reports
+protocol version 0. The port reproduces the C's side effect — the cache is
+written with `proto 0` — and then declines with `Error::LegacyFirmware`.
+`ak820ctl clock` still performs it, and no firmware in this tree reports
+version 0.

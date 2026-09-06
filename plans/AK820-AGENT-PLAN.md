@@ -1,10 +1,10 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PHASES 0 AND 1 COMPLETE AND AUDITED; PHASE 2 STARTED** (2026-09-06). Planned and revised the same day
+Status: **PHASES 0 AND 1 COMPLETE AND AUDITED; PHASE 2 GATED, ITS AUDIT OWED; PHASE 3'S CODE WRITTEN AHEAD OF ITS GATE** (2026-09-06). Planned and revised
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
-(gpt-6-astra, xhigh), then built and gated the same day.
+(gpt-6-astra, xhigh), then built and gated phase by phase.
 
-Crate at `ak820-agent/`, **150 unit tests plus a 2,309-case parity fixture**;
+Crate at `ak820-agent/`, **225 unit tests plus a 2,309-case parity fixture**;
 `cargo test` from that directory.
 
 - `hid::path` — bounded path matching, so discovery narrows to this board
@@ -31,8 +31,15 @@ Crate at `ak820-agent/`, **150 unit tests plus a 2,309-case parity fixture**;
 - `hid::exchange` — the request loop over a two-method `Wire` trait, with a
   scripted fake. This is where the drain rule, reply correlation and the
   unanswered-command rule are actually *tested*.
-- `clock` — the measurement half: GET decode, the fraction formula, midnight
-  wrap, min-RTT selection.
+- `clock` — the whole of `ak820ctl clock`: GET decode, the fraction formula,
+  `wrap_day`, min-RTT selection and the `--read` rendering (`mod.rs`); the
+  wall clock and `localtime` behind a `Host` trait (`host`); the SET packet
+  and its reply (`set`); the outbound-lead learner (`lead`); the capability
+  cache byte for byte, `fscanf`'s rules included (`cache`); and the
+  transaction itself over the fake wire, producing the line Python parses
+  (`transaction`). Its fixtures are the pinned C's **own output**
+  (`scripts/clock_oracle.c`, compiled with the gcc that builds `ak820ctl`),
+  not a reading of it.
 
 **The phase-0 gate is met in full** — see
 [Phase 0 evidence](#phase-0-evidence-2026-09-05) for the measurements and
@@ -67,15 +74,27 @@ rather than confirming them:
 - [Phase 0 audit disposition](#phase-0-audit--disposition-2026-09-06) — what an
   independent read found in the transport, and what is still owed.
 
-**Phase 2 has started.** Done: the **fake wire** the phase-0 audit asked for
-(`hid::exchange`, so the request loop and cancellation branches are testable
-without a keyboard), and the **clock read** — decode, the fraction formula,
-`wrap_day`, min-RTT selection — ported expression by expression from the C.
+**Phase 2 is gated** (2026-09-06) — the fake wire, the clock read, and
+`ak820 clock [--raw]`. Three captured replies render byte-identically through
+the pinned C and the port; see [Phase 2 evidence](#phase-2-evidence-2026-09-06).
+⚠️ **Its audit is owed**: the run stopped on the owner's Codex usage limit
+mid-review, with no findings delivered — see
+[Phase 2 audit disposition](#phase-2-audit--disposition-2026-09-06) for the
+transcript and the exact command to re-run. Under the standing rule the phase
+is not done until that has happened.
 
-**Next: the clock transaction** — the SET packet, the `0xFE` retry, the lead
-learner and the capability cache, per
-[AK820-AGENT-CLOCK-TRANSACTION.md](AK820-AGENT-CLOCK-TRANSACTION.md). It needs
-no hardware until its gate.
+**Phase 3's code is written ahead of its gate:** the whole clock transaction —
+SET packet, `0xFE` retry, lead learner, capability cache, the reported line —
+over the fake wire, a scripted host clock and an in-memory cache, per
+[AK820-AGENT-CLOCK-TRANSACTION.md](AK820-AGENT-CLOCK-TRANSACTION.md). What
+remains of phase 3 is its gate: the scheduler and SOF-bias learner from
+[AK820-AGENT-CLOCK-PARITY.md](AK820-AGENT-CLOCK-PARITY.md), deterministic
+replay against captured oracle inputs, then the measured takeover. ⚠️ The
+transaction has never touched hardware, deliberately: the CLI stays read-only
+until the daemon owns the interface, and a one-shot SET beside the Python
+timekeeper would corrupt both learners.
+
+**Next: the scheduler and the SOF-bias learner**, then the replay corpus.
 
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.
@@ -164,7 +183,9 @@ ak820-agent/
     hid/          path (open nothing), caps, device (Win32), exchange (the
                   request loop, over a Wire trait, with a scripted fake)
     proto.rs      channels, packet builders, reply validation
-    clock/        transaction (C contract) + scheduler/learner (Python contract)
+    clock/        mod (read), host, set, lead, cache, transaction (the C
+                  contract, done); scheduler + SOF learner (Python contract)
+                  to come
     text/         line/icon/playback packets, ASCII folding + generated table
     smtc/         ranking and timeline (pure) + worker (WinRT, own MTA thread)
     health.rs     counters
@@ -319,8 +340,8 @@ environment underneath it.
 |---|---|---|
 | 0 ✅ | HID discovery, transport, `ak820 info` | Same JEDEC id and writable base as `ak820ctl info`; **plus** wrong-interface and malformed-report rejection, timeout/unplug/cancellation, traced opens showing nothing unrelated was touched, and VIA coexistence measured. — **all met 2026-09-05**, [evidence](#phase-0-evidence-2026-09-05). |
 | 1 ✅ | `text/`, `smtc/`, `ak820 probe` | **Met 2026-09-06.** Captured competing sessions, the current-session tiebreak, absent metadata and timeline, a track change, Unicode folding and both line budgets — three real captures pinned as tests, plus a 2,309-case folding fixture. | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
-| 2 ~ | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) |
-| 3 | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. |
+| 2 ✅ gate · audit owed | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) — **Met 2026-09-06**: three captured replies, plus the SET-reply-as-GET bytes behind the oracle's own bad line, render byte-identically through the pinned C and the port. [Evidence](#phase-2-evidence-2026-09-06). |
+| 3 ~ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **Code and C-transaction fixtures done 2026-09-06** (`clock::transaction`, `set`, `lead`, `cache`); the scheduler, the replay and the takeover are open. |
 | 4 | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. |
 | 5 | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command — the firmware echoes the requested page in byte 3, so a foreign reply for another page would otherwise be decoded with this page's layout. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. |
 | 6 | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. |
@@ -578,6 +599,161 @@ It also **re-checked the phase-0 fixes**, which is where findings 3 and the
 **Not fixed, and stated rather than quietly carried:** the WinRT waits are still
 unbounded (`windows-future` 0.3.2 has only `join()`). The reasoning and its cost
 are in `smtc/worker.rs`'s header; the audit did not dispute it.
+
+### Phase 2 evidence (2026-09-06)
+
+**The gate is met by construction, not by eye.** `scripts/clock_oracle.c`
+carries the pinned C's `cap_load`, `cap_save`, `board_sod`, `wrap_day` and
+`cmd_clock_read` **verbatim**, compiled with the mingw64 gcc that builds
+`ak820ctl.exe` (⚠️ mingw64 first on `PATH`, or the xpack toolchain's DLLs make
+gcc fail with no output at all — the trap from `docs/hardware.md`, met again).
+Three consecutive replies captured with `ak820 clock --raw` at 06:45:52–54,
+together with the host midpoint and round trip that command prints, render
+byte-identically through the C's `decode` mode and through `clock::read_lines`.
+Pinned as `read_lines_match_the_c_for_captured_replies`. Live, `ak820ctl clock
+--read` and `ak820 clock` back to back print the same three lines with values a
+second apart.
+
+The same harness generated **every** cache and printf fixture: forty `fscanf`
+inputs with what `cap_load` made of each and what `cap_save` wrote back, and
+the `%.3f` / `%+.1f` / `%.2f` renderings Python parses, ties included
+(`0.0625 → 0.062`, `12.25 → +12.2`, `0.45 → +0.5`). Rust's formatter agrees on
+all of them, which is what makes the shared cache file *the same file* from
+both sides. Three things the harness showed that reasoning would not have: this
+CRT's `%d` **saturates** an overflowing integer to `INT_MAX`; `%d` reads `12.5`
+as `12` where Python's `int()` raises, so the two oracles already disagree on a
+malformed file (the C, as the file's owner, wins); and a lead of `nan`
+**survives** the C's range check and is written back as `nan` — the one input
+on which the port deliberately diverges.
+
+**`localtime` parity** is a sweep, not a sample: `SystemHost::local` against
+the CRT's own `_localtime64_s`, every 3601 s from 2026 to 2099 (~640,000
+instants, every DST transition inside), on this machine's zone.
+
+**Phase 3's code is written ahead of its gate.** The whole of `cmd_clock` —
+five GETs, min-RTT, the SET with the learned lead, `0xFE` retried once with a
+fresh `t_enc`, `0xFF` fatal, the lead learner behind its four gates, the cache
+written with `proto 2` whether or not the lead moved, the verify, the reported
+line and the warning — runs over the fake wire, a scripted host clock and an
+in-memory cache. The happy path asserts the seven frames on the wire, the SET
+packet's fifteen bytes, the learned lead, the cache bytes and the line; every
+failure branch asserts what was and was not sent, and what was and was not
+saved. The Python-facing coupling is a type: `Outcome::as_reported()` derives
+`before` and `slewing` **from the printed text** by Python's own rules, so a
+scheduler port decides on the one-decimal value at the 60 ms and 400 ms
+thresholds, as the transaction document requires.
+
+**The prepared-transaction API** that finding 3 of the phase-0 audit asked for
+exists: `exchange_prepared` builds the body after the drain and immediately
+before the write, and a test observes the drain's reads complete and nothing
+yet written at the instant the body is built. The SET's `t_enc` is read there.
+
+#### ⚠️ The oracle's `xfer()` was caught in the act, in its own log
+
+The timekeeper logged, on 2026-09-05 at 23:20:34:
+
+```
+sync (periodic): warning: residual +2365966.0 ms exceeds 3U -- lead still calibrating, or a slew is in progress
+```
+
+`+2365966.0 ms` is `(86400 − 84034.034) × 1000`: a board seconds-of-day of
+**exactly zero** against a host at 23:20:34.034. A `RTC_SET_TIME_MS` reply has
+every time field zeroed (`memset(&data[3], 0, 29)`), so decoding one as a GET
+reply gives a set clock at 00:00:00 with `cnt = per = pnom = 0` — seconds-of-day
+zero, to the decimal. The sequence: the SET's `xfer()` consumed a foreign
+report — the now-playing agent's `TEXT_CLEAR` or `TEXT_PLAYBACK` echo, which has
+a zero at `[3]` and so read as "stepped" with `o' = 0` — and the verify GET
+then consumed the board's **real SET reply**, same channel, command byte never
+checked. Two wrong answers printed with confidence; nothing learned from
+either only because `st == 0` happened to close the lead gate, and Python read
+`slewing = False` only because the warning fired.
+
+That is the off-by-one desync this plan described for VIA, on the oracle's own
+clock path, in production. The C harness reproduces the number from those
+bytes, and `the_oracles_2365966_ms_line_reproduced` pins both halves: the port
+drains the echo and takes the real replies; and the oracle's arithmetic on the
+same bytes yields `+2365966.0`.
+
+**Deliberate divergences from the C**, each pinned as a test that says what the
+C does instead:
+
+| Where | The C | The port | Why |
+|---|---|---|---|
+| cache, `nan` lead | kept, used, written back | reset to 1.5 | the C's path ends in `(time_t)NaN` |
+| cache, hex float `0x1p-1` | read as 0.5 | scan stops at `x` | no writer of the file emits it |
+| a `0xFF` unhandled echo of our own command | reads `st = rep[3]` off the echoed request | aborts | unreachable on matching firmware; recorded so it is not restored as parity |
+| cache write | before the verify GET | after it | unobservable; lets the outcome carry the saved value |
+
+**Kept for parity although an improvement is obvious:** the round trip is a
+wall-clock difference, as in the C. A monotonic RTT would be better and is not
+parity; it belongs after parity is proven.
+
+**What the CLI does and does not do.** `ak820 clock [--raw]` reads once and
+prints exactly what `ak820ctl clock --read` prints; `--raw` adds the 32 bytes
+and the host midpoint the harness needs. There is **no CLI SET**, on purpose:
+every `ak820` command is read-only, and the plan says a one-shot SET outside
+the daemon invalidates the daemon's lead baseline and must be routed through
+it. The transaction is reachable from library code and tests only until the
+daemon exists.
+
+**Carried into phase 3:** the cache's default path is settled as the
+timekeeper's agreed home, `%USERPROFILE%\.ak820ctl-cap`, resolved without the
+`HOME` export the C needs; whether to `resynchronise` after a timed-out GET is
+the scheduler's decision, and `run()` leaves the debt on the handle rather than
+spending a quarter second on its own; and the replay corpus format is still to
+be designed alongside the scheduler.
+
+### Phase 2 audit — disposition (2026-09-06)
+
+**Incomplete. No findings were delivered, and none are recorded as absent.**
+
+The run — the standing command, gpt-6-astra at xhigh, read-only with full disk
+read — was launched at 06:53 and stopped after ~109k tokens on the owner's
+Codex usage limit (`try again at 10:02 AM`). Its transcript and the prompt it
+was given are kept verbatim in
+[review-codex-phase2-2026-09-06.md](review-codex-phase2-2026-09-06.md). Before
+it stopped it had read the transaction against the C and reported, in its own
+interim words, that *"the normal-path arithmetic and packet layout match the C
+so far"*, and named what it was about to check next: whether unresolved
+requests survive later commands, whether SET preparation can stall after
+timestamping, and what the CRT fixtures actually prove. Those three are
+exactly the boundaries an audit earns its keep on, and they were not reached.
+As in phase 1, its shell could not start, so it worked from file reads.
+
+Two of the three were re-read by the author in the meantime and pinned, which
+is not a substitute for the audit and is recorded so the audit can start from
+them rather than at zero:
+
+- **Unresolved requests across commands — and a real bug in the phase-1
+  fix.** Writing the test for a lost SET found that `Outstanding` held a
+  **single slot**: the next transmitted command overwrote the debt, so a lost
+  GET followed by a lost SET forgot the GET, and a third request could be
+  answered by the first one's straggler. The phase-1 disposition's sentence
+  — "refused until an explicit `resynchronise` accounts for it" — described a
+  property the code did not have, the same class the last two audits found.
+  **Fixed:** a set of debts, retired one at a time by their own reply and
+  all at once only by `resynchronise`; a later *different* command
+  succeeding retires nothing else. Pinned by
+  `two_consecutive_lost_commands_are_both_remembered` and, at the
+  transaction level, `a_silent_set_leaves_a_debt_that_refuses_the_next_set`:
+  a lost SET lets the next transaction's five GETs out and then refuses its
+  SET until the handle is resynchronised. A timed-out GET aborts before any
+  SET; a timed-out verify leaves a GET debt that refuses the next
+  transaction's first GET. In every case the cache is not written.
+- **Stalling after the timestamp.** Between `t_enc` and `WriteFile` there is
+  `split_target`, one `localtime` (two user-mode Win32 conversions) and the
+  twelve-byte body; the C has the same `localtime` in the same place.
+- Found in the same pass and fixed: `select` initialised `rtt_max` to negative
+  infinity where the C uses zero. Identical on every real burst; different
+  `U` if a wall-clock step made every round trip negative. Made literal, with
+  a test.
+- Stated rather than assumed, in `host.rs`: the CRTs honour `TZ` and Win32
+  does not; nothing here sets one, and the parity sweep would fail loudly on a
+  machine that does.
+
+**To finish the phase:** re-run the command in the review file after the quota
+resets, save the verbatim output over that file, and replace this section with
+the disposition table.
 
 ### Every phase ends with an external audit
 
