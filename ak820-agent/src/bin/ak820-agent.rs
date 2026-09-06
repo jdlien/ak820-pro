@@ -15,8 +15,12 @@
 //! the clock until it is.
 //!
 //! ```text
-//! ak820-agent [--log PATH] [--status PATH] [--interval SECS] [--once]
+//! ak820-agent [--log PATH] [--status PATH] [--interval SECS] [--once] [--clock]
 //! ```
+//!
+//! `--clock` runs the clock loop as well. `ak820 install --clock` is the only
+//! thing that should pass it, because it also removes the Python timekeeper's
+//! task: two clock writers silently corrupt each other's learners.
 #![windows_subsystem = "windows"]
 
 use std::time::Duration;
@@ -32,6 +36,7 @@ fn main() {
         log: dir.join("ak820-agent.log"),
         status: dir.join("ak820-agent.status"),
         once: false,
+        clock: false,
     };
 
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -56,6 +61,10 @@ fn main() {
             }
             "--once" => {
                 opts.once = true;
+                i += 1;
+            }
+            "--clock" => {
+                opts.clock = true;
                 i += 1;
             }
             other => bail(&opts.log, &format!("unknown argument {other:?}"), 2),

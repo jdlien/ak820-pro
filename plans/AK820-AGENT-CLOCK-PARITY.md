@@ -260,3 +260,32 @@ part of a safety gate.
 until the Rust daemon has run clean for a week. It is the reference
 implementation, macOS uses it regardless, and it is the only thing that can
 settle "did the port change this, or did the hardware?"
+
+## Port status (2026-09-06)
+
+Everything above is ported verbatim in `ak820-agent/src/clock/scheduler.rs`
+— constants, the three triggers in their order, the interval rule with the
+unknown-residual case, the learner's every gate including the narrower hold
+condition and the `P None` print, the seed's reset/restart/measure and its
+strict `±600`, banker's rounding via `f64::round_ties_even`, and the mixed
+time sources (wall for scheduling and the seed, monotonic for `elapsed`,
+taken before the status read). One unit test per gate and boundary.
+
+**3a, the replay, is met** against this machine's own timekeeper log
+(`ak820-agent/tests/timekeeper_replay.rs` over
+`tests/fixtures/ak820pro-timekeeper-2026-09-05.log`): all 108 `bias learned`
+lines reproduced — 98 byte-identical at the printed elapsed, the other ten
+within the half-second the whole-second print hides — all 59 `bias hold`
+lines byte-identical, and all 171 interval choices confirmed by when the
+next sync actually happened. That is the positive evidence this document
+asks for. What the log cannot give, the test states: `ref_state` is assumed
+2 where learning fired, and `elapsed` is replayed at printed precision.
+
+**3b, the measured takeover, is open** and is the owner's: `ak820 install
+--clock`, the procedure and limits in the plan's "Phase 3a evidence".
+
+Two divergences from the Python, both already recorded for the C side: the
+cache is parsed by the C's `fscanf` rules, so a bias written as `12.5` reads
+as `12` where Python's `cap_read()` would return `None` and decline to learn;
+and the `--bias` persistence file `~/.ak820ctl-bias.json` is not written —
+nothing reads it.

@@ -93,6 +93,39 @@ pub fn timekeeper_running() -> Result<Option<bool>, String> {
     Ok(state(FOLDER, TIMEKEEPER)?.map(|s| s == State::Running))
 }
 
+/// The `<Arguments>` a registered task runs its command with, `None` when
+/// the task is not registered or has none. Read back from the scheduler's
+/// own XML, so it says what is actually registered rather than what an
+/// earlier `install` meant to register.
+pub fn arguments(folder: &str, name: &str) -> Result<Option<String>, String> {
+    with_service(|service| {
+        let Some(task) = get_task(service, folder, name)? else {
+            return Ok(None);
+        };
+        let xml = unsafe { task.Xml() }.map_err(|e| format!("xml of {name}: {e}"))?;
+        let xml = xml.to_string();
+        Ok(between(&xml, "<Arguments>", "</Arguments>").map(xml_unescape))
+    })
+}
+
+/// Does the daemon's registered task run the clock loop?
+pub fn agent_owns_clock() -> Result<bool, String> {
+    Ok(arguments(FOLDER, AGENT)?.is_some_and(|a| a.split_whitespace().any(|w| w == "--clock")))
+}
+
+fn between<'a>(s: &'a str, after: &str, before: &str) -> Option<&'a str> {
+    let i = s.find(after)? + after.len();
+    let rest = &s[i..];
+    Some(&rest[..rest.find(before)?])
+}
+
+fn xml_unescape(s: &str) -> String {
+    s.replace("&quot;", "\"")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+}
+
 // ---------------------------------------------------------------------------
 // Registration, from XML
 // ---------------------------------------------------------------------------
@@ -409,6 +442,17 @@ mod tests {
             working_directory: "C:\\Users\\jdlien\\code\\ak820-pro",
         });
         assert_eq!(xml, EXPORTED);
+    }
+
+    #[test]
+    fn arguments_of_an_unregistered_task_are_none() {
+        assert_eq!(arguments(FOLDER, "AK820Pro-no-such-task-4f2a").unwrap(), None);
+    }
+
+    #[test]
+    fn unescaping_reverses_escaping() {
+        let raw = "--log \"C:\\a & b\\log\" <x>";
+        assert_eq!(xml_unescape(&xml_escape(raw)), raw);
     }
 
     #[test]

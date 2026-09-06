@@ -1,0 +1,367 @@
+2026-09-05 11:36:09 timekeeper start
+2026-09-05 11:36:11 sync (enumerated): clock set (sub-second): before -4.3 ms, after -4.0 ms, rtt 4.7 ms, U ~0.7 ms, lead now 1.57 ms, bias unknown (slewing)
+2026-09-05 11:39:24 timekeeper start
+2026-09-05 11:39:26 sync (enumerated): clock set (sub-second): before -19.8 ms, after -19.7 ms, rtt 4.0 ms, U ~2.2 ms, lead now 2.03 ms, bias unknown (slewing)
+2026-09-05 11:44:30 sync (periodic): clock set (sub-second): before -25.9 ms, after -24.7 ms, rtt 4.0 ms, U ~1.8 ms, lead now 3.00 ms, bias unknown (slewing)
+2026-09-05 11:44:30 bias hold: P 33397 -> 33372 since the last sync (loop still moving); residual -25.9 ms not learned
+2026-09-05 11:49:33 sync (periodic): clock set (sub-second): before -39.8 ms, after -39.8 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.96 ms, bias unknown (slewing)
+2026-09-05 11:49:33 bias hold: P 33372 -> 33345 since the last sync (loop still moving); residual -39.8 ms not learned
+2026-09-05 11:54:36 sync (periodic): clock set (sub-second): before -26.7 ms, after -24.2 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.87 ms, bias unknown (slewing)
+2026-09-05 11:54:37 bias hold: P 33345 -> 33315 since the last sync (loop still moving); residual -26.7 ms not learned
+2026-09-05 11:57:45 timekeeper start
+2026-09-05 11:57:47 sync (enumerated): clock set (sub-second): before -15.7 ms, after -15.3 ms, rtt 5.0 ms, U ~1.7 ms, lead now 2.55 ms, bias unknown (slewing)
+2026-09-05 12:02:48 sync (periodic): clock set (sub-second): before +4.6 ms, after +5.1 ms, rtt 4.0 ms, U ~1.2 ms, lead now 2.90 ms, bias unknown (slewing)
+2026-09-05 12:02:48 bias hold: P 33299 -> 33292 since the last sync (loop still moving); residual +4.6 ms not learned
+2026-09-05 12:07:50 sync (periodic): clock set (sub-second): before -0.8 ms, after -0.5 ms, rtt 4.0 ms, U ~2.2 ms, lead now 2.85 ms, bias unknown (slewing)
+2026-09-05 12:12:51 sync (periodic): clock set (sub-second): before +4.6 ms, after +4.7 ms, rtt 3.7 ms, U ~2.0 ms, lead now 2.70 ms, bias unknown (slewing)
+2026-09-05 12:12:51 bias: F=903989 H=903.5s b=+566.0 ppm (controller b'\\\\?\\HID#VID_0C45&PID_8009&MI_00#e&36276d8e&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}\\KBD'|b'\\\\?\\HID#VID_0C45&PID_8009&MI_01#e&12502fcc&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}'|b'\\\\?\\HID#VID_0C45&PID_8009&MI_02&Col01#e&11870df6&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}'|b'\\\\?\\HID#VID_0C45&PID_8009&MI_02&Col02#e&11870df6&0&0001#{4d1e55b2-f16f-11cf-88cb-001111000030}'|b'\\\\?\\HID#VID_0C45&PID_8009&MI_02&Col03#e&11870df6&0&0002#{4d1e55b2-f16f-11cf-88cb-001111000030}\\KBD') cached
+2026-09-05 12:17:51 sync (periodic): clock set (sub-second): before +1.3 ms, after +1.7 ms, rtt 4.0 ms, U ~2.2 ms, lead now 2.62 ms, bias sent (slewing)
+2026-09-05 12:17:51 bias learned: before +1.3 ms over 300 s = board -4 ppm slow; b +566 -> +567 ppm (P 33285)
+2026-09-05 12:22:51 sync (periodic): clock set (sub-second): before -123.4 ms, after -123.3 ms, rtt 4.0 ms, U ~2.1 ms, lead now 2.72 ms, bias sent (slewing)
+2026-09-05 12:22:51 bias hold: P 33285 -> 33310 since the last sync (loop still moving); residual -123.4 ms not learned
+2026-09-05 12:25:51 sync (periodic): clock set (sub-second): before -89.3 ms, after -88.8 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.79 ms, bias sent (slewing)
+2026-09-05 12:25:51 bias learned: before -89.3 ms over 180 s = board +496 ppm slow; b +567 -> +443 ppm (P 33315)
+2026-09-05 12:28:51 sync (periodic): clock set (sub-second): before -102.2 ms, after -102.1 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.84 ms, bias sent (slewing)
+2026-09-05 12:28:51 bias hold: P 33315 -> 33307 since the last sync (loop still moving); residual -102.2 ms not learned
+2026-09-05 12:31:52 sync (periodic): clock set (sub-second): before -74.9 ms, after -75.1 ms, rtt 3.7 ms, U ~1.8 ms, lead now 2.58 ms, bias sent (slewing)
+2026-09-05 12:31:52 bias learned: before -74.9 ms over 181 s = board +414 ppm slow; b +443 -> +339 ppm (P 33304)
+2026-09-05 12:34:53 sync (periodic): clock set (sub-second): before -77.5 ms, after -77.0 ms, rtt 3.8 ms, U ~1.1 ms, lead now 2.70 ms, bias sent (slewing)
+2026-09-05 12:34:53 bias learned: before -77.5 ms over 181 s = board +429 ppm slow; b +339 -> +232 ppm (P 33300)
+2026-09-05 12:37:53 sync (periodic): clock set (sub-second): before -73.4 ms, after -72.5 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.79 ms, bias sent (slewing)
+2026-09-05 12:37:53 bias hold: P 33300 -> 33285 since the last sync (loop still moving); residual -73.4 ms not learned
+2026-09-05 12:40:54 sync (periodic): clock set (sub-second): before -49.8 ms, after -49.5 ms, rtt 4.0 ms, U ~1.6 ms, lead now 2.74 ms, bias sent (slewing)
+2026-09-05 12:40:54 bias hold: P 33285 -> 33269 since the last sync (loop still moving); residual -49.8 ms not learned
+2026-09-05 12:45:54 sync (periodic): clock set (sub-second): before -71.5 ms, after -71.3 ms, rtt 3.7 ms, U ~1.7 ms, lead now 2.62 ms, bias sent (slewing)
+2026-09-05 12:45:54 bias hold: P 33269 -> 33261 since the last sync (loop still moving); residual -71.5 ms not learned
+2026-09-05 12:48:55 sync (periodic): clock set (sub-second): before -51.1 ms, after -50.5 ms, rtt 3.7 ms, U ~1.3 ms, lead now 2.38 ms, bias sent (slewing)
+2026-09-05 12:48:55 bias hold: P 33261 -> 33246 since the last sync (loop still moving); residual -51.1 ms not learned
+2026-09-05 12:53:56 sync (periodic): clock set (sub-second): before -81.1 ms, after -80.8 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.42 ms, bias sent (slewing)
+2026-09-05 12:53:56 bias hold: P 33246 -> 33219 since the last sync (loop still moving); residual -81.1 ms not learned
+2026-09-05 12:56:57 sync (periodic): clock set (sub-second): before -32.1 ms, after -31.3 ms, rtt 4.0 ms, U ~1.5 ms, lead now 2.44 ms, bias sent (slewing)
+2026-09-05 12:56:57 bias learned: before -32.1 ms over 181 s = board +178 ppm slow; b +232 -> +188 ppm (P 33216)
+2026-09-05 13:01:58 sync (periodic): clock set (sub-second): before -62.9 ms, after -62.2 ms, rtt 4.0 ms, U ~2.0 ms, lead now 2.17 ms, bias sent (slewing)
+2026-09-05 13:01:58 bias hold: P 33216 -> 33208 since the last sync (loop still moving); residual -62.9 ms not learned
+2026-09-05 13:04:59 sync (periodic): clock set (sub-second): before -21.8 ms, after -21.0 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.38 ms, bias sent (slewing)
+2026-09-05 13:04:59 bias learned: before -21.8 ms over 181 s = board +121 ppm slow; b +188 -> +158 ppm (P 33211)
+2026-09-05 13:10:00 sync (periodic): clock set (sub-second): before -41.4 ms, after -41.2 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.72 ms, bias sent (slewing)
+2026-09-05 13:10:00 bias learned: before -41.4 ms over 301 s = board +138 ppm slow; b +158 -> +124 ppm (P 33217)
+2026-09-05 13:15:01 sync (periodic): clock set (sub-second): before -50.6 ms, after -50.3 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.62 ms, bias sent (slewing)
+2026-09-05 13:15:01 bias hold: P 33217 -> 33206 since the last sync (loop still moving); residual -50.6 ms not learned
+2026-09-05 13:20:03 sync (periodic): clock set (sub-second): before -24.4 ms, after -24.3 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.46 ms, bias sent (slewing)
+2026-09-05 13:20:03 bias learned: before -24.4 ms over 301 s = board +81 ppm slow; b +124 -> +104 ppm (P 33208)
+2026-09-05 13:25:03 sync (periodic): clock set (sub-second): before -23.3 ms, after -23.0 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.53 ms, bias sent (slewing)
+2026-09-05 13:25:03 bias learned: before -23.3 ms over 301 s = board +78 ppm slow; b +104 -> +85 ppm (P 33213)
+2026-09-05 13:30:04 sync (periodic): clock set (sub-second): before -16.7 ms, after -16.1 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.46 ms, bias sent (slewing)
+2026-09-05 13:30:04 bias learned: before -16.7 ms over 300 s = board +56 ppm slow; b +85 -> +71 ppm (P 33214)
+2026-09-05 13:35:04 sync (periodic): clock set (sub-second): before -5.8 ms, after -4.6 ms, rtt 3.7 ms, U ~1.3 ms, lead now 2.41 ms, bias sent (slewing)
+2026-09-05 13:35:04 bias learned: before -5.8 ms over 300 s = board +19 ppm slow; b +71 -> +66 ppm (P 33219)
+2026-09-05 13:40:04 sync (periodic): clock set (sub-second): before +0.8 ms, after +1.2 ms, rtt 4.0 ms, U ~1.2 ms, lead now 2.46 ms, bias sent (slewing)
+2026-09-05 13:40:04 bias hold: P 33219 -> 33234 since the last sync (loop still moving); residual +0.8 ms not learned
+2026-09-05 13:45:04 sync (periodic): clock set (sub-second): before -4.6 ms, after -3.7 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.60 ms, bias sent (slewing)
+2026-09-05 13:45:04 bias learned: before -4.6 ms over 300 s = board +15 ppm slow; b +66 -> +62 ppm (P 33239)
+2026-09-05 13:50:04 sync (periodic): clock set (sub-second): before -3.9 ms, after -2.9 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.58 ms, bias sent (slewing)
+2026-09-05 13:50:04 bias hold: P 33239 -> 33248 since the last sync (loop still moving); residual -3.9 ms not learned
+2026-09-05 13:55:04 sync (periodic): clock set (sub-second): before -2.2 ms, after -1.9 ms, rtt 4.0 ms, U ~1.0 ms, lead now 3.13 ms, bias sent (slewing)
+2026-09-05 13:55:05 bias hold: P 33248 -> 33256 since the last sync (loop still moving); residual -2.2 ms not learned
+2026-09-05 14:00:05 sync (periodic): clock set (sub-second): before +0.4 ms, after +0.5 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.76 ms, bias sent (slewing)
+2026-09-05 14:00:05 bias hold: P 33256 -> 33269 since the last sync (loop still moving); residual +0.4 ms not learned
+2026-09-05 14:05:06 sync (periodic): clock set (sub-second): before -9.1 ms, after -8.5 ms, rtt 3.7 ms, U ~1.2 ms, lead now 2.79 ms, bias sent (slewing)
+2026-09-05 14:05:06 bias learned: before -9.1 ms over 301 s = board +30 ppm slow; b +62 -> +54 ppm (P 33270)
+2026-09-05 14:10:07 sync (periodic): clock set (sub-second): before -6.3 ms, after -5.8 ms, rtt 4.0 ms, U ~2.0 ms, lead now 2.62 ms, bias sent (slewing)
+2026-09-05 14:10:08 bias hold: P 33270 -> 33283 since the last sync (loop still moving); residual -6.3 ms not learned
+2026-09-05 14:15:08 sync (periodic): clock set (sub-second): before -6.8 ms, after -6.4 ms, rtt 3.7 ms, U ~1.8 ms, lead now 2.57 ms, bias sent (slewing)
+2026-09-05 14:15:08 bias learned: before -6.8 ms over 301 s = board +23 ppm slow; b +54 -> +48 ppm (P 33283)
+2026-09-05 14:20:10 sync (periodic): clock set (sub-second): before +4.7 ms, after +5.2 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.40 ms, bias sent (slewing)
+2026-09-05 14:20:10 bias hold: P 33283 -> 33290 since the last sync (loop still moving); residual +4.7 ms not learned
+2026-09-05 14:25:11 sync (periodic): clock set (sub-second): before -7.9 ms, after -7.4 ms, rtt 4.0 ms, U ~1.5 ms, lead now 2.37 ms, bias sent (slewing)
+2026-09-05 14:25:11 bias learned: before -7.9 ms over 301 s = board +26 ppm slow; b +48 -> +41 ppm (P 33285)
+2026-09-05 14:30:12 sync (periodic): clock set (sub-second): before -8.1 ms, after -7.8 ms, rtt 4.0 ms, U ~1.6 ms, lead now 2.63 ms, bias sent (slewing)
+2026-09-05 14:30:12 bias learned: before -8.1 ms over 301 s = board +27 ppm slow; b +41 -> +34 ppm (P 33285)
+2026-09-05 14:35:13 sync (periodic): clock set (sub-second): before -20.0 ms, after -19.1 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.38 ms, bias sent (slewing)
+2026-09-05 14:35:13 bias hold: P 33285 -> 33273 since the last sync (loop still moving); residual -20.0 ms not learned
+2026-09-05 14:40:15 sync (periodic): clock set (sub-second): before -17.7 ms, after -16.7 ms, rtt 3.7 ms, U ~1.3 ms, lead now 2.54 ms, bias sent (slewing)
+2026-09-05 14:40:15 bias hold: P 33273 -> 33262 since the last sync (loop still moving); residual -17.7 ms not learned
+2026-09-05 14:45:16 sync (periodic): clock set (sub-second): before -23.7 ms, after -22.8 ms, rtt 3.8 ms, U ~2.1 ms, lead now 2.47 ms, bias sent (slewing)
+2026-09-05 14:45:16 bias hold: P 33262 -> 33247 since the last sync (loop still moving); residual -23.7 ms not learned
+2026-09-05 14:50:17 sync (periodic): clock set (sub-second): before -27.0 ms, after -26.9 ms, rtt 3.7 ms, U ~1.1 ms, lead now 2.47 ms, bias sent (slewing)
+2026-09-05 14:50:17 bias hold: P 33247 -> 33227 since the last sync (loop still moving); residual -27.0 ms not learned
+2026-09-05 14:55:18 sync (periodic): clock set (sub-second): before -16.2 ms, after -15.1 ms, rtt 4.0 ms, U ~2.3 ms, lead now 2.77 ms, bias sent (slewing)
+2026-09-05 14:55:18 bias hold: P 33227 -> 33215 since the last sync (loop still moving); residual -16.2 ms not learned
+2026-09-05 14:58:02 timekeeper start
+2026-09-05 14:58:04 sync (enumerated): clock set (sub-second): before -26.7 ms, after -26.6 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.70 ms, bias sent (slewing)
+2026-09-05 15:11:46 timekeeper start
+2026-09-05 15:11:48 sync (enumerated): clock set (sub-second): before +1042.5 ms, after -2.0 ms, rtt 4.0 ms, U ~2.0 ms, lead now 2.70 ms, bias sent
+2026-09-05 15:14:49 sync (periodic): clock set (sub-second): before -4.0 ms, after -3.0 ms, rtt 4.0 ms, U ~1.5 ms, lead now 2.95 ms, bias sent (slewing)
+2026-09-05 15:14:49 bias learned: before -4.0 ms over 181 s = board +22 ppm slow; b +34 -> +28 ppm (P 33166)
+2026-09-05 15:19:50 sync (periodic): clock set (sub-second): before -35.0 ms, after -34.1 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.94 ms, bias sent (slewing)
+2026-09-05 15:19:50 bias hold: P 33166 -> 33142 since the last sync (loop still moving); residual -35.0 ms not learned
+2026-09-05 15:24:51 sync (periodic): clock set (sub-second): before -5.5 ms, after -4.9 ms, rtt 4.0 ms, U ~1.2 ms, lead now 3.07 ms, bias sent (slewing)
+2026-09-05 15:24:51 bias hold: P 33142 -> 33132 since the last sync (loop still moving); residual -5.5 ms not learned
+2026-09-05 15:29:53 sync (periodic): clock set (sub-second): before -8.1 ms, after -7.3 ms, rtt 4.7 ms, U ~1.6 ms, lead now 2.84 ms, bias sent (slewing)
+2026-09-05 15:29:53 bias hold: P 33132 -> 33124 since the last sync (loop still moving); residual -8.1 ms not learned
+2026-09-05 15:34:54 sync (periodic): clock set (sub-second): before -11.0 ms, after -10.2 ms, rtt 3.8 ms, U ~1.1 ms, lead now 2.84 ms, bias sent (slewing)
+2026-09-05 15:34:54 bias hold: P 33124 -> 33113 since the last sync (loop still moving); residual -11.0 ms not learned
+2026-09-05 15:39:56 sync (periodic): clock set (sub-second): before +2.6 ms, after +2.9 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.68 ms, bias sent (slewing)
+2026-09-05 15:39:56 bias learned: before +2.6 ms over 301 s = board -9 ppm slow; b +28 -> +30 ppm (P 33112)
+2026-09-05 15:44:57 sync (periodic): clock set (sub-second): before +1.5 ms, after +2.0 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.56 ms, bias sent (slewing)
+2026-09-05 15:44:57 bias learned: before +1.5 ms over 301 s = board -5 ppm slow; b +30 -> +31 ppm (P 33109)
+2026-09-05 15:49:58 sync (periodic): clock set (sub-second): before +25.7 ms, after +26.7 ms, rtt 4.0 ms, U ~1.9 ms, lead now 2.89 ms, bias sent (slewing)
+2026-09-05 15:49:58 bias hold: P 33109 -> 33126 since the last sync (loop still moving); residual +25.7 ms not learned
+2026-09-05 15:54:59 sync (periodic): clock set (sub-second): before -5.1 ms, after -4.8 ms, rtt 4.0 ms, U ~1.8 ms, lead now 3.18 ms, bias sent (slewing)
+2026-09-05 15:54:59 bias learned: before -5.1 ms over 301 s = board +17 ppm slow; b +31 -> +27 ppm (P 33120)
+2026-09-05 16:00:00 sync (periodic): clock set (sub-second): before -1.4 ms, after -0.3 ms, rtt 3.7 ms, U ~1.6 ms, lead now 3.27 ms, bias sent (slewing)
+2026-09-05 16:00:01 bias learned: before -1.4 ms over 301 s = board +5 ppm slow; b +27 -> +26 ppm (P 33126)
+2026-09-05 16:05:02 sync (periodic): clock set (sub-second): before -10.4 ms, after -10.0 ms, rtt 3.7 ms, U ~1.8 ms, lead now 3.11 ms, bias sent (slewing)
+2026-09-05 16:05:02 bias hold: P 33126 -> 33116 since the last sync (loop still moving); residual -10.4 ms not learned
+2026-09-05 16:10:03 sync (periodic): clock set (sub-second): before -12.4 ms, after -12.3 ms, rtt 5.0 ms, U ~1.5 ms, lead now 3.45 ms, bias sent (slewing)
+2026-09-05 16:10:03 bias hold: P 33116 -> 33107 since the last sync (loop still moving); residual -12.4 ms not learned
+2026-09-05 16:15:05 sync (periodic): clock set (sub-second): before -1.6 ms, after -0.3 ms, rtt 3.7 ms, U ~1.2 ms, lead now 3.60 ms, bias sent (slewing)
+2026-09-05 16:15:05 bias learned: before -1.6 ms over 301 s = board +5 ppm slow; b +26 -> +25 ppm (P 33105)
+2026-09-05 16:20:06 sync (periodic): clock set (sub-second): before -1.3 ms, after -0.2 ms, rtt 4.0 ms, U ~1.9 ms, lead now 3.42 ms, bias sent (slewing)
+2026-09-05 16:20:06 bias learned: before -1.3 ms over 301 s = board +4 ppm slow; b +25 -> +24 ppm (P 33104)
+2026-09-05 16:25:07 sync (periodic): clock set (sub-second): before +3.9 ms, after +4.4 ms, rtt 3.8 ms, U ~1.9 ms, lead now 3.44 ms, bias sent (slewing)
+2026-09-05 16:25:07 bias learned: before +3.9 ms over 301 s = board -13 ppm slow; b +24 -> +27 ppm (P 33105)
+2026-09-05 16:27:40 sync (enumerated): clock set (sub-second): before +47.9 ms, after -1.7 ms, rtt 3.7 ms, U ~1.1 ms, lead now 3.44 ms, bias sent
+2026-09-05 16:32:41 sync (periodic): clock set (sub-second): before +31.1 ms, after +31.6 ms, rtt 4.0 ms, U ~1.5 ms, lead now 3.17 ms, bias sent (slewing)
+2026-09-05 16:32:41 bias learned: before +31.1 ms over 301 s = board -103 ppm slow; b +27 -> +53 ppm (P 33124)
+2026-09-05 16:37:42 sync (periodic): clock set (sub-second): before -2.8 ms, after -2.2 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.86 ms, bias sent (slewing)
+2026-09-05 16:37:42 bias hold: P 33124 -> 33116 since the last sync (loop still moving); residual -2.8 ms not learned
+2026-09-05 16:42:44 sync (periodic): clock set (sub-second): before -9.5 ms, after -1.6 ms, rtt 3.7 ms, U ~1.9 ms, lead now 2.86 ms, bias sent
+2026-09-05 16:47:44 sync (periodic): clock set (sub-second): before -10.2 ms, after -10.4 ms, rtt 3.7 ms, U ~1.1 ms, lead now 2.67 ms, bias sent (slewing)
+2026-09-05 16:47:44 bias learned: before -10.2 ms over 300 s = board +34 ppm slow; b +53 -> +45 ppm (P 33109)
+2026-09-05 17:03:30 timekeeper start
+2026-09-05 17:03:33 sync (enumerated): clock set (sub-second): before -41.7 ms, after -41.6 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.60 ms, bias sent (slewing)
+2026-09-05 18:00:33 timekeeper start
+2026-09-05 18:00:36 sync (enumerated): clock set (sub-second): before -1524.6 ms, after -1.7 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.60 ms, bias sent
+2026-09-05 18:03:36 sync (periodic): clock set (sub-second): before -18.6 ms, after -17.6 ms, rtt 3.8 ms, U ~1.1 ms, lead now 2.75 ms, bias sent (slewing)
+2026-09-05 18:03:36 bias hold: P 33113 -> 33105 since the last sync (loop still moving); residual -18.6 ms not learned
+2026-09-05 18:08:36 sync (periodic): clock set (sub-second): before -7.8 ms, after -7.3 ms, rtt 4.0 ms, U ~1.0 ms, lead now 3.20 ms, bias sent (slewing)
+2026-09-05 18:08:36 bias learned: before -7.8 ms over 300 s = board +26 ppm slow; b +45 -> +39 ppm (P 33101)
+2026-09-05 18:13:36 sync (periodic): clock set (sub-second): before -10.6 ms, after -9.8 ms, rtt 4.7 ms, U ~1.6 ms, lead now 3.10 ms, bias sent (slewing)
+2026-09-05 18:13:36 bias learned: before -10.6 ms over 300 s = board +35 ppm slow; b +39 -> +30 ppm (P 33101)
+2026-09-05 18:18:36 sync (periodic): clock set (sub-second): before -4.5 ms, after -3.8 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.97 ms, bias sent (slewing)
+2026-09-05 18:18:36 bias learned: before -4.5 ms over 300 s = board +15 ppm slow; b +30 -> +26 ppm (P 33106)
+2026-09-05 18:23:37 sync (periodic): clock set (sub-second): before +9.6 ms, after +10.5 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.82 ms, bias sent (slewing)
+2026-09-05 18:23:37 bias learned: before +9.6 ms over 300 s = board -32 ppm slow; b +26 -> +34 ppm (P 33111)
+2026-09-05 18:27:40 timekeeper start
+2026-09-05 18:27:43 sync (enumerated): clock set (sub-second): before +37.6 ms, after +38.0 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.67 ms, bias sent (slewing)
+2026-09-05 18:30:39 timekeeper start
+2026-09-05 18:30:41 sync (enumerated): clock set (sub-second): before +676.3 ms, after -2.6 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.67 ms, bias sent
+2026-09-05 18:33:31 timekeeper start
+2026-09-05 18:33:33 sync (enumerated): clock set (sub-second): before -102.7 ms, after -101.7 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.59 ms, bias sent (slewing)
+2026-09-05 18:43:23 timekeeper start
+2026-09-05 18:43:25 sync (enumerated): clock set (sub-second): before +552.0 ms, after -2.5 ms, rtt 3.8 ms, U ~2.6 ms, lead now 2.59 ms, bias sent
+2026-09-05 18:44:47 timekeeper start
+2026-09-05 23:00:30 timekeeper start
+2026-09-05 23:00:33 sync (enumerated): clock set (sub-second): before -57.2 ms, after -57.0 ms, rtt 3.7 ms, U ~1.1 ms, lead now 3.13 ms, bias sent (slewing)
+2026-09-05 23:05:33 sync (periodic): clock set (sub-second): before -2.5 ms, after -1.6 ms, rtt 4.0 ms, U ~2.3 ms, lead now 3.01 ms, bias sent (slewing)
+2026-09-05 23:05:33 bias learned: before -2.5 ms over 300 s = board +8 ppm slow; b +34 -> +32 ppm (P 33172)
+2026-09-05 23:10:33 sync (periodic): clock set (sub-second): before -5.6 ms, after -4.8 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.90 ms, bias sent (slewing)
+2026-09-05 23:10:33 bias learned: before -5.6 ms over 300 s = board +19 ppm slow; b +32 -> +27 ppm (P 33172)
+2026-09-05 23:15:33 sync (periodic): clock set (sub-second): before -9.8 ms, after -9.2 ms, rtt 4.0 ms, U ~1.8 ms, lead now 3.11 ms, bias sent (slewing)
+2026-09-05 23:15:33 bias learned: before -9.8 ms over 300 s = board +33 ppm slow; b +27 -> +19 ppm (P 33169)
+2026-09-05 23:20:34 sync (periodic): warning: residual +2365966.0 ms exceeds 3U -- lead still calibrating, or a slew is in progress
+2026-09-05 23:25:34 sync (periodic): clock set (sub-second): before +12.8 ms, after +13.6 ms, rtt 4.0 ms, U ~1.3 ms, lead now 3.16 ms, bias sent (slewing)
+2026-09-05 23:25:34 bias hold: P 33172 -> 33184 since the last sync (loop still moving); residual +12.8 ms not learned
+2026-09-05 23:30:34 sync (periodic): clock set (sub-second): before -6.5 ms, after -6.5 ms, rtt 4.0 ms, U ~1.7 ms, lead now 3.03 ms, bias sent (slewing)
+2026-09-05 23:30:34 bias learned: before -6.5 ms over 300 s = board +22 ppm slow; b +19 -> +14 ppm (P 33179)
+2026-09-05 23:35:35 sync (periodic): clock set (sub-second): before +5.9 ms, after +5.9 ms, rtt 4.0 ms, U ~1.8 ms, lead now 3.06 ms, bias sent (slewing)
+2026-09-05 23:35:35 bias learned: before +5.9 ms over 301 s = board -20 ppm slow; b +14 -> +19 ppm (P 33184)
+2026-09-05 23:40:37 sync (periodic): clock set (sub-second): before +3.4 ms, after +3.1 ms, rtt 4.0 ms, U ~2.0 ms, lead now 3.21 ms, bias sent (slewing)
+2026-09-05 23:40:37 bias learned: before +3.4 ms over 301 s = board -11 ppm slow; b +19 -> +22 ppm (P 33184)
+2026-09-05 23:45:39 sync (periodic): clock set (sub-second): before +18.0 ms, after +19.2 ms, rtt 4.6 ms, U ~0.7 ms, lead now 2.72 ms, bias sent (slewing)
+2026-09-05 23:45:39 bias hold: P 33184 -> 33200 since the last sync (loop still moving); residual +18.0 ms not learned
+2026-09-05 23:50:40 sync (periodic): clock set (sub-second): before +3.2 ms, after +3.6 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.66 ms, bias sent (slewing)
+2026-09-05 23:50:40 bias learned: before +3.2 ms over 301 s = board -11 ppm slow; b +22 -> +25 ppm (P 33204)
+2026-09-05 23:55:41 sync (periodic): clock set (sub-second): before +21.7 ms, after +21.5 ms, rtt 4.0 ms, U ~2.0 ms, lead now 2.73 ms, bias sent (slewing)
+2026-09-05 23:55:41 bias hold: P 33204 -> 33220 since the last sync (loop still moving); residual +21.7 ms not learned
+2026-09-06 00:00:44 sync (periodic): clock set (sub-second): before +9.0 ms, after +11.4 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.73 ms, bias sent (slewing)
+2026-09-06 00:00:44 bias hold: P 33220 -> 33228 since the last sync (loop still moving); residual +9.0 ms not learned
+2026-09-06 00:05:47 sync (periodic): clock set (sub-second): before +11.1 ms, after +11.2 ms, rtt 3.9 ms, U ~1.8 ms, lead now 2.72 ms, bias sent (slewing)
+2026-09-06 00:05:47 bias hold: P 33228 -> 33235 since the last sync (loop still moving); residual +11.1 ms not learned
+2026-09-06 00:10:49 sync (periodic): clock set (sub-second): before -0.4 ms, after -0.3 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.82 ms, bias sent (slewing)
+2026-09-06 00:10:49 bias learned: before -0.4 ms over 302 s = board +1 ppm slow; b +25 -> +25 ppm (P 33237)
+2026-09-06 00:15:50 sync (periodic): clock set (sub-second): before +19.1 ms, after +22.1 ms, rtt 4.0 ms, U ~1.3 ms, lead now 3.04 ms, bias sent (slewing)
+2026-09-06 00:15:50 bias hold: P 33237 -> 33248 since the last sync (loop still moving); residual +19.1 ms not learned
+2026-09-06 00:20:50 sync (periodic): clock set (sub-second): before +16.9 ms, after +17.4 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.83 ms, bias sent (slewing)
+2026-09-06 00:20:50 bias hold: P 33248 -> 33259 since the last sync (loop still moving); residual +16.9 ms not learned
+2026-09-06 00:25:51 sync (periodic): clock set (sub-second): before +9.5 ms, after +10.6 ms, rtt 4.0 ms, U ~1.6 ms, lead now 2.45 ms, bias sent (slewing)
+2026-09-06 00:25:51 bias learned: before +9.5 ms over 300 s = board -32 ppm slow; b +25 -> +33 ppm (P 33260)
+2026-09-06 00:30:52 sync (periodic): clock set (sub-second): before +14.3 ms, after +15.6 ms, rtt 3.9 ms, U ~1.4 ms, lead now 2.63 ms, bias sent (slewing)
+2026-09-06 00:30:52 bias hold: P 33260 -> 33267 since the last sync (loop still moving); residual +14.3 ms not learned
+2026-09-06 00:35:52 sync (periodic): clock set (sub-second): before +6.5 ms, after +7.1 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.76 ms, bias sent (slewing)
+2026-09-06 00:35:52 bias hold: P 33267 -> 33275 since the last sync (loop still moving); residual +6.5 ms not learned
+2026-09-06 00:40:53 sync (periodic): clock set (sub-second): before -7.3 ms, after -6.2 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.59 ms, bias sent (slewing)
+2026-09-06 00:40:53 bias learned: before -7.3 ms over 300 s = board +24 ppm slow; b +33 -> +27 ppm (P 33277)
+2026-09-06 00:45:53 sync (periodic): clock set (sub-second): before +4.3 ms, after +6.0 ms, rtt 4.0 ms, U ~1.1 ms, lead now 3.01 ms, bias sent (slewing)
+2026-09-06 00:45:54 bias learned: before +4.3 ms over 301 s = board -14 ppm slow; b +27 -> +31 ppm (P 33283)
+2026-09-06 00:50:54 sync (periodic): clock set (sub-second): before +7.7 ms, after +7.4 ms, rtt 4.0 ms, U ~1.5 ms, lead now 3.08 ms, bias sent (slewing)
+2026-09-06 00:50:54 bias hold: P 33283 -> 33292 since the last sync (loop still moving); residual +7.7 ms not learned
+2026-09-06 00:55:55 sync (periodic): clock set (sub-second): before -4.1 ms, after -3.9 ms, rtt 4.0 ms, U ~1.7 ms, lead now 3.11 ms, bias sent (slewing)
+2026-09-06 00:55:55 bias learned: before -4.1 ms over 300 s = board +14 ppm slow; b +31 -> +28 ppm (P 33290)
+2026-09-06 01:00:55 sync (periodic): clock set (sub-second): before +0.1 ms, after +0.3 ms, rtt 4.0 ms, U ~2.0 ms, lead now 2.83 ms, bias sent (slewing)
+2026-09-06 01:00:55 bias hold: P 33290 -> 33297 since the last sync (loop still moving); residual +0.1 ms not learned
+2026-09-06 01:05:56 sync (periodic): clock set (sub-second): before +15.4 ms, after +17.4 ms, rtt 4.4 ms, U ~1.0 ms, lead now 2.72 ms, bias sent (slewing)
+2026-09-06 01:05:56 bias hold: P 33297 -> 33311 since the last sync (loop still moving); residual +15.4 ms not learned
+2026-09-06 01:10:56 sync (periodic): clock set (sub-second): before -5.0 ms, after -4.7 ms, rtt 5.0 ms, U ~1.3 ms, lead now 2.73 ms, bias sent (slewing)
+2026-09-06 01:10:56 bias learned: before -5.0 ms over 300 s = board +17 ppm slow; b +28 -> +24 ppm (P 33309)
+2026-09-06 01:15:57 sync (periodic): clock set (sub-second): before +15.6 ms, after +15.6 ms, rtt 4.0 ms, U ~1.4 ms, lead now 2.82 ms, bias sent (slewing)
+2026-09-06 01:15:57 bias hold: P 33309 -> 33320 since the last sync (loop still moving); residual +15.6 ms not learned
+2026-09-06 01:20:58 sync (periodic): clock set (sub-second): before +3.1 ms, after +5.3 ms, rtt 4.0 ms, U ~1.1 ms, lead now 2.80 ms, bias sent (slewing)
+2026-09-06 01:20:58 bias learned: before +3.1 ms over 301 s = board -10 ppm slow; b +24 -> +27 ppm (P 33317)
+2026-09-06 01:25:58 sync (periodic): clock set (sub-second): before +18.2 ms, after +18.9 ms, rtt 3.9 ms, U ~1.8 ms, lead now 2.51 ms, bias sent (slewing)
+2026-09-06 01:25:58 bias hold: P 33317 -> 33327 since the last sync (loop still moving); residual +18.2 ms not learned
+2026-09-06 01:30:59 sync (periodic): clock set (sub-second): before +1.3 ms, after +2.0 ms, rtt 3.8 ms, U ~1.7 ms, lead now 2.68 ms, bias sent (slewing)
+2026-09-06 01:30:59 bias learned: before +1.3 ms over 300 s = board -4 ppm slow; b +27 -> +28 ppm (P 33333)
+2026-09-06 01:36:00 sync (periodic): clock set (sub-second): before -1.4 ms, after -0.4 ms, rtt 3.8 ms, U ~2.1 ms, lead now 2.52 ms, bias sent (slewing)
+2026-09-06 01:36:00 bias learned: before -1.4 ms over 301 s = board +5 ppm slow; b +28 -> +27 ppm (P 33328)
+2026-09-06 01:41:00 sync (periodic): clock set (sub-second): before +14.0 ms, after +15.1 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.27 ms, bias sent (slewing)
+2026-09-06 01:41:00 bias hold: P 33328 -> 33337 since the last sync (loop still moving); residual +14.0 ms not learned
+2026-09-06 01:46:01 sync (periodic): clock set (sub-second): before +1.8 ms, after +2.4 ms, rtt 4.0 ms, U ~1.6 ms, lead now 2.31 ms, bias sent (slewing)
+2026-09-06 01:46:01 bias learned: before +1.8 ms over 300 s = board -6 ppm slow; b +27 -> +28 ppm (P 33335)
+2026-09-06 01:51:02 sync (periodic): clock set (sub-second): before +9.1 ms, after +3.1 ms, rtt 3.9 ms, U ~2.1 ms, lead now 2.28 ms, bias sent (slewing)
+2026-09-06 01:51:02 bias learned: before +9.1 ms over 301 s = board -30 ppm slow; b +28 -> +36 ppm (P 33341)
+2026-09-06 01:56:02 sync (periodic): clock set (sub-second): before +18.6 ms, after +18.8 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.14 ms, bias sent (slewing)
+2026-09-06 01:56:02 bias hold: P 33341 -> 33353 since the last sync (loop still moving); residual +18.6 ms not learned
+2026-09-06 02:01:03 sync (periodic): clock set (sub-second): before -14.9 ms, after -13.8 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.36 ms, bias sent (slewing)
+2026-09-06 02:01:03 bias learned: before -14.9 ms over 300 s = board +50 ppm slow; b +36 -> +24 ppm (P 33347)
+2026-09-06 02:06:04 sync (periodic): clock set to 2026-09-06 02:06:04
+2026-09-06 02:11:04 sync (periodic): clock set (sub-second): before -4.2 ms, after -3.8 ms, rtt 4.0 ms, U ~1.5 ms, lead now 2.16 ms, bias sent (slewing)
+2026-09-06 02:11:04 bias learned: before -4.2 ms over 301 s = board +14 ppm slow; b +24 -> +21 ppm (P 33356)
+2026-09-06 02:16:05 sync (periodic): clock set (sub-second): before +7.4 ms, after +7.7 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.31 ms, bias sent (slewing)
+2026-09-06 02:16:05 bias learned: before +7.4 ms over 300 s = board -25 ppm slow; b +21 -> +27 ppm (P 33358)
+2026-09-06 02:21:05 sync (periodic): clock set (sub-second): before +4.3 ms, after +4.1 ms, rtt 4.0 ms, U ~1.5 ms, lead now 2.48 ms, bias sent (slewing)
+2026-09-06 02:21:05 bias learned: before +4.3 ms over 301 s = board -14 ppm slow; b +27 -> +31 ppm (P 33363)
+2026-09-06 02:26:06 sync (periodic): clock set (sub-second): before -3.9 ms, after -4.3 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.46 ms, bias sent (slewing)
+2026-09-06 02:26:06 bias learned: before -3.9 ms over 301 s = board +13 ppm slow; b +31 -> +28 ppm (P 33359)
+2026-09-06 02:31:07 sync (periodic): clock set (sub-second): before +13.6 ms, after +14.1 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.57 ms, bias sent (slewing)
+2026-09-06 02:31:07 bias hold: P 33359 -> 33377 since the last sync (loop still moving); residual +13.6 ms not learned
+2026-09-06 02:36:07 sync (periodic): clock set (sub-second): before +1.3 ms, after +1.6 ms, rtt 4.0 ms, U ~1.4 ms, lead now 2.49 ms, bias sent (slewing)
+2026-09-06 02:36:07 bias learned: before +1.3 ms over 301 s = board -4 ppm slow; b +28 -> +29 ppm (P 33374)
+2026-09-06 02:41:08 sync (periodic): clock set (sub-second): before +1.1 ms, after +1.1 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.47 ms, bias sent (slewing)
+2026-09-06 02:41:08 bias learned: before +1.1 ms over 301 s = board -4 ppm slow; b +29 -> +30 ppm (P 33373)
+2026-09-06 02:46:08 sync (periodic): clock set (sub-second): before +5.5 ms, after +6.5 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.60 ms, bias sent (slewing)
+2026-09-06 02:46:09 bias learned: before +5.5 ms over 301 s = board -18 ppm slow; b +30 -> +35 ppm (P 33375)
+2026-09-06 02:51:09 sync (periodic): clock set (sub-second): before -9.8 ms, after -9.2 ms, rtt 4.0 ms, U ~2.1 ms, lead now 2.55 ms, bias sent (slewing)
+2026-09-06 02:51:09 bias learned: before -9.8 ms over 300 s = board +33 ppm slow; b +35 -> +27 ppm (P 33374)
+2026-09-06 02:56:10 sync (periodic): clock set (sub-second): before -12.0 ms, after -9.0 ms, rtt 3.9 ms, U ~1.3 ms, lead now 2.55 ms, bias sent (slewing)
+2026-09-06 02:56:10 bias learned: before -12.0 ms over 301 s = board +40 ppm slow; b +27 -> +17 ppm (P 33372)
+2026-09-06 03:01:10 sync (periodic): clock set (sub-second): before +18.0 ms, after +18.5 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.81 ms, bias sent (slewing)
+2026-09-06 03:01:10 bias hold: P 33372 -> 33384 since the last sync (loop still moving); residual +18.0 ms not learned
+2026-09-06 03:06:11 sync (periodic): clock set (sub-second): before +0.3 ms, after +0.7 ms, rtt 4.0 ms, U ~1.8 ms, lead now 3.23 ms, bias sent (slewing)
+2026-09-06 03:06:11 bias learned: before +0.3 ms over 300 s = board -1 ppm slow; b +17 -> +17 ppm (P 33384)
+2026-09-06 03:11:12 sync (periodic): clock set (sub-second): before -7.1 ms, after -6.4 ms, rtt 3.9 ms, U ~1.7 ms, lead now 3.01 ms, bias sent (slewing)
+2026-09-06 03:11:12 bias learned: before -7.1 ms over 301 s = board +24 ppm slow; b +17 -> +11 ppm (P 33380)
+2026-09-06 03:16:12 sync (periodic): clock set (sub-second): before +8.1 ms, after +8.7 ms, rtt 3.8 ms, U ~1.1 ms, lead now 2.97 ms, bias sent (slewing)
+2026-09-06 03:16:12 bias learned: before +8.1 ms over 301 s = board -27 ppm slow; b +11 -> +18 ppm (P 33382)
+2026-09-06 03:21:13 sync (periodic): clock set (sub-second): before +7.2 ms, after +0.0 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.92 ms, bias sent (slewing)
+2026-09-06 03:21:13 bias learned: before +7.2 ms over 300 s = board -24 ppm slow; b +18 -> +24 ppm (P 33383)
+2026-09-06 03:26:13 sync (periodic): clock set (sub-second): before +14.3 ms, after +14.6 ms, rtt 4.0 ms, U ~1.5 ms, lead now 3.59 ms, bias sent (slewing)
+2026-09-06 03:26:13 bias hold: P 33383 -> 33399 since the last sync (loop still moving); residual +14.3 ms not learned
+2026-09-06 03:31:14 sync (periodic): clock set (sub-second): before -8.6 ms, after -5.8 ms, rtt 3.8 ms, U ~1.1 ms, lead now 3.48 ms, bias sent (slewing)
+2026-09-06 03:31:14 bias hold: P 33399 -> 33390 since the last sync (loop still moving); residual -8.6 ms not learned
+2026-09-06 03:36:15 sync (periodic): clock set (sub-second): before +15.4 ms, after +15.9 ms, rtt 4.0 ms, U ~1.8 ms, lead now 3.13 ms, bias sent (slewing)
+2026-09-06 03:36:15 bias hold: P 33390 -> 33400 since the last sync (loop still moving); residual +15.4 ms not learned
+2026-09-06 03:41:15 sync (periodic): clock set (sub-second): before +2.6 ms, after +3.4 ms, rtt 3.8 ms, U ~1.1 ms, lead now 3.24 ms, bias sent (slewing)
+2026-09-06 03:41:15 bias learned: before +2.6 ms over 301 s = board -9 ppm slow; b +24 -> +26 ppm (P 33401)
+2026-09-06 03:46:16 sync (periodic): clock set (sub-second): before -8.5 ms, after -7.8 ms, rtt 3.8 ms, U ~1.1 ms, lead now 3.13 ms, bias sent (slewing)
+2026-09-06 03:46:16 bias learned: before -8.5 ms over 301 s = board +28 ppm slow; b +26 -> +19 ppm (P 33395)
+2026-09-06 03:51:16 sync (periodic): clock set (sub-second): before +4.5 ms, after +4.7 ms, rtt 4.0 ms, U ~2.3 ms, lead now 3.01 ms, bias sent (slewing)
+2026-09-06 03:51:16 bias learned: before +4.5 ms over 300 s = board -15 ppm slow; b +19 -> +23 ppm (P 33397)
+2026-09-06 03:56:17 sync (periodic): clock set (sub-second): before -43.8 ms, after -42.9 ms, rtt 4.0 ms, U ~2.2 ms, lead now 2.96 ms, bias sent (slewing)
+2026-09-06 03:56:17 bias learned: before -43.8 ms over 301 s = board +146 ppm slow; b +23 -> -13 ppm (P 33396)
+2026-09-06 04:01:18 sync (periodic): clock set (sub-second): before -47.3 ms, after -47.6 ms, rtt 4.0 ms, U ~1.4 ms, lead now 2.77 ms, bias sent (slewing)
+2026-09-06 04:01:18 bias learned: before -47.3 ms over 301 s = board +157 ppm slow; b -13 -> -52 ppm (P 33402)
+2026-09-06 04:06:18 sync (periodic): clock set (sub-second): before -54.8 ms, after -54.4 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.71 ms, bias sent (slewing)
+2026-09-06 04:06:18 bias learned: before -54.8 ms over 300 s = board +182 ppm slow; b -52 -> -98 ppm (P 33400)
+2026-09-06 04:11:19 sync (periodic): clock set (sub-second): before -39.4 ms, after -39.1 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.80 ms, bias sent (slewing)
+2026-09-06 04:11:19 bias learned: before -39.4 ms over 301 s = board +131 ppm slow; b -98 -> -131 ppm (P 33398)
+2026-09-06 04:16:20 sync (periodic): clock set (sub-second): before -7.2 ms, after -7.3 ms, rtt 4.0 ms, U ~1.7 ms, lead now 3.10 ms, bias sent (slewing)
+2026-09-06 04:16:20 bias learned: before -7.2 ms over 301 s = board +24 ppm slow; b -131 -> -137 ppm (P 33402)
+2026-09-06 04:21:21 sync (periodic): clock set (sub-second): before -5.6 ms, after -5.0 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.98 ms, bias sent (slewing)
+2026-09-06 04:21:21 bias learned: before -5.6 ms over 301 s = board +19 ppm slow; b -137 -> -142 ppm (P 33398)
+2026-09-06 04:26:21 sync (periodic): clock set (sub-second): before +0.6 ms, after +1.5 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.84 ms, bias sent (slewing)
+2026-09-06 04:26:21 bias learned: before +0.6 ms over 300 s = board -2 ppm slow; b -142 -> -142 ppm (P 33398)
+2026-09-06 04:31:22 sync (periodic): clock set (sub-second): before +17.2 ms, after +19.8 ms, rtt 3.9 ms, U ~1.5 ms, lead now 2.78 ms, bias sent (slewing)
+2026-09-06 04:31:22 bias learned: before +17.2 ms over 301 s = board -57 ppm slow; b -142 -> -128 ppm (P 33403)
+2026-09-06 04:36:23 sync (periodic): clock set (sub-second): before +18.6 ms, after +18.8 ms, rtt 4.0 ms, U ~1.6 ms, lead now 2.88 ms, bias sent (slewing)
+2026-09-06 04:36:23 bias learned: before +18.6 ms over 301 s = board -62 ppm slow; b -128 -> -113 ppm (P 33405)
+2026-09-06 04:41:24 sync (periodic): clock set (sub-second): before -987.2 ms, after +13.2 ms, rtt 4.0 ms, U ~2.5 ms, lead now 2.88 ms, bias sent (slewing)
+2026-09-06 04:44:24 sync (periodic): clock set (sub-second): before +2.0 ms, after +2.6 ms, rtt 4.0 ms, U ~2.2 ms, lead now 2.89 ms, bias sent (slewing)
+2026-09-06 04:44:24 bias learned: before +2.0 ms over 180 s = board -11 ppm slow; b -113 -> -110 ppm (P 33404)
+2026-09-06 04:49:25 sync (periodic): clock set (sub-second): before +9.5 ms, after +9.6 ms, rtt 4.0 ms, U ~2.0 ms, lead now 3.02 ms, bias sent (slewing)
+2026-09-06 04:49:25 bias learned: before +9.5 ms over 301 s = board -32 ppm slow; b -110 -> -102 ppm (P 33405)
+2026-09-06 04:54:25 sync (periodic): clock set (sub-second): before +10.6 ms, after +11.4 ms, rtt 4.0 ms, U ~1.8 ms, lead now 3.12 ms, bias sent (slewing)
+2026-09-06 04:54:25 bias learned: before +10.6 ms over 301 s = board -35 ppm slow; b -102 -> -93 ppm (P 33405)
+2026-09-06 04:59:26 sync (periodic): clock set (sub-second): before +7.9 ms, after +8.1 ms, rtt 4.0 ms, U ~2.1 ms, lead now 2.90 ms, bias sent (slewing)
+2026-09-06 04:59:26 bias learned: before +7.9 ms over 300 s = board -26 ppm slow; b -93 -> -86 ppm (P 33411)
+2026-09-06 05:04:27 sync (periodic): clock set (sub-second): before +13.5 ms, after +15.3 ms, rtt 4.0 ms, U ~1.2 ms, lead now 3.52 ms, bias sent (slewing)
+2026-09-06 05:04:27 bias learned: before +13.5 ms over 301 s = board -45 ppm slow; b -86 -> -75 ppm (P 33409)
+2026-09-06 05:09:27 sync (periodic): clock set (sub-second): before -0.5 ms, after +0.0 ms, rtt 4.0 ms, U ~1.2 ms, lead now 3.40 ms, bias sent (slewing)
+2026-09-06 05:09:27 bias learned: before -0.5 ms over 301 s = board +2 ppm slow; b -75 -> -75 ppm (P 33409)
+2026-09-06 05:14:28 sync (periodic): clock set (sub-second): before +4.2 ms, after +5.1 ms, rtt 4.0 ms, U ~1.3 ms, lead now 3.10 ms, bias sent (slewing)
+2026-09-06 05:14:28 bias learned: before +4.2 ms over 300 s = board -14 ppm slow; b -75 -> -72 ppm (P 33411)
+2026-09-06 05:19:29 sync (periodic): clock set (sub-second): before +9.0 ms, after +10.3 ms, rtt 3.9 ms, U ~2.0 ms, lead now 3.10 ms, bias sent (slewing)
+2026-09-06 05:19:29 bias learned: before +9.0 ms over 301 s = board -30 ppm slow; b -72 -> -65 ppm (P 33407)
+2026-09-06 05:24:29 sync (periodic): clock set (sub-second): before +9.6 ms, after +12.4 ms, rtt 4.0 ms, U ~1.6 ms, lead now 2.96 ms, bias sent (slewing)
+2026-09-06 05:24:29 bias learned: before +9.6 ms over 301 s = board -32 ppm slow; b -65 -> -57 ppm (P 33408)
+2026-09-06 05:29:30 sync (periodic): clock set (sub-second): before +15.5 ms, after +15.4 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.84 ms, bias sent (slewing)
+2026-09-06 05:29:30 bias learned: before +15.5 ms over 300 s = board -52 ppm slow; b -57 -> -44 ppm (P 33412)
+2026-09-06 05:34:30 sync (periodic): clock set (sub-second): before -2.2 ms, after -1.9 ms, rtt 4.0 ms, U ~1.4 ms, lead now 2.90 ms, bias sent (slewing)
+2026-09-06 05:34:30 bias learned: before -2.2 ms over 301 s = board +7 ppm slow; b -44 -> -46 ppm (P 33407)
+2026-09-06 05:39:31 sync (periodic): clock set (sub-second): before +11.7 ms, after +14.6 ms, rtt 3.9 ms, U ~1.8 ms, lead now 2.74 ms, bias sent (slewing)
+2026-09-06 05:39:31 bias hold: P 33407 -> 33415 since the last sync (loop still moving); residual +11.7 ms not learned
+2026-09-06 05:44:32 sync (periodic): clock set (sub-second): before -2.7 ms, after -2.4 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.65 ms, bias sent (slewing)
+2026-09-06 05:44:32 bias hold: P 33415 -> 33408 since the last sync (loop still moving); residual -2.7 ms not learned
+2026-09-06 05:49:32 sync (periodic): clock set (sub-second): before +10.7 ms, after +10.4 ms, rtt 4.0 ms, U ~1.2 ms, lead now 2.72 ms, bias sent (slewing)
+2026-09-06 05:49:32 bias hold: P 33408 -> 33416 since the last sync (loop still moving); residual +10.7 ms not learned
+2026-09-06 05:54:33 sync (periodic): clock set (sub-second): before +10.1 ms, after +13.2 ms, rtt 4.0 ms, U ~1.4 ms, lead now 2.70 ms, bias sent (slewing)
+2026-09-06 05:54:33 bias learned: before +10.1 ms over 301 s = board -34 ppm slow; b -46 -> -38 ppm (P 33415)
+2026-09-06 05:59:33 sync (periodic): clock set (sub-second): before +6.6 ms, after +6.8 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.81 ms, bias sent (slewing)
+2026-09-06 05:59:33 bias learned: before +6.6 ms over 300 s = board -22 ppm slow; b -38 -> -33 ppm (P 33414)
+2026-09-06 06:04:34 sync (periodic): clock set (sub-second): before +15.7 ms, after +15.5 ms, rtt 4.0 ms, U ~1.5 ms, lead now 2.64 ms, bias sent (slewing)
+2026-09-06 06:04:34 bias hold: P 33414 -> 33423 since the last sync (loop still moving); residual +15.7 ms not learned
+2026-09-06 06:09:35 sync (periodic): clock set (sub-second): before +1.8 ms, after +2.5 ms, rtt 4.0 ms, U ~1.1 ms, lead now 2.69 ms, bias sent (slewing)
+2026-09-06 06:09:35 bias learned: before +1.8 ms over 301 s = board -6 ppm slow; b -33 -> -32 ppm (P 33420)
+2026-09-06 06:14:35 sync (periodic): clock set (sub-second): before +8.4 ms, after +8.6 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.35 ms, bias sent (slewing)
+2026-09-06 06:14:35 bias learned: before +8.4 ms over 301 s = board -28 ppm slow; b -32 -> -25 ppm (P 33420)
+2026-09-06 06:19:35 sync (periodic): clock set (sub-second): before +2.7 ms, after +3.0 ms, rtt 3.9 ms, U ~1.1 ms, lead now 2.43 ms, bias sent (slewing)
+2026-09-06 06:19:36 bias learned: before +2.7 ms over 300 s = board -9 ppm slow; b -25 -> -23 ppm (P 33414)
+2026-09-06 06:24:36 sync (periodic): clock set (sub-second): before -0.6 ms, after -0.4 ms, rtt 4.0 ms, U ~2.3 ms, lead now 2.59 ms, bias sent (slewing)
+2026-09-06 06:24:36 bias learned: before -0.6 ms over 300 s = board +2 ppm slow; b -23 -> -23 ppm (P 33419)
+2026-09-06 06:29:36 sync (periodic): clock set (sub-second): before -5.7 ms, after -5.2 ms, rtt 4.0 ms, U ~1.7 ms, lead now 2.51 ms, bias sent (slewing)
+2026-09-06 06:29:36 bias learned: before -5.7 ms over 300 s = board +19 ppm slow; b -23 -> -28 ppm (P 33414)
+2026-09-06 06:34:36 sync (periodic): clock set (sub-second): before +0.4 ms, after +1.2 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.40 ms, bias sent (slewing)
+2026-09-06 06:34:36 bias learned: before +0.4 ms over 300 s = board -1 ppm slow; b -28 -> -28 ppm (P 33417)
+2026-09-06 06:39:36 sync (periodic): clock set (sub-second): before +2.4 ms, after +2.9 ms, rtt 3.8 ms, U ~1.4 ms, lead now 3.05 ms, bias sent (slewing)
+2026-09-06 06:39:36 bias learned: before +2.4 ms over 300 s = board -8 ppm slow; b -28 -> -26 ppm (P 33420)
+2026-09-06 06:44:36 sync (periodic): clock set (sub-second): before -9.5 ms, after -9.2 ms, rtt 4.4 ms, U ~1.6 ms, lead now 2.91 ms, bias sent (slewing)
+2026-09-06 06:44:36 bias learned: before -9.5 ms over 300 s = board +32 ppm slow; b -26 -> -34 ppm (P 33417)
+2026-09-06 06:49:37 sync (periodic): clock set (sub-second): before +8.6 ms, after +9.3 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.76 ms, bias sent (slewing)
+2026-09-06 06:49:37 bias learned: before +8.6 ms over 300 s = board -29 ppm slow; b -34 -> -27 ppm (P 33423)
+2026-09-06 06:54:37 sync (periodic): clock set (sub-second): before +5.9 ms, after +6.0 ms, rtt 5.0 ms, U ~1.3 ms, lead now 2.54 ms, bias sent (slewing)
+2026-09-06 06:54:37 bias learned: before +5.9 ms over 300 s = board -20 ppm slow; b -27 -> -22 ppm (P 33420)
+2026-09-06 06:59:37 sync (periodic): clock set (sub-second): before +4.8 ms, after +5.6 ms, rtt 4.0 ms, U ~1.5 ms, lead now 2.86 ms, bias sent (slewing)
+2026-09-06 06:59:37 bias hold: P 33420 -> 33427 since the last sync (loop still moving); residual +4.8 ms not learned
+2026-09-06 07:04:37 sync (periodic): clock set (sub-second): before -2.3 ms, after -1.5 ms, rtt 4.0 ms, U ~1.4 ms, lead now 2.94 ms, bias sent (slewing)
+2026-09-06 07:04:37 bias learned: before -2.3 ms over 300 s = board +8 ppm slow; b -22 -> -24 ppm (P 33432)
+2026-09-06 07:09:37 sync (periodic): clock set (sub-second): before -4.5 ms, after -4.2 ms, rtt 4.0 ms, U ~1.2 ms, lead now 3.07 ms, bias sent (slewing)
+2026-09-06 07:09:37 bias learned: before -4.5 ms over 300 s = board +15 ppm slow; b -24 -> -28 ppm (P 33426)
+2026-09-06 07:14:38 sync (periodic): clock set (sub-second): before +2.1 ms, after +1.9 ms, rtt 4.0 ms, U ~1.7 ms, lead now 3.29 ms, bias sent (slewing)
+2026-09-06 07:14:38 bias learned: before +2.1 ms over 300 s = board -7 ppm slow; b -28 -> -26 ppm (P 33426)
+2026-09-06 07:19:38 sync (periodic): clock set (sub-second): before +6.0 ms, after +6.7 ms, rtt 4.0 ms, U ~1.0 ms, lead now 2.79 ms, bias sent (slewing)
+2026-09-06 07:19:38 bias learned: before +6.0 ms over 300 s = board -20 ppm slow; b -26 -> -21 ppm (P 33432)
+2026-09-06 07:24:38 sync (periodic): clock set (sub-second): before +2.1 ms, after +2.5 ms, rtt 3.7 ms, U ~2.0 ms, lead now 2.76 ms, bias sent (slewing)
+2026-09-06 07:24:38 bias learned: before +2.1 ms over 300 s = board -7 ppm slow; b -21 -> -19 ppm (P 33431)
+2026-09-06 07:29:38 sync (periodic): clock set (sub-second): before +6.0 ms, after +6.6 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.76 ms, bias sent (slewing)
+2026-09-06 07:29:38 bias learned: before +6.0 ms over 300 s = board -20 ppm slow; b -19 -> -14 ppm (P 33435)
+2026-09-06 07:34:38 sync (periodic): clock set (sub-second): before +7.3 ms, after +7.9 ms, rtt 4.0 ms, U ~1.8 ms, lead now 2.93 ms, bias sent (slewing)
+2026-09-06 07:34:38 bias learned: before +7.3 ms over 300 s = board -24 ppm slow; b -14 -> -8 ppm (P 33440)
+2026-09-06 07:39:38 sync (periodic): clock set (sub-second): before -5.9 ms, after -3.0 ms, rtt 3.7 ms, U ~1.7 ms, lead now 2.91 ms, bias sent (slewing)
+2026-09-06 07:39:39 bias learned: before -5.9 ms over 300 s = board +20 ppm slow; b -8 -> -13 ppm (P 33437)
+2026-09-06 07:44:39 sync (periodic): clock set (sub-second): before +6.7 ms, after +7.1 ms, rtt 4.0 ms, U ~1.3 ms, lead now 2.75 ms, bias sent (slewing)
+2026-09-06 07:44:39 bias learned: before +6.7 ms over 300 s = board -22 ppm slow; b -13 -> -7 ppm (P 33443)
+2026-09-06 07:49:39 sync (periodic): clock set (sub-second): before -1.5 ms, after -1.3 ms, rtt 3.9 ms, U ~2.4 ms, lead now 2.62 ms, bias sent (slewing)
+2026-09-06 07:49:39 bias learned: before -1.5 ms over 300 s = board +5 ppm slow; b -7 -> -8 ppm (P 33443)
+2026-09-06 07:54:39 sync (periodic): clock set (sub-second): before +2.9 ms, after +3.4 ms, rtt 4.0 ms, U ~1.5 ms, lead now 2.65 ms, bias sent (slewing)
+2026-09-06 07:54:39 bias learned: before +2.9 ms over 300 s = board -10 ppm slow; b -8 -> -6 ppm (P 33443)

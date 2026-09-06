@@ -36,6 +36,7 @@
 pub mod cache;
 pub mod host;
 pub mod lead;
+pub mod scheduler;
 pub mod set;
 pub mod transaction;
 

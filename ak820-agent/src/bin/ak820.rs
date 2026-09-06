@@ -72,7 +72,8 @@ fn usage() {
         "ak820 -- AJAZZ AK820 Pro host tool -- reads the board, never writes it\n\
          \n\
          \x20 ak820 install [--in-place]   register the daemon as a per-user task and start it\n\
-         \x20                              (replaces the Python now-playing task; leaves the timekeeper)\n\
+         \x20               [--clock]      (replaces the Python now-playing task; --clock also takes the\n\
+         \x20                              clock from the Python timekeeper -- phase 4b, ahead of its gate)\n\
          \x20 ak820 uninstall              stop and remove the daemon's task\n\
          \x20 ak820 status                 the tasks, and what the daemon last did\n\
          \x20 ak820 --version\n\
@@ -227,6 +228,27 @@ fn clock(flags: &[&str]) -> Result<(), String> {
 /// accept the consequence. See [`clock`].
 fn clock_ownership(anyway: bool) -> Result<(), String> {
     use ak820_agent::task;
+    // The daemon, when it owns the clock, is the same hazard as the Python
+    // timekeeper: its transaction would take this read's reply as its own.
+    if let (Ok(Some(task::State::Running)), Ok(true)) =
+        (task::state(task::FOLDER, task::AGENT), task::agent_owns_clock())
+    {
+        if anyway {
+            eprintln!(
+                "warning: {} is running with --clock; this read can become one of its measurement samples (--anyway given)",
+                task::AGENT
+            );
+        } else {
+            return Err(format!(
+                "{} is running with --clock, so this read's reply could be taken as one of its own \
+                 measurement samples. Use `ak820 status` for what it sees, stop it first \
+                 (Stop-ScheduledTask -TaskPath '{}\\' -TaskName {}), or pass --anyway.",
+                task::AGENT,
+                task::FOLDER,
+                task::AGENT
+            ));
+        }
+    }
     match task::timekeeper_running() {
         Ok(Some(true)) if anyway => {
             eprintln!(
@@ -297,12 +319,14 @@ fn install(flags: &[&str]) -> Result<(), String> {
     use std::time::Duration;
 
     let mut in_place = false;
+    let mut clock = false;
     for flag in flags {
         match *flag {
             "--in-place" => in_place = true,
+            "--clock" => clock = true,
             other => {
                 return Err(format!(
-                    "install: unknown flag {other}; the only flag is --in-place"
+                    "install: unknown flag {other}; the flags are --in-place and --clock"
                 ))
             }
         }
@@ -362,20 +386,49 @@ fn install(flags: &[&str]) -> Result<(), String> {
     // now-playing mutex, and the daemon refused to start exactly as designed.
     // So: do not start until the name is free.
     wait_released(instance::NOWPLAYING, Duration::from_secs(10))?;
-    if task::info(task::FOLDER, task::TIMEKEEPER)?.is_some() {
+    // ⚠️ The clock. Exactly one process may run clock transactions; two
+    // silently corrupt each other's learners. `--clock` moves ownership to
+    // the daemon by removing the Python timekeeper's task; without it, the
+    // Python timekeeper is left exactly as it is.
+    let timekeeper_registered = task::info(task::FOLDER, task::TIMEKEEPER)?.is_some();
+    if clock {
+        if timekeeper_registered {
+            task::stop(task::FOLDER, task::TIMEKEEPER)?;
+            task::delete(task::FOLDER, task::TIMEKEEPER)?;
+            println!(
+                "stopped and removed the Python task {}: the daemon takes the clock (--clock)",
+                task::TIMEKEEPER
+            );
+        }
         println!(
-            "left the Python task {} alone: the clock stays with it until the Rust port passes its gate",
+            "⚠️  the daemon's clock loop is phase 4b, ahead of its measured-takeover gate; watch\n\
+             \x20   `ak820 status` and the log, and `powershell -File hostagent\\install-agents-windows.ps1`\n\
+             \x20   puts the Python timekeeper back if it misbehaves"
+        );
+    } else if timekeeper_registered {
+        println!(
+            "left the Python task {} alone: the clock stays with it (pass --clock to move it)",
             task::TIMEKEEPER
+        );
+    } else {
+        println!(
+            "⚠️  no Python timekeeper is registered and --clock was not given: nothing will sync\n\
+             \x20   the clock. Pass --clock, or reinstall the Python timekeeper."
         );
     }
 
     let user = format!("{}\\{}", env_var("USERDOMAIN")?, env_var("USERNAME")?);
     let log = dir.join("ak820-agent.log");
+    let arguments = format!(
+        "--log \"{}\"{}",
+        log.display(),
+        if clock { " --clock" } else { "" }
+    );
     let xml = task::task_xml(&task::Definition {
         description: task::AGENT_DESCRIPTION,
         user: &user,
         command: &daemon.display().to_string(),
-        arguments: &format!("--log \"{}\"", log.display()),
+        arguments: &arguments,
         working_directory: &bin_dir.display().to_string(),
     });
     task::register(task::AGENT, &xml)?;
@@ -428,9 +481,15 @@ fn uninstall() -> Result<(), String> {
     if task::info(task::FOLDER, task::AGENT)?.is_none() {
         println!("{}\\{} is not registered", task::FOLDER, task::AGENT);
     } else {
+        let owned_clock = task::agent_owns_clock()?;
         task::stop(task::FOLDER, task::AGENT)?;
         task::delete(task::FOLDER, task::AGENT)?;
         println!("stopped and removed {}\\{}", task::FOLDER, task::AGENT);
+        if owned_clock {
+            println!(
+                "⚠️  it owned the clock; nothing syncs it now. Reinstall the Python timekeeper below, or `ak820 install --clock` again."
+            );
+        }
     }
     println!("binaries and logs left in {}", agent::default_dir().display());
     println!(

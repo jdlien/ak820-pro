@@ -27,6 +27,24 @@ pub struct Status {
     /// Reports that arrived on our handle and answered someone else — the
     /// only direct evidence of another process talking to the board.
     pub foreign_reports: u64,
+    /// The clock loop's state, when the daemon runs it (`--clock`).
+    pub clock: Option<ClockStatus>,
+}
+
+/// What the clock loop last did — the readout the backlog asked for after
+/// "Running" hid thirteen minutes of missed syncs.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ClockStatus {
+    pub syncs: u64,
+    pub failures: u64,
+    pub last_sync: Option<String>,
+    /// The log line of the last sync attempt, success or failure.
+    pub last_line: Option<String>,
+    pub interval_s: u64,
+    /// The cache as last read: `lead_ms` to three decimals, and the bias.
+    pub lead_ms: String,
+    pub bias_ppm: Option<i32>,
+    pub last_error: Option<String>,
 }
 
 /// The file's text. One value per line; an absent value is an absent line.
@@ -58,6 +76,29 @@ pub fn render(s: &Status) -> String {
         put("smtc_last_error", v);
     }
     put("foreign_reports", &s.foreign_reports.to_string());
+    match &s.clock {
+        None => put("clock", "python timekeeper (not this daemon)"),
+        Some(c) => {
+            put("clock", "this daemon");
+            put("clock_syncs", &c.syncs.to_string());
+            put("clock_failures", &c.failures.to_string());
+            if let Some(v) = &c.last_sync {
+                put("clock_last_sync", v);
+            }
+            if let Some(v) = &c.last_line {
+                put("clock_last_line", v);
+            }
+            put("clock_interval_s", &c.interval_s.to_string());
+            put("clock_lead_ms", &c.lead_ms);
+            put(
+                "clock_bias_ppm",
+                &c.bias_ppm.map_or("unknown".to_string(), |b| b.to_string()),
+            );
+            if let Some(v) = &c.last_error {
+                put("clock_last_error", v);
+            }
+        }
+    }
     out
 }
 
@@ -102,6 +143,7 @@ mod tests {
             smtc_failures: 0,
             smtc_last_error: None,
             foreign_reports: 0,
+            clock: None,
         }
     }
 
@@ -110,8 +152,25 @@ mod tests {
         let text = render(&sample());
         assert_eq!(
             text,
-            "version=ak820-agent 0.1.0 (v0.1.0)\nstarted=2026-09-06 08:00:00\nupdated=2026-09-06 08:00:03\nboard=present\nmedia_last_push=2026-09-06 08:00:03\nmedia_last_text=play  Artist - Title\nsmtc_polls=2\nsmtc_failures=0\nforeign_reports=0\n"
+            "version=ak820-agent 0.1.0 (v0.1.0)\nstarted=2026-09-06 08:00:00\nupdated=2026-09-06 08:00:03\nboard=present\nmedia_last_push=2026-09-06 08:00:03\nmedia_last_text=play  Artist - Title\nsmtc_polls=2\nsmtc_failures=0\nforeign_reports=0\nclock=python timekeeper (not this daemon)\n"
         );
+    }
+
+    #[test]
+    fn the_clock_loop_renders_its_own_keys() {
+        let mut s = sample();
+        s.clock = Some(ClockStatus {
+            syncs: 3,
+            failures: 1,
+            last_sync: Some("2026-09-06 08:05:00".into()),
+            last_line: Some("sync (periodic): clock set (sub-second): before +2.9 ms".into()),
+            interval_s: 300,
+            lead_ms: "2.654".into(),
+            bias_ppm: Some(-6),
+            last_error: None,
+        });
+        let text = render(&s);
+        assert!(text.contains("clock=this daemon\nclock_syncs=3\nclock_failures=1\nclock_last_sync=2026-09-06 08:05:00\nclock_last_line=sync (periodic): clock set (sub-second): before +2.9 ms\nclock_interval_s=300\nclock_lead_ms=2.654\nclock_bias_ppm=-6\n"), "{text}");
     }
 
     #[test]
@@ -120,7 +179,7 @@ mod tests {
         s.media_last_error = Some("two\nlines\r\n".into());
         let text = render(&s);
         assert!(text.contains("media_last_error=two lines  \n"));
-        assert_eq!(text.lines().count(), 10);
+        assert_eq!(text.lines().count(), 11);
     }
 
     #[test]
@@ -130,7 +189,7 @@ mod tests {
         write(&path, &sample()).unwrap();
         let pairs = read(&path).unwrap();
         assert_eq!(pairs[0], ("version".to_string(), "ak820-agent 0.1.0 (v0.1.0)".to_string()));
-        assert_eq!(pairs.len(), 9);
+        assert_eq!(pairs.len(), 10);
         let mut tmp = path.as_os_str().to_owned();
         tmp.push(".tmp");
         assert!(!Path::new(&tmp).exists());

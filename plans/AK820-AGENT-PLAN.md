@@ -1,6 +1,6 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PHASES 0, 1 AND 2 COMPLETE, GATED AND AUDITED; PHASE 3'S CODE WRITTEN AHEAD OF ITS GATE** (2026-09-06). Planned and revised
+Status: **PHASES 0–2 COMPLETE AND AUDITED; 3a (REPLAY) MET; 4a LIVE — THE DAEMON OWNS NOW-PLAYING ON THIS MACHINE; 3b/4b (THE CLOCK TAKEOVER) WIRED AND AWAITING THE OWNER'S `ak820 install --clock`; 6a (RELEASE PLUMBING) DONE, 6b (CLEAN MACHINE) OPEN** (2026-09-06). Planned and revised
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
 (gpt-6-astra, xhigh), then built and gated phase by phase.
 
@@ -185,6 +185,63 @@ agent, both improvements rather than parity:** it logs presence transitions
 rather than a warning every three seconds while the cable is out, and a
 handle whose cancellation never lands pauses opens for a minute rather than
 leaking one per cycle.
+
+### Phase 3a evidence (2026-09-06)
+
+**The scheduler, the SOF-bias learner and the seed are ported verbatim**
+(`clock::scheduler`): every constant and gate from
+[AK820-AGENT-CLOCK-PARITY.md](AK820-AGENT-CLOCK-PARITY.md), wall time for
+scheduling and the seed, monotonic time for the learner's `elapsed`, the
+learner's timestamp taken before its status read, `int(round())` as ties to
+even, the hold log on its narrower condition, `P None` printed when a status
+read had failed. Twenty-three unit tests, one per gate and boundary.
+
+**Deterministic replay against the oracle's own record.** The Python
+timekeeper's log from this machine (`tests/fixtures/ak820pro-timekeeper-2026-09-05.log`,
+2026-09-05 11:36 to 2026-09-06 07:49, untouched) is the corpus:
+
+| Replayed | Count | Result |
+|---|---|---|
+| `bias learned` lines: inputs → the printed `e_slow`, the new bias, the whole line | 108 | all reproduced; 98 byte-identical at the printed elapsed, the other 10 within the half-second the whole-second print hides (`b` is sensitive to `elapsed` at the largest residuals) |
+| `bias hold` lines: the settled gate and the line | 59 | every one a period move beyond six ticks; every line byte-identical |
+| interval after each sync → when the next periodic sync actually came | 171 | every one inside `[interval, interval + one loop tick)`; 12 of them the fast interval, from the residual-above-60-ms stretch on 2026-09-05 12:22–12:53 |
+
+That is the parity document's "positive evidence that learning actually
+fired": a port that declined every sample would fail all three. What the
+log cannot supply is stated in the test: `ref_state` is assumed 2 where
+learning fired, and `elapsed` is replayed at the precision it was printed.
+
+**Phase 4b is wired but not switched.** The daemon runs the clock loop only
+with `--clock`: one Python-loop iteration every 15 s on the media thread,
+each transaction and status read on its own short handle (a fresh handle
+per transaction is also why a lost reply cannot straggle into the next one —
+the queue belongs to the file object), the sync line logged exactly as the
+Python logs it, the learner's cache write, the seed. `ak820 install --clock`
+is the owner's opt-in: it removes the Python timekeeper's task, registers
+the daemon with the flag, and says in so many words that this is ahead of
+the gate. `ak820 clock` refuses while a `--clock` daemon runs, for the same
+reason it refuses beside the Python one; `ak820 uninstall` says when it has
+just removed the clock's only owner; `ak820 install` without `--clock` warns
+when nothing would own the clock.
+
+**Phase 3b, the measured takeover, is the owner's to run** and is the one
+part of this the author could not exercise: a live clock transaction beside
+the running Python timekeeper would corrupt both learners. The procedure:
+
+1. `ak820 install --clock` (from a release build, so the exe in
+   `%LOCALAPPDATA%\ak820pro\bin` is the committed code).
+2. Watch `%LOCALAPPDATA%\ak820pro\ak820-agent.log` for the first sync line
+   within a minute — `sync (periodic): clock set (sub-second): before … ms,
+   after … ms, …` in the Python's exact format — and `ak820 status` for
+   `clock_syncs` climbing every 300 s (180 s while `before` exceeds 60 ms).
+3. The acceptance limits against the Python baseline in the same log file:
+   over a matched hour, `before` at the 300 s cadence within the Python's
+   own spread (its last day: median ~5 ms, 95 % under 30 ms), `bias learned`
+   lines appearing on the same gates, and no `warning:` line that the Python
+   would not have produced.
+4. Rollback at any point: `powershell -File hostagent\install-agents-windows.ps1`
+   reinstalls the Python timekeeper (the daemon's `--clock` must then be
+   removed with a plain `ak820 install`, or both write the clock).
 
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.
@@ -431,7 +488,7 @@ environment underneath it.
 | 0 ✅ | HID discovery, transport, `ak820 info` | Same JEDEC id and writable base as `ak820ctl info`; **plus** wrong-interface and malformed-report rejection, timeout/unplug/cancellation, traced opens showing nothing unrelated was touched, and VIA coexistence measured. — **all met 2026-09-05**, [evidence](#phase-0-evidence-2026-09-05). |
 | 1 ✅ | `text/`, `smtc/`, `ak820 probe` | **Met 2026-09-06.** Captured competing sessions, the current-session tiebreak, absent metadata and timeline, a track change, Unicode folding and both line budgets — three real captures pinned as tests, plus a 2,309-case folding fixture. | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
 | 2 ✅ | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) — **Met 2026-09-06**: three captured replies, plus the SET-reply-as-GET bytes behind the oracle's own bad line, render byte-identically through the pinned C and the port. [Evidence](#phase-2-evidence-2026-09-06). |
-| 3 ~ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **Code and C-transaction fixtures done 2026-09-06** (`clock::transaction`, `set`, `lead`, `cache`); the scheduler, the replay and the takeover are open. |
+| 3 ~ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **3a met 2026-09-06**: the scheduler, SOF-bias learner and seed ported (`clock::scheduler`), and replayed against the Python timekeeper's own log — 108 `bias learned` lines reproduced byte for byte, 59 holds, 171 interval choices ([evidence](#phase-3a-evidence-2026-09-06)). **3b, the measured takeover, is open** and is the owner's `ak820 install --clock`. |
 | 4 ~ | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. — **Split 2026-09-06** into 4a (now-playing now, self-install, status file) and 4b (the clock, after phase 3); see [Staged switch-over](#staged-switch-over-and-packaging-2026-09-06). |
 | 5 | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command — the firmware echoes the requested page in byte 3, so a foreign reply for another page would otherwise be decoded with this page's layout. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. |
 | 6 ~ | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. — **6a plumbing started 2026-09-06** (static CRT, `--version`, CI, tag → Release); the clean-machine gate is 6b. |

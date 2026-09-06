@@ -32,10 +32,12 @@ submodule sits on our `ak820pro-patches` branch.
 Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
 
 **In progress: `ak820-agent/`** — a Rust rewrite of the two Windows host agents
-as one daemon. **Phases 0, 1 and 2 complete and audited; phase 3's code —
-the whole clock transaction — written ahead of its gate; phase 4a live: the
-daemon owns now-playing on this machine, the Python timekeeper still owns
-the clock** (2026-09-06). 260 unit tests plus a 2,309-case parity fixture. Read
+as one daemon. **Phases 0–2 complete and audited; 3a met (the scheduler and
+learners replayed against the Python log); 4a live — the daemon owns
+now-playing on this machine, the Python timekeeper still owns the clock;
+the clock takeover (3b/4b) is wired behind `ak820 install --clock` and waits
+for the owner** (2026-09-06). 286 unit tests, the 2,309-case folding fixture,
+and a 3-test replay of the timekeeper's log. Read
 [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
 first; it carries the phase gates and the findings that are load-bearing.
 Its two companions are part of the plan, not background:
@@ -238,7 +240,7 @@ weak-hooked/no-op for other boards.
 (`windows` pinned `=0.62.2`; the blocking async spelling is `.join()`, not
 `.get()`). Two binaries because a PE has one subsystem: `ak820-agent.exe` is
 windows-subsystem so it can never flash a console, `ak820.exe` is a console CLI.
-Built test-first; `cargo test` from that directory (260 tests + 3 integration).
+Built test-first; `cargo test` from that directory (286 tests + 6 integration).
 `cargo build --release` gives static-CRT binaries (`.cargo/config.toml`); a
 `v*` tag builds the Releases zip in CI (`.github/workflows/release.yml`).
 

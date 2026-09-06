@@ -34,15 +34,18 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use crate::clock::host::SystemHost;
+use crate::clock::cache::{Cache, FileCache};
+use crate::clock::host::{Host, SystemHost};
+use crate::clock::scheduler::{self, Learn, Reason, Scheduler, StatusRead, SyncResult};
+use crate::clock::transaction;
 use crate::hid::device::{self, Device, REQUEST_TIMEOUT};
-use crate::hid::{self, Drained};
+use crate::hid::{self, path, Drained};
 use crate::logfile::{self, Log};
 use crate::media::{self, Publisher};
 use crate::proto::Channel;
 use crate::smtc::worker::MediaWorker;
 use crate::smtc::Snapshot;
-use crate::status::{self, Status};
+use crate::status::{self, ClockStatus, Status};
 
 /// How long opens pause after a cancellation that never landed.
 pub const ABANDON_BACKOFF: Duration = Duration::from_secs(60);
@@ -162,6 +165,205 @@ pub struct Options {
     pub status: PathBuf,
     /// One cycle, then return — for a check from a terminal.
     pub once: bool,
+    /// Run the clock loop too. ⚠️ Phase 4b: only when nothing else owns the
+    /// clock, which `ak820 install --clock` arranges by removing the Python
+    /// timekeeper's task. Two clock writers corrupt each other's learners.
+    pub clock: bool,
+}
+
+/// The clock loop: `ak820-timekeeper.py`'s `main()` body, one iteration per
+/// [`scheduler::LOOP`], over the in-process transaction instead of a spawned
+/// `ak820ctl`.
+///
+/// Every board interaction is one short open — the transaction, a status
+/// read — closed before the next, as the Python's per-spawn opens were. A
+/// fresh handle per transaction also means a lost reply cannot straggle into
+/// the next one: the driver's queue belongs to the file object, and a closed
+/// one takes its queue with it.
+struct ClockLoop {
+    sched: Scheduler,
+    cache: FileCache,
+    /// Monotonic seconds for the learner's `elapsed`, as `time.monotonic()`.
+    epoch: Instant,
+    last_tick: Option<Instant>,
+    status: ClockStatus,
+}
+
+impl ClockLoop {
+    fn new(now_wall: f64) -> ClockLoop {
+        let cache = FileCache::at(FileCache::default_path());
+        let mut status = ClockStatus {
+            interval_s: scheduler::SYNC_INTERVAL as u64,
+            ..ClockStatus::default()
+        };
+        let cap = cache.load();
+        status.lead_ms = format!("{:.3}", cap.lead_ms);
+        status.bias_ppm = cap.bias_ppm;
+        ClockLoop {
+            sched: Scheduler::new(now_wall),
+            cache,
+            epoch: Instant::now(),
+            last_tick: None,
+            status,
+        }
+    }
+
+    fn mono(&self) -> f64 {
+        self.epoch.elapsed().as_secs_f64()
+    }
+
+    fn due(&self, now: Instant) -> bool {
+        self.last_tick
+            .is_none_or(|t| now.duration_since(t) >= Duration::from_secs_f64(scheduler::LOOP))
+    }
+
+    /// One iteration of the Python loop body.
+    fn tick(&mut self, log: &Log, st: &mut Status, now: Instant) {
+        self.last_tick = Some(now);
+        let host = SystemHost;
+        let wall = host.now();
+        // `hid_present()`: the Configuration Manager's list, opening nothing.
+        let listed = device::interfaces(path::VID, path::PID).unwrap_or_default();
+        let present = !listed.is_empty();
+
+        if let Some(reason) = self.sched.due(wall, present) {
+            if reason == Reason::Enumerated {
+                std::thread::sleep(Duration::from_secs_f64(scheduler::ENUMERATED_SETTLE));
+            }
+            let (result, line) = self.sync(reason, st);
+            log.line(&line);
+            self.status.last_line = Some(line);
+            self.sched.synced(&result, host.now());
+            if result.ok {
+                self.status.syncs += 1;
+                self.status.last_sync = Some(logfile::stamp(&host));
+                self.status.last_error = None;
+                // learn_bias: the timestamp is taken BEFORE the status read
+                let now_mono = self.mono();
+                let status = self.read_status(st);
+                let cache_bias = self.cache.load().bias_ppm;
+                let decision = self.sched.learn(reason, &result, status.as_ref(), cache_bias, now_mono);
+                match &decision {
+                    Learn::Learned { b_new_rounded, .. } => {
+                        let mut cap = self.cache.load();
+                        cap.bias_ppm = Some(*b_new_rounded);
+                        match self.cache.save(&cap) {
+                            Ok(()) => {
+                                if let Some(l) = decision.log_line() {
+                                    log.line(&l);
+                                }
+                            }
+                            Err(e) => log.line(&format!("[warn] cache: {e}")),
+                        }
+                    }
+                    Learn::Hold { .. } => {
+                        if let Some(l) = decision.log_line() {
+                            log.line(&l);
+                        }
+                    }
+                    Learn::Baseline | Learn::Declined => {}
+                }
+            } else {
+                self.status.failures += 1;
+            }
+            self.status.interval_s = self.sched.interval() as u64;
+        }
+
+        if present {
+            // bias_step: the seed, only while the cache has no bias
+            let cap = self.cache.load();
+            if cap.bias_ppm.is_some() {
+                self.sched.seed_step(true, None, "", host.now());
+            } else {
+                let status = self.read_status(st);
+                let cid: Vec<&str> = listed.iter().map(|i| i.path()).collect();
+                let cid = cid.join("|");
+                let step = self.sched.seed_step(false, status.as_ref(), &cid, host.now());
+                if let Some(b) = step.bias_to_cache() {
+                    let mut cap = self.cache.load();
+                    cap.bias_ppm = Some(b);
+                    match self.cache.save(&cap) {
+                        Ok(()) => {
+                            if let Some(l) = step.log_line(&cid) {
+                                log.line(&l);
+                            }
+                        }
+                        Err(e) => log.line(&format!("[warn] cache: {e}")),
+                    }
+                }
+            }
+        }
+
+        let cap = self.cache.load();
+        self.status.lead_ms = format!("{:.3}", cap.lead_ms);
+        self.status.bias_ppm = cap.bias_ppm;
+        self.sched.end_loop(present, host.now());
+        st.clock = Some(self.status.clone());
+    }
+
+    /// `sync()`: one transaction on a fresh handle. Returns what the Python's
+    /// `sync()` returns and the log line it writes.
+    fn sync(&mut self, reason: Reason, st: &mut Status) -> (SyncResult, String) {
+        let mut discarded = Vec::new();
+        let outcome = match device::open_board() {
+            Ok(dev) => transaction::run(
+                &dev,
+                dev.outstanding(),
+                &SystemHost,
+                &self.cache,
+                REQUEST_TIMEOUT,
+                &mut discarded,
+            )
+            .map_err(|e| e.to_string()),
+            Err(e) => Err(e.to_string()),
+        };
+        st.foreign_reports += discarded
+            .iter()
+            .filter(|d| matches!(d, Drained::Foreign(_)))
+            .count() as u64;
+        match outcome {
+            Ok(out) => {
+                let report = out.report();
+                let last = report.lines().last().unwrap_or("").to_string();
+                let reported = out.as_reported();
+                (
+                    SyncResult {
+                        ok: true,
+                        before_ms: reported.before_ms,
+                        slewing: reported.slewing,
+                    },
+                    scheduler::sync_log_line(reason, &last, 0),
+                )
+            }
+            Err(e) => {
+                self.status.last_error = Some(e.clone());
+                (
+                    SyncResult {
+                        ok: false,
+                        before_ms: None,
+                        slewing: false,
+                    },
+                    scheduler::sync_log_line(reason, &e, 1),
+                )
+            }
+        }
+    }
+
+    /// `read_status()`: one GET on a fresh handle; `None` on any failure or
+    /// an unset clock, as the Python's `rc != 0` is.
+    fn read_status(&mut self, st: &mut Status) -> Option<StatusRead> {
+        let dev = device::open_board().ok()?;
+        let got = transaction::read_once(&dev, dev.outstanding(), &SystemHost, REQUEST_TIMEOUT).ok()?;
+        st.foreign_reports += got
+            .drained
+            .iter()
+            .filter(|d| matches!(d, Drained::Foreign(_)))
+            .count() as u64;
+        if !got.board.understood() {
+            return None;
+        }
+        StatusRead::from_board(&got.board, got.sample.map(|s| s.offset_ms))
+    }
 }
 
 /// `%LOCALAPPDATA%\ak820pro`: the directory the PowerShell installer put the
@@ -193,6 +395,18 @@ pub fn run(opts: Options) -> Result<(), String> {
         started: logfile::stamp(&SystemHost),
         ..Status::default()
     };
+    let mut clock = if opts.clock {
+        log.line(&format!(
+            "clock loop: syncing every {}s ({}s while the residual exceeds {} ms); cache {}",
+            scheduler::SYNC_INTERVAL,
+            scheduler::SYNC_INTERVAL_FAST,
+            scheduler::FAST_ABOVE_MS,
+            FileCache::default_path().display()
+        ));
+        Some(ClockLoop::new(SystemHost.now()))
+    } else {
+        None
+    };
 
     // The Python agent read SMTC synchronously, so its first push was the
     // true state. The worker publishes asynchronously, and the first live run
@@ -214,6 +428,15 @@ pub fn run(opts: Options) -> Result<(), String> {
             let outcome = cycle(&plan, &snapshot, now, &mut publisher, &log, &mut st);
             if let Some(line) = watch.observe(outcome.as_ref().map(|_| ()), now) {
                 log.line(&line);
+            }
+        }
+
+        // The clock loop, every 15 s, on the same thread: a transaction is
+        // ~100 ms and the media pushes can wait that long. The one long
+        // pause is the 2 s settle after an enumeration.
+        if let Some(clock) = clock.as_mut() {
+            if clock.due(now) {
+                clock.tick(&log, &mut st, now);
             }
         }
 
