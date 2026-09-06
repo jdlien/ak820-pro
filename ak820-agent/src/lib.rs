@@ -8,3 +8,4 @@ pub mod hid;
 pub mod proto;
 pub mod smtc;
 pub mod text;
+pub mod via;

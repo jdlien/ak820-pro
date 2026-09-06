@@ -33,6 +33,7 @@ fn main() -> ExitCode {
         ["info"] => info(),
         ["selftest"] => selftest(),
         ["probe"] => probe(),
+        ["lighting"] => lighting(),
         ["watch"] => watch(20),
         ["watch", secs] => secs
             .parse()
@@ -266,6 +267,49 @@ fn probe() -> Result<(), String> {
             .map(|&b| if (0x20..0x7F).contains(&b) { b as char } else { '.' })
             .collect();
         println!("  {} ...   {text:?}", hex.join(" "));
+    }
+    Ok(())
+}
+
+/// What the board says its lighting actually is.
+///
+/// ⚠️ Read-only, and worth having because VIA's display cannot be trusted after
+/// a desync -- see `plans/BACKLOG.md`. The board executes the commands it is
+/// sent; VIA only loses the confirmations, so its UI can disagree with reality.
+///
+/// The comparison against `keyboard.json` is the actionable part: `flash.sh`
+/// does **not** restore RGB state, so every flash reverts the LEDs to
+/// `rgb_matrix.default`. If the board differs from that default, the next flash
+/// silently changes the lighting.
+fn lighting() -> Result<(), String> {
+    use ak820_agent::via;
+
+    let dev = device::open_board().map_err(|e| e.to_string())?;
+    let l = via::read_lighting(&dev).map_err(|e| e.to_string())?;
+
+    println!("effect     : {} ({})", l.effect, via::effect_name(l.effect));
+    println!("hue        : {}", l.hue);
+    println!("sat        : {}", l.sat);
+    println!("brightness : {}", l.brightness);
+    println!("speed      : {}", l.speed);
+
+    // keyboard.json's rgb_matrix.default, as of 2026-09-06.
+    const DEFAULT: (u8, &str, u8, u8, u8, u8) = (2, "alphas_mods", 240, 215, 86, 127);
+    let (d_effect, d_name, d_hue, d_sat, d_val, d_speed) = DEFAULT;
+    let same = l.effect == d_effect
+        && l.hue == d_hue
+        && l.sat == d_sat
+        && l.brightness == d_val
+        && l.speed == d_speed;
+    println!();
+    if same {
+        println!("matches keyboard.json's rgb_matrix.default -- a flash would not change it.");
+    } else {
+        println!(
+            "⚠️  keyboard.json's default is effect {d_effect} ({d_name}), hue {d_hue}, sat {d_sat}, val {d_val}, speed {d_speed}."
+        );
+        println!("   They differ, so the next flash would revert the lighting to that default.");
+        println!("   Either set the default to match, or note these values before flashing.");
     }
     Ok(())
 }
