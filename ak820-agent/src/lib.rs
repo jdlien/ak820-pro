@@ -2,6 +2,7 @@
 //!
 //! Windows only, by design: macOS keeps the Python LaunchAgents, which also
 //! remain the clock's reference implementation. See plans/AK820-AGENT-PLAN.md.
+pub mod clock;
 pub mod flash;
 pub mod hid;
 pub mod proto;
