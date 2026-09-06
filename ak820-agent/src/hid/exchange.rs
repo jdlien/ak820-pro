@@ -129,10 +129,10 @@ pub fn drain_until(wire: &impl Wire, deadline: Instant) -> (Vec<Drained>, Queue)
 /// 2. **Drain, and require an empty queue.** A leftover report can carry our own
 ///    channel and command from an earlier request; nothing in the bytes
 ///    distinguishes it from a fresh reply.
-/// 3. **Write, and tell the caller when.** `on_send` fires between the write
-///    completing and the read starting, which is where a clock measurement's
-///    `t0` belongs — not before the drain, whose duration is unbounded from the
-///    caller's point of view.
+/// 3. **Write, and tell the caller when.** `on_send` fires immediately before
+///    the write, matching where `ak820ctl` takes `t0` — after the drain, whose
+///    duration is unbounded from the caller's point of view, and not after the
+///    write, which would shift every offset relative to the oracle.
 /// 4. **Correlate every read**, discarding anything that answered someone else,
 ///    until the budget runs out.
 pub fn exchange(
@@ -161,8 +161,17 @@ pub fn exchange(
     }
 
     let frame = proto::frame(channel, command, body);
+    // ⚠️ **Before** the write, not after it, and this is parity rather than
+    // preference. `ak820ctl` takes `t0` immediately before `hid_write` and `t1`
+    // after the read returns, then uses the midpoint. Timestamping write
+    // *completion* instead would be arguably closer to the moment of
+    // transmission — and would shift every offset this port produces relative
+    // to the oracle by half the write, straight into the lead learner. A
+    // deliberate improvement to the measurement is a separate change from
+    // reproducing it.
+    on_send(Instant::now());
     match wire.write_report(&frame, left.min(WRITE_TIMEOUT))? {
-        Sent::Yes => on_send(Instant::now()),
+        Sent::Yes => {}
         Sent::TimedOut => {
             return Err(Error::Io {
                 op: "write",
@@ -451,18 +460,39 @@ mod tests {
         assert_eq!(&reply.report[..8], INFO_REPLY);
     }
 
-    /// ⚠️ The timestamp placement finding 3 is about: `on_send` must fire after
-    /// the drain and before the read, or a clock measurement brackets the wrong
-    /// interval.
+    /// ⚠️ What timestamp placement (finding 3) is about: `on_send` must fire
+    /// after the drain — whose duration the caller cannot see — and before the
+    /// write, which is where `ak820ctl` takes `t0`. A caller that brackets the
+    /// drain measures an interval whose midpoint is not the transmission
+    /// midpoint, and reports a false offset of half the drain.
     #[test]
-    fn on_send_fires_between_the_drain_and_the_read() {
+    fn on_send_fires_after_the_drain_and_before_the_write() {
+        // A drain with something in it, so the two instants are separable.
         let fake = Fake::new(vec![report(TEXT_ECHO), None, report(INFO_REPLY)]);
-        let before = Instant::now();
+        let entered = Instant::now();
         let mut sent_at = None;
         exchange(&fake, Channel::Flash, 0x01, &[], budget(), |t| sent_at = Some(t)).unwrap();
-        let sent_at = sent_at.expect("on_send must fire on a successful write");
-        assert!(sent_at >= before);
+        let sent_at = sent_at.expect("on_send must fire when a command goes out");
+        assert!(sent_at >= entered);
         assert!(sent_at <= Instant::now());
+    }
+
+    /// The write is issued after the callback, so a caller's `t0` cannot
+    /// include it. Ordering is asserted through the fake rather than by
+    /// reading the code.
+    #[test]
+    fn nothing_is_written_before_on_send_fires() {
+        let fake = Fake::new(vec![None, report(INFO_REPLY)]);
+        let mut written_when_called = None;
+        exchange(&fake, Channel::Flash, 0x01, &[], budget(), |_| {
+            written_when_called = Some(fake.written().len());
+        })
+        .unwrap();
+        assert_eq!(
+            written_when_called,
+            Some(0),
+            "the command must still be unsent when the caller takes t0"
+        );
     }
 
     #[test]
