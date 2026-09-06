@@ -496,6 +496,14 @@ fn install(flags: &[&str]) -> Result<(), String> {
     if !staged.is_empty() {
         println!("copied ak820-agent.exe and ak820.exe to {}", bin_dir.display());
     }
+    if !in_place {
+        // Not on PATH, and `%LOCALAPPDATA%` is cmd's spelling: PowerShell
+        // reads it as a module name. Say the form that works there.
+        println!(
+            "the installed CLI is {}\\ak820.exe; from PowerShell: & \"$env:LOCALAPPDATA\\ak820pro\\bin\\ak820.exe\" status",
+            bin_dir.display()
+        );
+    }
 
     // The Python now-playing agent is what the daemon replaces. The Python
     // timekeeper is not, unless --clock says so.
@@ -526,12 +534,37 @@ fn install(flags: &[&str]) -> Result<(), String> {
         task::AGENT,
         daemon.display()
     );
+    // The status file is the daemon's own account of itself, and the previous
+    // daemon's file stays there until the new one writes — after its first
+    // pass, which with --clock includes a sync a few seconds in. So wait for
+    // a `started` stamp that is not the old one; what prints below is then
+    // this daemon's, not its predecessor's (the owner's first `--clock` run
+    // printed the old daemon's file, "clock python timekeeper" and all).
+    let status_path = dir.join("ak820-agent.status");
+    let previous = started_stamp(&status_path);
     task::start(task::FOLDER, task::AGENT)
         .map_err(|e| format!("{e}; it is registered and will start at the next logon"))?;
     println!("started it now; log: {}", log.display());
-    std::thread::sleep(Duration::from_millis(1500));
+    let until = std::time::Instant::now() + Duration::from_secs(20);
+    while started_stamp(&status_path) == previous && std::time::Instant::now() < until {
+        std::thread::sleep(Duration::from_millis(250));
+    }
     println!();
+    if started_stamp(&status_path) == previous {
+        println!(
+            "(the daemon has not written its status file yet; what follows is the previous one's -- \
+             `ak820 status` in a moment)\n"
+        );
+    }
     status()
+}
+
+/// The `started` stamp in a status file, if there is one.
+fn started_stamp(path: &std::path::Path) -> Option<String> {
+    ak820_agent::status::read(path)?
+        .into_iter()
+        .find(|(k, _)| k == "started")
+        .map(|(_, v)| v)
 }
 
 /// Stop and remove the Python tasks the daemon replaces, and not until each

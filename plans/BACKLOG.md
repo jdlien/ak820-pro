@@ -411,6 +411,26 @@ one of those five is ever opened.
 
 **2026-09-06:** the Python now-playing agent is retired on this machine (the
 daemon has its job), which removes `ak820text.py`'s share. The timekeeper's
-two enumerations per loop remain until the clock moves to the daemon
-(`ak820 install --clock`, the plan's phase 4b), after which nothing on this
-machine enumerates HID except a hand-run `ak820ctl` or `clock-phase.py`.
+two enumerations per loop went with it at 14:40 the same day (`ak820 install
+--clock`, the plan's phase 4b): **nothing on this machine enumerates HID now**
+except a hand-run `ak820ctl` or `clock-phase.py`.
+
+## The daemon's verify residual runs +1.7 ms above the C's (2026-09-06)
+
+Measured across the takeover's first ten syncs: `after` minus `before` — the
+verify GET's offset against the burst's min-RTT sample — averages +1.7 ms
+(max +2.9) in the daemon, +0.4 (max +1.2) in the last 60 Python-driven
+`ak820ctl` syncs on the same board. Everything else in the line is inside the
+C's spread (`plans/AK820-AGENT-PLAN.md`, "Phase 3b evidence").
+
+**Why it is not urgent:** neither learner uses `after`. The lead learns from
+the SET reply's receipt offset and the bias from `before`; `after` feeds the
+printed line and the stepped-case `warning:` gate only.
+
+**Why it is worth understanding:** a single sample's offset sitting +2 ms off
+the min-RTT sample's means the two transports' write/read asymmetry differs,
+and asymmetry is what the midpoint estimate cannot see — so `before` itself
+could carry a small constant offset the C's did not. The check is cheap:
+capture a burst's five (t0, t1, board) triples with `ak820 clock --raw` (with
+the daemon stopped, never beside it) and compare per-sample offsets against
+the same capture through `ak820ctl clock --read` on the pinned C.

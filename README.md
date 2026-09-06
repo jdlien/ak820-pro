@@ -190,6 +190,10 @@ ak820 probe          # what Windows' media API sees, if the LCD shows nothing
 ak820 health         # the firmware's own stall counters (--stalls --rows --isr --json)
 ```
 
+The installed copy is not on `PATH`. From PowerShell it is
+`& "$env:LOCALAPPDATA\ak820pro\bin\ak820.exe" status` — `%LOCALAPPDATA%` is
+cmd's spelling, and PowerShell reads it as a module name.
+
 The daemon reads **SMTC**, Windows' own media-session API — the one behind the
 volume-key flyout — so it needs no per-app support at all. Spotify, Apple Music,
 foobar2000 and **any browser** (YouTube and web players included) all appear
@@ -198,11 +202,11 @@ SMTC session, which no change to the agent can fix. Two measured quirks:
 **foobar2000** reports title and artist but no timeline, so it gets no progress
 timer; **Apple Music** reports everything.
 
-**The clock is still the Python timekeeper's job** until the Rust port passes
-its gate (`plans/AK820-AGENT-PLAN.md`); `ak820 install --clock` moves it to
-the daemon ahead of that gate, for testing. To move it back, run a plain
-`ak820 install` **first** and the PowerShell installer below second — the
-other order runs two clock writers at once. The Python installer is
+**The clock moves to the daemon with `ak820 install --clock`**, which stops
+and removes the Python timekeeper (`plans/AK820-AGENT-PLAN.md` has the
+measured takeover). To move it back, run a plain `ak820 install` **first**
+and the PowerShell installer below second — the other order would run two
+clock writers at once, and the installer refuses it. The Python installer is
 **PowerShell**, not the MSYS2 shell you built the firmware in, and it needs
 `./setup.sh` to have made `venv-win`:
 

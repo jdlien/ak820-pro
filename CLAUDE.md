@@ -33,10 +33,10 @@ Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
 
 **In progress: `ak820-agent/`** — a Rust rewrite of the two Windows host agents
 as one daemon. **Phases 0–2 complete and audited; 3a met (the scheduler and
-learners replayed against the Python log); 4a live — the daemon owns
-now-playing on this machine, the Python timekeeper still owns the clock;
-the clock takeover (3b/4b) is wired behind `ak820 install --clock` and waits
-for the owner; the 3a/4a audit's 18 findings fixed and phase 5 (health) met** (2026-09-06).
+learners replayed against the Python log); 4a and 4b live — since 14:40 on 2026-09-06
+the daemon owns now-playing AND the clock on this machine, the Python
+timekeeper is removed, and the first hour is inside the Python's baseline;
+the 3a/4a audit's 18 findings fixed and phase 5 (health) met** (2026-09-06).
 305 unit tests, the 2,309-case folding fixture, a 4-test replay of the
 timekeeper's log and a 2-test health capture. Read
 [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
@@ -132,11 +132,12 @@ is plain HID, so no Zadig. All four are written up in
 Windows host agents are Scheduled Tasks under `\ak820pro\`. **As of
 2026-09-06 now-playing is the Rust daemon** (`ak820 install` / `status` /
 `uninstall`, task `AK820Pro-agent`, log and status file in
-`%LOCALAPPDATA%\ak820pro\`), and **the clock is still the Python timekeeper**,
-installed from **PowerShell**:
-`hostagent/install-agents-windows.ps1 [-Status] [-Uninstall]`. That installer
-also re-registers the Python now-playing task; it then exits at once because
-the daemon holds its mutex, which is the intended outcome. The Python agents
+`%LOCALAPPDATA%\ak820pro\`), and **since 14:40 on 2026-09-06 the clock too** (`ak820 install --clock`;
+the Python timekeeper's task is removed). The Python agents' installer is
+**PowerShell**: `hostagent/install-agents-windows.ps1 [-Status] [-Uninstall]`.
+It **refuses** while the daemon owns the clock — the way back is a plain
+`ak820 install` FIRST, then that installer — and its now-playing task exits at
+once because the daemon holds its mutex, which is the intended outcome. The Python agents
 need `venv-win` (native python) — `venv-mingw64` can never hold `winsdk`, so
 `venv_bootstrap.py` picks the venv that *provides* the module, not the first
 that exists. Two traps that fail silently: **ak820ctl must be linked static**

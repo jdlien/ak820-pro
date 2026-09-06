@@ -67,6 +67,12 @@ function Get-AgentTask($name) {
 }
 
 if ($Status) {
+    $rust = Get-AgentTask 'AK820Pro-agent'
+    if ($rust) {
+        $rustArgs = ($rust.Actions | ForEach-Object { $_.Arguments }) -join ' '
+        $owns = if ($rustArgs -match '(^|\s)"?--clock"?(\s|$)') { 'owns the clock too (--clock)' } else { 'owns now-playing; the clock is the timekeeper''s' }
+        "{0,-22} {1,-10} the Rust daemon: {2}" -f 'AK820Pro-agent', $rust.State, $owns
+    }
     foreach ($a in $Agents) {
         $t = Get-AgentTask $a.Name
         if (-not $t) {
@@ -95,6 +101,24 @@ if ($Uninstall) {
     }
     "log files left in $LogDir"
     return
+}
+
+# --- the Rust daemon --------------------------------------------------------
+# `ak820 install` registers \ak820pro\AK820Pro-agent, which owns now-playing
+# and, with --clock, the clock. Exactly one process may write the clock: two
+# silently corrupt each other's learners. So this installer refuses to put the
+# Python timekeeper beside a daemon that owns the clock. The way back is the
+# other order: a plain `ak820 install` (without --clock) FIRST, so the daemon
+# stops writing the clock, then this installer.
+$RustAgent = Get-AgentTask 'AK820Pro-agent'
+if ($RustAgent) {
+    $rustArgs = ($RustAgent.Actions | ForEach-Object { $_.Arguments }) -join ' '
+    if ($rustArgs -match '(^|\s)"?--clock"?(\s|$)') {
+        throw ("AK820Pro-agent (the Rust daemon) owns the clock: its task runs with --clock. " +
+               "Registering the Python timekeeper beside it would run two clock writers. " +
+               "Run a plain 'ak820 install' (without --clock) FIRST, then this installer.")
+    }
+    "AK820Pro-agent (the Rust daemon) is registered and owns now-playing: AK820Pro-nowplaying will start, find the daemon holding its mutex, and exit. Expected."
 }
 
 # --- install ---------------------------------------------------------------
