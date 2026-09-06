@@ -187,6 +187,7 @@ ak820 install        # copies itself to %LOCALAPPDATA%\ak820pro\bin, registers a
 ak820 status         # is it running, what did it last push, and when
 ak820 uninstall      # stop and remove the task (binaries and logs stay)
 ak820 probe          # what Windows' media API sees, if the LCD shows nothing
+ak820 health         # the firmware's own stall counters (--stalls --rows --isr --json)
 ```
 
 The daemon reads **SMTC**, Windows' own media-session API — the one behind the
@@ -198,9 +199,12 @@ SMTC session, which no change to the agent can fix. Two measured quirks:
 timer; **Apple Music** reports everything.
 
 **The clock is still the Python timekeeper's job** until the Rust port passes
-its gate (`plans/AK820-AGENT-PLAN.md`). Its installer is **PowerShell**, not the
-MSYS2 shell you built the firmware in, and it needs `./setup.sh` to have made
-`venv-win`:
+its gate (`plans/AK820-AGENT-PLAN.md`); `ak820 install --clock` moves it to
+the daemon ahead of that gate, for testing. To move it back, run a plain
+`ak820 install` **first** and the PowerShell installer below second — the
+other order runs two clock writers at once. The Python installer is
+**PowerShell**, not the MSYS2 shell you built the firmware in, and it needs
+`./setup.sh` to have made `venv-win`:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File hostagent\install-agents-windows.ps1

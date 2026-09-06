@@ -1,10 +1,10 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PHASES 0–2 COMPLETE AND AUDITED; 3a (REPLAY) MET; 4a LIVE — THE DAEMON OWNS NOW-PLAYING ON THIS MACHINE; 3b/4b (THE CLOCK TAKEOVER) WIRED AND AWAITING THE OWNER'S `ak820 install --clock`; 6a (RELEASE PLUMBING) DONE, 6b (CLEAN MACHINE) OPEN** (2026-09-06). Planned and revised
+Status: **PHASES 0–2 COMPLETE AND AUDITED; 3a (REPLAY) MET, RE-MET WITH STATE CARRIED AFTER ITS AUDIT; 4a LIVE AND AUDITED — THE DAEMON OWNS NOW-PLAYING ON THIS MACHINE; 5 (HEALTH) MET; 3b/4b (THE CLOCK TAKEOVER) WIRED AND AWAITING THE OWNER'S `ak820 install --clock`; 6a (RELEASE PLUMBING) DONE, 6b (CLEAN MACHINE) OPEN** (2026-09-06). Planned and revised
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
 (gpt-6-astra, xhigh), then built and gated phase by phase.
 
-Crate at `ak820-agent/`, **235 unit tests plus a 2,309-case parity fixture**;
+Crate at `ak820-agent/`, **305 unit tests, a 2,309-case folding fixture, a 4-test replay of the timekeeper's log and a 2-test health capture**;
 `cargo test` from that directory.
 
 - `hid::path` — bounded path matching, so discovery narrows to this board
@@ -239,9 +239,45 @@ the running Python timekeeper would corrupt both learners. The procedure:
    own spread (its last day: median ~5 ms, 95 % under 30 ms), `bias learned`
    lines appearing on the same gates, and no `warning:` line that the Python
    would not have produced.
-4. Rollback at any point: `powershell -File hostagent\install-agents-windows.ps1`
-   reinstalls the Python timekeeper (the daemon's `--clock` must then be
-   removed with a plain `ak820 install`, or both write the clock).
+4. Rollback at any point, **in this order**: a plain `ak820 install` first,
+   which re-registers the daemon without `--clock` and so stops it writing
+   the clock; *then* `powershell -File hostagent\install-agents-windows.ps1`
+   to reinstall the Python timekeeper. The other order runs two clock
+   writers at once (the phase-3a/4a audit's finding 1), and the daemon now
+   refuses to start with `--clock` while the Python task is registered, so
+   the wrong order also fails loudly at the next logon rather than silently.
+
+### Phase 3a/4a audit — disposition (2026-09-06)
+
+[review-codex-phase3a4a-2026-09-06.md](review-codex-phase3a4a-2026-09-06.md):
+gpt-6-astra at xhigh, read-only, against `b741289`, ~218k tokens. Its verdict
+was to block the 4b takeover, reopen the 3a replay gate and keep 4a open, and
+all three were accepted: 3a was re-met with the sequential replay (finding 8),
+4a stays live on the fixed daemon, reinstalled from the commit that records
+this table, and 4b remains the owner's. Every finding was fixed; none was
+declined.
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 | P1 — the advertised rollback (PowerShell reinstall of the Python timekeeper, *then* remove the daemon's `--clock`) runs two clock writers; the forward `install --clock` stopped and deleted the Python tasks without confirming their processes had exited, and the timekeeper's `ak820ctl` child outlives `pythonw.exe` and sets the clock on its way out; `IRegisteredTask::Stop`'s `S_FALSE` reads as success in the binding | **Fixed.** Both directions are stop-confirm-start. `install` asks the scheduler for the task's running-instance count (`task::wait_stopped`), claims the mutex, and for the timekeeper watches the process list for `ak820ctl.exe` (`process::wait_gone`, a Toolhelp snapshot — no HID) before deleting anything; a wait that fails leaves the task registered and says so. The rollback text — printed by `install --clock` and in the plan — is now `ak820 install` (without `--clock`) **first**, then the PowerShell installer. `Stop`'s return no longer matters: the wait is the confirmation. And the daemon no longer trusts its flag alone: started with `--clock` while the Python timekeeper's task is still registered, or while an `ak820ctl.exe` is running, it refuses to start and logs why. |
+| 2 | P1 — `ak820 clock`'s daemon check failed **open** on a Task Scheduler error, and `"--clock"` in quotes was not recognised as `--clock` | **Fixed.** `clock_ownership` collects owners and unknowns and refuses on either; `--anyway` is the only way past, and it prints every reason it is overriding. Quotes are stripped before comparing, as Windows strips them before the daemon sees the flag. |
+| 3 | P1 — reinstalling from the installed copy copied the daemon over itself, and a copy that failed after the daemon was stopped left nothing running | **Fixed.** Copies are staged as `.new` beside their destinations *before* any owner is stopped and renamed into place after; a source that canonicalises to its destination is skipped; every failure after the stop starts the previous registration again and says whether that worked. |
+| 4 | P1 — a clock GET whose reply was lost on one handle can be answered on the next: the driver queues per file object, but a straggler arriving after the reopen lands on the new handle, and it is a well-formed reply to the next GET | **Fixed.** `ClockLoop` remembers an unresolved command (timeout, unresolved, I/O error, stuck) and its next open drains, settles and drains again on the fresh handle before any clock operation — `exchange::resynchronise`'s discipline; a queue that is not empty twice skips the tick. |
+| 5 | P2 — an SMTC read failure kept publishing the previous track (and refreshing it every 30 s), where the Python publishes idle and lets the firmware's expiry take it down | **Fixed.** The worker reports `last_poll_ok`; the daemon publishes idle while it is false, logs `[warn] read_state` on the transition and `recovered` on the way back, and the status file carries `smtc_stale_s`. |
+| 6 | P2 — the clock loop bypassed the presence machine's abandon backoff and flattened its errors to strings, so a stuck handle would leak one per tick | **Fixed.** One `Watch` for every interaction — media, clock, status read, health — each consulting `holding()` before opening, each reporting its typed `hid::Error`. |
+| 7 | P2 — the learner moved its baseline when the cache write failed, where the Python's `learn_bias()` raises out of `cap_write_bias()` before its final assignment | **Fixed.** `Scheduler::cache_write_failed()` restores the previous sample; the test carries the audit's own example (two +12 ms residuals with the first write failing: bias +5 over 600 s, not +10 over 300 s). The transaction's own `cache_saved` failure is logged too. |
+| 8 | P2 — the replay rebuilt the learner per line, so state carried between syncs (`b_old`, the held period) was never checked | **Fixed.** A fourth replay test drives one scheduler through every run of consecutive periodic syncs with bias lines: 8 runs, 163 consecutive syncs, 106 of them learning, the carried bias equal to each line's `b`, the carried period equal to each hold's `P`. |
+| 9 | P2 — a failed text push skipped the playback push, where the Python's two `try` blocks are independent | **Fixed.** Both are attempted on the one open; only `Stuck` ends the cycle early. |
+| 10 | P2 — `open_board` still reported the last candidate's error (phase-0 finding 6, deferred to phase 4) | **Fixed.** The first `Open` failure outranks every `Incompatible`, which the keyboard's own other collections produce by design. |
+| 11 | P2 — text replies were correlated on channel and command only, so another row's echo, or another process's echo of the same row, was taken as ours (phase-0 finding 5) | **Fixed.** `exchange_matched` requires the reply to echo the request bytes; `Device::request_echoed` uses it for every text command; `Mismatch::OtherEcho` names the discard. Three tests. |
+| 12 | P2 — `foreign_reports` counted stale reports as foreign and lost the discards of failed requests | **Fixed.** Only `Drained::Foreign` counts, accumulated from successes and from the discards a timeout carries. |
+| 13 | P2 — `--interval` accepted `inf` and `1e300` (a panic inside `Duration`, with no console) and the worker's thread spawn was an `expect` | **Fixed.** Finite and within 0.5–3600 s, or the daemon logs and exits 2; `spawn` returns an error the daemon logs. |
+| 14 | P2 — the clock loop was scheduled off the media sleep, so `--interval 120` turned every sync into a `wake` | **Fixed.** Independent schedules, each measured from the end of its own work as the Python's `sleep` is; the health read is a third. |
+| 15 | P3 — the first-poll grace claimed to remove the `CLEAR` blink; it only shortens it | **Fixed.** The comment says what it does. |
+| 16 | P3 — `build.rs` re-ran only on `.git` changes, so an edit after a clean build kept a clean describe without `-dirty` | **Fixed.** `rerun-if-changed=src` and `Cargo.toml`. |
+| 17 | P3 — a log rotation whose rename failed was silent and unbounded | **Fixed.** The stale `.1` is removed and the rename retried; the remaining case is stated in the code as the choice it is — an oversized log over lost lines. |
+| 18 | P3 — a nominal period of 0 was stored as `None`, so a later hold line printed `P None` where the Python prints `P 0` | **Fixed.** Stored as read, treated as absent by the gates only. |
+
 
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.
@@ -488,9 +524,9 @@ environment underneath it.
 | 0 ✅ | HID discovery, transport, `ak820 info` | Same JEDEC id and writable base as `ak820ctl info`; **plus** wrong-interface and malformed-report rejection, timeout/unplug/cancellation, traced opens showing nothing unrelated was touched, and VIA coexistence measured. — **all met 2026-09-05**, [evidence](#phase-0-evidence-2026-09-05). |
 | 1 ✅ | `text/`, `smtc/`, `ak820 probe` | **Met 2026-09-06.** Captured competing sessions, the current-session tiebreak, absent metadata and timeline, a track change, Unicode folding and both line budgets — three real captures pinned as tests, plus a 2,309-case folding fixture. | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
 | 2 ✅ | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) — **Met 2026-09-06**: three captured replies, plus the SET-reply-as-GET bytes behind the oracle's own bad line, render byte-identically through the pinned C and the port. [Evidence](#phase-2-evidence-2026-09-06). |
-| 3 ~ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **3a met 2026-09-06**: the scheduler, SOF-bias learner and seed ported (`clock::scheduler`), and replayed against the Python timekeeper's own log — 108 `bias learned` lines reproduced byte for byte, 59 holds, 171 interval choices ([evidence](#phase-3a-evidence-2026-09-06)). **3b, the measured takeover, is open** and is the owner's `ak820 install --clock`. |
-| 4 ~ | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. — **Split 2026-09-06** into 4a (now-playing now, self-install, status file) and 4b (the clock, after phase 3); see [Staged switch-over](#staged-switch-over-and-packaging-2026-09-06). |
-| 5 | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command — the firmware echoes the requested page in byte 3, so a foreign reply for another page would otherwise be decoded with this page's layout. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. |
+| 3 ~ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **3a met 2026-09-06**: the scheduler, SOF-bias learner and seed ported (`clock::scheduler`), and replayed against the Python timekeeper's own log — 108 `bias learned` lines reproduced byte for byte, 59 holds, 171 interval choices ([evidence](#phase-3a-evidence-2026-09-06)). **3b, the measured takeover, is open** and is the owner's `ak820 install --clock`. The phase-3a/4a audit reopened 3a for checking no state carried between syncs; re-met with a sequential replay (8 runs, 163 consecutive syncs, 106 learning), see its [disposition](#phase-3a4a-audit--disposition-2026-09-06). |
+| 4 ~ | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. — **Split 2026-09-06** into 4a (now-playing now, self-install, status file) and 4b (the clock, after phase 3); see [Staged switch-over](#staged-switch-over-and-packaging-2026-09-06). **4a audited 2026-09-06**; its 18 findings fixed and the daemon reinstalled from the fix. |
+| 5 ✅ | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. — **Met 2026-09-06**: a live capture decodes and renders byte-identically to `ak820health.py` (`tests/health_parity.rs`); `ak820 health [--stalls] [--rows] [--isr] [--json] [--raw]` reads the pages over the correlated transport; the daemon reads pages 1 and 2 every five minutes into `health_*` keys of its status file, so the takeover has a before. The health pages are selected by *command* (`0x01`, `0x04`, `0x06`, `0x07`), so channel+command is the page correlation; the echo check finding 5 asked for exists now as `exchange_matched` and is what the text commands use, where the selector is in the body. |
 | 6 ~ | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. — **6a plumbing started 2026-09-06** (static CRT, `--version`, CI, tag → Release); the clean-machine gate is 6b. |
 
 **Every row above also ends with a codex audit** — see

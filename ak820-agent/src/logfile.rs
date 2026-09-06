@@ -43,7 +43,14 @@ impl Log {
         if std::fs::metadata(&self.path).map(|m| m.len() > ROTATE_AT).unwrap_or(false) {
             let mut rotated = self.path.clone().into_os_string();
             rotated.push(".1");
-            let _ = std::fs::rename(&self.path, rotated);
+            // A rename can fail with the old `.1` open in a viewer; remove it
+            // and try once more. If that fails too the bound is not held for
+            // this file — the choice is between an oversized log and lost
+            // lines, and lost lines are worse. Stated, not hidden.
+            if std::fs::rename(&self.path, &rotated).is_err() {
+                let _ = std::fs::remove_file(&rotated);
+                let _ = std::fs::rename(&self.path, &rotated);
+            }
         }
         let mut file = OpenOptions::new().create(true).append(true).open(&self.path)?;
         writeln!(file, "{} {message}", stamp(&SystemHost))

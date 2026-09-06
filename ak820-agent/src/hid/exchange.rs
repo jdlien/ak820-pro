@@ -309,6 +309,31 @@ pub fn exchange_prepared(
     budget: Duration,
     prepare: impl FnOnce(Instant) -> Vec<u8>,
 ) -> Result<Reply, Error> {
+    exchange_matched(wire, outstanding, channel, command, budget, None, prepare)
+}
+
+/// As [`exchange_prepared`], and the reply must also **echo `echo`** at
+/// `[3..]`.
+///
+/// ⚠️ For commands the firmware answers by echoing the request — every text
+/// command, the paged health reads — channel and command are not enough: a
+/// `TEXT_SET_LINE` for row 1 is a well-formed reply to a `TEXT_SET_LINE` for
+/// row 0, and another process's row is a well-formed reply to ours. The
+/// firmware preserves the request bytes, so a reply that does not carry ours
+/// is somebody else's and is drained as [`proto::Mismatch::OtherEcho`]. The
+/// phase-0 audit's finding 5 and the phase-3a/4a audit's finding 11.
+///
+/// Not for commands whose reply is a different shape (the clock GET and SET,
+/// `FC_INFO`): pass `None`.
+pub fn exchange_matched(
+    wire: &impl Wire,
+    outstanding: &Outstanding,
+    channel: Channel,
+    command: u8,
+    budget: Duration,
+    echo: Option<&[u8]>,
+    prepare: impl FnOnce(Instant) -> Vec<u8>,
+) -> Result<Reply, Error> {
     // ⚠️ Before anything else: has this exact question already been asked and
     // left unanswered? If so its reply is still coming, and it would satisfy
     // this request's matcher perfectly. See `Outstanding`.
@@ -374,7 +399,7 @@ pub fn exchange_prepared(
         }
     }
 
-    let answered = collect(wire, channel, command, deadline, drained);
+    let answered = collect(wire, channel, command, echo, deadline, drained);
     if answered.is_ok() {
         // This command's debt only. Any other still owed stays owed: a reply
         // to *this* question says nothing about whether an earlier, different
@@ -384,11 +409,13 @@ pub fn exchange_prepared(
     answered
 }
 
-/// Read until something answers `(channel, command)` or the deadline passes.
+/// Read until something answers `(channel, command)` — and echoes `echo`, if
+/// one is expected — or the deadline passes.
 fn collect(
     wire: &impl Wire,
     channel: Channel,
     command: u8,
+    echo: Option<&[u8]>,
     deadline: Instant,
     mut drained: Vec<Drained>,
 ) -> Result<Reply, Error> {
@@ -402,6 +429,13 @@ fn collect(
         };
         match proto::classify(&buf, channel, command) {
             Verdict::Reply(report) => {
+                if let Some(expected) = echo {
+                    let end = 3 + expected.len();
+                    if end > report.len() || &report[3..end] != expected {
+                        drained.push(Drained::Foreign(proto::Mismatch::OtherEcho));
+                        continue;
+                    }
+                }
                 let mut out = [0u8; REPORT_LEN];
                 out.copy_from_slice(&report[..REPORT_LEN]);
                 return Ok(Reply {
@@ -1017,6 +1051,45 @@ mod tests {
         assert!(matches!(err, Error::Unresolved { .. }));
         assert!(!prepared);
         assert!(b.written().is_empty());
+    }
+
+    // -- echo correlation -------------------------------------------------
+
+    /// A `TEXT_SET_LINE` for row 1 is a well-formed reply to a `TEXT_SET_LINE`
+    /// for row 0. With the echo expected, it is drained and the wait goes on
+    /// until our own row comes back.
+    #[test]
+    fn another_rows_echo_is_not_our_reply() {
+        let row0 = [0x00, 0x01, b'A', b'r', b't'];
+        let row1_echo = [0x07, 0x12, 0x03, 0x01, 0x01, b'T', b'i', b't'];
+        let row0_echo = [0x07, 0x12, 0x03, 0x00, 0x01, b'A', b'r', b't'];
+        let fake = Fake::new(vec![None, report(&row1_echo), report(&row0_echo)]);
+        let reply = exchange_matched(&fake, &Outstanding::new(), Channel::Text, 0x03, budget(), Some(&row0), |_| row0.to_vec()).unwrap();
+        assert_eq!(&reply.report[..8], &row0_echo);
+        assert_eq!(reply.drained.len(), 1);
+        assert!(matches!(reply.drained[0], Drained::Foreign(proto::Mismatch::OtherEcho)));
+    }
+
+    /// The same row with different text — another process's push — is not
+    /// ours either.
+    #[test]
+    fn the_same_row_with_other_text_is_not_our_reply() {
+        let ours = [0x00, 0x01, b'A'];
+        let theirs = [0x07, 0x12, 0x03, 0x00, 0x01, b'B'];
+        let mine = [0x07, 0x12, 0x03, 0x00, 0x01, b'A'];
+        let fake = Fake::new(vec![None, report(&theirs), report(&mine)]);
+        let reply = exchange_matched(&fake, &Outstanding::new(), Channel::Text, 0x03, budget(), Some(&ours), |_| ours.to_vec()).unwrap();
+        assert_eq!(&reply.report[..6], &mine);
+        assert_eq!(reply.drained.len(), 1);
+    }
+
+    /// Without an expected echo the old behaviour stands: channel and command
+    /// decide, which is right for replies that are not echoes.
+    #[test]
+    fn without_an_expected_echo_any_matching_command_is_the_reply() {
+        let fake = Fake::new(vec![None, report(&[0x07, 0x12, 0x03, 0x01, 0x01, b'T'])]);
+        let reply = exchange_matched(&fake, &Outstanding::new(), Channel::Text, 0x03, budget(), None, |_| vec![0x00, 0x01, b'A']).unwrap();
+        assert!(reply.drained.is_empty());
     }
 
     /// The command really is framed the way the firmware parses it.

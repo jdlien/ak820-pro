@@ -351,14 +351,37 @@ pub fn open_board() -> Result<Device, Error> {
     // Ordered so the raw-HID hint is first, which means the usual case opens
     // exactly one collection. Anything after it gets opened only because the
     // hint was wrong, and the post-open check is what actually decides.
-    let mut last = None;
+    let mut failures = Vec::new();
     for iface in candidates {
         match iface.open() {
             Ok(dev) => return Ok(dev),
-            Err(e) => last = Some(e),
+            Err(e) => failures.push(e),
         }
     }
-    Err(last.unwrap_or(Error::Absent))
+    Err(most_telling(failures))
+}
+
+/// Which failure to report when every candidate failed.
+///
+/// ⚠️ Not the last one (the phase-0 audit's finding 6, deferred to phase 4
+/// and reopened by the phase-3a/4a audit as finding 10). The candidates after
+/// the hinted interface are the keyboard's *own* other collections — boot
+/// keyboard, consumer, NKRO — which fail the identity check by design, so an
+/// `Incompatible` from them is noise. An `Open` failure anywhere means the
+/// interface exists and could not be opened: **busy**, the state the plan
+/// says must not be mistaken for absence or for the wrong device. So the
+/// first `Open` failure outranks everything; otherwise the first failure.
+fn most_telling(failures: Vec<Error>) -> Error {
+    let mut first_open = None;
+    let mut first = None;
+    for e in failures {
+        match e {
+            Error::Open { .. } if first_open.is_none() => first_open = Some(e),
+            _ if first.is_none() => first = Some(e),
+            _ => {}
+        }
+    }
+    first_open.or(first).unwrap_or(Error::Absent)
 }
 
 impl Device {
@@ -420,6 +443,21 @@ impl Device {
         prepare: impl FnOnce(Instant) -> Vec<u8>,
     ) -> Result<Reply, Error> {
         exchange::exchange_prepared(self, &self.outstanding, channel, command, budget, prepare)
+    }
+
+    /// As [`Device::request`], for a command the firmware answers by echoing
+    /// the request: the reply must carry `body` back, or it is another
+    /// request's echo and is drained. See [`exchange::exchange_matched`].
+    pub fn request_echoed(
+        &self,
+        channel: Channel,
+        command: u8,
+        body: &[u8],
+        budget: Duration,
+    ) -> Result<Reply, Error> {
+        exchange::exchange_matched(self, &self.outstanding, channel, command, budget, Some(body), |_| {
+            body.to_vec()
+        })
     }
 
     /// This handle's accounting of unanswered commands, for code that drives
@@ -657,6 +695,30 @@ mod tests {
             crate::proto::frame(Channel::Flash, 0x01, &[]).len(),
             crate::proto::WIRE_LEN
         );
+    }
+
+    fn open_err() -> Error {
+        Error::Open {
+            path: "raw".into(),
+            source: windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(32)),
+        }
+    }
+
+    fn incompatible() -> Error {
+        Error::Incompatible {
+            path: "kbd".into(),
+            why: super::super::caps::Reject::Silent,
+        }
+    }
+
+    /// The raw interface busy and the keyboard's own other collections
+    /// refused is **busy**, whatever order the failures came in.
+    #[test]
+    fn a_busy_interface_outranks_the_expected_refusals() {
+        assert!(matches!(most_telling(vec![open_err(), incompatible(), incompatible()]), Error::Open { .. }));
+        assert!(matches!(most_telling(vec![incompatible(), open_err(), incompatible()]), Error::Open { .. }));
+        assert!(matches!(most_telling(vec![incompatible(), incompatible()]), Error::Incompatible { .. }));
+        assert!(matches!(most_telling(vec![]), Error::Absent));
     }
 
     /// Discovery must open nothing, and must survive a machine with no board.

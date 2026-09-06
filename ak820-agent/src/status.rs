@@ -24,11 +24,39 @@ pub struct Status {
     pub smtc_polls: u64,
     pub smtc_failures: u64,
     pub smtc_last_error: Option<String>,
-    /// Reports that arrived on our handle and answered someone else — the
-    /// only direct evidence of another process talking to the board.
+    /// Seconds since the media snapshot last refreshed; absent before the
+    /// first successful poll. Large while `smtc_last_error` is set.
+    pub smtc_stale_s: Option<u64>,
+    /// Reports that arrived on our handle **while a request was waiting** and
+    /// answered someone else — the only direct evidence of another process
+    /// talking to the board. Stale reports queued before we asked are not
+    /// counted: they are ours from an earlier request as often as not.
     pub foreign_reports: u64,
     /// The clock loop's state, when the daemon runs it (`--clock`).
     pub clock: Option<ClockStatus>,
+    /// The firmware's own health counters, read every few minutes: whether
+    /// the board is stalling, from the board's point of view.
+    pub health: Option<HealthStatus>,
+}
+
+/// Health pages 1 and 2, the counters that decide "is the firmware even
+/// involved" — `Fn`+`D` on the LCD, `ak820 health` at the terminal, and here
+/// so the takeover gate can compare stalls before and after the daemon took
+/// the clock.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct HealthStatus {
+    pub read_at: String,
+    pub version: u8,
+    pub loop_gap_max_ms: u32,
+    pub loop_gap_max_mark: String,
+    /// Stalls of 25 ms or more — the threshold below which a press cannot be
+    /// lost. Must be 0 on everyday firmware.
+    pub count_ge_25ms: u32,
+    pub count_ge_25ms_nonflash: u16,
+    pub count_ge_10ms: u32,
+    pub blit_timeouts: u32,
+    pub tx_timeouts: u32,
+    pub wdt_consecutive_resets: u8,
 }
 
 /// What the clock loop last did — the readout the backlog asked for after
@@ -75,7 +103,22 @@ pub fn render(s: &Status) -> String {
     if let Some(v) = &s.smtc_last_error {
         put("smtc_last_error", v);
     }
+    if let Some(v) = s.smtc_stale_s {
+        put("smtc_stale_s", &v.to_string());
+    }
     put("foreign_reports", &s.foreign_reports.to_string());
+    if let Some(h) = &s.health {
+        put("health_read_at", &h.read_at);
+        put("health_version", &h.version.to_string());
+        put("health_loop_gap_max_ms", &h.loop_gap_max_ms.to_string());
+        put("health_loop_gap_max_mark", &h.loop_gap_max_mark);
+        put("health_stall_ge_25ms", &h.count_ge_25ms.to_string());
+        put("health_stall_ge_25ms_nonflash", &h.count_ge_25ms_nonflash.to_string());
+        put("health_stall_ge_10ms", &h.count_ge_10ms.to_string());
+        put("health_blit_timeouts", &h.blit_timeouts.to_string());
+        put("health_tx_timeouts", &h.tx_timeouts.to_string());
+        put("health_wdt_consecutive_resets", &h.wdt_consecutive_resets.to_string());
+    }
     match &s.clock {
         None => put("clock", "python timekeeper (not this daemon)"),
         Some(c) => {
@@ -142,9 +185,31 @@ mod tests {
             smtc_polls: 2,
             smtc_failures: 0,
             smtc_last_error: None,
+            smtc_stale_s: None,
             foreign_reports: 0,
             clock: None,
+            health: None,
         }
+    }
+
+    #[test]
+    fn the_health_counters_render_with_their_own_prefix() {
+        let mut s = sample();
+        s.smtc_stale_s = Some(4);
+        s.health = Some(HealthStatus {
+            read_at: "2026-09-06 08:05:00".into(),
+            version: 5,
+            loop_gap_max_ms: 105,
+            loop_gap_max_mark: "unexplained".into(),
+            count_ge_25ms: 12,
+            count_ge_25ms_nonflash: 12,
+            count_ge_10ms: 30,
+            blit_timeouts: 0,
+            tx_timeouts: 1,
+            wdt_consecutive_resets: 0,
+        });
+        let text = render(&s);
+        assert!(text.contains("smtc_stale_s=4\nforeign_reports=0\nhealth_read_at=2026-09-06 08:05:00\nhealth_version=5\nhealth_loop_gap_max_ms=105\nhealth_loop_gap_max_mark=unexplained\nhealth_stall_ge_25ms=12\nhealth_stall_ge_25ms_nonflash=12\nhealth_stall_ge_10ms=30\nhealth_blit_timeouts=0\nhealth_tx_timeouts=1\nhealth_wdt_consecutive_resets=0\nclock="), "{text}");
     }
 
     #[test]

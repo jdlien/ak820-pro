@@ -285,15 +285,33 @@ pub struct Health {
     pub last_error: Option<String>,
     /// How long since the snapshot last refreshed. `None` before the first one.
     pub stale_for: Option<Duration>,
+    /// Did the most recent poll succeed? `true` before the first one, when
+    /// the snapshot is the idle default and there is nothing stale to show.
+    /// The daemon publishes idle while this is false, as the Python agent
+    /// did when `read_state()` raised.
+    pub last_poll_ok: bool,
 }
 
-#[derive(Default)]
 struct State {
     snapshot: Snapshot,
     updated: Option<Instant>,
     polls: u64,
     failures: u64,
     last_error: Option<String>,
+    last_poll_ok: bool,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State {
+            snapshot: Snapshot::default(),
+            updated: None,
+            polls: 0,
+            failures: 0,
+            last_error: None,
+            last_poll_ok: true,
+        }
+    }
 }
 
 /// A thread polling SMTC, and the latest snapshot it managed to produce.
@@ -304,14 +322,16 @@ pub struct MediaWorker {
 impl MediaWorker {
     /// Start polling. The thread is detached deliberately — see the module
     /// header: shutdown must not be able to block on a wedged media broker.
-    pub fn spawn(interval: Duration) -> MediaWorker {
+    pub fn spawn(interval: Duration) -> Result<MediaWorker, String> {
         let state = Arc::new(Mutex::new(State::default()));
         let worker = Arc::clone(&state);
+        // An error, not a panic: the daemon has no console, and a panic here
+        // is a silent exit where a returned error is a log line.
         thread::Builder::new()
             .name("ak820-smtc".into())
             .spawn(move || run(worker, interval))
-            .expect("spawning the media thread");
-        MediaWorker { state }
+            .map_err(|e| format!("spawning the media thread: {e}"))?;
+        Ok(MediaWorker { state })
     }
 
     /// The most recent snapshot, and how the reads are going.
@@ -327,6 +347,7 @@ impl MediaWorker {
                 failures: state.failures,
                 last_error: state.last_error.clone(),
                 stale_for: state.updated.map(|at| at.elapsed()),
+                last_poll_ok: state.last_poll_ok,
             },
         )
     }
@@ -371,14 +392,17 @@ fn run(state: Arc<Mutex<State>>, interval: Duration) {
                     // the lock. A slow poll must age its own snapshot.
                     s.updated = Some(observed);
                     s.last_error = None;
+                    s.last_poll_ok = true;
                 }
                 Err(message) => {
-                    // Keep the previous snapshot. A broker that blinks should
-                    // not blank the panel; the staleness clock is what says
-                    // something is wrong, and the keepalive will expire the
-                    // firmware's text slot if it stays wrong.
+                    // The previous snapshot is kept for the record, but
+                    // `last_poll_ok` tells the daemon not to publish it: the
+                    // Python agent showed idle when `read_state()` raised,
+                    // and refreshing a stale track every 30 s would keep the
+                    // firmware's expiry from ever taking it down.
                     s.failures += 1;
                     s.last_error = Some(message);
+                    s.last_poll_ok = false;
                 }
             }
         }

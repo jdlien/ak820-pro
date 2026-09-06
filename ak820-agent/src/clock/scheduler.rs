@@ -254,6 +254,9 @@ pub struct Scheduler {
     interval: f64,
     was_present: bool,
     learn: Option<LearnSample>,
+    /// What `learn` was before the last [`Scheduler::learn`], so a failed
+    /// cache write can put it back — see [`Scheduler::cache_write_failed`].
+    learn_before: Option<LearnSample>,
     seed: Option<Seed>,
 }
 
@@ -267,8 +270,19 @@ impl Scheduler {
             interval: SYNC_INTERVAL,
             was_present: false,
             learn: None,
+            learn_before: None,
             seed: None,
         }
+    }
+
+    /// The cache write a [`Learn::Learned`] asked for failed with an I/O
+    /// error. In the Python that is `cap_write_bias()` raising inside
+    /// `learn_bias()`, which never reaches its final `state["learn"] = …`, so
+    /// the baseline stays where it was and the next residual spans both
+    /// intervals. Call this and the same happens here (the phase-3a/4a
+    /// audit's finding 7).
+    pub fn cache_write_failed(&mut self) {
+        self.learn = self.learn_before.take();
     }
 
     pub fn interval(&self) -> f64 {
@@ -330,17 +344,20 @@ impl Scheduler {
         cache_bias: Option<i32>,
         now_mono: f64,
     ) -> Learn {
-        // Python truthiness: a pnom of 0 is as good as none.
-        let pnom = status.map(|s| s.pnom).filter(|&p| p != 0);
+        // Stored as read — a 0 stays 0, so a later hold line prints `P 0`
+        // as the Python's would — and treated as absent by the gates, which
+        // is Python truthiness.
+        let pnom = status.map(|s| s.pnom);
+        let live = |p: Option<u32>| p.filter(|&n| n != 0);
         let ref_state = status.map(|s| s.ref_state);
         let prev = self.learn.take();
+        self.learn_before = prev.clone();
 
         let decision = if reason != Reason::Periodic {
             Learn::Baseline
         } else {
-            let settled = match (&prev, pnom) {
-                (Some(p), Some(n)) => p
-                    .pnom
+            let settled = match (&prev, live(pnom)) {
+                (Some(p), Some(n)) => live(p.pnom)
                     .is_some_and(|pp| (pp as i64 - n as i64).abs() <= LEARN_MAX_DP),
                 _ => false,
             };
@@ -348,7 +365,7 @@ impl Scheduler {
                 .before_ms
                 .is_some_and(|b| b.abs() <= LEARN_MAX_BEFORE);
             let common = prev.is_some()
-                && pnom.is_some()
+                && live(pnom).is_some()
                 && before_ok
                 && result.slewing
                 && ref_state == Some(2);
@@ -688,6 +705,40 @@ mod tests {
         );
         // status unreadable
         assert_eq!(learning(&mut |s| s.learn(Reason::Periodic, &ok(1.0, true), None, Some(0), 300.0)), Learn::Declined);
+    }
+
+    /// ⚠️ The phase-3a/4a audit's finding 7. A failed cache write in the
+    /// Python raises out of `learn_bias()` before its final baseline
+    /// assignment, so the next residual spans both intervals. Two +12 ms
+    /// residuals 300 s apart with the first write failing: the Python learns
+    /// over 600 s (bias +5), a port that moved the baseline anyway would
+    /// learn over 300 s (bias +10).
+    #[test]
+    fn a_failed_cache_write_leaves_the_baseline_where_it_was() {
+        let mut s = Scheduler::new(0.0);
+        s.learn(Reason::Periodic, &ok(0.0, true), Some(&status(33400, 2)), Some(0), 0.0);
+        let d = s.learn(Reason::Periodic, &ok(12.0, true), Some(&status(33400, 2)), Some(0), 300.0);
+        assert!(matches!(d, Learn::Learned { b_new_rounded: 10, .. }), "{d:?}");
+        s.cache_write_failed(); // the save raised: the baseline is still t=0
+        let d = s.learn(Reason::Periodic, &ok(12.0, true), Some(&status(33400, 2)), Some(0), 600.0);
+        match d {
+            Learn::Learned { elapsed_s, b_new_rounded, .. } => {
+                assert_eq!(elapsed_s, 600.0);
+                assert_eq!(b_new_rounded, 5);
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    /// A nominal period of 0 is stored as 0 and printed as `P 0`, while the
+    /// gates treat it as absent — Python truthiness, both halves.
+    #[test]
+    fn a_zero_period_prints_as_zero_and_never_settles() {
+        let mut s = Scheduler::new(0.0);
+        s.learn(Reason::Periodic, &ok(0.0, true), Some(&status(0, 2)), Some(0), 0.0);
+        let d = s.learn(Reason::Periodic, &ok(1.0, true), Some(&status(33400, 2)), Some(0), 300.0);
+        assert_eq!(d, Learn::Hold { prev_pnom: Some(0), pnom: 33400, before_ms: 1.0 });
+        assert!(d.log_line().unwrap().starts_with("bias hold: P 0 -> 33400 "));
     }
 
     /// A failed status read stores `pnom = None`, so the next sync cannot be

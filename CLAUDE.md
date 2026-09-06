@@ -36,8 +36,9 @@ as one daemon. **Phases 0–2 complete and audited; 3a met (the scheduler and
 learners replayed against the Python log); 4a live — the daemon owns
 now-playing on this machine, the Python timekeeper still owns the clock;
 the clock takeover (3b/4b) is wired behind `ak820 install --clock` and waits
-for the owner** (2026-09-06). 286 unit tests, the 2,309-case folding fixture,
-and a 3-test replay of the timekeeper's log. Read
+for the owner; the 3a/4a audit's 18 findings fixed and phase 5 (health) met** (2026-09-06).
+305 unit tests, the 2,309-case folding fixture, a 4-test replay of the
+timekeeper's log and a 2-test health capture. Read
 [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
 first; it carries the phase gates and the findings that are load-bearing.
 Its two companions are part of the plan, not background:
@@ -240,7 +241,7 @@ weak-hooked/no-op for other boards.
 (`windows` pinned `=0.62.2`; the blocking async spelling is `.join()`, not
 `.get()`). Two binaries because a PE has one subsystem: `ak820-agent.exe` is
 windows-subsystem so it can never flash a console, `ak820.exe` is a console CLI.
-Built test-first; `cargo test` from that directory (286 tests + 6 integration).
+Built test-first; `cargo test` from that directory (305 tests + 9 integration).
 `cargo build --release` gives static-CRT binaries (`.cargo/config.toml`); a
 `v*` tag builds the Releases zip in CI (`.github/workflows/release.yml`).
 
@@ -259,6 +260,7 @@ ak820 selftest        # budget guard, idle cancel, and recovery
 ak820 watch [secs]    # narrate presence + what the drain discards
 ak820 probe           # what SMTC sees; touches no keyboard at all
 ak820 lighting        # RGB values read back off the board
+ak820 health          # the firmware's counters, as ak820health.py prints them (--stalls --rows --isr --json --raw)
 ak820 clock [--raw]   # the RTC, printed as `ak820ctl clock --read` prints it
 ```
 

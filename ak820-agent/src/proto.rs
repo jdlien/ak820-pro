@@ -127,6 +127,11 @@ pub enum Mismatch {
     NotOurs { header: [u8; 3] },
     /// Right channel, different command -- e.g. a text echo while we await a set.
     OtherCommand { command: u8 },
+    /// Right channel and command, but the echoed request bytes belong to another
+    /// request -- a different text row, page or payload. The firmware echoes what
+    /// it was sent, so those bytes tell one reply from another reply to the same
+    /// command (the phase-3a/4a audit, finding 11).
+    OtherEcho,
     /// Right channel and command, but the leading id is neither `SET_VALUE` nor
     /// `ID_UNHANDLED`. Not a shape this firmware produces.
     BadHeader(u8),

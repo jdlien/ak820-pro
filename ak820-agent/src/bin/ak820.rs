@@ -34,6 +34,7 @@ fn main() -> ExitCode {
         ["selftest"] => selftest(),
         ["probe"] => probe(),
         ["lighting"] => lighting(),
+        ["health", flags @ ..] => health_cmd(flags),
         ["clock", flags @ ..] => clock(flags),
         ["install", flags @ ..] => install(flags),
         ["uninstall"] => uninstall(),
@@ -85,6 +86,8 @@ fn usage() {
          \x20 ak820 watch [secs]   narrate presence; unplug the cable to see it\n\
          \x20 ak820 probe          what SMTC sees; needs no keyboard\n\
          \x20 ak820 lighting       RGB values read back off the board\n\
+         \x20 ak820 health         the firmware's health counters, as ak820health.py prints them\n\
+         \x20   [--stalls] [--rows] [--isr] [--json] [--raw]\n\
          \x20 ak820 clock [--raw]  the RTC, as `ak820ctl clock --read` prints it;\n\
          \x20                      refuses while the Python timekeeper task runs (--anyway overrides)\n\
          \n\
@@ -224,61 +227,155 @@ fn clock(flags: &[&str]) -> Result<(), String> {
     Ok(())
 }
 
+/// `ak820health.py`, over the correlated transport: the health pages, printed
+/// as the Python prints them (phase 5's gate is the byte-for-byte parity of
+/// that rendering in `tests/health_parity.rs`).
+///
+/// Read-only — there is no `--reset`; `Fn`+`D` held resets the counters on
+/// the board itself, and a reset from the host would be one more thing the
+/// takeover comparison could not trust. `--raw` prints each page's 32 bytes
+/// as `pageN <hex>`, the form `scripts/health_oracle.py` consumes.
+fn health_cmd(flags: &[&str]) -> Result<(), String> {
+    use ak820_agent::health::{self, Page1, Page2, Page3, Page4};
+    use ak820_agent::hid::device::REQUEST_TIMEOUT;
+    use ak820_agent::proto::Channel;
+
+    let (mut stalls, mut rows, mut isr, mut json, mut raw) = (false, false, false, false, false);
+    for flag in flags {
+        match *flag {
+            "--stalls" => stalls = true,
+            "--rows" => rows = true,
+            "--isr" => isr = true,
+            "--json" => json = true,
+            "--raw" => raw = true,
+            other => {
+                return Err(format!(
+                    "health: unknown flag {other}; the flags are --stalls --rows --isr --json --raw"
+                ))
+            }
+        }
+    }
+    contention_notice();
+
+    let mut drained = Vec::new();
+    // One open per page, as the Python's `_txn` opens and closes per read:
+    // the agents need the interface too, and the `--isr` pair is two seconds
+    // apart by design.
+    let mut page = |command: u8, n: u8| -> Result<[u8; 32], String> {
+        let dev = device::open_board().map_err(|e| e.to_string())?;
+        let reply = dev
+            .request(Channel::Health, command, &[], REQUEST_TIMEOUT)
+            .map_err(|e| format!("page {n}: {e}"))?;
+        drained.extend(reply.drained);
+        if raw {
+            let hex: Vec<String> = reply.report.iter().map(|b| format!("{b:02X}")).collect();
+            println!("page{n} {}", hex.join(" "));
+        }
+        Ok(reply.report)
+    };
+
+    let p1 = Page1::decode(&page(health::GET, 1)?).map_err(|e| e.to_string())?;
+    let p2 = if stalls || json {
+        Some(Page2::decode(&page(health::GET2, 2)?).map_err(|e| e.to_string())?)
+    } else {
+        None
+    };
+    let p3 = if rows || (isr && json) {
+        Some(Page3::decode(&page(health::GET3, 3)?).map_err(|e| e.to_string())?)
+    } else {
+        None
+    };
+    let p4 = if isr {
+        let a = Page4::decode(&page(health::GET4, 4)?).map_err(|e| e.to_string())?;
+        let t_a = std::time::Instant::now();
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        let b = Page4::decode(&page(health::GET4, 4)?).map_err(|e| e.to_string())?;
+        let wall = t_a.elapsed().as_secs_f64();
+        let matrix_rows = p3.as_ref().map_or(6, |p| p.matrix_rows as u32);
+        let rates = health::isr_rates(&a, &b, wall, matrix_rows);
+        Some((b, rates))
+    } else {
+        None
+    };
+
+    if json {
+        println!(
+            "{}",
+            health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r)))
+        );
+    } else {
+        print!("{}", health::render_page1(&p1));
+        if let Some(p2) = &p2 {
+            print!("{}", health::render_page2(p2));
+        }
+        if let Some(p3) = &p3 {
+            print!("{}", health::render_page3(p3, p2.as_ref().map(|p| p.key_presses)));
+        }
+        if let Some((_, rates)) = &p4 {
+            print!("{}", health::render_isr(rates));
+        }
+    }
+    report_drained(&drained);
+    Ok(())
+}
+
 /// Refuse a clock read beside a running Python timekeeper, unless told to
 /// accept the consequence. See [`clock`].
 fn clock_ownership(anyway: bool) -> Result<(), String> {
     use ak820_agent::task;
+    // ⚠️ Fails CLOSED: a clock owner that is running refuses, and so does not
+    // being able to tell. The phase-3a/4a audit's finding 2 found the daemon
+    // check failing open on a Task Scheduler error — the one situation in
+    // which "I could not check" and "nobody owns it" must not be confused,
+    // because the cost of being wrong is a silently corrupted sync.
+    let mut owners = Vec::new();
+    let mut unknown = Vec::new();
     // The daemon, when it owns the clock, is the same hazard as the Python
     // timekeeper: its transaction would take this read's reply as its own.
-    if let (Ok(Some(task::State::Running)), Ok(true)) =
-        (task::state(task::FOLDER, task::AGENT), task::agent_owns_clock())
-    {
-        if anyway {
-            eprintln!(
-                "warning: {} is running with --clock; this read can become one of its measurement samples (--anyway given)",
-                task::AGENT
-            );
-        } else {
-            return Err(format!(
+    match task::state(task::FOLDER, task::AGENT) {
+        Ok(Some(task::State::Running)) => match task::agent_owns_clock() {
+            Ok(true) => owners.push(format!(
                 "{} is running with --clock, so this read's reply could be taken as one of its own \
-                 measurement samples. Use `ak820 status` for what it sees, stop it first \
-                 (Stop-ScheduledTask -TaskPath '{}\\' -TaskName {}), or pass --anyway.",
+                 measurement samples. Use `ak820 status` for what it sees, or stop it first \
+                 (Stop-ScheduledTask -TaskPath '{}\\' -TaskName {})",
                 task::AGENT,
                 task::FOLDER,
                 task::AGENT
-            ));
-        }
+            )),
+            Ok(false) => {}
+            Err(e) => unknown.push(format!("whether {} owns the clock ({e})", task::AGENT)),
+        },
+        Ok(_) => {}
+        Err(e) => unknown.push(format!("whether {} is running ({e})", task::AGENT)),
     }
     match task::timekeeper_running() {
-        Ok(Some(true)) if anyway => {
-            eprintln!(
-                "warning: the {} task is running; this read can become one of its measurement \
-                 samples and spoil that sync (--anyway given)",
-                task::TIMEKEEPER
-            );
-            Ok(())
-        }
-        Ok(Some(true)) => Err(format!(
+        Ok(Some(true)) => owners.push(format!(
             "the {} task is running. Its ak820ctl takes the first report that arrives, so this \
              read's reply can become one of its five measurement samples and corrupt that sync \
-             and what it learns. Stop it first:\n\
-             \x20 Stop-ScheduledTask -TaskPath '{}\\' -TaskName {}\n\
-             or pass --anyway to accept one possibly spoiled sync.",
+             and what it learns. Stop it first \
+             (Stop-ScheduledTask -TaskPath '{}\\' -TaskName {})",
             task::TIMEKEEPER,
             task::FOLDER,
             task::TIMEKEEPER
         )),
-        Ok(_) => Ok(()),
-        Err(e) if anyway => {
-            eprintln!("warning: could not ask the Task Scheduler ({e}); proceeding on --anyway");
-            Ok(())
-        }
-        Err(e) => Err(format!(
-            "could not establish that the {} task is stopped ({e}); pass --anyway to proceed \
-             regardless",
-            task::TIMEKEEPER
-        )),
+        Ok(_) => {}
+        Err(e) => unknown.push(format!("whether the {} task is running ({e})", task::TIMEKEEPER)),
     }
+    if owners.is_empty() && unknown.is_empty() {
+        return Ok(());
+    }
+    let mut lines = owners;
+    lines.extend(unknown.into_iter().map(|u| format!("could not establish {u}")));
+    if anyway {
+        for line in &lines {
+            eprintln!("warning: {line} (--anyway given)");
+        }
+        return Ok(());
+    }
+    Err(format!(
+        "{}\nor pass --anyway to accept one possibly spoiled sync.",
+        lines.join("\n")
+    ))
 }
 
 /// One line on stderr when the Python timekeeper is running, for the commands
@@ -347,74 +444,63 @@ fn install(flags: &[&str]) -> Result<(), String> {
     let dir = agent::default_dir();
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
 
-    // A running daemon holds its exe open; stop it before copying over it —
-    // and wait until it has actually gone, which its mutex tells us.
-    if task::info(task::FOLDER, task::AGENT)?.is_some() {
-        task::stop(task::FOLDER, task::AGENT)?;
-        wait_released(instance::AGENT, Duration::from_secs(10))?;
-    }
-
-    let (bin_dir, daemon) = if in_place {
-        (here_dir.clone(), daemon_src.clone())
+    // Everything that can fail without consequence happens BEFORE any owner
+    // is stopped: the copies are staged beside their destinations, so a full
+    // disk or a locked file leaves the running daemon exactly as it was (the
+    // phase-3a/4a audit's finding 3). A reinstall from the installed copy —
+    // `%LOCALAPPDATA%\ak820pro\bin\ak820 install` — stages nothing.
+    let (bin_dir, daemon, staged) = if in_place {
+        (here_dir.clone(), daemon_src.clone(), Vec::new())
     } else {
         let bin = dir.join("bin");
         std::fs::create_dir_all(&bin).map_err(|e| format!("{}: {e}", bin.display()))?;
-        let daemon = bin.join("ak820-agent.exe");
-        let cli = bin.join("ak820.exe");
-        std::fs::copy(&daemon_src, &daemon)
-            .map_err(|e| format!("copying to {}: {e}", daemon.display()))?;
-        if here != cli {
-            std::fs::copy(&here, &cli).map_err(|e| format!("copying to {}: {e}", cli.display()))?;
+        let mut staged = Vec::new();
+        for (src, name) in [(&daemon_src, "ak820-agent.exe"), (&here, "ak820.exe")] {
+            let dst = bin.join(name);
+            if same_file(src, &dst) {
+                continue;
+            }
+            let tmp = bin.join(format!("{name}.new"));
+            std::fs::copy(src, &tmp).map_err(|e| format!("copying to {}: {e}", tmp.display()))?;
+            staged.push((tmp, dst));
         }
-        println!("copied ak820-agent.exe and ak820.exe to {}", bin.display());
-        (bin, daemon)
+        (bin.clone(), bin.join("ak820-agent.exe"), staged)
     };
 
-    // The Python now-playing agent is what the daemon replaces. The Python
-    // timekeeper is not: the clock stays with it until phase 3's gates.
-    if task::info(task::FOLDER, task::NOWPLAYING)?.is_some() {
-        task::stop(task::FOLDER, task::NOWPLAYING)?;
-        task::delete(task::FOLDER, task::NOWPLAYING)?;
-        println!(
-            "stopped and removed the Python task {}: the daemon replaces it (its log stays in {})",
-            task::NOWPLAYING,
-            dir.display()
-        );
-    }
-    // ⚠️ Stopping a task ends its process asynchronously. The first live
-    // install started the daemon while the Python agent still held the
-    // now-playing mutex, and the daemon refused to start exactly as designed.
-    // So: do not start until the name is free.
-    wait_released(instance::NOWPLAYING, Duration::from_secs(10))?;
-    // ⚠️ The clock. Exactly one process may run clock transactions; two
-    // silently corrupt each other's learners. `--clock` moves ownership to
-    // the daemon by removing the Python timekeeper's task; without it, the
-    // Python timekeeper is left exactly as it is.
-    let timekeeper_registered = task::info(task::FOLDER, task::TIMEKEEPER)?.is_some();
-    if clock {
-        if timekeeper_registered {
-            task::stop(task::FOLDER, task::TIMEKEEPER)?;
-            task::delete(task::FOLDER, task::TIMEKEEPER)?;
-            println!(
-                "stopped and removed the Python task {}: the daemon takes the clock (--clock)",
-                task::TIMEKEEPER
-            );
+    // From here on an owner may be stopped, so every failure must put one
+    // back: the previous registration is restarted, and said so.
+    let previous = task::info(task::FOLDER, task::AGENT)?;
+    let restore = |why: String| -> String {
+        if previous.is_none() {
+            return why;
         }
-        println!(
-            "⚠️  the daemon's clock loop is phase 4b, ahead of its measured-takeover gate; watch\n\
-             \x20   `ak820 status` and the log, and `powershell -File hostagent\\install-agents-windows.ps1`\n\
-             \x20   puts the Python timekeeper back if it misbehaves"
-        );
-    } else if timekeeper_registered {
-        println!(
-            "left the Python task {} alone: the clock stays with it (pass --clock to move it)",
-            task::TIMEKEEPER
-        );
-    } else {
-        println!(
-            "⚠️  no Python timekeeper is registered and --clock was not given: nothing will sync\n\
-             \x20   the clock. Pass --clock, or reinstall the Python timekeeper."
-        );
+        match task::start(task::FOLDER, task::AGENT) {
+            Ok(()) => format!("{why}; the previous daemon was started again"),
+            Err(e) => format!("{why}; and starting the previous daemon again failed too: {e}"),
+        }
+    };
+
+    // A running daemon holds its exe open; stop it before replacing it — and
+    // wait until it has actually gone, which the scheduler and its mutex
+    // both tell us.
+    if previous.is_some() {
+        task::stop(task::FOLDER, task::AGENT)?;
+        task::wait_stopped(task::FOLDER, task::AGENT, Duration::from_secs(10))?;
+        wait_released(instance::AGENT, Duration::from_secs(10))?;
+    }
+    for (tmp, dst) in &staged {
+        if let Err(e) = std::fs::rename(tmp, dst) {
+            return Err(restore(format!("replacing {}: {e}", dst.display())));
+        }
+    }
+    if !staged.is_empty() {
+        println!("copied ak820-agent.exe and ak820.exe to {}", bin_dir.display());
+    }
+
+    // The Python now-playing agent is what the daemon replaces. The Python
+    // timekeeper is not, unless --clock says so.
+    if let Err(e) = retire_python(clock, &dir) {
+        return Err(restore(e));
     }
 
     let user = format!("{}\\{}", env_var("USERDOMAIN")?, env_var("USERNAME")?);
@@ -431,18 +517,106 @@ fn install(flags: &[&str]) -> Result<(), String> {
         arguments: &arguments,
         working_directory: &bin_dir.display().to_string(),
     });
-    task::register(task::AGENT, &xml)?;
+    if let Err(e) = task::register(task::AGENT, &xml) {
+        return Err(restore(e));
+    }
     println!(
         "registered {}\\{} to run {} at logon, as {user}",
         task::FOLDER,
         task::AGENT,
         daemon.display()
     );
-    task::start(task::FOLDER, task::AGENT)?;
+    task::start(task::FOLDER, task::AGENT)
+        .map_err(|e| format!("{e}; it is registered and will start at the next logon"))?;
     println!("started it now; log: {}", log.display());
     std::thread::sleep(Duration::from_millis(1500));
     println!();
     status()
+}
+
+/// Stop and remove the Python tasks the daemon replaces, and not until each
+/// has actually gone.
+///
+/// ⚠️ Stopping a task ends its process asynchronously. The first live install
+/// started the daemon while the Python agent still held the now-playing
+/// mutex, and the daemon refused to start exactly as designed. And the
+/// timekeeper is worse: its `ak820ctl` child is a separate process that
+/// finishes on its own — by **setting the clock** — after `pythonw.exe` is
+/// gone. So the scheduler is asked, the mutex is claimed, and for the
+/// timekeeper the process list is watched for `ak820ctl.exe` (the phase-3a/4a
+/// audit's finding 1). Nothing is deleted until its process is gone: a
+/// failure here leaves the task registered and stopped, and says so.
+fn retire_python(clock: bool, dir: &std::path::Path) -> Result<(), String> {
+    use ak820_agent::{instance, process, task};
+    use std::time::Duration;
+
+    if task::info(task::FOLDER, task::NOWPLAYING)?.is_some() {
+        task::stop(task::FOLDER, task::NOWPLAYING)?;
+        task::wait_stopped(task::FOLDER, task::NOWPLAYING, Duration::from_secs(10))
+            .map_err(|e| format!("{e}; it is still registered"))?;
+        wait_released(instance::NOWPLAYING, Duration::from_secs(10))?;
+        task::delete(task::FOLDER, task::NOWPLAYING)?;
+        println!(
+            "stopped and removed the Python task {}: the daemon replaces it (its log stays in {})",
+            task::NOWPLAYING,
+            dir.display()
+        );
+    } else {
+        // not registered, but a hand-started copy would hold the name
+        wait_released(instance::NOWPLAYING, Duration::from_secs(10))?;
+    }
+
+    // ⚠️ The clock. Exactly one process may run clock transactions; two
+    // silently corrupt each other's learners. `--clock` moves ownership to
+    // the daemon by removing the Python timekeeper's task; without it, the
+    // Python timekeeper is left exactly as it is.
+    let timekeeper_registered = task::info(task::FOLDER, task::TIMEKEEPER)?.is_some();
+    if clock {
+        if timekeeper_registered {
+            task::stop(task::FOLDER, task::TIMEKEEPER)?;
+            task::wait_stopped(task::FOLDER, task::TIMEKEEPER, Duration::from_secs(10))
+                .map_err(|e| format!("{e}; it is still registered and still owns the clock"))?;
+            process::wait_gone("ak820ctl.exe", Duration::from_secs(15)).map_err(|e| {
+                format!("{e}; the {} task is stopped but still registered", task::TIMEKEEPER)
+            })?;
+            task::delete(task::FOLDER, task::TIMEKEEPER)?;
+            println!(
+                "stopped and removed the Python task {}: the daemon takes the clock (--clock)",
+                task::TIMEKEEPER
+            );
+        } else if process::running("ak820ctl.exe")? > 0 {
+            return Err(
+                "an ak820ctl.exe is running: something else is talking to the clock right now"
+                    .into(),
+            );
+        }
+        println!(
+            "⚠️  the daemon's clock loop is phase 4b, ahead of its measured-takeover gate. Watch\n\
+             \x20   `ak820 status` and the log. To give the clock back to the Python timekeeper,\n\
+             \x20   IN THIS ORDER: `ak820 install` (without --clock) first, so the daemon stops\n\
+             \x20   writing the clock, THEN `powershell -File hostagent\\install-agents-windows.ps1`.\n\
+             \x20   The other order runs two clock writers at once."
+        );
+    } else if timekeeper_registered {
+        println!(
+            "left the Python task {} alone: the clock stays with it (pass --clock to move it)",
+            task::TIMEKEEPER
+        );
+    } else {
+        println!(
+            "⚠️  no Python timekeeper is registered and --clock was not given: nothing will sync\n\
+             \x20   the clock. Pass --clock, or reinstall the Python timekeeper."
+        );
+    }
+    Ok(())
+}
+
+/// Do two paths name one existing file? `false` when either does not exist.
+fn same_file(a: &std::path::Path, b: &std::path::Path) -> bool {
+    match (a.canonicalize(), b.canonicalize()) {
+        (Ok(x), Ok(y)) => x == y,
+        _ => false,
+    }
 }
 
 fn env_var(name: &str) -> Result<String, String> {

@@ -109,8 +109,14 @@ pub fn arguments(folder: &str, name: &str) -> Result<Option<String>, String> {
 }
 
 /// Does the daemon's registered task run the clock loop?
+///
+/// Quotes are stripped before comparing: Windows strips them before the
+/// daemon's `args()` sees the flag, so `"--clock"` in the registration runs
+/// the clock loop just as `--clock` does (the phase-3a/4a audit's finding 2).
 pub fn agent_owns_clock() -> Result<bool, String> {
-    Ok(arguments(FOLDER, AGENT)?.is_some_and(|a| a.split_whitespace().any(|w| w == "--clock")))
+    Ok(arguments(FOLDER, AGENT)?.is_some_and(|a| {
+        a.split_whitespace().any(|w| w.trim_matches('"') == "--clock")
+    }))
 }
 
 fn between<'a>(s: &'a str, after: &str, before: &str) -> Option<&'a str> {
@@ -265,6 +271,42 @@ pub fn stop(folder: &str, name: &str) -> Result<(), String> {
         }
         Ok(())
     })
+}
+
+/// How many instances of a task the scheduler says are running.
+pub fn instances(folder: &str, name: &str) -> Result<usize, String> {
+    with_service(|service| {
+        let Some(task) = get_task(service, folder, name)? else {
+            return Ok(0);
+        };
+        let running = unsafe { task.GetInstances(0) }.map_err(|e| format!("instances of {name}: {e}"))?;
+        let n = unsafe { running.Count() }.map_err(|e| format!("instances of {name}: {e}"))?;
+        Ok(n.max(0) as usize)
+    })
+}
+
+/// Wait until the scheduler reports no running instance of a task.
+///
+/// ⚠️ `Stop-ScheduledTask` — and `IRegisteredTask::Stop`, which may even
+/// return `S_FALSE` for "could not stop" and have it read as success by the
+/// binding — ends the process asynchronously. The first live `install`
+/// started the daemon while the Python agent it had just stopped was still
+/// alive. This is the scheduler's own answer to "has it gone", polled.
+pub fn wait_stopped(folder: &str, name: &str, timeout: std::time::Duration) -> Result<(), String> {
+    let until = std::time::Instant::now() + timeout;
+    loop {
+        let n = instances(folder, name)?;
+        if n == 0 {
+            return Ok(());
+        }
+        if std::time::Instant::now() >= until {
+            return Err(format!(
+                "{name} still has {n} running instance(s) {} s after being stopped",
+                timeout.as_secs()
+            ));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
 }
 
 /// Unregister a task. Not an error if it is not registered.
@@ -447,6 +489,8 @@ mod tests {
     #[test]
     fn arguments_of_an_unregistered_task_are_none() {
         assert_eq!(arguments(FOLDER, "AK820Pro-no-such-task-4f2a").unwrap(), None);
+        assert_eq!(instances(FOLDER, "AK820Pro-no-such-task-4f2a").unwrap(), 0);
+        wait_stopped(FOLDER, "AK820Pro-no-such-task-4f2a", std::time::Duration::from_millis(10)).unwrap();
     }
 
     #[test]

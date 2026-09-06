@@ -149,6 +149,118 @@ fn every_hold_line_is_a_period_move_beyond_six_ticks_and_is_reproduced() {
     assert!(holds >= 50, "{holds} hold lines replayed");
 }
 
+/// One `bias hold` or `bias learned` line, whichever followed a sync.
+enum BiasLine {
+    Hold { prev_pnom: u32, pnom: u32 },
+    Learned(Learned),
+}
+
+/// The log as a sequence: every sync line paired with the bias line that
+/// followed it, if one did.
+fn sequence() -> Vec<(Sync, Option<BiasLine>)> {
+    let lines: Vec<&str> = LOG.lines().collect();
+    let mut out = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        let Some(sync) = parse_sync(line) else { continue };
+        let bias = lines.get(i + 1).and_then(|next| {
+            if next.contains("bias learned:") {
+                parse_learned(next).map(BiasLine::Learned)
+            } else if next.contains("bias hold:") {
+                Some(BiasLine::Hold {
+                    prev_pnom: between(next, "P ", " -> ")?.parse().ok()?,
+                    pnom: between(next, " -> ", " since")?.parse().ok()?,
+                })
+            } else {
+                None
+            }
+        });
+        out.push((sync, bias));
+    }
+    out
+}
+
+/// ⚠️ The phase-3a/4a audit's finding 8: the per-line replays above rebuild
+/// the learner for every line, so state carried from one sync to the next
+/// was never checked. This one carries it. Over every run of consecutive
+/// periodic syncs that each have a bias line — the only stretches the log
+/// records enough of — ONE scheduler is driven through the run: the cache
+/// bias it carries must be the `b` each `bias learned` line says it started
+/// from, its stored period must be the `P` each hold line says it compared
+/// against, and its decisions must be the log's, line for line.
+///
+/// What the log still cannot give: `ref_state` (assumed 2 on these stretches,
+/// where every line shows the learner running), the exact elapsed (the
+/// monotonic instants are reconstructed from the wall-clock stamps), and
+/// the syncs the Python declined silently, which end a run.
+#[test]
+fn state_carried_across_consecutive_syncs_matches_the_log() {
+    let seq = sequence();
+    let mut runs = 0;
+    let mut steps = 0;
+    let mut learned = 0;
+    let mut i = 0;
+    while i < seq.len() {
+        // a run: periodic syncs with bias lines, at least three long
+        let mut j = i;
+        while j < seq.len() && seq[j].0.reason == "periodic" && seq[j].1.is_some() {
+            j += 1;
+        }
+        if j - i >= 3 {
+            let mut s = Scheduler::new(0.0);
+            // the sync before the run established the baseline; its period
+            // is what the run's first bias line compared against
+            // the cache bias going in is what the first learned line in the
+            // run says it started from -- holds do not touch the cache
+            let first_learned = seq[i..j].iter().find_map(|(_, l)| match l {
+                Some(BiasLine::Learned(l)) => Some(l.b_old),
+                _ => None,
+            });
+            let (first_pnom, mut bias) = match seq[i].1.as_ref().unwrap() {
+                BiasLine::Hold { prev_pnom, .. } => (*prev_pnom, first_learned),
+                BiasLine::Learned(l) => (l.pnom, Some(l.b_old)),
+            };
+            let t0 = seq[i].0.at - 300.0;
+            s.learn(Reason::Enumerated, &SyncResult { ok: true, before_ms: Some(0.0), slewing: true }, Some(&status(first_pnom)), bias, 0.0);
+            for (sync, line) in &seq[i..j] {
+                let line = line.as_ref().unwrap();
+                let (pnom, expect_prev) = match line {
+                    BiasLine::Hold { prev_pnom, pnom } => (*pnom, Some(*prev_pnom)),
+                    BiasLine::Learned(l) => (l.pnom, None),
+                };
+                if let BiasLine::Learned(l) = line {
+                    assert_eq!(bias, Some(l.b_old), "the carried bias differs from the log's at {}", l.text);
+                }
+                let result = SyncResult { ok: true, before_ms: sync.before, slewing: true };
+                s.synced(&result, sync.at);
+                let d = s.learn(Reason::Periodic, &result, Some(&status(pnom)), bias, sync.at - t0);
+                match (line, &d) {
+                    (BiasLine::Hold { .. }, Learn::Hold { prev_pnom, .. }) => {
+                        assert_eq!(*prev_pnom, expect_prev, "carried period at {}", sync.at);
+                    }
+                    (BiasLine::Learned(l), Learn::Learned { b_new_rounded, .. }) => {
+                        // the arithmetic is checked per line elsewhere at the
+                        // log's precision; here the STATE flows on
+                        bias = Some(l.b_new);
+                        learned += 1;
+                        let _ = b_new_rounded;
+                    }
+                    (BiasLine::Hold { .. }, other) => panic!("log held at {} but the port {other:?}", sync.at),
+                    (BiasLine::Learned(l), other) => panic!("log learned at {} but the port {other:?}", l.text),
+                }
+                steps += 1;
+            }
+            runs += 1;
+            i = j;
+        } else {
+            i += 1;
+        }
+    }
+    assert!(runs >= 5, "{runs} runs");
+    assert!(steps >= 60, "{steps} sequential steps");
+    assert!(learned >= 40, "{learned} learned steps inside runs");
+    eprintln!("replayed {runs} runs, {steps} consecutive syncs, {learned} of them learning, with state carried");
+}
+
 struct Sync {
     at: f64,
     reason: &'static str,

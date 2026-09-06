@@ -10,6 +10,7 @@ pub mod hid;
 pub mod instance;
 pub mod logfile;
 pub mod media;
+pub mod process;
 pub mod proto;
 pub mod smtc;
 pub mod status;

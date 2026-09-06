@@ -27,7 +27,7 @@ use std::time::Duration;
 
 use ak820_agent::instance::{self, Instance};
 use ak820_agent::logfile::Log;
-use ak820_agent::{agent, media};
+use ak820_agent::{agent, media, process, task};
 
 fn main() {
     let dir = agent::default_dir();
@@ -53,9 +53,18 @@ fn main() {
                 i += 2;
             }
             "--interval" if value(i).is_some() => {
+                // Bounded and finite: `inf` or 1e300 would panic inside
+                // Duration and a tiny value would poll continuously — either
+                // way with no console to say so.
                 match value(i).unwrap().parse::<f64>() {
-                    Ok(secs) if secs > 0.0 => opts.interval = Duration::from_secs_f64(secs),
-                    _ => bail(&opts.log, &format!("bad --interval {}", value(i).unwrap()), 2),
+                    Ok(secs) if secs.is_finite() && (0.5..=3600.0).contains(&secs) => {
+                        opts.interval = Duration::from_secs_f64(secs)
+                    }
+                    _ => bail(
+                        &opts.log,
+                        &format!("bad --interval {} (0.5 to 3600 seconds)", value(i).unwrap()),
+                        2,
+                    ),
                 }
                 i += 2;
             }
@@ -77,6 +86,38 @@ fn main() {
         Ok(held) => held,
         Err(e) => bail(&opts.log, &format!("not starting: {e}"), 2),
     };
+
+    // ⚠️ The clock's ownership is not the flag's word alone (the phase-3a/4a
+    // audit's finding 1). `ak820 install --clock` removes the Python
+    // timekeeper's task before registering this one with `--clock`; if that
+    // task is nonetheless registered — the PowerShell installer was re-run —
+    // it will write the clock at the next logon if it is not doing so now,
+    // and two writers corrupt each other's learners. Refusing to start is
+    // the safe failure; not being able to ask is treated the same way.
+    if opts.clock {
+        match task::info(task::FOLDER, task::TIMEKEEPER) {
+            Ok(None) => {}
+            Ok(Some(_)) => bail(
+                &opts.log,
+                &format!(
+                    "not starting: --clock was given but the Python task {} is still registered; \
+                     `ak820 install --clock` removes it, or run without --clock",
+                    task::TIMEKEEPER
+                ),
+                2,
+            ),
+            Err(e) => bail(&opts.log, &format!("not starting: cannot establish who owns the clock ({e})"), 2),
+        }
+        match process::running("ak820ctl.exe") {
+            Ok(0) => {}
+            Ok(n) => bail(
+                &opts.log,
+                &format!("not starting: {n} ak820ctl.exe process(es) are talking to the clock"),
+                2,
+            ),
+            Err(e) => bail(&opts.log, &format!("not starting: cannot list processes ({e})"), 2),
+        }
+    }
 
     if let Err(e) = agent::run(opts) {
         std::process::exit(bail_code(&e));

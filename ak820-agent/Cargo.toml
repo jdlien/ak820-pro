@@ -47,6 +47,7 @@ features = [
     "Win32_System_Com",                          # CoInitializeEx/CoCreateInstance for the above
     "Win32_System_Ole",                          # VARIANT itself is gated on it
     "Win32_System_Variant",                      # ITaskService::Connect takes VARIANTs
+    "Win32_System_Diagnostics_ToolHelp",         # process snapshot: wait for ak820ctl.exe to exit, no HID involved
     "Win32_System_LibraryLoader",                # tests: msvcrt.dll!_localtime64, the oracle CRT, by LoadLibrary
     "Win32_System_Time",                         # FileTimeToSystemTime + SystemTimeToTzSpecificLocalTime: the clock's localtime()
     # WinRT, for the media half (phase 1).

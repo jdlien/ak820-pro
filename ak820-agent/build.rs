@@ -9,10 +9,14 @@
 use std::process::Command;
 
 fn main() {
-    // Re-run when the checkout moves, not on every build.
+    // Re-run when the checkout moves — and when a source file does, or an
+    // edit after a clean build would keep a clean describe without `-dirty`
+    // (the phase-3a/4a audit's P3).
     println!("cargo:rerun-if-changed=../.git/HEAD");
     println!("cargo:rerun-if-changed=../.git/refs");
     println!("cargo:rerun-if-changed=../.git/packed-refs");
+    println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed=Cargo.toml");
 
     let describe = Command::new("git")
         .args(["describe", "--always", "--dirty", "--tags"])
