@@ -6,9 +6,13 @@
 //!   is what lets discovery narrow the list **before opening anything**.
 //! - [`caps`] -- whether an opened collection is the raw-HID one. Pure.
 //! - [`device`] -- the Win32 calls, and the cancellation discipline they need.
+//! - [`exchange`] -- the request loop over a narrow [`exchange::Wire`] trait, so
+//!   the drain and correlation rules can be tested against a scripted fake
+//!   instead of only against a keyboard.
 
 pub mod caps;
 pub mod device;
+pub mod exchange;
 pub mod path;
 
 use crate::proto::Mismatch;
@@ -84,7 +88,7 @@ pub enum Error {
     /// to tell it from a fresh reply — so sending anyway risks answering a new
     /// question with an old measurement.
     Dirty {
-        queue: device::Queue,
+        queue: exchange::Queue,
         drained: Vec<Drained>,
     },
     /// A cancellation did not complete inside its grace period, so this device

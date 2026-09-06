@@ -43,20 +43,16 @@ use windows::Win32::System::Threading::{CreateEventW, ResetEvent, WaitForSingleO
 
 use super::caps::{Identity, Reject};
 use super::path;
-use super::{Drained, Error};
-use crate::proto::{self, Channel, REPORT_LEN, Verdict};
+pub use super::exchange::{Queue, Reply};
+use super::exchange::{self, Sent, Wire};
 
-/// How long one report may take to leave. Generous: the board answers in single
-/// milliseconds, so a stall here means something is wrong rather than slow.
-const WRITE_TIMEOUT_MS: u32 = 1000;
+use super::{Drained, Error};
+use crate::proto::Channel;
 
 /// How long a whole request may take, matching `ak820ctl`'s `hid_read_timeout`.
 /// It is a budget for the *transaction*, not for one read, because a read that
 /// returns someone else's report has not answered us.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_millis(2000);
-
-/// Per-read slice of that budget.
-const READ_SLICE: Duration = Duration::from_millis(250);
 
 /// How long a refused-to-land cancellation is given before the device is
 /// declared stuck and its buffer abandoned to the kernel.
@@ -78,18 +74,6 @@ const DRAIN_BUDGET: Duration = Duration::from_millis(250);
 fn ms(d: Duration) -> u32 {
     d.as_millis().min(u32::MAX as u128) as u32
 }
-
-/// How long a pre-drain read waits before concluding the queue is empty.
-///
-/// Not zero, deliberately. A queued report completes the `ReadFile` almost
-/// immediately, but "almost" is not "before we ask", and a zero wait would
-/// cancel reads that were about to hand us the stale report we are trying to
-/// clear. One millisecond is enough for a report already sitting in the
-/// driver's queue and short enough to be free when the queue is empty.
-const DRAIN_TIMEOUT_MS: u32 = 1;
-
-/// Bound on the pre-drain, so a chatty peer cannot hold us in the loop.
-const DRAIN_LIMIT: usize = 32;
 
 // ---------------------------------------------------------------------------
 // Discovery -- reads the PnP database, opens nothing
@@ -218,17 +202,6 @@ pub struct Device {
 // Safe because the handles are owned exclusively by this Device and Win32
 // handles are process-wide, so moving one between threads is sound.
 unsafe impl Send for Device {}
-
-/// A correlated reply, and what had to be thrown away to reach it.
-///
-/// `drained` is not noise: on this machine it is the direct evidence of another
-/// process talking to the same board, and an empty list on a busy machine is
-/// itself worth noticing.
-#[derive(Clone, Debug)]
-pub struct Reply {
-    pub report: [u8; REPORT_LEN],
-    pub drained: Vec<Drained>,
-}
 
 impl Interface {
     /// Open for reading and writing, then make the device confirm what it is.
@@ -407,7 +380,7 @@ impl Device {
         body: &[u8],
         budget: Duration,
     ) -> Result<Reply, Error> {
-        self.request_at(channel, command, body, budget, |_| {})
+        exchange::exchange(self, channel, command, body, budget, |_| {})
     }
 
     /// As [`Device::request`], but the caller is handed the instant the command
@@ -419,12 +392,7 @@ impl Device {
     /// a VIA flood can make it several milliseconds. The midpoint of that wider
     /// interval is not the transmission midpoint, so the offset it yields is
     /// wrong by half the drain -- silently, and in the direction that looks
-    /// like a real clock error.
-    ///
-    /// The callback fires **after** draining and immediately before the write
-    /// returns, so a caller can take `t0` where the NTP arithmetic actually
-    /// needs it. Phase 2 will build the SET side on this; see finding 3 of
-    /// `plans/review-codex-phase0-2026-09-06.md`.
+    /// like a real clock error. Finding 3 of the phase-0 audit.
     pub fn request_at(
         &self,
         channel: Channel,
@@ -433,133 +401,18 @@ impl Device {
         budget: Duration,
         on_send: impl FnOnce(Instant),
     ) -> Result<Reply, Error> {
-        // ⚠️ The budget is checked BEFORE anything is transmitted. An expired
-        // operation that still writes can change the board -- set a clock, move
-        // the text band -- after the scheduler has given up on it, which is the
-        // one outcome a timeout must never produce.
-        let deadline = Instant::now()
-            .checked_add(budget)
-            .ok_or(Error::Timeout { drained: Vec::new() })?;
-        if budget.is_zero() {
-            return Err(Error::Timeout { drained: Vec::new() });
-        }
-
-        // Anything already queued predates our write and cannot be our answer,
-        // so clearing it first keeps the budget for reports that might be.
-        // Deliberately before the write: this is time spent outside the
-        // interval a clock measurement brackets.
-        let (mut drained, queue) = self.drain_until(deadline);
-
-        // ⚠️ Finding 2 of the 2026-09-06 audit. A drain that stopped early has
-        // NOT established an empty queue, and the reports still in it can carry
-        // our own channel and command from an earlier request. Accepting one
-        // would pair an old board sample with new timestamps -- the exact
-        // silent corruption single ownership exists to prevent -- so a request
-        // that cannot start clean does not start.
-        if queue != Queue::Empty {
-            return Err(Error::Dirty { queue, drained });
-        }
-
-        let left = deadline.saturating_duration_since(Instant::now());
-        if left.is_zero() {
-            return Err(Error::Timeout { drained });
-        }
-
-        let frame = proto::frame(channel, command, body);
-        let write_ms = ms(left.min(Duration::from_millis(WRITE_TIMEOUT_MS as u64)));
-        match self.transfer(Op::Write(frame.to_vec()), write_ms)? {
-            Outcome::Wrote(_) => on_send(Instant::now()),
-            Outcome::Read(..) => unreachable!("a write cannot complete as a read"),
-            Outcome::TimedOut => {
-                return Err(Error::Io {
-                    op: "write",
-                    source: windows::core::Error::from_hresult(HRESULT::from_win32(
-                        ERROR_OPERATION_ABORTED.0,
-                    )),
-                })
-            }
-        }
-
-        loop {
-            let left = deadline.saturating_duration_since(Instant::now());
-            if left.is_zero() {
-                return Err(Error::Timeout { drained });
-            }
-            let Some(buf) = self.read_once(ms(left.min(READ_SLICE)))? else {
-                continue;
-            };
-            match proto::classify(&buf, channel, command) {
-                Verdict::Reply(report) => {
-                    let mut out = [0u8; REPORT_LEN];
-                    out.copy_from_slice(&report[..REPORT_LEN]);
-                    return Ok(Reply {
-                        report: out,
-                        drained,
-                    });
-                }
-                Verdict::Drain(m) => drained.push(Drained::Foreign(m)),
-                Verdict::Unhandled => {
-                    return Err(Error::Unhandled {
-                        channel: channel.id(),
-                        command,
-                    })
-                }
-            }
-        }
+        exchange::exchange(self, channel, command, body, budget, on_send)
     }
 
-    /// Empty the driver's queue of anything that arrived before we asked, and
-    /// **say whether it actually got empty**.
-    ///
-    /// ⚠️ Finding 2 of the 2026-09-06 audit. The old version returned only what
-    /// it discarded, so a caller could not tell "the queue is clean" from "I
-    /// gave up after 32 reports". The driver holds 64, so giving up left as
-    /// many as 32 in place — and one of those can be a **stale reply carrying
-    /// our own channel and command** from an earlier request. The next request
-    /// would then be answered by it instantly, pairing an old board sample with
-    /// new timestamps. For a clock GET that is a wrong offset with a plausible
-    /// RTT: exactly the silent corruption this layer exists to prevent.
-    ///
-    /// So the outcome is part of the result, and [`Device::request_at`] refuses
-    /// to transmit unless it is [`Queue::Empty`].
+    /// Empty the driver's queue, and say whether it actually got empty.
     pub fn drain_until(&self, deadline: Instant) -> (Vec<Drained>, Queue) {
-        let mut seen = Vec::new();
-        for _ in 0..DRAIN_LIMIT {
-            if Instant::now() >= deadline {
-                return (seen, Queue::OutOfTime);
-            }
-            match self.read_once(DRAIN_TIMEOUT_MS) {
-                // A read that times out is the only positive evidence the queue
-                // is empty: there was nothing for the kernel to hand back.
-                Ok(None) => return (seen, Queue::Empty),
-                Ok(Some(buf)) => seen.push(match proto::normalize_input(&buf) {
-                    Ok(r) => Drained::Stale {
-                        header: [r[0], r[1], r[2]],
-                    },
-                    Err(m) => Drained::StaleUnreadable(m),
-                }),
-                Err(_) => return (seen, Queue::Unreadable),
-            }
-        }
-        (seen, Queue::MoreWaiting)
+        exchange::drain_until(self, deadline)
     }
 
     /// Drain with the default allowance, for callers with no deadline of their
     /// own.
     pub fn drain(&self) -> (Vec<Drained>, Queue) {
         self.drain_until(Instant::now() + DRAIN_BUDGET)
-    }
-
-    /// One read, or `Ok(None)` if nothing arrived in time.
-    fn read_once(&self, timeout_ms: u32) -> Result<Option<Vec<u8>>, Error> {
-        match self.transfer(Op::Read(self.identity.input_len as usize), timeout_ms)? {
-            Outcome::Read(mut buf, n) => {
-                buf.truncate(n);
-                Ok(Some(buf))
-            }
-            Outcome::Wrote(_) => unreachable!("a read cannot complete as a write"),
-            Outcome::TimedOut => Ok(None),
-        }
     }
 
     /// One overlapped transfer, started and finished inside this call.
@@ -665,41 +518,38 @@ impl Device {
     }
 }
 
+/// The real device, behind the narrow interface [`exchange`] needs.
+///
+/// Everything hard about Win32 -- overlapped I/O, the `CancelIoEx` lifetime
+/// rule, the stuck-device decision -- stays on this side of the trait, and
+/// everything hard about the protocol stays on the other. That split is what
+/// lets the request loop be tested against a scripted fake.
+impl Wire for Device {
+    fn write_report(&self, data: &[u8], timeout: Duration) -> Result<Sent, Error> {
+        match self.transfer(Op::Write(data.to_vec()), ms(timeout))? {
+            Outcome::Wrote(_) => Ok(Sent::Yes),
+            Outcome::TimedOut => Ok(Sent::TimedOut),
+            Outcome::Read(..) => unreachable!("a write cannot complete as a read"),
+        }
+    }
+
+    fn read_report(&self, timeout: Duration) -> Result<Option<Vec<u8>>, Error> {
+        match self.transfer(Op::Read(self.identity.input_len as usize), ms(timeout))? {
+            Outcome::Read(mut buf, n) => {
+                buf.truncate(n);
+                Ok(Some(buf))
+            }
+            Outcome::TimedOut => Ok(None),
+            Outcome::Wrote(_) => unreachable!("a read cannot complete as a write"),
+        }
+    }
+}
+
 /// A transfer's buffer and `OVERLAPPED`, on the heap so they can outlive the
 /// call that started them when a cancellation refuses to land.
 struct Pending {
     ov: OVERLAPPED,
     buf: Vec<u8>,
-}
-
-/// What the pre-drain established about the driver's queue.
-///
-/// ⚠️ Only [`Queue::Empty`] is safe to start a request on. Every other value
-/// means "there may still be a report in there that would answer the command I
-/// am about to send", and such a report is indistinguishable from a real reply.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Queue {
-    /// A read timed out with nothing to hand back. The only positive evidence.
-    Empty,
-    /// [`DRAIN_LIMIT`] reports came out and more may remain.
-    MoreWaiting,
-    /// The deadline passed mid-drain.
-    OutOfTime,
-    /// A read failed, so nothing was established either way.
-    Unreadable,
-}
-
-impl std::fmt::Display for Queue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Queue::Empty => write!(f, "empty"),
-            Queue::MoreWaiting => {
-                write!(f, "still held reports after {DRAIN_LIMIT} were discarded")
-            }
-            Queue::OutOfTime => write!(f, "could not be cleared within the budget"),
-            Queue::Unreadable => write!(f, "could not be read"),
-        }
-    }
 }
 
 /// A transfer that finished, or one that ran out of time. A timeout is not an
@@ -763,7 +613,10 @@ mod tests {
     /// these two constants must not drift apart.
     #[test]
     fn a_frame_is_one_wire_report() {
-        assert_eq!(proto::frame(Channel::Flash, 0x01, &[]).len(), proto::WIRE_LEN);
+        assert_eq!(
+            crate::proto::frame(Channel::Flash, 0x01, &[]).len(),
+            crate::proto::WIRE_LEN
+        );
     }
 
     /// Discovery must open nothing, and must survive a machine with no board.
