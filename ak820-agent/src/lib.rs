@@ -5,6 +5,7 @@
 pub mod agent;
 pub mod clock;
 pub mod flash;
+pub mod health;
 pub mod hid;
 pub mod instance;
 pub mod logfile;

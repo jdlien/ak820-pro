@@ -1,0 +1,46 @@
+blit_timeouts            43
+tx_sent                  11233
+tx_timeouts              5565
+tx_drops                 0
+rx_malformed             1
+loop_gap_max_ms          105
+scan_rate                375
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+passes                   21315563
+count_ge_10ms            101
+count_ge_25ms            14
+count_ge_25ms_nonflash   12
+loop_gap_max_mark        none
+flash_writes             116
+flash_gap_max_ms         33
+blit_gap_max_ms          31
+i2c_gap_max_ms           11
+key_presses              4568
+
+  ** 12 UNEXPLAINED stall(s) >= 25 ms -- long enough to lose a keystroke **
+
+row_samples              [15235, 15236, 15236, 15236, 15236, 15236]
+row_gap_max_ms           15  (row 2)
+raw_edges                9105
+consumes                 21319381
+cooked_changes           9084
+
+  spread 15235-15236 (EVEN)  [uint16, wraps every ~5 min -- --reset first for absolute counts]
+  worst gap 15 ms -- elevated; healthy is single-digit
+  raw_edges 9105 vs key_presses 4568 (expect ~2x: a press and a release are two raw edges)
+
+isr_per_s                3910.0
+isr_mean_us              186.1
+isr_min_us               10.7
+isr_max_us               480.0
+isr_cpu_pct              72.8
+row_samples_per_row_per_s 217.3
+timebase_vs_wall         1.0035
+
+  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;
+  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop
+----
+{"blit_timeouts": 43, "tx_sent": 11233, "tx_timeouts": 5565, "tx_drops": 0, "rx_malformed": 1, "loop_gap_max_ms": 105, "scan_rate": 375, "wdt_consecutive_resets": 0, "flags": 0, "version": 5, "wdt_fired_last_boot": false, "wdt_degraded": false, "count_ge_10ms": 101, "count_ge_25ms": 14, "passes": 21315563, "flash_writes": 116, "flash_gap_max_ms": 33, "blit_gap_max_ms": 31, "i2c_gap_max_ms": 11, "count_ge_25ms_nonflash": 12, "key_presses": 4568, "loop_gap_max_mark": "none", "row_samples": [15235, 15236, 15236, 15236, 15236, 15236], "row_gap_max_ms": 15, "raw_edges": 9105, "consumes": 21319381, "cooked_changes": 9084, "row_gap_max_row": 2, "matrix_rows": 6, "isr_entries": 219697006, "isr_ticks_sum": 3369313304, "isr_ticks_min": 2, "isr_ticks_max": 90, "st_freq": 187500, "uptime_ms": 56181309, "row_samples_total": 73232248, "isr_dt_s": 2.022, "isr_per_s": 3910.0, "isr_mean_us": 186.1, "isr_min_us": 10.7, "isr_max_us": 480.0, "isr_cpu_pct": 72.8, "row_samples_per_row_per_s": 217.3, "timebase_vs_wall": 1.0035}
