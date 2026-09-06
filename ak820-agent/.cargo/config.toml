@@ -1,0 +1,9 @@
+# Static CRT, so the binaries run on a machine that has never installed a
+# VC++ redistributable. Measured 2026-09-06: without this both exes import
+# VCRUNTIME140.dll, which is not part of Windows; with it their imports are
+# inbox only (kernel32, ntdll, cfgmgr32, hid, combase, oleaut32). The cost is
+# ~100 KB per binary. This is the whole "nothing to install" promise of the
+# Releases zip, and it is a build setting rather than a Cargo.toml feature
+# because Cargo has no per-package way to say it.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

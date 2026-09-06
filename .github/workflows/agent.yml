@@ -1,0 +1,48 @@
+# The Rust host agent: build and test on every change to the crate.
+#
+# Windows only, like the crate. `--locked` refuses to run with a Cargo.lock
+# that disagrees with Cargo.toml, so a dependency bump has to be a committed
+# lockfile change and not something the runner resolves on its own -- the
+# `windows` crate is pinned to the exact version the blocking-async spelling
+# was measured on.
+name: ak820-agent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ak820-agent/**"
+      - "scripts/clock_oracle.c"
+      - ".github/workflows/agent.yml"
+  pull_request:
+    paths:
+      - "ak820-agent/**"
+      - "scripts/clock_oracle.c"
+      - ".github/workflows/agent.yml"
+
+jobs:
+  test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ak820-agent
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # build.rs bakes in `git describe`
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ak820-agent
+      # The unit tests talk to the Task Scheduler service, the Configuration
+      # Manager and both C runtimes' localtime, all of which a runner has. None
+      # of them need a keyboard.
+      - run: cargo test --locked
+      - run: cargo build --release --locked
+      - run: .\target\release\ak820.exe --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ak820-agent-windows-x64
+          path: |
+            ak820-agent/target/release/ak820.exe
+            ak820-agent/target/release/ak820-agent.exe

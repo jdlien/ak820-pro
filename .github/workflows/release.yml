@@ -1,0 +1,48 @@
+# A tag `v*` becomes a GitHub Release carrying the agent zip and its sha256
+# sums. The firmware artifacts for the same tag are uploaded by hand afterwards
+# (`gh release upload v… ak820pro-builds/out/… via.json`): the pinned MSYS2
+# toolchain in deps.lock is not something to reproduce on a runner, and the
+# repo's reproducible-build habit -- three clean builds hashing identically --
+# is the check that matters there.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  agent:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ak820-agent
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --locked
+      - run: cargo build --release --locked
+      - name: package
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $dir = "ak820-agent-$tag-windows-x64"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item target\release\ak820.exe, target\release\ak820-agent.exe, INSTALL.txt $dir
+          Compress-Archive -Path $dir -DestinationPath "$dir.zip" -Force
+          $sums = Get-FileHash -Algorithm SHA256 "$dir.zip", "$dir\ak820.exe", "$dir\ak820-agent.exe" |
+            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path -Leaf $_.Path) }
+          Set-Content -Path sha256sums.txt -Value $sums
+          Get-Content sha256sums.txt
+          .\target\release\ak820.exe --version
+      - name: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release create $tag "ak820-agent-$tag-windows-x64.zip" sha256sums.txt `
+            --title $tag --generate-notes --verify-tag

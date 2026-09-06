@@ -1,4 +1,4 @@
-//! `ak820-agent` -- the daemon. Phase 0: a stub.
+//! `ak820-agent` -- the daemon.
 //!
 //! ⚠️ The attribute below is the whole reason this is a separate binary from
 //! `ak820.exe`: a PE has exactly one subsystem, and a windows-subsystem image
@@ -7,8 +7,79 @@
 //! construction rather than by discipline, which is the only version of that
 //! guarantee worth having in something a Scheduled Task starts.
 //!
-//! It also means stdout is gone. Everything this binary has to say will go to a
-//! log, not a stream -- see "Observability" in plans/AK820-AGENT-PLAN.md.
+//! It also means stdout is gone. Everything this binary has to say goes to
+//! the log, including why it refused to start; `ak820 status` reads it back.
+//!
+//! Phase 4a: now-playing only. The clock loop is not here yet — see "Staged
+//! switch-over" in plans/AK820-AGENT-PLAN.md — and the Python timekeeper owns
+//! the clock until it is.
+//!
+//! ```text
+//! ak820-agent [--log PATH] [--status PATH] [--interval SECS] [--once]
+//! ```
 #![windows_subsystem = "windows"]
 
-fn main() {}
+use std::time::Duration;
+
+use ak820_agent::instance::{self, Instance};
+use ak820_agent::logfile::Log;
+use ak820_agent::{agent, media};
+
+fn main() {
+    let dir = agent::default_dir();
+    let mut opts = agent::Options {
+        interval: media::INTERVAL,
+        log: dir.join("ak820-agent.log"),
+        status: dir.join("ak820-agent.status"),
+        once: false,
+    };
+
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut i = 0;
+    while i < args.len() {
+        let value = |i: usize| -> Option<&String> { args.get(i + 1) };
+        match args[i].as_str() {
+            "--log" if value(i).is_some() => {
+                opts.log = value(i).unwrap().into();
+                i += 2;
+            }
+            "--status" if value(i).is_some() => {
+                opts.status = value(i).unwrap().into();
+                i += 2;
+            }
+            "--interval" if value(i).is_some() => {
+                match value(i).unwrap().parse::<f64>() {
+                    Ok(secs) if secs > 0.0 => opts.interval = Duration::from_secs_f64(secs),
+                    _ => bail(&opts.log, &format!("bad --interval {}", value(i).unwrap()), 2),
+                }
+                i += 2;
+            }
+            "--once" => {
+                opts.once = true;
+                i += 1;
+            }
+            other => bail(&opts.log, &format!("unknown argument {other:?}"), 2),
+        }
+    }
+
+    // Ownership is enforced, not intended: one of us, and not the Python
+    // now-playing agent either, whose mutex name this also takes.
+    let _held: Instance = match Instance::claim(&[instance::AGENT, instance::NOWPLAYING]) {
+        Ok(held) => held,
+        Err(e) => bail(&opts.log, &format!("not starting: {e}"), 2),
+    };
+
+    if let Err(e) = agent::run(opts) {
+        std::process::exit(bail_code(&e));
+    }
+}
+
+fn bail(log: &std::path::Path, message: &str, code: i32) -> ! {
+    Log::at(log).line(message);
+    std::process::exit(code)
+}
+
+fn bail_code(e: &str) -> i32 {
+    let _ = e;
+    1
+}

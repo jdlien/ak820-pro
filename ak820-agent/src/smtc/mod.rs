@@ -250,18 +250,31 @@ pub fn snapshot(sessions: &[SessionFacts]) -> Snapshot {
 /// every track change. Issued back to back through one open they are ~1 ms
 /// apart and land in the same tick.
 pub fn reports(snapshot: &Snapshot) -> Vec<(u8, Vec<u8>)> {
-    use crate::text;
-    let mut out = Vec::with_capacity(3);
-    match snapshot.lines() {
-        None => out.push((text::CLEAR, Vec::new())),
-        Some((row0, row1, icon)) => {
-            out.push((text::SET_LINE, text::line_body(Line::WithIcon, row0, icon)));
-            out.push((text::SET_LINE, text::line_body(Line::FullWidth, row1, icon)));
-        }
-    }
-    let (state, pos, dur) = snapshot.playback();
-    out.push((text::PLAYBACK, text::playback_body(state, pos, dur).to_vec()));
+    let mut out = text_reports(snapshot);
+    out.push(playback_report(snapshot));
     out
+}
+
+/// The text half of [`reports`]: the two rows, or a clear. The Python agent
+/// sends these only when the text changed or the keepalive is due.
+pub fn text_reports(snapshot: &Snapshot) -> Vec<(u8, Vec<u8>)> {
+    use crate::text;
+    match snapshot.lines() {
+        None => vec![(text::CLEAR, Vec::new())],
+        Some((row0, row1, icon)) => vec![
+            (text::SET_LINE, text::line_body(Line::WithIcon, row0, icon)),
+            (text::SET_LINE, text::line_body(Line::FullWidth, row1, icon)),
+        ],
+    }
+}
+
+/// The playback half: pushed on **every** poll, separately from the text —
+/// "it is the readout that has to stay honest, and it is cheap" — and the
+/// firmware expires it after 20 s.
+pub fn playback_report(snapshot: &Snapshot) -> (u8, Vec<u8>) {
+    use crate::text;
+    let (state, pos, dur) = snapshot.playback();
+    (text::PLAYBACK, text::playback_body(state, pos, dur).to_vec())
 }
 
 #[cfg(test)]
@@ -375,9 +388,9 @@ mod tests {
     #[test]
     fn an_empty_timeline_reads_as_no_progress() {
         let snap = playing_with(Timeline {
-            start_ticks: 0 * TICKS_PER_SEC,
-            end_ticks: 0 * TICKS_PER_SEC,
-            position_ticks: 0 * TICKS_PER_SEC,
+            start_ticks: 0,
+            end_ticks: 0,
+            position_ticks: 0,
             age_s: Some(1.0),
         });
         assert_eq!((snap.pos_s, snap.dur_s), (1, 0));
@@ -395,7 +408,7 @@ mod tests {
     #[test]
     fn a_stale_position_is_extrapolated_while_playing() {
         let snap = playing_with(Timeline {
-            start_ticks: 0 * TICKS_PER_SEC,
+            start_ticks: 0,
             end_ticks: 300 * TICKS_PER_SEC,
             position_ticks: 100 * TICKS_PER_SEC,
             age_s: Some(4.7),
@@ -407,7 +420,7 @@ mod tests {
     fn a_paused_position_is_never_extrapolated() {
         let mut s = session("app", Status::Paused, true);
         s.timeline = Some(Timeline {
-            start_ticks: 0 * TICKS_PER_SEC,
+            start_ticks: 0,
             end_ticks: 300 * TICKS_PER_SEC,
             position_ticks: 100 * TICKS_PER_SEC,
             age_s: Some(120.0),
@@ -422,7 +435,7 @@ mod tests {
     fn an_implausible_age_is_not_trusted() {
         for age in [-0.1, -3600.0, 600.0, 1e9] {
             let snap = playing_with(Timeline {
-                start_ticks: 0 * TICKS_PER_SEC,
+                start_ticks: 0,
                 end_ticks: 300 * TICKS_PER_SEC,
                 position_ticks: 100 * TICKS_PER_SEC,
                 age_s: Some(age),
@@ -432,7 +445,7 @@ mod tests {
         // ... and the boundaries that ARE trusted.
         for (age, want) in [(0.0, 100), (599.9, 699)] {
             let snap = playing_with(Timeline {
-                start_ticks: 0 * TICKS_PER_SEC,
+                start_ticks: 0,
                 end_ticks: 1000 * TICKS_PER_SEC,
                 position_ticks: 100 * TICKS_PER_SEC,
                 age_s: Some(age),
@@ -444,7 +457,7 @@ mod tests {
     #[test]
     fn extrapolation_cannot_run_past_the_end_of_the_track() {
         let snap = playing_with(Timeline {
-            start_ticks: 0 * TICKS_PER_SEC,
+            start_ticks: 0,
             end_ticks: 120 * TICKS_PER_SEC,
             position_ticks: 118 * TICKS_PER_SEC,
             age_s: Some(30.0),

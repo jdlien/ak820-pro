@@ -93,7 +93,60 @@ transaction has never touched hardware, deliberately: the CLI stays read-only
 until the daemon owns the interface, and a one-shot SET beside the Python
 timekeeper would corrupt both learners.
 
-**Next: the scheduler and the SOF-bias learner**, then the replay corpus.
+**Next: the staged switch-over** — see
+[Staged switch-over and packaging](#staged-switch-over-and-packaging-2026-09-06).
+The daemon takes over now-playing now; the clock follows phase 3's gates.
+
+## Staged switch-over and packaging (2026-09-06)
+
+Asked on 2026-09-06: switch to the Rust agent if ready, and do the release
+plumbing and a self-installing Scheduled Task.
+
+**Ready for half of it.** The media half — `text/`, `smtc/` — is gated and
+audited, and its writes are the same traffic the Python now-playing agent
+puts on the wire today, every three seconds. The clock half is not: the
+scheduler and SOF-bias learner are unported, the replay and takeover gates
+have not run, and the transaction has never touched hardware. Switching the
+clock now would stop a working writer for an unproven one on a daily
+keyboard. So the switch is staged:
+
+| Step | What runs | Gate |
+|---|---|---|
+| 4a | `ak820-agent.exe` owns **now-playing**. `ak820 install` stops and unregisters the Python `AK820Pro-nowplaying` task and registers `AK820Pro-agent`; the Python `AK820Pro-timekeeper` keeps the clock, untouched. | The LCD follows a track change, a pause and idle; the daemon rides through an unplug and replug; the timekeeper's log keeps syncing throughout; `ak820 status` says what the daemon last did and when. |
+| 4b | The daemon takes the clock too and the Python timekeeper is stopped. | Phase 3's gates as written: deterministic replay against captured oracle inputs, then the measured takeover with numeric limits. Not before. |
+| 6a | Release plumbing: static CRT, `--version`, CI on every push to the crate, a Release zip with sha256 sums on every `v*` tag; firmware artifacts uploaded to the same Release by hand, since the pinned MSYS2 toolchain is not something to reproduce in CI. | A tag produces a zip whose `ak820 install` works on a machine with no Python, no MSYS2 and no VC++ redistributable — Windows Sandbox is the cheap way to prove it. |
+
+**Why the daemon holds the Python now-playing agent's mutex.**
+`nowplaying-windows.py` refuses to start while `Global\ak820pro-nowplaying`
+is held. The daemon holds that name as well as its own, so re-running the
+old PowerShell installer cannot put two media writers on the board. The
+timekeeper has no such guard; ownership of the clock stays a matter of which
+task is registered, and `ak820 clock` already checks that before reading.
+
+**Self-install through XML, deliberately.** `ak820 install` registers the task
+from a task XML document via `ITaskFolder::RegisterTask`, not by building the
+definition object by object. The XML is a string the tests compare against
+what `Export-ScheduledTask` produced for the task the PowerShell installer
+created — the same principal (interactive token, least privilege), logon
+trigger, both battery settings, no execution time limit, restart 999 times at
+one minute, ignore new instances, start when available. The exes are copied to
+`%LOCALAPPDATA%\ak820pro\bin\` so the zip can be deleted afterwards;
+`--in-place` registers the running location instead, for development.
+
+**Observability, the minimum that answers the backlog.** "Task running"
+coexisted with thirteen minutes of missed syncs on 2026-09-05. The daemon
+writes `%LOCALAPPDATA%\ak820pro\ak820-agent.status` atomically every cycle —
+version, start time, board presence, last media push, last error — and
+`ak820 status` prints it beside the three tasks' states. The log is bounded:
+rotated at 1 MB.
+
+**Measured before building (2026-09-06):** the release binaries import
+`VCRUNTIME140.dll`, which is not part of Windows; with `+crt-static` their
+imports are inbox only (`kernel32`, `ntdll`, `cfgmgr32`, `hid`, `combase`,
+`oleaut32`) at 321 KB and 193 KB. And the repository has **zero releases and
+zero tags** while the README already sends readers to the Releases page for
+firmware — so the tag workflow is needed for a promise that predates the
+agent.
 
 A single Rust binary replacing the two Python host agents **on Windows only**.
 macOS keeps its LaunchAgents and its Python, unchanged.
@@ -341,9 +394,9 @@ environment underneath it.
 | 1 ✅ | `text/`, `smtc/`, `ak820 probe` | **Met 2026-09-06.** Captured competing sessions, the current-session tiebreak, absent metadata and timeline, a track change, Unicode folding and both line budgets — three real captures pinned as tests, plus a 2,309-case folding fixture. | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
 | 2 ✅ | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) — **Met 2026-09-06**: three captured replies, plus the SET-reply-as-GET bytes behind the oracle's own bad line, render byte-identically through the pinned C and the port. [Evidence](#phase-2-evidence-2026-09-06). |
 | 3 ~ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **Code and C-transaction fixtures done 2026-09-06** (`clock::transaction`, `set`, `lead`, `cache`); the scheduler, the replay and the takeover are open. |
-| 4 | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. |
+| 4 ~ | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. — **Split 2026-09-06** into 4a (now-playing now, self-install, status file) and 4b (the clock, after phase 3); see [Staged switch-over](#staged-switch-over-and-packaging-2026-09-06). |
 | 5 | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command — the firmware echoes the requested page in byte 3, so a foreign reply for another page would otherwise be decoded with this page's layout. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. |
-| 6 | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. |
+| 6 ~ | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. — **6a plumbing started 2026-09-06** (static CRT, `--version`, CI, tag → Release); the clean-machine gate is 6b. |
 
 **Every row above also ends with a codex audit** — see
 [Every phase ends with an external audit](#every-phase-ends-with-an-external-audit).

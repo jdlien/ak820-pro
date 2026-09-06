@@ -76,6 +76,17 @@ impl Icon {
     pub fn id(self) -> u8 {
         self as u8
     }
+
+    /// The key `ak820text.py`'s `ICONS` table uses, which is also what the
+    /// Python now-playing agent writes in its log lines.
+    pub fn name(self) -> &'static str {
+        match self {
+            Icon::None => "none",
+            Icon::Play => "play",
+            Icon::Pause => "pause",
+            Icon::Stop => "stop",
+        }
+    }
 }
 
 /// Fold one non-ASCII character to the ASCII it contributes, if any.

@@ -35,6 +35,13 @@ fn main() -> ExitCode {
         ["probe"] => probe(),
         ["lighting"] => lighting(),
         ["clock", flags @ ..] => clock(flags),
+        ["install", flags @ ..] => install(flags),
+        ["uninstall"] => uninstall(),
+        ["status"] => status(),
+        ["--version"] | ["version"] => {
+            println!("{}", ak820_agent::version_line("ak820"));
+            return ExitCode::SUCCESS;
+        }
         ["watch"] => watch(20),
         ["watch", secs] => secs
             .parse()
@@ -62,7 +69,13 @@ fn main() -> ExitCode {
 
 fn usage() {
     println!(
-        "ak820 -- AJAZZ AK820 Pro host tool -- all read-only\n\
+        "ak820 -- AJAZZ AK820 Pro host tool -- reads the board, never writes it\n\
+         \n\
+         \x20 ak820 install [--in-place]   register the daemon as a per-user task and start it\n\
+         \x20                              (replaces the Python now-playing task; leaves the timekeeper)\n\
+         \x20 ak820 uninstall              stop and remove the daemon's task\n\
+         \x20 ak820 status                 the tasks, and what the daemon last did\n\
+         \x20 ak820 --version\n\
          \n\
          \x20 ak820 list           interfaces this board owns; opens nothing\n\
          \x20 ak820 list --caps    ... and what each one says once opened\n\
@@ -264,6 +277,183 @@ fn contention_notice() {
             task::TIMEKEEPER
         );
     }
+}
+
+/// Install the daemon as a per-user Scheduled Task and start it — the "just
+/// run it" path of the Releases zip.
+///
+/// Copies both binaries to `%LOCALAPPDATA%\ak820pro\bin\` so the zip can be
+/// deleted afterwards (`--in-place` registers the running location instead,
+/// for development), stops and unregisters the Python now-playing task —
+/// which the daemon replaces — and leaves the Python timekeeper alone: the
+/// clock stays with it until the Rust port passes phase 3's gates. Then it
+/// registers `AK820Pro-agent` from the same task definition the PowerShell
+/// installer used (`task::task_xml`) and starts it, so nobody has to log out
+/// and back in.
+///
+/// Writes to the Task Scheduler and the profile directory; never to the board.
+fn install(flags: &[&str]) -> Result<(), String> {
+    use ak820_agent::{agent, task};
+    use std::time::Duration;
+
+    let mut in_place = false;
+    for flag in flags {
+        match *flag {
+            "--in-place" => in_place = true,
+            other => {
+                return Err(format!(
+                    "install: unknown flag {other}; the only flag is --in-place"
+                ))
+            }
+        }
+    }
+
+    let here = std::env::current_exe().map_err(|e| format!("locating ak820.exe: {e}"))?;
+    let here_dir = here
+        .parent()
+        .ok_or("ak820.exe has no parent directory")?
+        .to_path_buf();
+    let daemon_src = here_dir.join("ak820-agent.exe");
+    if !daemon_src.is_file() {
+        return Err(format!(
+            "{} must sit beside ak820.exe (both come in the same zip)",
+            daemon_src.display()
+        ));
+    }
+    let dir = agent::default_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+
+    // A running daemon holds its exe open; stop it before copying over it.
+    if task::info(task::FOLDER, task::AGENT)?.is_some() {
+        task::stop(task::FOLDER, task::AGENT)?;
+        std::thread::sleep(Duration::from_millis(500));
+    }
+
+    let (bin_dir, daemon) = if in_place {
+        (here_dir.clone(), daemon_src.clone())
+    } else {
+        let bin = dir.join("bin");
+        std::fs::create_dir_all(&bin).map_err(|e| format!("{}: {e}", bin.display()))?;
+        let daemon = bin.join("ak820-agent.exe");
+        let cli = bin.join("ak820.exe");
+        std::fs::copy(&daemon_src, &daemon)
+            .map_err(|e| format!("copying to {}: {e}", daemon.display()))?;
+        if here != cli {
+            std::fs::copy(&here, &cli).map_err(|e| format!("copying to {}: {e}", cli.display()))?;
+        }
+        println!("copied ak820-agent.exe and ak820.exe to {}", bin.display());
+        (bin, daemon)
+    };
+
+    // The Python now-playing agent is what the daemon replaces. The Python
+    // timekeeper is not: the clock stays with it until phase 3's gates.
+    if task::info(task::FOLDER, task::NOWPLAYING)?.is_some() {
+        task::stop(task::FOLDER, task::NOWPLAYING)?;
+        task::delete(task::FOLDER, task::NOWPLAYING)?;
+        println!(
+            "stopped and removed the Python task {}: the daemon replaces it (its log stays in {})",
+            task::NOWPLAYING,
+            dir.display()
+        );
+    }
+    if task::info(task::FOLDER, task::TIMEKEEPER)?.is_some() {
+        println!(
+            "left the Python task {} alone: the clock stays with it until the Rust port passes its gate",
+            task::TIMEKEEPER
+        );
+    }
+
+    let user = format!("{}\\{}", env_var("USERDOMAIN")?, env_var("USERNAME")?);
+    let log = dir.join("ak820-agent.log");
+    let xml = task::task_xml(&task::Definition {
+        description: task::AGENT_DESCRIPTION,
+        user: &user,
+        command: &daemon.display().to_string(),
+        arguments: &format!("--log \"{}\"", log.display()),
+        working_directory: &bin_dir.display().to_string(),
+    });
+    task::register(task::AGENT, &xml)?;
+    println!(
+        "registered {}\\{} to run {} at logon, as {user}",
+        task::FOLDER,
+        task::AGENT,
+        daemon.display()
+    );
+    task::start(task::FOLDER, task::AGENT)?;
+    println!("started it now; log: {}", log.display());
+    std::thread::sleep(Duration::from_millis(1500));
+    println!();
+    status()
+}
+
+fn env_var(name: &str) -> Result<String, String> {
+    std::env::var(name).map_err(|_| format!("{name} is not set in the environment"))
+}
+
+/// Stop and unregister the daemon's task. Binaries and logs stay.
+fn uninstall() -> Result<(), String> {
+    use ak820_agent::{agent, task};
+    if task::info(task::FOLDER, task::AGENT)?.is_none() {
+        println!("{}\\{} is not registered", task::FOLDER, task::AGENT);
+    } else {
+        task::stop(task::FOLDER, task::AGENT)?;
+        task::delete(task::FOLDER, task::AGENT)?;
+        println!("stopped and removed {}\\{}", task::FOLDER, task::AGENT);
+    }
+    println!("binaries and logs left in {}", agent::default_dir().display());
+    println!(
+        "to put the Python now-playing agent back: powershell -ExecutionPolicy Bypass -File hostagent\\install-agents-windows.ps1"
+    );
+    Ok(())
+}
+
+/// The three tasks' states, then what the daemon last did, then its log's
+/// tail. "Running" alone is liveness, not health — the status file is what
+/// says whether anything has happened lately.
+fn status() -> Result<(), String> {
+    use ak820_agent::{agent, status, task};
+
+    for name in [task::AGENT, task::TIMEKEEPER, task::NOWPLAYING] {
+        match task::info(task::FOLDER, name)? {
+            None => println!("{name:<22} not registered"),
+            Some(i) => {
+                let state = match i.state {
+                    task::State::Running => "Running".to_string(),
+                    task::State::Idle(1) => "Disabled".to_string(),
+                    task::State::Idle(2) => "Queued".to_string(),
+                    task::State::Idle(3) => "Ready".to_string(),
+                    task::State::Idle(s) => format!("state {s}"),
+                };
+                println!(
+                    "{name:<22} {state:<9} last run {}  result 0x{:x}",
+                    i.last_run.as_deref().unwrap_or("never"),
+                    i.last_result
+                );
+            }
+        }
+    }
+
+    let dir = agent::default_dir();
+    let status_path = dir.join("ak820-agent.status");
+    println!();
+    match status::read(&status_path) {
+        None => println!("no status file yet at {}", status_path.display()),
+        Some(pairs) => {
+            for (k, v) in pairs {
+                println!("{k:<18} {v}");
+            }
+        }
+    }
+
+    let log = dir.join("ak820-agent.log");
+    if let Ok(text) = std::fs::read_to_string(&log) {
+        println!("\nlast lines of {}:", log.display());
+        let lines: Vec<&str> = text.lines().collect();
+        for line in lines.iter().rev().take(6).rev() {
+            println!("  {line}");
+        }
+    }
+    Ok(())
 }
 
 /// Ask the board the same question twice a second and narrate what happens.
