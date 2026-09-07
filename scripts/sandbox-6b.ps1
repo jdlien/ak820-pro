@@ -15,7 +15,9 @@
       ak820 install --clock
       ak820 status         (the gate: board=absent, updated moving, no [warn])
 
-  and leaves the window open with the daemon's log. The sandbox has no USB
+  and leaves the window open with the daemon's log. With -Wait, the same
+  output is read back from the mapped folder and printed here on the host,
+  so the run can be driven and judged without touching the sandbox window. The sandbox has no USB
   passthrough, so the board half of the install is proven on a real machine;
   this proves the "nothing else needed" half. Close the sandbox and every
   trace of the install is discarded.
@@ -31,7 +33,9 @@
   powershell -ExecutionPolicy Bypass -File scripts\sandbox-6b.ps1 -Tag v0.1.0
 #>
 param(
-    [Parameter(Mandatory = $true)][string]$Tag
+    [Parameter(Mandatory = $true)][string]$Tag,
+    # Wait for the sandbox to finish and print its transcript here on the host.
+    [switch]$Wait
 )
 $ErrorActionPreference = 'Stop'
 
@@ -53,6 +57,9 @@ foreach ($name in @($zip, 'sha256sums.txt')) {
 # Runs INSIDE the sandbox, as WDAGUtilityAccount, at logon.
 $check = @"
 `$ErrorActionPreference = 'Continue'
+# Everything below lands in result.txt in the mapped folder -- on the HOST, so
+# whoever launched this can read the outcome without looking at this window.
+Start-Transcript -Path 'C:SERSWDAGUTILITYACCOUNTDESKTOPK820ESULT.TXT' -FORCE | OUT-NULL
 `$host.UI.RawUI.WindowTitle = 'ak820 phase 6b: $Tag on a clean Windows'
 `$src = 'C:\Users\WDAGUtilityAccount\Desktop\ak820'
 `$work = 'C:\Users\WDAGUtilityAccount\ak820'
@@ -74,6 +81,7 @@ Write-Host "`n== ak820 status  (the gate: board=absent, updated moving, no [warn
 Write-Host "`n== the log" -ForegroundColor Cyan
 Get-Content "`$env:LOCALAPPDATA\ak820pro\ak820-agent.log"
 Write-Host "`nDone. Close this sandbox window to discard everything." -ForegroundColor Yellow
+Stop-Transcript | Out-Null
 "@
 Set-Content -Path (Join-Path $dir 'check.ps1') -Value $check
 
@@ -83,7 +91,7 @@ $wsb = @"
     <MappedFolder>
       <HostFolder>$dir</HostFolder>
       <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\ak820</SandboxFolder>
-      <ReadOnly>true</ReadOnly>
+      <ReadOnly>false</ReadOnly>
     </MappedFolder>
   </MappedFolders>
   <LogonCommand>
@@ -95,3 +103,14 @@ $wsbPath = Join-Path $dir 'ak820-6b.wsb'
 Set-Content -Path $wsbPath -Value $wsb
 "opening the sandbox from $wsbPath"
 Start-Process $wsbPath
+
+if ($Wait) {
+    $result = Join-Path $dir 'result.txt'
+    Remove-Item $result -ErrorAction SilentlyContinue
+    $deadline = (Get-Date).AddMinutes(6)
+    while ((Get-Date) -lt $deadline) {
+        if ((Test-Path $result) -and (Select-String -Path $result -Pattern '^Done.' -Quiet)) { break }
+        Start-Sleep -Seconds 5
+    }
+    if (Test-Path $result) { Get-Content $result } else { throw "no result.txt from the sandbox after 6 minutes" }
+}
