@@ -157,16 +157,17 @@ The daemon's first sync landed three seconds later — an enumerated one — and
 wrote the cache file in the C's exact format, carrying the bias the Python had
 learned at 14:37:54.
 
-The first 49 minutes, against the Python's own last two days in the same log
-directory (252 periodic syncs):
+Four hours and twenty minutes later, 50 periodic syncs, against the Python's
+own whole log in the same directory (252 periodic syncs over two days):
 
-| | Python timekeeper | Daemon, first 10 syncs |
+| | Python timekeeper | Daemon |
 |---|---|---|
-| residual `before`, median | 7.3 ms | 6.7 ms |
-| residual `before`, worst | 51.1 ms at the 95th percentile, 994.5 ms max | 17.2 ms |
-| round trip | 3.9–4.0 ms | 3.7–4.6 ms |
-| lead | 2.14–3.60 ms | 2.92–3.48 ms |
-| learner decisions | learned and held on its gates | 3 learned, 6 held, on the same gates |
+| periodic syncs measured | 252 | 50 |
+| residual `before`, median | 7.3 ms | 8.0 ms |
+| residual `before`, 95th percentile | 51.1 ms | 21.0 ms |
+| residual `before`, worst | 994.5 ms | 23.8 ms |
+| learned bias, range | −142 to +567 ppm (spread 709) | +23 to +84 ppm (spread 61) |
+| learner decisions | learned and held on its gates | 23 learned, 26 held, on the same gates |
 | `warning:` lines | — | 0 |
 | foreign reports, sync failures | — | 0, 0 |
 
@@ -174,6 +175,26 @@ Every line the daemon logged is one the Python's rules make of the same
 inputs, in the same format, so the log reads as one story across 14:40. The
 lead moved +0.17 and +0.16 ms on the first two syncs and then settled: the C's
 learner converging on this transport's outbound delay, as it is designed to.
+
+**The daemon is not merely at parity on the tail; it is better**, and the
+difference is the shape the transport work predicts. The median residual is
+the same to within a millisecond — the arithmetic is the C's, so it should be
+— while the Python's 95th percentile is 2.4× worse and its worst sync is 42×
+worse. Its learned bias swings across a 709 ppm range where the daemon's holds
+inside 61. Excursions of that size are what a *spoiled sample* looks like: a
+foreign reply taken as one of the five, pairing another process's board sample
+with these timestamps, which is precisely the failure `ak820ctl`'s `xfer()`
+cannot detect and this crate's correlation and single ownership exist to
+remove. Stated as the correlation it is: the Python ran beside a now-playing
+agent touching the wire every 3 s, and the daemon is the only writer.
+
+**Restart, exercised 2026-09-06 18:43.** A reboot for Windows Sandbox took the
+host down for ten minutes. The board free-ran on its own oscillator with no
+USB SOF to discipline it and drifted 270 ms. The task started the daemon at
+logon by itself; its enumerated sync at 18:50:21 caught the whole 270 ms, the
+scheduler dropped to the 180 s fast interval because the residual exceeded
+60 ms, and three minutes later the residual was −11.1 ms. That is the Python's
+own recovery rule, running unattended.
 
 **One number differs, and is recorded rather than explained.** `after` minus
 `before` — the verify GET against the burst's best sample — averages +1.7 ms

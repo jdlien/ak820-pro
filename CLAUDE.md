@@ -122,7 +122,13 @@ restructured the same day into a clone-and-build package: `setup.sh` +
 **Releasing:** `git tag -a vX.Y.Z` and push it; CI builds the agent zip into
 a GitHub Release, then `scripts/release-firmware.sh vX.Y.Z` (from a checkout
 at the tag) uploads this machine's firmware artifacts to it -- a clean build
-of deps.lock's pinned commit only, never a `-dirty` one.
+of deps.lock's pinned commit only, never a `-dirty` one. Then
+`scripts/sandbox-6b.ps1 -Tag vX.Y.Z -Wait` proves the published zip installs
+on a clean Windows (no Python, no MSYS2, no VC++ redistributable) in Windows
+Sandbox, and prints the sandbox's transcript back on the host. ⚠️ **The zip's
+`INSTALL.txt` is what a stranger reads first, and it only changes with a
+tag** -- v0.1.0 shipped one telling a clean machine to leave the clock to a
+Python agent it does not have, which cost a v0.1.1.
 
 Works on macOS and on Windows from the **MSYS2 MinGW 64-bit shell** (only that
 shell — `qmk_cli` refuses the others). Windows has four traps that all present
