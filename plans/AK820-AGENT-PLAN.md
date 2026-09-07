@@ -1,6 +1,6 @@
 # ak820-agent — one Windows daemon for the clock and the LCD text — plan
 
-Status: **PHASES 0–2 COMPLETE AND AUDITED; 3a (REPLAY) MET, RE-MET WITH STATE CARRIED AFTER ITS AUDIT; 4a LIVE AND AUDITED — THE DAEMON OWNS NOW-PLAYING ON THIS MACHINE; 5 (HEALTH) MET; 3b/4b LIVE SINCE 14:40 — THE DAEMON OWNS THE CLOCK TOO AND THE PYTHON TIMEKEEPER IS REMOVED, THE FIRST HOUR INSIDE THE PYTHON'S BASELINE; 6a (RELEASE PLUMBING) DONE, 6b (CLEAN MACHINE) OPEN** (2026-09-06). Planned and revised
+Status: **PHASES 0–2 COMPLETE AND AUDITED; 3a (REPLAY) MET, RE-MET WITH STATE CARRIED AFTER ITS AUDIT; 4a LIVE AND AUDITED — THE DAEMON OWNS NOW-PLAYING ON THIS MACHINE; 5 (HEALTH) MET; 3b/4b LIVE SINCE 14:40 — THE DAEMON OWNS THE CLOCK TOO AND THE PYTHON TIMEKEEPER IS REMOVED, THE FIRST HOUR INSIDE THE PYTHON'S BASELINE; 6 (RELEASE) MET — v0.1.1 PUBLISHED AND PROVEN TO INSTALL ON A CLEAN WINDOWS** (2026-09-06). Planned and revised
 against [review-codex-ak820d-2026-09-05.md](review-codex-ak820d-2026-09-05.md)
 (gpt-6-astra, xhigh), then built and gated phase by phase.
 
@@ -113,7 +113,7 @@ keyboard. So the switch is staged:
 | Step | What runs | Gate |
 |---|---|---|
 | 4a | `ak820-agent.exe` owns **now-playing**. `ak820 install` stops and unregisters the Python `AK820Pro-nowplaying` task and registers `AK820Pro-agent`; the Python `AK820Pro-timekeeper` keeps the clock, untouched. | The LCD follows a track change, a pause and idle; the daemon rides through an unplug and replug; the timekeeper's log keeps syncing throughout; `ak820 status` says what the daemon last did and when. |
-| 4b | The daemon takes the clock too and the Python timekeeper is stopped. | Phase 3's gates as written: deterministic replay against captured oracle inputs, then the measured takeover with numeric limits. Not before. **Done 2026-09-06 14:40**; suspend/resume, battery and the rollback itself not yet exercised. |
+| 4b | The daemon takes the clock too and the Python timekeeper is stopped. | Phase 3's gates as written: deterministic replay against captured oracle inputs, then the measured takeover with numeric limits. Not before. **Done 2026-09-06 14:40**, and measured over 50 syncs: tighter than the Python on every tail statistic. Restart met at 18:43. Suspend/resume, battery and the rollback carried through are open. |
 | 6a | Release plumbing: static CRT, `--version`, CI on every push to the crate, a Release zip with sha256 sums on every `v*` tag; firmware artifacts uploaded to the same Release by hand, since the pinned MSYS2 toolchain is not something to reproduce in CI. | A tag produces a zip whose `ak820 install` works on a machine with no Python, no MSYS2 and no VC++ redistributable — Windows Sandbox is the cheap way to prove it. **v0.1.0 cut 2026-09-06**: CI built the zip and its sums on the tag; `scripts/release-firmware.sh v0.1.0` put the firmware, asset image, `via.json` and a provenance note beside it. |
 
 **Why the daemon holds the Python now-playing agent's mutex.**
@@ -147,6 +147,53 @@ imports are inbox only (`kernel32`, `ntdll`, `cfgmgr32`, `hid`, `combase`,
 zero tags** while the README already sends readers to the Releases page for
 firmware — so the tag workflow is needed for a promise that predates the
 agent.
+
+### Phase 6b evidence (2026-09-06, Windows Sandbox)
+
+The gate as written: *a tag produces a zip whose `ak820 install` works on a
+machine with no Python, no MSYS2 and no VC++ redistributable.* Run with
+`scripts/sandbox-6b.ps1 -Tag v0.1.1 -Wait`, which downloads the **published**
+zip and sums from the Release, maps them into a fresh Windows Sandbox, runs
+the checks at logon, and reads the sandbox's transcript back on the host.
+A sandbox is a clean Windows 10.0.26100 with none of those three present.
+
+| Step | Result |
+|---|---|
+| zip sha256 vs the published `sha256sums.txt` | `6d4e78ca…aaa9`, matched |
+| `ak820 --version` | `ak820 0.1.1 (v0.1.1); speaks RTC protocol 2, text channel 0x12, health channel 0x13`, exit 0 |
+| `ak820 list` | `0 HID interfaces present, 0 of them this board's; opening none`, exit 0 |
+| `ak820 probe` | "No SMTC sessions at all", with the app-side explanation, exit 0 |
+| `ak820 install --clock` | copied both exes, registered `\ak820pro\AK820Pro-agent` as `WDAGUtilityAccount`, started it, exit 0 |
+| `ak820 status` | `board absent`, `clock this daemon`, no `[warn]` line |
+| `updated`, 7 s apart | `19:07:03` → `19:07:09` — the daemon is alive, not merely registered |
+
+Nothing was installed first, and nothing was needed: a static-CRT binary, a
+per-user task, and a non-elevated shell. The daemon's four log lines are the
+ones a first run should write, ending in
+`board: unknown -> absent (no AK820 Pro (0C45:8009) is present -- check the
+cable and that the slider is on `cable`)` — the right answer, since **Windows
+Sandbox has no USB passthrough**. That is the boundary of this gate: the board
+half is proven on real hardware (phases 0–5 and the 3b takeover above), and
+this proves the half a stranger's machine adds — that the zip alone is enough.
+
+Two traps met while running it, both now handled in the script:
+
+- **One sandbox at a time.** Launching a second `.wsb` while one is open does
+  nothing visible: no error, no window. `-Wait` then sits out its whole
+  timeout waiting for a check that never ran. The script refuses when
+  `WindowsSandboxServer` is already running.
+- **A boot can take minutes.** The first sandbox reached its `LogonCommand` in
+  about ten seconds; the next one on the same host took **seven minutes**, and
+  a six-minute wait reported a failure for a run that had in fact succeeded
+  and wrote its transcript a minute later. The wait is now twenty minutes.
+
+⚠️ **v0.1.0 failed this gate on its documentation**, which is why v0.1.1
+exists. Its `INSTALL.txt` told the reader to run a plain `ak820 install` and
+said the clock came from the Python timekeeper in `hostagent/` — an agent a
+machine installing from the zip does not have and cannot get without the
+repository and a `venv-win`. Every binary worked; the instructions would have
+left a stranger's LCD clock unsynced with nothing to say so. The zip's text
+is the one artifact that only changes with a tag.
 
 ### Phase 3b evidence (2026-09-06, live on this machine)
 
@@ -602,9 +649,9 @@ environment underneath it.
 | 1 ✅ | `text/`, `smtc/`, `ak820 probe` | **Met 2026-09-06.** Captured competing sessions, the current-session tiebreak, absent metadata and timeline, a track change, Unicode folding and both line budgets — three real captures pinned as tests, plus a 2,309-case folding fixture. | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
 | 2 ✅ | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) — **Met 2026-09-06**: three captured replies, plus the SET-reply-as-GET bytes behind the oracle's own bad line, render byte-identically through the pinned C and the port. [Evidence](#phase-2-evidence-2026-09-06). |
 | 3 ✅ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **3a met 2026-09-06**: the scheduler, SOF-bias learner and seed ported (`clock::scheduler`), and replayed against the Python timekeeper's own log — 108 `bias learned` lines reproduced byte for byte, 59 holds, 171 interval choices ([evidence](#phase-3a-evidence-2026-09-06)). **3b met 2026-09-06 14:40**: the owner ran `ak820 install --clock`; the first 49 minutes are inside the Python's own baseline, with one printed number recorded as open ([evidence](#phase-3b-evidence-2026-09-06-live-on-this-machine)). The phase-3a/4a audit reopened 3a for checking no state carried between syncs; re-met with a sequential replay (8 runs, 163 consecutive syncs, 106 learning), see its [disposition](#phase-3a4a-audit--disposition-2026-09-06). |
-| 4 ~ | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. — **Split 2026-09-06** into 4a (now-playing now, self-install, status file) and 4b (the clock, after phase 3); see [Staged switch-over](#staged-switch-over-and-packaging-2026-09-06). **4a audited 2026-09-06**; its 18 findings fixed and the daemon reinstalled from the fix. |
+| 4 ~ | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. — **Split 2026-09-06** into 4a (now-playing now, self-install, status file) and 4b (the clock, after phase 3); see [Staged switch-over](#staged-switch-over-and-packaging-2026-09-06). **4a audited 2026-09-06**; its 18 findings fixed and the daemon reinstalled from the fix. **Both halves live and 4b measured** (see [3b evidence](#phase-3b-evidence-2026-09-06-live-on-this-machine)); **migration, restart and real liveness met**, the rollback's *refusals* exercised (the PowerShell installer threw rather than register a second clock writer). **Open: suspend/resume, battery, and the rollback carried through.** |
 | 5 ✅ | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. — **Met 2026-09-06**: a live capture decodes and renders byte-identically to `ak820health.py` (`tests/health_parity.rs`); `ak820 health [--stalls] [--rows] [--isr] [--json] [--raw]` reads the pages over the correlated transport; the daemon reads pages 1 and 2 every five minutes into `health_*` keys of its status file, so the takeover has a before. The health pages are selected by *command* (`0x01`, `0x04`, `0x06`, `0x07`), so channel+command is the page correlation; the echo check finding 5 asked for exists now as `exchange_matched` and is what the text commands use, where the selector is in the body. |
-| 6 ~ | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. — **6a plumbing started 2026-09-06** (static CRT, `--version`, CI, tag → Release); the clean-machine gate is 6b. **v0.1.0 released 2026-09-06** (agent zip from CI, firmware from this machine via `scripts/release-firmware.sh`); 6b is the owner's Windows Sandbox run of that zip. |
+| 6 ✅ | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. — **6a plumbing started 2026-09-06** (static CRT, `--version`, CI, tag → Release); the clean-machine gate is 6b. **v0.1.0 released 2026-09-06** (agent zip from CI, firmware from this machine via `scripts/release-firmware.sh`); **6b met 2026-09-06** in Windows Sandbox against the published v0.1.1 zip ([evidence](#phase-6b-evidence-2026-09-06-windows-sandbox)); v0.1.0 failed it on its INSTALL.txt, which is why v0.1.1 exists. |
 
 **Every row above also ends with a codex audit** — see
 [Every phase ends with an external audit](#every-phase-ends-with-an-external-audit).

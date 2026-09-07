@@ -31,12 +31,17 @@ submodule sits on our `ak820pro-patches` branch.
 
 Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
 
-**In progress: `ak820-agent/`** — a Rust rewrite of the two Windows host agents
-as one daemon. **Phases 0–2 complete and audited; 3a met (the scheduler and
-learners replayed against the Python log); 4a and 4b live — since 14:40 on 2026-09-06
-the daemon owns now-playing AND the clock on this machine, the Python
-timekeeper is removed, and the first hour is inside the Python's baseline;
-the 3a/4a audit's 18 findings fixed and phase 5 (health) met** (2026-09-06).
+**`ak820-agent/`** — a Rust rewrite of the two Windows host agents as one
+daemon. **Every phase met as of 2026-09-06.** Since 14:40 that day the daemon
+owns now-playing **and** the clock on this machine and the Python timekeeper
+is removed; over its first 50 syncs it beat the Python it replaced on every
+tail statistic (95th percentile residual 21.0 ms against 51.1, worst 23.8
+against 994.5, learned bias inside 61 ppm against 709). Phases 0–2, 3a and 4a
+were each audited by codex and every finding dispositioned. **v0.1.1 is
+published** and proven to install on a clean Windows with no Python, no MSYS2
+and no VC++ redistributable. Still open: suspend/resume and battery, the
+rollback carried through, and the verify-residual question in
+[`plans/BACKLOG.md`](plans/BACKLOG.md).
 305 unit tests, the 2,309-case folding fixture, a 4-test replay of the
 timekeeper's log and a 2-test health capture. Read
 [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)

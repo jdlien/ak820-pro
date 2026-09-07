@@ -121,10 +121,23 @@ Start-Process $wsbPath
 if ($Wait) {
     $result = Join-Path $dir 'result.txt'
     Remove-Item $result -ErrorAction SilentlyContinue
-    $deadline = (Get-Date).AddMinutes(6)
+    # ⚠️ Generous on purpose. A first sandbox boot reached its LogonCommand in
+    # ~10 s here; the next one on the same host took **seven minutes**, and a
+    # 6-minute wait reported a failure for a run that then succeeded on its
+    # own. Wait long enough that "no transcript" means something.
+    $deadline = (Get-Date).AddMinutes(20)
     while ((Get-Date) -lt $deadline) {
         if ((Test-Path $result) -and (Select-String -Path $result -Pattern '^Done\.' -Quiet)) { break }
         Start-Sleep -Seconds 5
     }
-    if (Test-Path $result) { Get-Content $result } else { throw "no result.txt from the sandbox after 6 minutes" }
+    if (Test-Path $result) {
+        Get-Content $result
+    }
+    else {
+        throw @"
+no result.txt from the sandbox after 20 minutes. The window may be open without
+having run its check. Close it, make sure no *andbox* process is left
+(Get-Process | Where-Object ProcessName -like '*andbox*'), and run this again.
+"@
+    }
 }
