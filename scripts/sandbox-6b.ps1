@@ -43,6 +43,13 @@ $sandbox = Join-Path $env:WINDIR 'System32\WindowsSandbox.exe'
 if (-not (Test-Path $sandbox)) {
     throw "Windows Sandbox is not enabled. Once, from an elevated PowerShell, then reboot:`n  Enable-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM -All"
 }
+# ⚠️ Windows Sandbox runs ONE instance. Launching a second .wsb while one is
+# open does nothing visible: no error, no window, and -Wait then sits for its
+# whole timeout waiting for a check that never ran. Caught doing exactly that
+# on 2026-09-06. Say so instead.
+if (Get-Process WindowsSandboxServer -ErrorAction SilentlyContinue) {
+    throw "a Windows Sandbox is already running, and only one may run at a time. Close its window and try again."
+}
 
 $repo = 'jdlien/ak820-pro'
 $zip = "ak820-agent-$Tag-windows-x64.zip"
@@ -70,14 +77,21 @@ Write-Host "== sha256 of the zip against the published sum" -ForegroundColor Cya
 if (`$have -eq `$want) { Write-Host "OK  `$have" -ForegroundColor Green } else { Write-Host "MISMATCH have `$have want `$want" -ForegroundColor Red }
 Expand-Archive -Path '$zip' -DestinationPath `$work -Force
 Set-Location (Join-Path `$work 'ak820-agent-$Tag-windows-x64')
+# Windows PowerShell 5.1's transcript does not record what a native exe
+# prints unless it is piped through the host, hence the Out-Host on each.
 foreach (`$cmd in @('--version', 'list', 'probe', 'install --clock')) {
     Write-Host "`n== ak820 `$cmd" -ForegroundColor Cyan
-    & .\ak820.exe (`$cmd -split ' ')
+    & .\ak820.exe (`$cmd -split ' ') 2>&1 | Out-Host
     Write-Host "exit `$LASTEXITCODE"
 }
 Start-Sleep -Seconds 6
 Write-Host "`n== ak820 status  (the gate: board=absent, updated moving, no [warn] lines)" -ForegroundColor Cyan
-& .\ak820.exe status
+& .\ak820.exe status 2>&1 | Out-Host
+`$statusFile = "`$env:LOCALAPPDATA\ak820pro\ak820-agent.status"
+Write-Host "`n== the status file, twice, 7 s apart: 'updated' must move" -ForegroundColor Cyan
+Get-Content `$statusFile
+Start-Sleep -Seconds 7
+Get-Content `$statusFile | Select-String '^updated='
 Write-Host "`n== the log" -ForegroundColor Cyan
 Get-Content "`$env:LOCALAPPDATA\ak820pro\ak820-agent.log"
 Write-Host "`nDone. Close this sandbox window to discard everything." -ForegroundColor Yellow
