@@ -59,7 +59,7 @@ $check = @"
 `$ErrorActionPreference = 'Continue'
 # Everything below lands in result.txt in the mapped folder -- on the HOST, so
 # whoever launched this can read the outcome without looking at this window.
-Start-Transcript -Path 'C:SERSWDAGUTILITYACCOUNTDESKTOPK820ESULT.TXT' -FORCE | OUT-NULL
+Start-Transcript -Path 'C:\Users\WDAGUtilityAccount\Desktop\ak820\result.txt' -Force | Out-Null
 `$host.UI.RawUI.WindowTitle = 'ak820 phase 6b: $Tag on a clean Windows'
 `$src = 'C:\Users\WDAGUtilityAccount\Desktop\ak820'
 `$work = 'C:\Users\WDAGUtilityAccount\ak820'
@@ -109,7 +109,7 @@ if ($Wait) {
     Remove-Item $result -ErrorAction SilentlyContinue
     $deadline = (Get-Date).AddMinutes(6)
     while ((Get-Date) -lt $deadline) {
-        if ((Test-Path $result) -and (Select-String -Path $result -Pattern '^Done.' -Quiet)) { break }
+        if ((Test-Path $result) -and (Select-String -Path $result -Pattern '^Done\.' -Quiet)) { break }
         Start-Sleep -Seconds 5
     }
     if (Test-Path $result) { Get-Content $result } else { throw "no result.txt from the sandbox after 6 minutes" }
