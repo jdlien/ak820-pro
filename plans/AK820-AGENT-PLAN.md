@@ -97,6 +97,65 @@ timekeeper would corrupt both learners.
 [Staged switch-over and packaging](#staged-switch-over-and-packaging-2026-09-06).
 The daemon takes over now-playing now; the clock follows phase 3's gates.
 
+## ⚠️ What is left, for whoever picks this up next (written 2026-09-06 19:20)
+
+Every phase gate is met and v0.1.1 is published. The daemon owns now-playing
+**and** the clock on this machine and the Python timekeeper is gone. Nothing
+below blocks anything; all five are the owner's to run, and the first two are
+the only ones where the answer could still be "something is wrong".
+
+**None of these needs a flash, and none of them writes the board.**
+
+1. **The firmware's stall counters — the only open thread that could mean
+   harm.** `health_stall_ge_25ms_nonflash` in `ak820 status` read 12 all
+   morning under the Python, 16 at 15:31 and 18 at 19:09, and `..._ge_10ms`
+   rose 31 in that window. ≥25 ms is the threshold below which a press cannot
+   be lost, so a real climb matters. Evidence against the daemon so far: a
+   7-minute poll every 5 s bracketing the 15:36:46 sync — a whole
+   transaction, the status read, the media pushes and 267 key presses — saw
+   **no movement at all**. Confounds in that window: a reboot, the daemon
+   restarting three times, the installer tests, several hand-run health
+   reads, and a Windows Sandbox VM.
+   **How to settle it:** read `health_stall_ge_25ms_nonflash` after a quiet
+   night with nobody at the keyboard. Unchanged ⇒ today's testing did it, and
+   this closes. Climbing at the 300 s sync cadence with the machine idle ⇒
+   the daemon is the suspect; the next place to look is the firmware's health
+   page and `docs/leds.md`'s interrupt-priority table, not the host.
+   ⚠️ **Do not poll the board to investigate this.** A health read is itself
+   board traffic and could cause what it is looking for. The daemon already
+   reads pages 1 and 2 into its status file every 5 minutes — sample **that
+   file** instead.
+
+2. **The verify residual runs +1.7 ms above the C's** — a known divergence
+   from the oracle with no explanation. Benign: neither learner reads
+   `after`. Full entry, and the cheap experiment that would settle it, in
+   [BACKLOG.md](BACKLOG.md). Needs the daemon stopped for a minute, so it is
+   the owner's call when.
+
+3. **Suspend/resume and battery** — phase 4's last unexercised paths. Sleep
+   the machine, wake it, and look for a `sync (wake)` line (the Python's
+   `SLEEP_GAP` reason, ported and replayed but never run live). Restart was
+   met at 18:43 by the Sandbox reboot: the board free-ran 270 ms off and the
+   daemon caught all of it unattended.
+
+4. **The rollback, carried through.** Its *refusals* are proven — the
+   PowerShell installer threw rather than register a second clock writer, and
+   the daemon refuses `--clock` while that task exists. The path itself has
+   never been walked. **In this order:** `ak820 install` (no `--clock`)
+   first, then `powershell -File hostagent\install-agents-windows.ps1`.
+
+5. **Two decisions, not checks.**
+   - `qmk_firmware-ak820pro` carries an **uncommitted `keymap.c`** — the
+     owner's VIA layout regenerated 2026-09-05 (Alt/GUI swapped on the Mac
+     base, the Mac Fn row cleared). It was stashed and restored around both
+     firmware uploads. Committing it moves `deps.lock`'s pin and the next
+     release picks it up. It only affects a first flash: VIA's stored keymap
+     overrides the default.
+   - **No `fpb` build exists**, so the other panel revision has no binary on
+     either Release. `scripts/release-firmware.sh` warns and continues.
+     Deliberately not built unattended: it is an untested binary for hardware
+     nobody here can test.
+
 ## Staged switch-over and packaging (2026-09-06)
 
 Asked on 2026-09-06: switch to the Rust agent if ready, and do the release

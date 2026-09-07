@@ -39,9 +39,14 @@ tail statistic (95th percentile residual 21.0 ms against 51.1, worst 23.8
 against 994.5, learned bias inside 61 ppm against 709). Phases 0–2, 3a and 4a
 were each audited by codex and every finding dispositioned. **v0.1.1 is
 published** and proven to install on a clean Windows with no Python, no MSYS2
-and no VC++ redistributable. Still open: suspend/resume and battery, the
-rollback carried through, and the verify-residual question in
-[`plans/BACKLOG.md`](plans/BACKLOG.md).
+and no VC++ redistributable. ⚠️ **Five things are still open and none of them
+blocks anything — read "What is left, for whoever picks this up next" at the
+top of [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md) before
+starting work here.** The one that could still mean harm is the firmware's
+unexplained ≥25 ms stall count, which moved from 12 to 18 across a day of
+testing; a quiet night settles it, and **do not poll the board to
+investigate** — a health read is itself board traffic, and the daemon already
+samples it into its status file every 5 minutes.
 305 unit tests, the 2,309-case folding fixture, a 4-test replay of the
 timekeeper's log and a 2-test health capture. Read
 [`plans/AK820-AGENT-PLAN.md`](plans/AK820-AGENT-PLAN.md)
