@@ -1,31 +1,36 @@
 ak820-agent -- the host agent for an AJAZZ AK820 Pro running the QMK firmware
 from this repository's Releases (https://github.com/jdlien/ak820-pro/releases)
 
-What it does: shows the track you are playing on the keyboard's LCD, read from
-Windows' own media API (SMTC) -- Spotify, Apple Music, foobar2000, any browser.
-The clock sync on the LCD still comes from the Python timekeeper in the repo's
-hostagent/ directory until the Rust port passes its gate; nothing here breaks
-that if you have it installed, and nothing here needs it if you do not.
+What it does: keeps the keyboard's LCD clock in sync with this PC to within a
+few milliseconds, and shows the track you are playing, read from Windows' own
+media API (SMTC) -- Spotify, Apple Music, foobar2000, any browser.
 
 Needs: Windows 10 or 11, and the firmware from the SAME release on the
 keyboard. Nothing else -- no Python, no runtime, no driver, no admin rights.
 
 1. Unzip anywhere.
-2. Open a terminal in that folder and run:
+2. Open a terminal (PowerShell or cmd, NOT elevated) in that folder and run:
 
-       ak820 install
+       .\ak820 install --clock
 
    That copies ak820.exe and ak820-agent.exe to %LOCALAPPDATA%\ak820pro\bin,
    registers a per-user Scheduled Task (\ak820pro\AK820Pro-agent) that starts
    at logon, and starts it now. You can delete the zip afterwards.
-   If the Python now-playing task from hostagent/ is installed, this stops and
-   removes it; the daemon replaces it. The Python timekeeper is left alone.
 
-3. Useful afterwards:
+   --clock makes the daemon sync the clock as well as show the track. Leave
+   it off only if you run the repository's Python timekeeper from hostagent/
+   and want to keep it; the daemon refuses --clock while that task is
+   registered, because two clock writers corrupt each other's learning. If
+   the Python now-playing task from hostagent/ is installed, install stops
+   and removes it: the daemon replaces it.
 
-       ak820 status         is it running, what did it last push, and when
+3. Useful afterwards. The installed copy is not on PATH; from PowerShell it
+   is:  & "$env:LOCALAPPDATA\ak820pro\bin\ak820.exe" status
+
+       ak820 status         is it running, the last sync and push, the board's own health counters
        ak820 uninstall      stop and remove the task (binaries and logs stay)
        ak820 probe          what Windows' media API sees, if the LCD shows nothing
+       ak820 health         the firmware's stall counters, if typing feels off
        ak820 --version      which build, and which firmware protocol it speaks
 
 Logs and status:  %LOCALAPPDATA%\ak820pro\ak820-agent.log
@@ -34,6 +39,7 @@ Logs and status:  %LOCALAPPDATA%\ak820pro\ak820-agent.log
 If Windows SmartScreen objects when you double-click an .exe from the zip:
 run it from a terminal instead, which is what the steps above do.
 
-Everything in ak820.exe reads the keyboard; nothing in it writes to the
-keyboard's flash or clock. Provisioning the LCD assets stays in ak820ctl,
+Everything in ak820.exe reads the keyboard; nothing in it writes the
+keyboard's flash. The clock is written only by the daemon, and only when it
+was installed with --clock. Provisioning the LCD assets stays in ak820ctl,
 built from the repository.

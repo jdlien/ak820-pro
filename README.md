@@ -175,16 +175,18 @@ hostagent/nowplaying-macos.sh
 
 ### Windows
 
-Now-playing is a small native daemon, `ak820-agent`, with nothing to install
-but itself — no Python, no runtime, no driver, no admin rights. Take the zip
-from [Releases](https://github.com/jdlien/ak820-pro/releases) (or build it:
-`cd ak820-agent && cargo build --release`), unzip anywhere, and from a
-terminal in that folder:
+Both agents are one small native daemon, `ak820-agent`, with nothing to
+install but itself — no Python, no runtime, no driver, no admin rights. Take
+the zip from [Releases](https://github.com/jdlien/ak820-pro/releases) (or build
+it: `cd ak820-agent && cargo build --release`), unzip anywhere, and from a
+terminal in that folder, not elevated:
 
 ```powershell
-ak820 install        # copies itself to %LOCALAPPDATA%\ak820pro\bin, registers a per-user
-                     # Scheduled Task (\ak820pro\AK820Pro-agent) at logon, starts it now
-ak820 status         # is it running, what did it last push, and when
+.\ak820 install --clock   # copies itself to %LOCALAPPDATA%\ak820pro\bin, registers a
+                          # per-user Scheduled Task (\ak820pro\AK820Pro-agent) at logon,
+                          # starts it now; --clock = sync the clock too (leave it off
+                          # only to keep the repo's Python timekeeper, below)
+ak820 status         # is it running, the last sync and push, the board's health counters
 ak820 uninstall      # stop and remove the task (binaries and logs stay)
 ak820 probe          # what Windows' media API sees, if the LCD shows nothing
 ak820 health         # the firmware's own stall counters (--stalls --rows --isr --json)

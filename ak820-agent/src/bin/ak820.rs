@@ -72,9 +72,10 @@ fn usage() {
     println!(
         "ak820 -- AJAZZ AK820 Pro host tool -- reads the board, never writes it\n\
          \n\
-         \x20 ak820 install [--in-place]   register the daemon as a per-user task and start it\n\
-         \x20               [--clock]      (replaces the Python now-playing task; --clock also takes the\n\
-         \x20                              clock from the Python timekeeper -- phase 4b, ahead of its gate)\n\
+         \x20 ak820 install --clock        register the daemon as a per-user task and start it: the\n\
+         \x20   [--in-place]               track on the LCD, and with --clock the clock too (leave --clock\n\
+         \x20                              off only to keep the repo's Python timekeeper; it replaces the\n\
+         \x20                              Python now-playing task either way)\n\
          \x20 ak820 uninstall              stop and remove the daemon's task\n\
          \x20 ak820 status                 the tasks, and what the daemon last did\n\
          \x20 ak820 --version\n\
@@ -624,11 +625,11 @@ fn retire_python(clock: bool, dir: &std::path::Path) -> Result<(), String> {
             );
         }
         println!(
-            "⚠️  the daemon's clock loop is phase 4b, ahead of its measured-takeover gate. Watch\n\
-             \x20   `ak820 status` and the log. To give the clock back to the Python timekeeper,\n\
-             \x20   IN THIS ORDER: `ak820 install` (without --clock) first, so the daemon stops\n\
-             \x20   writing the clock, THEN `powershell -File hostagent\\install-agents-windows.ps1`.\n\
-             \x20   The other order runs two clock writers at once."
+            "the daemon syncs the clock (--clock); `ak820 status` shows each sync. To give the\n\
+             \x20   clock back to the repo's Python timekeeper, IN THIS ORDER: `ak820 install`\n\
+             \x20   (without --clock) first, so the daemon stops writing the clock, THEN\n\
+             \x20   `powershell -File hostagent\\install-agents-windows.ps1`. The other order would\n\
+             \x20   run two clock writers at once, and that installer refuses it."
         );
     } else if timekeeper_registered {
         println!(
