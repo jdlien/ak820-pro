@@ -4,6 +4,17 @@
 #   hostagent/install-agents.sh              install + start
 #   hostagent/install-agents.sh --uninstall  stop + remove
 #   hostagent/install-agents.sh --status     what is running
+#   ... --only timekeeper|nowplaying         act on one agent (last argument)
+#
+# `--only` exists for the Rust daemon's Phase 4a (plans/AK820-AGENT-CROSSPLATFORM-
+# PLAN.md): it replaces nowplaying and leaves the timekeeper running, and a
+# both-agents reinstall would restart the timekeeper and start a new run in the
+# very log that phase's gate reads.
+#
+# ⚠️ While the daemon's agent (com.jdlien.ak820pro.agent) is loaded, installing
+# nowplaying is REFUSED: the two would run side by side, the bash would lose the
+# shared lock and exit, and KeepAlive would restart it every 30 s. The way back
+# to the bash agent is `ak820 uninstall`, which does it.
 #
 # Installs TWO agents:
 #   timekeeper  -- syncs the board clock every 5 min, on re-enumeration (a
@@ -37,7 +48,16 @@ wait_gone() {
   return 1
 }
 
-case "${1:---install}" in
+ACTION="${1:---install}"
+if [ "${2:-}" = "--only" ] || [ "${1:-}" = "--only" ]; then
+  [ "${1:-}" = "--only" ] && { ONLY="${2:-}"; ACTION=--install; } || ONLY="${3:-}"
+  case "$ONLY" in
+    timekeeper|nowplaying) AGENTS=("$ONLY") ;;
+    *) echo "usage: $0 [--install|--uninstall|--status] [--only timekeeper|nowplaying]" >&2; exit 2 ;;
+  esac
+fi
+
+case "$ACTION" in
 --status)
   for a in "${AGENTS[@]}"; do
     label="com.jdlien.ak820pro.$a"
@@ -56,8 +76,17 @@ case "${1:---install}" in
   echo "  removed. Logs and ~/.ak820ctl-bias.json are left in place."
   exit 0 ;;
 --install|"") ;;
-*) echo "usage: $0 [--install|--uninstall|--status]" >&2; exit 2 ;;
+*) echo "usage: $0 [--install|--uninstall|--status] [--only timekeeper|nowplaying]" >&2; exit 2 ;;
 esac
+
+for a in "${AGENTS[@]}"; do
+  if [ "$a" = nowplaying ] && launchctl print "$DOMAIN/com.jdlien.ak820pro.agent" >/dev/null 2>&1; then
+    echo "refusing: the Rust daemon (com.jdlien.ak820pro.agent) owns now-playing." >&2
+    echo "  \`ak820 uninstall\` removes it and starts the bash agent again;" >&2
+    echo "  or pass --only timekeeper." >&2
+    exit 1
+  fi
+done
 
 # --- preconditions ----------------------------------------------------------
 # Both agents shell out to these. Checking here turns a silent do-nothing agent
@@ -85,6 +114,9 @@ for a in "${AGENTS[@]}"; do
   plutil -lint "$DEST/$label.plist" >/dev/null || { echo "generated plist is invalid: $a" >&2; exit 1; }
   launchctl bootout "$DOMAIN/$label" 2>/dev/null
   wait_gone "$label" || echo "  warning: $label was slow to unload"
+  # `ak820 install` disables nowplaying so it stays off across logins; a
+  # disabled service refuses bootstrap.
+  launchctl enable "$DOMAIN/$label" 2>/dev/null
   if launchctl bootstrap "$DOMAIN" "$DEST/$label.plist" 2>/dev/null; then
     echo "  started $label"
   else

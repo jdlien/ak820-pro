@@ -39,6 +39,15 @@ fn alive(pid: i32) -> bool {
     rc == 0 || io::Error::last_os_error().raw_os_error() == Some(1)
 }
 
+/// The live pid holding the lock at `path`, if any. A lock with no pid file or
+/// a dead pid is not held.
+pub fn holder(path: &Path) -> Option<i32> {
+    std::fs::read_to_string(path.join("pid"))
+        .ok()
+        .and_then(|s| s.trim().parse::<i32>().ok())
+        .filter(|&pid| alive(pid))
+}
+
 #[derive(Debug)]
 pub struct Lock {
     path: PathBuf,
@@ -55,11 +64,8 @@ impl Lock {
                     return Ok(lock);
                 }
                 Err(e) if e.kind() == io::ErrorKind::AlreadyExists && attempt == 0 => {
-                    let owner = std::fs::read_to_string(path.join("pid"))
-                        .ok()
-                        .and_then(|s| s.trim().parse::<i32>().ok());
-                    match owner {
-                        Some(pid) if alive(pid) => {
+                    match holder(path) {
+                        Some(pid) => {
                             return Err(format!("another now-playing agent is live as pid {pid} ({})", path.display()))
                         }
                         // ⚠️ No pid yet can also be an owner between its mkdir

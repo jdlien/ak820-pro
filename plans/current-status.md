@@ -1,4 +1,4 @@
-# Current status — where to pick up (written 2026-09-16, updated after Phases 0, 1 and 3 were built the same day)
+# Current status — where to pick up (written 2026-09-16, updated after Phases 0, 1, 3 and 4a were built the same day)
 
 **For a clean session resuming the macOS port of `ak820-agent`.** Read this,
 then [`AK820-AGENT-CROSSPLATFORM-PLAN.md`](AK820-AGENT-CROSSPLATFORM-PLAN.md).
@@ -13,7 +13,7 @@ line (🟡 built, owed …).
 | | state |
 |---|---|
 | **Windows agent** | **Done.** `ak820-agent` v0.1.1, phases 0–6 met, published, per-phase Codex audits. Owns now-playing **and** the clock on that machine; the Python timekeeper is gone there. |
-| **macOS port** | **Spikes S1, S2, S1b (logic) and S3 met; Phases 0, 1 and 3 built, 2026-09-16.** Waiting on hardware tests with the owner (list below). Nothing is installed: the Mac still runs the bash/Python pair. |
+| **macOS port** | **Spikes S1, S2, S1b (logic) and S3 met; Phases 0, 1, 3 and 4a built, 2026-09-16.** Waiting on hardware tests with the owner (list below). Nothing is installed: the Mac still runs the bash/Python pair. |
 | **This Mac's OS** | ⚠️ **macOS 27.0 (26A428), installed 12:27 on 2026-09-16.** Everything the plan measured before that was on 26.5.2. MediaRemote-via-perl works on 27.0, from both the sibling's plugin and this crate's own supervisor. |
 | **macOS today** | Still the Python/bash pair: `nowplaying-macos.sh` + `ak820-timekeeper.py`, via LaunchAgents. Working, and costing ~30% of a core while music plays. |
 | **Firmware** | `b89777e0f9`, pinned in `deps.lock`, flashed **on the Mac's board**. ⚠️ **gremlin's board (the Windows gate's) is on `8608c4f6-dirty`** and stays there until Phase 0's live gate is done — its baseline was measured on that build. |
@@ -26,8 +26,9 @@ line (🟡 built, owed …).
 | **S2** IOKit transport | `ab3a724` | ✅ met: `info` byte-identical; 10,000-cycle soak flat after the one-object-per-arrival fix; 0.33 ms CPU per cycle |
 | **S1b** canary logic, **S3** signing | `e8a4c16` | ✅ logic built, live half owed; S3 met: Developer ID + hardened runtime + empty entitlements |
 | **0** the platform seam | `a46e770` | 🟡 built; Windows CI green; **Fable audit: safe to deploy** ([record](review-fable-phase0-2026-09-16.md)), comparator fixes in the next commit; **live gate on gremlin owed** |
-| **1** macOS HID transport | this commit | 🟡 built; `info`/`health`/`selftest` verified on the Mac's board; unplug and open-trace owed |
-| **3** macOS media | this commit | 🟡 built; `ak820 probe` read a live Chrome session through the real helper; the daemon refused to start beside the bash agent (lock verified live); live daemon run owed |
+| **1** macOS HID transport | `e7e0b10` | 🟡 built; `info`/`health`/`selftest` verified on the Mac's board; unplug and open-trace owed |
+| **3** macOS media | `e7e0b10` | 🟡 built; `ak820 probe` read a live Chrome session through the real helper; the daemon refused to start beside the bash agent (lock verified live); live daemon run owed |
+| **4a** install, now-playing only | this commit | 🟡 built, **not installed**: `ak820 install` / `uninstall` (the rollback, performed) / `status`; `install-agents.sh --only`, and it refuses to start nowplaying beside the daemon |
 
 **Tests:** 315 unit tests on macOS (63 in `platform::macos`), plus the
 integration suites; `cargo check --target x86_64-pc-windows-msvc --all-targets`
@@ -40,15 +41,16 @@ clean from the Mac.
    state `none`, the same cache, RGB and slider. Three overnight windows, then
    `python scripts/clock_log_windows.py <log> --since "<reinstall time>" --gate 23.9 27.6 49`.
    `--since` is required now; the baseline shares the log file.
-2. **Phase 3 live daemon run, on this Mac.** Pause the bash now-playing agent
-   (`launchctl bootout gui/$UID/com.jdlien.ak820pro.nowplaying`, which leaves the
-   timekeeper alone), then run
-   `AK820_MEDIAREMOTE_DYLIB=<the sibling's dylib> ak820-agent --log <scratch>`
-   in a terminal and watch the panel through play, pause, a track change, a
-   switch from Music to Chrome, and quitting the player. Restore the bash with
-   `launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.jdlien.ak820pro.nowplaying.plist`.
-   ⚠️ The timekeeper's `ak820ctl` still seizes the device each sync; a busy
-   write logs `[warn]`, which is 4a's coexistence gate to count, not a bug.
+2. **Phases 3 and 4a live, on this Mac.** Build and sign (`cargo build
+   --release`, then S3's `codesign` with `--identifier`), then
+   `target/release/ak820 install --dylib <the sibling's dylib>`. It retires the
+   bash agent and leaves the timekeeper. Watch the panel through play, pause, a
+   track change, a switch from Music to Chrome, and quitting the player; then
+   logout/login and sleep/wake; `ak820 status` between. **Rollback:
+   `ak820 uninstall`**, which starts the bash agent again. ⚠️ The timekeeper's
+   `ak820ctl` still seizes the device at each sync; a busy push logs `[warn]`,
+   which 4a's coexistence gate counts, not a bug. Take 5a's overhead "after"
+   while it runs.
 3. **S1b live, with the owner at the desktop:** `ak820 probe --applescript`
    with Music playing and the helper refused (or simulated), grant the
    Automation prompt, then revoke it in System Settings and see
@@ -61,7 +63,7 @@ clean from the Mac.
 6. **The leak comparison**, re-run with a RAM-only command (health page 1) and
    **not while anyone types**: the S2 soak's ~40 B per exchange over 100k.
 
-Then 4a (LaunchAgent install, now-playing only) and 5a (the overhead "after").
+Then 5a (the overhead "after"), and the clock: 2 → 4b.
 
 ## Decisions — all settled 2026-09-16
 
