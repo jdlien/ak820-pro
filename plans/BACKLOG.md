@@ -489,7 +489,7 @@ behind for at most one sync interval, and nothing warned.
 | 2026-09-10 15:01:46 | the Mac's, pre-`b89777` | macOS, Python + `ak820ctl` | −999.8 → −0.8 ms | 183 s, −7.1 |
 
 The three gremlin rows were found by the Claude session on gremlin
-(`scripts/clock_log_windows.py`, uncommitted there) from logs that live on
+(`scripts/clock_log_windows.py`, committed in `8cf2c8d`) from logs that live on
 gremlin; the Mac row was read here from `~/Library/Logs/ak820pro-timekeeper.log`.
 The takeover table's "worst 994.5 ms" (`AK820-AGENT-PLAN.md:274`) is the second
 row, and the first was hidden behind it because the table reports only the
