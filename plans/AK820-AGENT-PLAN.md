@@ -273,7 +273,7 @@ own whole log in the same directory (252 periodic syncs over two days):
 | residual `before`, 95th percentile | 51.1 ms | 21.0 ms |
 | residual `before`, worst | 994.5 ms | 23.8 ms |
 | learned bias, range | −142 to +567 ppm (spread 709) | +23 to +84 ppm (spread 61) |
-| learner decisions | learned and held on its gates | 23 learned, 26 held, on the same gates |
+| learner decisions | learned and held on its gates | 24 learned, 26 held, on the same gates — ⚠️ **said 23 until 2026-09-16**; the log has 50 decisions for 50 syncs (found by gremlin's `scripts/clock_log_windows.py`, which reproduces every other cell of this table exactly) |
 | `warning:` lines | — | 0 |
 | foreign reports, sync failures | — | 0, 0 |
 

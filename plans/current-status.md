@@ -1,4 +1,4 @@
-# Current status — where to pick up (written 2026-09-16)
+# Current status — where to pick up (written 2026-09-16, updated after finalization the same day)
 
 **For a clean session resuming the macOS port of `ak820-agent`.** Read this,
 then [`AK820-AGENT-CROSSPLATFORM-PLAN.md`](AK820-AGENT-CROSSPLATFORM-PLAN.md).
@@ -12,9 +12,10 @@ repeat itself here.
 | | state |
 |---|---|
 | **Windows agent** | **Done.** `ak820-agent` v0.1.1, phases 0–6 met, published, per-phase Codex audits. Owns now-playing **and** the clock on that machine; the Python timekeeper is gone there. |
-| **macOS port** | **Planned, reviewed, dispositioned. Nothing built.** Plan drafted 2026-09-10, Fable review the same day (17 findings, 5 High), all dispositioned in `9f5f7d3` — two changed the design. |
+| **macOS port** | **Planned, reviewed, dispositioned, finalized. Nothing built.** Plan drafted 2026-09-10, Fable review the same day (17 findings, 5 High), all dispositioned in `9f5f7d3` — two changed the design. **Finalized 2026-09-16**: every gating question decided, see the plan's *Finalization* section. |
+| **This Mac's OS** | ⚠️ **macOS 27.0 (26A428), installed 12:27 on 2026-09-16.** Everything the plan measured before that was on 26.5.2. MediaRemote-via-perl re-verified on 27.0 the same afternoon — it still answers. |
 | **macOS today** | Still the Python/bash pair: `nowplaying-macos.sh` + `ak820-timekeeper.py`, via LaunchAgents. Working. |
-| **Firmware** | `b89777e0f9`, pinned in `deps.lock`, flashed. Unrelated to this work and healthy — see the bottom section. |
+| **Firmware** | `b89777e0f9`, pinned in `deps.lock`, flashed **on the Mac's board**. Unrelated to this work and healthy — see the bottom section. ⚠️ **gremlin's board (the Windows gate's) is on `8608c4f6-dirty`** and stays there until Phase 0's live gate is done — its baseline was measured on that build. |
 
 **The crate is unconditionally Windows right now.** There is no `cfg(target_os)`
 anywhere in `ak820-agent/src`, and nine files reference `windows::` directly:
@@ -30,10 +31,10 @@ Phase 0 until both have answered.**
 
 | spike | question it settles | what a failure means |
 |---|---|---|
-| **S1** | Can Rust drive the MediaRemote-via-perl helper and get a **browser** (YouTube in Chrome) title/artist/state over line-JSON? | **The capability gain evaporates.** The media half reduces to porting today's AppleScript. The clock case survives, at much reduced value. This is the reason to do the whole project, so test it first. |
+| **S1** | Can Rust drive the MediaRemote-via-perl helper and get a **browser** (YouTube in Chrome) title/artist/state over line-JSON? ✅ **The Apple half is answered on 27.0**: the sibling's dylib under perl returned a Chrome/YouTube session with `playing: true`. **The Rust supervisor half is the work.** Parse from captured output — the live `now` carries `elapsedAt`, which the `.m` header does not list. | **The capability gain evaporates.** The media half reduces to porting today's AppleScript. The clock case survives, at much reduced value. This is the reason to do the whole project, so test it first. |
 | **S1b** | Is a TCC revocation *visible*? | The likeliest revocation shape is **not** helper death — the helper stays alive, heartbeats, and emits `bundle: null` forever, indistinguishable from "nothing is playing". Needs the canary cross-check against AppleScript `player state`. |
-| **S2** | IOKit HID: open **exactly one** device, decided from IORegistry properties with nothing opened; `ak820 info` byte-identical to `ak820ctl info` | Same gate Windows phase 0 had. Also resolve the report-id/length mismatch at `hid/caps.rs:97-104`, and prove recovery when a hidapi peer (`ak820health.py`) seizes the device mid-transaction. |
-| **S3** | Signing shape: ad-hoc Rust binary + signed dylib under the hardened runtime | Hypothesis is an empty entitlement set; establish empirically. |
+| **S2** | IOKit HID: open **exactly one** device, decided from IORegistry properties with nothing opened (`IOServiceGetMatchingServices`, **never `IOHIDManagerOpen`**); `ak820 info` byte-identical to `ak820ctl info` | Same gate Windows phase 0 had. Also resolve the report-id/length mismatch at `hid/caps.rs:97-104`; measure seize behaviour **in both directions** (the plan had assumed the hidapi peer always wins); log IOKit's kernel report timestamp beside userspace `t1`. Opens are **per interaction**. S2 is also the evidence for hand-rolling IOKit. |
+| **S3** | Signing shape: Rust binary signed with the **Developer ID Application identity, by SHA-1** (not ad-hoc — ad-hoc churns TCC identity every rebuild) + signed dylib under the hardened runtime | Hypothesis is an empty entitlement set; establish empirically. |
 
 **Phase 2 is the one that earns the project**, and it has a trap worth reading
 before you get there: fixture parity *cannot* see a self-consistent wrong time.
@@ -42,23 +43,44 @@ macOS `local()` off by an hour yields a **zero residual and a board an hour
 wrong**. Windows covered this with hourly sweeps 2026–2099 against the oracle
 CRT, which cannot compile here. The plan lists the four substitutes.
 
-## Open questions — JD's, and only two gate anything
+## Decisions — all settled 2026-09-16
 
-Full text in the plan's *Open questions* section.
+Full reasoning in the plan's *Finalization* section and at each site.
 
-1. "On this machine" wording in three files — trivial, blocks nothing.
-2. **Two MediaRemote helpers or one shared? — SETTLED as (A)**, code shaped so a
-   broker stays cheap. ⚠️ But see the cross-repo note below.
-3. `.pkg`/`.dmg` or bare binary — **affects Phase 6 only.** Recommend `.pkg` for
-   stapling.
-4. Intel slice — **Phase 6 only.** Recommend Apple Silicon unless universal is free.
-5. **Does this ship publicly, or stay personal-first like the firmware?** — this
-   one changes the *size* of Phase 6, because it sets how much the install must
-   defend against unknown machines. Worth answering before Phase 6 is scoped,
-   not before Phase 0 starts.
+1. "On this machine" wording at five sites — trivial, still unfixed, blocks
+   nothing.
+2. **Two MediaRemote helpers, shared code** (A). Gates **Phase 3**, not the
+   spikes: the sibling's protocol still has no version field, and S1–S3 use its
+   built dylib unchanged. ⚠️ See the cross-repo note below.
+3. **Ships publicly** as a stapled **`.dmg`**, **Apple Silicon only**. (This
+   file said `.pkg` until finalization, contradicting the plan's review
+   disposition. The Installer certificate does exist; `.dmg` won on shape.)
+4. **Phase 0 builds on the Mac** (`cargo check --target
+   x86_64-pc-windows-msvc` passes in 11 s), tests on CI, and its **live gate
+   runs on `gremlin.local`** against that machine's own AK820 — do not reflash
+   it between the baseline and the phase-0 run. The baseline already exists:
+   1,614 clean periodic syncs, 09-09 → 09-15, **with media state `none`** (steady keepalive traffic still flowed) — match
+   that condition, and pause Windows Update for the run. gremlin has no SSH;
+   reach its Claude session over Remote Control (on at both ends).
+5. **Dependencies:** IOKit hand-rolled (confirmed at the end of S2); JSON
+   hand-rolled for flat objects, tested against a Python-`json` corpus.
+6. **Media failure policy:** a failed source publishes idle, on both platforms;
+   each backend defines "failed" (macOS: helper dead, `fatal`, or silent two
+   heartbeats).
+7. **The S1b canary** asks AppleScript only while Spotify or Music is running,
+   checked with no spawn, at most once per 60 s.
 
-So: **nothing blocks starting the spikes.** 3–5 can wait until Phase 6 is
-planned in detail.
+8. **Whole-second clock slips: deferred by the owner.** Four are on record
+   (`BACKLOG.md`), with none in about 3,270 syncs since 09-10. The clock "stays
+   in perfect sync with the system clock almost all the time", so it is good
+   enough for now; perfect it later. Phases 0 and 2 count slips separately so
+   the port is neither blamed nor credited for them.
+9. **The owner's main hope for the port is the Mac's now-playing overhead.**
+   The plan's Why section records it. Measure the "before" on this Mac while
+   the Python agents still run.
+
+So: **nothing blocks starting the spikes**, and nothing unanswered blocks
+Phase 0 once S1 and S2 are in.
 
 ## ⚠️ The decision that touches another product
 
@@ -99,10 +121,11 @@ would silently kill now-playing on the keyboard.
    main justification. A Rust supervisor, the sibling's perl helper, YouTube in
    Chrome, and a title on stdout.
 3. Then **S2**, then S1b and S3 in either order.
-4. Only then Phase 0, and settle **where it builds** first — the plan flags this
-   as unspecified: CI is `windows-latest` with no board, `.cargo/config.toml`
-   pins static CRT to the msvc target only, and cross-compiling from the Mac is
-   unaddressed. `agent.rs` is the file most at risk.
+4. Only then Phase 0. Its first commit is forced: `windows` is an unconditional
+   dependency, so a native macOS build fails in `windows-future` until it moves
+   under `[target.'cfg(windows)'.dependencies]`. gremlin's baseline is already
+   in hand (see decision 4); do not reflash that board or let Windows Update
+   restart it mid-run. `agent.rs` is the file most at risk.
 
 Every phase ends with an external audit, per the convention in
 `AK820-AGENT-PLAN.md`: the gate proves the phase does what it claims, the audit
