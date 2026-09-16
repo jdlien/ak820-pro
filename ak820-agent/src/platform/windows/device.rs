@@ -16,7 +16,7 @@
 //! transfer that actually completed as a timeout would mean re-sending a write
 //! that already went out, or discarding a reply that did arrive.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use windows::core::{HRESULT, PCWSTR};
 use windows::Win32::Devices::DeviceAndDriverInstallation::{
@@ -43,16 +43,10 @@ use windows::Win32::System::Threading::{CreateEventW, ResetEvent, WaitForSingleO
 
 use super::caps::{Identity, Reject};
 use super::path;
-pub use super::exchange::{Outstanding, Queue, Reply};
-use super::exchange::{self, Sent, Wire};
+pub use crate::hid::exchange::{Outstanding, Queue, Reply, REQUEST_TIMEOUT};
+use crate::hid::exchange::{Sent, Wire};
 
-use super::{Drained, Error};
-use crate::proto::Channel;
-
-/// How long a whole request may take, matching `ak820ctl`'s `hid_read_timeout`.
-/// It is a budget for the *transaction*, not for one read, because a read that
-/// returns someone else's report has not answered us.
-pub const REQUEST_TIMEOUT: Duration = Duration::from_millis(2000);
+use crate::hid::{Error, HidTransport};
 
 /// How long a refused-to-land cancellation is given before the device is
 /// declared stuck and its buffer abandoned to the kernel.
@@ -62,10 +56,6 @@ pub const REQUEST_TIMEOUT: Duration = Duration::from_millis(2000);
 /// observed worst case and anything past it is a driver that is not coming
 /// back.
 const CANCEL_GRACE_MS: u32 = 1000;
-
-/// How long [`Device::drain`] may spend clearing the queue when the caller
-/// gave no deadline of its own.
-const DRAIN_BUDGET: Duration = Duration::from_millis(250);
 
 /// Milliseconds for a Win32 timeout argument, clamped rather than truncated.
 ///
@@ -228,17 +218,17 @@ impl Interface {
         }
         .map_err(|source| Error::Open {
             path: self.text.clone(),
-            source,
+            source: source.into(),
         })?;
 
         // Close on every failure below. The device is ours by the time it is
         // open, but a handle left behind on a rejected collection is a handle
         // still receiving that collection's input reports.
-        let reject = |why| {
+        let reject = |why: Reject| {
             unsafe { CloseHandle(handle).ok() };
             Err(Error::Incompatible {
                 path: self.text.clone(),
-                why,
+                why: why.to_string(),
             })
         };
 
@@ -261,7 +251,7 @@ impl Interface {
                 unsafe { CloseHandle(handle).ok() };
                 return Err(Error::Io {
                     op: "event",
-                    source,
+                    source: source.into(),
                 });
             }
         };
@@ -296,13 +286,13 @@ impl Interface {
         }
         .map_err(|source| Error::Open {
             path: self.text.clone(),
-            source,
+            source: source.into(),
         })?;
         let got = identify(handle);
         unsafe { CloseHandle(handle).ok() };
         got.ok_or_else(|| Error::Incompatible {
             path: self.text.clone(),
-            why: Reject::Silent,
+            why: Reject::Silent.to_string(),
         })
     }
 }
@@ -393,106 +383,6 @@ impl Device {
         &self.text
     }
 
-    /// Send one command and wait for **its** reply.
-    ///
-    /// ⚠️ The loop is the point. Windows delivers input reports to every open
-    /// handle, so a read can return VIA's answer, or another process's text
-    /// echo, or our own echo from an earlier command on another channel. Each
-    /// of those is discarded and the wait continues; only a report naming this
-    /// channel and command ends it.
-    pub fn request(
-        &self,
-        channel: Channel,
-        command: u8,
-        body: &[u8],
-        budget: Duration,
-    ) -> Result<Reply, Error> {
-        exchange::exchange(self, &self.outstanding, channel, command, body, budget, |_| {})
-    }
-
-    /// As [`Device::request`], but the caller is handed the instant the command
-    /// actually went onto the wire.
-    ///
-    /// ⚠️ This exists because the clock contract cannot be expressed without
-    /// it. `t0; request(GET); t1` measures the **pre-drain** as well as the
-    /// round trip, and the drain is unbounded from the caller's point of view:
-    /// a VIA flood can make it several milliseconds. The midpoint of that wider
-    /// interval is not the transmission midpoint, so the offset it yields is
-    /// wrong by half the drain -- silently, and in the direction that looks
-    /// like a real clock error. Finding 3 of the phase-0 audit.
-    pub fn request_at(
-        &self,
-        channel: Channel,
-        command: u8,
-        body: &[u8],
-        budget: Duration,
-        on_send: impl FnOnce(Instant),
-    ) -> Result<Reply, Error> {
-        exchange::exchange(self, &self.outstanding, channel, command, body, budget, on_send)
-    }
-
-    /// As [`Device::request_at`], but the body is built inside the call, after
-    /// the drain and immediately before the write — see
-    /// [`exchange::exchange_prepared`]. The clock SET needs this: the timestamp
-    /// it carries has to be taken as late as possible.
-    pub fn request_prepared(
-        &self,
-        channel: Channel,
-        command: u8,
-        budget: Duration,
-        prepare: impl FnOnce(Instant) -> Vec<u8>,
-    ) -> Result<Reply, Error> {
-        exchange::exchange_prepared(self, &self.outstanding, channel, command, budget, prepare)
-    }
-
-    /// As [`Device::request`], for a command the firmware answers by echoing
-    /// the request: the reply must carry `body` back, or it is another
-    /// request's echo and is drained. See [`exchange::exchange_matched`].
-    pub fn request_echoed(
-        &self,
-        channel: Channel,
-        command: u8,
-        body: &[u8],
-        budget: Duration,
-    ) -> Result<Reply, Error> {
-        exchange::exchange_matched(self, &self.outstanding, channel, command, budget, Some(body), |_| {
-            body.to_vec()
-        })
-    }
-
-    /// This handle's accounting of unanswered commands, for code that drives
-    /// [`exchange`] directly — a whole transaction — rather than one request
-    /// at a time through the methods above.
-    pub fn outstanding(&self) -> &Outstanding {
-        &self.outstanding
-    }
-
-    /// Empty the driver's queue, and say whether it actually got empty.
-    pub fn drain_until(&self, deadline: Instant) -> (Vec<Drained>, Queue) {
-        exchange::drain_until(self, deadline)
-    }
-
-    /// Drain with the default allowance, for callers with no deadline of their
-    /// own.
-    pub fn drain(&self) -> (Vec<Drained>, Queue) {
-        self.drain_until(Instant::now() + DRAIN_BUDGET)
-    }
-
-    /// Every command this handle transmitted and never got an answer to,
-    /// oldest first.
-    ///
-    /// While one is listed, asking that question again is refused: the old
-    /// reply is still owed and would be indistinguishable from the new one.
-    /// Only [`Device::resynchronise`] retires them.
-    pub fn unanswered(&self) -> Vec<(u8, u8)> {
-        self.outstanding.all()
-    }
-
-    /// Account for an unanswered command so the handle can be used again.
-    pub fn resynchronise(&self, budget: Duration) -> Result<Vec<Drained>, Error> {
-        exchange::resynchronise(self, &self.outstanding, budget)
-    }
-
     /// One overlapped transfer, started and finished inside this call.
     ///
     /// ⚠️ The buffer and the `OVERLAPPED` live in a heap [`Pending`], not on
@@ -529,7 +419,7 @@ impl Device {
         unsafe {
             ResetEvent(self.event).map_err(|source| Error::Io {
                 op: "event reset",
-                source,
+                source: source.into(),
             })?;
 
             // The kernel keeps writing to these after the call returns, which
@@ -553,7 +443,7 @@ impl Device {
             };
             if let Err(source) = started {
                 if source.code() != HRESULT::from_win32(ERROR_IO_PENDING.0) {
-                    return Err(Error::Io { op: name, source });
+                    return Err(Error::Io { op: name, source: source.into() });
                 }
             }
 
@@ -586,17 +476,25 @@ impl Device {
                         Box::leak(pending);
                         Err(Error::Stuck)
                     }
-                    Err(source) => Err(Error::Io { op: name, source }),
+                    Err(source) => Err(Error::Io { op: name, source: source.into() }),
                 };
             }
             GetOverlappedResult(self.handle, &pending.ov, &mut moved, true)
-                .map_err(|source| Error::Io { op: name, source })?;
+                .map_err(|source| Error::Io { op: name, source: source.into() })?;
             Ok(op.finish(pending, moved as usize))
         }
     }
 }
 
-/// The real device, behind the narrow interface [`exchange`] needs.
+/// The request methods callers use come from [`HidTransport`]'s defaults; the
+/// ledger is the only thing a platform supplies beyond the two raw calls.
+impl HidTransport for Device {
+    fn outstanding(&self) -> &Outstanding {
+        &self.outstanding
+    }
+}
+
+/// The real device, behind the narrow interface `hid::exchange` needs.
 ///
 /// Everything hard about Win32 -- overlapped I/O, the `CancelIoEx` lifetime
 /// rule, the stuck-device decision -- stays on this side of the trait, and
@@ -692,7 +590,7 @@ mod tests {
     #[test]
     fn a_frame_is_one_wire_report() {
         assert_eq!(
-            crate::proto::frame(Channel::Flash, 0x01, &[]).len(),
+            crate::proto::frame(crate::proto::Channel::Flash, 0x01, &[]).len(),
             crate::proto::WIRE_LEN
         );
     }
@@ -700,14 +598,14 @@ mod tests {
     fn open_err() -> Error {
         Error::Open {
             path: "raw".into(),
-            source: windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(32)),
+            source: windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(32)).into(),
         }
     }
 
     fn incompatible() -> Error {
         Error::Incompatible {
             path: "kbd".into(),
-            why: super::super::caps::Reject::Silent,
+            why: super::super::caps::Reject::Silent.to_string(),
         }
     }
 

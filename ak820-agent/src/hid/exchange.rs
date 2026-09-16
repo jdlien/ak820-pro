@@ -15,7 +15,7 @@
 
 use std::time::{Duration, Instant};
 
-use super::{Drained, Error};
+use super::{Drained, Error, OsError};
 use crate::proto::{self, Channel, REPORT_LEN, Verdict};
 
 /// Bound on the pre-drain, so a chatty peer cannot hold us in the loop.
@@ -38,6 +38,15 @@ pub const WRITE_TIMEOUT: Duration = Duration::from_millis(1000);
 
 /// Per-read slice of a request's budget.
 pub const READ_SLICE: Duration = Duration::from_millis(250);
+
+/// How long a whole request may take, matching `ak820ctl`'s `hid_read_timeout`.
+/// It is a budget for the *transaction*, not for one read, because a read that
+/// returns someone else's report has not answered us.
+pub const REQUEST_TIMEOUT: Duration = Duration::from_millis(2000);
+
+/// How long [`crate::hid::HidTransport::drain`] may spend clearing the queue
+/// when the caller gave no deadline of its own.
+pub const DRAIN_BUDGET: Duration = Duration::from_millis(250);
 
 /// Whether a write actually went out.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -390,11 +399,12 @@ pub fn exchange_matched(
             // that never went out as outstanding would refuse the next attempt
             // for no reason.
             outstanding.forget(channel, command);
+            // 0x800703E3 is Windows' ERROR_OPERATION_ABORTED, the code this
+            // path has always carried; the text is this module's own, since a
+            // platform-neutral module cannot ask Windows for its message.
             return Err(Error::Io {
                 op: "write",
-                source: windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(
-                    windows::Win32::Foundation::ERROR_OPERATION_ABORTED.0,
-                )),
+                source: OsError::new(0x800703E3_u32 as i32 as i64, "the write timed out and was cancelled before it left"),
             });
         }
     }
@@ -537,9 +547,7 @@ pub mod fake {
                     } else {
                         Error::Io {
                             op: "read",
-                            source: windows::core::Error::from_hresult(
-                                windows::core::HRESULT(-1),
-                            ),
+                            source: OsError::new(-1, "scripted read failure"),
                         }
                     });
                 }

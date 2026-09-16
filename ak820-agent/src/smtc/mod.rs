@@ -13,9 +13,7 @@
 //! This file is the **pure** half: given facts about the sessions, which one
 //! wins and what goes on the two rows. It holds no WinRT types and no clock, so
 //! every ranking rule below is a test rather than a thing to try in front of a
-//! keyboard. [`worker`] is the half that talks to WinRT.
-
-pub mod worker;
+//! keyboard. `platform::windows::smtc` is the half that talks to WinRT.
 
 use crate::text::{Icon, Line};
 

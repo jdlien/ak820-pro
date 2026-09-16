@@ -1,6 +1,6 @@
-//! A line-per-event log file, because the daemon has no console by
-//! construction (`#![windows_subsystem = "windows"]`) and a crash it cannot
-//! report is a crash nobody sees.
+//! A line-per-event log file, because the daemon has no console (on Windows by
+//! construction, `#![windows_subsystem = "windows"]`; on macOS a LaunchAgent
+//! has none either) and a crash it cannot report is a crash nobody sees.
 //!
 //! Same shape as the Python agents' logs — `YYYY-MM-DD HH:MM:SS message` —
 //! so `%LOCALAPPDATA%\ak820pro\` reads as one story across the migration.
@@ -13,7 +13,8 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::clock::host::{Host, SystemHost};
+use crate::clock::host::Host;
+use crate::platform::SystemHost;
 
 /// Rotate once the file is this large.
 pub const ROTATE_AT: u64 = 1_000_000;

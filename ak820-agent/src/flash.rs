@@ -12,8 +12,8 @@
 //! and the answer matches a second implementation. That makes it the phase-0
 //! gate.
 
-use crate::hid::device::{Device, Reply, REQUEST_TIMEOUT};
-use crate::hid::{Drained, Error as HidError};
+use crate::hid::exchange::{Reply, REQUEST_TIMEOUT};
+use crate::hid::{Drained, Error as HidError, HidTransport};
 use crate::proto::Channel;
 
 /// `FC_INFO` -- JEDEC id and the address writes are allowed from.
@@ -125,7 +125,7 @@ pub fn decode_info(report: &[u8]) -> Result<Info, Status> {
 /// Returns what had to be discarded alongside the answer, accumulated across
 /// retries. Dropping it would throw away the only direct evidence that another
 /// process is talking to the same board.
-pub fn read_info(dev: &Device) -> Result<(Info, Vec<Drained>), Error> {
+pub fn read_info(dev: &impl HidTransport) -> Result<(Info, Vec<Drained>), Error> {
     let mut discarded = Vec::new();
     for _ in 0..8 {
         let Reply { report, drained } =

@@ -50,7 +50,8 @@ use windows::Media::Control::{
 use windows::Win32::System::SystemInformation::GetSystemTimePreciseAsFileTime;
 use windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize, RoUninitialize};
 
-use super::{SessionFacts, Snapshot, Status, Timeline};
+use crate::media::{Health, MediaSource};
+use crate::smtc::{self, SessionFacts, Snapshot, Status, Timeline};
 
 /// How often to ask SMTC what is playing.
 ///
@@ -67,7 +68,7 @@ const TICKS_PER_SEC: f64 = 10_000_000.0;
 /// White_Space property; Python's `str.isspace()` additionally accepts the C0
 /// separators U+001C..U+001F. The difference decides whether an artist field
 /// containing only a stray separator is **empty**, and
-/// [`Snapshot::lines`](super::Snapshot::lines) puts the title on the narrow row
+/// [`Snapshot::lines`](crate::smtc::Snapshot::lines) puts the title on the narrow row
 /// when the artist is empty and the wide row when it is not. So a control
 /// character would silently move the title to a different row with a different
 /// budget. The set is generated alongside the fold table.
@@ -86,7 +87,7 @@ fn py_trim(s: &str) -> &str {
 /// compiles and is wrong:
 ///
 /// ```compile_fail
-/// # use ak820_agent::smtc::worker::Apartment;
+/// # use ak820_agent::platform::windows::smtc::Apartment;
 /// let apartment = Apartment::enter().unwrap();
 /// std::thread::spawn(move || drop(apartment));   // uninitializes the wrong thread
 /// ```
@@ -115,7 +116,7 @@ impl Drop for Apartment {
 fn age_seconds(last_updated_ticks: i64) -> Option<f64> {
     // A session that has never reported an update leaves this at zero, which
     // would otherwise read as "last updated in 1601" and produce an age of four
-    // centuries. The gate in `super::position` would reject that anyway; this
+    // centuries. The gate in `smtc::position` would reject that anyway; this
     // says what is meant.
     if last_updated_ticks <= 0 {
         return None;
@@ -191,7 +192,7 @@ pub fn read_current() -> windows::core::Result<(Option<SessionFacts>, Instant)> 
         handles.push(session);
     }
 
-    let Some(winner) = super::choose(&cheap) else {
+    let Some(winner) = smtc::choose(&cheap) else {
         return Ok((None, Instant::now()));
     };
     let at = cheap
@@ -274,24 +275,6 @@ pub fn poll_once() -> windows::core::Result<Vec<SessionFacts>> {
     read_sessions()
 }
 
-/// How the media side is doing, for a degraded-state report.
-///
-/// "Task running" can coexist with hours of failed reads, so the daemon needs
-/// to be able to say more than whether the thread exists.
-#[derive(Clone, Debug, Default)]
-pub struct Health {
-    pub polls: u64,
-    pub failures: u64,
-    pub last_error: Option<String>,
-    /// How long since the snapshot last refreshed. `None` before the first one.
-    pub stale_for: Option<Duration>,
-    /// Did the most recent poll succeed? `true` before the first one, when
-    /// the snapshot is the idle default and there is nothing stale to show.
-    /// The daemon publishes idle while this is false, as the Python agent
-    /// did when `read_state()` raised.
-    pub last_poll_ok: bool,
-}
-
 struct State {
     snapshot: Snapshot,
     updated: Option<Instant>,
@@ -334,7 +317,8 @@ impl MediaWorker {
         Ok(MediaWorker { state })
     }
 
-    /// The most recent snapshot, and how the reads are going.
+    /// The most recent snapshot, and how the reads are going. Inherent as well
+    /// as through [`MediaSource`], so the CLI need not import the trait.
     ///
     /// Never blocks on the media API: the worst case is returning the previous
     /// snapshot, which is exactly what a stale-but-honest readout should do.
@@ -350,6 +334,12 @@ impl MediaWorker {
                 last_poll_ok: state.last_poll_ok,
             },
         )
+    }
+}
+
+impl MediaSource for MediaWorker {
+    fn latest(&self) -> (Snapshot, Health) {
+        MediaWorker::latest(self)
     }
 }
 
@@ -377,7 +367,7 @@ fn run(state: Arc<Mutex<State>>, interval: Duration) {
         // COM object is a call.
         let outcome = match read_current() {
             Ok((chosen, observed)) => Ok((
-                super::snapshot(chosen.as_slice()),
+                smtc::snapshot(chosen.as_slice()),
                 observed,
             )),
             Err(e) => Err(e.to_string()),
@@ -440,7 +430,7 @@ mod tests {
             (-1.0..5.0).contains(&age),
             "age of a just-taken timestamp was {age}"
         );
-        // And it must land inside the window `super::position` will trust.
+        // And it must land inside the window `smtc::position` will trust.
         assert!((0.0..600.0).contains(&age.max(0.0)));
     }
 

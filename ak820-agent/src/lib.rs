@@ -1,20 +1,21 @@
 //! ak820-agent -- clock sync and now-playing for the AJAZZ AK820 Pro LCD.
 //!
-//! Windows only, by design: macOS keeps the Python LaunchAgents, which also
-//! remain the clock's reference implementation. See plans/AK820-AGENT-PLAN.md.
+//! Everything outside [`platform`] is platform-neutral and compiles and tests
+//! on every OS; everything OS-specific sits behind the traits the seam defines
+//! there. Windows is the shipped platform; macOS is being built
+//! (plans/AK820-AGENT-CROSSPLATFORM-PLAN.md). The Python agents and the pinned
+//! C utility remain the clock's reference implementations on both.
 pub mod agent;
 pub mod clock;
 pub mod flash;
 pub mod health;
 pub mod hid;
-pub mod instance;
 pub mod logfile;
 pub mod media;
-pub mod process;
+pub mod platform;
 pub mod proto;
 pub mod smtc;
 pub mod status;
-pub mod task;
 pub mod text;
 pub mod via;
 

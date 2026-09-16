@@ -18,15 +18,11 @@
 //! they cannot un-open a device, which is why this filter is deliberately
 //! strict rather than a loose substring search.
 
-/// The AJAZZ AK820 Pro. Same ids in bootloader-adjacent tooling, so the usage
-/// page check after opening is what actually distinguishes the raw-HID
-/// interface from the keyboard's other collections.
-pub const VID: u16 = 0x0C45;
-pub const PID: u16 = 0x8009;
-
-/// QMK raw HID. Verified on this board: interface `MI_01`.
-pub const USAGE_PAGE: u16 = 0xFF60;
-pub const USAGE: u16 = 0x61;
+/// The AJAZZ AK820 Pro's ids and QMK raw HID's usage, defined once in
+/// `crate::hid`. Same ids in bootloader-adjacent tooling, so the usage page
+/// check after opening is what actually distinguishes the raw-HID interface
+/// from the keyboard's other collections. Verified on this board: `MI_01`.
+pub use crate::hid::{PID, USAGE, USAGE_PAGE, VID};
 
 /// Split the Configuration Manager's `REG_MULTI_SZ`-shaped answer into paths.
 ///

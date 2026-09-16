@@ -45,17 +45,16 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use crate::clock::cache::{Cache, FileCache};
-use crate::clock::host::{Host, SystemHost};
+use crate::clock::host::Host;
 use crate::clock::scheduler::{self, Learn, Reason, Scheduler, StatusRead, SyncResult};
 use crate::clock::transaction;
 use crate::health;
-use crate::hid::device::{self, Device, Queue, REQUEST_TIMEOUT};
-use crate::hid::exchange::RESYNC_SETTLE;
-use crate::hid::{self, path, Drained};
+use crate::hid::exchange::{Queue, REQUEST_TIMEOUT, RESYNC_SETTLE};
+use crate::hid::{self, Drained, HidTransport};
 use crate::logfile::{self, Log};
-use crate::media::{self, Publisher};
+use crate::media::{self, MediaSource, Publisher};
+use crate::platform::Platform;
 use crate::proto::Channel;
-use crate::smtc::worker::MediaWorker;
 use crate::smtc::Snapshot;
 use crate::status::{self, ClockStatus, HealthStatus, Status};
 
@@ -190,16 +189,6 @@ pub struct Options {
     pub clock: bool,
 }
 
-/// `%LOCALAPPDATA%\ak820pro`: the directory the PowerShell installer put the
-/// Python agents' logs in, so the migration reads as one story.
-pub fn default_dir() -> PathBuf {
-    std::env::var_os("LOCALAPPDATA")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("USERPROFILE").map(|p| PathBuf::from(p).join("AppData").join("Local")))
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("ak820pro")
-}
-
 /// The foreign reports among what a request threw away — arrived while we
 /// waited and answered somebody else. Stale reports (queued before we asked)
 /// are not counted: they are ours from an earlier request as often as not.
@@ -219,23 +208,24 @@ fn discards_of(e: &hid::Error) -> &[Drained] {
     }
 }
 
-/// Run until the process is ended (or once, with `once`).
-pub fn run(opts: Options) -> Result<(), String> {
+/// Run until the process is ended (or once, with `once`), on platform `P`.
+pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
     let log = Log::at(&opts.log);
     let version = crate::version_line("ak820-agent");
     log.line(&version);
     log.line(&format!(
-        "polling SMTC every {}s (keepalive {}s)",
+        "polling {} every {}s (keepalive {}s)",
+        P::MEDIA_API,
         opts.interval.as_secs_f64(),
         media::KEEPALIVE.as_secs()
     ));
 
-    let worker = MediaWorker::spawn(opts.interval)?;
+    let worker = P::spawn_media(opts.interval)?;
     let mut publisher = Publisher::new();
     let mut watch = Watch::new();
     let mut st = Status {
         version,
-        started: logfile::stamp(&SystemHost),
+        started: logfile::stamp(&P::host()),
         ..Status::default()
     };
     let mut clock = if opts.clock {
@@ -246,7 +236,7 @@ pub fn run(opts: Options) -> Result<(), String> {
             scheduler::FAST_ABOVE_MS,
             FileCache::default_path().display()
         ));
-        Some(ClockLoop::new(SystemHost.now()))
+        Some(ClockLoop::new(P::host().now()))
     } else {
         None
     };
@@ -286,7 +276,7 @@ pub fn run(opts: Options) -> Result<(), String> {
             if !watch.holding(now) {
                 let plan = publisher.plan(&snapshot, now);
                 let mut discarded = Vec::new();
-                let outcome = cycle(&plan, &snapshot, now, &mut publisher, &log, &mut st, &mut discarded);
+                let outcome = cycle::<P>(&plan, &snapshot, now, &mut publisher, &log, &mut st, &mut discarded);
                 st.foreign_reports += foreign(&discarded);
                 if let Some(line) = watch.observe(outcome.as_ref().map(|_| ()), now) {
                     log.line(&line);
@@ -303,7 +293,7 @@ pub fn run(opts: Options) -> Result<(), String> {
             if now >= next_clock {
                 worked = true;
                 if !watch.holding(now) {
-                    clock.tick(&log, &mut st, &mut watch);
+                    clock.tick::<P>(&log, &mut st, &mut watch);
                 }
                 st.clock = Some(clock.status.clone());
                 next_clock = Instant::now() + Duration::from_secs_f64(scheduler::LOOP);
@@ -313,7 +303,7 @@ pub fn run(opts: Options) -> Result<(), String> {
         if now >= next_health && !watch.holding(now) {
             worked = true;
             let mut discarded = Vec::new();
-            match read_health(&mut discarded) {
+            match read_health::<P>(&mut discarded) {
                 Ok(h) => st.health = Some(h),
                 Err(HealthRead::Hid(e)) => {
                     if let Some(line) = watch.observe(Err(&e), now) {
@@ -328,7 +318,7 @@ pub fn run(opts: Options) -> Result<(), String> {
 
         if worked {
             st.board = watch.state().word().to_string();
-            st.updated = logfile::stamp(&SystemHost);
+            st.updated = logfile::stamp(&P::host());
             if let Err(e) = status::write(&opts.status, &st) {
                 log.line(&format!("[warn] status file: {e}"));
             }
@@ -350,7 +340,7 @@ pub fn run(opts: Options) -> Result<(), String> {
 /// attempted whether or not the first succeeded, as the Python's two `try`
 /// blocks are independent (finding 9). A `Stuck` handle ends the cycle at
 /// once; nothing else does.
-fn cycle(
+fn cycle<P: Platform>(
     plan: &media::Plan,
     snapshot: &Snapshot,
     now: Instant,
@@ -359,13 +349,13 @@ fn cycle(
     st: &mut Status,
     discarded: &mut Vec<Drained>,
 ) -> Result<(), hid::Error> {
-    let dev = device::open_board()?;
+    let dev = P::open_board()?;
     let mut failure: Option<hid::Error> = None;
     if let Some(text) = &plan.text {
         match send(&dev, text, discarded) {
             Ok(()) => {
                 publisher.text_pushed(snapshot, now);
-                st.media_last_push = Some(logfile::stamp(&SystemHost));
+                st.media_last_push = Some(logfile::stamp(&P::host()));
                 st.media_last_text = Some(Publisher::describe(snapshot));
                 st.media_last_error = None;
                 if plan.changed {
@@ -401,7 +391,7 @@ fn cycle(
 
 /// Write the reports in order through one handle, each correlated on its own
 /// echo, keeping every discard whether the batch succeeds or not.
-fn send(dev: &Device, reports: &[(u8, Vec<u8>)], discarded: &mut Vec<Drained>) -> Result<(), hid::Error> {
+fn send(dev: &impl HidTransport, reports: &[(u8, Vec<u8>)], discarded: &mut Vec<Drained>) -> Result<(), hid::Error> {
     for (command, body) in reports {
         match dev.request_echoed(Channel::Text, *command, body, REQUEST_TIMEOUT) {
             Ok(reply) => discarded.extend(reply.drained),
@@ -421,8 +411,8 @@ enum HealthRead {
 
 /// Pages 1 and 2 on one open: the counters that say whether the firmware is
 /// stalling, read before the clock takeover can add stalls of its own.
-fn read_health(discarded: &mut Vec<Drained>) -> Result<HealthStatus, HealthRead> {
-    let dev = device::open_board().map_err(HealthRead::Hid)?;
+fn read_health<P: Platform>(discarded: &mut Vec<Drained>) -> Result<HealthStatus, HealthRead> {
+    let dev = P::open_board().map_err(HealthRead::Hid)?;
     let mut page = |command: u8| -> Result<[u8; 32], HealthRead> {
         match dev.request(Channel::Health, command, &[], REQUEST_TIMEOUT) {
             Ok(reply) => {
@@ -438,7 +428,7 @@ fn read_health(discarded: &mut Vec<Drained>) -> Result<HealthStatus, HealthRead>
     let p1 = health::Page1::decode(&page(health::GET)?).map_err(HealthRead::Decode)?;
     let p2 = health::Page2::decode(&page(health::GET2)?).map_err(HealthRead::Decode)?;
     Ok(HealthStatus {
-        read_at: logfile::stamp(&SystemHost),
+        read_at: logfile::stamp(&P::host()),
         version: p1.version,
         loop_gap_max_ms: p1.loop_gap_max_ms,
         blit_timeouts: p1.blit_timeouts,
@@ -494,8 +484,8 @@ impl ClockLoop {
 
     /// Open the board for a clock interaction, resynchronising first when a
     /// command is unaccounted for.
-    fn open(&mut self, log: &Log) -> Result<Device, hid::Error> {
-        let dev = device::open_board()?;
+    fn open<P: Platform>(&mut self, log: &Log) -> Result<P::Device, hid::Error> {
+        let dev = P::open_board()?;
         if self.unresolved {
             let (_, first) = dev.drain();
             std::thread::sleep(RESYNC_SETTLE);
@@ -531,18 +521,18 @@ impl ClockLoop {
     }
 
     /// One iteration of the Python loop body.
-    fn tick(&mut self, log: &Log, st: &mut Status, watch: &mut Watch) {
-        let host = SystemHost;
+    fn tick<P: Platform>(&mut self, log: &Log, st: &mut Status, watch: &mut Watch) {
+        let host = P::host();
         let wall = host.now();
-        // `hid_present()`: the Configuration Manager's list, opening nothing.
-        let listed = device::interfaces(path::VID, path::PID).unwrap_or_default();
+        // `hid_present()`: the platform's own device list, opening nothing.
+        let listed = P::listed();
         let present = !listed.is_empty();
 
         if let Some(reason) = self.sched.due(wall, present) {
             if reason == Reason::Enumerated {
                 std::thread::sleep(Duration::from_secs_f64(scheduler::ENUMERATED_SETTLE));
             }
-            let (result, line) = self.sync(reason, log, st, watch);
+            let (result, line) = self.sync::<P>(reason, log, st, watch);
             log.line(&line);
             self.status.last_line = Some(line);
             self.sched.synced(&result, host.now());
@@ -552,7 +542,7 @@ impl ClockLoop {
                 self.status.last_error = None;
                 // learn_bias: the timestamp is taken BEFORE the status read
                 let now_mono = self.mono();
-                let status = self.read_status(log, st, watch);
+                let status = self.read_status::<P>(log, st, watch);
                 let cache_bias = self.cache.load().bias_ppm;
                 let decision = self.sched.learn(reason, &result, status.as_ref(), cache_bias, now_mono);
                 match &decision {
@@ -591,9 +581,8 @@ impl ClockLoop {
             if cap.bias_ppm.is_some() {
                 self.sched.seed_step(true, None, "", host.now());
             } else {
-                let status = self.read_status(log, st, watch);
-                let cid: Vec<&str> = listed.iter().map(|i| i.path()).collect();
-                let cid = cid.join("|");
+                let status = self.read_status::<P>(log, st, watch);
+                let cid = listed.join("|");
                 let step = self.sched.seed_step(false, status.as_ref(), &cid, host.now());
                 if let Some(b) = step.bias_to_cache() {
                     let mut cap = self.cache.load();
@@ -618,14 +607,14 @@ impl ClockLoop {
 
     /// `sync()`: one transaction on a fresh handle. Returns what the Python's
     /// `sync()` returns and the log line it writes.
-    fn sync(&mut self, reason: Reason, log: &Log, st: &mut Status, watch: &mut Watch) -> (SyncResult, String) {
+    fn sync<P: Platform>(&mut self, reason: Reason, log: &Log, st: &mut Status, watch: &mut Watch) -> (SyncResult, String) {
         let now = Instant::now();
         let mut discarded = Vec::new();
-        let outcome = match self.open(log) {
+        let outcome = match self.open::<P>(log) {
             Ok(dev) => transaction::run(
                 &dev,
                 dev.outstanding(),
-                &SystemHost,
+                &P::host(),
                 &self.cache,
                 REQUEST_TIMEOUT,
                 &mut discarded,
@@ -687,11 +676,11 @@ impl ClockLoop {
 
     /// `read_status()`: one GET on a fresh handle; `None` on any failure or
     /// an unset clock, as the Python's `rc != 0` is.
-    fn read_status(&mut self, log: &Log, st: &mut Status, watch: &mut Watch) -> Option<StatusRead> {
+    fn read_status<P: Platform>(&mut self, log: &Log, st: &mut Status, watch: &mut Watch) -> Option<StatusRead> {
         let now = Instant::now();
         let got = self
-            .open(log)
-            .and_then(|dev| transaction::read_once(&dev, dev.outstanding(), &SystemHost, REQUEST_TIMEOUT));
+            .open::<P>(log)
+            .and_then(|dev| transaction::read_once(&dev, dev.outstanding(), &P::host(), REQUEST_TIMEOUT));
         match got {
             Ok(got) => {
                 st.foreign_reports += foreign(&got.drained);
@@ -752,7 +741,7 @@ mod tests {
         let mut w = Watch::new();
         let open = hid::Error::Open {
             path: "x".into(),
-            source: windows::core::Error::from_hresult(windows::core::HRESULT::from_win32(32)),
+            source: hid::OsError::new(0x80070020_u32 as i32 as i64, "sharing violation"),
         };
         w.observe(Err(&open), now());
         assert_eq!(w.state(), Presence::Busy);
@@ -791,12 +780,5 @@ mod tests {
         let timeout = hid::Error::Timeout { drained: d.to_vec() };
         assert_eq!(foreign(discards_of(&timeout)), 2);
         assert!(discards_of(&hid::Error::Absent).is_empty());
-    }
-
-    #[test]
-    fn the_default_dir_is_under_local_appdata() {
-        let d = default_dir();
-        assert!(d.ends_with("ak820pro"));
-        assert!(d.is_absolute());
     }
 }

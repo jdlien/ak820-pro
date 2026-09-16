@@ -2,7 +2,7 @@
 name = "ak820-agent"
 version = "0.1.1"
 edition = "2021"
-description = "Clock sync and now-playing for the AJAZZ AK820 Pro LCD (Windows)"
+description = "Clock sync and now-playing for the AJAZZ AK820 Pro LCD (Windows; macOS in progress)"
 
 [lib]
 name = "ak820_agent"
@@ -30,7 +30,9 @@ path = "src/bin/ak820-agent.rs"
 # NOT hidapi, deliberately, as in both siblings: its enumeration opens every HID
 # device on the machine, which is what wedged a UPS here. See
 # ../jdrgb/docs/ups-wedge-incident.md and plans/AK820-AGENT-PLAN.md.
-[dependencies.windows]
+# Windows only: every use of it is under `src/platform/windows/`. Phase 0 of the
+# cross-platform plan moved it here so the neutral crate builds and tests on macOS.
+[target.'cfg(windows)'.dependencies.windows]
 version = "=0.62.2"
 features = [
     "Win32_Foundation",                          # HANDLE, GetLastError, CloseHandle

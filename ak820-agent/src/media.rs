@@ -34,6 +34,37 @@ pub const INTERVAL: Duration = Duration::from_secs(3);
 /// expiry of the host text slot.
 pub const KEEPALIVE: Duration = Duration::from_secs(30);
 
+/// How the media side is doing, for a degraded-state report.
+///
+/// "Task running" can coexist with hours of failed reads, so the daemon needs
+/// to be able to say more than whether the thread exists.
+#[derive(Clone, Debug, Default)]
+pub struct Health {
+    pub polls: u64,
+    pub failures: u64,
+    pub last_error: Option<String>,
+    /// How long since the snapshot last refreshed. `None` before the first one.
+    pub stale_for: Option<Duration>,
+    /// Did the most recent poll succeed? `true` before the first one, when
+    /// the snapshot is the idle default and there is nothing stale to show.
+    /// The daemon publishes idle while this is false, as the Python agent
+    /// did when `read_state()` raised.
+    pub last_poll_ok: bool,
+}
+
+/// Where snapshots come from: SMTC on Windows, MediaRemote on macOS.
+///
+/// Deliberately the lowest common denominator (plan, *`MediaSource` must be the
+/// lowest common denominator*): the current session or none, never an invented
+/// session list. Ranking, stickiness and what counts as a failed read are each
+/// platform's own business; the daemon only ever asks for the latest answer,
+/// and never blocks on it.
+pub trait MediaSource {
+    /// The most recent snapshot, and how the reads are going. Never blocks on
+    /// the media API.
+    fn latest(&self) -> (Snapshot, Health);
+}
+
 /// What one poll should put on the wire.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Plan {
