@@ -75,9 +75,18 @@ Full reasoning in the plan's *Finalization* section and at each site.
    in perfect sync with the system clock almost all the time", so it is good
    enough for now; perfect it later. Phases 0 and 2 count slips separately so
    the port is neither blamed nor credited for them.
-9. **The owner's main hope for the port is the Mac's now-playing overhead.**
-   The plan's Why section records it. Measure the "before" on this Mac while
-   the Python agents still run.
+9. **The owner's main hope for the port is the Mac's now-playing overhead,
+   and it is real — measured 2026-09-16:** about **30% of one core,
+   continuously, while Music plays**. That is 47 CPU-seconds per 4 minutes in
+   the agent's own children, plus `tccd`, `launchservicesd`, `trustd` and
+   `runningboardd` busy only while it runs. The event-driven MediaRemote helper
+   used 0.76 CPU-seconds in 98 minutes. `scripts/agent_overhead_macos.py` took
+   the "before" and takes the "after".
+10. **Now-playing first, the clock soon after** — decided by the owner, the
+    way Windows went. Build order: **S1 → S2 → S1b, S3 → 0 → 1 → 3 → 4a → 5a →
+    2 → 4b → 5b → 6.** In 4a the daemon owns now-playing and the Python
+    timekeeper keeps the clock; the gate is that the timekeeper's own log
+    shows no more sync failures than before. The public release stays last.
 
 So: **nothing blocks starting the spikes**, and nothing unanswered blocks
 Phase 0 once S1 and S2 are in.
@@ -126,6 +135,9 @@ would silently kill now-playing on the keyboard.
    under `[target.'cfg(windows)'.dependencies]`. gremlin's baseline is already
    in hand (see decision 4); do not reflash that board or let Windows Update
    restart it mid-run. `agent.rs` is the file most at risk.
+5. Then **1 → 3 → 4a → 5a**: now-playing moves to the daemon while the Python
+   timekeeper keeps the clock, and `scripts/agent_overhead_macos.py` takes the
+   "after" with Music playing. The clock (**2 → 4b**) follows soon after.
 
 Every phase ends with an external audit, per the convention in
 `AK820-AGENT-PLAN.md`: the gate proves the phase does what it claims, the audit

@@ -472,6 +472,30 @@ Note this is a *cost* argument, and the plan's own "Why" section is explicit tha
 cost does not justify the port — unification, capability and two named defects
 do. Useful as a supporting measurement; not a reason on its own.
 
+**Measured 2026-09-16, macOS 27.0, Music.app playing** with
+`scripts/agent_overhead_macos.py`: five 240 s windows, the agent frozen with
+`SIGSTOP` in alternate ones.
+
+| | per 240 s window | share of one core |
+|---|---|---|
+| the agent's own child processes (kernel rusage, exact) | 50.6 / 38.4 / 53.2 CPU-s | **19.7%** |
+| `tccd`, `launchservicesd`, `trustd`, `runningboardd`, `launchd`, which move only while it runs | ~20–30 CPU-s | ~8–12% |
+| **total** | | **~30%, continuously while playing** |
+| for contrast: the sibling's event-driven MediaRemote helper | 0.76 CPU-s in 98 min | ~0.01% |
+
+What this does **not** confirm:
+- **The ~100–200k processes/day.** System-wide launches ran 1,068–1,604 a
+  minute in every window, paused or not; post-upgrade Spotlight indexing buried
+  the agent's share. The script's structure gives about 20 launches per 3 s
+  while playing, so ~570k a day. That figure is derived, not measured.
+- **The WindowServer/FocusManager churn.** WindowServer used 105–124 CPU-s per
+  window whether the agent ran or not; any effect is below the resolution.
+  Music.app's cost of answering Apple events was likewise invisible.
+
+The owner's complaint that the Mac "seems to suffer a lot of overhead" from
+this agent is therefore **confirmed on CPU**. Cost stays a supporting argument
+in the plan's terms, but it is now the owner's stated priority for the port.
+
 ## Whole-second clock slips: four, on both boards, both OSes, both host implementations (found 2026-09-16)
 
 **The signature, identical every time:** a periodic sync reads `before` about

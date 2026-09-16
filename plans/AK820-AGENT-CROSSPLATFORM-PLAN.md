@@ -71,13 +71,14 @@ the time.
 
 ⚠️ **Owner statement, 2026-09-16: the Mac "seems to suffer a lot of overhead"
 from the now-playing agent, and fixing that is what the owner most hopes this
-port delivers.** That is a priority, and it is recorded as one. It does not
-turn cost into a proof. The overhead is still **unmeasured here**: the churn
-figures in `BACKLOG.md` are derived from the script's loop or reported by
-another session. Two consequences follow. **Phase 5's "before" column must be
-measured on this Mac before the Python agents are retired**, or the result
-cannot be shown. And shipping the **media half ahead of the clock** becomes
-worth deciding, as Windows did (now-playing live in 4a, clock in 3b/4b).
+port delivers.** That is a priority, and it is recorded as one. **Measured the
+same afternoon, and the complaint holds:** while Music plays, the now-playing
+agent costs about **30% of one core, continuously** — 19.7% in its own child
+processes, plus 8–12% in `tccd`, `launchservicesd`, `trustd` and
+`runningboardd` handling its launches. See [Efficiency](#efficiency-the-baseline-and-targets-that-can-fail).
+That is Phase 5's "before" column, taken with a script kept for the "after".
+Shipping the **media half ahead of the clock** is therefore worth deciding, as
+Windows did (now-playing live in 4a, clock in 3b/4b).
 
 ---
 
@@ -393,16 +394,47 @@ Measured on this Mac, 2026-09-10, with both current agents live:
 | Disk, agent runtime | **43 MB** venv + 36 KB `ak820ctl` | **≤ 1 MB** total payload |
 | Resident, clock | **11.3 MB** (`python3`) — ⚠️ re-read later as 7.2 MB; RSS drifts widely between samples and is a weak gate | ≤ 5 MB, ⚠️ **undefined once clock and media share one process** — restate as one total |
 | Resident, media | 3.2 MB (2× `bash`) + transient `osascript` | see caveat |
+| **CPU, media agent, while Music plays** | **47.4 CPU-s per 240 s = 19.7% of one core**, in the agent's own children alone (50.6 / 38.4 / 53.2 s over three windows; kernel child accounting, exact) — plus **~20–30 s** more in system daemons that only move while it runs: `tccd` 5.6–12.0, `launchservicesd` 6.9–8.8, `trustd` up to 9.8, `runningboardd` ~5, `launchd` ~2.6 above its paused level. **Roughly 30% of one core, 2.5% of this 12-core Mac, around the clock while music plays** **[measured 2026-09-16]** | **≤ 1% of one core** while playing. The event-driven helper it replaces the polling with measured **0.76 CPU-s in 98 min** (the sibling's perl helper, same Mac, same afternoon, music playing for part of it) |
 | Process spawns, steady state | **Up to 7 `osascript` per poll**, poll = 3 s (`BACKLOG.md`, verified against the script 2026-09-16; this row said 8 until then) — ⚠️ plus the timekeeper's own: `ioreg -p IOUSB -w0 -l` every 15 s while the cache lacks a bias (`ak820-timekeeper.py:117`) and 2–3 `ak820ctl` per sync | **Stated per state, because the S1b canary spawns** (decided 2026-09-16): **0** while no AppleScript-scriptable player is running (the idle case, most hours); **≤ 1 per 60 s** while Spotify or Music is running but MediaRemote reports nothing; **0** while MediaRemote reports playback. ⚠️ Plus a **failure-mode rate**: six 1.5 s timeouts then helper exit and restart with backoff — without it the row passes only while nothing goes wrong |
 | Windows binary | 117 KB **[2026-09-05]** | ⚠️ a **bound** (say ≤ 150 KB), not "no regression" — equality fails trivially on any trait refactor |
 
+**How the CPU row was measured (2026-09-16, macOS 27.0, Music.app playing),
+so Phase 5's "after" can be taken the same way:** `scripts/agent_overhead_macos.py`
+alternates five 240 s windows — run, pause, run, pause, run — freezing the
+agent with `SIGSTOP` in the pause windows and always `SIGCONT`ing on exit. The
+agent's cost is its own `proc_pid_rusage` child CPU, which the kernel
+accumulates for every reaped descendant and which matched `ps` to the
+hundredth. The daemon costs are `ps` CPU deltas per window, compared across
+run and pause, with a resolution floor of ~3–5 s per window (only the top 25
+movers were kept). ⚠️ **Two things the method could not measure:**
+
+- **Process launches.** The PID counter moved **1,068–1,604 per minute in
+  every window, paused or not**. The paused windows were busier, not quieter:
+  six `mdworker` processes were live, and post-upgrade Spotlight and media
+  analysis (`mds_stores` 182–384 s, `mediaanalysisd` 94–313 s per window) were
+  running the day of the 27.0 install. That noise swamps the agent's
+  contribution. The script's own structure gives **about 20 launches per 3 s
+  while playing** (7 `osascript`, each in a `$(…)` subshell, 2 `awk`, a
+  `date`, a `sleep`, and a venv Python playback push every poll), so roughly
+  400 a minute. That figure is **derived from the script, not measured**.
+- **WindowServer and Music.** Neither moved measurably. WindowServer ran
+  105–124 s per window either way, and Music 11–15 s. The reported
+  FocusManager churn may exist, but it is below this method's resolution.
+
+⚠️ **The machine's larger load that day was not the agent.** Spotlight
+re-indexing and media analysis after the upgrade ran at **1.25–2.5 cores**
+across the same windows. The agent is a steady ~30% of one core. The rest will
+settle on its own; the agent's cost will not.
+
 ⚠️ **The memory target is the weak one, and the plan should not pretend
 otherwise.** The MediaRemote helper is a `/usr/bin/perl` process: the sibling
-project's is running on this machine right now at **7.9 MB RSS**
-**[measured]**. Rust daemon + perl helper lands near where Python + bash is
-today. **The honest claim is disk and CPU, not memory.** The CPU claim is
-strong: up to 7 subprocess spawns every 3 s becomes a mostly event-driven push
-whose spawn rate is zero while idle and bounded by the S1b canary otherwise.
+project's ran at **7.9 MB RSS** on 2026-09-10 and **17.8 MB** on 2026-09-16
+after 98 minutes on macOS 27.0 **[measured]**. Rust daemon + perl helper lands near where Python + bash is
+today. **The honest claim is disk and CPU, not memory.** The CPU claim is now
+**measured, not argued**: about 30% of one core while music plays, against a
+helper that used 0.76 CPU-seconds in 98 minutes. The polling becomes a mostly
+event-driven push whose spawn rate is zero while idle and bounded by the S1b
+canary otherwise.
 
 ⚠️ **And there would then be two MediaRemote helpers on this machine** — one for
 the Stream Deck plugin, one for the keyboard. ~16 MB of perl to read one
@@ -488,6 +520,21 @@ recorded as such so nobody re-derives them:
 Spikes first: **S1 and S2 can each kill or reshape the plan, and both are
 cheap.** Do not start Phase 0 until both have answered.
 
+**Order — decided 2026-09-16: now-playing first, the clock soon after**, the way
+Windows went (4a live before 3b/4b). The measured reason: while Music plays,
+the media agent costs ~30% of one core, while the clock agent is cheap and
+accurate. The table below keeps its numbers; **build them in this order:**
+
+> **S1 → S2 → S1b, S3 → 0 → 1 → 3 → 4a → 5a** — *now-playing on the daemon,
+> Python timekeeper still owns the clock* — **→ 2 → 4b → 5b → 6**
+
+Nothing is skipped, only reordered: Phase 3 needs only Phase 1's HID transport,
+not the clock. ⚠️ **Phase 6 (public release) stays last.** A public macOS
+release without the clock would tell a clean Mac to leave the clock to a Python
+agent it does not have — the exact `INSTALL.txt` mistake that cost Windows
+v0.1.1. Until 4b, the daemon runs on this Mac from a local build, **signed
+with the Developer ID identity** so TCC does not churn (S3).
+
 | # | Work | Gate |
 |---|---|---|
 | **S1** | MediaRemote via perl host, driven from Rust | A **browser** session (YouTube in Chrome) yields title/artist/state to a Rust supervisor over line-JSON; and a **Music.app** session both resolve — ⚠️ *not* "the Music stale case reproduces", which `fc70de4` made unreachable except by reintroducing the deadlock. Every call bounded. **Helper supervision is specified, not assumed**: silence detection, restart backoff, a healthy-run rule and kill-on-silence, mirroring `MediaRemoteHost.cs:67-81`, `:192-207`. The reader lives on **its own thread**, for the reason `smtc/worker.rs:1-11` gives. **If this fails, the media half reduces to porting today's AppleScript and the capability gain evaporates** — the plan is still worth doing for the clock, at much reduced value. ✅ **The Apple half is answered on macOS 27.0 (26A428), 2026-09-16**: the sibling's dylib under `/usr/bin/perl` returned `bundle: com.google.Chrome`, title, artist, duration, `rate: 1`, `playing: true` for a YouTube video, and the owner confirmed the Stream Deck plugin showing it live. **The Rust supervisor half is still S1's work.** |
@@ -498,8 +545,10 @@ cheap.** Do not start Phase 0 until both have answered.
 | **1** | macOS HID transport | S2's gate, now through the real trait, plus wrong-interface rejection, malformed-report rejection, timeout, unplug mid-transaction, and **traced opens showing nothing unrelated was touched** (see [G-A](#g-a--open-nothing-you-did-not-mean-to)). |
 | **2** | macOS clock, read then set | Captured replies decode identically to the pinned C **on macOS**; then the scheduler and SOF-bias learner replayed against `ak820-timekeeper.py`'s own macOS log, matching decisions **and next state**, the way phase 3a did on Windows — the macOS timekeeper log exists (241 KB, same format), so that half is achievable. ⚠️ **Fixture parity CANNOT see a self-consistent wrong time**, which is the exact failure this phase exists to prevent: both the GET's residual and the SET's payload go through `host.local()` (`transaction.rs:174`, `:205-208`), so a macOS `local()` off by an hour yields a **zero residual and a board an hour wrong**. Captured-reply decoding never exercises localtime at all — the oracle takes `host_mid_sod` as an argument (`scripts/clock_oracle.c:14`). Windows covered this with hourly sweeps across 2026–2099 against the oracle CRT (`host.rs:294-347`), which cannot compile here. **So this phase also requires**: an hourly-sweep test against libc `localtime_r` (what `ak820ctl.c:159`, `:198`, `:256` call), a TZ-change test, **independent** reads via the pinned `ak820ctl clock --read` with the daemon paused, and a human reading the LCD against a reference clock. "No worse than Python" compares *self-reported* residuals and would absorb a transport timestamping bias into the lead learner as zero. ⚠️ **Parity would also carry a whole-second slip faithfully** (added 2026-09-16): four identical ~1 s slips are on record across both boards, both OSes and both host implementations (`BACKLOG.md`), and firmware or the shared transaction contract are the remaining suspects. If it is the contract, the port reproduces it by design. So this phase **counts slips separately** — never folded into p95 or worst, never read as the port's regression or as the port's fix. **This is the phase that earns the project.** |
 | **3** | macOS media | Router works: **MediaRemote for everything including Music** (post-`fc70de4`), with AppleScript as the fallback for a stale provider or unhealthy helper — not as Music's route. Bounded calls, supervised helper, 5 s stickiness so a paused app does not steal the band. **Plus [G-B](#g-b--a-tcc-revocation-must-be-visible) and the S1b canary.** ⚠️ **The old "byte-identical to what `nowplaying-macos.sh` would have pushed" gate could not fail honestly**: folding parity is already proven at generation time across every scalar, and the genuinely new variable is the *source* — MediaRemote's title/artist and AppleScript's fields can legitimately differ for the same track. Split into (a) folding parity on **identical input**, an existing test, and (b) a **documented source comparison** where each difference is explained rather than counted as a defect. |
-| **4** | `install` / `uninstall` / `status` on macOS | LaunchAgent registered, survives logout/login and sleep/wake; **refuses to run beside the Python agents** the way the Windows installer refuses (one clock owner, enforced not intended); rollback to the Python pair proven, not merely described. |
-| **5** | Efficiency | The table above, measured, with the memory caveat stated honestly rather than met by redefinition. The spawn row is measured **in each of its three states plus the failure mode**, not once. |
+| **4a** | `install` / `uninstall` / `status` on macOS, **now-playing only** | Mirrors Windows 4a: `ak820 install` (no `--clock`) registers a LaunchAgent that owns now-playing, unloads the `nowplaying-macos.sh` LaunchAgent, and **leaves the Python timekeeper running and owning the clock**. The daemon in this mode runs **no clock transaction of any kind**. Survives logout/login and sleep/wake. ⚠️ **Coexistence is the gate on macOS, not an assumption**: the timekeeper's `ak820ctl` still opens the device every sync, so the two contend exactly as today's two Python agents do. Across ≥ 50 periodic syncs, the timekeeper's own log must show **no more `[rc=N]` failures or unmeasured syncs** than its pre-4a log over the same duration, with its residuals inside that baseline's spread. `scripts/clock_log_windows.py` already parses this log format. Rollback to `nowplaying-macos.sh` proven, not described. |
+| **5a** | Efficiency, media | Right after 4a, `scripts/agent_overhead_macos.py` against the daemon, **with Music playing, the same way the "before" was taken**. The CPU row's target is the gate. The spawn row is measured in each of its three states plus the failure mode. |
+| **4b** | `install --clock` on macOS | After Phase 2. The daemon takes the clock and the Python timekeeper is retired. **Refuses to run beside it** the way the Windows installer refuses (one clock owner, enforced not intended), stop-confirm-start in both directions per the Windows phase-3a/4a audit's finding 1. Rollback to the Python timekeeper proven, not merely described. |
+| **5b** | Efficiency, whole | The table above, measured, with the memory caveat stated honestly rather than met by redefinition. |
 | **6** | Signed release | **Clean-Mac install from Releases with no toolchain, no Python, no Homebrew.** Gatekeeper reports `source=Notarized Developer ID`. The `.dmg` is stapled and passes `spctl` **offline**; `ak820 install` copies out of the mounted image, and the LaunchAgent-started daemon's perl child loads the **copied** dylib with the network off — the quarantine path above, proven rather than assumed. This is the macOS phase-6b and deserves the same suspicion — v0.1.0 shipped a wrong `INSTALL.txt` and cost a release. ⚠️ **Name the test bed**: Windows had Sandbox, but a fresh macOS *user account* does not reset Gatekeeper's per-file assessment or the binary's TCC state — only a VM is a real clean machine. Unnamed, this gate is an intention. |
 
 **Every phase ends with an external audit**, per the convention in
@@ -708,8 +757,12 @@ defects; "8 `osascript` per poll" against the backlog's verified "up to 7"; and
 the Windows failed-read policy attributed to the phase-0 audit rather than the
 phase-3a/4a audit, as `agent.rs:274-277` has it.
 
-**Nothing now gates S1.** The order stands: S1 (the Rust supervisor half), S2,
-then S1b and S3, then Phase 0.
+9. **Now-playing first, the clock soon after** (owner, after the overhead
+   measurement): S1 → S2 → S1b, S3 → 0 → 1 → 3 → 4a → 5a → 2 → 4b → 5b → 6.
+   Public release stays last.
+
+**Nothing now gates S1.** Build order is in
+[Phases](#phases-with-gates-that-can-actually-fail).
 
 ## References
 
