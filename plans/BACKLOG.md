@@ -434,3 +434,60 @@ could carry a small constant offset the C's did not. The check is cheap:
 capture a burst's five (t0, t1, board) triples with `ak820 clock --raw` (with
 the daemon stopped, never beside it) and compare per-sample offsets against
 the same capture through `ak820ctl clock --read` on the pinned C.
+
+## nowplaying-macos.sh: process churn, and notes toward a native rewrite
+
+Inbound 2026-09-16 from another session (`code-b3`) that was diagnosing system
+load on this Mac, passed on at JD's request. **No port is planned or started;
+this is a note so the analysis is not lost.**
+
+### Verified in this repo
+
+- `INTERVAL` is **3 s** (`nowplaying-macos.sh:40`), and the getters are separate
+  `osascript` invocations: `running` (called per app, so twice), `player state`,
+  and while playing `name`, `artist`, `player position`, `duration` — **up to 7
+  process spawns per 3-second loop**, plus a one-time Automation probe.
+- Every push runs a **fresh venv Python** (`PY=$AK820_ROOT/venv/bin/python`
+  invoking `ak820text.py`), so the HID interface is opened and closed per update.
+- The `mkdir` lock at `$TMPDIR/ak820pro-nowplaying.lock` exists to stop two
+  agents contending for the exclusive raw-HID interface.
+- `~/code/streamdeck-now-playing` exists and contains
+  `nowplaying-mediaremote.dylib`, which corroborates the MediaRemote-adapter
+  guess below.
+
+### Reported, NOT verified here
+
+The load analysis is theirs and is about the machine, not this repo — recorded
+as attribution, not as fact. **Re-measure before acting on it.** Each `osascript`
+registers with WindowServer as an app and its exit makes FocusManager
+re-evaluate focus; at ~100–200k short-lived processes/day on a Mac at
+swap 24.6/25.6 GB with `fseventsd` at 20 GB and 58 days uptime, the churn was
+said to add real load. They also confirmed the agent itself does **not** leak:
+1.5 MB after 6.7 days.
+
+### Their suggestions for a native (Rust) version
+
+1. **Push on change, not on a poll.** Subscribe via
+   `NSDistributedNotificationCenter` to `com.apple.Music.playerInfo` and
+   `com.spotify.client.PlaybackStateChanged`; keep a light timer only for the
+   position readout while playing. ⚠️ Confirm both still fire on current macOS
+   before designing around them.
+2. **If a query is still needed, keep it in-process** — compile the AppleScript
+   once with `NSAppleScript`, or use Scripting Bridge via `objc2`, rather than
+   spawning `osascript` per field. The TCC Automation prompt then attributes to
+   the binary.
+3. **Hold the HID interface open** for the process lifetime via hidapi instead
+   of spawning Python per push. A single-instance check then replaces the
+   `mkdir` lock, since the exclusive-HID contention it guards disappears.
+4. **Browser media.** The Stream Deck plugin's `/usr/bin/perl` helper loads a
+   dylib through DynaLoader — the mediaremote-adapter technique for reaching
+   MediaRemote. If so, the agent could reuse it and pick up YouTube and other
+   browser audio, which this script's own comments say AppleScript cannot see.
+
+### Worth weighing before anyone starts
+
+The bash agent works, is understood, and is ~1.5 MB resident. A rewrite trades
+that for a compiled dependency, a new TCC grant to approve, and a second way for
+the LCD text slot to be wrong. (4) is the only item that adds a *capability*
+rather than reducing cost — browser media is a real gap. If the port happens for
+any single reason, that is the one.
