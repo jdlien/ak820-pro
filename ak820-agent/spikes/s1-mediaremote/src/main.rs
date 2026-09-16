@@ -24,6 +24,17 @@ fn secs(v: Option<String>, name: &str) -> Duration {
 }
 
 fn main() {
+    // `s1 players`: the process-table check the canary uses. No spawn, no
+    // Apple event, so it can never raise an Automation prompt.
+    if std::env::args().nth(1).as_deref() == Some("players") {
+        let started = Instant::now();
+        let running = s1::players::running();
+        println!(
+            "running players: {running:?} ({:.2} ms, no spawn)",
+            started.elapsed().as_secs_f64() * 1e3
+        );
+        return;
+    }
     let mut args = std::env::args().skip(1);
     let mut config: Option<Config> = None;
     let mut run_for: Option<Duration> = None;
