@@ -1,0 +1,13 @@
+[package]
+name = "s2-iokit"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Spike S2: IOKit HID discovery and transport for the AK820 Pro (macOS), hand-rolled FFI"
+
+# No dependencies: IOKit and CoreFoundation are declared by hand in src/sys.rs,
+# per the plan's Settled decision, to be confirmed or reversed at S2's end.
+
+[[bin]]
+name = "s2"
+path = "src/main.rs"

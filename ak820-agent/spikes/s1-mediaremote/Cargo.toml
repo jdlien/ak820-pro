@@ -1,0 +1,17 @@
+[package]
+name = "s1-mediaremote"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Spike S1: a Rust supervisor for the perl-hosted MediaRemote helper (macOS)"
+
+# No dependencies, by the plan's rule: the helper's line-JSON is read by a
+# hand-rolled flat-object reader tested against Python's `json` (Settled, 2).
+
+[[bin]]
+name = "s1"
+path = "src/main.rs"
+
+[lib]
+name = "s1"
+path = "src/lib.rs"

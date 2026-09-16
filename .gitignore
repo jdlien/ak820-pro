@@ -26,3 +26,6 @@ ak820pro-builds/release/
 
 # Rust build output for the Windows host agent.
 ak820-agent/target/
+
+# Spike crates build on their own, outside the main crate.
+ak820-agent/spikes/*/target/
