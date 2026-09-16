@@ -47,7 +47,9 @@ the 2026-09-16 review): --gate P95_MAX WORST_MAX [BIAS_SPREAD_MAX] judges the fi
 3 windows against the baseline's maxima -- FAIL if any window has a failed,
 unmeasured or warn sync, or if 2 or more of 3 exceed P95_MAX or WORST_MAX; PASS
 if none does and bias spread stays within BIAS_SPREAD_MAX; EXTEND once to 6 if
-exactly one exceeds, then FAIL on 2 or more of 6.
+exactly one exceeds, then FAIL on 2 or more of 6. Whole-second slips across the
+graded windows: 2 or more FAIL, exactly 1 turns PASS into REVIEW. Needs --since,
+set to the reinstall time: the baseline shares the log file.
   media                          now-playing lines inside, and every state the
                                  window saw (the state at its start included);
                                  the gate wants this condition matched
@@ -208,6 +210,13 @@ def main():
     ap.add_argument("--gate", nargs="+", type=float, metavar="MAX",
                     help="P95_MAX WORST_MAX [BIAS_SPREAD_MAX]: the Phase 0 verdict against the baseline's maxima")
     args = ap.parse_args()
+    if args.gate and args.since is None:
+        # The daemon's log rotates only at 1 MB, so the baseline sits in the same
+        # file as the run under test, and the gate grades the first windows it
+        # sees. Without --since that is the baseline's own pass.
+        ap.error("--gate needs --since set to the reinstall time, or it grades the baseline")
+    if args.gate and args.keep_slips:
+        ap.error("--gate counts slips separately; drop --keep-slips")
 
     rows, runs = windows(args.log, args.window, args.since, args.until, args.max_gap, args.across_breaks, args.keep_slips)
 
@@ -264,34 +273,61 @@ def main():
 
 
 def gate_verdict(rows, p95_max, worst_max, spread_max=None):
-    """The Phase 0 rule, mechanically. Returns the verdict text."""
+    """The Phase 0 rule, mechanically. Returns the verdict text.
+
+    Grades the FIRST 3 (or 6) rows it is given, so the caller must hand it only
+    the run under test: main() refuses --gate without --since (the Phase 0
+    audit's finding 1 -- the baseline shares the log file).
+
+    Whole-second slips are kept out of p95 and worst, so they get their own rule
+    here (the audit's finding 2): the 1,614-sync baseline had none, so 2 or more
+    across the graded windows FAIL, and exactly 1 turns a PASS into REVIEW -- one
+    cannot convict the refactor, since four slips are on record from every host
+    (plans/BACKLOG.md), but it must be read by hand, not passed silently.
+    """
     def over(r):
         return r["p95"] > p95_max or r["worst"] > worst_max
 
     def dirty(r):
         return r["failed"] or r["unmeasured"] or r["warned"]
 
+    def spread_ok(graded):
+        return spread_max is None or all(
+            r["bias_lo"] is None or r["bias_hi"] - r["bias_lo"] <= spread_max for r in graded)
+
+    def span(graded):
+        return f"windows 1-{len(graded)}, {graded[0]['first']} -> {graded[-1]['last']}"
+
+    def judged(graded, passed):
+        slips = sum(r["slips"] for r in graded)
+        where = f" [{span(graded)}; {slips} slip(s)]"
+        if slips >= 2:
+            return f"GATE: FAIL -- {slips} whole-second slips; the baseline had none in 1,614 syncs" + where
+        if not spread_ok(graded):
+            return f"GATE: FAIL -- bias spread above {spread_max} ppm" + where
+        if slips == 1:
+            return f"GATE: REVIEW -- would be {passed}, but 1 whole-second slip must be read by hand" + where
+        return f"GATE: {passed}" + where
+
     if len(rows) < 3:
         return f"GATE: INCOMPLETE -- {len(rows)} window(s); the rule needs 3"
     first = rows[:3]
     if any(dirty(r) for r in first):
-        return "GATE: FAIL -- a failed, unmeasured or [warn] sync in the first 3 windows"
+        return f"GATE: FAIL -- a failed, unmeasured or [warn] sync [{span(first)}]"
     n_over = sum(over(r) for r in first)
-    spread_ok = spread_max is None or all(
-        r["bias_lo"] is None or r["bias_hi"] - r["bias_lo"] <= spread_max for r in first)
     if n_over >= 2:
-        return f"GATE: FAIL -- {n_over} of 3 windows exceed p95 {p95_max} or worst {worst_max}"
+        return f"GATE: FAIL -- {n_over} of 3 windows exceed p95 {p95_max} or worst {worst_max} [{span(first)}]"
     if n_over == 0:
-        return "GATE: PASS" if spread_ok else f"GATE: FAIL -- bias spread above {spread_max} ppm"
+        return judged(first, "PASS")
     if len(rows) < 6:
-        return f"GATE: EXTEND -- 1 of 3 exceeds; run to 6 windows ({len(rows)} so far)"
+        return f"GATE: EXTEND -- 1 of 3 exceeds; run to 6 windows ({len(rows)} so far) [{span(first)}]"
     six = rows[:6]
     if any(dirty(r) for r in six):
-        return "GATE: FAIL -- a failed, unmeasured or [warn] sync in the extension"
+        return f"GATE: FAIL -- a failed, unmeasured or [warn] sync in the extension [{span(six)}]"
     n_over = sum(over(r) for r in six)
     if n_over >= 2:
-        return f"GATE: FAIL -- {n_over} of 6 windows exceed p95 {p95_max} or worst {worst_max}"
-    return "GATE: PASS (after one extension)" if spread_ok else f"GATE: FAIL -- bias spread above {spread_max} ppm"
+        return f"GATE: FAIL -- {n_over} of 6 windows exceed p95 {p95_max} or worst {worst_max} [{span(six)}]"
+    return judged(six, "PASS (after one extension)")
 
 
 if __name__ == "__main__":

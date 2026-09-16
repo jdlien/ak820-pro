@@ -86,7 +86,7 @@ fn py_trim(s: &str) -> &str {
 /// `RoInitialize` **on the same thread**, and without the marker below this
 /// compiles and is wrong:
 ///
-/// ```compile_fail
+/// ```compile_fail,E0277
 /// # use ak820_agent::platform::windows::smtc::Apartment;
 /// let apartment = Apartment::enter().unwrap();
 /// std::thread::spawn(move || drop(apartment));   // uninitializes the wrong thread

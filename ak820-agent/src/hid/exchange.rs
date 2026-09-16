@@ -401,10 +401,16 @@ pub fn exchange_matched(
             outstanding.forget(channel, command);
             // 0x800703E3 is Windows' ERROR_OPERATION_ABORTED, the code this
             // path has always carried; the text is this module's own, since a
-            // platform-neutral module cannot ask Windows for its message.
+            // platform-neutral module cannot ask Windows for its message. The
+            // code stays in the text, as `windows::core::Error` printed it
+            // before Phase 0, so the log line still names it (Phase 0 audit,
+            // finding 4).
             return Err(Error::Io {
                 op: "write",
-                source: OsError::new(0x800703E3_u32 as i32 as i64, "the write timed out and was cancelled before it left"),
+                source: OsError::new(
+                    0x800703E3_u32 as i32 as i64,
+                    "the write timed out and was cancelled before it left (0x800703E3)",
+                ),
             });
         }
     }

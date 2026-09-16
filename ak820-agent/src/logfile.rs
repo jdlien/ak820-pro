@@ -117,8 +117,16 @@ mod tests {
         assert!(fresh.ends_with(" after\n"));
     }
 
+    /// A regular file used as a directory is unwritable on every OS. The
+    /// test once used `Z:\no\such\dir`, which is a valid relative file
+    /// name on macOS, and it wrote one into the crate (Phase 0 audit, finding 5).
     #[test]
     fn an_unwritable_path_does_not_panic() {
-        Log::at("Z:\\no\\such\\dir\\agent.log").line("lost, quietly");
+        let blocker = std::env::temp_dir().join(format!("ak820-log-blocker-{}", std::process::id()));
+        std::fs::write(&blocker, b"a file, not a directory").unwrap();
+        let log = Log::at(blocker.join("agent.log"));
+        log.line("lost, quietly");
+        assert!(!log.path().exists());
+        let _ = std::fs::remove_file(&blocker);
     }
 }
