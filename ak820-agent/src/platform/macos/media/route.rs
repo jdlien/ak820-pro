@@ -9,13 +9,23 @@
 //! - ⚠️ **Stickiness, 5 s.** macOS sometimes names a *paused* app as current
 //!   while another is still playing. Windows ranks sessions itself and puts
 //!   playing above paused; here the OS ranks, so a switch from a playing app to
-//!   a non-playing different one is ignored for 5 s after the last sign of
-//!   playback. Without it the LCD flips to the wrong app.
+//!   a non-playing different one is held for 5 s after the last `now` that
+//!   said the current app was playing. ⚠️ That is 5 s after the last
+//!   *message*, not the last moment of playback: steady playback sends none,
+//!   so two minutes into a track a handover lands at once. It covers the
+//!   flip-flop around a transition, which is where the sibling measured it,
+//!   and no more (sibling parity; audit F7).
 //! - **Position extrapolates from the player's own clock.** `elapsed` is true
 //!   as of `elapsedAt` (Unix seconds); while playing, the position shown is
-//!   `elapsed + (now − elapsedAt) × rate`, with the same `0 ≤ age < 600 s`
-//!   honesty gate `smtc::position` applies on Windows. This is new work, not
-//!   inherited (plan, *The finding that changes the shape*).
+//!   `elapsed + (now − elapsedAt) × rate`. This is new work, not inherited
+//!   (plan, *The finding that changes the shape*).
+//!   ⚠️ **Not Windows' `0 ≤ age < 600 s` gate.** SMTC apps refresh their
+//!   timestamp; MediaRemote players stamp `elapsedAt` only at play, pause and
+//!   seek, and the helper sends `now` only on change, so a reading 214 s old
+//!   during steady playback was captured on 2026-09-16. A 600 s cap froze the
+//!   readout ten minutes into any long track and pushed the stale position
+//!   every poll (Phases 1 and 3 audit, F3). The gate here is `elapsedAt > 0`,
+//!   age not negative, age under a day, and the duration clamp.
 //!
 //! Text is trimmed exactly as Python's `str.strip()` trims (`text::PY_SPACE`),
 //! as the Windows worker does, so an artist of only a stray separator is empty
@@ -29,8 +39,9 @@ use crate::text::Icon;
 
 pub const PLAYING_STICKINESS: Duration = Duration::from_secs(5);
 
-/// Readings older than this are not extrapolated from, as on Windows.
-const MAX_AGE_S: f64 = 600.0;
+/// Readings older than this are not extrapolated from: a day is longer than
+/// any track, and short of a timestamp that means nothing.
+const MAX_AGE_S: f64 = 86_400.0;
 
 fn py_trim(s: &str) -> &str {
     s.trim_matches(|c| crate::text::PY_SPACE.contains(&c))
@@ -70,6 +81,19 @@ impl Router {
     pub fn accept(&mut self, incoming: Now, at: Instant) -> bool {
         let incoming_playing = is_playing(&incoming);
         if let Some(current) = &self.current {
+            // A stale repeat of the same app with nothing to say keeps what it
+            // said before, rather than blanking the text (audit F8). A stale
+            // Music or Spotify owner is still taken: the engine reads those
+            // over AppleScript.
+            let same_app = incoming.bundle.is_some()
+                && incoming.bundle.as_deref().unwrap_or("").eq_ignore_ascii_case(current.bundle.as_deref().unwrap_or(""));
+            let says_nothing = [&incoming.title, &incoming.artist, &incoming.album]
+                .iter()
+                .all(|f| f.as_deref().is_none_or(|t| py_trim(t).is_empty()));
+            let scriptable = incoming.bundle.as_deref().and_then(super::players::Player::from_bundle).is_some();
+            if incoming.stale && same_app && says_nothing && !scriptable {
+                return false;
+            }
             let different_app = !incoming.bundle.as_deref().unwrap_or("").eq_ignore_ascii_case(current.bundle.as_deref().unwrap_or(""));
             if different_app && !incoming_playing && self.holding(at) {
                 self.held = Some(incoming);
@@ -150,13 +174,16 @@ pub fn snapshot_of(now: &Now, wall_now: f64) -> Snapshot {
         a => a.to_string(),
     };
     let playing = is_playing(now);
-    if title.is_empty() && artist.is_empty() && !playing {
-        return Snapshot::idle(); // an owner with nothing loaded: stopped
+    if title.is_empty() && artist.is_empty() {
+        // An owner with nothing loaded is stopped; and one that plays but
+        // describes nothing has no text to show, so the band goes back to the
+        // clock rather than showing two empty rows beside a play icon (F8).
+        return Snapshot::idle();
     }
     let dur_s = now.duration.map(secs).unwrap_or(0);
     let mut pos = now.elapsed.unwrap_or(0.0);
     if playing {
-        if let (Some(at), Some(rate)) = (now.elapsed_at, now.rate.or(Some(1.0))) {
+        if let (Some(at), Some(rate)) = (now.elapsed_at.filter(|&t| t > 0.0), now.rate.or(Some(1.0))) {
             let age = wall_now - at;
             if (0.0..MAX_AGE_S).contains(&age) {
                 pos += age * rate.max(0.0);
@@ -212,16 +239,49 @@ mod tests {
     }
 
     #[test]
-    fn stale_or_future_timestamps_are_not_extrapolated() {
-        let n = track("x", "T", "A", 1.0);
-        assert_eq!(snapshot_of(&n, 1_000.0 + 900.0).pos_s, 10, "older than 600 s");
+    fn meaningless_or_future_timestamps_are_not_extrapolated() {
+        let mut n = track("x", "T", "A", 1.0);
+        n.duration = Some(1_000_000.0);
+        assert_eq!(snapshot_of(&n, 1_000.0 + 90_000.0).pos_s, 10, "older than a day");
         assert_eq!(snapshot_of(&n, 990.0).pos_s, 10, "clock says the reading is from the future");
+        n.elapsed_at = Some(0.0);
+        assert_eq!(snapshot_of(&n, 1_789_586_100.0).pos_s, 10, "a zero timestamp is absent, not 1970");
+    }
+
+    /// F3: MediaRemote players stamp `elapsedAt` at play and seek only, so a
+    /// long uninterrupted track is read from an old stamp. It must keep running.
+    #[test]
+    fn a_long_track_keeps_running_past_ten_minutes() {
+        let mut n = track("com.google.Chrome", "Long", "A", 1.0);
+        n.duration = Some(3_600.0);
+        n.elapsed = Some(0.0);
+        assert_eq!(snapshot_of(&n, 1_000.0 + 1_500.4).pos_s, 1_500);
     }
 
     #[test]
     fn position_is_clamped_to_the_duration() {
         let n = track("x", "T", "A", 1.0);
         assert_eq!(snapshot_of(&n, 1_000.0 + 500.0).pos_s, 244);
+    }
+
+    #[test]
+    fn a_playing_owner_that_describes_nothing_is_idle() {
+        let n = Now { bundle: Some("com.example.Player".into()), playing: true, rate: Some(1.0), ..Now::default() };
+        assert!(snapshot_of(&n, 0.0).is_idle());
+    }
+
+    #[test]
+    fn a_stale_repeat_with_nothing_to_say_keeps_the_text() {
+        let mut r = Router::default();
+        let t = Instant::now();
+        r.accept(track("com.google.Chrome", "Video", "Channel", 1.0), t);
+        let blank = Now { bundle: Some("com.google.Chrome".into()), stale: true, playing: true, rate: Some(1.0), ..Now::default() };
+        assert!(!r.accept(blank, t + Duration::from_secs(1)));
+        assert_eq!(r.snapshot(1_000.0).title, "Video");
+        // A stale Music owner is still taken: the engine reads it instead.
+        r.accept(track("com.apple.Music", "Song", "B", 1.0), t + Duration::from_secs(2));
+        let stale_music = Now { bundle: Some("com.apple.Music".into()), stale: true, ..Now::default() };
+        assert!(r.accept(stale_music, t + Duration::from_secs(3)));
     }
 
     #[test]

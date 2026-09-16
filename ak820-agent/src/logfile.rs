@@ -33,7 +33,15 @@ impl Log {
     }
 
     /// Append one timestamped line. Never fails visibly.
+    ///
+    /// Serialized across every `Log` in the process: the macOS media thread
+    /// holds its own handle on the daemon's file, and two handles each seeing
+    /// the size threshold at once would both rotate, the second rename
+    /// replacing the rotated file with a one-line one (Phases 1 and 3 audit,
+    /// F11).
     pub fn line(&self, message: &str) {
+        static WRITING: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _one_at_a_time = WRITING.lock().unwrap_or_else(|e| e.into_inner());
         let _ = self.try_line(message);
     }
 

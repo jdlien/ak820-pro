@@ -30,9 +30,13 @@ line (🟡 built, owed …).
 | **3** macOS media | `e7e0b10` | 🟡 built; `ak820 probe` read a live Chrome session through the real helper; the daemon refused to start beside the bash agent (lock verified live); live daemon run owed |
 | **4a** install, now-playing only | this commit | 🟡 built, **not installed**: `ak820 install` / `uninstall` (the rollback, performed) / `status`; `install-agents.sh --only`, and it refuses to start nowplaying beside the daemon |
 
-**Tests:** 315 unit tests on macOS (63 in `platform::macos`), plus the
-integration suites; `cargo check --target x86_64-pc-windows-msvc --all-targets`
-clean from the Mac.
+**Tests:** 332 unit tests on macOS, plus the integration suites;
+`cargo check --target x86_64-pc-windows-msvc --all-targets` clean from the Mac.
+
+**Audited:** Phases 1 and 3 by Fable ([record](review-fable-phases1-3-2026-09-16.md)).
+The verdict was an attended run safe and an unattended install unsafe until
+F1, F2, F4 and F5 changed. **All four are fixed**, with six of the eight Low
+findings; the other two are instructions for the live run below.
 
 ## What needs the owner, in the order it unblocks things
 
@@ -49,8 +53,12 @@ clean from the Mac.
    logout/login and sleep/wake; `ak820 status` between. **Rollback:
    `ak820 uninstall`**, which starts the bash agent again. ⚠️ The timekeeper's
    `ak820ctl` still seizes the device at each sync; a busy push logs `[warn]`,
-   which 4a's coexistence gate counts, not a bug. Take 5a's overhead "after"
-   while it runs.
+   which 4a's coexistence gate counts, not a bug. So are the timekeeper's own
+   `[rc=N]` lines (audit F12): the idle readout every 3 s gives its seized read
+   more chances to take our echo, and its version check turns that into a
+   failed sync, not a wrong one. Count them against its pre-install log. Take
+   5a's overhead "after" while it runs. A ten-minute-plus video checks the
+   readout past F3's old cap; a slider flip or replug exercises F4's teardown.
 3. **S1b live, with the owner at the desktop:** `ak820 probe --applescript`
    with Music playing and the helper refused (or simulated), grant the
    Automation prompt, then revoke it in System Settings and see

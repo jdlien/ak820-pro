@@ -79,7 +79,7 @@ pub fn main() {
         bail(&opts.log, "not starting: --clock is not built on macOS yet; the Python timekeeper owns the clock");
     }
 
-    let _held: Lock = match Lock::claim(&instance::default_path()) {
+    let _held: Lock = match Lock::claim_all(&instance::default_path(), &instance::all_paths()) {
         Ok(held) => held,
         Err(e) => bail(&opts.log, &format!("not starting: {e}")),
     };

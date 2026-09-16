@@ -58,7 +58,9 @@ pub fn classify(status_ok: bool, stdout: &str, stderr: &str) -> Outcome {
     match stdout.trim() {
         "playing" => Outcome::State(State::Playing),
         "paused" => Outcome::State(State::Paused),
-        "stopped" => Outcome::State(State::Stopped),
+        // "notrunning": the guard found it gone, which agrees with a null
+        // MediaRemote exactly as stopped does.
+        "stopped" | "notrunning" => Outcome::State(State::Stopped),
         other => Outcome::Failed(format!("unexpected player state {other:?}")),
     }
 }
@@ -190,12 +192,15 @@ enum Ran {
 }
 
 impl Asker {
-    /// `player state` of a player **already known to be running** — the caller
-    /// checks the process table first, because a `tell` launches the app.
+    /// `player state` of a player the process table says is running.
+    ///
+    /// ⚠️ Guarded all the same (audit F6): the table read and this call are
+    /// moments apart, and an unguarded `tell` to a player that quit in between
+    /// launches it again.
     pub fn player_state(&self, player: Player) -> Outcome {
+        let app = player.app_name();
         let script = format!(
-            "tell application \"{}\" to player state as string",
-            player.app_name()
+            "if application \"{app}\" is not running then return \"notrunning\"\ntell application \"{app}\" to return player state as string"
         );
         match self.run(&script) {
             Ran::Finished { ok, stdout, stderr } => classify(ok, &stdout, &stderr),
@@ -284,6 +289,11 @@ mod tests {
         let err = "execution error: Not authorized to send Apple events to Music. (-1743)";
         assert!(matches!(classify(false, "", err), Outcome::Denied(_)));
         assert!(matches!(classify(true, "", "-1743"), Outcome::Denied(_)));
+    }
+
+    #[test]
+    fn a_player_gone_by_the_time_it_is_asked_reads_as_stopped() {
+        assert_eq!(classify(true, "notrunning\n", ""), Outcome::State(State::Stopped));
     }
 
     #[test]

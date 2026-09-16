@@ -67,7 +67,7 @@ fn started_stamp(path: &Path) -> Option<String> {
 
 fn wait_unlocked(timeout: Duration) -> Result<(), String> {
     let until = Instant::now() + timeout;
-    while let Some(pid) = instance::holder(&instance::default_path()) {
+    while let Some((pid, _)) = instance::any_holder() {
         if Instant::now() >= until {
             return Err(format!("pid {pid} still holds the now-playing lock {} s later", timeout.as_secs()));
         }
@@ -292,8 +292,8 @@ pub fn status() -> Result<(), String> {
             ),
         }
     }
-    if let Some(pid) = instance::holder(&instance::default_path()) {
-        println!("now-playing lock held by pid {pid}");
+    if let Some((pid, path)) = instance::any_holder() {
+        println!("now-playing lock held by pid {pid} ({})", path.display());
     }
 
     let status_path = daemon::state_dir().join("ak820-agent.status");

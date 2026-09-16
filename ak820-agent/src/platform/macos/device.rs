@@ -176,9 +176,15 @@ impl Drop for Board {
             let d = SendPtr(self.dev);
             // Unregister and unschedule ON the loop thread: once this returns,
             // no callback for this object is running or can run.
+            //
+            // ⚠️ Unregistered with the SAME buffer and length it was registered
+            // with, as hidapi does. The NULL-buffer form was never soaked while
+            // the object was scheduled, and whether IOKit detaches on it is
+            // unverified (Phases 1 and 3 audit, F4).
+            let (buf, ctx) = (SendPtr(self.buffer as *mut c_void), SendPtr(self.ctx as *mut c_void));
             RunLoop::get().run(move |rl| {
-                let d = d;
-                IOHIDDeviceRegisterInputReportWithTimeStampCallback(d.0, std::ptr::null_mut(), 0, None, std::ptr::null_mut());
+                let (d, buf, ctx) = (d, buf, ctx);
+                IOHIDDeviceRegisterInputReportWithTimeStampCallback(d.0, buf.0 as *mut u8, INPUT_BUFFER as CFIndex, None, ctx.0);
                 IOHIDDeviceRegisterRemovalCallback(d.0, None, std::ptr::null_mut());
                 IOHIDDeviceUnscheduleFromRunLoop(d.0, rl, kCFRunLoopDefaultMode);
             });
@@ -186,10 +192,12 @@ impl Drop for Board {
                 IOHIDDeviceClose(self.dev, 0);
             }
             CFRelease(self.dev as CFTypeRef);
-            if !self.abandoned.load(Relaxed) {
-                drop(Arc::from_raw(self.ctx));
-                drop(Box::from_raw(self.buffer));
-            }
+            // ⚠️ `ctx` and `buffer` are deliberately NEVER freed. If IOKit kept
+            // any registration past the calls above, the next report would
+            // land in freed memory; leaking them costs about 400 B per board
+            // arrival (a replug, a slider flip, a `Stuck`), which is nothing
+            // against a use-after-free in a daemon that runs for weeks (F4).
+            let _ = (self.ctx, self.buffer);
         }
     }
 }

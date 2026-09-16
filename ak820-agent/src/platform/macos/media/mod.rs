@@ -70,6 +70,15 @@ const FIRST_NOW_WAIT: Duration = Duration::from_millis(1500);
 /// A fallback read happens once a poll, so it must finish inside one.
 const TRACK_TIMEOUT: Duration = Duration::from_secs(3);
 
+/// After a stale owner reads as not playing, wait this long before asking it
+/// again (audit F9): the helper can say "stale" for as long as an open player
+/// has nothing loaded, and a read every poll is the bash agent's spawn rate.
+const STALE_NOTHING_BACKOFF: Duration = Duration::from_secs(30);
+
+/// No poll for this long means the media thread has stopped (audit F10). The
+/// slowest honest poll is a canary question (5 s) plus a fallback read (3 s).
+const STALLED_AFTER: Duration = Duration::from_secs(20);
+
 /// Where the helper dylib is expected.
 pub fn dylib_path() -> Option<PathBuf> {
     if let Some(p) = std::env::var_os(DYLIB_ENV) {
@@ -131,6 +140,9 @@ pub struct View {
     pub last_poll_ok: bool,
     pub updated: Option<Instant>,
     pub route: Route,
+    /// When the engine last polled, for [`MediaRemoteSource::latest`] to
+    /// notice a thread that has stopped.
+    pub polled_at: Option<Instant>,
 }
 
 impl Default for View {
@@ -143,6 +155,7 @@ impl Default for View {
             last_poll_ok: true,
             updated: None,
             route: Route::MediaRemote,
+            polled_at: None,
         }
     }
 }
@@ -160,7 +173,12 @@ pub struct Engine {
     /// event can ever be sent (`ak820 probe` without `--applescript`).
     canary: Option<Canary>,
     proof: Option<Instant>,
+    /// Has the helper's current run sent a `now`? Until it has, MediaRemote has
+    /// not answered, and a null there is not a null to cross-check (audit F1).
+    fresh: bool,
     denied: Option<String>,
+    /// While a stale owner reads as not playing, no read before this.
+    stale_quiet_until: Option<Instant>,
     view: View,
 }
 
@@ -170,7 +188,9 @@ impl Engine {
             router: Router::default(),
             canary: applescript.then(Canary::default),
             proof: None,
+            fresh: false,
             denied: None,
+            stale_quiet_until: None,
             view: View::default(),
         }
     }
@@ -191,6 +211,7 @@ impl Engine {
                 }
                 match m {
                     Message::Now(now) => {
+                        self.fresh = true;
                         let (from, to) = (self.router.bundle().map(str::to_owned), now.bundle.clone());
                         if !self.router.accept(now, at) {
                             say(format!(
@@ -198,8 +219,13 @@ impl Engine {
                                 to.as_deref().unwrap_or("(none)"),
                                 from.as_deref().unwrap_or("(none)")
                             ));
-                        } else if self.view.route == Route::MediaRemote {
-                            self.view.current = self.router.current().cloned();
+                        } else {
+                            // News from the owner: a stale player that was
+                            // quiet may have started, so read it at once.
+                            self.stale_quiet_until = None;
+                            if self.view.route == Route::MediaRemote {
+                                self.view.current = self.router.current().cloned();
+                            }
                         }
                         return true;
                     }
@@ -207,7 +233,10 @@ impl Engine {
                     _ => {}
                 }
             }
-            Event::Started { pid } => say(format!("mediaremote: helper started, pid {pid}")),
+            Event::Started { pid } => {
+                self.fresh = false;
+                say(format!("mediaremote: helper started, pid {pid}"))
+            }
             Event::Exited { pid, code, signal, ran } => say(format!(
                 "mediaremote: helper pid {pid} exited ({}) after {}s",
                 match (code, signal) {
@@ -236,15 +265,21 @@ impl Engine {
     /// One poll: the canary, the route, and the fallback read if one is due.
     pub fn poll(&mut self, at: Instant, helper: HelperState, world: &mut dyn World, say: &mut dyn FnMut(String)) {
         self.view.polls += 1;
+        self.view.polled_at = Some(at);
         self.router.settle(at);
 
         // The canary cross-checks a null MediaRemote, so it only means
-        // something while the helper is answering at all.
-        if let (false, Some(canary)) = (helper.failed, self.canary.as_mut()) {
+        // something while the helper is answering at all, and only once this
+        // run of it has said what is playing (F1).
+        if let (false, true, Some(canary)) = (helper.failed, self.fresh, self.canary.as_mut()) {
             let (decision, note) = canary.step(self.router.has_bundle(), at, || world.running());
             let mut notes: Vec<Note> = note.into_iter().collect();
             if let Decision::Ask(player) = decision {
                 let outcome = world.player_state(player);
+                // An answer is proof consent is in place again (F2).
+                if matches!(outcome, Outcome::State(_)) {
+                    self.denied = None;
+                }
                 notes.extend(canary.answered(player, outcome));
             }
             for n in notes {
@@ -263,6 +298,7 @@ impl Engine {
             Route::MediaRemote
         };
         if route != self.view.route {
+            self.stale_quiet_until = None;
             say(match route {
                 Route::MediaRemote => "media: reading MediaRemote again".into(),
                 Route::Stale(p) => format!(
@@ -298,6 +334,10 @@ impl Engine {
                 self.view.current = None;
                 Err(format!("MediaRemote helper silent {}s", helper.silent_for.as_secs()))
             }
+            Route::Stale(_) if self.stale_quiet_until.is_some_and(|until| at < until) => {
+                self.view.current = None;
+                Ok(())
+            }
             Route::Stale(_) | Route::Silent | Route::Refused(_) => {
                 let running = world.running();
                 let ask: Vec<Player> = match route {
@@ -328,6 +368,9 @@ impl Engine {
                             self.denied = None;
                             self.view.current = None;
                             self.view.updated = Some(at);
+                            if matches!(route, Route::Stale(_)) {
+                                self.stale_quiet_until = Some(at + STALE_NOTHING_BACKOFF);
+                            }
                             Ok(())
                         }
                         Reading::Denied(d) => {
@@ -466,21 +509,29 @@ impl MediaRemoteSource {
 impl MediaSource for MediaRemoteSource {
     fn latest(&self) -> (Snapshot, Health) {
         let v = self.view.lock().unwrap_or_else(|e| e.into_inner()).clone();
-        let snapshot = match &v.current {
-            Some(now) => route::snapshot_of(now, applescript::wall_now()),
-            None => Snapshot::idle(),
-        };
-        (
-            snapshot,
-            Health {
-                polls: v.polls,
-                failures: v.failures,
-                last_error: v.last_error,
-                stale_for: v.updated.map(|at| at.elapsed()),
-                last_poll_ok: v.last_poll_ok,
-            },
-        )
+        health_of(v, Instant::now(), applescript::wall_now())
     }
+}
+
+/// The daemon's answer from one view. ⚠️ A thread that stopped polling, by a
+/// panic or a wedge, is a failed source (F10): otherwise its last view is
+/// served forever, and the keepalive re-asserts a track that is long over.
+fn health_of(v: View, now: Instant, wall: f64) -> (Snapshot, Health) {
+    let stalled = v.polled_at.is_some_and(|at| now.saturating_duration_since(at) >= STALLED_AFTER);
+    let snapshot = match &v.current {
+        Some(n) => route::snapshot_of(n, wall),
+        None => Snapshot::idle(),
+    };
+    (
+        snapshot,
+        Health {
+            polls: v.polls,
+            failures: v.failures,
+            last_error: if stalled { Some("the media thread has stopped polling".into()) } else { v.last_error },
+            stale_for: v.updated.map(|at| now.saturating_duration_since(at)),
+            last_poll_ok: v.last_poll_ok && !stalled,
+        },
+    )
 }
 
 #[cfg(test)]
@@ -700,6 +751,66 @@ mod tests {
         e.poll(t + canary::MIN_GAP * 2, FAILED, &mut w, &mut quiet());
         assert_eq!((w.scans, w.asked.len(), w.read.len()), (0, 0, 0));
         assert!(!e.view().last_poll_ok);
+    }
+
+    /// F1: a null from before this helper run has spoken is not a null to
+    /// cross-check, at start or after a restart.
+    #[test]
+    fn no_canary_question_before_the_helpers_first_now() {
+        let mut e = Engine::new(true);
+        let mut w = Fake { running: vec![Player::Music], state: Some(Outcome::State(State::Paused)), ..Fake::default() };
+        let t = Instant::now();
+        e.poll(t, OK, &mut w, &mut quiet());
+        assert_eq!((w.scans, w.asked.len()), (0, 0), "no now yet");
+        e.event(now_msg(None, "", 0.0), t, &mut quiet());
+        e.poll(t + Duration::from_secs(3), OK, &mut w, &mut quiet());
+        assert_eq!(w.asked.len(), 1);
+        e.event(Event::Started { pid: 2 }, t, &mut quiet());
+        e.poll(t + canary::MIN_GAP * 2, OK, &mut w, &mut quiet());
+        assert_eq!(w.asked.len(), 1, "restarted, and not yet answered");
+    }
+
+    /// F2: consent re-granted while idle is seen at the next question, not
+    /// only when something MediaRemote can describe plays.
+    #[test]
+    fn a_denial_clears_when_the_canary_is_answered_again() {
+        let mut e = Engine::new(true);
+        let mut w = Fake { running: vec![Player::Music], state: Some(Outcome::Denied("(-1743)".into())), ..Fake::default() };
+        let t = Instant::now();
+        e.event(now_msg(None, "", 0.0), t, &mut quiet());
+        e.poll(t, OK, &mut w, &mut quiet());
+        assert!(!e.view().last_poll_ok);
+        w.state = Some(Outcome::State(State::Paused));
+        e.poll(t + canary::MIN_GAP, OK, &mut w, &mut quiet());
+        assert!(e.view().last_poll_ok);
+        assert!(e.view().last_error.is_none());
+    }
+
+    /// F9: a stale owner with nothing playing is not read every poll.
+    #[test]
+    fn a_stale_owner_that_is_not_playing_is_read_at_most_every_thirty_seconds() {
+        let mut e = Engine::new(true);
+        let mut w = Fake { running: vec![Player::Music], reading: Some(Reading::Nothing), ..Fake::default() };
+        let t = Instant::now();
+        let stale = Event::Message(Message::Now(Now { bundle: Some("com.apple.Music".into()), stale: true, ..Now::default() }));
+        e.event(stale, t, &mut quiet());
+        for i in 0..20 {
+            e.poll(t + Duration::from_secs(3 * i), OK, &mut w, &mut quiet());
+            assert!(e.view().last_poll_ok);
+        }
+        // 60 s of polls: at 0, 30 and 60 s at most
+        assert!(w.read.len() <= 3, "read {} times", w.read.len());
+    }
+
+    /// F10: a view nobody has refreshed for 20 s is a failed source.
+    #[test]
+    fn a_stopped_media_thread_reads_as_failed() {
+        let t = Instant::now();
+        let v = View { polled_at: Some(t), current: Some(Now { bundle: Some("x".into()), title: Some("T".into()), ..Now::default() }), ..View::default() };
+        assert!(health_of(v.clone(), t + Duration::from_secs(5), 0.0).1.last_poll_ok);
+        let (_, h) = health_of(v, t + STALLED_AFTER, 0.0);
+        assert!(!h.last_poll_ok);
+        assert_eq!(h.last_error.as_deref(), Some("the media thread has stopped polling"));
     }
 
     #[test]
