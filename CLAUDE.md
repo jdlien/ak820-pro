@@ -29,7 +29,11 @@ submodule sits on our `ak820pro-patches` branch.
 | [docs/leds.md](docs/leds.md) | **Interrupt priorities**, RGB field rate, indicator LEDs, the rainbow, effects |
 | [docs/hardware.md](docs/hardware.md) | Slider power quirk, bootloader, build/flash, watchdog+health, hang history, diagnostics |
 
-Live work: [`plans/`](plans/) (`BACKLOG.md`, `CLOCK-FORMAT-PLAN.md`).
+**Resuming work? Start at
+[`plans/current-status.md`](plans/current-status.md)** — where things stand and
+what to pick up next, written to be read cold. Live work:
+[`plans/`](plans/) (`BACKLOG.md`, `AK820-AGENT-CROSSPLATFORM-PLAN.md`,
+`CLOCK-FORMAT-PLAN.md`).
 
 **`ak820-agent/`** — a Rust rewrite of the two Windows host agents as one
 daemon. **Every phase met as of 2026-09-06.** Since 14:40 that day the daemon
