@@ -336,6 +336,11 @@ impl Device {
         }
     }
 
+    /// Leak isolation only: the synchronous write, no timeout.
+    pub unsafe fn set_report_sync(&self, data: &[u8; WIRE_LEN]) -> IOReturn {
+        IOHIDDeviceSetReport(self.dev, kIOHIDReportTypeOutput, data[0] as CFIndex, data[1..].as_ptr(), REPORT_LEN as CFIndex)
+    }
+
     /// The next report, or `None` if nothing arrives inside `timeout`.
     pub fn read_report(&self, timeout: Duration) -> Result<Option<Arrival>, Error> {
         let deadline = Instant::now() + timeout;

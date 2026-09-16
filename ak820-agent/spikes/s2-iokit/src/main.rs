@@ -8,7 +8,13 @@
 //!
 //! Read-only against the board: FC_INFO reads the flash id, and the soak's
 //! exchange is the text channel's playback readout with state 0 — the exact
-//! report the daemon sends every 3 s, so the soak is production traffic, faster.
+//! report the daemon sends every 3 s.
+//!
+//! ⚠️ **Do not reuse that choice.** Tens of thousands of playback readouts,
+//! partly while the bash agent pushed state 1 for music that was playing, most
+//! probably caused the 12 non-flash >= 25 ms stalls the board recorded that
+//! afternoon (`plans/BACKLOG.md`): each flip is an LCD redraw. A soak must use
+//! a RAM-only command (health page 1), and never run while anyone is typing.
 
 mod cf;
 mod device;
@@ -540,6 +546,24 @@ fn isolate(what: &str, n: u32) -> Result<(), String> {
                     sys::IOHIDDeviceUnscheduleFromRunLoop(p as _, rl, sys::kCFRunLoopDefaultMode)
                 });
                 sys::CFRelease(d as sys::CFTypeRef);
+            }
+        }
+        // writes only through the async call, reads drained, on one open device
+        "write-async" => {
+            let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
+            dev.open(false).map_err(|e| e.to_string())?;
+            for _ in 0..n {
+                let _ = dev.write_report(&request, Duration::from_millis(1000));
+                while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {}
+            }
+        }
+        // the same with the synchronous IOHIDDeviceSetReport
+        "write-sync" => {
+            let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
+            dev.open(false).map_err(|e| e.to_string())?;
+            for _ in 0..n {
+                unsafe { dev.set_report_sync(&request) };
+                while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {}
             }
         }
         // removal callback only

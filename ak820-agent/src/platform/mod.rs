@@ -25,6 +25,7 @@ use std::time::Duration;
 
 use crate::clock::host::Host;
 use crate::hid::{self, HidTransport};
+use crate::logfile::Log;
 use crate::media::MediaSource;
 
 /// What the daemon loop (`crate::agent`) needs from an operating system.
@@ -52,8 +53,10 @@ pub trait Platform {
     /// controller id, as the Python timekeeper's `cid` is.
     fn listed() -> Vec<String>;
 
-    /// Start the media source on its own thread.
-    fn spawn_media(interval: Duration) -> Result<Self::Media, String>;
+    /// Start the media source on its own thread. `log` is the daemon's, for a
+    /// source with something to say between polls (the macOS helper's
+    /// restarts); a source that has nothing to say ignores it.
+    fn spawn_media(interval: Duration, log: &Log) -> Result<Self::Media, String>;
 }
 
 #[cfg(windows)]
@@ -64,4 +67,4 @@ pub use self::windows::{cli_main, daemon_main, Native, SystemHost};
 #[cfg(target_os = "macos")]
 pub mod macos;
 #[cfg(target_os = "macos")]
-pub use self::macos::{cli_main, daemon_main, SystemHost};
+pub use self::macos::{cli_main, daemon_main, Native, SystemHost};

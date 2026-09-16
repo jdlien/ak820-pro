@@ -1,9 +1,10 @@
-# Current status — where to pick up (written 2026-09-16, updated after finalization the same day)
+# Current status — where to pick up (written 2026-09-16, updated after Phases 0, 1 and 3 were built the same day)
 
 **For a clean session resuming the macOS port of `ak820-agent`.** Read this,
 then [`AK820-AGENT-CROSSPLATFORM-PLAN.md`](AK820-AGENT-CROSSPLATFORM-PLAN.md).
 This file is the state and the entry point; the plan is the design and does not
-repeat itself here.
+repeat itself here. Each phase row in the plan's table carries its own status
+line (🟡 built, owed …).
 
 ---
 
@@ -12,36 +13,55 @@ repeat itself here.
 | | state |
 |---|---|
 | **Windows agent** | **Done.** `ak820-agent` v0.1.1, phases 0–6 met, published, per-phase Codex audits. Owns now-playing **and** the clock on that machine; the Python timekeeper is gone there. |
-| **macOS port** | **Planned, reviewed, dispositioned, finalized. Nothing built.** Plan drafted 2026-09-10, Fable review the same day (17 findings, 5 High), all dispositioned in `9f5f7d3` — two changed the design. **Finalized 2026-09-16**: every gating question decided, see the plan's *Finalization* section. |
-| **This Mac's OS** | ⚠️ **macOS 27.0 (26A428), installed 12:27 on 2026-09-16.** Everything the plan measured before that was on 26.5.2. MediaRemote-via-perl re-verified on 27.0 the same afternoon — it still answers. |
-| **macOS today** | Still the Python/bash pair: `nowplaying-macos.sh` + `ak820-timekeeper.py`, via LaunchAgents. Working. |
-| **Firmware** | `b89777e0f9`, pinned in `deps.lock`, flashed **on the Mac's board**. Unrelated to this work and healthy — see the bottom section. ⚠️ **gremlin's board (the Windows gate's) is on `8608c4f6-dirty`** and stays there until Phase 0's live gate is done — its baseline was measured on that build. |
+| **macOS port** | **Spikes S1, S2, S1b (logic) and S3 met; Phases 0, 1 and 3 built, 2026-09-16.** Waiting on hardware tests with the owner (list below). Nothing is installed: the Mac still runs the bash/Python pair. |
+| **This Mac's OS** | ⚠️ **macOS 27.0 (26A428), installed 12:27 on 2026-09-16.** Everything the plan measured before that was on 26.5.2. MediaRemote-via-perl works on 27.0, from both the sibling's plugin and this crate's own supervisor. |
+| **macOS today** | Still the Python/bash pair: `nowplaying-macos.sh` + `ak820-timekeeper.py`, via LaunchAgents. Working, and costing ~30% of a core while music plays. |
+| **Firmware** | `b89777e0f9`, pinned in `deps.lock`, flashed **on the Mac's board**. ⚠️ **gremlin's board (the Windows gate's) is on `8608c4f6-dirty`** and stays there until Phase 0's live gate is done — its baseline was measured on that build. |
 
-**The crate is unconditionally Windows right now.** There is no `cfg(target_os)`
-anywhere in `ak820-agent/src`, and nine files reference `windows::` directly:
-`agent.rs`, `task.rs`, `process.rs`, `instance.rs`, `smtc/worker.rs`,
-`hid/{mod,device,exchange}.rs`, `clock/host.rs`. That list *is* the Phase 0
-platform-seam job, measured rather than estimated.
+## What is built
 
-## Do not start with Phase 0
-
-The plan is explicit and it is the single most important thing on this page:
-**S1 and S2 can each kill or reshape the plan, and both are cheap. Do not start
-Phase 0 until both have answered.**
-
-| spike | question it settles | what a failure means |
+| step | commit | state |
 |---|---|---|
-| **S1** | Can Rust drive the MediaRemote-via-perl helper and get a **browser** (YouTube in Chrome) title/artist/state over line-JSON? ✅ **The Apple half is answered on 27.0**: the sibling's dylib under perl returned a Chrome/YouTube session with `playing: true`. **The Rust supervisor half is the work.** Parse from captured output — the live `now` carries `elapsedAt`, which the `.m` header does not list. | **The capability gain evaporates.** The media half reduces to porting today's AppleScript. The clock case survives, at much reduced value. This is the reason to do the whole project, so test it first. |
-| **S1b** | Is a TCC revocation *visible*? | The likeliest revocation shape is **not** helper death — the helper stays alive, heartbeats, and emits `bundle: null` forever, indistinguishable from "nothing is playing". Needs the canary cross-check against AppleScript `player state`. |
-| **S2** | IOKit HID: open **exactly one** device, decided from IORegistry properties with nothing opened (`IOServiceGetMatchingServices`, **never `IOHIDManagerOpen`**); `ak820 info` byte-identical to `ak820ctl info` | Same gate Windows phase 0 had. Also resolve the report-id/length mismatch at `hid/caps.rs:97-104`; measure seize behaviour **in both directions** (the plan had assumed the hidapi peer always wins); log IOKit's kernel report timestamp beside userspace `t1`. Opens are **per interaction**. S2 is also the evidence for hand-rolling IOKit. |
-| **S3** | Signing shape: Rust binary signed with the **Developer ID Application identity, by SHA-1** (not ad-hoc — ad-hoc churns TCC identity every rebuild) + signed dylib under the hardened runtime | Hypothesis is an empty entitlement set; establish empirically. |
+| **S1** MediaRemote supervisor | `ab3a724` | ✅ met: Music.app and Chrome sessions; SIGSTOP 240 s survived; JSON reader agrees with Python on 5,013 cases |
+| **S2** IOKit transport | `ab3a724` | ✅ met: `info` byte-identical; 10,000-cycle soak flat after the one-object-per-arrival fix; 0.33 ms CPU per cycle |
+| **S1b** canary logic, **S3** signing | `e8a4c16` | ✅ logic built, live half owed; S3 met: Developer ID + hardened runtime + empty entitlements |
+| **0** the platform seam | `a46e770` | 🟡 built; Windows CI green; **Fable audit: safe to deploy** ([record](review-fable-phase0-2026-09-16.md)), comparator fixes in the next commit; **live gate on gremlin owed** |
+| **1** macOS HID transport | this commit | 🟡 built; `info`/`health`/`selftest` verified on the Mac's board; unplug and open-trace owed |
+| **3** macOS media | this commit | 🟡 built; `ak820 probe` read a live Chrome session through the real helper; the daemon refused to start beside the bash agent (lock verified live); live daemon run owed |
 
-**Phase 2 is the one that earns the project**, and it has a trap worth reading
-before you get there: fixture parity *cannot* see a self-consistent wrong time.
-Both the GET's residual and the SET's payload go through `host.local()`, so a
-macOS `local()` off by an hour yields a **zero residual and a board an hour
-wrong**. Windows covered this with hourly sweeps 2026–2099 against the oracle
-CRT, which cannot compile here. The plan lists the four substitutes.
+**Tests:** 315 unit tests on macOS (63 in `platform::macos`), plus the
+integration suites; `cargo check --target x86_64-pc-windows-msvc --all-targets`
+clean from the Mac.
+
+## What needs the owner, in the order it unblocks things
+
+1. **Phase 0 live gate, on gremlin** (its Claude session, over Remote Control).
+   Build and install from `main`, no reflash, Windows Update paused, media
+   state `none`, the same cache, RGB and slider. Three overnight windows, then
+   `python scripts/clock_log_windows.py <log> --since "<reinstall time>" --gate 23.9 27.6 49`.
+   `--since` is required now; the baseline shares the log file.
+2. **Phase 3 live daemon run, on this Mac.** Pause the bash now-playing agent
+   (`launchctl bootout gui/$UID/com.jdlien.ak820pro.nowplaying`, which leaves the
+   timekeeper alone), then run
+   `AK820_MEDIAREMOTE_DYLIB=<the sibling's dylib> ak820-agent --log <scratch>`
+   in a terminal and watch the panel through play, pause, a track change, a
+   switch from Music to Chrome, and quitting the player. Restore the bash with
+   `launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.jdlien.ak820pro.nowplaying.plist`.
+   ⚠️ The timekeeper's `ak820ctl` still seizes the device each sync; a busy
+   write logs `[warn]`, which is 4a's coexistence gate to count, not a bug.
+3. **S1b live, with the owner at the desktop:** `ak820 probe --applescript`
+   with Music playing and the helper refused (or simulated), grant the
+   Automation prompt, then revoke it in System Settings and see
+   `Automation denied` surface. **Spotify Connect:** play on another device and
+   see whether the canary switches.
+4. **Phase 1 on hardware:** unplug the board mid-transaction
+   (`ak820 selftest` in a loop) and see it recover; a trace of opens.
+5. **Board stall counters:** re-read `count_ge_25ms_nonflash` after an hour of
+   normal use (`BACKLOG.md`, "Stalls during the S2 transport soaks").
+6. **The leak comparison**, re-run with a RAM-only command (health page 1) and
+   **not while anyone types**: the S2 soak's ~40 B per exchange over 100k.
+
+Then 4a (LaunchAgent install, now-playing only) and 5a (the overhead "after").
 
 ## Decisions — all settled 2026-09-16
 
@@ -131,27 +151,6 @@ would silently kill now-playing on the keyboard.
   explicitly. The verified churn numbers in [`BACKLOG.md`](BACKLOG.md) (6–8
   `osascript` spawns per 3 s interval while playing, a fresh venv Python per push) are
   supporting evidence only. The case is unification, capability, and G-B.
-
-## A suggested first session
-
-1. Read the plan end to end. It is long because it was reviewed hard; the
-   dispositions carry most of the load.
-2. Answer **S1** first — it is the cheapest thing that can kill the project's
-   main justification. A Rust supervisor, the sibling's perl helper, YouTube in
-   Chrome, and a title on stdout.
-3. Then **S2**, then S1b and S3 in either order.
-4. Only then Phase 0. Its first commit is forced: `windows` is an unconditional
-   dependency, so a native macOS build fails in `windows-future` until it moves
-   under `[target.'cfg(windows)'.dependencies]`. gremlin's baseline is already
-   in hand (see decision 4); do not reflash that board or let Windows Update
-   restart it mid-run. `agent.rs` is the file most at risk.
-5. Then **1 → 3 → 4a → 5a**: now-playing moves to the daemon while the Python
-   timekeeper keeps the clock, and `scripts/agent_overhead_macos.py` takes the
-   "after" with Music playing. The clock (**2 → 4b**) follows soon after.
-
-Every phase ends with an external audit, per the convention in
-`AK820-AGENT-PLAN.md`: the gate proves the phase does what it claims, the audit
-looks for what nobody thought to claim.
 
 ## Conventions a fresh session needs
 

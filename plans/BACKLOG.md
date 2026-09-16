@@ -565,3 +565,29 @@ the previous sync**, so the next one is visible without a log dig.
 
 ⚠️ **Do not poll either board to look into it** — a clock read spoils the live
 agent's sync. Start from the logs, and from `rtc.c`'s GET reply construction.
+
+## Stalls during the S2 transport soaks (2026-09-16, the Mac's board) — probably ours
+
+After the S2 and Phase 1 soaks, `ak820 health --stalls` read
+`count_ge_25ms_nonflash 12`, `count_ge_10ms 1180`, `blit_timeouts 216`, with
+`loop_gap_max_mark blit`, at `key_presses 27804` (counters since the board's
+last boot; ~15:35 MDT). `plans/current-status.md` had recorded **0** such stalls
+across a 13-hour overnight on this board.
+
+**Probable cause, not proven: the soaks.** They drove `TEXT_PLAYBACK` state 0 —
+the daemon's idle readout — tens of thousands of times, much of it while the
+bash now-playing agent was pushing state 1 for music that was playing. Each flip
+hands the band between the clock and the playback readout, which is an LCD
+redraw, and the slowest stall is marked `blit`. The owner was typing throughout.
+The soaks were stopped the moment the counter was seen.
+
+**How to tell:** re-read the counters after an hour or more of ordinary use with
+no bulk traffic. If `count_ge_25ms_nonflash` is still 12, the soaks caused all of
+it; if it rose, something else is stalling and `docs/hardware.md`'s
+keystroke-loss section applies.
+
+⚠️ **Rule for every future transport soak:** use a command that touches only RAM
+on the board — health page 1 (`HC_GET`) — never one that can move the LCD, and
+never while the owner is typing or a now-playing agent is live. The
+`TEXT_PLAYBACK` choice was made to be "production traffic, faster"; faster is
+exactly what production traffic is not.

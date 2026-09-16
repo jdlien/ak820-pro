@@ -1,7 +1,6 @@
 //! The IOKit, CoreFoundation and Mach surface this transport uses, declared by
-//! hand. Every symbol here is counted in S2's report: the plan's Settled
-//! decision is "hand-rolled, confirmed at the end of S2", and the evidence is
-//! how big this file had to get and how ugly the ownership code around it is.
+//! hand — the plan's Settled decision, confirmed by spike S2 (37 functions,
+//! ownership in two small RAII wrappers; `ak820-agent/spikes/s2-iokit`).
 //!
 //! Ownership rules, from Apple's "Create/Copy" convention: anything returned by
 //! a function with `Create` or `Copy` in its name is ours to `CFRelease`;
@@ -185,25 +184,11 @@ extern "C" {
         callback: Option<IOHIDReportWithTimeStampCallback>,
         context: *mut c_void,
     );
-    pub fn IOHIDDeviceRegisterInputReportCallback(
-        device: IOHIDDeviceRef,
-        report: *mut u8,
-        report_length: CFIndex,
-        callback: Option<IOHIDReportCallback>,
-        context: *mut c_void,
-    );
     pub fn IOHIDDeviceRegisterRemovalCallback(
         device: IOHIDDeviceRef,
         callback: Option<IOHIDCallback>,
         context: *mut c_void,
     );
-    pub fn IOHIDDeviceSetReport(
-        device: IOHIDDeviceRef,
-        report_type: IOHIDReportType,
-        report_id: CFIndex,
-        report: *const u8,
-        report_length: CFIndex,
-    ) -> IOReturn;
     pub fn IOHIDDeviceSetReportWithCallback(
         device: IOHIDDeviceRef,
         report_type: IOHIDReportType,

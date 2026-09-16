@@ -220,7 +220,7 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
         media::KEEPALIVE.as_secs()
     ));
 
-    let worker = P::spawn_media(opts.interval)?;
+    let worker = P::spawn_media(opts.interval, &log)?;
     let mut publisher = Publisher::new();
     let mut watch = Watch::new();
     let mut st = Status {

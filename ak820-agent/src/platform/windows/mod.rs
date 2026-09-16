@@ -59,7 +59,7 @@ impl crate::platform::Platform for Native {
             .collect()
     }
 
-    fn spawn_media(interval: Duration) -> Result<smtc::MediaWorker, String> {
+    fn spawn_media(interval: Duration, _log: &crate::logfile::Log) -> Result<smtc::MediaWorker, String> {
         smtc::MediaWorker::spawn(interval)
     }
 }

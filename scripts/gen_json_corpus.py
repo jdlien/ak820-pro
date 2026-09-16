@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the JSON reader's parity corpus, with Python's `json` as the oracle.
 
-    python3 scripts/gen_json_corpus.py ak820-agent/spikes/s1-mediaremote/tests/json_corpus.txt
+    python3 scripts/gen_json_corpus.py ak820-agent/src/platform/macos/media/json_corpus.txt
 
 The macOS agent reads the MediaRemote helper's line-JSON with a hand-rolled
 flat-object reader instead of a dependency. The cross-platform plan accepts
