@@ -450,8 +450,11 @@ the current bash agent actually costs.** Verified against the script
 
 - `INTERVAL` is 3 s (`nowplaying-macos.sh:40`), and each field is its own
   `osascript`: `running` per app (twice), `player state`, then while playing
-  `name`, `artist`, `player position`, `duration` — **up to 7 process spawns per
-  3-second loop.**
+  `name`, `artist`, `player position`, `duration` — **6 to 8 `osascript` per
+  3-second loop while playing**: 6 with Spotify playing, 7 with Music playing
+  and Spotify closed, 8 with Spotify open but stopped and Music playing (it
+  falls through, asking both apps for `player state`). Corrected 2026-09-16 by
+  the Fable review's finding 9; this said "up to 7".
 - Every push runs a **fresh venv Python** (`ak820text.py`), so the exclusive HID
   interface is opened and closed per update. This is also why the `mkdir` lock at
   `$TMPDIR/ak820pro-nowplaying.lock` exists; holding the interface open for the

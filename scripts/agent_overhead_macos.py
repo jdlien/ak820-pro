@@ -13,6 +13,14 @@ What each number is, and how far to trust it:
 - agent_child_cpu_s: the kernel's rusage for every reaped descendant of the
   agent (proc_pid_rusage, RUSAGE_INFO_V4). Exact; it matched `ps` to the
   hundredth when this was written. This is the agent's own cost.
+  ⚠️ REAPED descendants only. A child that lives as long as the agent -- the
+  Rust daemon's perl MediaRemote helper -- is never reaped, so its CPU is NOT
+  in this number; live_cpu_s is.
+- live_cpu_s: self CPU of the agent's LONG-LIVED children (alive >= 5 s when
+  seen), discovered afresh at each window edge with proc_listchildpids, so a
+  helper that restarts mid-window is still counted. A restart is logged in
+  live_restarts. Use it from RUN windows only: SIGSTOP freezes the agent, not
+  its children, so a helper keeps running (unread) through a pause window.
 - top_cpu: `ps` CPU deltas per process per window, top 25 only, so anything
   under a few seconds per window is invisible. System daemons that move only in
   run windows (tccd, launchservicesd, trustd, ...) are the agent's knock-on cost.
@@ -52,6 +60,9 @@ _FIELDS = ["user", "sys", "pkg_idle", "intr", "pageins", "wired", "resident", "f
            "billed_sys", "serviced_sys", "lwrites", "life_max_fp", "instr", "cycles",
            "billed_energy", "serviced_energy", "int_max_fp", "runnable"]
 RUSAGE_INFO_V4 = 4
+LONG_LIVED_S = 5.0
+PID_WRAP = 99999          # macOS: pids run 1..99998, then wrap to the lowest free
+libc.mach_absolute_time.restype = ctypes.c_uint64
 
 
 def rusage(pid):
@@ -64,6 +75,35 @@ def rusage(pid):
 def cpu_s(r, child=False):
     ticks = (r["c_user"] + r["c_sys"]) if child else (r["user"] + r["sys"])
     return ticks * NS_PER_TICK / 1e9
+
+
+def long_lived_children(pid):
+    """{child pid: (self cpu s, start abstime)} for children alive >= LONG_LIVED_S."""
+    buf = (ctypes.c_int * 1024)()
+    n = libc.proc_listchildpids(ctypes.c_int(pid), buf, ctypes.c_int(ctypes.sizeof(buf)))
+    now = libc.mach_absolute_time()
+    found = {}
+    for child in (buf[i] for i in range(max(0, n))):
+        try:
+            r = rusage(child)
+        except OSError:                         # exited between the list and the read
+            continue
+        if (now - r["start"]) * NS_PER_TICK / 1e9 >= LONG_LIVED_S:
+            found[child] = (cpu_s(r), r["start"])
+    return found
+
+
+def live_delta(before, after):
+    """CPU spent in the window by long-lived children, and any set change."""
+    spent, restarts = 0.0, []
+    for child, (cpu, start) in after.items():
+        if child in before and before[child][1] == start:
+            spent += cpu - before[child][0]
+        else:                                   # new since the window opened: all of it is in-window
+            spent += cpu
+            restarts.append(f"+{child}")
+    restarts += [f"-{c}" for c in before if c not in after]
+    return round(spent, 3), restarts
 
 
 def ps_table():
@@ -114,6 +154,7 @@ def main():
                     resume()
                 time.sleep(2)                   # let a resumed loop settle
                 a0, ps0, t0 = rusage(agent), ps_table(), time.monotonic()
+                l0 = long_lived_children(agent)
                 pids = [pid_probe()]
                 probes = 1
                 while time.monotonic() < t0 + args.window:
@@ -121,9 +162,11 @@ def main():
                     pids.append(pid_probe())
                     probes += 1
                 a1, ps1, t1 = rusage(agent), ps_table(), time.monotonic()
+                l1 = long_lived_children(agent)
+                live_cpu, live_restarts = live_delta(l0, l1)
                 probes += 1                     # the closing ps
                 dur = t1 - t0
-                launched = (pids[-1] - pids[0]) % 99998
+                launched = (pids[-1] - pids[0]) % PID_WRAP
                 top = sorted(((round(ps1[p][0] - ps0[p][0], 2), ps1[p][1], p)
                               for p in ps1 if p in ps0 and ps0[p][1] == ps1[p][1]
                               and ps1[p][0] - ps0[p][0] > 0.05), reverse=True)[:25]
@@ -133,11 +176,13 @@ def main():
                        "agent_child_cpu_s": round(cpu_s(a1, True) - cpu_s(a0, True), 3),
                        "agent_self_cpu_s": round(cpu_s(a1) - cpu_s(a0), 3),
                        "agent_rss_kb": a1["resident"] // 1024,
+                       "live_cpu_s": live_cpu, "live_restarts": live_restarts,
                        "top_cpu": top}
                 log.write(json.dumps(rec) + "\n")
                 log.flush()
                 print(f"{rec['window']} {mode:5} {rec['dur_s']:6.1f}s  agent child cpu "
                       f"{rec['agent_child_cpu_s']:7.2f}s  self {rec['agent_self_cpu_s']:5.2f}s  "
+                      f"live {rec['live_cpu_s']:5.2f}s{' RESTART ' + ','.join(live_restarts) if live_restarts else ''}  "
                       f"launches/min (system-wide) {rec['spawns_per_min']}")
         finally:
             resume()

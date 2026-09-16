@@ -65,11 +65,13 @@ Full reasoning in the plan's *Finalization* section and at each site.
 5. **Dependencies:** IOKit hand-rolled (confirmed at the end of S2); JSON
    hand-rolled for flat objects, tested against a Python-`json` corpus.
 6. **Media failure policy:** a failed source publishes idle, on both platforms;
-   each backend defines "failed" (macOS: helper dead, `fatal`, or silent two
-   heartbeats).
+   each backend defines "failed". On macOS that is **60 s with no line read
+   from the helper**; death and `fatal` start that clock rather than trip it,
+   so the helper's designed restart does not blank the LCD.
 7. **The S1b canary** asks AppleScript only while Spotify or Music is running,
-   checked with no spawn, at most once per 60 s.
-
+   checked with no spawn, at most once per 60 s, each call bounded, never
+   overlapping, with a reversible switch. G-B's gate is therefore "surfaces
+   within 60 s of the next Apple event, forced by the test".
 8. **Whole-second clock slips: deferred by the owner.** Four are on record
    (`BACKLOG.md`), with none in about 3,270 syncs since 09-10. The clock "stays
    in perfect sync with the system clock almost all the time", so it is good
@@ -87,6 +89,14 @@ Full reasoning in the plan's *Finalization* section and at each site.
     2 → 4b → 5b → 6.** In 4a the daemon owns now-playing and the Python
     timekeeper keeps the clock; the gate is that the timekeeper's own log
     shows no more sync failures than before. The public release stays last.
+
+**Reviewed again 2026-09-16** (Fable, today's changes only): ten findings, one
+High, all accepted — see the plan's second *Review disposition*. Two changed
+what S1 builds: **the macOS failure rule is now "60 s with no line read"**, with
+death and `fatal` starting that clock rather than tripping it, and silence is
+never judged while the pipe holds unread bytes. Phase 0's gate was rewritten
+so it can fail. Due before 4a: the idle cadence and seize direction, and the
+`launchctl disable` fence. Due in S2: a 10,000-cycle open/close soak.
 
 So: **nothing blocks starting the spikes**, and nothing unanswered blocks
 Phase 0 once S1 and S2 are in.
@@ -118,8 +128,8 @@ would silently kill now-playing on the keyboard.
   a macOS gain** — the justification list overstated by one. G-A survives as a
   discipline worth keeping, not a benefit to claim.
 - **Cost is not a justification.** The plan's Why section rules it out
-  explicitly. The verified churn numbers in [`BACKLOG.md`](BACKLOG.md) (7
-  `osascript` spawns per 3 s interval, a fresh venv Python per push) are
+  explicitly. The verified churn numbers in [`BACKLOG.md`](BACKLOG.md) (6–8
+  `osascript` spawns per 3 s interval while playing, a fresh venv Python per push) are
   supporting evidence only. The case is unification, capability, and G-B.
 
 ## A suggested first session
