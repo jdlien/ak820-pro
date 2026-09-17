@@ -463,6 +463,17 @@ re-indexing and media analysis after the upgrade ran at **1.25–2.5 cores**
 across the same windows. The agent is a steady ~30% of one core. The rest will
 settle on its own; the agent's cost will not.
 
+✅ **Measured by footprint, 2026-09-16 21:40, the memory claim holds after
+all.** RSS was the wrong gauge: it counts shared system-framework pages that
+every process maps. `phys_footprint` (`proc_pid_rusage`, what Activity
+Monitor's Memory column shows) gives the Rust daemon **2.7 MB** (RSS 7.7), its
+perl helper **5.7 MB** (RSS 21.0), **8.4 MB together**. The Python timekeeper
+alone is **10.6 MB** (RSS 13.4) and retires in 4b, so after 4b the total is
+below today's. The Stream Deck plugin's helper is 7.3 MB. No cheap cut
+remains: most of the daemon's 2.7 MB is what any process linking
+CoreFoundation and IOKit pays. The paragraph below, written from RSS, is
+superseded.
+
 ⚠️ **The memory target is the weak one, and the plan should not pretend
 otherwise.** The MediaRemote helper is a `/usr/bin/perl` process: the sibling
 project's ran at **7.9 MB RSS** on 2026-09-10 and **17.8 MB** on 2026-09-16
