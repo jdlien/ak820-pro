@@ -581,6 +581,13 @@ hands the band between the clock and the playback readout, which is an LCD
 redraw, and the slowest stall is marked `blit`. The owner was typing throughout.
 The soaks were stopped the moment the counter was seen.
 
+**Read again (2026-09-16):** `count_ge_25ms_nonflash` was **14** at 20:01:50,
+when the daemon started, and **15** at 20:46:57. Between 15:35 and 20:01 the only
+board traffic was the bash now-playing agent and the Python timekeeper, as
+before today; nothing new. **So it rose**, which by the rule below means the
+soaks did not cause all of it. The daemon now samples these counters into its
+status file every 5 minutes, so the rate is visible without polling.
+
 **How to tell:** re-read the counters after an hour or more of ordinary use with
 no bulk traffic. If `count_ge_25ms_nonflash` is still 12, the soaks caused all of
 it; if it rose, something else is stalling and `docs/hardware.md`'s

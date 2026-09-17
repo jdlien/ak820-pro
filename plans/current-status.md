@@ -28,7 +28,7 @@ line (🟡 built, owed …).
 | **0** the platform seam | `a46e770` | 🟡 built; Windows CI green; **Fable audit: safe to deploy** ([record](review-fable-phase0-2026-09-16.md)), comparator fixes in the next commit; **live gate on gremlin owed** |
 | **1** macOS HID transport | `e7e0b10` | 🟡 built; `info`/`health`/`selftest` verified on the Mac's board; unplug and open-trace owed |
 | **3** macOS media | `e7e0b10` | 🟡 built; `ak820 probe` read a live Chrome session through the real helper; the daemon refused to start beside the bash agent (lock verified live); live daemon run owed |
-| **4a** install, now-playing only | this commit | 🟡 built, **not installed**: `ak820 install` / `uninstall` (the rollback, performed) / `status`; `install-agents.sh --only`, and it refuses to start nowplaying beside the daemon |
+| **4a** install, now-playing only | `c5bd787` | 🟢 **installed on this Mac 2026-09-16 20:01**, the panel confirmed by the owner (YouTube titles too). Reinstalled 20:50 as `ProcessType Standard`: `Background` ran it at priority 4 and starved HID replies under screen-sharing load (9 timeouts in 45 min). Coexistence gate (50+ timekeeper syncs) and 5a running |
 
 **Tests:** 332 unit tests on macOS, plus the integration suites;
 `cargo check --target x86_64-pc-windows-msvc --all-targets` clean from the Mac.

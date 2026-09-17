@@ -54,6 +54,17 @@ fn xml(text: &str) -> String {
 
 /// The plist, generated whole. ⚠️ Never edited in place: PlistBuddy strips
 /// comments (CLAUDE.md), and a reinstall writes it again anyway.
+///
+/// ⚠️ **`ProcessType` is `Standard`.** The first live install copied the bash
+/// agent's `Background`, and launchd then ran every thread of the daemon, of
+/// its perl helper and of every `osascript` at **priority 4**. In the first 45
+/// minutes on 2026-09-16, with high-performance screen sharing encoding, that
+/// gave nine "no reply from the keyboard" timeouts (one reply arrived seconds
+/// late), MediaRemote reporting a paused Music "stale" because the helper's
+/// calls timed out, and both AppleScript reads timing out. The board's own
+/// counters showed its loop never stalled past 36 ms. The daemon idles at 0%
+/// CPU, so normal priority costs nothing; it only stops the scheduler starving
+/// it under load.
 pub fn plist(def: &Definition) -> String {
     let path = |p: &Path| xml(&p.display().to_string());
     let env = match def.dylib {
@@ -95,8 +106,11 @@ pub fn plist(def: &Definition) -> String {
     <key>StandardErrorPath</key>
     <string>{stdio}</string>
 
+    <!-- Standard, NOT Background: Background runs every thread at priority 4,
+         and on a busy Mac that starved HID replies past the 2 s timeout, the
+         helper's MediaRemote calls and osascript (measured 2026-09-16). -->
     <key>ProcessType</key>
-    <string>Background</string>
+    <string>Standard</string>
 </dict>
 </plist>
 "#,
@@ -235,6 +249,7 @@ mod tests {
         assert!(p.contains("<string>/Users/a&amp;b/bin/ak820-agent</string>"));
         assert!(!p.contains("EnvironmentVariables"));
         assert!(p.contains(&format!("<string>{AGENT}</string>")));
+        assert!(p.contains("<key>ProcessType</key>\n    <string>Standard</string>"), "Background starves it");
 
         let p = plist(&Definition {
             daemon: Path::new("/x/ak820-agent"),
