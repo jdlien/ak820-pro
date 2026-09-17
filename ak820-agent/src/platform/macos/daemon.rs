@@ -124,7 +124,7 @@ pub fn clock_is_ours() -> Result<(), String> {
             Err(e) => return Err(format!("cannot establish whether {TIMEKEEPER} is disabled ({e})")),
         }
     }
-    match super::process::running_named("ak820ctl") {
+    match super::process::running_named("ak820ctl")? {
         0 => Ok(()),
         n => Err(format!("{n} ak820ctl process(es) are talking to the clock")),
     }

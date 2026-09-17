@@ -303,8 +303,9 @@ fn clock_ownership(anyway: bool) -> Result<(), String> {
         Err(e) => unknown.push(format!("whether {AGENT} is loaded ({e})")),
     }
     match super::process::running_named("ak820ctl") {
-        0 => {}
-        n => owners.push(format!("{n} ak820ctl process(es) are talking to the board right now")),
+        Ok(0) => {}
+        Ok(n) => owners.push(format!("{n} ak820ctl process(es) are talking to the board right now")),
+        Err(e) => unknown.push(format!("whether an ak820ctl is running ({e})")),
     }
     if owners.is_empty() && unknown.is_empty() {
         return Ok(());

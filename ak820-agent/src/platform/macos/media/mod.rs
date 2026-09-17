@@ -453,6 +453,9 @@ fn note_to(denied: &mut Option<String>, note: Note, say: &mut dyn FnMut(String))
 /// The source the daemon polls.
 pub struct MediaRemoteSource {
     view: Arc<Mutex<View>>,
+    /// No poll for this long is a stalled media thread: 20 s, or longer when
+    /// the daemon polls less often than that (4b audit, F3).
+    stalled_after: Duration,
     /// When the daemon last asked, so a caller that was itself frozen does not
     /// judge the media thread stalled for the same freeze.
     asked_at: Mutex<Option<Instant>>,
@@ -469,6 +472,7 @@ impl MediaRemoteSource {
     /// Start the helper and the engine thread. `say` receives every log line.
     pub fn spawn(opts: Options, mut say: Box<dyn FnMut(String) + Send>) -> Result<MediaRemoteSource, String> {
         let view = Arc::new(Mutex::new(View::default()));
+        let stalled_after = stall_threshold(opts.interval);
         let (tx, rx) = mpsc::channel();
         // ⚠️ Absolute, always: /usr/bin/perl runs under the hardened runtime,
         // whose dyld refuses a relative path -- the helper prints "load failed"
@@ -522,7 +526,7 @@ impl MediaRemoteSource {
                 }
             })
             .map_err(|e| format!("spawning the media thread: {e}"))?;
-        Ok(MediaRemoteSource { view, asked_at: Mutex::new(None) })
+        Ok(MediaRemoteSource { view, stalled_after, asked_at: Mutex::new(None) })
     }
 
     /// The effective `now`, unextrapolated, for `ak820 probe`.
@@ -541,8 +545,14 @@ impl MediaSource for MediaRemoteSource {
         let v = self.view.lock().unwrap_or_else(|e| e.into_inner()).clone();
         let now = Instant::now();
         let previous = self.asked_at.lock().unwrap_or_else(|e| e.into_inner()).replace(now);
-        health_of(v, now, previous, applescript::wall_now())
+        health_of(v, now, previous, self.stalled_after, applescript::wall_now())
     }
+}
+
+/// The larger of [`STALLED_AFTER`] and two poll intervals plus the slowest
+/// honest poll's work.
+fn stall_threshold(interval: Duration) -> Duration {
+    STALLED_AFTER.max(interval * 2 + Duration::from_secs(8))
 }
 
 /// The daemon's answer from one view. ⚠️ A thread that stopped polling, by a
@@ -552,9 +562,9 @@ impl MediaSource for MediaRemoteSource {
 /// Judged only when the caller itself asked recently (`asked_before`): a
 /// whole process frozen and resumed finds every thread's timestamps old at
 /// once, and its media thread has not had its first chance to poll yet.
-fn health_of(v: View, now: Instant, asked_before: Option<Instant>, wall: f64) -> (Snapshot, Health) {
-    let caller_was_here = asked_before.is_some_and(|at| now.saturating_duration_since(at) < STALLED_AFTER);
-    let stalled = caller_was_here && v.polled_at.is_some_and(|at| now.saturating_duration_since(at) >= STALLED_AFTER);
+fn health_of(v: View, now: Instant, asked_before: Option<Instant>, stalled_after: Duration, wall: f64) -> (Snapshot, Health) {
+    let caller_was_here = asked_before.is_some_and(|at| now.saturating_duration_since(at) < stalled_after);
+    let stalled = caller_was_here && v.polled_at.is_some_and(|at| now.saturating_duration_since(at) >= stalled_after);
     let snapshot = match &v.current {
         Some(n) => route::snapshot_of(n, wall),
         None => Snapshot::idle(),
@@ -848,10 +858,21 @@ mod tests {
         let t = Instant::now();
         let v = View { polled_at: Some(t), current: Some(Now { bundle: Some("x".into()), title: Some("T".into()), ..Now::default() }), ..View::default() };
         let asked = |at: Instant| Some(at - Duration::from_secs(3));
-        assert!(health_of(v.clone(), t + Duration::from_secs(5), asked(t + Duration::from_secs(5)), 0.0).1.last_poll_ok);
-        let (_, h) = health_of(v, t + STALLED_AFTER, asked(t + STALLED_AFTER), 0.0);
+        assert!(health_of(v.clone(), t + Duration::from_secs(5), asked(t + Duration::from_secs(5)), STALLED_AFTER, 0.0).1.last_poll_ok);
+        let (_, h) = health_of(v, t + STALLED_AFTER, asked(t + STALLED_AFTER), STALLED_AFTER, 0.0);
         assert!(!h.last_poll_ok);
         assert_eq!(h.last_error.as_deref(), Some("the media thread has stopped polling"));
+    }
+
+    /// F3: a daemon polling once a minute is not stalled after 20 s.
+    #[test]
+    fn the_stall_threshold_follows_a_long_poll_interval() {
+        assert_eq!(stall_threshold(Duration::from_secs(3)), STALLED_AFTER);
+        assert_eq!(stall_threshold(Duration::from_secs(60)), Duration::from_secs(128));
+        let t = Instant::now();
+        let v = View { polled_at: Some(t), ..View::default() };
+        let at = t + Duration::from_secs(61);
+        assert!(health_of(v, at, Some(t + Duration::from_secs(1)), stall_threshold(Duration::from_secs(60)), 0.0).1.last_poll_ok);
     }
 
     /// Measured: after a 240 s SIGSTOP of the whole daemon, the first `latest()`
@@ -862,7 +883,7 @@ mod tests {
         let t = Instant::now();
         let v = View { polled_at: Some(t), ..View::default() };
         let resumed = t + Duration::from_secs(246);
-        let (_, h) = health_of(v, resumed, Some(t + Duration::from_secs(1)), 0.0);
+        let (_, h) = health_of(v, resumed, Some(t + Duration::from_secs(1)), STALLED_AFTER, 0.0);
         assert!(h.last_poll_ok);
     }
 

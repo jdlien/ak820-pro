@@ -866,6 +866,7 @@ live in their own file; this is the index.
 |---|---|---|---|---|
 | **0** | `a46e770` | Fable 5.1, 2026-09-16 | **Safe to deploy.** 7 findings: 2 Medium in the gate comparator, fixed; 5 Low, 4 fixed and 1 deferred to Phase 2 | [`review-fable-phase0-2026-09-16.md`](review-fable-phase0-2026-09-16.md) |
 | **1, 3** | `e7e0b10` | Fable 5.1, 2026-09-16 | **Attended run safe; install not, until F1, F2, F4, F5.** 13 findings: 5 Medium, all fixed (canary before first `now`, denial clearing, 600 s extrapolation cap, IOKit teardown, lock race and `$TMPDIR`); 8 Low, 6 fixed, 2 folded into the live run | [`review-fable-phases1-3-2026-09-16.md`](review-fable-phases1-3-2026-09-16.md) |
+| **2, 4a, 4b** | `e07fdfa..057b141` | Fable 5.1, 2026-09-16 | **Safe to leave owning the clock overnight.** 6 findings: 1 Medium in the reinstall rollback (fixed, half of it found independently first), 5 Low: 3 fixed, 2 accepted as benign | [`review-fable-4b-2026-09-16.md`](review-fable-4b-2026-09-16.md) |
 
 ## References
 

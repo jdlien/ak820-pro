@@ -13,9 +13,16 @@ const PROC_PIDPATHINFO_MAXSIZE: usize = 4096;
 
 /// How many running processes have an executable whose file name is `name`.
 /// Processes whose path cannot be read (another user's) are not counted.
-pub fn running_named(name: &str) -> usize {
+///
+/// ⚠️ An error, not zero, when the table cannot be read (4b audit, F5): every
+/// caller is an ownership check, and "could not look" must not read as
+/// "nobody is there".
+pub fn running_named(name: &str) -> Result<usize, String> {
     let mut pids = vec![0 as c_int; 8192];
     let n = unsafe { proc_listallpids(pids.as_mut_ptr() as *mut c_void, (pids.len() * 4) as c_int) };
+    if n <= 0 {
+        return Err(format!("could not read the process table ({})", std::io::Error::last_os_error()));
+    }
     let mut path = vec![0 as c_char; PROC_PIDPATHINFO_MAXSIZE];
     let mut count = 0;
     for &pid in pids.iter().take(n.max(0) as usize) {
@@ -31,7 +38,7 @@ pub fn running_named(name: &str) -> usize {
             count += 1;
         }
     }
-    count
+    Ok(count)
 }
 
 #[cfg(test)]
@@ -42,7 +49,7 @@ mod tests {
     fn this_test_binary_finds_itself_and_not_a_stranger() {
         let me = std::env::current_exe().unwrap();
         let name = me.file_name().unwrap().to_str().unwrap();
-        assert!(running_named(name) >= 1);
-        assert_eq!(running_named("no-such-process-ak820"), 0);
+        assert!(running_named(name).unwrap() >= 1);
+        assert_eq!(running_named("no-such-process-ak820").unwrap(), 0);
     }
 }

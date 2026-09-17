@@ -78,7 +78,7 @@ fn started_stamp(path: &Path) -> Option<String> {
 /// writer beside it, is what the ordering exists to prevent.
 fn wait_no_ak820ctl(timeout: Duration) -> Result<(), String> {
     let until = Instant::now() + timeout;
-    while super::process::running_named("ak820ctl") > 0 {
+    while super::process::running_named("ak820ctl")? > 0 {
         if Instant::now() >= until {
             return Err(format!("an ak820ctl process was still running {} s later", timeout.as_secs()));
         }
@@ -192,13 +192,24 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
 
     // ---- from here an agent may be stopped, so failures put one back ----
     let previous = launchd::print(AGENT).is_some() && plist.is_file();
+    // The previous plist's text, so a failure after the new plist is written
+    // restores the previous daemon rather than retrying the new one (4b audit,
+    // F1), and so put_back knows whether that daemon owned the clock.
+    let previous_text = previous.then(|| std::fs::read_to_string(&plist).ok()).flatten();
+    let previous_owned_clock = previous_text.as_deref().is_some_and(launchd::plist_owns_clock);
     let bash_plist = launchd::plist_path(NOWPLAYING);
     let timekeeper_plist = launchd::plist_path(TIMEKEEPER);
     let retired_timekeeper = std::cell::Cell::new(false);
     let put_back = |why: String| -> String {
         let mut said = vec![why];
         let result = if previous {
-            launchd::bootstrap(&plist).map(|()| "the previous daemon was started again")
+            let restored = match &previous_text {
+                Some(text) => std::fs::write(&plist, text).map_err(|e| format!("restoring {}: {e}", plist.display())),
+                None => Ok(()),
+            };
+            restored
+                .and_then(|()| launchd::bootstrap(&plist))
+                .map(|()| "the previous daemon was started again")
         } else if bash_plist.is_file() {
             launchd::enable(NOWPLAYING)
                 .and_then(|()| launchd::bootstrap(&bash_plist))
@@ -212,8 +223,9 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
             Err(e) => said.push(format!("and putting the previous agent back failed too: {e}")),
         }
         // Only the timekeeper THIS run retired, and never beside a previous
-        // daemon that owned the clock itself.
-        if retired_timekeeper.get() {
+        // daemon that owned the clock itself: that daemon is back, and it is
+        // the clock's one owner.
+        if retired_timekeeper.get() && !(previous && previous_owned_clock) {
             match launchd::enable(TIMEKEEPER).and_then(|()| launchd::bootstrap(&timekeeper_plist)) {
                 Ok(()) => said.push("the Python timekeeper was started again".into()),
                 Err(e) => said.push(format!("and restarting the Python timekeeper failed: {e}; nothing syncs the clock")),

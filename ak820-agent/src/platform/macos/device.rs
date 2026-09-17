@@ -51,6 +51,30 @@ const INPUT_BUFFER: usize = 256;
 /// replaced. See [`Deafness`].
 const SILENT_LIMIT: u32 = 3;
 
+/// At most this many retirements in any hour (4b audit, F2). Each one leaks a
+/// page, and a board answering one request in four would otherwise retire an
+/// object every ~12 s, about 30 MB a day. Past the cap the object is kept, and
+/// a deaf one simply stays deaf until the hour rolls over.
+const RETIREMENTS_PER_HOUR: usize = 6;
+
+/// Whether one more retirement fits in the last hour, recording it if so.
+fn retirement_allowed(log: &mut std::collections::VecDeque<Instant>, now: Instant) -> bool {
+    while log.front().is_some_and(|t| now.saturating_duration_since(*t) >= Duration::from_secs(3600)) {
+        log.pop_front();
+    }
+    if log.len() >= RETIREMENTS_PER_HOUR {
+        return false;
+    }
+    log.push_back(now);
+    true
+}
+
+static RETIREMENTS: Mutex<std::collections::VecDeque<Instant>> = Mutex::new(std::collections::VecDeque::new());
+
+/// The cap message is said once per capped spell, not once per interaction:
+/// a deaf object past the cap is dropped every 3 s.
+static CAP_SAID: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// ⚠️ **An `IOHIDDevice` object can go deaf for good** (measured live
 /// 2026-09-16, 20:55:07). After 5 minutes of clean exchanges, every write
 /// still completed through the run loop and not one input report arrived
@@ -341,14 +365,23 @@ impl Drop for Device {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .interaction(self.wrote.load(Relaxed), self.heard.load(Relaxed));
-        if retire && !self.board.abandoned.swap(true, Relaxed) {
+        if retire && !self.board.abandoned.load(Relaxed) {
+            let stamp = crate::logfile::stamp(&super::host::SystemHost);
             // stderr is the daemon's stdio log under launchd: rare, and worth
             // counting when it happens.
-            eprintln!(
-                "{} transport: {} replaced after {SILENT_LIMIT} interactions that wrote and heard nothing",
-                crate::logfile::stamp(&super::host::SystemHost),
-                self.board.name
-            );
+            if retirement_allowed(&mut RETIREMENTS.lock().unwrap_or_else(|e| e.into_inner()), Instant::now()) {
+                self.board.abandoned.store(true, Relaxed);
+                CAP_SAID.store(false, Relaxed);
+                eprintln!(
+                    "{stamp} transport: {} replaced after {SILENT_LIMIT} interactions that wrote and heard nothing",
+                    self.board.name
+                );
+            } else if !CAP_SAID.swap(true, Relaxed) {
+                eprintln!(
+                    "{stamp} transport: {} is deaf, but {RETIREMENTS_PER_HOUR} replacements in an hour is the cap; keeping it",
+                    self.board.name
+                );
+            }
         }
     }
 }
@@ -483,6 +516,17 @@ mod tests {
         for _ in 0..100 {
             assert!(!d.interaction(true, false));
         }
+    }
+
+    #[test]
+    fn retirements_are_capped_per_hour() {
+        let mut log = std::collections::VecDeque::new();
+        let t = Instant::now();
+        for i in 0..RETIREMENTS_PER_HOUR {
+            assert!(retirement_allowed(&mut log, t + Duration::from_secs(i as u64)));
+        }
+        assert!(!retirement_allowed(&mut log, t + Duration::from_secs(60)), "the cap");
+        assert!(retirement_allowed(&mut log, t + Duration::from_secs(3600)), "the hour rolled over for the first");
     }
 
     #[test]
