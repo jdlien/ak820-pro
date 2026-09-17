@@ -1,0 +1,59 @@
+ak820-agent for macOS -- the host agent for an AJAZZ AK820 Pro running the QMK
+firmware from this repository's Releases (https://github.com/jdlien/ak820-pro/releases)
+
+What it does: keeps the keyboard's LCD clock in sync with this Mac to within a
+few milliseconds, and shows the track you are playing -- Music, Spotify, any
+browser tab -- read through macOS's own now-playing service.
+
+Needs: a Mac with Apple silicon, macOS 15 or later, and the firmware from the
+SAME release on the keyboard. Nothing else: no Homebrew, no Python, no admin
+password.
+
+1. Open the disk image. Leave it mounted.
+2. Open Terminal and run (the quotes matter, the volume name has spaces):
+
+       "/Volumes/AK820 Agent/ak820" install --clock
+
+   That copies ak820, ak820-agent and nowplaying-mediaremote.dylib to
+   ~/Library/Application Support/ak820pro/bin, writes a LaunchAgent
+   (com.jdlien.ak820pro.agent) that starts at login, and starts it now. You
+   can eject and delete the disk image afterwards.
+
+   --clock makes the daemon sync the clock as well as show the track. Leave it
+   off only if you run the repository's Python timekeeper from hostagent/ and
+   want to keep it. With --clock, install stops and disables that timekeeper,
+   because two clock writers corrupt each other's learning; the daemon refuses
+   --clock while it is still enabled. If the repository's bash now-playing
+   agent is installed, install stops and disables it too: the daemon replaces it.
+
+3. Useful afterwards. The installed copy is not on your PATH:
+
+       ~/Library/Application\ Support/ak820pro/bin/ak820 status
+
+   ak820 status          is it running, the last sync and push, the board's health counters
+   ak820 clock           read the keyboard's clock once (refuses while something else owns it)
+   ak820 probe           what macOS says is playing, without touching the keyboard
+   ak820 health          the firmware's counters
+
+   Log:    ~/Library/Logs/ak820pro/ak820-agent.log
+   Status: ~/Library/Application Support/ak820pro/ak820-agent.status
+
+4. Automation permission. Normally nothing asks. If macOS reports nothing
+   playing while Music or Spotify is open, the daemon asks the player directly
+   (at most once a minute), and macOS shows "ak820-agent wants access to
+   control Music". Allow it. A refusal is logged and shown in `ak820 status`,
+   never mistaken for "nothing playing".
+
+5. Uninstall:
+
+       ~/Library/Application\ Support/ak820pro/bin/ak820 uninstall
+
+   It stops and removes the LaunchAgent. If it replaced the repository's bash
+   now-playing agent or Python timekeeper, it enables and starts them again
+   (--keep-bash-off / --keep-timekeeper-off to leave them off). The binaries
+   and logs stay in the folders above; delete them by hand if you want them gone.
+
+Known limits: the now-playing half depends on a private macOS framework through
+a small helper hosted by /usr/bin/perl (source in the repository, ak820-agent/
+helper). A future macOS may close that off; the daemon then says so in its log
+and status, and the clock keeps working regardless.
