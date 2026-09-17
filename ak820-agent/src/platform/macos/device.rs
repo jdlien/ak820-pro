@@ -47,6 +47,48 @@ const WRITE_GRACE: Duration = Duration::from_millis(500);
 /// callback is registered — the object's lifetime here.
 const INPUT_BUFFER: usize = 256;
 
+/// Consecutive interactions that wrote and heard nothing before the object is
+/// replaced. See [`Deafness`].
+const SILENT_LIMIT: u32 = 3;
+
+/// ⚠️ **An `IOHIDDevice` object can go deaf for good** (measured live
+/// 2026-09-16, 20:55:07). After 5 minutes of clean exchanges, every write
+/// still completed through the run loop and not one input report arrived
+/// for 8 minutes, while the Python timekeeper's `ak820ctl` synced normally and
+/// `ak820 info` from a second process got its reply at once. A restart cured
+/// it. The likeliest mechanism, not proven: IOKit signals the input queue only
+/// on empty-to-non-empty, so a report landing as the object closes can leave
+/// it non-empty and never signalled again.
+///
+/// So interactions that wrote and heard nothing are counted, and after
+/// [`SILENT_LIMIT`] in a row the object is retired and the next open makes a
+/// fresh one. **Only an object that has heard at least once is retired**: a
+/// board that is truly hung makes a fresh object silent too, and replacing
+/// objects without bound would leak one page each (S2's measured
+/// registration leak) for as long as the hang lasts. One stolen reply (the
+/// timekeeper's seize) is a single silent interaction and resets on the next.
+#[derive(Debug, Default)]
+struct Deafness {
+    silent: u32,
+    ever_heard: bool,
+}
+
+impl Deafness {
+    /// Record one interaction. True means retire the object.
+    fn interaction(&mut self, wrote: bool, heard: bool) -> bool {
+        if heard {
+            self.silent = 0;
+            self.ever_heard = true;
+            return false;
+        }
+        if !wrote {
+            return false;
+        }
+        self.silent += 1;
+        self.ever_heard && self.silent >= SILENT_LIMIT
+    }
+}
+
 #[derive(Default)]
 struct Inbox {
     reports: VecDeque<Vec<u8>>,
@@ -115,6 +157,7 @@ struct Board {
     buffer: *mut [u8; INPUT_BUFFER],
     abandoned: std::sync::atomic::AtomicBool,
     open: std::sync::atomic::AtomicBool,
+    deafness: Mutex<Deafness>,
 }
 
 // The raw pointers are dereferenced only under the inbox mutex, or on the
@@ -155,6 +198,7 @@ impl Board {
                 buffer,
                 abandoned: false.into(),
                 open: false.into(),
+                deafness: Mutex::new(Deafness::default()),
             })
         }
     }
@@ -209,6 +253,10 @@ static BOARD: Mutex<Option<Arc<Board>>> = Mutex::new(None);
 pub struct Device {
     board: Arc<Board>,
     outstanding: Outstanding,
+    /// A write completed in this interaction, and a report was read: what
+    /// [`Deafness`] counts.
+    wrote: std::sync::atomic::AtomicBool,
+    heard: std::sync::atomic::AtomicBool,
 }
 
 impl Device {
@@ -278,7 +326,7 @@ pub fn open_board() -> Result<Device, Error> {
     }
     // Reports that arrived while closed belong to nobody.
     board.shared().inbox.lock().unwrap_or_else(|e| e.into_inner()).reports.clear();
-    Ok(Device { board, outstanding: Outstanding::new() })
+    Ok(Device { board, outstanding: Outstanding::new(), wrote: false.into(), heard: false.into() })
 }
 
 impl Drop for Device {
@@ -286,6 +334,21 @@ impl Drop for Device {
         use std::sync::atomic::Ordering::Relaxed;
         if self.board.open.swap(false, Relaxed) {
             unsafe { IOHIDDeviceClose(self.board.dev, 0) };
+        }
+        let retire = self
+            .board
+            .deafness
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .interaction(self.wrote.load(Relaxed), self.heard.load(Relaxed));
+        if retire && !self.board.abandoned.swap(true, Relaxed) {
+            // stderr is the daemon's stdio log under launchd: rare, and worth
+            // counting when it happens.
+            eprintln!(
+                "{} transport: {} replaced after {SILENT_LIMIT} interactions that wrote and heard nothing",
+                crate::logfile::stamp(&super::host::SystemHost),
+                self.board.name
+            );
         }
     }
 }
@@ -337,7 +400,10 @@ impl Wire for Device {
             if let Some((s, result)) = inbox.write_done {
                 if s == seq {
                     return match result {
-                        kIOReturnSuccess => Ok(Sent::Yes),
+                        kIOReturnSuccess => {
+                            self.wrote.store(true, Relaxed);
+                            Ok(Sent::Yes)
+                        }
                         kIOReturnTimeout => Ok(Sent::TimedOut),
                         kIOReturnExclusiveAccess => {
                             Err(Error::Open { path: board.name.clone(), source: os(result, "write") })
@@ -364,6 +430,7 @@ impl Wire for Device {
         let mut inbox = shared.inbox.lock().unwrap_or_else(|e| e.into_inner());
         loop {
             if let Some(r) = inbox.reports.pop_front() {
+                self.heard.store(true, std::sync::atomic::Ordering::Relaxed);
                 return Ok(Some(r));
             }
             if inbox.removed {
@@ -381,5 +448,50 @@ impl Wire for Device {
 impl HidTransport for Device {
     fn outstanding(&self) -> &Outstanding {
         &self.outstanding
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_deaf_object_is_retired_after_three_silent_writes() {
+        let mut d = Deafness::default();
+        assert!(!d.interaction(true, true));
+        assert!(!d.interaction(true, false));
+        assert!(!d.interaction(true, false));
+        assert!(d.interaction(true, false), "third silent interaction in a row");
+    }
+
+    /// The timekeeper's seize can steal one reply; that is not deafness.
+    #[test]
+    fn one_stolen_reply_resets_on_the_next_answer() {
+        let mut d = Deafness::default();
+        d.interaction(true, true);
+        for _ in 0..10 {
+            assert!(!d.interaction(true, false));
+            assert!(!d.interaction(true, true));
+        }
+    }
+
+    /// A hung board makes a fresh object silent too: never retire one that
+    /// has not heard, or objects leak a page each for as long as it hangs.
+    #[test]
+    fn an_object_that_never_heard_is_not_retired() {
+        let mut d = Deafness::default();
+        for _ in 0..100 {
+            assert!(!d.interaction(true, false));
+        }
+    }
+
+    #[test]
+    fn an_interaction_that_wrote_nothing_counts_for_nothing() {
+        let mut d = Deafness::default();
+        d.interaction(true, true);
+        d.interaction(true, false);
+        d.interaction(true, false);
+        assert!(!d.interaction(false, false));
+        assert!(d.interaction(true, false));
     }
 }
