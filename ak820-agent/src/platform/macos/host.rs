@@ -161,6 +161,44 @@ mod tests {
         }
     }
 
+    /// The plan's hourly sweep, 2026 to 2099, against **the pinned C's own
+    /// `localtime()`**: `scripts/clock_oracle.c localtime`, built natively
+    /// (`cc -O2 -o clock_oracle scripts/clock_oracle.c`) and named by
+    /// `AK820_CLOCK_ORACLE`. Skipped without it, since a test run need not
+    /// have a C compiler. Run it under several `TZ` values: the zone is the
+    /// point. First run 2026-09-16 in America/Edmonton, Europe/Berlin and
+    /// Australia/Lord_Howe.
+    #[test]
+    fn local_time_agrees_with_the_c_oracle_hourly_2026_to_2099() {
+        let Some(oracle) = std::env::var_os("AK820_CLOCK_ORACLE") else {
+            eprintln!("skipped: set AK820_CLOCK_ORACLE to a built scripts/clock_oracle.c");
+            return;
+        };
+        const START: i64 = 1_767_225_600; // 2026-01-01 00:00 UTC
+        const END: i64 = 4_102_444_800; // 2100-01-01 00:00 UTC
+        let hours: Vec<i64> = (START..END).step_by(3600).collect();
+        let mut compared = 0usize;
+        for batch in hours.chunks(20_000) {
+            let out = std::process::Command::new(&oracle)
+                .arg("localtime")
+                .args(batch.iter().map(|t| t.to_string()))
+                .output()
+                .expect("running the oracle");
+            let text = String::from_utf8(out.stdout).unwrap();
+            for (line, &t) in text.lines().zip(batch) {
+                let l = SystemHost.local(t);
+                let ours = format!(
+                    "{t} {:04}-{:02}-{:02} {} {:02}:{:02}:{:02}",
+                    l.year, l.month, l.day, l.weekday, l.hour, l.minute, l.second
+                );
+                assert_eq!(line, ours, "TZ={:?}", std::env::var("TZ").ok());
+                compared += 1;
+            }
+        }
+        assert_eq!(compared, hours.len());
+        eprintln!("compared {compared} hours with the C oracle's localtime, TZ={:?}", std::env::var("TZ").ok());
+    }
+
     /// The daemon runs for weeks. A zone change while it runs must reach the
     /// next `local()` without a restart: here through `TZ`, in one process.
     #[test]
