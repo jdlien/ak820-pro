@@ -260,7 +260,12 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
             retired_timekeeper.set(true);
             println!("stopped {TIMEKEEPER}: the daemon takes the clock");
         }
-        if timekeeper_plist.is_file() {
+        // ⚠️ "Retired" means retired BY THIS RUN. On a --clock reinstall the
+        // timekeeper is already disabled, the previous daemon owned the clock,
+        // and a failure must put back only that daemon. Counting an
+        // already-disabled timekeeper as ours would restart it beside the
+        // previous clock owner: two writers.
+        if timekeeper_plist.is_file() && !launchd::is_disabled(TIMEKEEPER).unwrap_or(false) {
             if let Err(e) = launchd::disable(TIMEKEEPER) {
                 return Err(put_back(e));
             }

@@ -1,0 +1,9 @@
+# The MediaRemote helper, vendored (decided by the owner 2026-09-16: a pinned
+# copy here, not a shared source). scripts/check-helper-upstream.sh compares
+# this pin with the plugin repo.
+repo      ~/code/streamdeck-now-playing (github.com/jdlien/streamdeck-now-playing)
+path      src/NowPlaying.Media.Mac/native/nowplaying-mediaremote.m
+commit    fc70de48f82532d2b645ee2ed4b5fe298f27088c  (2026-09-10, "Fix the loader-lock deadlock that froze the media dial")
+sha256    3fe3adfdc2bc95f1c34a65088b3b5780cfcafbffe25982d89fd52325e192025f  (the upstream file, before the local change)
+build     clang -dynamiclib -fobjc-arc -O2 -framework Foundation  (the plugin's csproj, line 53)
+local     hello gains "protocol": 1; a vendoring header comment

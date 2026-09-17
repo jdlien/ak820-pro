@@ -5,8 +5,8 @@
 #   scripts/sign-agent-macos.sh [DIR] [--dylib PATH]
 #
 # DIR defaults to ak820-agent/target/release. Signs ak820-agent and ak820 in
-# place, and the helper dylib too when --dylib is given (sign a COPY you own:
-# the sibling's build output is not this repo's to modify).
+# place, and the helper dylib found beside them (scripts/build-helper-macos.sh),
+# or the one --dylib names (sign a copy you own, never the plugin's build output).
 #
 # Why it matters before Phase 6: TCC keys Automation consent on the designated
 # requirement. An ad-hoc (linker) signature changes with every rebuild, so the
@@ -40,4 +40,6 @@ sign() {   # path identifier
 
 sign "$DIR/ak820-agent" com.jdlien.ak820pro.agent
 sign "$DIR/ak820" com.jdlien.ak820pro.cli
+# The vendored helper, when scripts/build-helper-macos.sh put it beside them.
+[ -z "$DYLIB" ] && [ -f "$DIR/nowplaying-mediaremote.dylib" ] && DYLIB="$DIR/nowplaying-mediaremote.dylib"
 [ -z "$DYLIB" ] || sign "$DYLIB" com.jdlien.ak820pro.mediaremote

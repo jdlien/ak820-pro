@@ -58,6 +58,9 @@ use self::route::Router;
 use crate::media::{Health, MediaSource};
 use crate::smtc::Snapshot;
 
+/// The protocol the vendored helper announces in `hello` (`ak820-agent/helper`).
+pub const HELPER_PROTOCOL: f64 = 1.0;
+
 /// The helper's file name, next to the executable unless [`DYLIB_ENV`] says.
 pub const DYLIB: &str = "nowplaying-mediaremote.dylib";
 pub const DYLIB_ENV: &str = "AK820_MEDIAREMOTE_DYLIB";
@@ -233,6 +236,16 @@ impl Engine {
                         return true;
                     }
                     Message::Fatal { error } => say(format!("[warn] mediaremote: helper fatal: {error}")),
+                    // Said once per helper run: the constructor sends one hello.
+                    Message::Hello { protocol, .. } => match protocol {
+                        Some(p) if p == HELPER_PROTOCOL => {}
+                        Some(p) => say(format!(
+                            "[warn] mediaremote: the helper speaks protocol {p}, this daemon expects {HELPER_PROTOCOL}; build it from ak820-agent/helper"
+                        )),
+                        None => say(
+                            "[warn] mediaremote: the helper sends no protocol version (an unversioned build, such as the Stream Deck plugin's); build it from ak820-agent/helper".into(),
+                        ),
+                    },
                     _ => {}
                 }
             }
@@ -874,10 +887,23 @@ mod tests {
     }
 
     #[test]
+    fn an_unversioned_or_foreign_helper_is_named_once() {
+        let mut e = Engine::new(true);
+        let t = Instant::now();
+        let mut lines = Vec::new();
+        e.event(Event::Message(Message::Hello { pid: Some(1.0), protocol: Some(HELPER_PROTOCOL) }), t, &mut |l| lines.push(l));
+        assert!(lines.is_empty(), "the vendored helper is quiet");
+        e.event(Event::Message(Message::Hello { pid: Some(2.0), protocol: None }), t, &mut |l| lines.push(l));
+        e.event(Event::Message(Message::Hello { pid: Some(3.0), protocol: Some(2.0) }), t, &mut |l| lines.push(l));
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].contains("no protocol version") && lines[1].contains("protocol 2"));
+    }
+
+    #[test]
     fn hello_is_not_proof_of_life_but_tick_is() {
         let mut e = Engine::new(true);
         let t = Instant::now();
-        e.event(Event::Message(Message::Hello { pid: Some(1.0) }), t, &mut quiet());
+        e.event(Event::Message(Message::Hello { pid: Some(1.0), protocol: Some(HELPER_PROTOCOL) }), t, &mut quiet());
         assert!(e.proof.is_none());
         e.event(Event::Message(Message::Tick { seq: Some(1.0) }), t, &mut quiet());
         assert_eq!(e.proof, Some(t));

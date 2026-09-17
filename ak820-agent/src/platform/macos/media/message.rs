@@ -34,6 +34,9 @@ pub enum Message {
     /// process loaded, and nothing about whether MediaRemote answers.
     Hello {
         pid: Option<f64>,
+        /// The vendored helper's protocol version (`ak820-agent/helper`); the
+        /// plugin's own build sends none.
+        protocol: Option<f64>,
     },
     Now(Now),
     /// Heartbeat, every 15 s, from the helper's serial queue: proof the queue
@@ -82,7 +85,7 @@ fn owned(o: &Object, key: &str) -> Option<String> {
 pub fn classify(line: &str) -> Result<Message, json::Error> {
     let o = json::parse_object(line)?;
     Ok(match o.str("type") {
-        Some("hello") => Message::Hello { pid: o.num("pid") },
+        Some("hello") => Message::Hello { pid: o.num("pid"), protocol: o.num("protocol") },
         Some("tick") => Message::Tick { seq: o.num("seq") },
         Some("fatal") => Message::Fatal {
             error: owned(&o, "error").unwrap_or_default(),
