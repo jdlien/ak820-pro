@@ -16,6 +16,8 @@
 //! ak820 health [--stalls] [--rows] [--isr] [--json] [--raw]
 //! ak820 lighting             the RGB values the board reports
 //! ak820 selftest             budget guard, idle drain, and recovery on one open
+//! ak820 clock [--raw] [--anyway]
+//!                            the RTC, as `ak820ctl clock --read` prints it; refuses beside a clock owner
 //! ak820 probe [--seconds N] [--applescript] [--dylib PATH]
 //!                            what MediaRemote reports; touches no keyboard at all
 //! ak820 install [--in-place] [--dylib PATH]
@@ -48,12 +50,13 @@ pub fn main() -> ExitCode {
         ["health", flags @ ..] => health(flags),
         ["lighting"] => lighting(),
         ["selftest"] => selftest(),
+        ["clock", flags @ ..] => clock(flags),
         ["probe", flags @ ..] => probe(flags),
         ["install", flags @ ..] => super::install::install(flags),
         ["uninstall", flags @ ..] => super::install::uninstall(flags),
         ["status"] => super::install::status(),
         _ => {
-            eprintln!("usage: ak820 --version | list | info | health [--stalls] [--rows] [--isr] [--json] [--raw] | lighting | selftest | probe [--seconds N] [--applescript] [--dylib PATH] | install [--in-place] [--dylib PATH] | uninstall [--keep-bash-off] | status");
+            eprintln!("usage: ak820 --version | list | info | health [--stalls] [--rows] [--isr] [--json] [--raw] | lighting | selftest | clock [--raw] [--anyway] | probe [--seconds N] [--applescript] [--dylib PATH] | install [--in-place] [--dylib PATH] | uninstall [--keep-bash-off] | status");
             eprintln!("(macOS: read-only commands only so far; see plans/AK820-AGENT-CROSSPLATFORM-PLAN.md)");
             return ExitCode::from(2);
         }
@@ -226,6 +229,95 @@ fn selftest() -> Result<(), String> {
     report_drained(&drained);
     println!("ok");
     Ok(())
+}
+
+/// The board's clock, read once and printed as `ak820ctl clock --read` prints
+/// it: Phase 2's read half on macOS. There is deliberately no set here.
+fn clock(flags: &[&str]) -> Result<(), String> {
+    use super::host::SystemHost;
+    use crate::clock::{self, transaction};
+
+    let mut raw = false;
+    let mut anyway = false;
+    for flag in flags {
+        match *flag {
+            "--raw" => raw = true,
+            "--anyway" => anyway = true,
+            other => return Err(format!("clock: unknown flag {other}; flags are --raw and --anyway")),
+        }
+    }
+    clock_ownership(anyway)?;
+
+    let dev = device::open_board().map_err(|e| e.to_string())?;
+    let got = transaction::read_once(&dev, dev.outstanding(), &SystemHost, REQUEST_TIMEOUT).map_err(|e| e.to_string())?;
+    if !got.board.understood() {
+        return Err(format!(
+            "RTC protocol version {} -- this tool speaks only version {} (ak820ctl clock --read would fall back to its legacy read)",
+            got.board.proto,
+            clock::PROTO_VERSION
+        ));
+    }
+    print!("{}", clock::read_lines(&got.board, got.sample.map(|s| (s.offset_ms, got.rtt_ms))));
+    if raw {
+        let hex: Vec<String> = got.report.iter().map(|b| format!("{b:02X}")).collect();
+        println!("raw {}", hex.join(" "));
+        println!("host_mid_sod {:.17}", got.host_mid_sod);
+        println!("rtt_ms {:.17}", got.rtt_ms);
+    }
+    report_drained(&got.drained);
+    if got.sample.is_none() {
+        return Err("the board's clock is not set (ak820ctl clock --read exits 1 here too)".into());
+    }
+    Ok(())
+}
+
+/// Refuse beside a clock owner (plan, Phase 2; review finding 10).
+///
+/// ⚠️ Fails CLOSED, as on Windows: a running owner refuses, and so does not
+/// being able to tell. The hazard is not our read failing. It is the owner's
+/// `ak820ctl` taking this read's reply as one of its own measurement samples:
+/// a well-formed `RTC_GET_TIME` reply no header check can tell apart, which
+/// becomes a wrong offset with a plausible round trip.
+fn clock_ownership(anyway: bool) -> Result<(), String> {
+    use super::launchd::{self, AGENT, TIMEKEEPER};
+    let mut owners = Vec::new();
+    let mut unknown = Vec::new();
+    match launchd::print_checked(TIMEKEEPER) {
+        // KeepAlive: loaded means syncing every 5 minutes, running or asleep between.
+        Ok(Some(_)) => owners.push(format!(
+            "{TIMEKEEPER} is loaded; its ak820ctl could take this read's reply as a measurement sample. \
+             Pause it first with `launchctl bootout gui/$UID/{TIMEKEEPER}`; `hostagent/install-agents.sh --only timekeeper` restores it"
+        )),
+        Ok(None) => {}
+        Err(e) => unknown.push(format!("whether {TIMEKEEPER} is loaded ({e})")),
+    }
+    match launchd::print_checked(AGENT) {
+        Ok(Some(_)) => match std::fs::read_to_string(launchd::plist_path(AGENT)) {
+            Ok(plist) if plist.contains("<string>--clock</string>") => owners.push(format!(
+                "{AGENT} runs with --clock, so this read's reply could become one of its samples; `ak820 status` shows what it sees"
+            )),
+            Ok(_) => {}
+            Err(e) => unknown.push(format!("whether {AGENT} owns the clock ({e})")),
+        },
+        Ok(None) => {}
+        Err(e) => unknown.push(format!("whether {AGENT} is loaded ({e})")),
+    }
+    match super::process::running_named("ak820ctl") {
+        0 => {}
+        n => owners.push(format!("{n} ak820ctl process(es) are talking to the board right now")),
+    }
+    if owners.is_empty() && unknown.is_empty() {
+        return Ok(());
+    }
+    let mut lines = owners;
+    lines.extend(unknown.into_iter().map(|u| format!("could not establish {u}")));
+    if anyway {
+        for line in &lines {
+            eprintln!("warning: {line} (--anyway given)");
+        }
+        return Ok(());
+    }
+    Err(format!("{}\nor pass --anyway to accept one possibly spoiled sync.", lines.join("\n")))
 }
 
 fn report_drained(drained: &[Drained]) {

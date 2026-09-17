@@ -1,25 +1,82 @@
-//! Phase 3a: deterministic replay of the oracle's own record.
+//! Phase 3a (Windows) and Phase 2 (macOS): deterministic replay of the oracle's
+//! own record, on each machine it has run on.
 //!
-//! `tests/fixtures/ak820pro-timekeeper-2026-09-05.log` is the Python
-//! timekeeper's log from this machine, 2026-09-05 11:36 to 2026-09-06 07:49,
-//! untouched. Every `bias learned` line names its inputs and its result
-//! (`before`, `elapsed`, the old bias, the new one, `P`); every `bias hold`
-//! line names the two periods the settled gate compared; every sync line's
-//! `before` decided the interval to the next one, and the next one's
-//! timestamp shows what was decided. So the log is a replay corpus for the
-//! learner's arithmetic, its settled gate and the scheduler's interval
-//! choice — with the positive evidence the parity document demands: over a
-//! hundred lines where learning actually fired.
+//! Two corpora, both the Python timekeeper's logs, untouched:
 //!
-//! What the log cannot give: `elapsed` is printed to whole seconds and
-//! `before` to one decimal, so the arithmetic is replayed at that precision
-//! and a result is accepted if the true elapsed within ±0.5 s could produce
-//! it. `ref_state` is not logged; it is assumed 2 where learning fired,
-//! which it must have been.
+//! - `tests/fixtures/ak820pro-timekeeper-2026-09-05.log`: Windows,
+//!   2026-09-05 11:36 to 2026-09-06 07:49.
+//! - `tests/fixtures/ak820pro-timekeeper-macos-2026-09-16.log`: the Mac, from
+//!   the restart onto the current learner (`94a4f3a`, 2026-09-04 11:16) to
+//!   2026-09-16 20:00, just before the Rust daemon was installed beside it.
+//!   4,166 lines, 1,469 `bias learned`, 605 `bias hold`, no failure lines.
+//!
+//! Every `bias learned` line names its inputs and its result (`before`,
+//! `elapsed`, the old bias, the new one, `P`); every `bias hold` line names the
+//! two periods the settled gate compared; every sync line's `before` decided
+//! the interval to the next one, and the next one's timestamp shows what was
+//! decided. So each log is a replay corpus for the learner's arithmetic, its
+//! settled gate and the scheduler's interval choice, with the positive
+//! evidence the parity document demands.
+//!
+//! What a log cannot give: `elapsed` is printed to whole seconds and `before`
+//! to one decimal, so the arithmetic is replayed at that precision and a
+//! result is accepted if the true elapsed within ±0.5 s could produce it.
+//! `ref_state` is not logged; it is assumed 2 where learning fired, which it
+//! must have been.
+//!
+//! ⚠️ **One macOS allowance, stated rather than hidden:** the Mac's timekeeper
+//! runs as a `Background` LaunchAgent, at priority 4, and its 15 s loop
+//! sometimes wakes late. So a macOS sync may come after the Windows tolerance
+//! of `interval + LOOP + 5 s`. Of 2,077 intervals, 11 did (21 to 51 s over).
+//! The replay allows at most 1% late and none more than 60 s over. **The early
+//! edge, where the decision actually lives, is held exactly on both.**
 
 use ak820_agent::clock::scheduler::{Learn, Reason, Scheduler, StatusRead, SyncResult, SYNC_INTERVAL, SYNC_INTERVAL_FAST, LOOP};
 
-const LOG: &str = include_str!("fixtures/ak820pro-timekeeper-2026-09-05.log");
+/// One log, and what it must show to count as positive evidence.
+struct Corpus {
+    name: &'static str,
+    log: &'static str,
+    min_learned: usize,
+    min_holds: usize,
+    min_runs: usize,
+    min_steps: usize,
+    min_learned_in_runs: usize,
+    min_intervals: usize,
+    min_fast: usize,
+    /// Late syncs allowed, as a fraction of intervals, and the most any may be
+    /// late beyond the Windows tolerance. Zero on Windows.
+    late_fraction: f64,
+    late_max_s: f64,
+}
+
+const WINDOWS: Corpus = Corpus {
+    name: "windows",
+    log: include_str!("fixtures/ak820pro-timekeeper-2026-09-05.log"),
+    min_learned: 100,
+    min_holds: 50,
+    min_runs: 5,
+    min_steps: 60,
+    min_learned_in_runs: 40,
+    min_intervals: 150,
+    min_fast: 5,
+    late_fraction: 0.0,
+    late_max_s: 0.0,
+};
+
+const MACOS: Corpus = Corpus {
+    name: "macos",
+    log: include_str!("fixtures/ak820pro-timekeeper-macos-2026-09-16.log"),
+    min_learned: 1_400,
+    min_holds: 600,
+    min_runs: 10,
+    min_steps: 2_000,
+    min_learned_in_runs: 1_400,
+    min_intervals: 2_000,
+    min_fast: 30,
+    late_fraction: 0.01,
+    late_max_s: 60.0,
+};
 
 fn status(pnom: u32) -> StatusRead {
     StatusRead {
@@ -75,10 +132,19 @@ fn parse_learned(line: &str) -> Option<Learned> {
 }
 
 #[test]
-fn every_learned_line_is_reproduced_by_the_learner() {
+fn windows_every_learned_line_is_reproduced_by_the_learner() {
+    every_learned_line_is_reproduced_by_the_learner(&WINDOWS);
+}
+
+#[test]
+fn macos_every_learned_line_is_reproduced_by_the_learner() {
+    every_learned_line_is_reproduced_by_the_learner(&MACOS);
+}
+
+fn every_learned_line_is_reproduced_by_the_learner(c: &Corpus) {
     let mut fired = 0;
     let mut exact = 0;
-    for line in LOG.lines().filter(|l| l.contains("bias learned:")) {
+    for line in c.log.lines().filter(|l| l.contains("bias learned:")) {
         let l = parse_learned(line).unwrap_or_else(|| panic!("unparsed: {line}"));
         // The elapsed was printed to the second, and `b` is sensitive to it
         // (0.25 * before * 1000 / elapsed^2 per second: up to ~0.5 ppm per
@@ -121,21 +187,42 @@ fn every_learned_line_is_reproduced_by_the_learner() {
         }
         fired += 1;
     }
-    assert!(fired >= 100, "positive evidence: {fired} learned lines replayed");
-    assert!(exact * 2 >= fired, "{exact} of {fired} exact at the printed elapsed");
-    eprintln!("replayed {fired} learned lines, {exact} exact at the printed elapsed");
+    assert!(fired >= c.min_learned, "{}: positive evidence: {fired} learned lines replayed", c.name);
+    assert!(exact * 2 >= fired, "{}: {exact} of {fired} exact at the printed elapsed", c.name);
+    eprintln!("{}: replayed {fired} learned lines, {exact} exact at the printed elapsed", c.name);
 }
 
 #[test]
-fn every_hold_line_is_a_period_move_beyond_six_ticks_and_is_reproduced() {
+fn windows_every_hold_line_is_a_period_move_beyond_six_ticks_and_is_reproduced() {
+    every_hold_line_is_a_period_move_beyond_six_ticks_and_is_reproduced(&WINDOWS);
+}
+
+#[test]
+fn macos_every_hold_line_is_a_period_move_beyond_six_ticks_and_is_reproduced() {
+    every_hold_line_is_a_period_move_beyond_six_ticks_and_is_reproduced(&MACOS);
+}
+
+fn every_hold_line_is_a_period_move_beyond_six_ticks_and_is_reproduced(c: &Corpus) {
     let mut holds = 0;
-    for line in LOG.lines().filter(|l| l.contains("bias hold:")) {
-        let a: i64 = between(line, "P ", " -> ").unwrap().parse().unwrap();
+    let mut unknown_prev = 0;
+    for line in c.log.lines().filter(|l| l.contains("bias hold:")) {
         let b: i64 = between(line, " -> ", " since").unwrap().parse().unwrap();
         let before: f64 = between(line, "residual ", " ms").unwrap().parse().unwrap();
-        assert!((a - b).abs() > 6, "a hold with |dP| <= 6: {line}");
         let mut s = Scheduler::new(0.0);
-        s.learn(Reason::Periodic, &SyncResult { ok: true, before_ms: Some(0.0), slewing: true }, Some(&status(a as u32)), Some(0), 0.0);
+        match between(line, "P ", " -> ").unwrap() {
+            // `P None`: the previous sync's status read failed, so nothing
+            // could be compared (the macOS log has two; the scheduler's unit
+            // test was this path's only evidence before).
+            "None" => {
+                s.learn(Reason::Periodic, &SyncResult { ok: true, before_ms: Some(0.0), slewing: true }, None, Some(0), 0.0);
+                unknown_prev += 1;
+            }
+            a => {
+                let a: i64 = a.parse().unwrap();
+                assert!((a - b).abs() > 6, "a hold with |dP| <= 6: {line}");
+                s.learn(Reason::Periodic, &SyncResult { ok: true, before_ms: Some(0.0), slewing: true }, Some(&status(a as u32)), Some(0), 0.0);
+            }
+        }
         let d = s.learn(
             Reason::Periodic,
             &SyncResult { ok: true, before_ms: Some(before), slewing: true },
@@ -146,7 +233,8 @@ fn every_hold_line_is_a_period_move_beyond_six_ticks_and_is_reproduced() {
         assert_eq!(d.log_line().as_deref(), Some(&line[20..]), "{line}");
         holds += 1;
     }
-    assert!(holds >= 50, "{holds} hold lines replayed");
+    assert!(holds >= c.min_holds, "{}: {holds} hold lines replayed", c.name);
+    eprintln!("{}: replayed {holds} hold lines, {unknown_prev} with no previous period", c.name);
 }
 
 /// One `bias hold` or `bias learned` line, whichever followed a sync.
@@ -157,8 +245,8 @@ enum BiasLine {
 
 /// The log as a sequence: every sync line paired with the bias line that
 /// followed it, if one did.
-fn sequence() -> Vec<(Sync, Option<BiasLine>)> {
-    let lines: Vec<&str> = LOG.lines().collect();
+fn sequence(log: &str) -> Vec<(Sync, Option<BiasLine>)> {
+    let lines: Vec<&str> = log.lines().collect();
     let mut out = Vec::new();
     for (i, line) in lines.iter().enumerate() {
         let Some(sync) = parse_sync(line) else { continue };
@@ -193,8 +281,17 @@ fn sequence() -> Vec<(Sync, Option<BiasLine>)> {
 /// monotonic instants are reconstructed from the wall-clock stamps), and
 /// the syncs the Python declined silently, which end a run.
 #[test]
-fn state_carried_across_consecutive_syncs_matches_the_log() {
-    let seq = sequence();
+fn windows_state_carried_across_consecutive_syncs_matches_the_log() {
+    state_carried_across_consecutive_syncs_matches_the_log(&WINDOWS);
+}
+
+#[test]
+fn macos_state_carried_across_consecutive_syncs_matches_the_log() {
+    state_carried_across_consecutive_syncs_matches_the_log(&MACOS);
+}
+
+fn state_carried_across_consecutive_syncs_matches_the_log(c: &Corpus) {
+    let seq = sequence(c.log);
     let mut runs = 0;
     let mut steps = 0;
     let mut learned = 0;
@@ -255,10 +352,10 @@ fn state_carried_across_consecutive_syncs_matches_the_log() {
             i += 1;
         }
     }
-    assert!(runs >= 5, "{runs} runs");
-    assert!(steps >= 60, "{steps} sequential steps");
-    assert!(learned >= 40, "{learned} learned steps inside runs");
-    eprintln!("replayed {runs} runs, {steps} consecutive syncs, {learned} of them learning, with state carried");
+    eprintln!("{}: replayed {runs} runs, {steps} consecutive syncs, {learned} of them learning, with state carried", c.name);
+    assert!(runs >= c.min_runs, "{}: {runs} runs", c.name);
+    assert!(steps >= c.min_steps, "{}: {steps} sequential steps", c.name);
+    assert!(learned >= c.min_learned_in_runs, "{}: {learned} learned steps inside runs", c.name);
 }
 
 struct Sync {
@@ -289,10 +386,20 @@ fn parse_sync(line: &str) -> Option<Sync> {
 /// sync actually happened: at the first 15-second loop tick on or after
 /// `last_sync + interval`.
 #[test]
-fn the_interval_after_each_sync_matches_when_the_next_one_happened() {
-    let syncs: Vec<Sync> = LOG.lines().filter_map(parse_sync).collect();
+fn windows_the_interval_after_each_sync_matches_when_the_next_one_happened() {
+    the_interval_after_each_sync_matches_when_the_next_one_happened(&WINDOWS);
+}
+
+#[test]
+fn macos_the_interval_after_each_sync_matches_when_the_next_one_happened() {
+    the_interval_after_each_sync_matches_when_the_next_one_happened(&MACOS);
+}
+
+fn the_interval_after_each_sync_matches_when_the_next_one_happened(c: &Corpus) {
+    let syncs: Vec<Sync> = c.log.lines().filter_map(parse_sync).collect();
     let mut checked = 0;
     let mut fast = 0;
+    let mut late = 0;
     for pair in syncs.windows(2) {
         let (this, next) = (&pair[0], &pair[1]);
         if next.reason != "periodic" {
@@ -306,9 +413,19 @@ fn the_interval_after_each_sync_matches_when_the_next_one_happened() {
         let interval = s.interval();
         let gap = next.at - this.at;
         assert!(
-            gap >= interval - 1.0 && gap < interval + LOOP + 5.0,
-            "after before {before:+.1} ms the interval was {interval} s but the next sync came {gap} s later"
+            gap >= interval - 1.0,
+            "{}: after before {before:+.1} ms the interval was {interval} s but the next sync came EARLY, {gap} s later",
+            c.name
         );
+        if gap >= interval + LOOP + 5.0 {
+            // A late loop wake, not a decision: see the module note.
+            assert!(
+                gap < interval + LOOP + 5.0 + c.late_max_s,
+                "{}: after before {before:+.1} ms the interval was {interval} s but the next sync came {gap} s later",
+                c.name
+            );
+            late += 1;
+        }
         // the loop was ticking every 15 s in between, so `wake` stays quiet
         // and the board was present throughout
         s.end_loop(true, this.at + interval - 10.0);
@@ -319,7 +436,12 @@ fn the_interval_after_each_sync_matches_when_the_next_one_happened() {
         }
         checked += 1;
     }
-    assert!(checked >= 150, "{checked} intervals replayed");
-    assert!(fast >= 5, "{fast} fast intervals: the log has a stretch above 60 ms");
-    eprintln!("replayed {checked} intervals, {fast} of them fast; normal is {SYNC_INTERVAL} s");
+    assert!(checked >= c.min_intervals, "{}: {checked} intervals replayed", c.name);
+    assert!(fast >= c.min_fast, "{}: {fast} fast intervals: the log has a stretch above 60 ms", c.name);
+    assert!(
+        late as f64 <= c.late_fraction * checked as f64,
+        "{}: {late} of {checked} intervals ran late",
+        c.name
+    );
+    eprintln!("{}: replayed {checked} intervals, {fast} of them fast, {late} late; normal is {SYNC_INTERVAL} s", c.name);
 }

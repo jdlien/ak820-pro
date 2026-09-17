@@ -177,6 +177,24 @@ pub fn print(label: &str) -> Option<Service> {
     launchctl(&["print", &format!("{}/{label}", domain())]).ok().map(|t| parse_print(&t))
 }
 
+/// As [`print`], but an error that is not "no such service" is an error: for
+/// the clock's ownership check, "could not ask" must not read as "not loaded".
+pub fn print_checked(label: &str) -> Result<Option<Service>, String> {
+    let out = Command::new("/bin/launchctl")
+        .args(["print", &format!("{}/{label}", domain())])
+        .output()
+        .map_err(|e| format!("launchctl: {e}"))?;
+    if out.status.success() {
+        return Ok(Some(parse_print(&String::from_utf8_lossy(&out.stdout))));
+    }
+    let text = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    // 113: "Could not find service ... in domain for user gui: 501"
+    if out.status.code() == Some(113) || text.contains("Could not find service") {
+        return Ok(None);
+    }
+    Err(format!("launchctl print {label}: {}", text.trim()))
+}
+
 pub fn is_disabled(label: &str) -> Result<bool, String> {
     Ok(parse_disabled(&launchctl(&["print-disabled", &domain()])?, label))
 }

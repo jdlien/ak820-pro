@@ -16,6 +16,7 @@ pub mod install;
 pub mod instance;
 pub mod launchd;
 pub mod media;
+pub mod process;
 mod runloop;
 mod sys;
 

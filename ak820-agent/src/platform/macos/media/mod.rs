@@ -179,6 +179,8 @@ pub struct Engine {
     denied: Option<String>,
     /// While a stale owner reads as not playing, no read before this.
     stale_quiet_until: Option<Instant>,
+    /// Consecutive polls on which the supervisor said failed. See [`Engine::poll`].
+    failed_polls: u32,
     view: View,
 }
 
@@ -191,6 +193,7 @@ impl Engine {
             fresh: false,
             denied: None,
             stale_quiet_until: None,
+            failed_polls: 0,
             view: View::default(),
         }
     }
@@ -267,6 +270,17 @@ impl Engine {
         self.view.polls += 1;
         self.view.polled_at = Some(at);
         self.router.settle(at);
+
+        // ⚠️ Failed must hold on TWO consecutive polls (measured 2026-09-16).
+        // A daemon frozen for 4 minutes by Phase 5a's SIGSTOP wakes with its
+        // media thread polling before its reader thread has drained the lines
+        // the helper wrote meanwhile, so the supervisor reports 246 s of
+        // silence from a helper that never stopped. Acting on that one poll
+        // pushed "none" for 3 s. The reader drains in milliseconds, so the
+        // next poll, 3 s later, sees the truth; a helper that really went
+        // quiet costs one poll more, inside the 60 s rule.
+        self.failed_polls = if helper.failed { self.failed_polls + 1 } else { 0 };
+        let helper = HelperState { failed: self.failed_polls >= 2, ..helper };
 
         // The canary cross-checks a null MediaRemote, so it only means
         // something while the helper is answering at all, and only once this
@@ -426,6 +440,9 @@ fn note_to(denied: &mut Option<String>, note: Note, say: &mut dyn FnMut(String))
 /// The source the daemon polls.
 pub struct MediaRemoteSource {
     view: Arc<Mutex<View>>,
+    /// When the daemon last asked, so a caller that was itself frozen does not
+    /// judge the media thread stalled for the same freeze.
+    asked_at: Mutex<Option<Instant>>,
 }
 
 pub struct Options {
@@ -492,7 +509,7 @@ impl MediaRemoteSource {
                 }
             })
             .map_err(|e| format!("spawning the media thread: {e}"))?;
-        Ok(MediaRemoteSource { view })
+        Ok(MediaRemoteSource { view, asked_at: Mutex::new(None) })
     }
 
     /// The effective `now`, unextrapolated, for `ak820 probe`.
@@ -509,15 +526,22 @@ impl MediaRemoteSource {
 impl MediaSource for MediaRemoteSource {
     fn latest(&self) -> (Snapshot, Health) {
         let v = self.view.lock().unwrap_or_else(|e| e.into_inner()).clone();
-        health_of(v, Instant::now(), applescript::wall_now())
+        let now = Instant::now();
+        let previous = self.asked_at.lock().unwrap_or_else(|e| e.into_inner()).replace(now);
+        health_of(v, now, previous, applescript::wall_now())
     }
 }
 
 /// The daemon's answer from one view. ⚠️ A thread that stopped polling, by a
 /// panic or a wedge, is a failed source (F10): otherwise its last view is
 /// served forever, and the keepalive re-asserts a track that is long over.
-fn health_of(v: View, now: Instant, wall: f64) -> (Snapshot, Health) {
-    let stalled = v.polled_at.is_some_and(|at| now.saturating_duration_since(at) >= STALLED_AFTER);
+///
+/// Judged only when the caller itself asked recently (`asked_before`): a
+/// whole process frozen and resumed finds every thread's timestamps old at
+/// once, and its media thread has not had its first chance to poll yet.
+fn health_of(v: View, now: Instant, asked_before: Option<Instant>, wall: f64) -> (Snapshot, Health) {
+    let caller_was_here = asked_before.is_some_and(|at| now.saturating_duration_since(at) < STALLED_AFTER);
+    let stalled = caller_was_here && v.polled_at.is_some_and(|at| now.saturating_duration_since(at) >= STALLED_AFTER);
     let snapshot = match &v.current {
         Some(n) => route::snapshot_of(n, wall),
         None => Snapshot::idle(),
@@ -635,6 +659,7 @@ mod tests {
         let mut e = Engine::new(true);
         let mut w = Fake { running: vec![Player::Music], reading: Some(track(Player::Music, "Song")), ..Fake::default() };
         let t = Instant::now();
+        e.poll(t, FAILED, &mut w, &mut quiet()); // one failed poll is not acted on
         e.poll(t, FAILED, &mut w, &mut quiet());
         assert!(e.view().last_poll_ok, "AppleScript answered for the helper");
         assert_eq!(e.view().route, Route::Silent);
@@ -732,6 +757,7 @@ mod tests {
         let mut e = Engine::new(true);
         let mut w = Fake { running: vec![Player::Music], reading: Some(Reading::TimedOut), ..Fake::default() };
         e.poll(Instant::now(), FAILED, &mut w, &mut quiet());
+        e.poll(Instant::now(), FAILED, &mut w, &mut quiet());
         assert!(!e.view().last_poll_ok);
         assert_eq!(e.view().last_error.as_deref(), Some("AppleScript read timed out"));
     }
@@ -748,6 +774,7 @@ mod tests {
         e.poll(t, OK, &mut w, &mut quiet());
         e.event(now_msg(None, "", 0.0), t, &mut quiet());
         e.poll(t + canary::MIN_GAP, OK, &mut w, &mut quiet());
+        e.poll(t + canary::MIN_GAP * 2, FAILED, &mut w, &mut quiet());
         e.poll(t + canary::MIN_GAP * 2, FAILED, &mut w, &mut quiet());
         assert_eq!((w.scans, w.asked.len(), w.read.len()), (0, 0, 0));
         assert!(!e.view().last_poll_ok);
@@ -807,10 +834,43 @@ mod tests {
     fn a_stopped_media_thread_reads_as_failed() {
         let t = Instant::now();
         let v = View { polled_at: Some(t), current: Some(Now { bundle: Some("x".into()), title: Some("T".into()), ..Now::default() }), ..View::default() };
-        assert!(health_of(v.clone(), t + Duration::from_secs(5), 0.0).1.last_poll_ok);
-        let (_, h) = health_of(v, t + STALLED_AFTER, 0.0);
+        let asked = |at: Instant| Some(at - Duration::from_secs(3));
+        assert!(health_of(v.clone(), t + Duration::from_secs(5), asked(t + Duration::from_secs(5)), 0.0).1.last_poll_ok);
+        let (_, h) = health_of(v, t + STALLED_AFTER, asked(t + STALLED_AFTER), 0.0);
         assert!(!h.last_poll_ok);
         assert_eq!(h.last_error.as_deref(), Some("the media thread has stopped polling"));
+    }
+
+    /// Measured: after a 240 s SIGSTOP of the whole daemon, the first `latest()`
+    /// found the view 246 s old because nothing had run yet, not because the
+    /// media thread had stopped.
+    #[test]
+    fn a_whole_process_freeze_is_not_a_stalled_media_thread() {
+        let t = Instant::now();
+        let v = View { polled_at: Some(t), ..View::default() };
+        let resumed = t + Duration::from_secs(246);
+        let (_, h) = health_of(v, resumed, Some(t + Duration::from_secs(1)), 0.0);
+        assert!(h.last_poll_ok);
+    }
+
+    /// Measured: the first poll after that freeze saw the supervisor report
+    /// 246 s of silence from a helper that had kept writing. One failed poll is
+    /// not acted on; two are.
+    #[test]
+    fn one_failed_poll_after_a_freeze_does_not_leave_mediaremote() {
+        let mut e = Engine::new(true);
+        let mut w = Fake { running: vec![Player::Music], reading: Some(track(Player::Music, "Song")), ..Fake::default() };
+        let t = Instant::now();
+        e.event(now_msg(Some("com.apple.Music"), "Song", 1.0), t, &mut quiet());
+        e.poll(t + Duration::from_secs(246), FAILED, &mut w, &mut quiet());
+        assert_eq!((e.view().route, w.read.len()), (Route::MediaRemote, 0));
+        assert!(e.view().last_poll_ok);
+        e.poll(t + Duration::from_secs(249), OK, &mut w, &mut quiet());
+        assert_eq!(e.view().route, Route::MediaRemote);
+        // a helper that really stays silent is left on the second poll
+        e.poll(t + Duration::from_secs(252), FAILED, &mut w, &mut quiet());
+        e.poll(t + Duration::from_secs(255), FAILED, &mut w, &mut quiet());
+        assert_eq!(e.view().route, Route::Silent);
     }
 
     #[test]
