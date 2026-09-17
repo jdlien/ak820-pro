@@ -220,6 +220,12 @@ impl Engine {
                         self.fresh = true;
                         let (from, to) = (self.router.bundle().map(str::to_owned), now.bundle.clone());
                         if !self.router.accept(now, at) {
+                            // A stale, wordless repeat whose text was kept is
+                            // routine (seen live 2026-09-16 22:30, when it was
+                            // logged misleadingly as a stickiness hold).
+                            if self.router.kept_text() {
+                                return true;
+                            }
                             say(format!(
                                 "media: holding a switch to paused {} for up to 5s; {} is still playing",
                                 to.as_deref().unwrap_or("(none)"),

@@ -68,6 +68,9 @@ pub struct Router {
     current: Option<Now>,
     playing_since: Option<Instant>,
     held: Option<Now>,
+    /// The last refusal kept the text of a stale, wordless repeat (F8), rather
+    /// than holding a switch: routine, and not worth a log line.
+    kept_text: bool,
 }
 
 impl Router {
@@ -79,6 +82,7 @@ impl Router {
     /// reporting the flag loosely could take the band at once; here it waits
     /// out the hold like any other paused app.
     pub fn accept(&mut self, incoming: Now, at: Instant) -> bool {
+        self.kept_text = false;
         let incoming_playing = is_playing(&incoming);
         if let Some(current) = &self.current {
             // A stale repeat of the same app with nothing to say keeps what it
@@ -92,6 +96,7 @@ impl Router {
                 .all(|f| f.as_deref().is_none_or(|t| py_trim(t).is_empty()));
             let scriptable = incoming.bundle.as_deref().and_then(super::players::Player::from_bundle).is_some();
             if incoming.stale && same_app && says_nothing && !scriptable {
+                self.kept_text = true;
                 return false;
             }
             let different_app = !incoming.bundle.as_deref().unwrap_or("").eq_ignore_ascii_case(current.bundle.as_deref().unwrap_or(""));
@@ -121,6 +126,11 @@ impl Router {
             return true;
         }
         false
+    }
+
+    /// Was the last refusal a stale repeat's text being kept, not a hold?
+    pub fn kept_text(&self) -> bool {
+        self.kept_text
     }
 
     /// The latest accepted message.
@@ -277,6 +287,7 @@ mod tests {
         r.accept(track("com.google.Chrome", "Video", "Channel", 1.0), t);
         let blank = Now { bundle: Some("com.google.Chrome".into()), stale: true, playing: true, rate: Some(1.0), ..Now::default() };
         assert!(!r.accept(blank, t + Duration::from_secs(1)));
+        assert!(r.kept_text(), "a kept text, not a stickiness hold");
         assert_eq!(r.snapshot(1_000.0).title, "Video");
         // A stale Music owner is still taken: the engine reads it instead.
         r.accept(track("com.apple.Music", "Song", "B", 1.0), t + Duration::from_secs(2));
