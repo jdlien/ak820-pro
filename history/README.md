@@ -31,3 +31,12 @@ offsets slew rather than jump, and a no-host reboot self-acquires to ~±15 ms.
 | `findings-bounded-wait.md` | Every unbounded wait in the tree, and what bounds it now |
 | `findings-ch582-states.md` | CH582F wire captures and state analysis. `scripts/bt_faults.py` replays these |
 | `findings-input-validation.md` | What the firmware trusts from the host and the module, and what it now checks |
+
+## phase0-burst-2026-09-17/ — the cross-platform refactor's Phase 0 gate (2026-09-17)
+
+| File | What it holds |
+|---|---|
+| `README.md` | Why a burst A/B replaced the overnight gate, what ran, both tables, the thin margin on condition 3, and the paired-offset check |
+| `phase0-burst-20260917-101627.txt` | Raw `ak820 clock --raw` output, 50 reads each from `e07fdfa` and `d8ead97`, interleaved on gremlin |
+| `burst_ab.ps1` | The run: stop the daemon, alternate the two CLIs, restart |
+| `burst_grade.py` | The grader; re-run from here, it gives the same PASS |
