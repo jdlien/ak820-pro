@@ -844,6 +844,19 @@ limit. **Every finding accepted; none waved off.**
 
 **What the review confirmed as sound**, and is therefore not restated: media-only mode sends no clock transaction (`agent.rs:241-252`, `:302-311`); the comparator parses the Python timekeeper's log; the gremlin binary is today's daemon code; nine Windows-referencing files and no `cfg`; the `elapsedAt` drift; per-interaction opens as the existing Windows design; SIGSTOP as a fair pause; the 19.7% child-CPU figure as exact; one neutral failure policy with backend-defined failure as the right shape; `IOServiceGetMatchingServices`; process-table player detection by exact executable path.
 
+## Helper decision revised — 2026-09-16, owner
+
+**Pinned copy, not shared source.** Open question 2's "shared code" would have
+meant a change and a release of the notarized Stream Deck plugin. Instead
+`ak820-agent/helper/` vendors `nowplaying-mediaremote.m` (MIT, same author) at
+`fc70de4`, pinned by commit and SHA-256 in `UPSTREAM`, built with the plugin's
+own flags (`scripts/build-helper-macos.sh`), signed as
+`com.jdlien.ak820pro.mediaremote` (`scripts/sign-agent-macos.sh`). The one local
+change is a `"protocol": 1` field in `hello`, which the daemon checks.
+`scripts/check-helper-upstream.sh` exits 1 when the plugin's copy moves, so a
+release can gate on it; bug fixes go upstream first and are re-vendored. The
+cross-repo note in `current-status.md` no longer applies.
+
 ## Phase audits
 
 Every phase ends with an external audit. Each report and its dispositions

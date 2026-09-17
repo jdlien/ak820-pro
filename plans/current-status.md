@@ -81,9 +81,13 @@ Full reasoning in the plan's *Finalization* section and at each site.
 
 1. "On this machine" wording at five sites — trivial, still unfixed, blocks
    nothing.
-2. **Two MediaRemote helpers, shared code** (A). Gates **Phase 3**, not the
-   spikes: the sibling's protocol still has no version field, and S1–S3 use its
-   built dylib unchanged. ⚠️ See the cross-repo note below.
+2. **Two MediaRemote helpers, and — revised by the owner 2026-09-16 — a pinned
+   copy, not shared code.** `ak820-agent/helper/` vendors the plugin's
+   `nowplaying-mediaremote.m` at `fc70de4` (pin and SHA-256 in `UPSTREAM`), with
+   one local change: `hello` carries `"protocol": 1`, and the daemon warns on an
+   unversioned or foreign helper. `scripts/build-helper-macos.sh` builds it,
+   `scripts/sign-agent-macos.sh` signs it, `scripts/check-helper-upstream.sh`
+   flags drift. The plugin repo is untouched. Installed on this Mac 22:20.
 3. **Ships publicly** as a stapled **`.dmg`**, **Apple Silicon only**. (This
    file said `.pkg` until finalization, contradicting the plan's review
    disposition. The Installer certificate does exist; `.dmg` won on shape.)
