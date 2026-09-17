@@ -1,4 +1,4 @@
-//! `ak820 install` / `uninstall` / `status` on macOS: Phase 4a, now-playing only.
+//! `ak820 install [--clock]` / `uninstall` / `status` on macOS: Phases 4a and 4b.
 //!
 //! The Windows installer's shape (`windows/cli.rs`), with launchd's mechanics:
 //!
@@ -9,17 +9,25 @@
 //! - **Retire the bash agent with `bootout` plus `disable`**, and wait for its
 //!   lock to be released, before the daemon starts. The daemon takes the same
 //!   lock and would refuse beside it.
-//! - **Leave the Python timekeeper alone.** It owns the clock until Phase 4b,
-//!   and `--clock` is refused. Its `ak820ctl` still seizes the device at each
-//!   sync; a busy push logs `[warn]`, and 4a's gate counts those.
+//! - **Without `--clock`, the Python timekeeper keeps the clock**: left alone
+//!   if it runs, and given the clock back if a previous `--clock` install
+//!   disabled it. The order matters, as on Windows: the clock-owning daemon is
+//!   booted out first, the new daemon starts without `--clock`, and only then
+//!   does the timekeeper start. Two clock writers never overlap.
+//! - **With `--clock` (Phase 4b), the timekeeper is retired**: `bootout` at a
+//!   moment when no `ak820ctl` runs, so no sync is cut off mid-transaction,
+//!   then `disable`, so launchd does not load it at the next login beside the
+//!   daemon. The daemon itself refuses `--clock` unless all of that holds
+//!   (`daemon::clock_is_ours`).
 //! - **Every failure after something was stopped puts something back:** the
 //!   previous daemon if there was one, otherwise the bash agent.
 //! - **Strip `com.apple.quarantine`** from what it installs: a quarantined
 //!   helper dylib hangs perl behind a Gatekeeper dialog, at every restart (S3).
 //!
 //! `ak820 uninstall` is the rollback, and does it rather than describing it:
-//! the daemon's agent is removed, and the bash agent is enabled and started
-//! again (unless `--keep-bash-off`).
+//! the daemon's agent is removed, then the bash agent is enabled and started
+//! again (unless `--keep-bash-off`), and, if the daemon owned the clock, the
+//! Python timekeeper too (unless `--keep-timekeeper-off`).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -65,6 +73,20 @@ fn started_stamp(path: &Path) -> Option<String> {
     crate::status::read(path)?.into_iter().find(|(k, _)| k == "started").map(|(_, v)| v)
 }
 
+/// Wait until no `ak820ctl` runs: the Python timekeeper's sync is a separate
+/// process, and cutting one off mid-transaction, or starting a second clock
+/// writer beside it, is what the ordering exists to prevent.
+fn wait_no_ak820ctl(timeout: Duration) -> Result<(), String> {
+    let until = Instant::now() + timeout;
+    while super::process::running_named("ak820ctl") > 0 {
+        if Instant::now() >= until {
+            return Err(format!("an ak820ctl process was still running {} s later", timeout.as_secs()));
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    Ok(())
+}
+
 fn wait_unlocked(timeout: Duration) -> Result<(), String> {
     let until = Instant::now() + timeout;
     while let Some((pid, _)) = instance::any_holder() {
@@ -78,16 +100,15 @@ fn wait_unlocked(timeout: Duration) -> Result<(), String> {
 
 pub fn install(flags: &[&str]) -> Result<(), String> {
     let mut in_place = false;
+    let mut clock = false;
     let mut dylib_flag: Option<PathBuf> = None;
     let mut it = flags.iter();
     while let Some(flag) = it.next() {
         match *flag {
             "--in-place" => in_place = true,
+            "--clock" => clock = true,
             "--dylib" => dylib_flag = Some(it.next().ok_or("--dylib takes a path")?.into()),
-            "--clock" => {
-                return Err("install: --clock is not built on macOS yet; the Python timekeeper keeps the clock (plan, Phase 4b)".into())
-            }
-            other => return Err(format!("install: unknown flag {other}; the flags are --in-place and --dylib PATH")),
+            other => return Err(format!("install: unknown flag {other}; the flags are --in-place, --clock and --dylib PATH")),
         }
     }
 
@@ -146,6 +167,7 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
         log: &log,
         stdio: &stdio,
         dylib: (beside.as_deref() != Some(dylib_path.as_path())).then_some(dylib_path.as_path()),
+        clock,
     });
     let plist = launchd::plist_path(AGENT);
     if let Some(dir) = plist.parent() {
@@ -171,7 +193,10 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
     // ---- from here an agent may be stopped, so failures put one back ----
     let previous = launchd::print(AGENT).is_some() && plist.is_file();
     let bash_plist = launchd::plist_path(NOWPLAYING);
+    let timekeeper_plist = launchd::plist_path(TIMEKEEPER);
+    let retired_timekeeper = std::cell::Cell::new(false);
     let put_back = |why: String| -> String {
+        let mut said = vec![why];
         let result = if previous {
             launchd::bootstrap(&plist).map(|()| "the previous daemon was started again")
         } else if bash_plist.is_file() {
@@ -179,12 +204,22 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
                 .and_then(|()| launchd::bootstrap(&bash_plist))
                 .map(|()| "the bash now-playing agent was started again")
         } else {
-            return why;
+            Ok("")
         };
         match result {
-            Ok(what) => format!("{why}; {what}"),
-            Err(e) => format!("{why}; and putting the previous agent back failed too: {e}"),
+            Ok("") => {}
+            Ok(what) => said.push(what.into()),
+            Err(e) => said.push(format!("and putting the previous agent back failed too: {e}")),
         }
+        // Only the timekeeper THIS run retired, and never beside a previous
+        // daemon that owned the clock itself.
+        if retired_timekeeper.get() {
+            match launchd::enable(TIMEKEEPER).and_then(|()| launchd::bootstrap(&timekeeper_plist)) {
+                Ok(()) => said.push("the Python timekeeper was started again".into()),
+                Err(e) => said.push(format!("and restarting the Python timekeeper failed: {e}; nothing syncs the clock")),
+            }
+        }
+        said.join("; ")
     };
 
     launchd::bootout(AGENT, WAIT)?;
@@ -214,9 +249,39 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
         return Err(put_back(e));
     }
 
-    match launchd::print(TIMEKEEPER) {
-        Some(_) => println!("left {TIMEKEEPER} alone: it keeps the clock"),
-        None => println!("⚠️  {TIMEKEEPER} is not loaded, and this daemon does not sync the clock yet: nothing will"),
+    // The clock: exactly one owner, and never two at once.
+    let mut give_clock_back = false;
+    if clock {
+        if launchd::print(TIMEKEEPER).is_some() {
+            // Between syncs, so none is cut off mid-transaction.
+            if let Err(e) = wait_no_ak820ctl(Duration::from_secs(30)).and_then(|()| launchd::bootout(TIMEKEEPER, WAIT)) {
+                return Err(put_back(e));
+            }
+            retired_timekeeper.set(true);
+            println!("stopped {TIMEKEEPER}: the daemon takes the clock");
+        }
+        if timekeeper_plist.is_file() {
+            if let Err(e) = launchd::disable(TIMEKEEPER) {
+                return Err(put_back(e));
+            }
+            retired_timekeeper.set(true);
+            println!("disabled {TIMEKEEPER}, so it stays off across logins (its plist is left for `ak820 install` or `uninstall`)");
+        }
+        if let Err(e) = wait_no_ak820ctl(Duration::from_secs(15)) {
+            return Err(put_back(e));
+        }
+        if let Err(e) = daemon::clock_is_ours() {
+            return Err(put_back(format!("the clock is still not the daemon's to take: {e}")));
+        }
+    } else if timekeeper_plist.is_file() && launchd::print(TIMEKEEPER).is_none() && launchd::is_disabled(TIMEKEEPER).unwrap_or(false) {
+        // A previous --clock install retired it. The clock-owning daemon was
+        // booted out above; the timekeeper starts only after the new daemon,
+        // which does not write the clock, is running.
+        give_clock_back = true;
+    } else if launchd::print(TIMEKEEPER).is_some() {
+        println!("left {TIMEKEEPER} alone: it keeps the clock (pass --clock to move it to the daemon)");
+    } else {
+        println!("⚠️  {TIMEKEEPER} is not loaded and --clock was not given: nothing will sync the clock");
     }
 
     let status_path = state.join("ak820-agent.status");
@@ -227,7 +292,18 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
     if let Err(e) = launchd::bootstrap(&plist) {
         return Err(put_back(e));
     }
-    println!("started {AGENT} from {}\nlog: {}", plist.display(), log.display());
+    println!(
+        "started {AGENT} from {}{}\nlog: {}",
+        plist.display(),
+        if clock { ", owning the clock" } else { "" },
+        log.display()
+    );
+    if give_clock_back {
+        launchd::enable(TIMEKEEPER)
+            .and_then(|()| launchd::bootstrap(&timekeeper_plist))
+            .map_err(|e| format!("{e}; the daemon runs without the clock, so nothing syncs it: hostagent/install-agents.sh --only timekeeper"))?;
+        println!("enabled and started {TIMEKEEPER} again: the clock is back with the Python timekeeper");
+    }
 
     let until = Instant::now() + WAIT;
     while started_stamp(&status_path) == before && Instant::now() < until {
@@ -242,13 +318,18 @@ pub fn install(flags: &[&str]) -> Result<(), String> {
 
 pub fn uninstall(flags: &[&str]) -> Result<(), String> {
     let mut restore_bash = true;
+    let mut restore_timekeeper = true;
     for flag in flags {
         match *flag {
             "--keep-bash-off" => restore_bash = false,
-            other => return Err(format!("uninstall: unknown flag {other}; the flag is --keep-bash-off")),
+            "--keep-timekeeper-off" => restore_timekeeper = false,
+            other => {
+                return Err(format!("uninstall: unknown flag {other}; the flags are --keep-bash-off and --keep-timekeeper-off"))
+            }
         }
     }
     let plist = launchd::plist_path(AGENT);
+    let owned_clock = std::fs::read_to_string(&plist).is_ok_and(|t| launchd::plist_owns_clock(&t));
     if launchd::print(AGENT).is_some() {
         launchd::bootout(AGENT, WAIT)?;
         println!("stopped {AGENT}");
@@ -272,6 +353,23 @@ pub fn uninstall(flags: &[&str]) -> Result<(), String> {
         println!("enabled and started {NOWPLAYING} again");
     } else {
         println!("no {NOWPLAYING} plist to put back: `hostagent/install-agents.sh --only nowplaying` installs it");
+    }
+
+    // After the daemon is gone, so two clock writers never overlap.
+    let timekeeper_plist = launchd::plist_path(TIMEKEEPER);
+    if !owned_clock {
+        return Ok(());
+    }
+    if !restore_timekeeper {
+        println!("⚠️  the daemon owned the clock and {TIMEKEEPER} was left off (--keep-timekeeper-off): nothing syncs the clock");
+    } else if timekeeper_plist.is_file() {
+        launchd::enable(TIMEKEEPER)?;
+        if launchd::print(TIMEKEEPER).is_none() {
+            launchd::bootstrap(&timekeeper_plist)?;
+        }
+        println!("enabled and started {TIMEKEEPER} again: the clock is back with the Python timekeeper");
+    } else {
+        println!("⚠️  the daemon owned the clock and there is no {TIMEKEEPER} plist: `hostagent/install-agents.sh --only timekeeper` installs it");
     }
     Ok(())
 }

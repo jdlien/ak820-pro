@@ -79,7 +79,18 @@ case "$ACTION" in
 *) echo "usage: $0 [--install|--uninstall|--status] [--only timekeeper|nowplaying]" >&2; exit 2 ;;
 esac
 
+DAEMON_PLIST="$DEST/com.jdlien.ak820pro.agent.plist"
 for a in "${AGENTS[@]}"; do
+  # ⚠️ Two clock writers corrupt each other's learners. While the Rust daemon
+  # runs with --clock (Phase 4b), the timekeeper must not start. The way back is
+  # `ak820 install` WITHOUT --clock, which stops the daemon writing the clock and
+  # then starts the timekeeper itself -- in that order.
+  if [ "$a" = timekeeper ] && [ -f "$DAEMON_PLIST" ] && grep -q "<string>--clock</string>" "$DAEMON_PLIST"; then
+    echo "refusing: the Rust daemon (com.jdlien.ak820pro.agent) owns the clock." >&2
+    echo "  \`ak820 install\` without --clock gives the clock back to the timekeeper, in the safe order;" >&2
+    echo "  \`ak820 uninstall\` does too. Or pass --only nowplaying." >&2
+    exit 1
+  fi
   if [ "$a" = nowplaying ] && launchctl print "$DOMAIN/com.jdlien.ak820pro.agent" >/dev/null 2>&1; then
     echo "refusing: the Rust daemon (com.jdlien.ak820pro.agent) owns now-playing." >&2
     echo "  \`ak820 uninstall\` removes it and starts the bash agent again;" >&2

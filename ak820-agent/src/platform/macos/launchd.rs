@@ -46,6 +46,14 @@ pub struct Definition<'a> {
     pub stdio: &'a Path,
     /// Set when the helper is not beside the daemon (`--in-place` builds).
     pub dylib: Option<&'a Path>,
+    /// The daemon owns the clock (Phase 4b).
+    pub clock: bool,
+}
+
+/// Does the installed plist run the daemon with `--clock`? Read from the file
+/// launchd loads, which is what will run at the next login.
+pub fn plist_owns_clock(text: &str) -> bool {
+    text.contains("<string>--clock</string>")
 }
 
 fn xml(text: &str) -> String {
@@ -88,7 +96,7 @@ pub fn plist(def: &Definition) -> String {
     <array>
         <string>{daemon}</string>
         <string>--log</string>
-        <string>{log}</string>
+        <string>{log}</string>{clock}
     </array>
 {env}
     <key>RunAtLoad</key>
@@ -117,6 +125,7 @@ pub fn plist(def: &Definition) -> String {
         daemon = path(def.daemon),
         log = path(def.log),
         stdio = path(def.stdio),
+        clock = if def.clock { "\n        <string>--clock</string>" } else { "" },
     )
 }
 
@@ -263,18 +272,23 @@ mod tests {
             log: Path::new("/Users/a&b/Library/Logs/ak820pro/ak820-agent.log"),
             stdio: Path::new("/tmp/stdio.log"),
             dylib: None,
+            clock: false,
         });
         assert!(p.contains("<string>/Users/a&amp;b/bin/ak820-agent</string>"));
         assert!(!p.contains("EnvironmentVariables"));
         assert!(p.contains(&format!("<string>{AGENT}</string>")));
         assert!(p.contains("<key>ProcessType</key>\n    <string>Standard</string>"), "Background starves it");
+        assert!(!plist_owns_clock(&p));
 
         let p = plist(&Definition {
             daemon: Path::new("/x/ak820-agent"),
             log: Path::new("/x/log"),
             stdio: Path::new("/x/stdio"),
             dylib: Some(Path::new("/y/nowplaying-mediaremote.dylib")),
+            clock: true,
         });
+        assert!(plist_owns_clock(&p));
+        assert!(p.contains("<string>/x/log</string>\n        <string>--clock</string>\n    </array>"));
         assert!(p.contains("<key>AK820_MEDIAREMOTE_DYLIB</key>\n        <string>/y/nowplaying-mediaremote.dylib</string>"));
     }
 
@@ -290,6 +304,7 @@ mod tests {
                 log: Path::new("/x/l"),
                 stdio: Path::new("/x/s"),
                 dylib: Some(Path::new("/y/d.dylib")),
+                clock: true,
             }),
         )
         .unwrap();

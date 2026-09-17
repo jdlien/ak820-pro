@@ -1,10 +1,17 @@
-//! `ak820-agent` on macOS: now-playing only (plan, build order: Phase 3, then
-//! 4a). The Python timekeeper owns the clock until Phase 2 and 4b, so this
-//! **refuses `--clock`** rather than accept a flag it cannot honour.
+//! `ak820-agent` on macOS: now-playing, and with `--clock` the clock too
+//! (Phase 4b).
 //!
 //! ```text
-//! ak820-agent [--log PATH] [--status PATH] [--interval SECS] [--once]
+//! ak820-agent [--log PATH] [--status PATH] [--interval SECS] [--once] [--clock]
 //! ```
+//!
+//! ⚠️ **`--clock` is checked, not trusted**, as on Windows (the phase-3a/4a
+//! audit's finding 1): exactly one process may run clock transactions, or two
+//! learners corrupt each other silently. It refuses while the Python
+//! timekeeper's LaunchAgent is loaded, while its plist is present and **not
+//! disabled** (launchd would load it at the next login, beside this), while any
+//! `ak820ctl` process runs, and when any of that cannot be established.
+//! `ak820 install --clock` arranges all of it.
 //!
 //! The log is `~/Library/Logs/ak820pro/ak820-agent.log`, where Console.app
 //! looks; the status file is `~/Library/Application Support/ak820pro/`.
@@ -73,10 +80,12 @@ pub fn main() {
         }
     }
 
-    // After parsing, so the refusal lands in the log `--log` named, whatever
-    // the argument order.
+    // After parsing, so a refusal lands in the log `--log` named, whatever the
+    // argument order.
     if opts.clock {
-        bail(&opts.log, "not starting: --clock is not built on macOS yet; the Python timekeeper owns the clock");
+        if let Err(why) = clock_is_ours() {
+            bail(&opts.log, &format!("not starting with --clock: {why}"));
+        }
     }
 
     let _held: Lock = match Lock::claim_all(&instance::default_path(), &instance::all_paths()) {
@@ -88,6 +97,36 @@ pub fn main() {
     if let Err(e) = agent::run::<super::Native>(opts) {
         Log::at(&log).line(&format!("stopped: {e}"));
         std::process::exit(1);
+    }
+}
+
+/// May this process own the clock? Fails closed.
+pub fn clock_is_ours() -> Result<(), String> {
+    use super::launchd::{self, TIMEKEEPER};
+    match launchd::print_checked(TIMEKEEPER) {
+        Ok(None) => {}
+        Ok(Some(_)) => {
+            return Err(format!(
+                "the Python timekeeper {TIMEKEEPER} is loaded; `ak820 install --clock` retires it, or run without --clock"
+            ))
+        }
+        Err(e) => return Err(format!("cannot establish whether {TIMEKEEPER} is loaded ({e})")),
+    }
+    if launchd::plist_path(TIMEKEEPER).is_file() {
+        match launchd::is_disabled(TIMEKEEPER) {
+            Ok(true) => {}
+            Ok(false) => {
+                return Err(format!(
+                    "{TIMEKEEPER} is not disabled, so launchd starts it at the next login beside this; \
+                     `ak820 install --clock` disables it"
+                ))
+            }
+            Err(e) => return Err(format!("cannot establish whether {TIMEKEEPER} is disabled ({e})")),
+        }
+    }
+    match super::process::running_named("ak820ctl") {
+        0 => Ok(()),
+        n => Err(format!("{n} ak820ctl process(es) are talking to the clock")),
     }
 }
 

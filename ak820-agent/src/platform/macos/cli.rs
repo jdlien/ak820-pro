@@ -20,10 +20,10 @@
 //!                            the RTC, as `ak820ctl clock --read` prints it; refuses beside a clock owner
 //! ak820 probe [--seconds N] [--applescript] [--dylib PATH]
 //!                            what MediaRemote reports; touches no keyboard at all
-//! ak820 install [--in-place] [--dylib PATH]
-//!                            the daemon as a LaunchAgent, now-playing only (Phase 4a)
-//! ak820 uninstall [--keep-bash-off]
-//!                            remove it, and start the bash agent again
+//! ak820 install [--in-place] [--clock] [--dylib PATH]
+//!                            the daemon as a LaunchAgent; --clock retires the Python timekeeper (4b)
+//! ak820 uninstall [--keep-bash-off] [--keep-timekeeper-off]
+//!                            remove it, and start the bash agent (and timekeeper) again
 //! ak820 status               the three agents, the daemon's status file, its log
 //! ```
 //!
@@ -56,7 +56,7 @@ pub fn main() -> ExitCode {
         ["uninstall", flags @ ..] => super::install::uninstall(flags),
         ["status"] => super::install::status(),
         _ => {
-            eprintln!("usage: ak820 --version | list | info | health [--stalls] [--rows] [--isr] [--json] [--raw] | lighting | selftest | clock [--raw] [--anyway] | probe [--seconds N] [--applescript] [--dylib PATH] | install [--in-place] [--dylib PATH] | uninstall [--keep-bash-off] | status");
+            eprintln!("usage: ak820 --version | list | info | health [--stalls] [--rows] [--isr] [--json] [--raw] | lighting | selftest | clock [--raw] [--anyway] | probe [--seconds N] [--applescript] [--dylib PATH] | install [--in-place] [--clock] [--dylib PATH] | uninstall [--keep-bash-off] [--keep-timekeeper-off] | status");
             eprintln!("(macOS: read-only commands only so far; see plans/AK820-AGENT-CROSSPLATFORM-PLAN.md)");
             return ExitCode::from(2);
         }
