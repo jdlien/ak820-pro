@@ -1,0 +1,707 @@
+2026-09-17 10:16:27.988 burst A/B start; NEW=C:\Users\jdlien\AppData\Local\ak820pro\bin\ak820.exe (ak820 0.1.1 (v0.1.1-22-ge07fdfa); speaks RTC protocol 2, text channel 0x12, health channel 0x13); OLD=C:\Users\jdlien\AppData\Local\Temp\claude\C--Users-jdlien-code-ak820-pro\2a1fe2b5-2c78-4f0e-b7e5-5c1f7cda064b\scratchpad\rollback-d8ead97\ak820.exe (ak820 0.1.0 (d8ead97); speaks RTC protocol 2, text channel 0x12, health channel 0x13)
+2026-09-17 10:17:27.959 last daemon sync before stop: 2026-09-17 10:17:26 sync (periodic): clock set (sub-second): before +2.5 ms, after +3.4 ms, rtt 4.0 ms, U ~1.3 ms, lead now 3.28 ms, bias sent (slewing)
+2026-09-17 10:17:29.873 daemon stopped; task state Ready
+=== round 1 NEW at 2026-09-17 10:17:29.879 exit 0
+device 2026-09-17 10:17:29+0.907  (cnt 30407 / period 33517, nominal 33517)
+offset board-host +0.8 ms  rtt 5.3 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914367491  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 1D 02 C7 76 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 03 24 80 36
+host_mid_sod 37049.90634346008300781
+rtt_ms 5.30076026916503906
+=== round 1 OLD at 2026-09-17 10:17:30.921 exit 0
+device 2026-09-17 10:17:30+0.941  (cnt 31551 / period 33517, nominal 33517)
+offset board-host +1.3 ms  rtt 6.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914368491  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 1E 02 3F 7B 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 EB 27 80 36
+host_mid_sod 37050.93997359275817871
+rtt_ms 6.03103637695312500
+=== round 2 OLD at 2026-09-17 10:17:31.960 exit 0
+device 2026-09-17 10:17:31+0.980  (cnt 32841 / period 33517, nominal 33517)
+offset board-host +1.6 ms  rtt 5.5 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914369491  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 1F 02 49 80 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 D3 2B 80 36
+host_mid_sod 37051.97824859619140625
+rtt_ms 5.46622276306152344
+=== round 2 NEW at 2026-09-17 10:17:33.000 exit 0
+device 2026-09-17 10:17:33+0.020  (cnt 674 / period 33517, nominal 33517)
+offset board-host +1.2 ms  rtt 6.1 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914371491  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 21 02 A2 02 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 A3 33 80 36
+host_mid_sod 37053.01890134811401367
+rtt_ms 6.10017776489257812
+=== round 3 NEW at 2026-09-17 10:17:34.046 exit 0
+device 2026-09-17 10:17:34+0.065  (cnt 2195 / period 33517, nominal 33517)
+offset board-host +0.6 ms  rtt 6.2 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914372492  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 22 02 93 08 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 8C 37 80 36
+host_mid_sod 37054.06484103202819824
+rtt_ms 6.23703002929687500
+=== round 3 OLD at 2026-09-17 10:17:35.091 exit 0
+device 2026-09-17 10:17:35+0.111  (cnt 3734 / period 33517, nominal 33517)
+offset board-host +0.8 ms  rtt 6.6 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914373492  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 23 02 96 0E 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 74 3B 80 36
+host_mid_sod 37055.11065053939819336
+rtt_ms 6.56127929687500000
+=== round 4 OLD at 2026-09-17 10:17:36.135 exit 0
+device 2026-09-17 10:17:36+0.155  (cnt 5184 / period 33517, nominal 33517)
+offset board-host +0.4 ms  rtt 5.3 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914374492  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 24 02 40 14 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 5C 3F 80 36
+host_mid_sod 37056.15423250198364258
+rtt_ms 5.34558296203613281
+=== round 4 NEW at 2026-09-17 10:17:37.166 exit 0
+device 2026-09-17 10:17:37+0.184  (cnt 6162 / period 33517, nominal 33517)
+offset board-host -0.5 ms  rtt 5.2 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914375493  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 25 02 12 18 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 45 43 80 36
+host_mid_sod 37057.18429327011108398
+rtt_ms 5.21540641784667969
+=== round 5 NEW at 2026-09-17 10:17:38.209 exit 0
+device 2026-09-17 10:17:38+0.227  (cnt 7604 / period 33517, nominal 33517)
+offset board-host -1.4 ms  rtt 5.2 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914376494  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 26 02 B4 1D 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 2E 47 80 36
+host_mid_sod 37058.22826886177062988
+rtt_ms 5.21039962768554688
+=== round 5 OLD at 2026-09-17 10:17:39.254 exit 0
+device 2026-09-17 10:17:39+0.272  (cnt 9130 / period 33517, nominal 33517)
+offset board-host -0.9 ms  rtt 7.1 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914377494  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 27 02 AA 23 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 16 4B 80 36
+host_mid_sod 37059.27332711219787598
+rtt_ms 7.09819793701171875
+=== round 6 OLD at 2026-09-17 10:17:40.295 exit 0
+device 2026-09-17 10:17:40+0.311  (cnt 10431 / period 33517, nominal 33517)
+offset board-host -1.6 ms  rtt 4.1 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914378494  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 28 02 BF 28 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 FE 4E 80 36
+host_mid_sod 37060.31282806396484375
+rtt_ms 4.06765937805175781
+=== round 6 NEW at 2026-09-17 10:17:41.323 exit 0
+device 2026-09-17 10:17:41+0.341  (cnt 11435 / period 33517, nominal 33517)
+offset board-host -1.3 ms  rtt 6.8 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914379494  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 29 02 AB 2C 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 E6 52 80 36
+host_mid_sod 37061.34245204925537109
+rtt_ms 6.79659843444824219
+=== round 7 NEW at 2026-09-17 10:17:42.356 exit 0
+device 2026-09-17 10:17:42+0.372  (cnt 12470 / period 33517, nominal 33517)
+offset board-host -2.3 ms  rtt 4.9 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914380495  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 2A 02 B6 30 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 CF 56 80 36
+host_mid_sod 37062.37436652183532715
+rtt_ms 4.92572784423828125
+=== round 7 OLD at 2026-09-17 10:17:43.384 exit 0
+device 2026-09-17 10:17:43+0.401  (cnt 13433 / period 33517, nominal 33517)
+offset board-host -2.1 ms  rtt 6.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914381495  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 2B 02 79 34 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 B7 5A 80 36
+host_mid_sod 37063.40283441543579102
+rtt_ms 5.98239898681640625
+=== round 8 OLD at 2026-09-17 10:17:44.427 exit 0
+device 2026-09-17 10:17:44+0.443  (cnt 14840 / period 33517, nominal 33517)
+offset board-host -3.0 ms  rtt 6.1 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914382495  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 2C 02 F8 39 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 9F 5E 80 36
+host_mid_sod 37064.44575572013854980
+rtt_ms 6.10733032226562500
+=== round 8 NEW at 2026-09-17 10:17:45.467 exit 0
+device 2026-09-17 10:17:45+0.482  (cnt 16150 / period 33517, nominal 33517)
+offset board-host -3.7 ms  rtt 4.6 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914383496  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 2D 02 16 3F 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 88 62 80 36
+host_mid_sod 37065.48551082611083984
+rtt_ms 4.57215309143066406
+=== round 9 NEW at 2026-09-17 10:17:46.508 exit 0
+device 2026-09-17 10:17:46+0.521  (cnt 17463 / period 33517, nominal 33517)
+offset board-host -4.8 ms  rtt 3.9 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914384496  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 2E 02 37 44 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 70 66 80 36
+host_mid_sod 37066.52580261230468750
+rtt_ms 3.93223762512207031
+=== round 9 OLD at 2026-09-17 10:17:47.548 exit 0
+device 2026-09-17 10:17:47+0.562  (cnt 18824 / period 33517, nominal 33517)
+offset board-host -5.0 ms  rtt 4.2 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914385497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 2F 02 88 49 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 59 6A 80 36
+host_mid_sod 37067.56663513183593750
+rtt_ms 4.24051284790039062
+=== round 10 OLD at 2026-09-17 10:17:48.579 exit 0
+device 2026-09-17 10:17:48+0.593  (cnt 19883 / period 33517, nominal 33517)
+offset board-host -4.6 ms  rtt 6.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914386497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 30 02 AB 4D 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 41 6E 80 36
+host_mid_sod 37068.59777355194091797
+rtt_ms 5.97882270812988281
+=== round 10 NEW at 2026-09-17 10:17:49.625 exit 0
+device 2026-09-17 10:17:49+0.639  (cnt 21402 / period 33517, nominal 33517)
+offset board-host -4.8 ms  rtt 4.9 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914387497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 31 02 9A 53 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 29 72 80 36
+host_mid_sod 37069.64328002929687500
+rtt_ms 4.90212440490722656
+=== round 11 NEW at 2026-09-17 10:17:50.656 exit 0
+device 2026-09-17 10:17:50+0.671  (cnt 22501 / period 33517, nominal 33517)
+offset board-host -4.5 ms  rtt 5.9 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914388498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 32 02 E5 57 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 12 76 80 36
+host_mid_sod 37070.67579078674316406
+rtt_ms 5.87630271911621094
+=== round 11 OLD at 2026-09-17 10:17:51.699 exit 0
+device 2026-09-17 10:17:51+0.711  (cnt 23826 / period 33517, nominal 33517)
+offset board-host -6.0 ms  rtt 3.7 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914389498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 33 02 12 5D 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 FA 79 80 36
+host_mid_sod 37071.71683549880981445
+rtt_ms 3.72838973999023438
+=== round 12 OLD at 2026-09-17 10:17:52.723 exit 0
+device 2026-09-17 10:17:52+0.736  (cnt 24656 / period 33517, nominal 33517)
+offset board-host -5.9 ms  rtt 4.4 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914390498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 34 02 50 60 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 E2 7D 80 36
+host_mid_sod 37072.74151587486267090
+rtt_ms 4.37545776367187500
+=== round 12 NEW at 2026-09-17 10:17:53.753 exit 0
+device 2026-09-17 10:17:53+0.766  (cnt 25683 / period 33517, nominal 33517)
+offset board-host -5.6 ms  rtt 5.6 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914391498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 35 02 53 64 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 CA 81 80 36
+host_mid_sod 37073.77187013626098633
+rtt_ms 5.60784339904785156
+=== round 13 NEW at 2026-09-17 10:17:54.797 exit 0
+device 2026-09-17 10:17:54+0.811  (cnt 27179 / period 33517, nominal 33517)
+offset board-host -5.6 ms  rtt 6.4 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914392499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 36 02 2B 6A 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 B3 85 80 36
+host_mid_sod 37074.81647658348083496
+rtt_ms 6.40773773193359375
+=== round 13 OLD at 2026-09-17 10:17:55.840 exit 0
+device 2026-09-17 10:17:55+0.853  (cnt 28576 / period 33517, nominal 33517)
+offset board-host -6.1 ms  rtt 6.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914393499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 37 02 A0 6F 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 9B 89 80 36
+host_mid_sod 37075.85866856575012207
+rtt_ms 5.99718093872070312
+=== round 14 OLD at 2026-09-17 10:17:56.884 exit 0
+device 2026-09-17 10:17:56+0.896  (cnt 30016 / period 33517, nominal 33517)
+offset board-host -7.1 ms  rtt 4.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914394499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 38 02 40 75 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 83 8D 80 36
+host_mid_sod 37076.90263962745666504
+rtt_ms 3.99398803710937500
+=== round 14 NEW at 2026-09-17 10:17:57.916 exit 0
+device 2026-09-17 10:17:57+0.927  (cnt 31072 / period 33517, nominal 33517)
+offset board-host -7.2 ms  rtt 4.8 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914395500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 39 02 60 79 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 6C 91 80 36
+host_mid_sod 37077.93419313430786133
+rtt_ms 4.84204292297363281
+=== round 15 NEW at 2026-09-17 10:17:58.932 exit 0
+device 2026-09-17 10:17:58+0.944  (cnt 31644 / period 33517, nominal 33517)
+offset board-host -6.8 ms  rtt 5.5 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914396500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 3A 02 9C 7B 00 00 ED 82 ED 82 05 FF FF 30 00 02 00 81 54 95 80 36
+host_mid_sod 37078.95089864730834961
+rtt_ms 5.45167922973632812
+=== round 15 OLD at 2026-09-17 10:17:59.976 exit 0
+device 2026-09-17 10:17:59+0.988  (cnt 33128 / period 33517, nominal 33508)
+offset board-host -7.1 ms  rtt 6.2 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914397500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 11 3B 02 68 81 00 00 ED 82 E4 82 05 FF FF 30 00 02 00 81 3C 99 80 36
+host_mid_sod 37079.99550676345825195
+rtt_ms 6.23488426208496094
+=== round 16 OLD at 2026-09-17 10:18:01.019 exit 0
+device 2026-09-17 10:18:01+0.030  (cnt 1009 / period 33508, nominal 33508)
+offset board-host -7.5 ms  rtt 6.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914399500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 01 02 F1 03 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 0C A1 80 36
+host_mid_sod 37081.03759241104125977
+rtt_ms 6.03437423706054688
+=== round 16 NEW at 2026-09-17 10:18:02.064 exit 0
+device 2026-09-17 10:18:02+0.073  (cnt 2459 / period 33508, nominal 33508)
+offset board-host -8.2 ms  rtt 4.1 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914400500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 02 02 9B 09 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 F4 A4 80 36
+host_mid_sod 37082.08153772354125977
+rtt_ms 4.08864021301269531
+=== round 17 NEW at 2026-09-17 10:18:03.090 exit 0
+device 2026-09-17 10:18:03+0.100  (cnt 3365 / period 33508, nominal 33508)
+offset board-host -8.3 ms  rtt 3.7 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914401500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 03 02 25 0D 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 DC A8 80 36
+host_mid_sod 37083.10869550704956055
+rtt_ms 3.73363494873046875
+=== round 17 OLD at 2026-09-17 10:18:04.122 exit 0
+device 2026-09-17 10:18:04+0.135  (cnt 4522 / period 33508, nominal 33508)
+offset board-host -7.2 ms  rtt 6.9 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914402500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 04 02 AA 11 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 C4 AC 80 36
+host_mid_sod 37084.14210319519042969
+rtt_ms 6.92963600158691406
+=== round 18 OLD at 2026-09-17 10:18:05.169 exit 0
+device 2026-09-17 10:18:05+0.182  (cnt 6100 / period 33508, nominal 33508)
+offset board-host -6.3 ms  rtt 6.4 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914403500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 05 02 D4 17 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 AC B0 80 36
+host_mid_sod 37085.18835139274597168
+rtt_ms 6.36577606201171875
+=== round 18 NEW at 2026-09-17 10:18:06.213 exit 0
+device 2026-09-17 10:18:06+0.225  (cnt 7552 / period 33508, nominal 33508)
+offset board-host -6.6 ms  rtt 5.1 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914404500  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 06 02 80 1D 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 94 B4 80 36
+host_mid_sod 37086.23199558258056641
+rtt_ms 5.05709648132324219
+=== round 19 NEW at 2026-09-17 10:18:07.244 exit 0
+device 2026-09-17 10:18:07+0.255  (cnt 8544 / period 33508, nominal 33508)
+offset board-host -7.1 ms  rtt 4.8 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914405499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 07 02 60 21 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 7B B8 80 36
+host_mid_sod 37087.26211500167846680
+rtt_ms 4.81534004211425781
+=== round 19 OLD at 2026-09-17 10:18:08.289 exit 0
+device 2026-09-17 10:18:08+0.303  (cnt 10142 / period 33508, nominal 33508)
+offset board-host -5.7 ms  rtt 6.3 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914406499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 08 02 9E 27 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 63 BC 80 36
+host_mid_sod 37088.30836534500122070
+rtt_ms 6.25228881835937500
+=== round 20 OLD at 2026-09-17 10:18:09.324 exit 0
+device 2026-09-17 10:18:09+0.337  (cnt 11276 / period 33508, nominal 33508)
+offset board-host -6.6 ms  rtt 4.8 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914407499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 09 02 0C 2C 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 4B C0 80 36
+host_mid_sod 37089.34306621551513672
+rtt_ms 4.80508804321289062
+=== round 20 NEW at 2026-09-17 10:18:10.354 exit 0
+device 2026-09-17 10:18:10+0.365  (cnt 12245 / period 33508, nominal 33508)
+offset board-host -6.7 ms  rtt 4.7 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914408499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 0A 02 D5 2F 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 33 C4 80 36
+host_mid_sod 37090.37209177017211914
+rtt_ms 4.73499298095703125
+=== round 21 NEW at 2026-09-17 10:18:11.378 exit 0
+device 2026-09-17 10:18:11+0.391  (cnt 13088 / period 33508, nominal 33508)
+offset board-host -6.4 ms  rtt 5.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914409499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 0B 02 20 33 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 1B C8 80 36
+host_mid_sod 37091.39694547653198242
+rtt_ms 5.03706932067871094
+=== round 21 OLD at 2026-09-17 10:18:12.419 exit 0
+device 2026-09-17 10:18:12+0.432  (cnt 14460 / period 33508, nominal 33508)
+offset board-host -6.3 ms  rtt 5.3 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914410499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 0C 02 7C 38 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 03 CC 80 36
+host_mid_sod 37092.43778204917907715
+rtt_ms 5.33533096313476562
+=== round 22 OLD at 2026-09-17 10:18:13.457 exit 0
+device 2026-09-17 10:18:13+0.469  (cnt 15708 / period 33508, nominal 33508)
+offset board-host -6.7 ms  rtt 4.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914411499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 0D 02 5C 3D 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 EB CF 80 36
+host_mid_sod 37093.47542285919189453
+rtt_ms 4.03332710266113281
+=== round 22 NEW at 2026-09-17 10:18:14.487 exit 0
+device 2026-09-17 10:18:14+0.500  (cnt 16743 / period 33508, nominal 33508)
+offset board-host -6.0 ms  rtt 5.4 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914412499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 0E 02 67 41 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 D3 D3 80 36
+host_mid_sod 37094.50569581985473633
+rtt_ms 5.43689727783203125
+=== round 23 NEW at 2026-09-17 10:18:15.516 exit 0
+device 2026-09-17 10:18:15+0.530  (cnt 17747 / period 33508, nominal 33508)
+offset board-host -5.7 ms  rtt 6.2 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914413499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 0F 02 53 45 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 BB D7 80 36
+host_mid_sod 37095.53531217575073242
+rtt_ms 6.20770454406738281
+=== round 23 OLD at 2026-09-17 10:18:16.559 exit 0
+device 2026-09-17 10:18:16+0.572  (cnt 19176 / period 33508, nominal 33508)
+offset board-host -5.7 ms  rtt 4.9 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914414499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 10 02 E8 4A 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 A3 DB 80 36
+host_mid_sod 37096.57796239852905273
+rtt_ms 4.91285324096679688
+=== round 24 OLD at 2026-09-17 10:18:17.594 exit 0
+device 2026-09-17 10:18:17+0.606  (cnt 20321 / period 33508, nominal 33508)
+offset board-host -6.2 ms  rtt 5.4 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914415499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 11 02 61 4F 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 8B DF 80 36
+host_mid_sod 37097.61267042160034180
+rtt_ms 5.42926788330078125
+=== round 24 NEW at 2026-09-17 10:18:18.639 exit 0
+device 2026-09-17 10:18:18+0.651  (cnt 21815 / period 33508, nominal 33508)
+offset board-host -6.2 ms  rtt 4.2 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914416499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 12 02 37 55 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 73 E3 80 36
+host_mid_sod 37098.65724325180053711
+rtt_ms 4.24599647521972656
+=== round 25 NEW at 2026-09-17 10:18:19.664 exit 0
+device 2026-09-17 10:18:19+0.677  (cnt 22687 / period 33508, nominal 33508)
+offset board-host -5.9 ms  rtt 4.8 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914417499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 13 02 9F 58 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 5B E7 80 36
+host_mid_sod 37099.68293833732604980
+rtt_ms 4.83226776123046875
+=== round 25 OLD at 2026-09-17 10:18:20.695 exit 0
+device 2026-09-17 10:18:20+0.710  (cnt 23782 / period 33508, nominal 33508)
+offset board-host -4.4 ms  rtt 6.5 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914418498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 14 02 E6 5C 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 42 EB 80 36
+host_mid_sod 37100.71410560607910156
+rtt_ms 6.47139549255371094
+=== round 26 OLD at 2026-09-17 10:18:21.742 exit 0
+device 2026-09-17 10:18:21+0.755  (cnt 25284 / period 33508, nominal 33508)
+offset board-host -5.9 ms  rtt 3.7 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914419498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 15 02 C4 62 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 2A EF 80 36
+host_mid_sod 37101.76046299934387207
+rtt_ms 3.72457504272460938
+=== round 26 NEW at 2026-09-17 10:18:22.770 exit 0
+device 2026-09-17 10:18:22+0.782  (cnt 26215 / period 33508, nominal 33508)
+offset board-host -5.5 ms  rtt 4.9 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914420498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 16 02 67 66 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 12 F3 80 36
+host_mid_sod 37102.78787422180175781
+rtt_ms 4.87112998962402344
+=== round 27 NEW at 2026-09-17 10:18:23.798 exit 0
+device 2026-09-17 10:18:23+0.813  (cnt 27240 / period 33508, nominal 33508)
+offset board-host -4.6 ms  rtt 5.6 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914421498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 17 02 68 6A 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 FA F6 80 36
+host_mid_sod 37103.81752967834472656
+rtt_ms 5.55014610290527344
+=== round 27 OLD at 2026-09-17 10:18:24.843 exit 0
+device 2026-09-17 10:18:24+0.858  (cnt 28752 / period 33508, nominal 33508)
+offset board-host -4.4 ms  rtt 5.6 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914422498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 18 02 50 70 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 E2 FA 80 36
+host_mid_sod 37104.86248207092285156
+rtt_ms 5.61499595642089844
+=== round 28 OLD at 2026-09-17 10:18:25.888 exit 0
+device 2026-09-17 10:18:25+0.901  (cnt 30202 / period 33508, nominal 33508)
+offset board-host -4.6 ms  rtt 4.8 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914423498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 19 02 FA 75 00 00 E4 82 E4 82 05 FF FF 30 00 02 00 81 CA FE 80 36
+host_mid_sod 37105.90588378906250000
+rtt_ms 4.80818748474121094
+=== round 28 NEW at 2026-09-17 10:18:26.918 exit 0
+device 2026-09-17 10:18:26+0.935  (cnt 31321 / period 33508, nominal 33508)
+offset board-host -3.7 ms  rtt 7.6 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914424498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 1A 02 59 7A 00 00 E4 82 E4 82 05 FF FF 30 00 02 01 81 B2 02 81 36
+host_mid_sod 37106.93844628334045410
+rtt_ms 7.61604309082031250
+=== round 29 NEW at 2026-09-17 10:18:27.958 exit 0
+device 2026-09-17 10:18:27+0.972  (cnt 32579 / period 33508, nominal 33508)
+offset board-host -4.5 ms  rtt 5.0 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914425498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 1B 02 43 7F 00 00 E4 82 E4 82 05 FF FF 30 00 02 01 81 9A 06 81 36
+host_mid_sod 37107.97674608230590820
+rtt_ms 5.00750541687011719
+=== round 29 OLD at 2026-09-17 10:18:28.986 exit 0
+device 2026-09-17 10:18:29+0.002  (cnt 52 / period 33508, nominal 33508)
+offset board-host -4.2 ms  rtt 7.0 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914427498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 1D 02 34 00 00 00 E4 82 E4 82 05 FF FF 30 00 02 01 81 6A 0E 81 36
+host_mid_sod 37109.00573635101318359
+rtt_ms 7.02548027038574219
+=== round 30 OLD at 2026-09-17 10:18:30.022 exit 0
+device 2026-09-17 10:18:30+0.036  (cnt 1218 / period 33508, nominal 33508)
+offset board-host -4.3 ms  rtt 5.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914428498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 1E 02 C2 04 00 00 E4 82 E4 82 05 FF FF 30 00 02 01 81 52 12 81 36
+host_mid_sod 37110.04065513610839844
+rtt_ms 5.14149665832519531
+=== round 30 NEW at 2026-09-17 10:18:31.059 exit 0
+device 2026-09-17 10:18:31+0.073  (cnt 2458 / period 33508, nominal 33509)
+offset board-host -4.3 ms  rtt 5.0 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914429498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 1F 02 9A 09 00 00 E4 82 E5 82 05 FF FF 30 00 02 01 81 3A 16 81 36
+host_mid_sod 37111.07771301269531250
+rtt_ms 4.99010086059570312
+=== round 31 NEW at 2026-09-17 10:18:32.103 exit 0
+device 2026-09-17 10:18:32+0.116  (cnt 3902 / period 33509, nominal 33509)
+offset board-host -4.6 ms  rtt 4.2 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914430497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 20 02 3E 0F 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 21 1A 81 36
+host_mid_sod 37112.12108945846557617
+rtt_ms 4.19068336486816406
+=== round 31 OLD at 2026-09-17 10:18:33.120 exit 0
+device 2026-09-17 10:18:33+0.134  (cnt 4476 / period 33509, nominal 33509)
+offset board-host -4.6 ms  rtt 4.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914431497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 21 02 7C 11 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 09 1E 81 36
+host_mid_sod 37113.13813304901123047
+rtt_ms 4.11581993103027344
+=== round 32 OLD at 2026-09-17 10:18:34.149 exit 0
+device 2026-09-17 10:18:34+0.164  (cnt 5490 / period 33509, nominal 33509)
+offset board-host -4.5 ms  rtt 5.8 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914432497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 22 02 72 15 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 F1 21 81 36
+host_mid_sod 37114.16829562187194824
+rtt_ms 5.77068328857421875
+=== round 32 NEW at 2026-09-17 10:18:35.179 exit 0
+device 2026-09-17 10:18:35+0.193  (cnt 6473 / period 33509, nominal 33509)
+offset board-host -4.7 ms  rtt 4.5 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914433497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 23 02 49 19 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 D9 25 81 36
+host_mid_sod 37115.19787621498107910
+rtt_ms 4.53615188598632812
+=== round 33 NEW at 2026-09-17 10:18:36.223 exit 0
+device 2026-09-17 10:18:36+0.238  (cnt 7967 / period 33509, nominal 33509)
+offset board-host -4.6 ms  rtt 5.5 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914434498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 24 02 1F 1F 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 C2 29 81 36
+host_mid_sod 37116.24238634109497070
+rtt_ms 5.51939010620117188
+=== round 33 OLD at 2026-09-17 10:18:37.254 exit 0
+device 2026-09-17 10:18:37+0.267  (cnt 8945 / period 33509, nominal 33509)
+offset board-host -5.0 ms  rtt 4.4 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914435498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 25 02 F1 22 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 AA 2D 81 36
+host_mid_sod 37117.27195167541503906
+rtt_ms 4.36234474182128906
+=== round 34 OLD at 2026-09-17 10:18:38.281 exit 0
+device 2026-09-17 10:18:38+0.294  (cnt 9846 / period 33509, nominal 33509)
+offset board-host -5.1 ms  rtt 4.4 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914436498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 26 02 76 26 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 92 31 81 36
+host_mid_sod 37118.29891586303710938
+rtt_ms 4.42409515380859375
+=== round 34 NEW at 2026-09-17 10:18:39.326 exit 0
+device 2026-09-17 10:18:39+0.341  (cnt 11412 / period 33509, nominal 33509)
+offset board-host -4.4 ms  rtt 6.3 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914437498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 27 02 94 2C 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 7A 35 81 36
+host_mid_sod 37119.34498476982116699
+rtt_ms 6.25228881835937500
+=== round 35 NEW at 2026-09-17 10:18:40.370 exit 0
+device 2026-09-17 10:18:40+0.384  (cnt 12864 / period 33509, nominal 33509)
+offset board-host -4.8 ms  rtt 4.8 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914438498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 28 02 40 32 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 62 39 81 36
+host_mid_sod 37120.38866090774536133
+rtt_ms 4.83202934265136719
+=== round 35 OLD at 2026-09-17 10:18:41.415 exit 0
+device 2026-09-17 10:18:41+0.431  (cnt 14444 / period 33509, nominal 33509)
+offset board-host -3.9 ms  rtt 6.4 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914439498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 29 02 6C 38 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 4A 3D 81 36
+host_mid_sod 37121.43491244316101074
+rtt_ms 6.36196136474609375
+=== round 36 OLD at 2026-09-17 10:18:42.462 exit 0
+device 2026-09-17 10:18:42+0.477  (cnt 15970 / period 33509, nominal 33509)
+offset board-host -4.5 ms  rtt 5.9 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914440498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 2A 02 62 3E 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 32 41 81 36
+host_mid_sod 37122.48110294342041016
+rtt_ms 5.92041015625000000
+=== round 36 NEW at 2026-09-17 10:18:43.495 exit 0
+device 2026-09-17 10:18:43+0.509  (cnt 17050 / period 33509, nominal 33509)
+offset board-host -4.7 ms  rtt 5.0 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914441498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 2B 02 9A 42 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 1A 45 81 36
+host_mid_sod 37123.51353073120117188
+rtt_ms 5.03730773925781250
+=== round 37 NEW at 2026-09-17 10:18:44.514 exit 0
+device 2026-09-17 10:18:44+0.529  (cnt 17716 / period 33509, nominal 33509)
+offset board-host -4.0 ms  rtt 4.6 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914442497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 2C 02 34 45 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 01 49 81 36
+host_mid_sod 37124.53272533416748047
+rtt_ms 4.62651252746582031
+=== round 37 OLD at 2026-09-17 10:18:45.550 exit 0
+device 2026-09-17 10:18:45+0.566  (cnt 18952 / period 33509, nominal 33509)
+offset board-host -3.7 ms  rtt 5.5 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914443497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 2D 02 08 4A 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 E9 4C 81 36
+host_mid_sod 37125.56928396224975586
+rtt_ms 5.45811653137207031
+=== round 38 OLD at 2026-09-17 10:18:46.585 exit 0
+device 2026-09-17 10:18:46+0.599  (cnt 20074 / period 33509, nominal 33509)
+offset board-host -3.9 ms  rtt 4.2 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914444497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 2E 02 6A 4E 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 D1 50 81 36
+host_mid_sod 37126.60291767120361328
+rtt_ms 4.18925285339355469
+=== round 38 NEW at 2026-09-17 10:18:47.618 exit 0
+device 2026-09-17 10:18:47+0.632  (cnt 21178 / period 33509, nominal 33509)
+offset board-host -4.1 ms  rtt 3.7 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914445497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 2F 02 BA 52 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 B9 54 81 36
+host_mid_sod 37127.63612270355224609
+rtt_ms 3.72934341430664062
+=== round 39 NEW at 2026-09-17 10:18:48.659 exit 0
+device 2026-09-17 10:18:48+0.673  (cnt 22557 / period 33509, nominal 33509)
+offset board-host -4.2 ms  rtt 5.2 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914446497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 30 02 1D 58 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 A1 58 81 36
+host_mid_sod 37128.67739224433898926
+rtt_ms 5.16080856323242188
+=== round 39 OLD at 2026-09-17 10:18:49.702 exit 0
+device 2026-09-17 10:18:49+0.717  (cnt 24021 / period 33509, nominal 33509)
+offset board-host -4.1 ms  rtt 4.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914447497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 31 02 D5 5D 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 89 5C 81 36
+host_mid_sod 37129.72088980674743652
+rtt_ms 4.14752960205078125
+=== round 40 OLD at 2026-09-17 10:18:50.732 exit 0
+device 2026-09-17 10:18:50+0.746  (cnt 25014 / period 33509, nominal 33509)
+offset board-host -4.1 ms  rtt 4.7 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914448497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 32 02 B6 61 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 71 60 81 36
+host_mid_sod 37130.75058507919311523
+rtt_ms 4.74667549133300781
+=== round 40 NEW at 2026-09-17 10:18:51.760 exit 0
+device 2026-09-17 10:18:51+0.777  (cnt 26041 / period 33509, nominal 33509)
+offset board-host -3.1 ms  rtt 7.4 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914449497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 33 02 B9 65 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 59 64 81 36
+host_mid_sod 37131.78025341033935547
+rtt_ms 7.38120079040527344
+=== round 41 NEW at 2026-09-17 10:18:52.795 exit 0
+device 2026-09-17 10:18:52+0.811  (cnt 27165 / period 33509, nominal 33509)
+offset board-host -3.2 ms  rtt 6.2 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914450497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 34 02 1D 6A 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 41 68 81 36
+host_mid_sod 37132.81382250785827637
+rtt_ms 6.24561309814453125
+=== round 41 OLD at 2026-09-17 10:18:53.840 exit 0
+device 2026-09-17 10:18:53+0.855  (cnt 28650 / period 33509, nominal 33509)
+offset board-host -3.3 ms  rtt 5.3 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914451497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 35 02 EA 6F 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 29 6C 81 36
+host_mid_sod 37133.85829329490661621
+rtt_ms 5.26857376098632812
+=== round 42 OLD at 2026-09-17 10:18:54.856 exit 0
+device 2026-09-17 10:18:54+0.870  (cnt 29170 / period 33509, nominal 33509)
+offset board-host -3.9 ms  rtt 5.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914452497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 36 02 F2 71 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 11 70 81 36
+host_mid_sod 37134.87437272071838379
+rtt_ms 5.09452819824218750
+=== round 42 NEW at 2026-09-17 10:18:55.901 exit 0
+device 2026-09-17 10:18:55+0.915  (cnt 30673 / period 33509, nominal 33509)
+offset board-host -4.9 ms  rtt 5.4 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914453497  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 37 02 D1 77 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 F9 73 81 36
+host_mid_sod 37135.92021417617797852
+rtt_ms 5.37776947021484375
+=== round 43 NEW at 2026-09-17 10:18:56.945 exit 0
+device 2026-09-17 10:18:56+0.959  (cnt 32133 / period 33509, nominal 33509)
+offset board-host -4.4 ms  rtt 5.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914454498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 38 02 85 7D 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 E2 77 81 36
+host_mid_sod 37136.96335268020629883
+rtt_ms 5.10048866271972656
+=== round 43 OLD at 2026-09-17 10:18:57.975 exit 0
+device 2026-09-17 10:18:57+0.990  (cnt 33164 / period 33509, nominal 33509)
+offset board-host -4.7 ms  rtt 5.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914455498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 39 02 8C 81 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 CA 7B 81 36
+host_mid_sod 37137.99432778358459473
+rtt_ms 5.08880615234375000
+=== round 44 OLD at 2026-09-17 10:18:59.006 exit 0
+device 2026-09-17 10:18:59+0.021  (cnt 716 / period 33509, nominal 33509)
+offset board-host -4.2 ms  rtt 6.7 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914457498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 12 3B 02 CC 02 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 9A 83 81 36
+host_mid_sod 37139.02551937103271484
+rtt_ms 6.67095184326171875
+=== round 44 NEW at 2026-09-17 10:19:00.051 exit 0
+device 2026-09-17 10:19:00+0.066  (cnt 2215 / period 33509, nominal 33509)
+offset board-host -4.4 ms  rtt 6.7 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914458498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 00 02 A7 08 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 82 87 81 36
+host_mid_sod 37140.07048559188842773
+rtt_ms 6.70504570007324219
+=== round 45 NEW at 2026-09-17 10:19:01.084 exit 0
+device 2026-09-17 10:19:01+0.098  (cnt 3275 / period 33509, nominal 33509)
+offset board-host -4.9 ms  rtt 4.3 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914459498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 01 02 CB 0C 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 6A 8B 81 36
+host_mid_sod 37141.10264492034912109
+rtt_ms 4.33754920959472656
+=== round 45 OLD at 2026-09-17 10:19:02.120 exit 0
+device 2026-09-17 10:19:02+0.134  (cnt 4485 / period 33509, nominal 33509)
+offset board-host -4.5 ms  rtt 4.9 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914460498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 02 02 85 11 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 52 8F 81 36
+host_mid_sod 37142.13838148117065430
+rtt_ms 4.87351417541503906
+=== round 46 OLD at 2026-09-17 10:19:03.154 exit 0
+device 2026-09-17 10:19:03+0.168  (cnt 5642 / period 33509, nominal 33509)
+offset board-host -4.3 ms  rtt 6.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914461498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 03 02 0A 16 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 3A 93 81 36
+host_mid_sod 37143.17271590232849121
+rtt_ms 6.13355636596679688
+=== round 46 NEW at 2026-09-17 10:19:04.190 exit 0
+device 2026-09-17 10:19:04+0.203  (cnt 6811 / period 33509, nominal 33509)
+offset board-host -4.6 ms  rtt 3.9 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914462498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 04 02 9B 1A 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 22 97 81 36
+host_mid_sod 37144.20781898498535156
+rtt_ms 3.91077995300292969
+=== round 47 NEW at 2026-09-17 10:19:05.226 exit 0
+device 2026-09-17 10:19:05+0.239  (cnt 8014 / period 33509, nominal 33509)
+offset board-host -4.6 ms  rtt 4.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914463498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 05 02 4E 1F 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 0A 9B 81 36
+host_mid_sod 37145.24372959136962891
+rtt_ms 4.08172607421875000
+=== round 47 OLD at 2026-09-17 10:19:06.266 exit 0
+device 2026-09-17 10:19:06+0.279  (cnt 9356 / period 33509, nominal 33509)
+offset board-host -5.2 ms  rtt 4.8 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914464498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 06 02 8C 24 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 F2 9E 81 36
+host_mid_sod 37146.28437781333923340
+rtt_ms 4.77504730224609375
+=== round 48 OLD at 2026-09-17 10:19:07.292 exit 0
+device 2026-09-17 10:19:07+0.306  (cnt 10247 / period 33509, nominal 33509)
+offset board-host -4.6 ms  rtt 4.8 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914465498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 07 02 07 28 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 DA A2 81 36
+host_mid_sod 37147.31034636497497559
+rtt_ms 4.83417510986328125
+=== round 48 NEW at 2026-09-17 10:19:08.332 exit 0
+device 2026-09-17 10:19:08+0.347  (cnt 11631 / period 33509, nominal 33509)
+offset board-host -4.0 ms  rtt 7.3 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914466498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 08 02 6F 2D 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 C2 A6 81 36
+host_mid_sod 37148.35107803344726562
+rtt_ms 7.34472274780273438
+=== round 49 NEW at 2026-09-17 10:19:09.371 exit 0
+device 2026-09-17 10:19:09+0.385  (cnt 12889 / period 33509, nominal 33509)
+offset board-host -4.5 ms  rtt 5.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914467498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 09 02 59 32 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 AA AA 81 36
+host_mid_sod 37149.38915777206420898
+rtt_ms 5.14101982116699219
+=== round 49 OLD at 2026-09-17 10:19:10.414 exit 0
+device 2026-09-17 10:19:10+0.427  (cnt 14310 / period 33509, nominal 33509)
+offset board-host -5.1 ms  rtt 5.1 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914468499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 0A 02 E6 37 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 93 AE 81 36
+host_mid_sod 37150.43214941024780273
+rtt_ms 5.14721870422363281
+=== round 50 OLD at 2026-09-17 10:19:11.458 exit 0
+device 2026-09-17 10:19:11+0.473  (cnt 15834 / period 33509, nominal 33509)
+offset board-host -4.3 ms  rtt 5.9 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914469499  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 0B 02 DA 3D 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 7B B2 81 36
+host_mid_sod 37151.47677230834960938
+rtt_ms 5.87821006774902344
+=== round 50 NEW at 2026-09-17 10:19:12.499 exit 0
+device 2026-09-17 10:19:12+0.514  (cnt 17214 / period 33509, nominal 33509)
+offset board-host -4.3 ms  rtt 5.3 ms  flags 0x05  ref_state 2  sync_age 1 min  last_host_offset -1 ms
+sof_epoch 129  sof_frames_total 914470498  bias_in_use 48 ppm
+raw 07 10 02 01 1A 09 11 04 0A 13 0C 02 3E 43 00 00 E5 82 E5 82 05 FF FF 30 00 02 01 81 62 B6 81 36
+host_mid_sod 37152.51802825927734375
+rtt_ms 5.34605979919433594
+2026-09-17 10:19:13.543 burst done
+2026-09-17 10:19:13.945 task restarted; state Running
+2026-09-17 10:19:16.033 daemon log since restart:
+2026-09-17 10:19:16.055   2026-09-17 10:19:15 sync (enumerated): clock set (sub-second): before -5.0 ms, after -3.4 ms, rtt 4.6 ms, U ~1.2 ms, lead now 3.29 ms, bias sent (slewing)
