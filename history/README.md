@@ -40,3 +40,17 @@ offsets slew rather than jump, and a no-host reboot self-acquires to ~±15 ms.
 | `phase0-burst-20260917-101627.txt` | Raw `ak820 clock --raw` output, 50 reads each from `e07fdfa` and `d8ead97`, interleaved on gremlin |
 | `burst_ab.ps1` | The run: stop the daemon, alternate the two CLIs, restart |
 | `burst_grade.py` | The grader; re-run from here, it gives the same PASS |
+
+## windows-memory-2026-09-18/ — the Windows daemon does not leak (2026-09-18)
+
+The other half of the macOS leak question (`plans/AK820-AGENT-MACOS-LEAK-PLAN.md`):
+gremlin's live daemon, sampled 26.7 h after it started, so no warm-up is inside
+the window. Growth is bounded at **+0.70 B per HID write**, which excludes the
+macOS rate of 48 B/write by about 69×.
+
+| File | What it holds |
+|---|---|
+| `README.md` | Method, the slope with its 95% CI and r², why a flat line is credible here, and what the measurement does not say |
+| `mem-samples-e07fdfa.csv` | 49 samples, 5 min apart: private bytes, working set, handles, threads, CPU, and the daemon's own `smtc_polls` / `clock_syncs` |
+| `mem_sample.ps1` | The sampler |
+| `mem_slope.py` | The fit; re-run from here, it reproduces the numbers |
