@@ -8,6 +8,62 @@ line (🟡 built, owed …).
 
 ---
 
+## ⚠️ In flight right now — 2026-09-18 11:2x, read this first
+
+**The Elysium daemon is STOPPED.** `launchctl bootout gui/$UID/com.jdlien.ak820pro.agent`
+was run at 11:19:15 to give the leak soak the board to itself. The clock free-runs
+meanwhile (harmless for minutes; it re-syncs at the next start). **Put it back with:**
+
+```sh
+launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist
+tail -n 5 ~/Library/Logs/ak820pro/ak820-agent.log   # expect a start block and an enumerated sync
+```
+
+**Running in the background:** `spikes/s2-iokit/target/release/s2 soak 20000` (task
+`buc41x71c`), output buffered until it exits because it is piped through `tail`.
+
+**Why:** the daemon leaks about **1.9 MB of `phys_footprint` a day on macOS**
+(2.70 MB at 35 min uptime on 09-17, **4.58 MB at 25 h** on 09-18, over ~29,000 media
+polls + 300 clock + 300 health exchanges). ⚠️ **Windows does not leak**: gremlin's
+25 h run holds **2.74 MB private bytes after ~60,000 exchanges**, so the cause is in
+the **macOS transport**, not the shared code. The last good build is running everywhere;
+this is the one remaining engineering defect and it blocks nothing.
+
+**Codex review of the transport** (gpt-6-astra, high effort, read-only) is saved at
+`scratchpad/codex-leak.md` in this session's scratchpad. Its three usable findings:
+
+1. **No autorelease pool** on the calling thread or the run-loop thread
+   (`device.rs` write submission; `runloop.rs`'s indefinite `CFRunLoopRun()`).
+   IOKit's own Objective-C temporaries would then accumulate. Its first-choice fix:
+   scoped pools around IOKit calls, and a run loop of `CFRunLoopRunInMode(..., finite, true)`
+   with a fresh pool per iteration. **Plausible mechanism, unconfirmed.**
+2. ⚠️ **S2's own 56 B/exchange figure is confounded**: `soak()` keeps three `Vec<f64>`
+   timing samples per exchange (`spikes/s2-iokit/src/main.rs:279-287`), about 2.4 MB of
+   payload over 100,000 exchanges. **Use `isolate exchange` / `isolate open`, which keep
+   no samples, for a clean per-exchange number.** The production 1.9 MB/day is
+   independent evidence and stands.
+3. Two definite small bugs, worth fixing regardless:
+   - `cf.rs:17` `(!r.is_null()).then_some(Cf(r))` **builds `Cf(NULL)` eagerly** and drops
+     it, so `CFRelease(NULL)` on the NULL path. Use `.then(|| Cf(r))`.
+   - `device.rs:256` unregisters the **removal** callback with a NULL context while it was
+     registered with `ctx`; Apple's implementation matches by context, so the entry stays.
+     Pass the original `ctx`.
+
+**Next steps, in order:** (a) let the soak finish and read it; (b) run
+`s2 isolate exchange 20000` and `s2 isolate open 20000` for the unconfounded
+per-exchange and per-open numbers; (c) apply fix 3, then test fix 1 if the numbers
+still show growth; (d) **restart the daemon** (command above) and confirm a sync;
+(e) commit. ⚠️ **Uncommitted:** `spikes/s2-iokit/src/main.rs` now soaks with **health
+page 1** (`frame(0x13, 0x01, &[])`, RAM-only) instead of `TEXT_PLAYBACK`, per the
+BACKLOG rule from the 09-16 stall incident.
+
+**Everything else is done and running.** Phases 0-5a and 2/4a/4b are met on both
+machines; `scripts/package-macos.sh` builds a signed `.dmg` and stops before Apple.
+**Owed from JD:** one logout/login on Elysium; the notarize decision (test-notarize
+the current `.dmg`, or tag `v0.2.0`, which also fires the Windows CI release); and,
+at release, the MacBook Air smoke test (install from the `.dmg`, then lid shut 10 min
+for the sleep/wake check that Elysium cannot give — it never sleeps on AC).
+
 ## Where it stands
 
 | | state |
