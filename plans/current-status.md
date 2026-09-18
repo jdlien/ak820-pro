@@ -31,11 +31,19 @@ lost completion timestamp.
 ⚠️ **F0, a separate and arguably more consequential bug** (`6d5c9a8`):
 `IOHIDDeviceSetReportWithCallback`'s timeout is documented in **milliseconds**
 (`IOHIDDevice.h:676`) despite its `CFTimeInterval` type. We passed
-`as_secs_f64()`, so `WRITE_TIMEOUT = 1000 ms` became **1 ms**. ⚠️ **Every figure
-from the 45-minute `ProcessType Background` incident describes that 1 ms deadline,
-not the scheduler** — including anything characterising priority 4. The move to
-`ProcessType Standard` was still right on independent grounds, but its stated
-diagnosis is not supported by its own evidence.
+`as_secs_f64()`, so `WRITE_TIMEOUT = 1000 ms` became **1 ms**. Fixed to
+`as_secs_f64() * 1000.0`; no write has been observed to time out either way
+(zero across 60,000 counted exchanges after the fix).
+
+⚠️ **Do not connect F0 to the `ProcessType Background` incident.** It was
+claimed here for a few hours on 2026-09-18 that F0 explained that incident's nine
+HID timeouts and that the scheduler diagnosis had treated a symptom. **Both
+claims were wrong and are retracted.** Those nine were logged as "no reply from
+the keyboard" — `Error::Timeout` on the **read** path — whereas a timed-out write
+returns `Error::Io { op: "write" }` and prints `0x800703E3`. The same window also
+starved the perl helper and `osascript`, which a HID write deadline cannot reach.
+**The priority-4 diagnosis in the Phase 4a row is correct and needs no
+amendment.**
 
 **Open, and the only thing outstanding:** the production gate. A detached sampler
 (`~/Library/Logs/ak820pro/mem-sample.sh`, survives any session) writes

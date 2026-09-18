@@ -102,12 +102,31 @@ at `spikes/s2-iokit/src/device.rs:289`.
 
 **Why it has not been obvious:** the write normally completes in ~0.09 ms
 (measured userspace lag p50), comfortably inside even 1 ms, and our own Rust
-deadline is the outer bound that actually governs. So the daemon works. But the
-worst observed write was 9.1 ms, and ⚠️ **this is very likely what produced the
-9 HID timeouts in 45 minutes during the `ProcessType Background` incident** — at
-priority 4 the thread could not be scheduled inside 1 ms. We diagnosed that
-incident as scheduling starvation and moved to `ProcessType Standard`, which was
-correct but treated the symptom.
+deadline is the outer bound that actually governs. So the daemon works, and no
+write has been observed to time out: across 60,000 counted exchanges after the
+fix, **zero** timeouts. The worst observed write was 9.1 ms, so the window is
+real but rarely crossed.
+
+⚠️ **RETRACTED, same day.** An earlier version of this section claimed F0 was
+"very likely what produced the 9 HID timeouts in 45 minutes during the
+`ProcessType Background` incident", and that the scheduler diagnosis had treated
+a symptom. **That was wrong, and the original diagnosis stands.** Three checks
+against the source and the incident record:
+
+1. Those nine were logged as **"no reply from the keyboard"**, which is
+   `Error::Timeout` on the **read** path (`hid/mod.rs:258`). A write that times
+   out returns `Error::Io { op: "write" }` and prints `0x800703E3`
+   (`hid/exchange.rs:408-414`). Different error, different text; the log says
+   which happened.
+2. The same 45 minutes saw **the perl helper's calls to a paused Music time out
+   and both AppleScript reads time out** — separate processes that a HID write
+   deadline cannot reach.
+3. Priority 4 explains all three symptoms; F0 explains none of them.
+
+The lesson is the one this whole document keeps relearning: a new finding that
+*could* explain an old incident is not evidence that it *did*. The claim was
+made without checking which error text the incident actually logged, and the
+check took two minutes.
 
 **Fix:** pass milliseconds. Audit every `CFTimeInterval` at an IOKit HID call
 site for the same assumption. ⚠️ Do **not** assume the sibling APIs agree —
