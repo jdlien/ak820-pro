@@ -232,6 +232,32 @@ fn resident_kb() -> u64 {
     buf[2 + 6] / 1024
 }
 
+/// `phys_footprint`: what the kernel charges us, and what Activity Monitor shows.
+fn footprint_kb() -> u64 {
+    let mut buf = [0u64; 64];
+    unsafe { sys::proc_pid_rusage(sys::getpid(), 4, buf.as_mut_ptr() as *mut _) };
+    buf[2 + 7] / 1024
+}
+
+/// An autorelease pool held for one cycle, or nothing at all when `on` is false.
+struct Pool(*mut std::os::raw::c_void);
+impl Pool {
+    fn new(on: bool) -> Self {
+        Pool(if on {
+            unsafe { sys::objc_autoreleasePoolPush() }
+        } else {
+            std::ptr::null_mut()
+        })
+    }
+}
+impl Drop for Pool {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe { sys::objc_autoreleasePoolPop(self.0) }
+        }
+    }
+}
+
 fn cpu_s() -> f64 {
     let mut buf = [0u64; 64];
     unsafe { sys::proc_pid_rusage(sys::getpid(), 4, buf.as_mut_ptr() as *mut _) };
@@ -265,11 +291,14 @@ fn soak(n: u32, gap: Duration) -> Result<(), String> {
     // allocations are not counted as growth.
     let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
     dev.open(false).map_err(|e| e.to_string())?;
-    let _ = exchange(&mut dev, &frame(0x12, 0x04, &[0, 0, 0, 0, 0]), 5);
+    let _ = exchange(&mut dev, &frame(0x13, 0x01, &[]), 0);
     dev.close();
     let (rss0, ports0, cpu0, t0) = (resident_kb(), mach_ports(), cpu_s(), Instant::now());
     println!("start: rss {rss0} KB, mach ports {ports0}");
-    let request = frame(0x12, 0x04, &[0, 0, 0, 0, 0]); // TEXT_PLAYBACK state 0
+    // ⚠️ Health page 1 (channel 0x13, GET): RAM only on the board. The old
+    // choice, TEXT_PLAYBACK state 0, moves the LCD band and is what the
+    // 2026-09-16 stall incident blamed (plans/BACKLOG.md).
+    let request = frame(0x13, 0x01, &[]); // HC_GET page 1
     let (mut failures, mut discarded, mut worst_ms) = (0u32, 0usize, 0f64);
     // Per exchange: kernel timestamp -> reader wake (what userspace timing adds
     // over IOKit's own), and write done -> kernel reply (the board's turnaround).
@@ -277,7 +306,7 @@ fn soak(n: u32, gap: Duration) -> Result<(), String> {
     for i in 1..=n {
         let started = Instant::now();
         let result = dev.open(false).map_err(|e| e.to_string()).and_then(|()| {
-            let got = exchange(&mut dev, &request, 5)?;
+            let got = exchange(&mut dev, &request, 0)?;
             let t1 = unsafe { sys::mach_absolute_time() };
             user_lag.push(ms(t1.saturating_sub(got.0.kernel_abs)));
             board_turn.push(ms(got.0.kernel_abs.saturating_sub(dev.last_write.done_abs)));
@@ -361,240 +390,282 @@ unsafe extern "C" fn noop_removal(
 }
 
 /// Leak isolation: which step of a cycle grows RSS.
-fn isolate(what: &str, n: u32) -> Result<(), String> {
+fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
+    // "create+pool" is "create" with an autorelease pool held for each cycle.
+    let pooled = what.ends_with("+pool");
+    let what = what.strip_suffix("+pool").unwrap_or(what);
     let service = find()?;
     let rss0 = resident_kb();
-    let request = frame(0x12, 0x04, &[0, 0, 0, 0, 0]);
-    match what {
-        // create + release only, never opened
-        "create" => {
-            for _ in 0..n {
-                unsafe {
-                    let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                    sys::CFRelease(d as sys::CFTypeRef);
+    let foot0 = footprint_kb();
+    let request = frame(0x13, 0x01, &[]); // HC_GET page 1: RAM only, see soak()
+    // Pass 2 tells a leak from allocator retention: freed-but-held pages are
+    // reused by the next pass, a leak is not.
+    for pass in 1..=passes {
+        let (rss_a, foot_a) = (resident_kb(), footprint_kb());
+        match what {
+            // the IORegistry enumeration `open_board` runs before every open
+            "list" => {
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    let _ = discovery::list()?;
                 }
             }
-        }
-        // create + open + close + release, no callbacks, no run loop
-        "open-bare" => {
-            for _ in 0..n {
-                unsafe {
-                    let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                    sys::IOHIDDeviceOpen(d, 0);
-                    sys::IOHIDDeviceClose(d, 0);
-                    sys::CFRelease(d as sys::CFTypeRef);
+            // create + release only, never opened
+            "create" => {
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe {
+                        let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
+                        sys::CFRelease(d as sys::CFTypeRef);
+                    }
                 }
             }
-        }
-        // the full Device open/drop (callbacks + schedule/unschedule), no exchange
-        "open" => {
-            let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
-            for _ in 0..n {
+            // create + open + close + release, no callbacks, no run loop
+            "open-bare" => {
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe {
+                        let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
+                        sys::IOHIDDeviceOpen(d, 0);
+                        sys::IOHIDDeviceClose(d, 0);
+                        sys::CFRelease(d as sys::CFTypeRef);
+                    }
+                }
+            }
+            // the full Device open/drop (callbacks + schedule/unschedule), no exchange
+            "open" => {
+                let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    dev.open(false).map_err(|e| e.to_string())?;
+                    dev.close();
+                }
+            }
+            // one open, n exchanges
+            "exchange" => {
+                let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
                 dev.open(false).map_err(|e| e.to_string())?;
-                dev.close();
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    let _ = exchange(&mut dev, &request, 0);
+                }
             }
-        }
-        // one open, n exchanges
-        "exchange" => {
-            let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
-            dev.open(false).map_err(|e| e.to_string())?;
-            for _ in 0..n {
-                let _ = exchange(&mut dev, &request, 5);
+            // schedule + unschedule on the loop thread, no callbacks
+            "sched" => {
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe {
+                        let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
+                        sys::IOHIDDeviceOpen(d, 0);
+                        let p = d as usize;
+                        runloop::RunLoop::get().run(move |rl| {
+                            sys::IOHIDDeviceScheduleWithRunLoop(p as _, rl, sys::kCFRunLoopDefaultMode)
+                        });
+                        runloop::RunLoop::get().run(move |rl| {
+                            sys::IOHIDDeviceUnscheduleFromRunLoop(
+                                p as _,
+                                rl,
+                                sys::kCFRunLoopDefaultMode,
+                            )
+                        });
+                        sys::IOHIDDeviceClose(d, 0);
+                        sys::CFRelease(d as sys::CFTypeRef);
+                    }
+                }
             }
-        }
-        // schedule + unschedule on the loop thread, no callbacks
-        "sched" => {
-            for _ in 0..n {
+            // input-report callback registered and unregistered, never scheduled
+            "cb" => {
+                let mut buf = [0u8; 256];
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe {
+                        let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
+                        sys::IOHIDDeviceOpen(d, 0);
+                        sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+                            d,
+                            buf.as_mut_ptr(),
+                            256,
+                            Some(noop_report),
+                            std::ptr::null_mut(),
+                        );
+                        sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+                            d,
+                            std::ptr::null_mut(),
+                            0,
+                            None,
+                            std::ptr::null_mut(),
+                        );
+                        sys::IOHIDDeviceClose(d, 0);
+                        sys::CFRelease(d as sys::CFTypeRef);
+                    }
+                }
+            }
+            // timestamped callback registered, closed WITHOUT unregistering
+            "cb-noun" => {
+                let mut buf = [0u8; 256];
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe {
+                        let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
+                        sys::IOHIDDeviceOpen(d, 0);
+                        sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+                            d,
+                            buf.as_mut_ptr(),
+                            256,
+                            Some(noop_report),
+                            std::ptr::null_mut(),
+                        );
+                        sys::IOHIDDeviceClose(d, 0);
+                        sys::CFRelease(d as sys::CFTypeRef);
+                    }
+                }
+            }
+            // the older, un-timestamped callback API
+            "cb-old" => {
+                let mut buf = [0u8; 256];
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe {
+                        let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
+                        sys::IOHIDDeviceOpen(d, 0);
+                        sys::IOHIDDeviceRegisterInputReportCallback(
+                            d,
+                            buf.as_mut_ptr(),
+                            256,
+                            Some(noop_old),
+                            std::ptr::null_mut(),
+                        );
+                        sys::IOHIDDeviceRegisterInputReportCallback(
+                            d,
+                            std::ptr::null_mut(),
+                            0,
+                            None,
+                            std::ptr::null_mut(),
+                        );
+                        sys::IOHIDDeviceClose(d, 0);
+                        sys::CFRelease(d as sys::CFTypeRef);
+                    }
+                }
+            }
+            // the report buffer sized to the device's MaxInputReportSize (32), not 256
+            "cb-32" => {
+                let mut buf = [0u8; 32];
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe {
+                        let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
+                        sys::IOHIDDeviceOpen(d, 0);
+                        sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+                            d,
+                            buf.as_mut_ptr(),
+                            32,
+                            Some(noop_report),
+                            std::ptr::null_mut(),
+                        );
+                        sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+                            d,
+                            std::ptr::null_mut(),
+                            0,
+                            None,
+                            std::ptr::null_mut(),
+                        );
+                        sys::IOHIDDeviceClose(d, 0);
+                        sys::CFRelease(d as sys::CFTypeRef);
+                    }
+                }
+            }
+            // ONE device object, callback registered and scheduled ONCE; open/close per cycle
+            "cb-once" => {
+                let mut buf = [0u8; 256];
                 unsafe {
                     let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                    sys::IOHIDDeviceOpen(d, 0);
+                    sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
+                        d,
+                        buf.as_mut_ptr(),
+                        256,
+                        Some(noop_report),
+                        std::ptr::null_mut(),
+                    );
                     let p = d as usize;
                     runloop::RunLoop::get().run(move |rl| {
                         sys::IOHIDDeviceScheduleWithRunLoop(p as _, rl, sys::kCFRunLoopDefaultMode)
                     });
+                    for _ in 0..n {
+                        let _p = Pool::new(pooled);
+                        let rc = sys::IOHIDDeviceOpen(d, 0);
+                        assert_eq!(rc, 0, "open: {}", sys::ioreturn_name(rc));
+                        sys::IOHIDDeviceClose(d, 0);
+                    }
                     runloop::RunLoop::get().run(move |rl| {
-                        sys::IOHIDDeviceUnscheduleFromRunLoop(
-                            p as _,
-                            rl,
-                            sys::kCFRunLoopDefaultMode,
-                        )
+                        sys::IOHIDDeviceUnscheduleFromRunLoop(p as _, rl, sys::kCFRunLoopDefaultMode)
                     });
-                    sys::IOHIDDeviceClose(d, 0);
                     sys::CFRelease(d as sys::CFTypeRef);
                 }
             }
-        }
-        // input-report callback registered and unregistered, never scheduled
-        "cb" => {
-            let mut buf = [0u8; 256];
-            for _ in 0..n {
-                unsafe {
-                    let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                    sys::IOHIDDeviceOpen(d, 0);
-                    sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
-                        d,
-                        buf.as_mut_ptr(),
-                        256,
-                        Some(noop_report),
-                        std::ptr::null_mut(),
-                    );
-                    sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
-                        d,
-                        std::ptr::null_mut(),
-                        0,
-                        None,
-                        std::ptr::null_mut(),
-                    );
-                    sys::IOHIDDeviceClose(d, 0);
-                    sys::CFRelease(d as sys::CFTypeRef);
-                }
-            }
-        }
-        // timestamped callback registered, closed WITHOUT unregistering
-        "cb-noun" => {
-            let mut buf = [0u8; 256];
-            for _ in 0..n {
-                unsafe {
-                    let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                    sys::IOHIDDeviceOpen(d, 0);
-                    sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
-                        d,
-                        buf.as_mut_ptr(),
-                        256,
-                        Some(noop_report),
-                        std::ptr::null_mut(),
-                    );
-                    sys::IOHIDDeviceClose(d, 0);
-                    sys::CFRelease(d as sys::CFTypeRef);
-                }
-            }
-        }
-        // the older, un-timestamped callback API
-        "cb-old" => {
-            let mut buf = [0u8; 256];
-            for _ in 0..n {
-                unsafe {
-                    let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                    sys::IOHIDDeviceOpen(d, 0);
-                    sys::IOHIDDeviceRegisterInputReportCallback(
-                        d,
-                        buf.as_mut_ptr(),
-                        256,
-                        Some(noop_old),
-                        std::ptr::null_mut(),
-                    );
-                    sys::IOHIDDeviceRegisterInputReportCallback(
-                        d,
-                        std::ptr::null_mut(),
-                        0,
-                        None,
-                        std::ptr::null_mut(),
-                    );
-                    sys::IOHIDDeviceClose(d, 0);
-                    sys::CFRelease(d as sys::CFTypeRef);
-                }
-            }
-        }
-        // the report buffer sized to the device's MaxInputReportSize (32), not 256
-        "cb-32" => {
-            let mut buf = [0u8; 32];
-            for _ in 0..n {
-                unsafe {
-                    let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                    sys::IOHIDDeviceOpen(d, 0);
-                    sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
-                        d,
-                        buf.as_mut_ptr(),
-                        32,
-                        Some(noop_report),
-                        std::ptr::null_mut(),
-                    );
-                    sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
-                        d,
-                        std::ptr::null_mut(),
-                        0,
-                        None,
-                        std::ptr::null_mut(),
-                    );
-                    sys::IOHIDDeviceClose(d, 0);
-                    sys::CFRelease(d as sys::CFTypeRef);
-                }
-            }
-        }
-        // ONE device object, callback registered and scheduled ONCE; open/close per cycle
-        "cb-once" => {
-            let mut buf = [0u8; 256];
-            unsafe {
-                let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                sys::IOHIDDeviceRegisterInputReportWithTimeStampCallback(
-                    d,
-                    buf.as_mut_ptr(),
-                    256,
-                    Some(noop_report),
-                    std::ptr::null_mut(),
-                );
-                let p = d as usize;
-                runloop::RunLoop::get().run(move |rl| {
-                    sys::IOHIDDeviceScheduleWithRunLoop(p as _, rl, sys::kCFRunLoopDefaultMode)
-                });
+            // writes only through the async call, reads drained, on one open device
+            "write-async" => {
+                let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
+                dev.open(false).map_err(|e| e.to_string())?;
                 for _ in 0..n {
-                    let rc = sys::IOHIDDeviceOpen(d, 0);
-                    assert_eq!(rc, 0, "open: {}", sys::ioreturn_name(rc));
-                    sys::IOHIDDeviceClose(d, 0);
-                }
-                runloop::RunLoop::get().run(move |rl| {
-                    sys::IOHIDDeviceUnscheduleFromRunLoop(p as _, rl, sys::kCFRunLoopDefaultMode)
-                });
-                sys::CFRelease(d as sys::CFTypeRef);
-            }
-        }
-        // writes only through the async call, reads drained, on one open device
-        "write-async" => {
-            let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
-            dev.open(false).map_err(|e| e.to_string())?;
-            for _ in 0..n {
-                let _ = dev.write_report(&request, Duration::from_millis(1000));
-                while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {}
-            }
-        }
-        // the same with the synchronous IOHIDDeviceSetReport
-        "write-sync" => {
-            let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
-            dev.open(false).map_err(|e| e.to_string())?;
-            for _ in 0..n {
-                unsafe { dev.set_report_sync(&request) };
-                while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {}
-            }
-        }
-        // removal callback only
-        "removal" => {
-            for _ in 0..n {
-                unsafe {
-                    let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
-                    sys::IOHIDDeviceOpen(d, 0);
-                    sys::IOHIDDeviceRegisterRemovalCallback(
-                        d,
-                        Some(noop_removal),
-                        std::ptr::null_mut(),
-                    );
-                    sys::IOHIDDeviceRegisterRemovalCallback(d, None, std::ptr::null_mut());
-                    sys::IOHIDDeviceClose(d, 0);
-                    sys::CFRelease(d as sys::CFTypeRef);
+                    let _p = Pool::new(pooled);
+                    let _ = dev.write_report(&request, Duration::from_millis(1000));
+                    while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {}
                 }
             }
-        }
-        // run-loop jobs only
-        "runloop" => {
-            for _ in 0..n {
-                runloop::RunLoop::get().run(|_| ());
+            // the same with the synchronous IOHIDDeviceSetReport
+            "write-sync" => {
+                let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
+                dev.open(false).map_err(|e| e.to_string())?;
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe { dev.set_report_sync(&request) };
+                    while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {}
+                }
             }
+            // removal callback only
+            "removal" => {
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    unsafe {
+                        let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
+                        sys::IOHIDDeviceOpen(d, 0);
+                        sys::IOHIDDeviceRegisterRemovalCallback(
+                            d,
+                            Some(noop_removal),
+                            std::ptr::null_mut(),
+                        );
+                        sys::IOHIDDeviceRegisterRemovalCallback(d, None, std::ptr::null_mut());
+                        sys::IOHIDDeviceClose(d, 0);
+                        sys::CFRelease(d as sys::CFTypeRef);
+                    }
+                }
+            }
+            // run-loop jobs only
+            "runloop" => {
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    runloop::RunLoop::get().run(|_| ());
+                }
+            }
+            other => return Err(format!("unknown step {other}")),
         }
-        other => return Err(format!("unknown step {other}")),
+        let (rss_b, foot_b) = (resident_kb(), footprint_kb());
+        if passes > 1 {
+            println!(
+                "  pass {pass}: rss {:+} KB ({:+.3}/cycle), footprint {:+} KB ({:+.3}/cycle)",
+                rss_b as i64 - rss_a as i64,
+                (rss_b as f64 - rss_a as f64) / n as f64,
+                foot_b as i64 - foot_a as i64,
+                (foot_b as f64 - foot_a as f64) / n as f64,
+            );
+        }
     }
-    let rss1 = resident_kb();
+    let (rss1, foot1) = (resident_kb(), footprint_kb());
     println!(
-        "{what:>10} x{n}: rss {rss0} -> {rss1} KB ({:+.3} KB/cycle), mach ports {}",
+        "{what:>10}{:<5} x{n}: rss {rss0} -> {rss1} KB ({:+.3} KB/cycle),          footprint {foot0} -> {foot1} KB ({:+.3} KB/cycle), mach ports {}",
+        if pooled { "+pool" } else { "" },
         (rss1 as f64 - rss0 as f64) / n as f64,
+        (foot1 as f64 - foot0 as f64) / n as f64,
         mach_ports()
     );
     Ok(())
@@ -609,7 +680,10 @@ fn main() {
         ["info", "--timing"] => info(true),
         ["hold", secs] => hold(secs.parse().expect("seconds"), false),
         ["hold", secs, "--seize"] => hold(secs.parse().expect("seconds"), true),
-        ["isolate", what, n] => isolate(what, n.parse().expect("count")),
+        ["isolate", what, n] => isolate(what, n.parse().expect("count"), 1),
+        ["isolate", what, n, passes] => {
+            isolate(what, n.parse().expect("count"), passes.parse().expect("passes"))
+        }
         ["poll", secs] => poll(secs.parse().expect("seconds")),
         ["soak", n] => soak(n.parse().expect("count"), Duration::ZERO),
         ["soak", n, "--gap-ms", g] => soak(

@@ -81,7 +81,22 @@ impl RunLoop {
                     tx.send((rl as usize, source as usize))
                         .expect("loop handshake");
                     // The source keeps the loop alive for the process lifetime.
-                    CFRunLoopRun();
+                    //
+                    // Leak isolation: report and write-completion callbacks run
+                    // on THIS thread, and a bare `CFRunLoopRun()` never drains
+                    // an autorelease pool, so anything IOKit autoreleases while
+                    // delivering accumulates for the life of the process. With
+                    // `S2_LOOP_POOL=1` the loop instead runs one source at a
+                    // time inside a pool of its own.
+                    if std::env::var_os("S2_LOOP_POOL").is_some() {
+                        loop {
+                            let pool = objc_autoreleasePoolPush();
+                            CFRunLoopRunInMode(kCFRunLoopDefaultMode, 10.0, 1);
+                            objc_autoreleasePoolPop(pool);
+                        }
+                    } else {
+                        CFRunLoopRun();
+                    }
                 })
                 .expect("spawning the run-loop thread");
             let (rl, source) = rx.recv().expect("loop handshake");

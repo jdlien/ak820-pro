@@ -127,6 +127,11 @@ extern "C" {
 
     pub fn CFRunLoopGetCurrent() -> CFRunLoopRef;
     pub fn CFRunLoopRun();
+    pub fn CFRunLoopRunInMode(
+        mode: CFStringRef,
+        seconds: CFTimeInterval,
+        return_after_source_handled: Boolean,
+    ) -> i32;
     pub fn CFRunLoopWakeUp(rl: CFRunLoopRef);
     pub fn CFRunLoopSourceCreate(
         alloc: CFAllocatorRef,
@@ -230,6 +235,13 @@ extern "C" {
     pub fn vm_deallocate(task: mach_port_t, address: usize, size: usize) -> kern_return_t;
     pub fn proc_pid_rusage(pid: i32, flavor: i32, buffer: *mut c_void) -> i32;
     pub fn getpid() -> i32;
+}
+
+// The autorelease pool, so a cycle can be measured with one and without.
+#[link(name = "objc")]
+extern "C" {
+    pub fn objc_autoreleasePoolPush() -> *mut c_void;
+    pub fn objc_autoreleasePoolPop(pool: *mut c_void);
 }
 
 /// A name for an `IOReturn`, for logs a human reads.
