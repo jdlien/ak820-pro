@@ -253,7 +253,11 @@ impl Drop for Board {
             RunLoop::get().run(move |rl| {
                 let (d, buf, ctx) = (d, buf, ctx);
                 IOHIDDeviceRegisterInputReportWithTimeStampCallback(d.0, buf.0 as *mut u8, INPUT_BUFFER as CFIndex, None, ctx.0);
-                IOHIDDeviceRegisterRemovalCallback(d.0, None, std::ptr::null_mut());
+                // ⚠️ The original context, as with the input-report callback
+                // above: IOKit matches a registration by its context, so
+                // unregistering with NULL leaves the entry in place (Codex
+                // review of the transport, 2026-09-18).
+                IOHIDDeviceRegisterRemovalCallback(d.0, None, ctx.0);
                 IOHIDDeviceUnscheduleFromRunLoop(d.0, rl, kCFRunLoopDefaultMode);
             });
             if self.open.load(Relaxed) {

@@ -14,8 +14,12 @@ pub struct Cf(CFTypeRef);
 
 impl Cf {
     /// Takes ownership of `r`, or `None` for NULL.
+    ///
+    /// ⚠️ `then`, not `then_some`: the latter builds its argument first, so a
+    /// NULL `r` made a `Cf(NULL)` and dropped it, calling `CFRelease(NULL)`
+    /// (Codex review of the transport, 2026-09-18).
     pub fn owned(r: CFTypeRef) -> Option<Cf> {
-        (!r.is_null()).then_some(Cf(r))
+        (!r.is_null()).then(|| Cf(r))
     }
     pub fn as_ptr(&self) -> CFTypeRef {
         self.0
