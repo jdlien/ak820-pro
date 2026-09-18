@@ -225,18 +225,26 @@ fn poll(secs: f64) -> Result<(), String> {
     Ok(())
 }
 
-fn resident_kb() -> u64 {
+/// rusage_info_v4: a 16-byte uuid, then user, sys, pkg_idle, intr, pageins,
+/// wired, resident, footprint. Confirmed against `sys/resource.h:289`.
+///
+/// ⚠️ Panics rather than returning a zero. The buffer is zero-initialised, so
+/// an ignored failure here silently reports a 0 KB sample and makes a broken
+/// run look like a clean one (codex review, 2026-09-18).
+fn rusage(field: usize) -> u64 {
     let mut buf = [0u64; 64];
-    unsafe { sys::proc_pid_rusage(sys::getpid(), 4, buf.as_mut_ptr() as *mut _) };
-    // rusage_info_v4: 16-byte uuid, then user, sys, pkg_idle, intr, pageins, wired, resident, footprint
-    buf[2 + 6] / 1024
+    let rc = unsafe { sys::proc_pid_rusage(sys::getpid(), 4, buf.as_mut_ptr() as *mut _) };
+    assert_eq!(rc, 0, "proc_pid_rusage failed: a zero sample would be silently believed");
+    buf[2 + field] / 1024
+}
+
+fn resident_kb() -> u64 {
+    rusage(6)
 }
 
 /// `phys_footprint`: what the kernel charges us, and what Activity Monitor shows.
 fn footprint_kb() -> u64 {
-    let mut buf = [0u64; 64];
-    unsafe { sys::proc_pid_rusage(sys::getpid(), 4, buf.as_mut_ptr() as *mut _) };
-    buf[2 + 7] / 1024
+    rusage(7)
 }
 
 /// An autorelease pool held for one cycle, or nothing at all when `on` is false.
@@ -389,6 +397,63 @@ unsafe extern "C" fn noop_removal(
 ) {
 }
 
+/// What a measured run actually did. ⚠️ Without this the harness divides
+/// memory growth by iterations it never completed: an abandoned `Device`
+/// returns `Stuck` instantly, so 20,000 failures look exactly like 20,000
+/// successes, only cheaper (codex review, 2026-09-18).
+#[derive(Default)]
+struct Tally {
+    attempted: u32,
+    ok: u32,
+    timed_out: u32,
+    failed: u32,
+    replies: u32,
+    no_reply: u32,
+}
+
+impl Tally {
+    /// A run is only comparable if every attempt succeeded.
+    fn valid(&self, n: u32) -> bool {
+        self.attempted == n && self.ok == n && self.timed_out == 0 && self.failed == 0
+    }
+    fn line(&self) -> String {
+        format!(
+            "attempted {}, ok {}, timed out {}, failed {}, replies {}, silent {}",
+            self.attempted, self.ok, self.timed_out, self.failed, self.replies, self.no_reply
+        )
+    }
+}
+
+/// Footprint sampled through a pass, so the SHAPE of the growth is visible.
+/// A smooth slope and a staircase mean different things: ~40 B/cycle is far
+/// too small to be a leaked object, so the question is whether it is really
+/// one page every few hundred cycles.
+struct Progress {
+    every: u32,
+    i: u32,
+    marks: Vec<(u32, u64)>,
+}
+
+impl Progress {
+    fn new(n: u32) -> Self {
+        Progress { every: (n / 10).max(1), i: 0, marks: Vec::with_capacity(16) }
+    }
+    fn tick(&mut self) {
+        self.i += 1;
+        if self.i % self.every == 0 {
+            self.marks.push((self.i, footprint_kb()));
+        }
+    }
+    fn report(&self, base: u64) {
+        if self.marks.is_empty() {
+            return;
+        }
+        let steps: Vec<String> =
+            self.marks.iter().map(|(i, kb)| format!("{}:{:+}", i, *kb as i64 - base as i64)).collect();
+        println!("    shape (cycles:KB over start)  {}", steps.join("  "));
+    }
+}
+
 /// Leak isolation: which step of a cycle grows RSS.
 fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
     // "create+pool" is "create" with an autorelease pool held for each cycle.
@@ -402,11 +467,14 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
     // reused by the next pass, a leak is not.
     for pass in 1..=passes {
         let (rss_a, foot_a) = (resident_kb(), footprint_kb());
+        let mut tally = Tally::default();
+        let mut prog = Progress::new(n);
         match what {
             // the IORegistry enumeration `open_board` runs before every open
             "list" => {
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     let _ = discovery::list()?;
                 }
             }
@@ -414,6 +482,7 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
             "create" => {
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     unsafe {
                         let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
                         sys::CFRelease(d as sys::CFTypeRef);
@@ -424,6 +493,7 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
             "open-bare" => {
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     unsafe {
                         let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
                         sys::IOHIDDeviceOpen(d, 0);
@@ -437,6 +507,7 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                 let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     dev.open(false).map_err(|e| e.to_string())?;
                     dev.close();
                 }
@@ -447,13 +518,48 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                 dev.open(false).map_err(|e| e.to_string())?;
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
-                    let _ = exchange(&mut dev, &request, 0);
+                    prog.tick();
+                    tally.attempted += 1;
+                    match exchange(&mut dev, &request, 0) {
+                        Ok((_, discarded, _)) => {
+                            tally.ok += 1;
+                            tally.replies += 1;
+                            tally.no_reply += discarded.len() as u32;
+                        }
+                        Err(e) if e.contains("timed out") => tally.timed_out += 1,
+                        Err(_) => tally.failed += 1,
+                    }
+                }
+            }
+            // M1: `exchange` exactly, but with the blocking write. The daemon's
+            // own path with the async submission removed.
+            "exchange-sync" => {
+                let mut dev = Device::create(&service).map_err(|e| e.to_string())?;
+                dev.open(false).map_err(|e| e.to_string())?;
+                for _ in 0..n {
+                    let _p = Pool::new(pooled);
+                    prog.tick();
+                    tally.attempted += 1;
+                    let rc = unsafe { dev.set_report_sync(&request) };
+                    if rc != 0 {
+                        tally.failed += 1;
+                        continue;
+                    }
+                    match dev.read_report(Duration::from_millis(2000)) {
+                        Ok(Some(_)) => {
+                            tally.ok += 1;
+                            tally.replies += 1;
+                        }
+                        Ok(None) => tally.timed_out += 1,
+                        Err(_) => tally.failed += 1,
+                    }
                 }
             }
             // schedule + unschedule on the loop thread, no callbacks
             "sched" => {
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     unsafe {
                         let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
                         sys::IOHIDDeviceOpen(d, 0);
@@ -478,6 +584,7 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                 let mut buf = [0u8; 256];
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     unsafe {
                         let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
                         sys::IOHIDDeviceOpen(d, 0);
@@ -505,6 +612,7 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                 let mut buf = [0u8; 256];
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     unsafe {
                         let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
                         sys::IOHIDDeviceOpen(d, 0);
@@ -525,6 +633,7 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                 let mut buf = [0u8; 256];
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     unsafe {
                         let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
                         sys::IOHIDDeviceOpen(d, 0);
@@ -552,6 +661,7 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                 let mut buf = [0u8; 32];
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     unsafe {
                         let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
                         sys::IOHIDDeviceOpen(d, 0);
@@ -592,6 +702,7 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                     });
                     for _ in 0..n {
                         let _p = Pool::new(pooled);
+                        prog.tick();
                         let rc = sys::IOHIDDeviceOpen(d, 0);
                         assert_eq!(rc, 0, "open: {}", sys::ioreturn_name(rc));
                         sys::IOHIDDeviceClose(d, 0);
@@ -608,8 +719,16 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                 dev.open(false).map_err(|e| e.to_string())?;
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
-                    let _ = dev.write_report(&request, Duration::from_millis(1000));
-                    while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {}
+                    prog.tick();
+                    tally.attempted += 1;
+                    match dev.write_report(&request, Duration::from_millis(1000)) {
+                        Ok(Sent::Yes) => tally.ok += 1,
+                        Ok(Sent::TimedOut) => tally.timed_out += 1,
+                        Err(_) => tally.failed += 1,
+                    }
+                    while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {
+                        tally.replies += 1;
+                    }
                 }
             }
             // the same with the synchronous IOHIDDeviceSetReport
@@ -618,14 +737,23 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
                 dev.open(false).map_err(|e| e.to_string())?;
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
-                    unsafe { dev.set_report_sync(&request) };
-                    while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {}
+                    prog.tick();
+                    tally.attempted += 1;
+                    if unsafe { dev.set_report_sync(&request) } == 0 {
+                        tally.ok += 1;
+                    } else {
+                        tally.failed += 1;
+                    }
+                    while let Ok(Some(_)) = dev.read_report(Duration::from_millis(20)) {
+                        tally.replies += 1;
+                    }
                 }
             }
             // removal callback only
             "removal" => {
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     unsafe {
                         let d = sys::IOHIDDeviceCreate(sys::kCFAllocatorDefault, service.0);
                         sys::IOHIDDeviceOpen(d, 0);
@@ -644,20 +772,30 @@ fn isolate(what: &str, n: u32, passes: u32) -> Result<(), String> {
             "runloop" => {
                 for _ in 0..n {
                     let _p = Pool::new(pooled);
+                    prog.tick();
                     runloop::RunLoop::get().run(|_| ());
                 }
             }
             other => return Err(format!("unknown step {other}")),
         }
         let (rss_b, foot_b) = (resident_kb(), footprint_kb());
-        if passes > 1 {
-            println!(
-                "  pass {pass}: rss {:+} KB ({:+.3}/cycle), footprint {:+} KB ({:+.3}/cycle)",
-                rss_b as i64 - rss_a as i64,
-                (rss_b as f64 - rss_a as f64) / n as f64,
-                foot_b as i64 - foot_a as i64,
-                (foot_b as f64 - foot_a as f64) / n as f64,
-            );
+        println!(
+            "  pass {pass}: rss {:+} KB ({:+.3}/cycle), footprint {:+} KB ({:+.3}/cycle)",
+            rss_b as i64 - rss_a as i64,
+            (rss_b as f64 - rss_a as f64) / n as f64,
+            foot_b as i64 - foot_a as i64,
+            (foot_b as f64 - foot_a as f64) / n as f64,
+        );
+        prog.report(foot_a);
+        // ⚠️ A run that did not do the work it claims is not a measurement.
+        if tally.attempted > 0 {
+            println!("    workload  {}", tally.line());
+            if !tally.valid(n) {
+                println!(
+                    "    ⚠️ INVALID: {} of {n} attempts succeeded — this pass is NOT comparable",
+                    tally.ok
+                );
+            }
         }
     }
     let (rss1, foot1) = (resident_kb(), footprint_kb());
