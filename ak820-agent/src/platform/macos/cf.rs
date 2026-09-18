@@ -75,6 +75,33 @@ impl Drop for Cf {
     }
 }
 
+/// An autorelease pool, drained when it drops.
+///
+/// ⚠️ **Not optional, and not a tidiness measure.** IOKit's HID
+/// implementation autoreleases into the *calling* thread's pool:
+/// `-[IOHIDDeviceClass setReport:…callback:context:options:]` boxes the
+/// context in an `NSValue` via `+[NSValue valueWithPointer:]`, which is
+/// autoreleased. A Rust thread has no pool, so on macOS 27 every async write
+/// left a live 48-byte `NSConcreteValue` behind for the life of the process:
+/// 25,788 of them after 26,000 exchanges, measured with `malloc_history`
+/// 2026-09-18. That was the macOS daemon's ~1.9 MB/day footprint growth.
+///
+/// ⚠️ Pools are per-thread and strictly nested: push and pop on the **same**
+/// thread, and never let two overlap other than by nesting.
+pub struct Pool(*mut c_void);
+
+impl Pool {
+    pub fn new() -> Pool {
+        Pool(unsafe { objc_autoreleasePoolPush() })
+    }
+}
+
+impl Drop for Pool {
+    fn drop(&mut self) {
+        unsafe { objc_autoreleasePoolPop(self.0) }
+    }
+}
+
 /// An owned `io_object_t`.
 pub struct Io(pub io_object_t);
 

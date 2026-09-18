@@ -217,6 +217,14 @@ extern "C" {
     pub fn getpid() -> i32;
 }
 
+// The autorelease pool. ⚠️ Needed because IOKit's HID implementation
+// autoreleases into the CALLING thread's pool -- see `cf::Pool`.
+#[link(name = "objc")]
+extern "C" {
+    pub fn objc_autoreleasePoolPush() -> *mut c_void;
+    pub fn objc_autoreleasePoolPop(pool: *mut c_void);
+}
+
 /// A name for an `IOReturn`, for logs a human reads.
 pub fn ioreturn_name(rc: IOReturn) -> String {
     let name = match rc {

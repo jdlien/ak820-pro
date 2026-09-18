@@ -32,6 +32,7 @@ use std::os::raw::c_void;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
+use super::cf::Pool;
 use super::discovery::{self, Choice};
 use super::runloop::RunLoop;
 use super::sys::*;
@@ -393,6 +394,13 @@ impl Drop for Device {
 impl Wire for Device {
     fn write_report(&self, data: &[u8], timeout: Duration) -> Result<Sent, Error> {
         use std::sync::atomic::Ordering::Relaxed;
+        // ⚠️ The leak fix. IOKit autoreleases an `NSValue` wrapping our context
+        // into THIS thread's pool on every async write, and a Rust thread has
+        // none, so they accumulated for the life of the process (see
+        // `cf::Pool`). The pool covers the whole call INCLUDING the wait for
+        // the completion callback, so nothing it drains can still be in use by
+        // an operation in flight.
+        let _pool = Pool::new();
         let board = &self.board;
         if board.abandoned.load(Relaxed) {
             return Err(Error::Stuck);
