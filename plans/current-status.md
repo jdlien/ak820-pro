@@ -8,54 +8,57 @@ line (🟡 built, owed …).
 
 ---
 
-## ⚠️ In flight right now — 2026-09-18 11:2x, read this first
+## ✅ The macOS leak is solved — 2026-09-18 13:0x, read this first
 
-**The Elysium daemon is STOPPED.** `launchctl bootout gui/$UID/com.jdlien.ak820pro.agent`
-was run at 11:19:15 to give the leak soak the board to itself. The clock free-runs
-meanwhile (harmless for minutes; it re-syncs at the next start). **Put it back with:**
+**The daemon is RUNNING and healthy** on `v0.1.1-49-gbf7b7f3`, owning the clock.
+Nothing is in flight; nothing is stopped. The previous note in this slot said the
+daemon was booted out for a soak — that is over, and it was restarted at 13:01:27.
 
-```sh
-launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist
-tail -n 5 ~/Library/Logs/ak820pro/ak820-agent.log   # expect a start block and an enumerated sync
-```
+**The cause, confirmed:** `-[IOHIDDeviceClass setReport:…callback:context:options:]`
+boxes our context pointer in an `NSValue` via `+[NSValue valueWithPointer:]`, which
+is **autoreleased into the calling thread's pool**. Our calling thread is a plain
+Rust thread with no pool, so every async write left a live 48-byte
+`NSConcreteValue` for the life of the process. `malloc_history` on a 40,000-exchange
+run: 25,808 calls for 1,238,784 bytes; the heap census shows 25,788 still live plus
+52 pages of `@autoreleasepool content` holding them.
 
-**Running in the background:** `spikes/s2-iokit/target/release/s2 soak 20000` (task
-`buc41x71c`), output buffered until it exits because it is piped through `tail`.
+**The fix** (`bf7b7f3`) is one RAII `cf::Pool` guard at the top of `write_report`,
+scoped to include the wait for the completion callback so nothing it drains can
+still be in flight. Confirmed flat over 18,000 consecutive exchanges, three passes,
+**with the async API retained** — no worker-thread redesign, no lost timeout, no
+lost completion timestamp.
 
-**Why:** the daemon leaks about **1.9 MB of `phys_footprint` a day on macOS**
-(2.70 MB at 35 min uptime on 09-17, **4.58 MB at 25 h** on 09-18, over ~29,000 media
-polls + 300 clock + 300 health exchanges). ⚠️ **Windows does not leak**: gremlin's
-25 h run holds **2.74 MB private bytes after ~60,000 exchanges**, so the cause is in
-the **macOS transport**, not the shared code. The last good build is running everywhere;
-this is the one remaining engineering defect and it blocks nothing.
+⚠️ **F0, a separate and arguably more consequential bug** (`6d5c9a8`):
+`IOHIDDeviceSetReportWithCallback`'s timeout is documented in **milliseconds**
+(`IOHIDDevice.h:676`) despite its `CFTimeInterval` type. We passed
+`as_secs_f64()`, so `WRITE_TIMEOUT = 1000 ms` became **1 ms**. ⚠️ **Every figure
+from the 45-minute `ProcessType Background` incident describes that 1 ms deadline,
+not the scheduler** — including anything characterising priority 4. The move to
+`ProcessType Standard` was still right on independent grounds, but its stated
+diagnosis is not supported by its own evidence.
 
-**Codex review of the transport** (gpt-6-astra, high effort, read-only) is saved at
-`scratchpad/codex-leak.md` in this session's scratchpad. Its three usable findings:
+**Open, and the only thing outstanding:** the production gate. A detached sampler
+(`~/Library/Logs/ak820pro/mem-sample.sh`, survives any session) writes
+`~/Library/Logs/ak820pro/mem-samples-bf7b7f3.csv` every 5 minutes for 48 h, with the
+daemon's own `smtc_polls` so growth can be expressed per media cycle rather than
+against an assumed rate. Baseline **2,977 KB at 13:01:57**, pid 97246.
+⚠️ **The 0–24 h window contains warm-up and cannot distinguish a fix from a
+plateau — the 24 h → 48 h delta is the one that decides.** gremlin is running the
+same measurement on Windows for comparison (e07fdfa, deliberately not reinstalled).
 
-1. **No autorelease pool** on the calling thread or the run-loop thread
-   (`device.rs` write submission; `runloop.rs`'s indefinite `CFRunLoopRun()`).
-   IOKit's own Objective-C temporaries would then accumulate. Its first-choice fix:
-   scoped pools around IOKit calls, and a run loop of `CFRunLoopRunInMode(..., finite, true)`
-   with a fresh pool per iteration. **Plausible mechanism, unconfirmed.**
-2. ⚠️ **S2's own 56 B/exchange figure is confounded**: `soak()` keeps three `Vec<f64>`
-   timing samples per exchange (`spikes/s2-iokit/src/main.rs:279-287`), about 2.4 MB of
-   payload over 100,000 exchanges. **Use `isolate exchange` / `isolate open`, which keep
-   no samples, for a clean per-exchange number.** The production 1.9 MB/day is
-   independent evidence and stands.
-3. Two definite small bugs, worth fixing regardless:
-   - `cf.rs:17` `(!r.is_null()).then_some(Cf(r))` **builds `Cf(NULL)` eagerly** and drops
-     it, so `CFRelease(NULL)` on the NULL path. Use `.then(|| Cf(r))`.
-   - `device.rs:256` unregisters the **removal** callback with a NULL context while it was
-     registered with `ctx`; Apple's implementation matches by context, so the entry stays.
-     Pass the original `ctx`.
+⚠️ **The install warns the binary is unsigned**, so macOS re-asks for Automation
+consent on each rebuild. `scripts/sign-agent-macos.sh` fixes it; it touches the
+keychain, so it is left for the owner.
 
-**Next steps, in order:** (a) let the soak finish and read it; (b) run
-`s2 isolate exchange 20000` and `s2 isolate open 20000` for the unconfounded
-per-exchange and per-open numbers; (c) apply fix 3, then test fix 1 if the numbers
-still show growth; (d) **restart the daemon** (command above) and confirm a sync;
-(e) commit. ⚠️ **Uncommitted:** `spikes/s2-iokit/src/main.rs` now soaks with **health
-page 1** (`frame(0x13, 0x01, &[])`, RAM-only) instead of `TEXT_PLAYBACK`, per the
-BACKLOG rule from the 09-16 stall incident.
+**The method lesson, because it cost a day:** quoting a slope as a per-operation
+cost invented a finding that did not exist (a "26 B/cycle floor", reported as the
+one unexplained gap in the diagnosis, was one-time warm-up divided by the cycle
+count). `isolate` now samples footprint **through** a run and counts its workload;
+⚠️ **no per-cycle figure from before `2357880` should be trusted**, because the old
+harness discarded every operation result and 20,000 failures divided exactly like
+20,000 successes. Full write-up, including the three dead hypotheses and the codex
+review's eight accepted findings:
+[`AK820-AGENT-MACOS-LEAK-PLAN.md`](AK820-AGENT-MACOS-LEAK-PLAN.md).
 
 **Everything else is done and running.** Phases 0-5a and 2/4a/4b are met on both
 machines; `scripts/package-macos.sh` builds a signed `.dmg` and stops before Apple.
