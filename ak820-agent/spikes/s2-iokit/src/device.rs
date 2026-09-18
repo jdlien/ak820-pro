@@ -286,7 +286,13 @@ impl Device {
                 data[0] as CFIndex,
                 data[1..].as_ptr(),
                 REPORT_LEN as CFIndex,
-                timeout.as_secs_f64(),
+                // ⚠️ MILLISECONDS, despite the CFTimeInterval type, which is
+                // seconds everywhere else in CoreFoundation. IOHIDDevice.h:
+                // "CFTimeInterval containing the timeout in milliseconds".
+                // Passing `as_secs_f64()` gave every write a 1 ms deadline
+                // instead of 1 s, and is the likeliest source of the 9 HID
+                // timeouts in 45 min under `ProcessType Background`.
+                timeout.as_secs_f64() * 1000.0,
                 Some(on_written),
                 self.ctx as *mut c_void,
             )
