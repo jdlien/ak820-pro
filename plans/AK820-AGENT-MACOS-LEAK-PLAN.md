@@ -123,10 +123,18 @@ against the source and the incident record:
    deadline cannot reach.
 3. Priority 4 explains all three symptoms; F0 explains none of them.
 
+⚠️ **Independently confirmed** by the Windows session against the shared code:
+`no reply from the keyboard` is `Error::Timeout` with an empty drain list
+(`hid/mod.rs:258-259`), and the only other producer of that exact string in the
+tree is a scheduler test (`clock/scheduler.rs:920`). The two failures are
+textually distinct in the log, so nine lines reading that string are nine read
+timeouts, and nothing else.
+
 The lesson is the one this whole document keeps relearning: a new finding that
 *could* explain an old incident is not evidence that it *did*. The claim was
-made without checking which error text the incident actually logged, and the
-check took two minutes.
+made without checking which error text the incident actually logged, the check
+took two minutes, and **the log had already recorded the answer before anyone
+looked**.
 
 **Fix:** pass milliseconds. Audit every `CFTimeInterval` at an IOKit HID call
 site for the same assumption. ⚠️ Do **not** assume the sibling APIs agree —
