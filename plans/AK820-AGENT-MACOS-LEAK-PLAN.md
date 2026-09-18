@@ -14,8 +14,34 @@ exist on the Windows transport. An earlier draft argued macOS-specificity from
 gremlin holding 2.74 MB of private bytes "after ~60,000 exchanges"; that
 argument is **withdrawn** — the exchange count was roughly double the truth, and
 a single endpoint bounds a total rather than a rate, so it excluded nothing.
-Windows is being measured properly in parallel, but the macOS diagnosis never
-depended on it.
+
+**Windows has since been measured properly**, and it agrees — but note the
+order: the mechanism stands on its own, and this corroborates it rather than
+carrying it. 49 samples 5 min apart over 4.01 h on 2026-09-18, one pid
+throughout, the daemon up 26.7 h before the first sample so **no warm-up is
+inside the window**:
+
+| | slope | 95% CI |
+|---|---|---|
+| per hour | −1,537 B/h | −3,999 … +925 |
+| per media cycle | −1.28 B | −3.34 … +0.77 |
+| **per HID write** | **−1.17 B** | **−3.03 … +0.70** |
+
+r² = 0.031 — time explains ~3% of the variation, so it is noise, not a line.
+⚠️ **The useful number is the upper bound, +0.70 B/write.** macOS leaked 48 B
+per write; a leak that size would have added 0.254 MB over this window against
++0.004 MB observed. **Excluded by ~69×.**
+
+Credible rather than merely small: private bytes took only five distinct
+values, all multiples of 4,096 (the counter quantises to pages), the whole
+4-hour range is 64 KB, and it went **down** twice mid-run, which no monotonic
+leak does. Handles flat at 157 and threads at 6 in 48 of 49 samples.
+
+⚠️ Caveats, from the session that ran it: 4.01 h rather than 24; the per-write
+denominator is the daemon's own `smtc_polls` × a 1.1 writes/cycle model, so a
+doubled true rate would halve the bound to +0.35 B/write — still excluding 48;
+and the window is **idle only**, so text traffic was `CLEAR` keepalives rather
+than `SET_LINE` changes.
 
 ⚠️ **Read [Review record](#review-record--codex-2026-09-18) before trusting any
 figure here**, and note that the harness itself was capable of producing
