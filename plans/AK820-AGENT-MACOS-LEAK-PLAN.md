@@ -1,13 +1,25 @@
 # ak820-agent — the macOS transport's per-exchange growth — plan
 
-**Status: drafted 2026-09-18, reviewed by codex, revised, and the cause
-CONFIRMED the same day. F0 is fixed and committed (`6d5c9a8`); the leak's
-mechanism is established and the remaining work is the replacement design.** The macOS
-daemon grows about **1.9 MB of `phys_footprint` a day**; Windows holds 2.74 MB
-of private bytes after ~60,000 exchanges. The growth is real and macOS-specific.
-⚠️ **The mechanism is not yet established**, and the review found the harness
-capable of producing confident numbers from invalid workloads. Read
-[Review record](#review-record--codex-2026-09-18) before trusting any figure here.
+**Status: drafted, reviewed by codex, diagnosed, FIXED and deployed on
+2026-09-18.** The macOS daemon grew about **1.9 MB of `phys_footprint` a day**
+because IOKit autoreleases an `NSValue` onto the calling thread on every HID
+write and a Rust thread has no pool to drain it. The fix (`bf7b7f3`) is one
+RAII pool guard in `write_report`; F0, a separate 1000x timeout-unit bug, is
+fixed in `6d5c9a8`. Both are pushed and installed. **The only thing still open
+is the 24 h → 48 h production gate.**
+
+The growth was macOS-specific — ⚠️ **by mechanism, not by comparison**: the
+leaked object is an Objective-C `NSValue` allocated inside IOKit, which cannot
+exist on the Windows transport. An earlier draft argued macOS-specificity from
+gremlin holding 2.74 MB of private bytes "after ~60,000 exchanges"; that
+argument is **withdrawn** — the exchange count was roughly double the truth, and
+a single endpoint bounds a total rather than a rate, so it excluded nothing.
+Windows is being measured properly in parallel, but the macOS diagnosis never
+depended on it.
+
+⚠️ **Read [Review record](#review-record--codex-2026-09-18) before trusting any
+figure here**, and note that the harness itself was capable of producing
+confident numbers from invalid workloads until `2357880`.
 
 The review also found **a production defect unrelated to memory** that is more
 consequential than the leak. It is F0 below and should be fixed first.
@@ -177,13 +189,28 @@ it before the closing sample (`spikes/s2-iokit/src/main.rs:446`). Anything IOKit
 retains until device destruction would be released at every measurement
 boundary — while production keeps one `Board` alive for days.
 
-### The arithmetic, restated honestly
+### The arithmetic, with the real write rate
 
-40 B × 28,800 = 1.15 MB/day against 1.9 MB/day observed (2.70 MB at 35 min on
-09-17, 4.58 MB at 25 h on 09-18). ⚠️ **Do not read the remainder as warm-up.**
-The exchange count is a floor that ignores text pushes, clock and health traffic,
-and the 09-17→09-18 window is a single day-one sample that mixes ramp with leak.
-The two numbers being the same order is weak corroboration, not a closed account.
+⚠️ **Corrected 2026-09-18.** An earlier draft used 28,800 exchanges/day — the
+media poll rate — as the denominator. **The leaked object is one per WRITE, not
+one per cycle**, and the write rate is higher:
+
+| source | rate | writes/day |
+|---|---|---|
+| playback readout, every 3 s poll (`agent.rs:375`) | 1 per cycle | 28,800 |
+| text keepalive, every 10th poll (`media.rs:35`, `KEEPALIVE` = 30 s) | 0.1 per cycle | 2,880 |
+| clock and health transactions | ~72/h | ~1,730 |
+| | | **~33,400** |
+
+At the measured 48 B per write that is **1.60 MB/day**, against **1.88 MB/day**
+observed (2.70 MB at 35 min on 09-17, 4.58 MB at 25 h on 09-18). The previous
+figure of 1.15 MB/day understated it by using the cycle rate as the write rate.
+
+⚠️ Still not a closed account — the observed window is a single day-one sample
+that mixes ramp with leak, and the remainder is unattributed. But 1.60 against
+1.88 is corroboration worth the name, where 1.15 was not. The write-rate
+correction came from the Windows session, which caught the same error in its own
+analysis first.
 
 ### What has been ruled out
 
