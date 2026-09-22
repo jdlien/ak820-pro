@@ -1,0 +1,28 @@
+firmware : ak820pro-builds/out/via-daily-b89777e0f9-dirty-20260922-134320.bin
+built    : Sep 22 13:43:20 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s) -> /Users/jdlien/code/ak820-pro/history/incident-2026-09-22-wdt/validation/flash-keymap.json
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/code/ak820-pro/history/incident-2026-09-22-wdt/validation/flash-lighting.json
+  effect 2, hue 181, sat 219, val 105, speed 227
+
+== press Fn+Esc to enter the bootloader (waiting up to 10 min) ==
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/code/ak820-pro/history/incident-2026-09-22-wdt/validation/flash-keymap.json
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the RGB lighting ==
+lighting restored: effect 2, hue 181, sat 219, val 105, speed 227
+
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before -190.2 ms, after -1.1 ms, rtt 4.3 ms, U ~1.8 ms, lead now 3.52 ms, bias sent
+done.

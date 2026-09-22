@@ -1,0 +1,10 @@
+2026-09-22 13:02:19 sync (periodic): clock set (sub-second): before -8.3 ms, after -5.6 ms, rtt 2.9 ms, U ~3.8 ms, lead now 3.94 ms, bias sent (slewing)
+2026-09-22 13:02:19 bias hold: P 32090 -> 32080 since the last sync (loop still moving); residual -8.3 ms not learned
+2026-09-22 13:07:20 sync (periodic): clock set (sub-second): before +8.1 ms, after +9.9 ms, rtt 2.9 ms, U ~2.9 ms, lead now 4.16 ms, bias sent (slewing)
+2026-09-22 13:07:20 bias hold: P 32080 -> 32087 since the last sync (loop still moving); residual +8.1 ms not learned
+2026-09-22 13:12:21 sync (periodic): clock set (sub-second): before -11.9 ms, after -10.0 ms, rtt 4.1 ms, U ~1.5 ms, lead now 3.63 ms, bias sent (slewing)
+2026-09-22 13:12:21 bias hold: P 32087 -> 32078 since the last sync (loop still moving); residual -11.9 ms not learned
+2026-09-22 13:13:57 [warn] playback: no reply from the keyboard
+2026-09-22 13:13:57 board: present -> unresponsive (no reply from the keyboard)
+2026-09-22 13:14:02 [warn] playback: no reply from the keyboard
+2026-09-22 13:14:05 board: unresponsive -> present

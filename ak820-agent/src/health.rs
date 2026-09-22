@@ -1,11 +1,11 @@
 //! The health channel (`0x13`): the firmware's counters, decoded and rendered
 //! as `hostagent/ak820health.py` decodes and renders them.
 //!
-//! Four pages, each `[SET_VALUE, HEALTH, command, version, 28 bytes]`, with
+//! Five pages, each `[SET_VALUE, HEALTH, command, version, 28 bytes]`, with
 //! the 28 bytes laid out in `health.h`. A page exists per command because
 //! page 1's payload was already exactly full. ⚠️ **The version byte gates the
 //! layout**: page 2 was repacked at version 3, page 3 arrived at 4, page 4 at
-//! 5, and the Python refuses to parse an older board rather than silently
+//! 5, page 5 (retained watchdog evidence) at 6. The Python refuses to parse an older board rather than silently
 //! misread it. So does this.
 //!
 //! What this is for: the phase-5 gate says enough health reporting must land
@@ -30,12 +30,14 @@ pub const GET2: u8 = 0x04;
 pub const RESET: u8 = 0x05;
 pub const GET3: u8 = 0x06;
 pub const GET4: u8 = 0x07;
+pub const GET5: u8 = 0x08;
 
 /// Why a page could not be decoded.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Error {
     /// Fewer than 32 bytes.
     Short,
+    RecordFormat(u8),
     /// The firmware's health protocol version is older than this page's
     /// layout — the Python's `firmware health proto v{n}; page {p} needs v{m}`.
     Version { have: u8, page: u8, need: u8 },
@@ -45,6 +47,7 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Short => write!(f, "short health reply"),
+            Error::RecordFormat(v) => write!(f, "unsupported watchdog record format {v}"),
             Error::Version { have, page, need } => write!(
                 f,
                 "firmware health proto v{have}; page {page} needs v{need} -- flash the current build"
@@ -61,6 +64,83 @@ fn u16_at(r: &[u8], i: usize) -> u16 {
 
 fn u32_at(r: &[u8], i: usize) -> u32 {
     u32::from_le_bytes([r[i], r[i + 1], r[i + 2], r[i + 3]])
+}
+
+/// Frozen evidence from the boot immediately preceding a watchdog reset.
+/// This is an interrupted MAIN-LOOP scope, not a fault PC or proof of cause.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CrashRecord {
+    pub valid: bool,
+    pub site: u8,
+    pub parent: u8,
+    pub last_pass_uptime_ms: u32,
+    pub boot_rstst: u8,
+    pub consecutive_resets: u8,
+}
+
+impl CrashRecord {
+    pub const NEEDS: u8 = 6;
+
+    pub fn decode(report: &[u8]) -> Result<Self, Error> {
+        if report.len() < REPORT_LEN { return Err(Error::Short); }
+        if report[3] < Self::NEEDS {
+            return Err(Error::Version { have: report[3], page: 5, need: Self::NEEDS });
+        }
+        if report[4] != 1 { return Err(Error::RecordFormat(report[4])); }
+        let valid = report[5] & 1 != 0;
+        Ok(Self {
+            valid,
+            site: if valid { report[6] } else { 0 },
+            parent: if valid { report[7] } else { 0 },
+            last_pass_uptime_ms: if valid { u32_at(report, 8) } else { 0 },
+            boot_rstst: report[12],
+            consecutive_resets: report[13],
+        })
+    }
+
+    pub fn summary(&self) -> String {
+        if !self.valid {
+            return format!("unavailable (reset flags 0x{:02x}, consecutive {})", self.boot_rstst, self.consecutive_resets);
+        }
+        format!("{} within {}; last pass uptime {} ms; reset flags 0x{:02x}; consecutive {}",
+            crash_site(self.site), crash_site(self.parent), self.last_pass_uptime_ms,
+            self.boot_rstst, self.consecutive_resets)
+    }
+}
+
+/// IDs are append-only in firmware watchdog_record.h and ak820pro.h.
+pub fn crash_site(site: u8) -> String {
+    let name = match site {
+        0 => "none", 1 => "main_loop", 2 => "housekeeping", 3 => "key_event",
+        4 => "wireless", 5 => "raw_hid", 6 => "param_repeat", 7 => "rtc_fast",
+        8 => "second_edge", 9 => "display_pump", 10 => "display_housekeeping",
+        11 => "user_housekeeping", 12 => "lcd_wait", 13 => "lcd_transfer",
+        14 => "flash_read", 15 => "flash_erase", 16 => "flash_program",
+        17 => "i2c_read", 18 => "i2c_write", 19 => "internal_flash_write",
+        20 => "internal_flash_erase", 21 => "internal_flash_drain", 22 => "test_stall",
+        32 => "loop_none", 33 => "leds", 34 => "pair", 35 => "consumer",
+        36 => "param", 37 => "rtc_task", 38 => "animation", 39 => "connection",
+        40 => "status", 41 => "text", 42 => "locks", 43 => "clock_format",
+        44 => "clock", 45 => "battery", 46 => "eeconfig", 47 => "health",
+        48 => "rgb_flush",
+        _ => return format!("unknown_{site}"),
+    };
+    name.into()
+}
+
+pub fn render_crash(p: &CrashRecord) -> String {
+    format!("\nwatchdog_record          {}\n", p.summary())
+}
+
+/// Preserve the v5 JSON verbatim for old firmware/tools, append evidence on v6.
+pub fn render_json_with_crash(mut json: String, crash: Option<&CrashRecord>) -> String {
+    if let Some(p) = crash {
+        json.pop(); // render_json's closing brace
+        json.push_str(&format!(", \"watchdog_record\": {{\"valid\": {}, \"site\": \"{}\", \"site_id\": {}, \"parent\": \"{}\", \"parent_id\": {}, \"last_pass_uptime_ms\": {}, \"boot_rstst\": {}, \"consecutive_resets\": {}}}}}",
+            p.valid, crash_site(p.site), p.site, crash_site(p.parent), p.parent,
+            p.last_pass_uptime_ms, p.boot_rstst, p.consecutive_resets));
+    }
+    json
 }
 
 /// Page 1: `HC_GET`. `struct.unpack_from("<6IHBB", rep, 4)`.
@@ -550,6 +630,38 @@ pub fn render_json(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn retained_record_gates_format_and_preserves_unknown_sites() {
+        let mut r = report(GET5, 6, &[1, 1, 12, 9, 0x78, 0x56, 0x34, 0x12, 2, 1]);
+        let c = CrashRecord::decode(&r).unwrap();
+        assert!(c.valid);
+        assert_eq!(c.last_pass_uptime_ms, 0x12345678);
+        assert_eq!(c.summary(), "lcd_wait within display_pump; last pass uptime 305419896 ms; reset flags 0x02; consecutive 1");
+        assert_eq!(CrashRecord::decode(&r[..31]), Err(Error::Short));
+        r[3] = 5;
+        assert_eq!(CrashRecord::decode(&r), Err(Error::Version { have: 5, page: 5, need: 6 }));
+        r[3] = 6;
+        r[4] = 2;
+        assert_eq!(CrashRecord::decode(&r), Err(Error::RecordFormat(2)));
+        r[4] = 1;
+        r[6] = 250;
+        assert!(CrashRecord::decode(&r).unwrap().summary().starts_with("unknown_250"));
+        r[5] = 0; // Invalid evidence must not display stale operation or uptime.
+        let c = CrashRecord::decode(&r).unwrap();
+        assert_eq!((c.site, c.parent, c.last_pass_uptime_ms), (0, 0, 0));
+        assert_eq!(c.boot_rstst, 2);
+        assert!(c.summary().starts_with("unavailable"));
+    }
+
+    #[test]
+    fn crash_json_is_optional_and_keeps_raw_ids() {
+        let c = CrashRecord::decode(&report(GET5, 6, &[1, 1, 12, 9, 123, 0, 0, 0, 2, 1])).unwrap();
+        let base = "{\"version\": 6}".to_string();
+        assert_eq!(render_json_with_crash(base.clone(), None), base);
+        assert_eq!(render_json_with_crash(base, Some(&c)),
+            "{\"version\": 6, \"watchdog_record\": {\"valid\": true, \"site\": \"lcd_wait\", \"site_id\": 12, \"parent\": \"display_pump\", \"parent_id\": 9, \"last_pass_uptime_ms\": 123, \"boot_rstst\": 2, \"consecutive_resets\": 1}}");
+    }
 
     fn report(command: u8, version: u8, payload: &[u8]) -> Vec<u8> {
         let mut r = vec![0u8; REPORT_LEN];

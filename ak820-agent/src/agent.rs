@@ -300,11 +300,21 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
             }
         }
 
+        // Capture soon after recovery as well as at the normal five-minute
+        // cadence. The previous health sample is still available below.
+        if st.board != "present" && watch.state().word() == "present" {
+            next_health = now;
+        }
         if now >= next_health && !watch.holding(now) {
             worked = true;
             let mut discarded = Vec::new();
             match read_health::<P>(&mut discarded) {
-                Ok(h) => st.health = Some(h),
+                Ok(h) => {
+                    if let Some(line) = watchdog_recovery_line(st.health.as_ref(), &h) {
+                        log.line(&line);
+                    }
+                    st.health = Some(h);
+                },
                 Err(HealthRead::Hid(e)) => {
                     if let Some(line) = watch.observe(Err(&e), now) {
                         log.line(&line);
@@ -404,6 +414,21 @@ fn send(dev: &impl HidTransport, reports: &[(u8, Vec<u8>)], discarded: &mut Vec<
     Ok(())
 }
 
+/// Log once per observed recovery, retaining the preceding sample before
+/// the periodically overwritten status file loses it. A new agent also logs
+/// evidence still on the board. Counters are historical, not causal proof.
+fn watchdog_recovery_line(previous: Option<&HealthStatus>, current: &HealthStatus) -> Option<String> {
+    if current.wdt_consecutive_resets == 0 { return None; }
+    if previous.is_some_and(|p| p.wdt_consecutive_resets == current.wdt_consecutive_resets && p.crash == current.crash) {
+        return None;
+    }
+    let evidence = current.crash.as_ref().map_or_else(|| "breadcrumbs unsupported by this firmware".into(), |c| c.summary());
+    let before = previous.map_or_else(String::new, |p| format!(
+        "; preceding health sample at {}: blit_timeouts={}, nonflash_stalls_25ms={}, worst_gap={} ms ({})",
+        p.read_at, p.blit_timeouts, p.count_ge_25ms_nonflash, p.loop_gap_max_ms, p.loop_gap_max_mark));
+    Some(format!("[warn] firmware watchdog reset x{}: {evidence}{before}", current.wdt_consecutive_resets))
+}
+
 enum HealthRead {
     Hid(hid::Error),
     Decode(health::Error),
@@ -427,6 +452,9 @@ fn read_health<P: Platform>(discarded: &mut Vec<Drained>) -> Result<HealthStatus
     };
     let p1 = health::Page1::decode(&page(health::GET)?).map_err(HealthRead::Decode)?;
     let p2 = health::Page2::decode(&page(health::GET2)?).map_err(HealthRead::Decode)?;
+    let crash = if p1.version >= health::CrashRecord::NEEDS {
+        Some(health::CrashRecord::decode(&page(health::GET5)?).map_err(HealthRead::Decode)?)
+    } else { None };
     Ok(HealthStatus {
         read_at: logfile::stamp(&P::host()),
         version: p1.version,
@@ -434,6 +462,7 @@ fn read_health<P: Platform>(discarded: &mut Vec<Drained>) -> Result<HealthStatus
         blit_timeouts: p1.blit_timeouts,
         tx_timeouts: p1.tx_timeouts,
         wdt_consecutive_resets: p1.wdt_consecutive_resets,
+        crash,
         count_ge_25ms: p2.count_ge_25ms,
         count_ge_25ms_nonflash: p2.count_ge_25ms_nonflash,
         count_ge_10ms: p2.count_ge_10ms,
@@ -707,6 +736,27 @@ impl ClockLoop {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn watchdog_evidence_is_logged_once_with_the_preceding_sample() {
+        let before = HealthStatus { read_at: "2026-09-22 13:12:15".into(), blit_timeouts: 455,
+            count_ge_25ms_nonflash: 28, ..HealthStatus::default() };
+        assert!(watchdog_recovery_line(None, &before).is_none());
+        let mut after = HealthStatus { wdt_consecutive_resets: 1, crash: Some(health::CrashRecord {
+            valid: true, site: 12, parent: 9, last_pass_uptime_ms: 1000,
+            boot_rstst: 2, consecutive_resets: 1,
+        }), ..HealthStatus::default() };
+        let line = watchdog_recovery_line(Some(&before), &after).unwrap();
+        assert!(line.contains("lcd_wait within display_pump"));
+        assert!(line.contains("preceding health sample at 2026-09-22 13:12:15: blit_timeouts=455, nonflash_stalls_25ms=28"));
+        assert!(watchdog_recovery_line(Some(&after), &after).is_none());
+        assert!(watchdog_recovery_line(None, &after).is_some());
+        let previous = after.clone();
+        after.wdt_consecutive_resets = 2;
+        assert!(watchdog_recovery_line(Some(&previous), &after).is_some());
+        after.crash = None; // Older firmware still reports a reset honestly.
+        assert!(watchdog_recovery_line(None, &after).unwrap().contains("unsupported"));
+    }
 
     fn now() -> Instant {
         Instant::now()

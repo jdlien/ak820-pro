@@ -13,7 +13,7 @@
 //! ak820 --version
 //! ak820 list                 the board's HID services, from the IORegistry; opens nothing
 //! ak820 info                 FC_INFO, exactly as `ak820ctl info` prints it
-//! ak820 health [--stalls] [--rows] [--isr] [--json] [--raw]
+//! ak820 health [--crash] [--stalls] [--rows] [--isr] [--json] [--raw]
 //! ak820 lighting             the RGB values the board reports
 //! ak820 selftest             budget guard, idle drain, and recovery on one open
 //! ak820 clock [--raw] [--anyway]
@@ -56,7 +56,7 @@ pub fn main() -> ExitCode {
         ["uninstall", flags @ ..] => super::install::uninstall(flags),
         ["status"] => super::install::status(),
         _ => {
-            eprintln!("usage: ak820 --version | list | info | health [--stalls] [--rows] [--isr] [--json] [--raw] | lighting | selftest | clock [--raw] [--anyway] | probe [--seconds N] [--applescript] [--dylib PATH] | install [--in-place] [--clock] [--dylib PATH] | uninstall [--keep-bash-off] [--keep-timekeeper-off] | status");
+            eprintln!("usage: ak820 --version | list | info | health [--crash] [--stalls] [--rows] [--isr] [--json] [--raw] | lighting | selftest | clock [--raw] [--anyway] | probe [--seconds N] [--applescript] [--dylib PATH] | install [--in-place] [--clock] [--dylib PATH] | uninstall [--keep-bash-off] [--keep-timekeeper-off] | status");
             eprintln!("(macOS: read-only commands only so far; see plans/AK820-AGENT-CROSSPLATFORM-PLAN.md)");
             return ExitCode::from(2);
         }
@@ -106,15 +106,17 @@ fn info() -> Result<(), String> {
 fn health(flags: &[&str]) -> Result<(), String> {
     use crate::health::{self, Page1, Page2, Page3, Page4};
 
+    let mut crash_requested = false;
     let (mut stalls, mut rows, mut isr, mut json, mut raw) = (false, false, false, false, false);
     for flag in flags {
         match *flag {
+            "--crash" => crash_requested = true,
             "--stalls" => stalls = true,
             "--rows" => rows = true,
             "--isr" => isr = true,
             "--json" => json = true,
             "--raw" => raw = true,
-            other => return Err(format!("health: unknown flag {other}; the flags are --stalls --rows --isr --json --raw")),
+            other => return Err(format!("health: unknown flag {other}; the flags are --crash --stalls --rows --isr --json --raw")),
         }
     }
     let mut drained = Vec::new();
@@ -130,6 +132,11 @@ fn health(flags: &[&str]) -> Result<(), String> {
         Ok(reply.report)
     };
     let p1 = Page1::decode(&page(health::GET, 1)?).map_err(|e| e.to_string())?;
+    let crash = if p1.version >= health::CrashRecord::NEEDS {
+        Some(health::CrashRecord::decode(&page(health::GET5, 5)?).map_err(|e| e.to_string())?)
+    } else if crash_requested {
+        return Err(format!("watchdog breadcrumbs need firmware health v6; board has v{}", p1.version));
+    } else { None };
     let p2 = if stalls || json { Some(Page2::decode(&page(health::GET2, 2)?).map_err(|e| e.to_string())?) } else { None };
     let p3 = if rows || (isr && json) { Some(Page3::decode(&page(health::GET3, 3)?).map_err(|e| e.to_string())?) } else { None };
     let p4 = if isr {
@@ -143,9 +150,10 @@ fn health(flags: &[&str]) -> Result<(), String> {
         None
     };
     if json {
-        println!("{}", health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))));
+        println!("{}", health::render_json_with_crash(health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))), crash.as_ref()));
     } else {
         print!("{}", health::render_page1(&p1));
+        if let Some(p) = &crash { print!("{}", health::render_crash(p)); }
         if let Some(p2) = &p2 {
             print!("{}", health::render_page2(p2));
         }

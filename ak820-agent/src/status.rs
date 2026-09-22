@@ -57,6 +57,7 @@ pub struct HealthStatus {
     pub blit_timeouts: u32,
     pub tx_timeouts: u32,
     pub wdt_consecutive_resets: u8,
+    pub crash: Option<crate::health::CrashRecord>,
 }
 
 /// What the clock loop last did — the readout the backlog asked for after
@@ -118,6 +119,9 @@ pub fn render(s: &Status) -> String {
         put("health_blit_timeouts", &h.blit_timeouts.to_string());
         put("health_tx_timeouts", &h.tx_timeouts.to_string());
         put("health_wdt_consecutive_resets", &h.wdt_consecutive_resets.to_string());
+        if let Some(c) = &h.crash {
+            put("health_watchdog_record", &c.summary());
+        }
     }
     match &s.clock {
         None => put("clock", "python timekeeper (not this daemon)"),
@@ -207,6 +211,7 @@ mod tests {
             blit_timeouts: 0,
             tx_timeouts: 1,
             wdt_consecutive_resets: 0,
+            crash: None,
         });
         let text = render(&s);
         assert!(text.contains("smtc_stale_s=4\nforeign_reports=0\nhealth_read_at=2026-09-06 08:05:00\nhealth_version=5\nhealth_loop_gap_max_ms=105\nhealth_loop_gap_max_mark=unexplained\nhealth_stall_ge_25ms=12\nhealth_stall_ge_25ms_nonflash=12\nhealth_stall_ge_10ms=30\nhealth_blit_timeouts=0\nhealth_tx_timeouts=1\nhealth_wdt_consecutive_resets=0\nclock="), "{text}");

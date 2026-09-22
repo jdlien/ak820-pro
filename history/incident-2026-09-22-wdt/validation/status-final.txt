@@ -1,0 +1,44 @@
+com.jdlien.ak820pro.agent          running      pid 97745  last exit (never exited)
+com.jdlien.ak820pro.timekeeper     disabled
+com.jdlien.ak820pro.nowplaying     disabled
+now-playing lock held by pid 97745 (/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/ak820pro-nowplaying.lock)
+
+version            ak820-agent 0.1.1 (v0.1.1-56-g3f9df71-dirty); speaks RTC protocol 2, text channel 0x12, health channel 0x13
+started            2026-09-22 14:02:20
+updated            2026-09-22 14:02:29
+board              present
+media_last_push    2026-09-22 14:02:20
+media_last_text    pause Volkor X - Damage (Instrumental Version)
+smtc_polls         4
+smtc_failures      0
+smtc_stale_s       9
+foreign_reports    0
+health_read_at     2026-09-22 14:02:22
+health_version     6
+health_loop_gap_max_ms 15
+health_loop_gap_max_mark blit
+health_stall_ge_25ms 0
+health_stall_ge_25ms_nonflash 0
+health_stall_ge_10ms 1
+health_blit_timeouts 0
+health_tx_timeouts 1
+health_wdt_consecutive_resets 0
+health_watchdog_record unavailable (reset flags 0x01, consecutive 0)
+clock              this daemon
+clock_syncs        1
+clock_failures     0
+clock_last_sync    2026-09-22 14:02:22
+clock_last_line    sync (enumerated): clock set (sub-second): before -653.0 ms, after +0.7 ms, rtt 4.2 ms, U ~1.6 ms, lead now 3.52 ms, bias sent
+clock_interval_s   180
+clock_lead_ms      3.521
+clock_bias_ppm     2
+
+last lines of /Users/jdlien/Library/Logs/ak820pro/ak820-agent.log:
+  2026-09-22 14:00:07 [warn] firmware watchdog reset x1: test_stall within raw_hid; last pass uptime 32708 ms; reset flags 0x03; consecutive 1; preceding health sample at 2026-09-22 13:59:47: blit_timeouts=0, nonflash_stalls_25ms=0, worst_gap=23 ms (blit)
+  2026-09-22 14:02:20 ak820-agent 0.1.1 (v0.1.1-56-g3f9df71-dirty); speaks RTC protocol 2, text channel 0x12, health channel 0x13
+  2026-09-22 14:02:20 polling MediaRemote every 3s (keepalive 30s)
+  2026-09-22 14:02:20 clock loop: syncing every 300s (180s while the residual exceeds 60 ms); cache /Users/jdlien/.ak820ctl-cap
+  2026-09-22 14:02:20 mediaremote: helper started, pid 97748
+  2026-09-22 14:02:20 pause Volkor X - Damage (Instrumental Version)
+  2026-09-22 14:02:20 board: unknown -> present
+  2026-09-22 14:02:22 sync (enumerated): clock set (sub-second): before -653.0 ms, after +0.7 ms, rtt 4.2 ms, U ~1.6 ms, lead now 3.52 ms, bias sent

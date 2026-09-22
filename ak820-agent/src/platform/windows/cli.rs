@@ -88,7 +88,7 @@ fn usage() {
          \x20 ak820 probe          what SMTC sees; needs no keyboard\n\
          \x20 ak820 lighting       RGB values read back off the board\n\
          \x20 ak820 health         the firmware's health counters, as ak820health.py prints them\n\
-         \x20   [--stalls] [--rows] [--isr] [--json] [--raw]\n\
+         \x20   [--crash] [--stalls] [--rows] [--isr] [--json] [--raw]\n\
          \x20 ak820 clock [--raw]  the RTC, as `ak820ctl clock --read` prints it;\n\
          \x20                      refuses while the Python timekeeper task runs (--anyway overrides)\n\
          \n\
@@ -242,9 +242,11 @@ fn health_cmd(flags: &[&str]) -> Result<(), String> {
     use crate::hid::exchange::REQUEST_TIMEOUT;
     use crate::proto::Channel;
 
+    let mut crash_requested = false;
     let (mut stalls, mut rows, mut isr, mut json, mut raw) = (false, false, false, false, false);
     for flag in flags {
         match *flag {
+            "--crash" => crash_requested = true,
             "--stalls" => stalls = true,
             "--rows" => rows = true,
             "--isr" => isr = true,
@@ -252,7 +254,7 @@ fn health_cmd(flags: &[&str]) -> Result<(), String> {
             "--raw" => raw = true,
             other => {
                 return Err(format!(
-                    "health: unknown flag {other}; the flags are --stalls --rows --isr --json --raw"
+                    "health: unknown flag {other}; the flags are --crash --stalls --rows --isr --json --raw"
                 ))
             }
         }
@@ -277,6 +279,11 @@ fn health_cmd(flags: &[&str]) -> Result<(), String> {
     };
 
     let p1 = Page1::decode(&page(health::GET, 1)?).map_err(|e| e.to_string())?;
+    let crash = if p1.version >= health::CrashRecord::NEEDS {
+        Some(health::CrashRecord::decode(&page(health::GET5, 5)?).map_err(|e| e.to_string())?)
+    } else if crash_requested {
+        return Err(format!("watchdog breadcrumbs need firmware health v6; board has v{}", p1.version));
+    } else { None };
     let p2 = if stalls || json {
         Some(Page2::decode(&page(health::GET2, 2)?).map_err(|e| e.to_string())?)
     } else {
@@ -303,10 +310,11 @@ fn health_cmd(flags: &[&str]) -> Result<(), String> {
     if json {
         println!(
             "{}",
-            health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r)))
+            health::render_json_with_crash(health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))), crash.as_ref())
         );
     } else {
         print!("{}", health::render_page1(&p1));
+        if let Some(p) = &crash { print!("{}", health::render_crash(p)); }
         if let Some(p2) = &p2 {
             print!("{}", health::render_page2(p2));
         }

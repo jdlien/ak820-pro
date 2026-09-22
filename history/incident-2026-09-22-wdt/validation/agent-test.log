@@ -1,0 +1,12 @@
+2026-09-22 13:59:44 ak820-agent 0.1.1 (v0.1.1-56-g3f9df71-dirty); speaks RTC protocol 2, text channel 0x12, health channel 0x13
+2026-09-22 13:59:44 polling MediaRemote every 3s (keepalive 30s)
+2026-09-22 13:59:44 clock loop: syncing every 300s (180s while the residual exceeds 60 ms); cache /Users/jdlien/.ak820ctl-cap
+2026-09-22 13:59:44 mediaremote: helper started, pid 89958
+2026-09-22 13:59:45 pause Volkor X - Damage (Instrumental Version)
+2026-09-22 13:59:45 board: unknown -> present
+2026-09-22 13:59:47 sync (enumerated): clock set (sub-second): before -795.0 ms, after +0.2 ms, rtt 6.4 ms, U ~1.5 ms, lead now 3.52 ms, bias sent
+2026-09-22 13:59:59 [warn] playback: no reply from the keyboard
+2026-09-22 13:59:59 board: present -> unresponsive (no reply from the keyboard)
+2026-09-22 14:00:04 [warn] playback: no reply from the keyboard
+2026-09-22 14:00:07 board: unresponsive -> present
+2026-09-22 14:00:07 [warn] firmware watchdog reset x1: test_stall within raw_hid; last pass uptime 32708 ms; reset flags 0x03; consecutive 1; preceding health sample at 2026-09-22 13:59:47: blit_timeouts=0, nonflash_stalls_25ms=0, worst_gap=23 ms (blit)

@@ -1,0 +1,40 @@
+Firmware to flash: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-b89777e0f9-dirty-20260922-134320.bin with offset 0x0000, device: 0x0c45/0x7140.
+
+
+Opening device...
+
+Device opened successfully...
+
+Fetching flash version...
+Sonix SN32 Detected.
+
+Checking variant... 290 Detected!
+Current Security level: CS0. Code Security value: 0xFFFF.
+Checking Code Option Table... Expected: 0x0000 Received: 0xFFFF.
+Updating Code Option Table from 0x0000 to 0xFFFF
+Device failed to init, re-trying in 3 seconds. Attempt 1 of 5...
+
+Fetching flash version...
+Sonix SN32 Detected.
+
+Checking variant... 290 Detected!
+Current Security level: CS0. Code Security value: 0xFFFF.
+Checking Code Option Table... Expected: 0xFFFF Received: 0xFFFF.
+
+Checking Code Option Table...
+
+Erasing flash from page 0 to page 256...
+Flash erase verified. 
+
+File size: 262144 bytes
+
+Enabling Program mode...
+Flashing device, please wait...
+Flashed File Checksum: 0x9926
+
+Verifying flash completion...
+Flash completion verified. 
+Flash Verification Checksum: OK!
+Device succesfully flashed!
+
+Flashing done. Rebooting.

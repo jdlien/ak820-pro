@@ -276,6 +276,53 @@ breadcrumb, then **all sticky flags are cleared** so each boot names ITS
 cause, not a union of history. A WDT reset shows `WDT reset xN` on the LCD
 alert slot for 60 s.
 
+**Retained operation record (health v6, 2026-09-22):** the remaining eight bytes
+of that same reserved RAM region now hold the current main-loop scope and its
+parent, plus the uptime at the last housekeeping entry. The path is one aligned
+32-bit store with a complemented half-word. Scope exits restore the parent,
+including early returns; ISR code never writes it. This adds no flash writes,
+timer reads, console output, or LCD drawing to the instrumented operations.
+The existing health timer read supplies the uptime. The linker and bootloader
+memory layout are unchanged.
+
+After a watchdog reset, the boot code freezes the preceding record before
+enabling new recording. Power-on/brownout flags, a different layout magic, or
+a corrupt path make the evidence **unavailable**, rather than naming an old
+operation as a culprit. `Fn`+`D` hold / `HC_RESET` cannot clear the frozen record.
+It describes only the immediately preceding watchdog boot and is lost on a
+later non-watchdog reboot or power loss; it is not a persistent crash history.
+
+Read it with the updated Rust CLI:
+
+```sh
+ak820-agent/target/release/ak820 health --crash
+ak820-agent/target/release/ak820 health --crash --json
+```
+
+On v6, ordinary `ak820 health` includes the record automatically; `--crash`
+explicitly requires v6. Without that flag older firmware still works unchanged.
+Wire command `HC_GET5 = 0x08` returns the layout in `watchdog_record.h`.
+The updated daemon reads it at its normal five-minute health interval and
+after an observed recovery. It appends each newly observed watchdog recovery
+to its log, including the preceding health sample if available, and includes
+the record in its status file. Both the new firmware and updated daemon must
+be installed for automatic collection.
+
+Covered paths include the LCD wait/transfers, external flash, RTC I2C,
+internal flash program/erase and its preceding LCD drain, wireless task,
+custom raw HID, key events, and housekeeping subtasks. A hang outside a marked
+scope reads `main_loop`; an interrupt that wedges leaves the interrupted
+main-loop scope. An asynchronous DMA transfer can outlive its starting scope.
+**This is evidence of where main-loop progress stopped, not a stack trace or
+proof that the named operation caused the failure.** Uptime is the last pass's
+entry time, not the time of the watchdog reset (which occurs about 12 s later).
+
+Host simulation: `cc -std=c11 -Wall -Wextra -Werror
+tests/watchdog_record_test.c -o /tmp/ak820-wdt-test && /tmp/ak820-wdt-test`.
+The instrumented firmware's existing `HC_STALL` hook records `test_stall`
+within `raw_hid`, allowing a controlled hardware check after flashing. That
+hook is absent from daily builds.
+
 **Health channel** (`health.c`, raw HID channel `0x13`): `HC_GET` 28-byte
 counter snapshot (blit timeouts, loop-gap max, tx drops, rx malformed, …),
 `HC_CONN` (link state/slot/battery/flags + boot RSTST + stored/live RTC

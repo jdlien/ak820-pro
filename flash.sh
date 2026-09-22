@@ -44,11 +44,27 @@ FW="${FW:-$QMK_HOME/a_jazz_ak820pro_via.bin}"
 
 BOOTLOADER=0x7140
 RUNNING=0x8009
-# Ask hidapi rather than ioreg: the Sonix bootloader and QMK are both HID
-# devices, so one enumerate answers on every platform. `ioreg -p IOUSB` was
-# macOS-only and was the single thing that stopped this script running under
-# MSYS2, which is the Windows build environment (see docs/hardware.md).
-usb() { "$PY" -c 'import hid,sys; sys.exit(0 if hid.enumerate(0x0C45, int(sys.argv[1],16)) else 1)' "$1" 2>/dev/null; }
+# On macOS the Sonix bootloader can exist in IOUSB without an IOHID service:
+# hidapi then reports nothing even though our libusb flasher can open it.
+# Match VID and PID on the SAME registry node. Other platforms keep hidapi.
+usb() {
+    case "$(uname -s)" in
+        Darwin)
+            ioreg -a -l -p IOUSB | "$PY" -c '
+import plistlib, sys
+pid = int(sys.argv[1], 16)
+def present(node):
+    if isinstance(node, dict):
+        if node.get("idVendor") == 0x0C45 and node.get("idProduct") == pid:
+            return True
+        return any(present(v) for v in node.values())
+    return isinstance(node, list) and any(present(v) for v in node)
+sys.exit(0 if present(plistlib.loads(sys.stdin.buffer.read())) else 1)
+' "$1" 2>/dev/null
+            ;;
+        *) "$PY" -c 'import hid,sys; sys.exit(0 if hid.enumerate(0x0C45, int(sys.argv[1],16)) else 1)' "$1" 2>/dev/null ;;
+    esac
+}
 
 # BSD stat (macOS) and GNU stat (MSYS2, Linux) share no flags, and they cannot
 # be probed by trying one first: GNU's -f means --file-system, so it SUCCEEDS
