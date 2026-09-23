@@ -137,6 +137,18 @@ synchronous band clear. A retry of the same glyph always succeeds. Next: log
 source, w×h and the previous blit in the timeout line, and count blits per
 face.
 
+## ❌ Fifth result: the SPI0 dispatch fix broke completions; reverted (2026-09-23)
+
+The fix for the raw-RIS dispatch (route on `sn32_dma_busy`, clear only the
+DMA flags read; ChibiOS `2a17a73b48`) ran its first hunt on the daily build
+`32bb72aa53`. It lasted 21 minutes: six blit timeouts classified **unknown**,
+each a DMA whose start the wait saw and whose completion never came, each
+with a **1.95 s** main-loop stall as the wait ran out its long bound. The old
+dispatch gave none in ten hours of the same stress. Reverted in both
+repositories (`bf9310ca84`, firmware `7302fc1393`). `deps.lock` had never
+moved to it. The two hazards remain open; the mechanism is being captured
+on an instrumented build of the fix before anything is retried.
+
 Test-build aids added on the way, instrumented builds only: `HC_BOOTLOADER`
 (`0x79`) jumps to the bootloader so a diagnostic flash needs no Fn+Esc, and
 `HC_PEEK` (`0x78`) reads one RAM word. Neither is in the daily build: either

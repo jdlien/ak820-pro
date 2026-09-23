@@ -102,8 +102,8 @@ file:line.
 ## Next
 
 1. **Flash a daily build with the lost-write fix** and restore the agent.
-   The fix is `02db293696`; a daily at the branch tip, which adds the SPI0
-   fix, is built: `via-daily-32bb72aa53-20260923-132759.bin`.
+   The fix is `02db293696`. Do NOT flash `via-daily-32bb72aa53-*`: it
+   carries the reverted SPI0 patch.
 2. **The DMA that never starts**: the 13:01 hunt found that **all six were
    clock digits** (one 660-byte 15×22 cell, ~5–7% of blits), and none had a
    slow arm (see the plan's "Fourth result",
@@ -113,14 +113,19 @@ file:line.
    `via-instrumented-32bb72aa53-dirty-20260923-140533.bin`. Run it with the
    console captured (`scripts/consolelog.sh`) and a hunt, overnight if the
    owner can spare the keyboard.
-3. **SPI0 ISR dispatch**: committed and pushed (`2a17a73b48` on
-   `ak820pro-patches`; gitlink in firmware `32bb72aa53`). It routes on
-   `sn32_dma_busy` and clears only the DMA flags it read, which closes a
-   lost-completion race and a FIFO interrupt that a stale DMA flag could
-   hijack. **Not yet run on hardware:** hunt it, then move `deps.lock`.
+3. **SPI0 ISR dispatch: tried and REVERTED.** The fix (`2a17a73b48`) routed
+   the SPI0 handler on `sn32_dma_busy` and cleared only the DMA flags it
+   read. Its first hunt, on the daily build, gave six "unknown" blit timeouts
+   in 21 minutes. Each was a DMA that started and never delivered its
+   completion, with a 1.95 s main-loop stall while the wait ran out its long
+   bound. The old dispatch gave none in ten hours. Reverted in both
+   repositories and pushed (`bf9310ca84`, firmware `7302fc1393`); the hazards
+   it aimed at are still open. An instrumented build of it (E1,
+   `via-instrumented-32bb72aa53-dirty-20260923-142322`) is being run with the
+   console to see how the completion goes missing.
 4. Stress the untouched paths: wireless (`tx_timeouts` run at ~35–50% of
    frames in the console just now), RTC I2C, Mac sleep/wake.
-5. Move `deps.lock` to `32bb72aa53` after the SPI0 fix's hunt (see above).
+5. Keep `deps.lock` on `02db293696` until a better build has survived a hunt.
 6. Parked idea (taskmaster task 6): a QR code to the agent installer via a
    jqr.ca redirect.
 7. Still outstanding: **reboot the Mac** to prove the agent comes back on its
@@ -128,14 +133,11 @@ file:line.
 
 ## Repository notes
 
-Pushed 2026-09-23 ~13:35, all three repositories. The firmware branch
-`ak820pro-jdlien` ends at `32bb72aa53`: `02db293696` is the lost-write fix
-and its test aids, and `32bb72aa53` moves the `lib/chibios-contrib` gitlink
-to `2a17a73b48` (`ak820pro-patches`), the SPI0 dispatch fix. **`deps.lock`
-pins `02db293696`**: v7 plus the lost-write fix, with the ChibiOS pin
-unchanged. That code is what the 13:01 hunt runs. The SPI0 fix has never run
-on hardware; move the pin to `32bb72aa53` once a hunt passes on it. The
-recovery bundle in `ak820pro-builds/` holds the new ChibiOS tip. `.taskmaster/` stays untracked, as
+Pushed 2026-09-23, all three repositories. Firmware branch `ak820pro-jdlien`:
+`02db293696` (the lost-write fix and its test aids), `32bb72aa53` (the SPI0
+dispatch fix) and `7302fc1393` (its revert, gitlink `bf9310ca84`, the
+pre-patch ChibiOS tree). **`deps.lock` pins `02db293696`**, which never had
+the SPI0 patch. The tip's tree equals it apart from `PATCHES.md`. `.taskmaster/` stays untracked, as
 before; it now holds task 6, the QR idea. The hunt's raw output stays in
 `~/Library/Logs/ak820pro/crash-hunt/`; a snapshot of the 21:18 evidence is in
 [`history/crash-hunt-2026-09-22/`](../history/crash-hunt-2026-09-22/).
