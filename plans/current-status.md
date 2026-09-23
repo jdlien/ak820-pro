@@ -61,7 +61,19 @@ arrived inside the ~50 ms before the pump's grace would have recovered it,
 and `bus_quiesce()` waited, found it never started, and retried. On v6 the
 same coincidence ran `Prepare()` under the stuck transfer -- the 21:18 hang.
 One event: corroboration, not proof. At 91 min: 295,803 blits, 8
-never-started (all retried), 1 busy-wait, no reset, MSP 616 / PSP 1368 free. Stop early
+never-started (all retried), 1 busy-wait, no reset, MSP 616 / PSP 1368 free.
+
+**At 2 h (01:01):** 393,648 blits, 14 never-started (all retried), 3
+busy-waits, no reset. Two NON-flash stalls >= 25 ms appeared (00:38, 01:01),
+25-26 ms, marked blit -- each in the same 30 s window as a never-started
+recovery (one a double: the retry did not start either; one with a busy-wait).
+The worst blit-marked gap had been creeping up under this stress without them
+(21 -> 24 ms), so a recovery's extra millisecond or two tips an already heavy
+synchronous draw past the line; not a new mechanism, and on v6 the busy-wait
+case was the hang. Still the keystroke-losing class: watch
+`count_ge_25ms_nonflash` in the agent's history under ORDINARY use. The MSP
+watermark fell 680 -> 576 free over the two hours as rarer interrupt nestings
+turned up (448 of 1024 bytes used at worst); keep watching it. Stop early
 with `pkill -f crash_hunt.py` (TERM or INT): it restores and verifies settings
 and resumes the agent.
 
