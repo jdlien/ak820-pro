@@ -57,8 +57,8 @@ battery fill, icons) and in every external-flash transaction, so the fix is
 now `bus_quiesce()` at the start of every CPU transaction on either bus. That
 also gives the owner's 13:13 crash (typing, light load) a plausible path. In
 the v7 builds from 21:44 (`via-*-a2c3b1a4e1-dirty-20260922-2144*`), not yet
-flashed; a narrow third codex pass on the guard's coverage was running at
-21:50. The hunt continues on v6 and stops itself at the
+flashed; a narrow third codex pass verified the guard covers every runtime
+transaction ([review](review-codex-crash-hunt-impl3-2026-09-22.md)). The hunt continues on v6 and stops itself at the
 next reset (consecutive count 2).
 
 ## Built, not flashed: health v7 (Part B)
@@ -76,26 +76,25 @@ Medium/Low issues the first time
 ([review-codex-crash-hunt-impl-2026-09-22.md](review-codex-crash-hunt-impl-2026-09-22.md)),
 two High (the unguarded bus paths above) and four smaller the second
 ([review-codex-crash-hunt-impl2-2026-09-22.md](review-codex-crash-hunt-impl2-2026-09-22.md)).
-All fixed. The archived
+All fixed; the third pass left two small hunt-script fixes, also done. The archived
 ELFs now carry line info: `scripts/symbolize.sh <pc> <token>` answers with
 file:line.
 
 ## Next
 
-1. Read the third (narrow) codex pass, fix anything it finds, rebuild.
-2. When the hunt ends: rebuild and re-sign the agent (it must decode v7 BEFORE
+1. When the hunt ends: rebuild and re-sign the agent (it must decode v7 BEFORE
    the board speaks it; review finding 6), reinstall with `--clock`.
-3. With the owner at the keyboard: flash the **instrumented** v7 build and run
+2. With the owner at the keyboard: flash the **instrumented** v7 build and run
    the plan's B6 checks — `HC_FAULT` modes 1, 2, 3 and 5, each read back with
    `ak820 health --crash`, each PC through `scripts/symbolize.sh`, with a cold
    reset after every second reset-causing test (three inside ten minutes would
    switch the watchdog off). Mode 4 (lockup) last: it may need a cold power-off.
    Then flash the **daily** v7, verify keymap, encoders and lighting.
-4. Hunt again on the daily v7. The v6 hang came 13 minutes in; hours with no
+3. Hunt again on the daily v7. The v6 hang came 13 minutes in; hours with no
    reset and a nonzero `blit_busy_waits` (page 6) prove the fix.
-5. Parked idea (taskmaster task 6): show a QR code to the agent installer
+4. Parked idea (taskmaster task 6): show a QR code to the agent installer
    (via a jqr.ca redirect) when no agent talks to the board.
-6. Still outstanding from before: **reboot the Mac** to prove the agent comes
+5. Still outstanding from before: **reboot the Mac** to prove the agent comes
    back on its own after login (now-playing and the clock).
 
 ## Repository notes

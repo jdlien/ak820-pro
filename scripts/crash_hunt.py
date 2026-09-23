@@ -155,7 +155,7 @@ class Hunt:
         self.no_flash = no_flash
         self.cli = find_cli()
         self.s = None
-        self.t0 = time.time()
+        self.t0 = time.monotonic()
         self.events = open(os.path.join(out, "events.log"), "a", buffering=1)
         self.csvf = open(os.path.join(out, "hunt.csv"), "a", newline="", buffering=1)
         self.csv = csv.writer(self.csvf)
@@ -212,14 +212,16 @@ class Hunt:
         up = h.get("uptime_ms")
         if up is None or self.last is None or self.last.get("uptime_ms") is None:
             return up is not None and up < 120_000
-        expected = self.last["uptime_ms"] + (time.time() - self.last_at) * 1000
+        # Monotonic: a wall-clock step (NTP) must not fake a reboot (third
+        # pass, finding 3).
+        expected = self.last["uptime_ms"] + (time.monotonic() - self.last_at) * 1000
         return up < expected - 5000
 
     def record(self, h, event=""):
         wr = h.get("watchdog_record") or {}
         vitals = h.get("vitals") or {}
         row = {k: h.get(k, "") for k in COLUMNS}
-        row.update(at=stamp(), elapsed_s=int(time.time() - self.t0), event=event,
+        row.update(at=stamp(), elapsed_s=int(time.monotonic() - self.t0), event=event,
                    wr_valid=wr.get("valid", ""), wr_site=wr.get("site", ""),
                    wr_parent=wr.get("parent", ""),
                    wr_last_pass_uptime_ms=wr.get("last_pass_uptime_ms", ""),
@@ -230,7 +232,7 @@ class Hunt:
         if self.first is None:
             self.first = h
         self.last = h
-        self.last_at = time.time()
+        self.last_at = time.monotonic()
 
     def capture(self, h, why):
         self.recoveries += 1
@@ -323,6 +325,14 @@ class Hunt:
         if not diffs and not fails:
             self.log(f"{when}: keymap, encoders and lighting match the backup")
             return True
+        if any("unreadable" in d for d in diffs):
+            # A failed READ is not a known-bad state: restoring would write
+            # flash on no evidence (third pass, finding 3). Stop and say so.
+            self.log(f"{when}: could not read the settings back ({', '.join(diffs)}) -- "
+                     f"not restoring blind; the hunt stops. Backups in {self.out}")
+            return False
+        # A real mismatch is corrected even under --no-flash: that flag spares
+        # the flash the STRESS writes, not the repair of a damaged state.
         self.log(f"{when}: SETTINGS DIFFER from the backup ({', '.join(diffs) or 'see above'}) "
                  "-- restoring it; the hunt stops")
         self.restore_backup()
@@ -331,12 +341,12 @@ class Hunt:
     # -- the event --------------------------------------------------------------
     def recover(self, why):
         """The board stopped answering. Wait for it, capture, decide."""
-        lost = time.time()
+        lost = time.monotonic()
         prev_up = (self.last or {}).get("uptime_ms")   # the last sample BEFORE the loss
         self.log(f"LOST: {why} -- waiting up to {RETURN_TIMEOUT_S} s for the board")
         self.close()
         h = None
-        while time.time() - lost < RETURN_TIMEOUT_S:
+        while time.monotonic() - lost < RETURN_TIMEOUT_S:
             time.sleep(2)
             h = self.health()
             if h is not None:
@@ -347,7 +357,7 @@ class Hunt:
                      "--crash` once it answers; if it never does, cold power-off "
                      "(cable + unplug ~10 s) loses the record.")
             return False
-        gone = time.time() - lost
+        gone = time.monotonic() - lost
         wr = h.get("watchdog_record") or {}
         # Did it REBOOT? Only uptime says so: wdt_fired_last_boot stays set for
         # the whole boot after one watchdog reset, so a later transport hiccup
@@ -475,13 +485,13 @@ def run(a):
         s.rgb_set(RGB_EFFECT, orig["effect"])
         hunt.log(f"effects: {effects}")
 
-        end = time.time() + a.hours * 3600
+        end = time.monotonic() + a.hours * 3600
         nxt = dict(ping=0.0, text=0.0, playback=0.0, fx=0.0, keymap=0.0,
-                   rgb=time.time() + a.flash_every / 2, health=time.time() + a.health_every)
+                   rgb=time.monotonic() + a.flash_every / 2, health=time.monotonic() + a.health_every)
         kc_flip, b_dir, fx_i, playing = False, 1, 0, False
         stopped = False
-        while time.time() < end:
-            now = time.time()
+        while time.monotonic() < end:
+            now = time.monotonic()
             try:
                 s = hunt.s
                 if now >= nxt["ping"]:
@@ -521,7 +531,7 @@ def run(a):
                         raise IOError("rgb save unanswered")
                     hunt.sent["rgb_save"] += 1
                 if now >= nxt["health"]:
-                    nxt["health"] = time.time() + a.health_every
+                    nxt["health"] = time.monotonic() + a.health_every
                     h = hunt.health()
                     if h is None:
                         raise IOError("health read failed")
@@ -545,7 +555,7 @@ def run(a):
                     stopped = True
                     break
                 hunt.open()
-                nxt["health"] = time.time() + a.health_every
+                nxt["health"] = time.monotonic() + a.health_every
             time.sleep(0.01)
         rc = 1 if stopped else 0
     except KeyboardInterrupt:
@@ -571,7 +581,7 @@ def run(a):
 
 
 def summarize(hunt):
-    hours = (time.time() - hunt.t0) / 3600
+    hours = (time.monotonic() - hunt.t0) / 3600
     hunt.log(f"ran {hours:.2f} h; {hunt.recoveries} recover{'y' if hunt.recoveries == 1 else 'ies'}; "
              "sent " + ", ".join(f"{v} {k}" for k, v in hunt.sent.items()))
     f, l = hunt.first, hunt.last
