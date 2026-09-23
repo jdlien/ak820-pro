@@ -69,6 +69,124 @@ int main(void) {
     boot(2 | 4); assert(!record[1] && record[9] == 1);
     watchdog_record_enter(WDT_SITE_LCD_WAIT);
     boot(2 | 16); assert(!record[1] && record[9] == 1);
+    /* ---- terminal records (crash-hunt plan B1) ---- */
+    static uint32_t ram[64];   /* stands in for SRAM: the frame bounds */
+    test_frame_lo = (uintptr_t)ram;
+    test_frame_hi = (uintptr_t)(ram + 64);
+    uint32_t *frame = &ram[8];
+    frame[6] = 0x0001A2B4u;            /* stacked PC */
+    frame[7] = 0x01000000u | 20u;      /* xPSR: Thumb, inside IRQ 4 */
+
+    /* A fault inside an operation: site hard_fault, parent the operation,
+     * PC and exception in format 2, no uptime. */
+    boot(1);
+    {
+        WDT_SCOPE(WDT_SITE_DISPLAY_PUMP);
+        {
+            WDT_SCOPE(WDT_SITE_LCD_WAIT);
+            watchdog_record_uptime(4242);
+            watchdog_record_fault_frame((uintptr_t)frame);
+            /* The first terminal record wins; nothing overwrites it. */
+            watchdog_record_stop(WDT_SITE_HALT, 0, 0x1234);
+            assert(retained.magic == FAULT_MAGIC);
+        }
+    }
+    boot(2);
+    assert(record[0] == 2 && record[1] == 1);
+    assert(record[2] == WDT_SITE_HARD_FAULT && record[3] == WDT_SITE_LCD_WAIT);
+    for (int i = 4; i < 8; ++i) assert(record[i] == 0);          /* no uptime */
+    assert(record[8] == 2 && record[9] == 1);
+    assert(record[10] == 0xB4 && record[11] == 0xA2 && record[12] == 0x01 && record[13] == 0);
+    assert(record[14] == 20);
+    for (int i = 15; i < 28; ++i) assert(record[i] == 0);
+    assert(retained.magic == RECORD_MAGIC && retained.count == 1);  /* back to normal */
+
+    /* Thread context reads exception 0. */
+    frame[7] = 0x01000000u;
+    watchdog_record_fault_frame((uintptr_t)frame);
+    boot(2);
+    assert(record[0] == 2 && record[14] == 0 && record[9] == 2);
+    assert(record[3] == WDT_SITE_MAIN_LOOP);
+
+    /* An unreadable frame is never loaded from: misaligned, below SRAM, or
+     * running past its end. PC 0xFFFFFFFF, exception unknown. */
+    uintptr_t bad[] = { (uintptr_t)frame + 2, test_frame_lo - 32, test_frame_hi - 28, 0 };
+    for (unsigned i = 0; i < sizeof(bad) / sizeof(bad[0]); ++i) {
+        boot(1);
+        watchdog_record_fault_frame(bad[i]);
+        boot(2);
+        assert(record[0] == 2 && record[1] == 1 && record[2] == WDT_SITE_HARD_FAULT);
+        for (int j = 10; j < 14; ++j) assert(record[j] == 0xFF);
+        assert(record[14] == 0xFF);
+    }
+    /* The last word of SRAM is a valid frame end. */
+    boot(1);
+    watchdog_record_fault_frame(test_frame_hi - 32);
+    boot(2);
+    assert(record[0] == 2 && record[14] != 0xFF);
+
+    /* Other terminal sites carry what they know. */
+    boot(1);
+    watchdog_record_stop(WDT_SITE_UNHANDLED_EXCEPTION, 19, 0);
+    boot(2);
+    assert(record[0] == 2 && record[2] == WDT_SITE_UNHANDLED_EXCEPTION && record[14] == 19);
+    for (int i = 10; i < 14; ++i) assert(record[i] == 0);
+
+    /* Before boot capture a terminal write must not destroy the previous
+     * boot's unread evidence. */
+    boot(1);
+    watchdog_record_enter(WDT_SITE_I2C_WRITE);
+    ready = false;
+    watchdog_record_fault_frame((uintptr_t)frame);
+    assert(retained.magic == RECORD_MAGIC);
+    boot(2);
+    assert(record[0] == 1 && record[2] == WDT_SITE_I2C_WRITE);
+
+    /* A reset part-way through the commit leaves no magic, so no record --
+     * never a PC under the ordinary magic. */
+    boot(1);
+    retained.magic = 0;
+    retained.count = 1u | (20u << 8);
+    retained.pass_uptime_ms = 0x0001A2B4u;
+    boot(2);
+    assert(record[0] == 1 && !record[1] && record[9] == 1);
+
+    /* A terminal record's count word validates as packed; junk above the
+     * exception byte is corruption, not a count. */
+    boot(1);
+    watchdog_record_stop(WDT_SITE_HALT, 0, 0x2000);
+    retained.count |= 1u << 16;
+    boot(2);
+    assert(!record[1] && record[9] == 1);
+    /* ...and an ordinary count above 255 is corruption too. */
+    retained.count = 256;
+    boot(2);
+    assert(!record[1] && record[9] == 1);
+
+    /* Power loss discards a terminal record like any other. */
+    boot(1);
+    watchdog_record_fault_frame((uintptr_t)frame);
+    boot(2 | 16);
+    assert(record[0] == 1 && !record[1] && record[9] == 1);
+
+    /* The carried count ages out after a healthy stretch (finding 3): three
+     * crashes weeks apart must not switch the watchdog off. The count this
+     * boot REPORTS stays a boot fact. */
+    boot(1); boot(2); boot(2);
+    assert(record[9] == 2 && retained.count == 2);
+    watchdog_record_uptime(WATCHDOG_COUNT_AGE_OUT_MS - 1);
+    assert(retained.count == 2);
+    watchdog_record_uptime(WATCHDOG_COUNT_AGE_OUT_MS);
+    assert(retained.count == 0);
+    watchdog_record_fill(record);
+    assert(record[9] == 2);
+    boot(2);
+    assert(record[9] == 1);
+    /* A boot loop never gets that far, and still counts up. */
+    watchdog_record_uptime(1000); boot(2);
+    watchdog_record_uptime(1000); boot(2);
+    assert(record[9] == 3);
+
     puts("watchdog retained-record tests passed");
     return 0;
 }
