@@ -31,6 +31,7 @@ pub const RESET: u8 = 0x05;
 pub const GET3: u8 = 0x06;
 pub const GET4: u8 = 0x07;
 pub const GET5: u8 = 0x08;
+pub const GET6: u8 = 0x09;
 
 /// Why a page could not be decoded.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -67,16 +68,35 @@ fn u32_at(r: &[u8], i: usize) -> u32 {
 }
 
 /// Frozen evidence from the boot immediately preceding a watchdog reset.
-/// This is an interrupted MAIN-LOOP scope, not a fault PC or proof of cause.
-#[derive(Clone, Debug, PartialEq, Eq)]
+///
+/// Format 1: the MAIN-LOOP scope that was interrupted -- where progress
+/// stopped, not proof of cause. Format 2 (health v7): a terminal site -- the
+/// CPU faulted, took a vector nobody handles, or ChibiOS halted -- with the PC
+/// and the interrupted context. `watchdog_record.h` has the byte layout.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CrashRecord {
     pub valid: bool,
     pub site: u8,
     pub parent: u8,
+    /// 0 in a format-2 record: the retained word held the PC instead.
     pub last_pass_uptime_ms: u32,
     pub boot_rstst: u8,
     pub consecutive_resets: u8,
+    /// 1 or 2; 0 only in a hand-built value.
+    pub format: u8,
+    /// Format 2: the faulting PC. `0xFFFFFFFF`: the stack frame was outside
+    /// RAM or misaligned, never read. 0: not recoverable (an unhandled vector).
+    /// For a halt, the address chSysHalt was called from.
+    pub pc: u32,
+    /// Format 2: the interrupted context's IPSR -- 0 thread, 16+n IRQ n,
+    /// `0xFF` unknown.
+    pub exception: u8,
 }
+
+/// Sites that end a boot rather than scope an operation (`watchdog_record.h`).
+pub const SITE_HARD_FAULT: u8 = 23;
+pub const SITE_UNHANDLED_EXCEPTION: u8 = 24;
+pub const SITE_HALT: u8 = 25;
 
 impl CrashRecord {
     pub const NEEDS: u8 = 6;
@@ -86,25 +106,56 @@ impl CrashRecord {
         if report[3] < Self::NEEDS {
             return Err(Error::Version { have: report[3], page: 5, need: Self::NEEDS });
         }
-        if report[4] != 1 { return Err(Error::RecordFormat(report[4])); }
+        let format = report[4];
+        if format != 1 && format != 2 { return Err(Error::RecordFormat(format)); }
         let valid = report[5] & 1 != 0;
+        let terminal = valid && format == 2;
         Ok(Self {
             valid,
             site: if valid { report[6] } else { 0 },
             parent: if valid { report[7] } else { 0 },
-            last_pass_uptime_ms: if valid { u32_at(report, 8) } else { 0 },
+            last_pass_uptime_ms: if valid && !terminal { u32_at(report, 8) } else { 0 },
             boot_rstst: report[12],
             consecutive_resets: report[13],
+            format,
+            pc: if terminal { u32_at(report, 14) } else { 0 },
+            exception: if terminal { report[18] } else { 0 },
         })
+    }
+
+    pub fn terminal(&self) -> bool {
+        self.valid && self.format == 2
     }
 
     pub fn summary(&self) -> String {
         if !self.valid {
             return format!("unavailable (reset flags 0x{:02x}, consecutive {})", self.boot_rstst, self.consecutive_resets);
         }
+        if self.terminal() {
+            let at = match (self.pc, self.site) {
+                (0, _) => String::new(),
+                (0xFFFF_FFFF, _) => " (stack frame unreadable, pc lost)".into(),
+                (pc, SITE_HALT) => format!(" called from 0x{pc:08x}"),
+                (pc, _) => format!(" at pc 0x{pc:08x}"),
+            };
+            return format!("{}{at} in {} within {}; reset flags 0x{:02x}; consecutive {}",
+                crash_site(self.site), exception_context(self.exception), crash_site(self.parent),
+                self.boot_rstst, self.consecutive_resets);
+        }
         format!("{} within {}; last pass uptime {} ms; reset flags 0x{:02x}; consecutive {}",
             crash_site(self.site), crash_site(self.parent), self.last_pass_uptime_ms,
             self.boot_rstst, self.consecutive_resets)
+    }
+}
+
+/// The interrupted context, from its IPSR. "thread" is the main thread or
+/// ChibiOS's idle thread -- not necessarily the main loop.
+pub fn exception_context(ipsr: u8) -> String {
+    match ipsr {
+        0 => "thread".into(),
+        16..=63 => format!("irq {}", ipsr - 16),
+        0xFF => "unknown context".into(),
+        e => format!("exception {e}"),
     }
 }
 
@@ -118,6 +169,7 @@ pub fn crash_site(site: u8) -> String {
         14 => "flash_read", 15 => "flash_erase", 16 => "flash_program",
         17 => "i2c_read", 18 => "i2c_write", 19 => "internal_flash_write",
         20 => "internal_flash_erase", 21 => "internal_flash_drain", 22 => "test_stall",
+        23 => "hard_fault", 24 => "unhandled_exception", 25 => "halt", 26 => "test_fault",
         32 => "loop_none", 33 => "leds", 34 => "pair", 35 => "consumer",
         36 => "param", 37 => "rtc_task", 38 => "animation", 39 => "connection",
         40 => "status", 41 => "text", 42 => "locks", 43 => "clock_format",
@@ -136,9 +188,101 @@ pub fn render_crash(p: &CrashRecord) -> String {
 pub fn render_json_with_crash(mut json: String, crash: Option<&CrashRecord>) -> String {
     if let Some(p) = crash {
         json.pop(); // render_json's closing brace
-        json.push_str(&format!(", \"watchdog_record\": {{\"valid\": {}, \"site\": \"{}\", \"site_id\": {}, \"parent\": \"{}\", \"parent_id\": {}, \"last_pass_uptime_ms\": {}, \"boot_rstst\": {}, \"consecutive_resets\": {}}}}}",
+        json.push_str(&format!(", \"watchdog_record\": {{\"valid\": {}, \"site\": \"{}\", \"site_id\": {}, \"parent\": \"{}\", \"parent_id\": {}, \"last_pass_uptime_ms\": {}, \"boot_rstst\": {}, \"consecutive_resets\": {}",
             p.valid, crash_site(p.site), p.site, crash_site(p.parent), p.parent,
             p.last_pass_uptime_ms, p.boot_rstst, p.consecutive_resets));
+        if p.terminal() {
+            json.push_str(&format!(", \"format\": 2, \"pc\": \"0x{:08x}\", \"exception\": {}, \"context\": \"{}\"",
+                p.pc, p.exception, exception_context(p.exception)));
+        }
+        json.push_str("}}");
+    }
+    json
+}
+
+/// Page 6: `HC_GET6`, version 7 or later -- the crash hunt's vitals
+/// (`health.h`). Counters are since boot and saturate; `HC_RESET` leaves them.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Page6 {
+    pub uptime_ms: u32,
+    /// Names the build in `ak820pro-builds/out/*.json`, so a fault PC finds
+    /// its ELF (`scripts/symbolize.sh`). 0: not built by `build.sh`.
+    pub build_token: u32,
+    /// Paint-based watermarks: bytes never written since boot. They overstate
+    /// headroom (a frame may reserve without writing); 0 means the bottom
+    /// canary is gone -- the stack was exhausted.
+    pub msp_free: u16,
+    pub psp_free: u16,
+    pub blit_never_started: u16,
+    pub blit_stalled: u16,
+    pub blit_irq_lost: u16,
+    pub blit_unknown: u16,
+    /// CPU bus transactions (a blit arm, a CPU draw, a flash transaction)
+    /// that found a DMA still in flight and waited it out. Each is an overlap
+    /// that could have hung before the 2026-09-22 fix -- not necessarily one
+    /// that would have. Nonzero is the race the fix closed, happening.
+    pub blit_busy_waits: u16,
+    pub blit_retry_successes: u16,
+    pub blits_issued: u32,
+}
+
+impl Page6 {
+    pub const NEEDS: u8 = 7;
+
+    pub fn decode(report: &[u8]) -> Result<Page6, Error> {
+        if report.len() < REPORT_LEN {
+            return Err(Error::Short);
+        }
+        if report[3] < Self::NEEDS {
+            return Err(Error::Version { have: report[3], page: 6, need: Self::NEEDS });
+        }
+        Ok(Page6 {
+            uptime_ms: u32_at(report, 4),
+            build_token: u32_at(report, 8),
+            msp_free: u16_at(report, 12),
+            psp_free: u16_at(report, 14),
+            blit_never_started: u16_at(report, 16),
+            blit_stalled: u16_at(report, 18),
+            blit_irq_lost: u16_at(report, 20),
+            blit_unknown: u16_at(report, 22),
+            blit_busy_waits: u16_at(report, 24),
+            blit_retry_successes: u16_at(report, 26),
+            blits_issued: u32_at(report, 28),
+        })
+    }
+}
+
+pub fn render_page6(p: &Page6) -> String {
+    let mut out = String::from("\n");
+    for (k, v) in [
+        ("uptime_ms", p.uptime_ms.to_string()),
+        ("build_token", format!("0x{:08x}", p.build_token)),
+        ("msp_free", format!("{} bytes (interrupt stack; paint watermark)", p.msp_free)),
+        ("psp_free", format!("{} bytes (main thread; paint watermark)", p.psp_free)),
+        ("blits_issued", p.blits_issued.to_string()),
+        ("blit_never_started", p.blit_never_started.to_string()),
+        ("blit_stalled", p.blit_stalled.to_string()),
+        ("blit_irq_lost", p.blit_irq_lost.to_string()),
+        ("blit_unknown", p.blit_unknown.to_string()),
+        ("blit_busy_waits", format!("{} (overlaps that could hang before the 2026-09-22 fix)", p.blit_busy_waits)),
+        ("blit_retry_successes", p.blit_retry_successes.to_string()),
+    ] {
+        out.push_str(&format!("{k:<24} {v}\n"));
+    }
+    if p.msp_free == 0 || p.psp_free == 0 {
+        out.push_str("  a stack's bottom canary is gone -- it was exhausted this boot\n");
+    }
+    out
+}
+
+/// Page 6 as a nested `vitals` object: its `uptime_ms` would collide with
+/// page 4's at the top level.
+pub fn render_json_with_vitals(mut json: String, p: Option<&Page6>) -> String {
+    if let Some(p) = p {
+        json.pop();
+        json.push_str(&format!(", \"vitals\": {{\"uptime_ms\": {}, \"build_token\": \"0x{:08x}\", \"msp_free\": {}, \"psp_free\": {}, \"blit_never_started\": {}, \"blit_stalled\": {}, \"blit_irq_lost\": {}, \"blit_unknown\": {}, \"blit_busy_waits\": {}, \"blit_retry_successes\": {}, \"blits_issued\": {}}}}}",
+            p.uptime_ms, p.build_token, p.msp_free, p.psp_free, p.blit_never_started, p.blit_stalled,
+            p.blit_irq_lost, p.blit_unknown, p.blit_busy_waits, p.blit_retry_successes, p.blits_issued));
     }
     json
 }
@@ -642,8 +786,8 @@ mod tests {
         r[3] = 5;
         assert_eq!(CrashRecord::decode(&r), Err(Error::Version { have: 5, page: 5, need: 6 }));
         r[3] = 6;
-        r[4] = 2;
-        assert_eq!(CrashRecord::decode(&r), Err(Error::RecordFormat(2)));
+        r[4] = 3;
+        assert_eq!(CrashRecord::decode(&r), Err(Error::RecordFormat(3)));
         r[4] = 1;
         r[6] = 250;
         assert!(CrashRecord::decode(&r).unwrap().summary().starts_with("unknown_250"));
@@ -661,6 +805,70 @@ mod tests {
         assert_eq!(render_json_with_crash(base.clone(), None), base);
         assert_eq!(render_json_with_crash(base, Some(&c)),
             "{\"version\": 6, \"watchdog_record\": {\"valid\": true, \"site\": \"lcd_wait\", \"site_id\": 12, \"parent\": \"display_pump\", \"parent_id\": 9, \"last_pass_uptime_ms\": 123, \"boot_rstst\": 2, \"consecutive_resets\": 1}}");
+    }
+
+    /// The bytes tests/watchdog_record_test.c asserts the firmware recorder
+    /// produces for a fault inside IRQ 4 while lcd_wait ran.
+    const FAULT_RECORD: [u8; 15] = [2, 1, 23, 12, 0, 0, 0, 0, 2, 1, 0xB4, 0xA2, 0x01, 0x00, 20];
+
+    #[test]
+    fn a_terminal_record_carries_pc_and_context() {
+        let c = CrashRecord::decode(&report(GET5, 7, &FAULT_RECORD)).unwrap();
+        assert!(c.terminal());
+        assert_eq!((c.site, c.parent, c.pc, c.exception, c.last_pass_uptime_ms), (23, 12, 0x0001_A2B4, 20, 0));
+        assert_eq!(c.summary(), "hard_fault at pc 0x0001a2b4 in irq 4 within lcd_wait; reset flags 0x02; consecutive 1");
+
+        let mut r = report(GET5, 7, &FAULT_RECORD);
+        r[14..18].copy_from_slice(&[0xFF; 4]);
+        r[18] = 0xFF;
+        assert_eq!(CrashRecord::decode(&r).unwrap().summary(),
+            "hard_fault (stack frame unreadable, pc lost) in unknown context within lcd_wait; reset flags 0x02; consecutive 1");
+
+        let r = report(GET5, 7, &[2, 1, 24, 26, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 19]);
+        assert_eq!(CrashRecord::decode(&r).unwrap().summary(),
+            "unhandled_exception in irq 3 within test_fault; reset flags 0x02; consecutive 1");
+
+        let r = report(GET5, 7, &[2, 1, 25, 1, 0, 0, 0, 0, 2, 1, 0x00, 0x20, 0, 0, 0]);
+        assert_eq!(CrashRecord::decode(&r).unwrap().summary(),
+            "halt called from 0x00002000 in thread within main_loop; reset flags 0x02; consecutive 1");
+
+        // An invalid format-2 record shows nothing stale.
+        let mut r = report(GET5, 7, &FAULT_RECORD);
+        r[5] = 0;
+        let c = CrashRecord::decode(&r).unwrap();
+        assert!(!c.terminal());
+        assert_eq!((c.pc, c.exception), (0, 0));
+        assert!(c.summary().starts_with("unavailable"));
+    }
+
+    #[test]
+    fn terminal_json_adds_pc_and_context() {
+        let c = CrashRecord::decode(&report(GET5, 7, &FAULT_RECORD)).unwrap();
+        assert_eq!(render_json_with_crash("{\"version\": 7}".into(), Some(&c)),
+            "{\"version\": 7, \"watchdog_record\": {\"valid\": true, \"site\": \"hard_fault\", \"site_id\": 23, \"parent\": \"lcd_wait\", \"parent_id\": 12, \"last_pass_uptime_ms\": 0, \"boot_rstst\": 2, \"consecutive_resets\": 1, \"format\": 2, \"pc\": \"0x0001a2b4\", \"exception\": 20, \"context\": \"irq 4\"}}");
+    }
+
+    #[test]
+    fn page6_decodes_at_v7_and_nests_in_json() {
+        let mut payload = Vec::new();
+        payload.extend(le32(3_600_000));
+        payload.extend(le32(0xAEEF_2602));
+        for v in [412u16, 1024, 3, 1, 0, 2, 3, 2] { payload.extend(v.to_le_bytes()); }
+        payload.extend(le32(987_654));
+        let r = report(GET6, 7, &payload);
+        let p = Page6::decode(&r).unwrap();
+        assert_eq!(p, Page6 { uptime_ms: 3_600_000, build_token: 0xAEEF_2602, msp_free: 412, psp_free: 1024,
+            blit_never_started: 3, blit_stalled: 1, blit_irq_lost: 0, blit_unknown: 2,
+            blit_busy_waits: 3, blit_retry_successes: 2, blits_issued: 987_654 });
+        let mut old = r.clone();
+        old[3] = 6;
+        assert_eq!(Page6::decode(&old), Err(Error::Version { have: 6, page: 6, need: 7 }));
+        assert_eq!(render_json_with_vitals("{\"v\": 7}".into(), None), "{\"v\": 7}");
+        assert_eq!(render_json_with_vitals("{\"v\": 7}".into(), Some(&p)),
+            "{\"v\": 7, \"vitals\": {\"uptime_ms\": 3600000, \"build_token\": \"0xaeef2602\", \"msp_free\": 412, \"psp_free\": 1024, \"blit_never_started\": 3, \"blit_stalled\": 1, \"blit_irq_lost\": 0, \"blit_unknown\": 2, \"blit_busy_waits\": 3, \"blit_retry_successes\": 2, \"blits_issued\": 987654}}");
+        assert!(render_page6(&p).contains("build_token              0xaeef2602"));
+        assert!(!render_page6(&p).contains("canary"));
+        assert!(render_page6(&Page6 { psp_free: 0, ..p }).contains("bottom canary is gone"));
     }
 
     fn report(command: u8, version: u8, payload: &[u8]) -> Vec<u8> {

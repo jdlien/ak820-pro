@@ -10,6 +10,7 @@ pub mod clock;
 pub mod flash;
 pub mod health;
 pub mod hid;
+pub mod history;
 pub mod logfile;
 pub mod media;
 pub mod platform;

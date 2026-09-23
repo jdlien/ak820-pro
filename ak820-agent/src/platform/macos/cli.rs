@@ -133,9 +133,23 @@ fn health(flags: &[&str]) -> Result<(), String> {
     };
     let p1 = Page1::decode(&page(health::GET, 1)?).map_err(|e| e.to_string())?;
     let crash = if p1.version >= health::CrashRecord::NEEDS {
-        Some(health::CrashRecord::decode(&page(health::GET5, 5)?).map_err(|e| e.to_string())?)
+        match health::CrashRecord::decode(&page(health::GET5, 5)?) {
+            Ok(c) => Some(c),
+            // A newer record format: say so and keep the counters, unless the
+            // record is what was asked for (crash-hunt review, finding 6).
+            Err(health::Error::RecordFormat(f)) if !crash_requested => {
+                eprintln!("note: watchdog record format {f} is newer than this ak820 -- update it");
+                None
+            }
+            Err(e) => return Err(e.to_string()),
+        }
     } else if crash_requested {
         return Err(format!("watchdog breadcrumbs need firmware health v6; board has v{}", p1.version));
+    } else { None };
+    // Page 6 on v7 boards, unasked, as page 5 is on v6: its build token is
+    // what symbolizes a fault PC in the record above.
+    let p6 = if p1.version >= health::Page6::NEEDS {
+        Some(health::Page6::decode(&page(health::GET6, 6)?).map_err(|e| e.to_string())?)
     } else { None };
     let p2 = if stalls || json { Some(Page2::decode(&page(health::GET2, 2)?).map_err(|e| e.to_string())?) } else { None };
     let p3 = if rows || (isr && json) { Some(Page3::decode(&page(health::GET3, 3)?).map_err(|e| e.to_string())?) } else { None };
@@ -150,10 +164,11 @@ fn health(flags: &[&str]) -> Result<(), String> {
         None
     };
     if json {
-        println!("{}", health::render_json_with_crash(health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))), crash.as_ref()));
+        println!("{}", health::render_json_with_vitals(health::render_json_with_crash(health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))), crash.as_ref()), p6.as_ref()));
     } else {
         print!("{}", health::render_page1(&p1));
         if let Some(p) = &crash { print!("{}", health::render_crash(p)); }
+        if let Some(p) = &p6 { print!("{}", health::render_page6(p)); }
         if let Some(p2) = &p2 {
             print!("{}", health::render_page2(p2));
         }

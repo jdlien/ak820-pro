@@ -49,6 +49,7 @@ use crate::clock::host::Host;
 use crate::clock::scheduler::{self, Learn, Reason, Scheduler, StatusRead, SyncResult};
 use crate::clock::transaction;
 use crate::health;
+use crate::history;
 use crate::hid::exchange::{Queue, REQUEST_TIMEOUT, RESYNC_SETTLE};
 use crate::hid::{self, Drained, HidTransport};
 use crate::logfile::{self, Log};
@@ -253,6 +254,8 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
     let mut next_clock = Instant::now();
     let mut next_health = Instant::now();
     let mut poll_was_ok = true;
+    let history_path = history::beside(&opts.log);
+    let mut history_ok = true;
 
     loop {
         let now = Instant::now();
@@ -312,6 +315,15 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
                 Ok(h) => {
                     if let Some(line) = watchdog_recovery_line(st.health.as_ref(), &h) {
                         log.line(&line);
+                    }
+                    // Logged on a change of state, not every five minutes.
+                    let appended = history::append(&history_path, &h);
+                    if appended.is_ok() != history_ok {
+                        history_ok = appended.is_ok();
+                        log.line(&match appended {
+                            Ok(()) => "health history: writing again".into(),
+                            Err(e) => format!("[warn] health history {}: {e}", history_path.display()),
+                        });
                     }
                     st.health = Some(h);
                 },
@@ -419,14 +431,27 @@ fn send(dev: &impl HidTransport, reports: &[(u8, Vec<u8>)], discarded: &mut Vec<
 /// evidence still on the board. Counters are historical, not causal proof.
 fn watchdog_recovery_line(previous: Option<&HealthStatus>, current: &HealthStatus) -> Option<String> {
     if current.wdt_consecutive_resets == 0 { return None; }
-    if previous.is_some_and(|p| p.wdt_consecutive_resets == current.wdt_consecutive_resets && p.crash == current.crash) {
+    // Uptime going backwards is a new boot, whatever the record says. Since
+    // the count ages out, two faults hours apart at the same PC both read
+    // count 1 and identical records, and the second would otherwise be taken
+    // for the first (crash-hunt implementation review, finding 7).
+    let rebooted = matches!((previous.and_then(|p| p.vitals.as_ref()), current.vitals.as_ref()),
+        (Some(p), Some(c)) if c.uptime_ms < p.uptime_ms);
+    if !rebooted && previous.is_some_and(|p| p.wdt_consecutive_resets == current.wdt_consecutive_resets
+        && p.crash == current.crash && p.crash_format_unsupported == current.crash_format_unsupported) {
         return None;
     }
-    let evidence = current.crash.as_ref().map_or_else(|| "breadcrumbs unsupported by this firmware".into(), |c| c.summary());
+    let evidence = current.record_summary().unwrap_or_else(|| "breadcrumbs unsupported by this firmware".into());
+    // A PC means nothing without its ELF: the token is read after the reset,
+    // from the same firmware that faulted (scripts/symbolize.sh).
+    let token = match (&current.crash, &current.vitals) {
+        (Some(c), Some(v)) if c.terminal() => format!("; build token 0x{:08x}", v.build_token),
+        _ => String::new(),
+    };
     let before = previous.map_or_else(String::new, |p| format!(
         "; preceding health sample at {}: blit_timeouts={}, nonflash_stalls_25ms={}, worst_gap={} ms ({})",
         p.read_at, p.blit_timeouts, p.count_ge_25ms_nonflash, p.loop_gap_max_ms, p.loop_gap_max_mark));
-    Some(format!("[warn] firmware watchdog reset x{}: {evidence}{before}", current.wdt_consecutive_resets))
+    Some(format!("[warn] firmware watchdog reset x{}: {evidence}{token}{before}", current.wdt_consecutive_resets))
 }
 
 enum HealthRead {
@@ -452,8 +477,19 @@ fn read_health<P: Platform>(discarded: &mut Vec<Drained>) -> Result<HealthStatus
     };
     let p1 = health::Page1::decode(&page(health::GET)?).map_err(HealthRead::Decode)?;
     let p2 = health::Page2::decode(&page(health::GET2)?).map_err(HealthRead::Decode)?;
-    let crash = if p1.version >= health::CrashRecord::NEEDS {
-        Some(health::CrashRecord::decode(&page(health::GET5)?).map_err(HealthRead::Decode)?)
+    let (crash, crash_format_unsupported) = if p1.version >= health::CrashRecord::NEEDS {
+        match health::CrashRecord::decode(&page(health::GET5)?) {
+            Ok(c) => (Some(c), None),
+            // A record format newer than this agent. Keep pages 1 and 2: the
+            // record is frozen for the boot, so failing here would lose every
+            // sample until the next reset (crash-hunt review, finding 6).
+            Err(health::Error::RecordFormat(f)) => (None, Some(f)),
+            Err(e) => return Err(HealthRead::Decode(e)),
+        }
+    } else { (None, None) };
+    // Page 6 is the one request this adds, and only on v7 boards.
+    let vitals = if p1.version >= health::Page6::NEEDS {
+        Some(health::Page6::decode(&page(health::GET6)?).map_err(HealthRead::Decode)?)
     } else { None };
     Ok(HealthStatus {
         read_at: logfile::stamp(&P::host()),
@@ -463,10 +499,23 @@ fn read_health<P: Platform>(discarded: &mut Vec<Drained>) -> Result<HealthStatus
         tx_timeouts: p1.tx_timeouts,
         wdt_consecutive_resets: p1.wdt_consecutive_resets,
         crash,
+        crash_format_unsupported,
+        vitals,
         count_ge_25ms: p2.count_ge_25ms,
         count_ge_25ms_nonflash: p2.count_ge_25ms_nonflash,
         count_ge_10ms: p2.count_ge_10ms,
         loop_gap_max_mark: p2.loop_gap_max_mark.text(),
+        tx_sent: p1.tx_sent,
+        tx_drops: p1.tx_drops,
+        rx_malformed: p1.rx_malformed,
+        scan_rate: p1.scan_rate,
+        wdt_flags: p1.flags,
+        passes: p2.passes,
+        flash_writes: p2.flash_writes,
+        flash_gap_max_ms: p2.flash_gap_max_ms,
+        blit_gap_max_ms: p2.blit_gap_max_ms,
+        i2c_gap_max_ms: p2.i2c_gap_max_ms,
+        key_presses: p2.key_presses,
     })
 }
 
@@ -744,7 +793,7 @@ mod tests {
         assert!(watchdog_recovery_line(None, &before).is_none());
         let mut after = HealthStatus { wdt_consecutive_resets: 1, crash: Some(health::CrashRecord {
             valid: true, site: 12, parent: 9, last_pass_uptime_ms: 1000,
-            boot_rstst: 2, consecutive_resets: 1,
+            boot_rstst: 2, consecutive_resets: 1, format: 1, ..health::CrashRecord::default()
         }), ..HealthStatus::default() };
         let line = watchdog_recovery_line(Some(&before), &after).unwrap();
         assert!(line.contains("lcd_wait within display_pump"));
@@ -756,6 +805,44 @@ mod tests {
         assert!(watchdog_recovery_line(Some(&previous), &after).is_some());
         after.crash = None; // Older firmware still reports a reset honestly.
         assert!(watchdog_recovery_line(None, &after).unwrap().contains("unsupported"));
+    }
+
+    /// Finding 6 of the crash-hunt review: a record format newer than this
+    /// agent is named in the log, and a later sample carrying the same
+    /// unreadable record is not logged again.
+    #[test]
+    fn a_fault_names_its_pc_and_build() {
+        let after = HealthStatus { wdt_consecutive_resets: 1, crash: Some(health::CrashRecord {
+            valid: true, site: health::SITE_HARD_FAULT, parent: 12, boot_rstst: 2, consecutive_resets: 1,
+            format: 2, pc: 0x0001_A2B4, exception: 20, ..health::CrashRecord::default()
+        }), vitals: Some(health::Page6 { build_token: 0xAEEF_2602, ..health::Page6::default() }),
+            ..HealthStatus::default() };
+        let line = watchdog_recovery_line(None, &after).unwrap();
+        assert!(line.contains("hard_fault at pc 0x0001a2b4 in irq 4 within lcd_wait"), "{line}");
+        assert!(line.contains("; build token 0xaeef2602"), "{line}");
+    }
+
+    #[test]
+    fn the_same_fault_twice_is_two_resets_when_uptime_went_back() {
+        let fault = health::CrashRecord { valid: true, site: health::SITE_HARD_FAULT, parent: 12,
+            boot_rstst: 2, consecutive_resets: 1, format: 2, pc: 0x0001_A2B4, exception: 0,
+            ..health::CrashRecord::default() };
+        let at = |uptime_ms| HealthStatus { wdt_consecutive_resets: 1, crash: Some(fault.clone()),
+            vitals: Some(health::Page6 { uptime_ms, ..health::Page6::default() }), ..HealthStatus::default() };
+        // Same boot, read again later: not news.
+        assert!(watchdog_recovery_line(Some(&at(60_000)), &at(360_000)).is_none());
+        // Hours later the same fault resets it again; the count aged out, so
+        // only the uptime says so.
+        assert!(watchdog_recovery_line(Some(&at(7_200_000)), &at(15_000)).is_some());
+    }
+
+    #[test]
+    fn an_unreadable_record_format_is_named_once() {
+        let after = HealthStatus { wdt_consecutive_resets: 1, crash_format_unsupported: Some(2),
+            ..HealthStatus::default() };
+        let line = watchdog_recovery_line(None, &after).unwrap();
+        assert!(line.contains("record format 2 not understood by this agent"), "{line}");
+        assert!(watchdog_recovery_line(Some(&after), &after).is_none());
     }
 
     fn now() -> Instant {

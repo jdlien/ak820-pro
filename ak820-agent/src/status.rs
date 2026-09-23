@@ -58,6 +58,37 @@ pub struct HealthStatus {
     pub tx_timeouts: u32,
     pub wdt_consecutive_resets: u8,
     pub crash: Option<crate::health::CrashRecord>,
+    /// A page-5 record format this agent cannot read; the rest of the sample
+    /// is kept.
+    pub crash_format_unsupported: Option<u8>,
+    /// Page 6 (health v7): uptime, build token, stack watermarks, the blit
+    /// breakdown. For the health history; not in the status file.
+    pub vitals: Option<crate::health::Page6>,
+    // Already on the wire in pages 1 and 2; kept for the health history
+    // (history.rs), not rendered into the status file.
+    pub tx_sent: u32,
+    pub tx_drops: u32,
+    pub rx_malformed: u32,
+    pub scan_rate: u16,
+    pub wdt_flags: u8,
+    pub passes: u32,
+    pub flash_writes: u32,
+    pub flash_gap_max_ms: u16,
+    pub blit_gap_max_ms: u16,
+    pub i2c_gap_max_ms: u16,
+    pub key_presses: u16,
+}
+
+impl HealthStatus {
+    /// The page-5 record as one line, or why it could not be read; `None`
+    /// below health v6, where there is no record to report.
+    pub fn record_summary(&self) -> Option<String> {
+        match (&self.crash, self.crash_format_unsupported) {
+            (Some(c), _) => Some(c.summary()),
+            (None, Some(f)) => Some(format!("record format {f} not understood by this agent -- update it")),
+            (None, None) => None,
+        }
+    }
 }
 
 /// What the clock loop last did — the readout the backlog asked for after
@@ -119,8 +150,8 @@ pub fn render(s: &Status) -> String {
         put("health_blit_timeouts", &h.blit_timeouts.to_string());
         put("health_tx_timeouts", &h.tx_timeouts.to_string());
         put("health_wdt_consecutive_resets", &h.wdt_consecutive_resets.to_string());
-        if let Some(c) = &h.crash {
-            put("health_watchdog_record", &c.summary());
+        if let Some(v) = h.record_summary() {
+            put("health_watchdog_record", &v);
         }
     }
     match &s.clock {
@@ -212,6 +243,10 @@ mod tests {
             tx_timeouts: 1,
             wdt_consecutive_resets: 0,
             crash: None,
+            // History-only fields: set, and still absent from the status file.
+            scan_rate: 326,
+            key_presses: 540,
+            ..HealthStatus::default()
         });
         let text = render(&s);
         assert!(text.contains("smtc_stale_s=4\nforeign_reports=0\nhealth_read_at=2026-09-06 08:05:00\nhealth_version=5\nhealth_loop_gap_max_ms=105\nhealth_loop_gap_max_mark=unexplained\nhealth_stall_ge_25ms=12\nhealth_stall_ge_25ms_nonflash=12\nhealth_stall_ge_10ms=30\nhealth_blit_timeouts=0\nhealth_tx_timeouts=1\nhealth_wdt_consecutive_resets=0\nclock="), "{text}");
