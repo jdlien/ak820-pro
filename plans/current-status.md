@@ -34,7 +34,24 @@ the next reset instead of waiting for it.
 `scripts/crash_hunt.py --hours 10 --pause-agent`, started 23:00, ends ~09:00
 2026-09-23. Output in `~/Library/Logs/ak820pro/crash-hunt/20260922-230010/`.
 The v6 firmware hung 13 minutes into the same stress; **hours with no reset
-and a nonzero `v_blit_busy_waits` column is the proof of the fix**. Stop early
+and a nonzero `v_blit_busy_waits` column is the proof of the fix**.
+
+⚠️ **Reading it honestly (added 23:31):** after 30 min and 97,639 blits,
+`v_blit_busy_waits` was still **0** -- the guard had not caught one overlap.
+One hang in 13 minutes is a thin basis for a rate. So:
+- counts > 0 and no reset: the fix is proven;
+- 0 and no reset: unproven either way -- the race is rarer than that one
+  event suggested;
+- a reset with 0: a DIFFERENT mechanism. The prime suspect is the SPI0 ISR
+  in chibios-contrib (`hal_spi_v2_lld.c`), which routes to the DMA handler
+  on the RAW `RIS & 0x30` whether or not a DMA is in flight, and whose DMA
+  handler clears every flag including RXFIFOTHIF -- a stale DMA flag would
+  swallow an ordinary `spiSend()`'s interrupt the same way. A fix would route
+  on `sn32_dma_busy` and clear only the DMA bits; it lives in the patched
+  submodule, so it needs the `ak820pro-patches` branch and the gitlink.
+Other readings at 30 min: 3 never-started blit timeouts (all retried), no
+stalls >= 25 ms, worst gap 41 ms attributed to flash (consolidations, driven by
+the hunt's writes, inside the 60 ms budget), MSP 632 / PSP 1368 bytes free. Stop early
 with `pkill -f crash_hunt.py` (TERM or INT): it restores and verifies settings
 and resumes the agent.
 
