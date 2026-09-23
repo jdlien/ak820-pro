@@ -1,6 +1,6 @@
 # Current status — the crash hunt
 
-Updated 2026-09-22, 21:50. The live plan is
+Updated 2026-09-22, 23:05. The live plan is
 [`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); its codex review and every
 finding's disposition are linked from it.
 
@@ -16,38 +16,40 @@ the next reset instead of waiting for it.
 
 ## Installed right now
 
-- **Firmware:** unchanged, the v6 daily build
-  (`via-daily-b89777e0f9-dirty-20260922-134320.bin`). Its ELF was overwritten
-  by the instrumented build and is gone; v6 records carry no PC, so nothing
-  needs it.
-- **Agent:** rebuilt with the health history, signed, installed with
-  `--clock` at 21:05 (`v0.1.1-58-gc03ecf1-dirty`). It appends one row per
-  health read to `~/Library/Logs/ak820pro/ak820-health.csv`.
-- **The agent is PAUSED** while the hunt runs (below). The hunt restores it
-  at exit; if it does not, `launchctl bootstrap gui/$(id -u)
-  ~/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist`.
+- **Firmware: v7 daily, WITH the hang fix**, flashed 22:59
+  (`via-daily-1b7f781887-20260922-225845.bin`, build token `0xebb930f8`,
+  ELF and manifest beside it). Keymap and lighting restored from the first
+  hunt's verified 21:05 backup (NOT `~/Documents/ak820pro-keymap.json`, which
+  is from 2026-09-04 and stale) and verified identical afterwards. First
+  readings: health v7; after boot, the interrupt stack had 688 of 1024 bytes
+  free and the main stack 1368 of 2048.
+- **Agent:** rebuilt and signed with v7 decoding, installed `--clock` at 22:05.
+  The history file rotated to `.1` at the schema change; the new
+  `ak820-health.csv` has page-6 columns.
+- **The agent is PAUSED** while the second hunt runs (below); the hunt
+  restores it at exit.
 
-## Running right now
+## Running right now: the second hunt, on the FIXED firmware
 
-`scripts/crash_hunt.py --hours 12 --pause-agent`, started 21:05, detached
-(`nohup`), ends ~09:05 on 2026-09-23. Output in
-`~/Library/Logs/ak820pro/crash-hunt/20260922-210530/` (`events.log`,
-`hunt.csv`, `captures/`, full keymap and lighting backups). The owner may type
-during it. Stop early with `pkill -f crash_hunt.py` (TERM or INT): it undoes its
-stress, compares the board's whole keymap, encoders and lighting against the
-backup, and resumes the agent. (The FIRST hunt ignored `pkill -INT`: a
-background job inherits SIGINT as ignored. It was stopped at 22:03 with
-SIGTERM and cleaned up by hand -- settings restored from its backup and
-verified. The script now handles both signals.)
+`scripts/crash_hunt.py --hours 10 --pause-agent`, started 23:00, ends ~09:00
+2026-09-23. Output in `~/Library/Logs/ak820pro/crash-hunt/20260922-230010/`.
+The v6 firmware hung 13 minutes into the same stress; **hours with no reset
+and a nonzero `v_blit_busy_waits` column is the proof of the fix**. Stop early
+with `pkill -f crash_hunt.py` (TERM or INT): it restores and verifies settings
+and resumes the agent.
 
-**If the keyboard froze:** leave it connected. The watchdog should bring it
-back in ~15 s and the hunt captures the record. If it never comes back, read
-`ak820 health --crash` once it answers; a cold power-off (cable + unplug
-~10 s) destroys the record.
+The first hunt (v6, 21:05) was stopped at 22:03. It ignored `pkill -INT` (a
+background job inherits SIGINT as ignored), so it was stopped with SIGTERM
+and its settings restored from its backup by hand, verified; the script now
+handles both signals. Its evidence is in
+[`history/crash-hunt-2026-09-22/`](../history/crash-hunt-2026-09-22/).
 
-**Do not rebuild `ak820-agent` in release mode while the hunt runs:** it calls
-`target/release/ak820` every 30 s, and swapping the file mid-call reads as a
-lost board.
+**If the keyboard freezes:** leave it connected. The watchdog brings it back
+in ~15 s and the hunt captures the record -- on v7 a fault also carries its PC
+(`scripts/symbolize.sh <pc> <token>`). A cold power-off destroys the record.
+
+**Do not rebuild `ak820-agent` in release mode while a hunt runs:** it calls
+`target/release/ak820` every 30 s.
 
 ## ⚠️ The hunt reproduced the hang at 21:18:52 — and the cause is found
 
@@ -58,16 +60,16 @@ watchdog. Full mechanism and fix in `CRASH-HUNT-PLAN.md` ("First result").
 A second codex pass found the same hole in the CPU draws (Caps padlock,
 battery fill, icons) and in every external-flash transaction, so the fix is
 now `bus_quiesce()` at the start of every CPU transaction on either bus. That
-also gives the owner's 13:13 crash (typing, light load) a plausible path. In
-the v7 builds from 21:44 (`via-*-a2c3b1a4e1-dirty-20260922-2144*`), not yet
-flashed; a narrow third codex pass verified the guard covers every runtime
-transaction ([review](review-codex-crash-hunt-impl3-2026-09-22.md)). The hunt continues on v6 and stops itself at the
-next reset (consecutive count 2).
+also gives the owner's 13:13 crash (typing, light load) a plausible path. A
+narrow third codex pass verified the guard covers every runtime transaction
+([review](review-codex-crash-hunt-impl3-2026-09-22.md)). Committed as
+firmware `1b7f781887`; flashed 22:59 (see above).
 
-## Built, not flashed: health v7 (Part B)
+## Health v7 (Part B) — flashed 22:59 (daily); instrumented tests pending
 
-`ak820pro-builds/out/via-{daily,instrumented}-a2c3b1a4e1-dirty-20260922-2144*`
-(`.bin`, `.elf`, `.json` manifest). A HardFault or an unhandled vector now
+Daily: `ak820pro-builds/out/via-daily-1b7f781887-20260922-225845.*` (flashed).
+Instrumented, for the B6 tests: rebuild from `1b7f781887` (`./build.sh
+instrumented`) rather than use the pre-commit `-dirty` 21:44 one. A HardFault or an unhandled vector now
 writes a terminal record with the PC and the interrupted context, and a ChibiOS
 halt records its caller. The record's consecutive-reset count clears after 10
 healthy minutes, so three spread-out crashes can no longer switch the watchdog
@@ -85,16 +87,16 @@ file:line.
 
 ## Next
 
-1. When the hunt ends: rebuild and re-sign the agent (it must decode v7 BEFORE
-   the board speaks it; review finding 6), reinstall with `--clock`.
+1. Read the second hunt's result (`events.log`, `hunt.csv`) in the morning.
 2. With the owner at the keyboard: flash the **instrumented** v7 build and run
-   the plan's B6 checks — `HC_FAULT` modes 1, 2, 3 and 5, each read back with
+   the plan's B6 checks -- `HC_FAULT` modes 1, 2, 3 and 5, each read back with
    `ak820 health --crash`, each PC through `scripts/symbolize.sh`, with a cold
    reset after every second reset-causing test (three inside ten minutes would
-   switch the watchdog off). Mode 4 (lockup) last: it may need a cold power-off.
-   Then flash the **daily** v7, verify keymap, encoders and lighting.
-3. Hunt again on the daily v7. The v6 hang came 13 minutes in; hours with no
-   reset and a nonzero `blit_busy_waits` (page 6) prove the fix.
+   switch the watchdog off). Mode 4 (lockup) last: it may need a cold
+   power-off. Then flash the daily v7 back. Back up the keymap and lighting
+   FIRST, while QMK runs (`flash.sh` does it unless the board is already in the
+   bootloader, when it falls back to the files in `~/Documents` -- stale).
+3. Bump `deps.lock` and push both repositories when this is released.
 4. Parked idea (taskmaster task 6): show a QR code to the agent installer
    (via a jqr.ca redirect) when no agent talks to the board.
 5. Still outstanding from before: **reboot the Mac** to prove the agent comes
