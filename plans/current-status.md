@@ -51,7 +51,17 @@ One hang in 13 minutes is a thin basis for a rate. So:
   submodule, so it needs the `ak820pro-patches` branch and the gitlink.
 Other readings at 30 min: 3 never-started blit timeouts (all retried), no
 stalls >= 25 ms, worst gap 41 ms attributed to flash (consolidations, driven by
-the hunt's writes, inside the 60 ms budget), MSP 632 / PSP 1368 bytes free. Stop early
+the hunt's writes, inside the 60 ms budget), MSP 632 / PSP 1368 bytes free.
+
+**First catch (00:18):** between the 00:17:46 and 00:18:16 readings,
+`v_blit_busy_waits` went 0 -> 1 in the SAME window as a never-started blit
+(7 -> 8, retry succeeded), and the board carried on. That is the predicted
+pairing: the pump armed a transfer that never started, a synchronous draw
+arrived inside the ~50 ms before the pump's grace would have recovered it,
+and `bus_quiesce()` waited, found it never started, and retried. On v6 the
+same coincidence ran `Prepare()` under the stuck transfer -- the 21:18 hang.
+One event: corroboration, not proof. At 91 min: 295,803 blits, 8
+never-started (all retried), 1 busy-wait, no reset, MSP 616 / PSP 1368 free. Stop early
 with `pkill -f crash_hunt.py` (TERM or INT): it restores and verifies settings
 and resumes the agent.
 
