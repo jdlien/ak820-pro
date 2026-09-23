@@ -33,9 +33,12 @@ the next reset instead of waiting for it.
 (`nohup`), ends ~09:05 on 2026-09-23. Output in
 `~/Library/Logs/ak820pro/crash-hunt/20260922-210530/` (`events.log`,
 `hunt.csv`, `captures/`, full keymap and lighting backups). The owner may type
-during it. Stop early with `pkill -INT -f crash_hunt.py`: it undoes its stress,
-compares the board's whole keymap, encoders and lighting against the backup,
-and resumes the agent.
+during it. Stop early with `pkill -f crash_hunt.py` (TERM or INT): it undoes its
+stress, compares the board's whole keymap, encoders and lighting against the
+backup, and resumes the agent. (The FIRST hunt ignored `pkill -INT`: a
+background job inherits SIGINT as ignored. It was stopped at 22:03 with
+SIGTERM and cleaned up by hand -- settings restored from its backup and
+verified. The script now handles both signals.)
 
 **If the keyboard froze:** leave it connected. The watchdog should bring it
 back in ~15 s and the hunt captures the record. If it never comes back, read

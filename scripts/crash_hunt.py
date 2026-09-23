@@ -45,8 +45,9 @@ Output: ~/Library/Logs/ak820pro/crash-hunt/<stamp>/ -- hunt.csv, events.log,
 run.json, keymap-backup.json, lighting-backup.json, captures/*.json.
 
 Usage: crash_hunt.py [--hours 8] [--pause-agent] [--no-flash]
+Stop early with `pkill -f crash_hunt.py` (TERM or INT): it cleans up either way.
 """
-import argparse, csv, json, os, random, string, subprocess, sys, time
+import argparse, csv, json, os, random, signal, string, subprocess, sys, time
 
 sys.path.insert(0, os.path.dirname(__file__))
 from soak import (Soak, report, SET_VALUE, TEXT_CHANNEL,  # noqa: E402
@@ -416,6 +417,17 @@ def main():
                     help=f"boot {AGENT_LABEL} out for the run and restore it after")
     ap.add_argument("--out", default=os.path.expanduser("~/Library/Logs/ak820pro/crash-hunt"))
     a = ap.parse_args()
+
+    # Stopping must reach the cleanup (settings verified, agent resumed). A
+    # job started in the background from a non-interactive shell inherits
+    # SIGINT as IGNORED, so Python never raises KeyboardInterrupt: the first
+    # hunt ignored `pkill -INT` and had to be killed and cleaned up by hand
+    # (2026-09-22 22:03). Put SIGINT back, and route SIGTERM/SIGHUP the same way.
+    def _stop(signum, frame):
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGHUP, _stop)
 
     if sys.platform != "darwin":
         # Opening the board enumerates HID, which is harmless on macOS and
