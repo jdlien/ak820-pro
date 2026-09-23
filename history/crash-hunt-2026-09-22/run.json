@@ -1,0 +1,19 @@
+{
+ "started": "2026-09-22 21:05:33",
+ "args": {
+  "hours": 12.0,
+  "text_every": 0.2,
+  "playback_every": 2.0,
+  "flash_every": 30.0,
+  "health_every": 30.0,
+  "no_flash": false,
+  "pause_agent": true,
+  "out": "/Users/jdlien/Library/Logs/ak820pro/crash-hunt"
+ },
+ "originals": {
+  "keycode": 0,
+  "brightness": 105,
+  "effect": 2
+ },
+ "cli": "/Users/jdlien/code/ak820-pro/ak820-agent/target/release/ak820"
+}

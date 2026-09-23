@@ -1,120 +1,110 @@
-# Current status — AK820 Pro watchdog diagnostics
+# Current status — the crash hunt
 
-Updated 2026-09-22 after implementing, hardware-testing, flashing, and pushing
-the retained watchdog breadcrumb feature.
+Updated 2026-09-22, 21:50. The live plan is
+[`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); its codex review and every
+finding's disposition are linked from it.
 
-## Current installed state
+## Why
 
-- The keyboard is running the daily firmware built from
-  `via-daily-b89777e0f9-dirty-20260922-134320.bin`.
-- Health protocol is v6. The keyboard reports reset count 0 after the final
-  daily flash, no LCD blit timeouts, no stalls >=25 ms, and an unavailable
-  previous-boot record, as expected after a normal reboot.
-- The keymap, encoder assignments, and RGB settings were backed up before
-  flashing and read back identically afterward: 720 keymap bytes, four layers,
-  one encoder, effect 2, hue 181, saturation 219, value 105, speed 227.
-- The signed Rust agent is installed and running as
-  `com.jdlien.ak820pro.agent`, owning the clock. The Python timekeeper and old
-  now-playing LaunchAgents remain disabled.
-- The agent status and log live at:
-  `~/Library/Application Support/ak820pro/ak820-agent.status` and
-  `~/Library/Logs/ak820pro/ak820-agent.log`.
+One spontaneous, unexplained watchdog reset on 2026-09-22 at ~13:13
+([incident](../history/incident-2026-09-22-wdt/README.md)). The retained
+operation breadcrumbs added that afternoon
+([WATCHDOG-BREADCRUMBS.md](WATCHDOG-BREADCRUMBS.md)) will name where the main
+loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
+versus a hang, the PC, stack depth, why blits time out) and tries to provoke
+the next reset instead of waiting for it.
 
-## What changed
+## Installed right now
 
-The firmware now uses the existing 16-byte reset-retained `.ram7` region to
-keep a versioned, corruption-checked operation breadcrumb. It records the
-current main-loop operation, its parent, and the uptime at the last completed
-housekeeping pass. Scope exits restore the parent, including early returns.
-The record is captured at boot after a watchdog reset and then frozen for that
-boot. It is not a full log, stack trace, program counter, or proof of cause.
+- **Firmware:** unchanged, the v6 daily build
+  (`via-daily-b89777e0f9-dirty-20260922-134320.bin`). Its ELF was overwritten
+  by the instrumented build and is gone; v6 records carry no PC, so nothing
+  needs it.
+- **Agent:** rebuilt with the health history, signed, installed with
+  `--clock` at 21:05 (`v0.1.1-58-gc03ecf1-dirty`). It appends one row per
+  health read to `~/Library/Logs/ak820pro/ak820-health.csv`.
+- **The agent is PAUSED** while the hunt runs (below). The hunt restores it
+  at exit; if it does not, `launchctl bootstrap gui/$(id -u)
+  ~/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist`.
 
-Covered operations include raw HID, wireless handling, key events, LCD waits
-and transfers, external flash, RTC I2C, internal flash drain/program/erase,
-and housekeeping subtasks. Power loss, brownout, ordinary reset, or corrupt
-retained RAM makes the record unavailable instead of reporting stale evidence.
-The ordinary health-counter reset does not clear it.
+## Running right now
 
-Health command `HC_GET5 = 0x08` exposes the record. The updated Rust CLI reads
-it with:
+`scripts/crash_hunt.py --hours 12 --pause-agent`, started 21:05, detached
+(`nohup`), ends ~09:05 on 2026-09-23. Output in
+`~/Library/Logs/ak820pro/crash-hunt/20260922-210530/` (`events.log`,
+`hunt.csv`, `captures/`, full keymap and lighting backups). The owner may type
+during it. Stop early with `pkill -INT -f crash_hunt.py`: it undoes its stress,
+compares the board's whole keymap, encoders and lighting against the backup,
+and resumes the agent.
 
-```sh
-ak820-agent/target/release/ak820 health --crash --json
-```
+**If the keyboard froze:** leave it connected. The watchdog should bring it
+back in ~15 s and the hunt captures the record. If it never comes back, read
+`ak820 health --crash` once it answers; a cold power-off (cable + unplug
+~10 s) destroys the record.
 
-The agent reads it after recovery and at its normal health interval, logs each
-new watchdog recovery once, includes the preceding health sample, and writes
-the record into the status file. Existing v5 firmware remains readable; v6 is
-required for `--crash` evidence.
+**Do not rebuild `ak820-agent` in release mode while the hunt runs:** it calls
+`target/release/ak820` every 30 s, and swapping the file mid-call reads as a
+lost board.
 
-## Hardware validation
+## ⚠️ The hunt reproduced the hang at 21:18:52 — and the cause is found
 
-The instrumented build was flashed, settings restored, and one controlled
-`HC_STALL` mode-1 hang was triggered. It recovered through the hardware
-watchdog in about 12 seconds and reported:
+13 minutes in: `lcd_transfer within text`. A synchronous LCD draw re-armed the
+flash->LCD DMA while the glyph pump's last transfer was still in flight, which
+left SPI0 unable to complete an ordinary `spiSend()`; no timeout, so the
+watchdog. Full mechanism and fix in `CRASH-HUNT-PLAN.md` ("First result").
+A second codex pass found the same hole in the CPU draws (Caps padlock,
+battery fill, icons) and in every external-flash transaction, so the fix is
+now `bus_quiesce()` at the start of every CPU transaction on either bus. That
+also gives the owner's 13:13 crash (typing, light load) a plausible path. In
+the v7 builds from 21:44 (`via-*-a2c3b1a4e1-dirty-20260922-2144*`), not yet
+flashed; a narrow third codex pass on the guard's coverage was running at
+21:50. The hunt continues on v6 and stops itself at the
+next reset (consecutive count 2).
 
-```text
-test_stall within raw_hid
-reset count: 1
-last pass uptime: 32708 ms
-reset flags: 0x03
-```
+## Built, not flashed: health v7 (Part B)
 
-The updated agent observed the temporary disconnect, logged the retained record
-once with the preceding health sample, and saved it in the status file.
-Reading the record repeatedly returned the same frozen bytes. Resetting normal
-health counters left the record unchanged. The daily build was then flashed,
-its checksum verified, settings restored, and the test hook was confirmed
-absent (`HC_TXTRACE` returned `UNHANDLED`).
+`ak820pro-builds/out/via-{daily,instrumented}-a2c3b1a4e1-dirty-20260922-2144*`
+(`.bin`, `.elf`, `.json` manifest). A HardFault or an unhandled vector now
+writes a terminal record with the PC and the interrupted context, and a ChibiOS
+halt records its caller. The record's consecutive-reset count clears after 10
+healthy minutes, so three spread-out crashes can no longer switch the watchdog
+off for good. Page 6 adds stack watermarks, the blit-timeout breakdown and a
+build token that `scripts/symbolize.sh` resolves to the archived ELF.
+Host simulation passes under ASan/UBSan; the Rust side decodes all of it (364
+unit tests). Codex reviewed the implementation twice: no High and twelve
+Medium/Low issues the first time
+([review-codex-crash-hunt-impl-2026-09-22.md](review-codex-crash-hunt-impl-2026-09-22.md)),
+two High (the unguarded bus paths above) and four smaller the second
+([review-codex-crash-hunt-impl2-2026-09-22.md](review-codex-crash-hunt-impl2-2026-09-22.md)).
+All fixed. The archived
+ELFs now carry line info: `scripts/symbolize.sh <pc> <token>` answers with
+file:line.
 
-Initial daily measurements after the final flash: scan rate 326 Hz, row
-sampling 215.9 Hz per row, worst row gap 10 ms, worst main-loop gap 15 ms,
-zero LCD blit timeouts, and zero stalls >=25 ms. This is a functional check,
-not a long soak and does not establish that the original intermittent crash is
-fixed.
+## Next
 
-## How to investigate the next real crash
-
-Do not power-cycle after a watchdog reset. Let the keyboard recover, leave it
-connected, and let the agent observe the reconnect. Then inspect:
-
-```sh
-rg "firmware watchdog reset" \
-  ~/Library/Logs/ak820pro/ak820-agent.log
-ak820-agent/target/release/ak820 health --crash --json
-ak820-agent/target/release/ak820 status
-```
-
-The log line should identify the interrupted operation and include the
-preceding health snapshot. If the keyboard loses power, the retained SRAM
-record is gone, but anything already written to the host log remains.
-
-## Source, commits, and validation artifacts
-
-- Main repository commit `773246a`, pushed to `origin/main`.
-- Firmware repository commit `8d1eb4dd21`, pushed to `jdlien/ak820pro-jdlien`.
-- Firmware metadata ignore commit `a2c3b1a4e1`, pushed to
-  `jdlien/ak820pro-jdlien`.
-- Implementation and hardware details: [`WATCHDOG-BREADCRUMBS.md`](WATCHDOG-BREADCRUMBS.md).
-- Incident and raw validation captures:
-  [`history/incident-2026-09-22-wdt/README.md`](../history/incident-2026-09-22-wdt/README.md).
-- Host tests: 348 Rust tests passed; Windows MSVC `cargo check` passed; the
-  retained-record C simulation passed with AddressSanitizer and UBSan; daily
-  and instrumented firmware builds passed structural checks.
+1. Read the third (narrow) codex pass, fix anything it finds, rebuild.
+2. When the hunt ends: rebuild and re-sign the agent (it must decode v7 BEFORE
+   the board speaks it; review finding 6), reinstall with `--clock`.
+3. With the owner at the keyboard: flash the **instrumented** v7 build and run
+   the plan's B6 checks — `HC_FAULT` modes 1, 2, 3 and 5, each read back with
+   `ak820 health --crash`, each PC through `scripts/symbolize.sh`, with a cold
+   reset after every second reset-causing test (three inside ten minutes would
+   switch the watchdog off). Mode 4 (lockup) last: it may need a cold power-off.
+   Then flash the **daily** v7, verify keymap, encoders and lighting.
+4. Hunt again on the daily v7. The v6 hang came 13 minutes in; hours with no
+   reset and a nonzero `blit_busy_waits` (page 6) prove the fix.
+5. Parked idea (taskmaster task 6): show a QR code to the agent installer
+   (via a jqr.ca redirect) when no agent talks to the board.
+6. Still outstanding from before: **reboot the Mac** to prove the agent comes
+   back on its own after login (now-playing and the clock).
 
 ## Repository notes
 
-`qmk_firmware-ak820pro` is a separate firmware repository ignored by the main
-repo, with direct nested submodules `lib/chibios` and
-`lib/chibios-contrib`. Their commits and gitlinks were not changed by this
-work. `.DS_Store` is ignored in the main repository, the firmware repository,
-and locally in the two nested submodule checkouts; all existing `.DS_Store`
-files under this workspace were removed. The unrelated root `.taskmaster/`
-directory remains untracked and was deliberately left alone.
-
-## Open question
-
-The original spontaneous `WDT reset x1` remains unexplained. Its preceding
-health sample had accumulated LCD blit timeouts and non-flash stalls, but those
-counters were historical and did not prove causation. The next real reset is
-the first one that should identify where main-loop progress stopped.
+Committed 2026-09-22 ~21:55, **not pushed**: firmware `1b7f781887` on
+`ak820pro-jdlien` in `qmk_firmware-ak820pro`; the agent, tooling and these
+documents in this repo. `deps.lock` still pins the firmware at `b89777e0f9`,
+as it did through the breadcrumbs work: bump it (and push the firmware
+branch first) when this is released. `.taskmaster/` stays untracked, as
+before; it now holds task 6, the QR idea. The hunt's raw output stays in
+`~/Library/Logs/ak820pro/crash-hunt/`; a snapshot of the 21:18 evidence is in
+[`history/crash-hunt-2026-09-22/`](../history/crash-hunt-2026-09-22/).

@@ -1,0 +1,9 @@
+2026-09-22 21:05:30 crash hunt: 12.0 h, output /Users/jdlien/Library/Logs/ak820pro/crash-hunt/20260922-210530
+2026-09-22 21:05:33 backed up; originals: keycode 0x0000, brightness 105, effect 2
+2026-09-22 21:05:33 effects: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+2026-09-22 21:18:52 LOST: OSError: liveness ping unanswered -- waiting up to 120 s for the board
+2026-09-22 21:19:03 WATCHDOG RESET after 12 s: lcd_transfer within text, last pass uptime 26197368 ms; consecutive 1; saved /Users/jdlien/Library/Logs/ak820pro/crash-hunt/20260922-210530/captures/01-211903.json
+2026-09-22 21:19:04 after recovery: keymap, encoders and lighting match the backup
+2026-09-22 21:19:36 LOST: OSError: watchdog reset seen at a health read -- waiting up to 120 s for the board
+2026-09-22 21:19:40 WATCHDOG RESET after 4 s: lcd_transfer within text, last pass uptime 26197368 ms; consecutive 1; saved /Users/jdlien/Library/Logs/ak820pro/crash-hunt/20260922-210530/captures/02-211940.json
+2026-09-22 21:19:40 after recovery: keymap, encoders and lighting match the backup
