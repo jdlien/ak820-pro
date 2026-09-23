@@ -4,7 +4,9 @@
 as it can about its cause, and then try to provoke one. This plan does not fix
 anything; it narrows where to look.
 
-**Status (2026-09-22, 21:20):** revised after the codex review
+**Status (2026-09-23, 09:05):** the hang is found and fixed, and the fix
+held for a ten-hour hunt (see "Second result"). Earlier status (2026-09-22,
+21:20): revised after the codex review
 ([review-codex-crash-hunt-2026-09-22.md](review-codex-crash-hunt-2026-09-22.md));
 dispositions at the end.
 
@@ -51,6 +53,23 @@ hung, not necessarily one that would have; a hunt night with counts and no
 reset is the proof. A related
 fragility remains, not yet addressed: the SPI0 ISR routes to the DMA handler on
 the RAW `RIS & 0x30`, and that handler clears every flag including RXFIFOTHIF.
+
+## ✅ Second result: the fix held for ten hours (2026-09-22 23:00 → 09:00)
+
+The v7 daily build (`1b7f781887`) under the same stress: **no reset in 10 h
+and 1,960,093 blits**. `blit_busy_waits` reached 7, **every one in the same
+30 s window as a never-started blit** -- the predicted overlap, waited out
+instead of hanging. All 53 blit timeouts were transfers that never started,
+all recovered by one retry; none stalled partway or lost their interrupt.
+All 8 non-flash stalls ≥ 25 ms (25–26 ms) came with a never-started recovery.
+Deepest stack use: interrupt 464/1024, main 680/2048 bytes. Evidence:
+[`history/crash-hunt-2026-09-23-v7/`](../history/crash-hunt-2026-09-23-v7/).
+
+**Next thread:** the DMA that never starts (~5/h under this stress) is now
+the root of both the hang and the only stalls left. Why does SPI1->SPI0 DMA
+sometimes not start after `Fire()`? `lcd_bus.c` already records that
+residue in SPI1's RX FIFO was tested and ruled out (2026-08-30). Secondary,
+still unaddressed: the SPI0 ISR's raw-RIS dispatch in chibios-contrib.
 
 ## What we know
 

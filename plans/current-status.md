@@ -1,6 +1,6 @@
 # Current status — the crash hunt
 
-Updated 2026-09-22, 23:05. The live plan is
+Updated 2026-09-23, 09:05. The live plan is
 [`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); its codex review and every
 finding's disposition are linked from it.
 
@@ -26,56 +26,18 @@ the next reset instead of waiting for it.
 - **Agent:** rebuilt and signed with v7 decoding, installed `--clock` at 22:05.
   The history file rotated to `.1` at the schema change; the new
   `ak820-health.csv` has page-6 columns.
-- **The agent is PAUSED** while the second hunt runs (below); the hunt
-  restores it at exit.
+- **The agent is running** (restored by the hunt at 09:00:15).
 
-## Running right now: the second hunt, on the FIXED firmware
+## ✅ The fix held: ten hours, no reset (second hunt, 23:00 → 09:00)
 
-`scripts/crash_hunt.py --hours 10 --pause-agent`, started 23:00, ends ~09:00
-2026-09-23. Output in `~/Library/Logs/ak820pro/crash-hunt/20260922-230010/`.
-The v6 firmware hung 13 minutes into the same stress; **hours with no reset
-and a nonzero `v_blit_busy_waits` column is the proof of the fix**.
-
-⚠️ **Reading it honestly (added 23:31):** after 30 min and 97,639 blits,
-`v_blit_busy_waits` was still **0** -- the guard had not caught one overlap.
-One hang in 13 minutes is a thin basis for a rate. So:
-- counts > 0 and no reset: the fix is proven;
-- 0 and no reset: unproven either way -- the race is rarer than that one
-  event suggested;
-- a reset with 0: a DIFFERENT mechanism. The prime suspect is the SPI0 ISR
-  in chibios-contrib (`hal_spi_v2_lld.c`), which routes to the DMA handler
-  on the RAW `RIS & 0x30` whether or not a DMA is in flight, and whose DMA
-  handler clears every flag including RXFIFOTHIF -- a stale DMA flag would
-  swallow an ordinary `spiSend()`'s interrupt the same way. A fix would route
-  on `sn32_dma_busy` and clear only the DMA bits; it lives in the patched
-  submodule, so it needs the `ak820pro-patches` branch and the gitlink.
-Other readings at 30 min: 3 never-started blit timeouts (all retried), no
-stalls >= 25 ms, worst gap 41 ms attributed to flash (consolidations, driven by
-the hunt's writes, inside the 60 ms budget), MSP 632 / PSP 1368 bytes free.
-
-**First catch (00:18):** between the 00:17:46 and 00:18:16 readings,
-`v_blit_busy_waits` went 0 -> 1 in the SAME window as a never-started blit
-(7 -> 8, retry succeeded), and the board carried on. That is the predicted
-pairing: the pump armed a transfer that never started, a synchronous draw
-arrived inside the ~50 ms before the pump's grace would have recovered it,
-and `bus_quiesce()` waited, found it never started, and retried. On v6 the
-same coincidence ran `Prepare()` under the stuck transfer -- the 21:18 hang.
-One event: corroboration, not proof. At 91 min: 295,803 blits, 8
-never-started (all retried), 1 busy-wait, no reset, MSP 616 / PSP 1368 free.
-
-**At 2 h (01:01):** 393,648 blits, 14 never-started (all retried), 3
-busy-waits, no reset. Two NON-flash stalls >= 25 ms appeared (00:38, 01:01),
-25-26 ms, marked blit -- each in the same 30 s window as a never-started
-recovery (one a double: the retry did not start either; one with a busy-wait).
-The worst blit-marked gap had been creeping up under this stress without them
-(21 -> 24 ms), so a recovery's extra millisecond or two tips an already heavy
-synchronous draw past the line; not a new mechanism, and on v6 the busy-wait
-case was the hang. Still the keystroke-losing class: watch
-`count_ge_25ms_nonflash` in the agent's history under ORDINARY use. The MSP
-watermark fell 680 -> 576 free over the two hours as rarer interrupt nestings
-turned up (448 of 1024 bytes used at worst); keep watching it. Stop early
-with `pkill -f crash_hunt.py` (TERM or INT): it restores and verifies settings
-and resumes the agent.
+Same stress that hung v6 in 13 minutes: no reset in 10 h and 1,960,093
+blits. The guard caught 7 overlaps, **all 7 alongside a DMA that never
+started** -- the predicted mechanism. All 53 blit timeouts were never-starts,
+all recovered by one retry. All 8 non-flash stalls ≥ 25 ms (25–26 ms) came
+with a never-start recovery. Deepest stack use: interrupt 464/1024, main
+680/2048. Settings verified at exit; the agent restored itself at 09:00:15
+and is writing v7 rows to `ak820-health.csv`. Evidence:
+[`history/crash-hunt-2026-09-23-v7/`](../history/crash-hunt-2026-09-23-v7/).
 
 The first hunt (v6, 21:05) was stopped at 22:03. It ignored `pkill -INT` (a
 background job inherits SIGINT as ignored), so it was stopped with SIGTERM
@@ -83,12 +45,10 @@ and its settings restored from its backup by hand, verified; the script now
 handles both signals. Its evidence is in
 [`history/crash-hunt-2026-09-22/`](../history/crash-hunt-2026-09-22/).
 
-**If the keyboard freezes:** leave it connected. The watchdog brings it back
-in ~15 s and the hunt captures the record -- on v7 a fault also carries its PC
-(`scripts/symbolize.sh <pc> <token>`). A cold power-off destroys the record.
-
-**Do not rebuild `ak820-agent` in release mode while a hunt runs:** it calls
-`target/release/ak820` every 30 s.
+**If the keyboard freezes in ordinary use:** leave it connected. The
+watchdog brings it back in ~15 s; read `ak820 health --crash` (on v7 a fault
+carries its PC: `scripts/symbolize.sh <pc> <token>`). A cold power-off
+destroys the record.
 
 ## ⚠️ The hunt reproduced the hang at 21:18:52 — and the cause is found
 
@@ -126,20 +86,26 @@ file:line.
 
 ## Next
 
-1. Read the second hunt's result (`events.log`, `hunt.csv`) in the morning.
-2. With the owner at the keyboard: flash the **instrumented** v7 build and run
-   the plan's B6 checks -- `HC_FAULT` modes 1, 2, 3 and 5, each read back with
-   `ak820 health --crash`, each PC through `scripts/symbolize.sh`, with a cold
-   reset after every second reset-causing test (three inside ten minutes would
-   switch the watchdog off). Mode 4 (lockup) last: it may need a cold
-   power-off. Then flash the daily v7 back. Back up the keymap and lighting
-   FIRST, while QMK runs (`flash.sh` does it unless the board is already in the
-   bootloader, when it falls back to the files in `~/Documents` -- stale).
-3. Bump `deps.lock` and push both repositories when this is released.
-4. Parked idea (taskmaster task 6): show a QR code to the agent installer
-   (via a jqr.ca redirect) when no agent talks to the board.
-5. Still outstanding from before: **reboot the Mac** to prove the agent comes
-   back on its own after login (now-playing and the clock).
+1. **The DMA that never starts** (~5/h under hunt stress): now the root of the
+   hang and of the only 25 ms stalls left. Why does the SPI1->SPI0 transfer
+   sometimes not start after `Fire()`? Residue in SPI1's RX FIFO was tested and
+   ruled out on 2026-08-30 (`lcd_bus.c`, `spi1_raw_byte`). Watch
+   `blit_never_started` and `count_ge_25ms_nonflash` in the agent's history
+   under ORDINARY use first: that is the rate that matters.
+2. With the owner at the keyboard: flash the **instrumented** v7 build (rebuild
+   from `1b7f781887`) and run the plan's B6 checks -- `HC_FAULT` modes 1, 2, 3
+   and 5, each read with `ak820 health --crash`, each PC through
+   `scripts/symbolize.sh`, a cold reset after every second reset-causing test.
+   Mode 4 (lockup) last. Back up keymap and lighting FIRST while QMK runs (the
+   `~/Documents` files are stale: 2026-09-04). Then the daily v7 back.
+3. Secondary: the SPI0 ISR in chibios-contrib dispatches on the RAW
+   `RIS & 0x30` and its DMA handler clears every flag -- route on
+   `sn32_dma_busy`, clear only the DMA bits (patched submodule branch + gitlink).
+4. Bump `deps.lock` and push both repositories when this is released.
+5. Parked idea (taskmaster task 6): a QR code to the agent installer via a
+   jqr.ca redirect.
+6. Still outstanding: **reboot the Mac** to prove the agent comes back on its
+   own after login.
 
 ## Repository notes
 
