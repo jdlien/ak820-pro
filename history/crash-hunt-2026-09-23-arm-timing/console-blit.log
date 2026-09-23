@@ -1,0 +1,72 @@
+13:01:40 AJAZZ:AK820 PRO:1: [lcd] arms=1771 slow_cmd=224 slow_fire=1 never=0 busy=0
+13:02:40 AJAZZ:AK820 PRO:1: [lcd] arms=5106 slow_cmd=596 slow_fire=1 never=0 busy=0
+13:03:40 AJAZZ:AK820 PRO:1: [lcd] arms=8326 slow_cmd=981 slow_fire=1 never=0 busy=0
+13:04:40 AJAZZ:AK820 PRO:1: [lcd] arms=11656 slow_cmd=1400 slow_fire=1 never=0 busy=0
+13:05:40 AJAZZ:AK820 PRO:1: [lcd] arms=14861 slow_cmd=1765 slow_fire=1 never=0 busy=0
+13:06:40 AJAZZ:AK820 PRO:1: [lcd] arms=18143 slow_cmd=2135 slow_fire=1 never=0 busy=0
+13:07:16 AJAZZ:AK820 PRO:1: [lcd] blit timeout #1 kind=0 ris=0e cnt=659/659 s0=69 s1=25 ris1=08 cmd=2 fire=1 i2c=0
+13:07:17 AJAZZ:AK820 PRO:1: [lcd] timeouts=1 retries=1 (blits/s=79)
+13:07:41 AJAZZ:AK820 PRO:1: [lcd] arms=21459 slow_cmd=2512 slow_fire=1 never=1 busy=0
+13:08:41 AJAZZ:AK820 PRO:1: [lcd] arms=24741 slow_cmd=2877 slow_fire=1 never=1 busy=0
+13:09:41 AJAZZ:AK820 PRO:1: [lcd] arms=27990 slow_cmd=3250 slow_fire=2 never=1 busy=0
+13:09:49 AJAZZ:AK820 PRO:1: [lcd] blit timeout #2 kind=0 ris=0f cnt=659/659 s0=69 s1=25 ris1=08 cmd=1 fire=1 i2c=0
+13:09:49 AJAZZ:AK820 PRO:1: [lcd] timeouts=2 retries=2 (blits/s=55)
+13:10:41 AJAZZ:AK820 PRO:1: [lcd] arms=31251 slow_cmd=3643 slow_fire=2 never=2 busy=0
+13:11:41 AJAZZ:AK820 PRO:1: [lcd] arms=34589 slow_cmd=4015 slow_fire=2 never=2 busy=0
+13:12:42 AJAZZ:AK820 PRO:1: [lcd] arms=37724 slow_cmd=4382 slow_fire=2 never=2 busy=0
+13:13:42 AJAZZ:AK820 PRO:1: [lcd] arms=41075 slow_cmd=4791 slow_fire=2 never=2 busy=0
+13:14:42 AJAZZ:AK820 PRO:1: [lcd] arms=44393 slow_cmd=5210 slow_fire=2 never=2 busy=0
+13:15:42 AJAZZ:AK820 PRO:1: [lcd] arms=47698 slow_cmd=5602 slow_fire=2 never=2 busy=0
+13:16:42 AJAZZ:AK820 PRO:1: [lcd] arms=50890 slow_cmd=6009 slow_fire=3 never=2 busy=0
+13:17:43 AJAZZ:AK820 PRO:1: [lcd] arms=54194 slow_cmd=6435 slow_fire=4 never=2 busy=0
+13:18:43 AJAZZ:AK820 PRO:1: [lcd] arms=57451 slow_cmd=6876 slow_fire=5 never=2 busy=0
+13:19:43 AJAZZ:AK820 PRO:1: [lcd] arms=60778 slow_cmd=7263 slow_fire=5 never=2 busy=0
+13:20:43 AJAZZ:AK820 PRO:1: [lcd] arms=64105 slow_cmd=7624 slow_fire=5 never=2 busy=0
+13:21:43 AJAZZ:AK820 PRO:1: [lcd] arms=67369 slow_cmd=8011 slow_fire=5 never=2 busy=0
+13:22:43 AJAZZ:AK820 PRO:1: [lcd] arms=70515 slow_cmd=8371 slow_fire=5 never=2 busy=0
+13:23:44 AJAZZ:AK820 PRO:1: [lcd] arms=73822 slow_cmd=8774 slow_fire=6 never=2 busy=0
+13:24:42 AJAZZ:AK820 PRO:1: [lcd] blit timeout #3 kind=0 ris=0f cnt=659/659 s0=69 s1=25 ris1=08 cmd=1 fire=2 i2c=0
+13:24:42 AJAZZ:AK820 PRO:1: [lcd] timeouts=3 retries=3 (blits/s=73)
+13:24:44 AJAZZ:AK820 PRO:1: [lcd] arms=77095 slow_cmd=9183 slow_fire=7 never=3 busy=1
+13:25:44 AJAZZ:AK820 PRO:1: [lcd] arms=80349 slow_cmd=9576 slow_fire=7 never=3 busy=1
+13:26:44 AJAZZ:AK820 PRO:1: [lcd] arms=83655 slow_cmd=9981 slow_fire=7 never=3 busy=1
+13:27:45 AJAZZ:AK820 PRO:1: [lcd] arms=86950 slow_cmd=10423 slow_fire=8 never=3 busy=1
+13:28:45 AJAZZ:AK820 PRO:1: [lcd] arms=90132 slow_cmd=10803 slow_fire=8 never=3 busy=1
+13:29:45 AJAZZ:AK820 PRO:1: [lcd] arms=93455 slow_cmd=11193 slow_fire=8 never=3 busy=1
+13:30:45 AJAZZ:AK820 PRO:1: [lcd] arms=96915 slow_cmd=11630 slow_fire=9 never=3 busy=1
+13:31:45 AJAZZ:AK820 PRO:1: [lcd] arms=100106 slow_cmd=12023 slow_fire=9 never=3 busy=1
+13:32:45 AJAZZ:AK820 PRO:1: [lcd] arms=103406 slow_cmd=12410 slow_fire=10 never=3 busy=1
+13:33:46 AJAZZ:AK820 PRO:1: [lcd] arms=106553 slow_cmd=12804 slow_fire=10 never=3 busy=1
+13:34:46 AJAZZ:AK820 PRO:1: [lcd] arms=109847 slow_cmd=13205 slow_fire=11 never=3 busy=1
+13:35:46 AJAZZ:AK820 PRO:1: [lcd] arms=113001 slow_cmd=13564 slow_fire=11 never=3 busy=1
+13:36:46 AJAZZ:AK820 PRO:1: [lcd] arms=116434 slow_cmd=13952 slow_fire=11 never=3 busy=1
+13:37:46 AJAZZ:AK820 PRO:1: [lcd] arms=119762 slow_cmd=14331 slow_fire=11 never=3 busy=1
+13:38:47 AJAZZ:AK820 PRO:1: [lcd] arms=122961 slow_cmd=14732 slow_fire=11 never=3 busy=1
+13:39:47 AJAZZ:AK820 PRO:1: [lcd] arms=126217 slow_cmd=15137 slow_fire=11 never=3 busy=1
+13:40:47 AJAZZ:AK820 PRO:1: [lcd] arms=129358 slow_cmd=15535 slow_fire=13 never=3 busy=1
+13:41:47 AJAZZ:AK820 PRO:1: [lcd] arms=132486 slow_cmd=15897 slow_fire=13 never=3 busy=1
+13:42:47 AJAZZ:AK820 PRO:1: [lcd] arms=135798 slow_cmd=16271 slow_fire=14 never=3 busy=1
+13:43:01 AJAZZ:AK820 PRO:1: [lcd] blit timeout #4 kind=0 ris=0f cnt=659/659 s0=69 s1=25 ris1=08 cmd=1 fire=1 i2c=0
+13:43:01 AJAZZ:AK820 PRO:1: [lcd] timeouts=4 retries=4 (blits/s=39)
+13:43:48 AJAZZ:AK820 PRO:1: [lcd] arms=138904 slow_cmd=16628 slow_fire=14 never=4 busy=1
+13:44:48 AJAZZ:AK820 PRO:1: [lcd] arms=142121 slow_cmd=17028 slow_fire=15 never=4 busy=1
+13:45:48 AJAZZ:AK820 PRO:1: [lcd] arms=145469 slow_cmd=17420 slow_fire=15 never=4 busy=1
+13:46:48 AJAZZ:AK820 PRO:1: [lcd] arms=148761 slow_cmd=17800 slow_fire=15 never=4 busy=1
+13:47:48 AJAZZ:AK820 PRO:1: [lcd] arms=151938 slow_cmd=18190 slow_fire=15 never=4 busy=1
+13:48:49 AJAZZ:AK820 PRO:1: [lcd] arms=155274 slow_cmd=18587 slow_fire=16 never=4 busy=1
+13:49:46 AJAZZ:AK820 PRO:1: [lcd] blit timeout #5 kind=0 ris=0e cnt=659/659 s0=69 s1=25 ris1=08 cmd=3 fire=0 i2c=0
+13:49:47 AJAZZ:AK820 PRO:1: [lcd] timeouts=5 retries=5 (blits/s=70)
+13:49:49 AJAZZ:AK820 PRO:1: [lcd] arms=158351 slow_cmd=18935 slow_fire=16 never=5 busy=2
+13:50:49 AJAZZ:AK820 PRO:1: [lcd] arms=161608 slow_cmd=19302 slow_fire=18 never=5 busy=2
+13:51:49 AJAZZ:AK820 PRO:1: [lcd] arms=164811 slow_cmd=19706 slow_fire=20 never=5 busy=2
+13:52:49 AJAZZ:AK820 PRO:1: [lcd] arms=168197 slow_cmd=20105 slow_fire=21 never=5 busy=2
+13:53:49 AJAZZ:AK820 PRO:1: [lcd] arms=171496 slow_cmd=20486 slow_fire=21 never=5 busy=2
+13:54:50 AJAZZ:AK820 PRO:1: [lcd] arms=174677 slow_cmd=20880 slow_fire=22 never=5 busy=2
+13:55:50 AJAZZ:AK820 PRO:1: [lcd] arms=177931 slow_cmd=21275 slow_fire=23 never=5 busy=2
+13:56:50 AJAZZ:AK820 PRO:1: [lcd] arms=181226 slow_cmd=21663 slow_fire=23 never=5 busy=2
+13:57:50 AJAZZ:AK820 PRO:1: [lcd] arms=184560 slow_cmd=22101 slow_fire=23 never=5 busy=2
+13:58:50 AJAZZ:AK820 PRO:1: [lcd] arms=187779 slow_cmd=22504 slow_fire=23 never=5 busy=2
+13:59:45 AJAZZ:AK820 PRO:1: [lcd] blit timeout #6 kind=0 ris=0f cnt=659/659 s0=69 s1=25 ris1=08 cmd=0 fire=1 i2c=0
+13:59:46 AJAZZ:AK820 PRO:1: [lcd] timeouts=6 retries=6 (blits/s=57)
+13:59:51 AJAZZ:AK820 PRO:1: [lcd] arms=190898 slow_cmd=22885 slow_fire=24 never=6 busy=2
+14:00:51 AJAZZ:AK820 PRO:1: [lcd] arms=194068 slow_cmd=23275 slow_fire=24 never=6 busy=2

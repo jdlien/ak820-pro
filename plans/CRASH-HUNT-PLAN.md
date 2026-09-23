@@ -122,6 +122,21 @@ name the parent operation instead. Every hang seen so far ran with interrupts
 on: the LED ISR alone stacks about 3,900 times a second. Left as is, and
 recorded in [docs/hardware.md](../docs/hardware.md).
 
+## 🔎 Fourth result: the never-starts are clock digits (2026-09-23)
+
+A one-hour hunt on the instrumented build, with the console captured
+([evidence](../history/crash-hunt-2026-09-23-arm-timing/)): no reset,
+6 never-started blits. **The arm window is not it.** 12% of all 194,068
+arms had a slow command phase, and none of the six did (0–3 ticks of
+5.33 µs). **All six were clock digits:** the same 660-byte transfer (`cnt=659`,
+bytes − 1: one 15×22 cell of the clock face), with identical register
+snapshots. Clock digits are roughly 5–7% of blits under this stress. Both
+kinds of glyph take the same queue and pump, so what differs is the length,
+the source region, or the moment: the RTC second edge, often right after a
+synchronous band clear. A retry of the same glyph always succeeds. Next: log
+source, w×h and the previous blit in the timeout line, and count blits per
+face.
+
 Test-build aids added on the way, instrumented builds only: `HC_BOOTLOADER`
 (`0x79`) jumps to the bootloader so a diagnostic flash needs no Fn+Esc, and
 `HC_PEEK` (`0x78`) reads one RAM word. Neither is in the daily build: either

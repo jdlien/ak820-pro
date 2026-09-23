@@ -14,20 +14,20 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## Installed right now (13:05)
+## Installed right now (14:05)
 
-- **Firmware: an INSTRUMENTED test build, not the daily.**
-  `via-instrumented-a5a06614be-dirty-20260923-125750.bin`, token
-  `0x0a8a1d5b`: v7 plus the lost-write fix below, and the test hooks,
-  including `HC_BOOTLOADER` and `HC_PEEK`, which must not stay on an
-  everyday board. The owner is typing on another keyboard meanwhile.
-- **A one-hour crash hunt is running against it** (13:01 → ~14:01,
-  `~/Library/Logs/ak820pro/crash-hunt/20260923-130105/`), with
-  `scripts/consolelog.sh` capturing the console for the DMA arm timing.
-- **Agent: booted out** since the fault tests. It comes back with the daily
-  flash: `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist`.
-- Keymap and lighting: `~/Documents/ak820pro-{keymap,lighting}.json` were
-  refreshed at 12:57 and match the verified hunt backup of 2026-09-22 23:00.
+- **Firmware: the DAILY build at the branch tip**,
+  `via-daily-32bb72aa53-20260923-132759.bin`, token `0x3000de57`: v7, the
+  lost-write fix and the SPI0 dispatch fix. No test hooks (`HC_PEEK`
+  verified refused).
+- **A two-hour crash hunt is running on it** (14:02 → ~16:02,
+  `~/Library/Logs/ak820pro/crash-hunt/20260923-140219/`): the SPI0 fix's first
+  run on hardware. The owner is typing on another keyboard meanwhile.
+- **Agent: booted out** since the fault tests. Restore it after the hunt:
+  `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist`.
+- Keymap and lighting: `~/Documents/ak820pro-{keymap,lighting}.json`
+  (refreshed by each flash today) match the verified hunt backup of
+  2026-09-22 23:00.
 
 ## ✅ The fault recorder works, after a fix (2026-09-23)
 
@@ -104,11 +104,15 @@ file:line.
 1. **Flash a daily build with the lost-write fix** and restore the agent.
    The fix is `02db293696`; a daily at the branch tip, which adds the SPI0
    fix, is built: `via-daily-32bb72aa53-20260923-132759.bin`.
-2. **The DMA that never starts** (~5/h under hunt stress): now the root of the
-   hang and of the only 25 ms stalls left. The running hunt collects the arm
-   timing (the once-a-minute `[lcd] arms=` console line, and the timeout lines' `cmd`/`fire`).
-   Residue in SPI1's RX FIFO was ruled out on 2026-08-30. Watch
-   `blit_never_started` in the agent's history under ORDINARY use too.
+2. **The DMA that never starts**: the 13:01 hunt found that **all six were
+   clock digits** (one 660-byte 15×22 cell, ~5–7% of blits), and none had a
+   slow arm (see the plan's "Fourth result",
+   [evidence](../history/crash-hunt-2026-09-23-arm-timing/)). An
+   instrumented build logging each timeout's source, size, position and the
+   blit before it, plus exposure per transfer size, is built but uncommitted:
+   `via-instrumented-32bb72aa53-dirty-20260923-140533.bin`. Run it with the
+   console captured (`scripts/consolelog.sh`) and a hunt, overnight if the
+   owner can spare the keyboard.
 3. **SPI0 ISR dispatch**: committed and pushed (`2a17a73b48` on
    `ak820pro-patches`; gitlink in firmware `32bb72aa53`). It routes on
    `sn32_dma_busy` and clears only the DMA flags it read, which closes a
