@@ -1,6 +1,6 @@
 # Current status — the crash hunt
 
-Updated 2026-09-23, 09:05. The live plan is
+Updated 2026-09-23, 13:05. The live plan is
 [`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); its codex review and every
 finding's disposition are linked from it.
 
@@ -14,19 +14,34 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## Installed right now
+## Installed right now (13:05)
 
-- **Firmware: v7 daily, WITH the hang fix**, flashed 22:59
-  (`via-daily-1b7f781887-20260922-225845.bin`, build token `0xebb930f8`,
-  ELF and manifest beside it). Keymap and lighting restored from the first
-  hunt's verified 21:05 backup (NOT `~/Documents/ak820pro-keymap.json`, which
-  is from 2026-09-04 and stale) and verified identical afterwards. First
-  readings: health v7; after boot, the interrupt stack had 688 of 1024 bytes
-  free and the main stack 1368 of 2048.
-- **Agent:** rebuilt and signed with v7 decoding, installed `--clock` at 22:05.
-  The history file rotated to `.1` at the schema change; the new
-  `ak820-health.csv` has page-6 columns.
-- **The agent is running** (restored by the hunt at 09:00:15).
+- **Firmware: an INSTRUMENTED test build, not the daily.**
+  `via-instrumented-a5a06614be-dirty-20260923-125750.bin`, token
+  `0x0a8a1d5b`: v7 plus the lost-write fix below, and the test hooks,
+  including `HC_BOOTLOADER` and `HC_PEEK`, which must not stay on an
+  everyday board. The owner is typing on another keyboard meanwhile.
+- **A one-hour crash hunt is running against it** (13:01 → ~14:01,
+  `~/Library/Logs/ak820pro/crash-hunt/20260923-130105/`), with
+  `scripts/consolelog.sh` capturing the console for the DMA arm timing.
+- **Agent: booted out** since the fault tests. It comes back with the daily
+  flash: `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist`.
+- Keymap and lighting: `~/Documents/ak820pro-{keymap,lighting}.json` were
+  refreshed at 12:57 and match the verified hunt backup of 2026-09-22 23:00.
+
+## ✅ The fault recorder works, after a fix (2026-09-23)
+
+All seven `HC_FAULT` modes were verified on hardware. The first runs of
+modes 1 and 3 came back invalid: on this chip **the last SRAM write before a
+loop that never writes again is lost at the watchdog reset**, and every
+handler commits its record and then spins. So the final `FAULT_MAGIC` store
+was lost, every time. `DSB` doesn't help; one sacrificial write after it
+does (`commit_terminal()`, firmware `02db293696`). The watchdog also **recovers a
+locked-up core** (mode 4), with the record intact. Details:
+[`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md), "Third result", and
+[`docs/hardware.md`](../docs/hardware.md). ⚠️ The v7 daily build lacks the
+fix: a fault on it would record as invalid, so a real crash would read
+"unavailable".
 
 ## ✅ The fix held: ten hours, no reset (second hunt, 23:00 → 09:00)
 
@@ -64,11 +79,11 @@ narrow third codex pass verified the guard covers every runtime transaction
 ([review](review-codex-crash-hunt-impl3-2026-09-22.md)). Committed as
 firmware `1b7f781887`; flashed 22:59 (see above).
 
-## Health v7 (Part B) — flashed 22:59 (daily); instrumented tests pending
+## Health v7 (Part B) — daily flashed 2026-09-22 22:59; validated 2026-09-23
 
-Daily: `ak820pro-builds/out/via-daily-1b7f781887-20260922-225845.*` (flashed).
-Instrumented, for the B6 tests: rebuild from `1b7f781887` (`./build.sh
-instrumented`) rather than use the pre-commit `-dirty` 21:44 one. A HardFault or an unhandled vector now
+Daily: `ak820pro-builds/out/via-daily-1b7f781887-20260922-225845.*` (flashed
+until the 2026-09-23 fault tests; lacks the lost-write fix above). A
+HardFault or an unhandled vector now
 writes a terminal record with the PC and the interrupted context, and a ChibiOS
 halt records its caller. The record's consecutive-reset count clears after 10
 healthy minutes, so three spread-out crashes can no longer switch the watchdog
@@ -86,34 +101,37 @@ file:line.
 
 ## Next
 
-1. **The DMA that never starts** (~5/h under hunt stress): now the root of the
-   hang and of the only 25 ms stalls left. Why does the SPI1->SPI0 transfer
-   sometimes not start after `Fire()`? Residue in SPI1's RX FIFO was tested and
-   ruled out on 2026-08-30 (`lcd_bus.c`, `spi1_raw_byte`). Watch
-   `blit_never_started` and `count_ge_25ms_nonflash` in the agent's history
-   under ORDINARY use first: that is the rate that matters.
-2. With the owner at the keyboard: flash the **instrumented** v7 build (rebuild
-   from `1b7f781887`) and run the plan's B6 checks -- `HC_FAULT` modes 1, 2, 3
-   and 5, each read with `ak820 health --crash`, each PC through
-   `scripts/symbolize.sh`, a cold reset after every second reset-causing test.
-   Mode 4 (lockup) last. Back up keymap and lighting FIRST while QMK runs (the
-   `~/Documents` files are stale: 2026-09-04). Then the daily v7 back.
-3. Secondary: the SPI0 ISR in chibios-contrib dispatches on the RAW
-   `RIS & 0x30` and its DMA handler clears every flag -- route on
-   `sn32_dma_busy`, clear only the DMA bits (patched submodule branch + gitlink).
-4. Bump `deps.lock` and push both repositories when this is released.
-5. Parked idea (taskmaster task 6): a QR code to the agent installer via a
+1. **Flash a daily build with the lost-write fix** and restore the agent.
+   The fix is `02db293696`; a daily at the branch tip, which adds the SPI0
+   fix, is built: `via-daily-32bb72aa53-20260923-132759.bin`.
+2. **The DMA that never starts** (~5/h under hunt stress): now the root of the
+   hang and of the only 25 ms stalls left. The running hunt collects the arm
+   timing (the once-a-minute `[lcd] arms=` console line, and the timeout lines' `cmd`/`fire`).
+   Residue in SPI1's RX FIFO was ruled out on 2026-08-30. Watch
+   `blit_never_started` in the agent's history under ORDINARY use too.
+3. **SPI0 ISR dispatch**: committed and pushed (`2a17a73b48` on
+   `ak820pro-patches`; gitlink in firmware `32bb72aa53`). It routes on
+   `sn32_dma_busy` and clears only the DMA flags it read, which closes a
+   lost-completion race and a FIFO interrupt that a stale DMA flag could
+   hijack. **Not yet run on hardware:** hunt it, then move `deps.lock`.
+4. Stress the untouched paths: wireless (`tx_timeouts` run at ~35–50% of
+   frames in the console just now), RTC I2C, Mac sleep/wake.
+5. Move `deps.lock` to `32bb72aa53` after the SPI0 fix's hunt (see above).
+6. Parked idea (taskmaster task 6): a QR code to the agent installer via a
    jqr.ca redirect.
-6. Still outstanding: **reboot the Mac** to prove the agent comes back on its
+7. Still outstanding: **reboot the Mac** to prove the agent comes back on its
    own after login.
 
 ## Repository notes
 
-Committed 2026-09-22 ~21:55, **not pushed**: firmware `1b7f781887` on
-`ak820pro-jdlien` in `qmk_firmware-ak820pro`; the agent, tooling and these
-documents in this repo. `deps.lock` still pins the firmware at `b89777e0f9`,
-as it did through the breadcrumbs work: bump it (and push the firmware
-branch first) when this is released. `.taskmaster/` stays untracked, as
+Pushed 2026-09-23 ~13:35, all three repositories. The firmware branch
+`ak820pro-jdlien` ends at `32bb72aa53`: `02db293696` is the lost-write fix
+and its test aids, and `32bb72aa53` moves the `lib/chibios-contrib` gitlink
+to `2a17a73b48` (`ak820pro-patches`), the SPI0 dispatch fix. **`deps.lock`
+pins `02db293696`**: v7 plus the lost-write fix, with the ChibiOS pin
+unchanged. That code is what the 13:01 hunt runs. The SPI0 fix has never run
+on hardware; move the pin to `32bb72aa53` once a hunt passes on it. The
+recovery bundle in `ak820pro-builds/` holds the new ChibiOS tip. `.taskmaster/` stays untracked, as
 before; it now holds task 6, the QR idea. The hunt's raw output stays in
 `~/Library/Logs/ak820pro/crash-hunt/`; a snapshot of the 21:18 evidence is in
 [`history/crash-hunt-2026-09-22/`](../history/crash-hunt-2026-09-22/).

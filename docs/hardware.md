@@ -317,6 +317,31 @@ main-loop scope. An asynchronous DMA transfer can outlive its starting scope.
 proof that the named operation caused the failure.** Uptime is the last pass's
 entry time, not the time of the watchdog reset (which occurs about 12 s later).
 
+**Terminal records (health v7, 2026-09-22):** a HardFault, an unhandled
+vector or a ChibiOS halt overwrites the record with its PC and the
+interrupted context (`hard_fault at pc 0x… in thread|irq N within <op>`);
+`scripts/symbolize.sh <pc> <build token>` turns the PC into file:line. All
+seven `HC_FAULT` modes were verified on hardware on 2026-09-23
+([plan](../plans/CRASH-HUNT-PLAN.md), "Third result"). Two facts about this
+part came out of that:
+
+- ⚠️ **The last SRAM write before a loop that never writes again is lost at
+  the watchdog reset.** It sits in a posted-write stage that only a later
+  *write* drains. Reads don't drain it, and neither does `DSB` (tried). Every
+  fault handler commits its record and then spins, so until
+  `commit_terminal()` got a sacrificial write after the magic, every record
+  written from a handler came back **invalid**. Anything written just before
+  a spin, reset or lockup needs the same treatment. An interrupts-on hang is
+  safe (interrupt stacking writes RAM constantly). An interrupts-off spin that
+  never writes is not: the ordinary breadcrumb's last store could name the
+  parent operation.
+- **The watchdog recovers a locked-up core.** A fault inside HardFault (mode
+  4) locked the M0 up, and the board was back in 12 s with its record
+  intact. A double fault does not need a cold power-off.
+
+Degraded mode is cleared by any reset that is not a watchdog reset: a cold
+power-off, or a flash (the bootloader leaves with a software reset).
+
 Host simulation: `cc -std=c11 -Wall -Wextra -Werror
 tests/watchdog_record_test.c -o /tmp/ak820-wdt-test && /tmp/ak820-wdt-test`.
 The instrumented firmware's existing `HC_STALL` hook records `test_stall`
@@ -326,9 +351,13 @@ hook is absent from daily builds.
 **Health channel** (`health.c`, raw HID channel `0x13`): `HC_GET` 28-byte
 counter snapshot (blit timeouts, loop-gap max, tx drops, rx malformed, …),
 `HC_CONN` (link state/slot/battery/flags + boot RSTST + stored/live RTC
-period). Instrumented builds add test hooks: `HC_STALL 0x7E` (wedge),
-`HC_INJECT 0x7D` (fake RX frames), `HC_TXTRACE 0x7C`, `HC_DRIVE 0x7B`
-(incl. RX mute). Host tools: `hostagent/ak820health.py`, `scripts/soak.py`,
+period). Instrumented builds add test hooks: `HC_FAULT 0x7F` (faults,
+modes 1–7), `HC_STALL 0x7E` (wedge), `HC_INJECT 0x7D` (fake RX frames),
+`HC_TXTRACE 0x7C`, `HC_DRIVE 0x7B` (incl. RX mute), `HC_BOOTLOADER 0x79`
+(jump to the bootloader, so a diagnostic flash needs no Fn+Esc) and
+`HC_PEEK 0x78` (read one RAM word). The last two stay out of daily builds
+on purpose: with them, any process on the host could reflash the keyboard
+or read its memory. Host tools: `hostagent/ak820health.py`, `scripts/soak.py`,
 `scripts/bt_faults.py` (18 assertions), `scripts/consolelog.sh`.
 
 **Raw-HID host gotchas that cost real time:**

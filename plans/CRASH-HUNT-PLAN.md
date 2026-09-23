@@ -4,18 +4,20 @@
 as it can about its cause, and then try to provoke one. This plan does not fix
 anything; it narrows where to look.
 
-**Status (2026-09-23, 09:05):** the hang is found and fixed, and the fix
-held for a ten-hour hunt (see "Second result"). Earlier status (2026-09-22,
+**Status (2026-09-23, 13:10):** the hang is found and fixed, and the fix
+held for a ten-hour hunt (see "Second result"). The fault recorder is
+validated on hardware, all seven test modes, after fixing a lost final write
+that voided every record written from a handler ("Third result"). Earlier
+status (2026-09-22,
 21:20): revised after the codex review
 ([review-codex-crash-hunt-2026-09-22.md](review-codex-crash-hunt-2026-09-22.md));
 dispositions at the end.
 
 - **Part A** — installed (signed agent, 21:05); writing `ak820-health.csv`.
-- **Part B** — implemented, not flashed. Host simulation passes under
-  ASan/UBSan; daily and instrumented builds pass the new handler checks
-  (`via-*-a2c3b1a4e1-dirty-20260922-2113*`). The agent and CLI decode it
-  (362 unit tests). An implementation review by codex is running. Hardware
-  validation (B6) needs the owner at the keyboard.
+- **Part B** — flashed (v7 daily, 2026-09-22 22:59) and validated on
+  hardware (B6, 2026-09-23, "Third result"). The daily build on the board
+  still lacks the lost-write fix, so a fault there would record as invalid;
+  flash the next daily to get it.
 - **Part C** — first hunt RUNNING since 21:05 on the v6 daily firmware, 12 h,
   `~/Library/Logs/ak820pro/crash-hunt/20260922-210530/`, agent paused for the
   run. Stop early with `pkill -INT -f crash_hunt.py` (restores and verifies
@@ -70,6 +72,60 @@ the root of both the hang and the only stalls left. Why does SPI1->SPI0 DMA
 sometimes not start after `Fire()`? `lcd_bus.c` already records that
 residue in SPI1's RX FIFO was tested and ruled out (2026-08-30). Secondary,
 still unaddressed: the SPI0 ISR's raw-RIS dispatch in chibios-contrib.
+
+## ✅ Third result: the fault recorder works, after one fix (2026-09-23)
+
+B6 on hardware. The first runs of modes 1 and 3 came back **invalid**:
+page 5 format 1, no site, reset flags `0x03`. Two new modes, 6 and 7, commit
+a record from thread context and then wedge, or then fault; both came back
+valid. That put the failure in committing from *inside* the handler. Adding
+probes to the handler made it vanish (3 of 3 valid), and removing them
+brought it back (3 of 3 invalid, polling or not, before or after the
+10-minute age-out). A build that only copies the raw retained words at boot
+(`WDT_BOOT_RAW`, instrumented builds, read with `HC_PEEK`) showed what was
+lost. The magic had been cleared, and count, path and PC were all written:
+**only the final `FAULT_MAGIC` store was missing**, every time.
+
+**Cause: on this part, the last SRAM write before a loop that never writes
+again does not survive the watchdog reset.** The handlers commit and then
+spin, or lock up. The write waits in a posted-write stage that only a later
+*write* drains. Reads don't drain it: the handler reads SRAM twice before it
+spins. Nor does `DSB`, which was tried, with the same result. With the probes
+in place the magic survived because a probe wrote after it, and the probe
+written last was lost instead. Commits from thread context survived because
+something wrote RAM afterwards (an interrupt's stacking, or the fault's own).
+
+**Fix:** one sacrificial write after the magic in `commit_terminal()`
+(`watchdog_record.c`). It covers HardFault, unhandled vectors and the
+ChibiOS halt hook at once, and that write is now the one lost.
+
+Results with the fix (modes 2, 3 and 5 on the experiment build
+`via-instrumented-a5a06614be-dirty-20260923-125320`, the rest on
+`…-125750`, token `0x0a8a1d5b`; the two have the same fault path):
+
+| mode | result |
+|---|---|
+| 1: `udf` in thread | `hard_fault at pc 0x964a in thread within test_fault`, which symbolizes to the `udf` (`hid_protocol.c:632`) |
+| 2: fault inside an ISR (the MSP path) | `hard_fault at pc 0x8fa4 in irq 4`, which symbolizes to `Vector50` (`hid_protocol.c:450`) |
+| 3: unhandled vector | `unhandled_exception in irq 3` (I2S0) |
+| 4: fault inside HardFault, so lockup | **the watchdog recovers a locked-up core**: back in 12 s, record intact |
+| 5: deep stack | main-thread free stack 1264 → 832 bytes |
+| 6, 7: commit from thread context | valid (`halt`, PC `0xcafe0006` / `0xcafe0007`) |
+
+Degraded mode engaged at the third consecutive reset (after mode 2), as
+designed, and the next flash (a software reset) cleared the count.
+
+**Where else the property can bite.** The ordinary breadcrumbs are exposed
+only to a hang that spins with interrupts off and never writes RAM. There,
+the last `watchdog_record_enter()` store could be lost, and the record would
+name the parent operation instead. Every hang seen so far ran with interrupts
+on: the LED ISR alone stacks about 3,900 times a second. Left as is, and
+recorded in [docs/hardware.md](../docs/hardware.md).
+
+Test-build aids added on the way, instrumented builds only: `HC_BOOTLOADER`
+(`0x79`) jumps to the bootloader so a diagnostic flash needs no Fn+Esc, and
+`HC_PEEK` (`0x78`) reads one RAM word. Neither is in the daily build: either
+would let any process on the host reflash the keyboard or read its memory.
 
 ## What we know
 
