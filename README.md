@@ -126,6 +126,17 @@ For the other panel revision:
 `USE_LIBUSB=1`, which `setup.sh` does. A plain build compiles, runs, and
 prints the same version banner — then fails to flash on Tahoe.
 
+## Notifications (Linux host)
+
+<img src="assets-src/notify/claude-octopus-preview.gif" width="160" align="right" alt="the octopus, hopping">
+
+`hostagent/ak820notify.py` lights the board up and puts text or a GIF on the
+LCD — over the cable, **or over BT/2.4G**, where the only host-to-board path
+is the keyboard-LED report, so the message travels as Num Lock / Scroll Lock
+toggles. A full-screen page stays until you press a key. With the Claude Code
+hook the octopus hops when a turn finishes. Setup, protocol and measurements:
+[docs/notify.md](docs/notify.md).
+
 ## The host agents (clock sync + now playing)
 
 Two small background agents, on both macOS and Windows:
@@ -361,7 +372,7 @@ it to take effect.
 
 | Path | What |
 |---|---|
-| [`docs/`](docs/) | The six topic docs — wireless, display, fonts/assets, clock, LEDs, hardware. Read the one for what you are touching. |
+| [`docs/`](docs/) | The seven topic docs — wireless, display, fonts/assets, clock, LEDs, hardware, notify. Read the one for what you are touching. |
 | [`hostagent/`](hostagent/) | Clock sync, now-playing, keymap backup, health counters |
 | [`ak820-agent/`](ak820-agent/) | **In progress** — Rust rewrite of the two Windows host agents as one daemon. The HID transport, the now-playing half and the clock *read* are done and audited; the clock *transaction*, the daemon and the installer are not. **Not yet shipped — use `hostagent/`** |
 | [`assets-src/`](assets-src/) | Font atlas and splash generators |
