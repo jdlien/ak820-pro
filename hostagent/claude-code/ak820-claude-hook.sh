@@ -15,7 +15,9 @@
 #                                "Permission / <tool>" page as a reminder
 #   UserPromptSubmit, PostToolUse, PostToolUseFailure, PermissionDenied,
 #   SessionEnd                   you are back at the computer: abort a question
-#                                still waiting on the board, or close the page
+#                                still waiting on the board, or close the page --
+#                                only for events from the SAME session, and for
+#                                tool events only the tool that was waiting
 #
 # Reads the hook JSON on stdin; needs jq. Never fails. Sends are serialised
 # with flock -- two frames interleaved on the LED channel corrupt each other.
@@ -42,7 +44,17 @@ mkdir -p "$(dirname "$LOG")"
 input=$(cat)
 ev=$(jq -r '.hook_event_name // empty' <<<"$input" 2>/dev/null)
 proj=$(basename "$(jq -r '.cwd // empty' <<<"$input" 2>/dev/null)")
+sid=$(jq -r '.session_id // empty' <<<"$input" 2>/dev/null)
 nl=$'\n'
+# Who owns the open page and the waiting question: only the same session may
+# close them. Without this, a second Claude Code session (or a parallel tool
+# call in this one) finishing a tool aborted every pending question -- you
+# pressed Enter on a board that had already stopped listening.
+PAGE_OWNER=$HOME/.cache/ak820notify.page.owner   # session_id
+ASK_CTX=$HOME/.cache/ak820notify.ask.ctx         # session_id and tool fingerprint
+# Fingerprint of a tool call, to recognise the PostToolUse of the very tool
+# whose permission was asked (i.e. it was answered in the terminal).
+toolkey() { jq -cS '{t: .tool_name, i: .tool_input}' <<<"$input" 2>/dev/null | sha1sum | cut -c1-16; }
 
 log() { echo "$(date '+%F %T') $*" >>"$LOG"; }
 
@@ -57,6 +69,7 @@ bg() {   # background, serialised
 
 case "$ev" in
   Stop)
+    echo "$sid" > "$PAGE_OWNER"
     bg send "Claude" "finished${proj:+$nl$proj}" --page --gif 1 --color orange --effect breathe --dur until
     ;;
 
@@ -67,17 +80,25 @@ case "$ev" in
     if [ -e "$c" ] && [ $(( $(date +%s) - $(stat -c %Y "$c") )) -lt 15 ]; then rm -f "$c"; exit 0; fi
     msg=$(jq -r '.message // empty' <<<"$input")
     tool=$(sed -nE 's/.*permission to use (.*)$/\1/p' <<<"$msg")   # "...permission to use Bash"
+    echo "$sid" > "$PAGE_OWNER"
     bg send "Permission" "${tool:-$msg}${proj:+$nl$proj}" --page --color yellow --effect blink --dur until
     ;;
 
   UserPromptSubmit|PostToolUse|PostToolUseFailure|PermissionDenied|SessionEnd)
     # A question still waiting on the board but answered here: abort it (it
     # closes its own page and releases the lock).
+    # Same session only; for tool events, only the tool that was waiting.
     pidf=$HOME/.cache/ak820notify.ask.pid
     if [ -s "$pidf" ] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
+      read -r asid akey 2>/dev/null <"$ASK_CTX"
+      [ "$sid" = "$asid" ] || exit 0
+      case "$ev" in
+        PostToolUse|PostToolUseFailure|PermissionDenied) [ "$(toolkey)" = "$akey" ] || exit 0 ;;
+      esac
       kill -TERM "$(cat "$pidf")" 2>/dev/null; log "$ev aborts the question"; exit 0
     fi
     [ -e "$HOME/.cache/ak820notify.page" ] || exit 0   # nothing open: no traffic
+    [ "$sid" = "$(cat "$PAGE_OWNER" 2>/dev/null)" ] || exit 0   # another session's page
     bg close --if-open
     ;;
 
@@ -100,6 +121,7 @@ case "$ev" in
       detail=${detail//$'\n'/ }
       args=(ask "Permission" "$tool" "${detail:0:12}" --permission --color yellow --effect blink)
     fi
+    echo "$sid $(toolkey)" > "$ASK_CTX"
     # Synchronous: Claude Code waits for the decision. The lock is held for
     # the whole wait so nothing else interleaves on the LEDs.
     ans=$( { flock -w 30 9 || exit 0; "${NOTIFY[@]}" "${args[@]}" 2>>"$LOG"; } 9>"$LOCK" )

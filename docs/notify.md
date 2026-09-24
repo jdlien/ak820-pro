@@ -199,7 +199,11 @@ header):
   a reminder page, skipped if you just cancelled on the board.
 - **UserPromptSubmit / PostToolUse / PostToolUseFailure / PermissionDenied /
   SessionEnd** — you are back: a question still waiting on the board is
-  aborted, an open page is closed.
+  aborted, an open page is closed. Only events from the **same session**
+  count, and a tool event only if it is the very tool whose permission was
+  asked. The first version reacted to any of them: a second Claude Code
+  session, or a parallel tool call finishing, aborted the question a second
+  before you pressed Enter on a board that was no longer listening.
 
 Everything else runs in the background and is serialised with `flock`, so
 two frames never interleave on the LEDs.
