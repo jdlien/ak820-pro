@@ -17,7 +17,7 @@ is still unexplained. Measurements are from hardware unless marked otherwise.
   `SN32_SPI0_HANDLER`). Submodule branch `ak820pro-patches`. The reverted
   dispatch patch is commit `2a17a73b48` there (`git show 2a17a73b48`).
 - `lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/UART/hal_serial_lld.c`
-  (fix in `c3ca7a9725`), `.../USB/hal_usb_lld.c`,
+  (fix in `a3fdffe26d`), `.../USB/hal_usb_lld.c`,
   `.../SN32F290/hal_efl_lld.c`.
 - `keyboards/a_jazz/ak820pro/graphics/display.c`: the glyph queue and clock
   band (`draw_clock`, `queue_line`, the pump).
@@ -208,7 +208,7 @@ Toggled at run time on one build (`HC_EXPERIMENT`):
 - bit 1: draw a 660-byte glyph as two 330-byte halves (same source,
   different length).
 
-## C. SN32 serial LLD: lock nesting that could swap bytes (fixed locally, `c3ca7a9725`, not yet hunted)
+## C. SN32 serial LLD: lock nesting that could swap bytes (fixed, `a3fdffe26d`)
 
 `load()` in `hal_serial_lld.c` is only ever the output queue's notify
 callback. `oqPutTimeout()` and `oqWriteTimeout()` call it with the system
@@ -285,7 +285,7 @@ Main-loop waits with no bound:
 
 ## Resolution and review dispositions (2026-09-23, 15:50)
 
-Codex (`gpt-6-astra`, reasoning effort high) reviewed this brief:
+Codex (`gpt-6-astra`, reasoning effort high) reviewed this brief. Its `c3ca7a9725` is the serial fix before an amend that restored CRLF line endings; the branch carries it as `a3fdffe26d`, same change:
 [`review-codex-firmware-findings-2026-09-23.md`](review-codex-firmware-findings-2026-09-23.md).
 
 ### B is explained: the half-transfer handler erases a completion that races it
@@ -343,7 +343,7 @@ raised their own interrupt a moment later.
 | 5 | The snapshot is ISR-exclusive, not hardware-atomic | Accepted; affects diagnostics only. **Open** |
 | 6 | Mode transitions skip the FRESET required by CTRL0 note 1; hand-back leaves SPI0 RX residue for the FIFO handler | Accepted as hygiene. The junk interrupt tail-chains before the thread resumes, so no premature completion was found in practice. FRESET at hand-back is **open**, as is the `HC_EXPERIMENT` bit-0 test |
 | 7 | Completion ISR's 200,000-iteration drain succeeds silently when exhausted | Accepted. **Open** (count it) |
-| 8 | Serial fix `c3ca7a9725` correct for its scope; OE not counted; unbounded ISR loop | Fix kept; OE counting **open** |
+| 8 | Serial fix `a3fdffe26d` correct for its scope; OE not counted; unbounded ISR loop | Fix kept; OE counting **open** |
 | 9 | USB `usb_lld_start_in()` has the same unlock-inside-lock | **Fixed** (`c212e20dd2`, firmware `303db5b608`); in build E5 |
 | 10 | CH582F pump retransmits before draining RX; a late duplicate ACK pops the next frame | **Fixed**: the pump now runs after the RX drain (uncommitted, in E5). No sequence number exists in the protocol, so the reorder is the mitigation |
 | 11 | ACK latency is measured at parse time, not arrival | Accepted; the histogram is an upper bound |

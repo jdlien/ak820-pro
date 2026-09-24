@@ -4,10 +4,12 @@
 as it can about its cause, and then try to provoke one. This plan does not fix
 anything; it narrows where to look.
 
-**Status (2026-09-23, 13:10):** the hang is found and fixed, and the fix
+**Status (2026-09-23, 19:05):** the hang is found and fixed, and the fix
 held for a ten-hour hunt (see "Second result"). The fault recorder is
 validated on hardware, all seven test modes, after fixing a lost final write
-that voided every record written from a handler ("Third result"). Earlier
+that voided every record written from a handler ("Third result"). The DMA
+"never-start" is found and fixed: a lost completion ("Sixth result"). The
+final daily of the campaign is on a ten-hour overnight hunt. Earlier
 status (2026-09-22,
 21:20): revised after the codex review
 ([review-codex-crash-hunt-2026-09-22.md](review-codex-crash-hunt-2026-09-22.md));
@@ -148,6 +150,32 @@ dispatch gave none in ten hours of the same stress. Reverted in both
 repositories (`bf9310ca84`, firmware `7302fc1393`). `deps.lock` had never
 moved to it. The two hazards remain open; the mechanism is being captured
 on an instrumented build of the fix before anything is retried.
+
+## ✅ Sixth result: the never-start is a lost completion, fixed (2026-09-23)
+
+`CURCNT` instrumentation (E3) showed each "never started" clock digit had
+in fact completed:
+- `CURCNT` was full;
+- `DMAEN` had been cleared by the hardware;
+- no flag was pending, and the completion callback never ran.
+
+`DMACNT`, which the classifier had trusted, never counts down. The
+half-transfer handler read `RIS` and then cleared every flag, so a DMATCIF
+raised between those two instructions was lost.
+
+A Codex review
+([review-codex-firmware-findings-2026-09-23.md](review-codex-firmware-findings-2026-09-23.md))
+pointed out that the LED row ISR shares SPI0's priority. That supplies the
+size selectivity: the handler runs when the next row ISR ends, 188–258 µs
+after the arm, and only a ~660-byte transfer completes inside that span.
+
+Fixed in ChibiOS `c57623d0d2`: clear only what was read, then re-check
+DMATCIF and DMAEN. E5 ran 3 hours and 580,060 blits with **0 timeouts**,
+and rescues fell only on the 660- and 672-byte transfers that the model
+predicts. Details:
+[FIRMWARE-FINDINGS-2026-09-23.md](FIRMWARE-FINDINGS-2026-09-23.md).
+Evidence:
+[`history/crash-hunt-2026-09-23-lost-completion/`](../history/crash-hunt-2026-09-23-lost-completion/).
 
 Test-build aids added on the way, instrumented builds only: `HC_BOOTLOADER`
 (`0x79`) jumps to the bootloader so a diagnostic flash needs no Fn+Esc, and

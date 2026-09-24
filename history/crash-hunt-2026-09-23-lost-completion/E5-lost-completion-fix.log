@@ -1,0 +1,925 @@
+15:51:12 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 1 2 1 0 0 1 0 1 1 0 0 0 4 | max=30448us retried=4 orphan=0
+15:51:13 AJAZZ:AK820 PRO:1: [lcd] arms=2364 slow_cmd=201 slow_fire=0 never=0 busy=0
+15:51:13 AJAZZ:AK820 PRO:1: [lcd] tc: full=2364 short=0 (last 0/0) arms_cur_stale=2363
+15:51:13 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:51:13 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:26/0/0 624:1/0/0 7424:1/0/0 660:130/0/6 5632:1/0/0 460:212/0/0 5060:3/0/0 920:1/0/0 3584:3/0/0 168:1914/0/0 840:7/0/0 672:5/0/0 other:55/0/0
+15:52:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 5 3 0 0 1 0 1 1 0 0 1 9 | max=30448us retried=10 orphan=0
+15:52:13 AJAZZ:AK820 PRO:1: [lcd] arms=5846 slow_cmd=453 slow_fire=1 never=0 busy=0
+15:52:13 AJAZZ:AK820 PRO:1: [lcd] tc: full=5846 short=0 (last 0/0) arms_cur_stale=5845
+15:52:13 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:52:13 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:58/0/0 624:1/0/0 7424:1/0/0 660:272/0/8 5632:1/0/0 460:458/0/0 5060:5/0/0 920:1/0/0 3584:9/0/0 168:4865/0/0 840:17/0/0 672:12/0/0 other:141/0/0
+15:53:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 3 8 5 0 0 1 0 1 1 0 0 3 13 | max=30448us retried=16 orphan=0
+15:53:13 AJAZZ:AK820 PRO:1: [lcd] arms=9246 slow_cmd=739 slow_fire=2 never=0 busy=0
+15:53:13 AJAZZ:AK820 PRO:1: [lcd] tc: full=9246 short=0 (last 0/0) arms_cur_stale=9245
+15:53:13 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:53:13 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:90/0/0 624:1/0/0 7424:1/0/0 660:414/0/10 5632:1/0/0 460:692/0/0 5060:7/0/0 920:1/0/0 3584:15/0/0 168:7737/0/0 840:34/0/0 672:18/0/0 other:230/0/0
+15:54:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 3 11 7 1 0 1 0 1 1 0 0 3 19 | max=30448us retried=22 orphan=0
+15:54:13 AJAZZ:AK820 PRO:1: [lcd] arms=12653 slow_cmd=990 slow_fire=4 never=0 busy=0
+15:54:13 AJAZZ:AK820 PRO:1: [lcd] tc: full=12653 short=0 (last 0/0) arms_cur_stale=12652
+15:54:13 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:54:13 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:122/0/0 624:1/0/0 7424:1/0/0 660:556/0/14 5632:1/0/0 460:935/0/0 5060:10/0/0 920:1/0/0 3584:20/0/0 168:10612/0/0 840:44/0/0 672:26/0/0 other:319/0/0
+15:55:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 5 11 9 1 1 1 0 1 2 0 0 4 24 | max=31126us retried=28 orphan=0
+15:55:13 AJAZZ:AK820 PRO:1: [lcd] arms=15995 slow_cmd=1262 slow_fire=5 never=0 busy=0
+15:55:13 AJAZZ:AK820 PRO:1: [lcd] tc: full=15995 short=0 (last 0/0) arms_cur_stale=15994
+15:55:13 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:55:13 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:156/0/0 624:1/0/0 7424:1/0/0 660:698/0/17 5632:1/0/0 460:1197/0/0 5060:12/0/0 920:1/0/0 3584:25/0/0 168:13403/0/0 840:51/0/0 672:33/0/0 other:411/0/0
+15:56:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 6 13 11 2 1 1 0 1 2 0 0 5 29 | max=31126us retried=34 orphan=0
+15:56:14 AJAZZ:AK820 PRO:1: [lcd] arms=19291 slow_cmd=1539 slow_fire=7 never=0 busy=0
+15:56:14 AJAZZ:AK820 PRO:1: [lcd] tc: full=19291 short=0 (last 0/0) arms_cur_stale=19290
+15:56:14 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:56:14 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:189/0/0 624:1/0/0 7424:1/0/0 660:840/0/21 5632:1/0/0 460:1455/0/0 5060:14/0/0 920:1/0/0 3584:30/0/0 168:16157/0/0 840:57/0/0 672:43/0/0 other:497/0/0
+15:57:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 8 15 11 2 2 1 0 1 3 0 0 5 35 | max=31126us retried=40 orphan=0
+15:57:14 AJAZZ:AK820 PRO:1: [lcd] arms=22536 slow_cmd=1792 slow_fire=7 never=0 busy=0
+15:57:14 AJAZZ:AK820 PRO:1: [lcd] tc: full=22536 short=0 (last 0/0) arms_cur_stale=22535
+15:57:14 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:57:14 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:223/0/0 624:1/0/0 7424:1/0/0 660:982/0/27 5632:1/0/0 460:1730/0/0 5060:17/0/0 920:1/0/0 3584:35/0/0 168:18837/0/0 840:62/0/0 672:49/0/0 other:592/0/0
+15:58:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 10 16 13 2 2 1 0 1 3 0 0 5 42 | max=31126us retried=47 orphan=0
+15:58:14 AJAZZ:AK820 PRO:1: [lcd] arms=25728 slow_cmd=2011 slow_fire=7 never=0 busy=0
+15:58:14 AJAZZ:AK820 PRO:1: [lcd] tc: full=25728 short=0 (last 0/0) arms_cur_stale=25727
+15:58:14 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:58:14 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:256/0/0 624:1/0/0 7424:1/0/0 660:1124/0/29 5632:1/0/0 460:1989/0/0 5060:19/0/0 920:1/0/0 3584:40/0/0 168:21481/0/0 840:72/0/0 672:58/0/0 other:680/0/0
+15:59:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 11 17 14 4 2 1 0 1 4 0 0 5 48 | max=31126us retried=53 orphan=0
+15:59:14 AJAZZ:AK820 PRO:1: [lcd] arms=29053 slow_cmd=2292 slow_fire=7 never=0 busy=0
+15:59:14 AJAZZ:AK820 PRO:1: [lcd] tc: full=29053 short=0 (last 0/0) arms_cur_stale=29052
+15:59:14 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:59:14 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:289/0/0 624:1/0/0 7424:1/0/0 660:1266/0/29 5632:1/0/0 460:2234/0/0 5060:21/0/0 920:1/0/0 3584:45/0/0 168:24263/0/0 840:88/0/0 672:72/0/0 other:766/0/0
+16:00:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 13 18 16 4 2 1 0 1 4 1 0 5 54 | max=31126us retried=59 orphan=0
+16:00:14 AJAZZ:AK820 PRO:1: [lcd] arms=32406 slow_cmd=2593 slow_fire=8 never=0 busy=0
+16:00:14 AJAZZ:AK820 PRO:1: [lcd] tc: full=32406 short=0 (last 0/0) arms_cur_stale=32405
+16:00:14 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:00:14 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:322/0/0 624:1/0/0 7424:1/0/0 660:1408/0/31 5632:1/0/0 460:2497/0/0 5060:24/0/0 920:1/0/0 3584:50/0/0 168:27061/0/0 840:100/0/0 672:84/0/0 other:851/0/0
+16:01:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 13 20 20 4 2 1 0 1 4 1 0 6 59 | max=31126us retried=65 orphan=0
+16:01:15 AJAZZ:AK820 PRO:1: [lcd] arms=35509 slow_cmd=2853 slow_fire=9 never=0 busy=0
+16:01:15 AJAZZ:AK820 PRO:1: [lcd] tc: full=35509 short=0 (last 0/0) arms_cur_stale=35508
+16:01:15 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:01:15 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:355/0/0 624:1/0/0 7424:1/0/0 660:1550/0/33 5632:1/0/0 460:2753/0/0 5060:26/0/0 920:1/0/0 3584:55/0/0 168:29614/0/0 840:107/0/0 672:95/0/0 other:945/0/0
+16:02:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 14 23 22 4 2 1 0 1 4 1 1 6 64 | max=31126us retried=71 orphan=0
+16:02:15 AJAZZ:AK820 PRO:1: [lcd] arms=38717 slow_cmd=3102 slow_fire=11 never=0 busy=0
+16:02:15 AJAZZ:AK820 PRO:1: [lcd] tc: full=38717 short=0 (last 0/0) arms_cur_stale=38716
+16:02:15 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:02:15 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:388/0/0 624:1/0/0 7424:1/0/0 660:1692/0/35 5632:1/0/0 460:2999/0/0 5060:28/0/0 920:1/0/0 3584:60/0/0 168:32286/0/0 840:117/0/0 672:102/0/0 other:1036/0/0
+16:03:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 15 27 23 4 2 1 0 1 4 1 1 6 70 | max=31126us retried=77 orphan=0
+16:03:15 AJAZZ:AK820 PRO:1: [lcd] arms=42061 slow_cmd=3367 slow_fire=11 never=0 busy=0
+16:03:15 AJAZZ:AK820 PRO:1: [lcd] tc: full=42061 short=0 (last 0/0) arms_cur_stale=42060
+16:03:15 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:03:15 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:421/0/0 624:1/0/0 7424:1/0/0 660:1834/0/41 5632:1/0/0 460:3262/0/0 5060:31/0/0 920:1/0/0 3584:65/0/0 168:35080/0/0 840:122/0/0 672:110/0/0 other:1127/0/0
+16:04:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 15 30 25 4 3 1 0 1 4 1 1 6 76 | max=31126us retried=83 orphan=0
+16:04:15 AJAZZ:AK820 PRO:1: [lcd] arms=45407 slow_cmd=3608 slow_fire=11 never=0 busy=0
+16:04:15 AJAZZ:AK820 PRO:1: [lcd] tc: full=45407 short=0 (last 0/0) arms_cur_stale=45406
+16:04:15 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:04:15 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:454/0/0 624:1/0/0 7424:1/0/0 660:1976/0/44 5632:1/0/0 460:3521/0/0 5060:33/0/0 920:1/0/0 3584:70/0/0 168:37881/0/0 840:137/0/0 672:122/0/0 other:1204/0/0
+16:05:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 16 32 28 4 3 1 0 1 4 1 1 6 82 | max=31126us retried=89 orphan=0
+16:05:15 AJAZZ:AK820 PRO:1: [lcd] arms=48531 slow_cmd=3882 slow_fire=12 never=0 busy=0
+16:05:15 AJAZZ:AK820 PRO:1: [lcd] tc: full=48531 short=0 (last 0/0) arms_cur_stale=48530
+16:05:15 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:05:15 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:487/0/0 624:1/0/0 7424:1/0/0 660:2118/0/47 5632:1/0/0 460:3764/0/0 5060:35/0/0 920:1/0/0 3584:75/0/0 168:40482/0/0 840:146/0/0 672:128/0/0 other:1287/0/0
+16:06:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 16 36 30 4 3 1 0 1 4 1 1 6 88 | max=31126us retried=95 orphan=0
+16:06:16 AJAZZ:AK820 PRO:1: [lcd] arms=51578 slow_cmd=4120 slow_fire=12 never=0 busy=0
+16:06:16 AJAZZ:AK820 PRO:1: [lcd] tc: full=51578 short=0 (last 0/0) arms_cur_stale=51577
+16:06:16 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:06:16 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:520/0/0 624:1/0/0 7424:1/0/0 660:2260/0/50 5632:1/0/0 460:4028/0/0 5060:38/0/0 920:1/0/0 3584:80/0/0 168:42981/0/0 840:155/0/0 672:131/0/0 other:1376/0/0
+16:07:13 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 17 36 32 5 5 1 0 1 4 1 1 6 94 | max=31126us retried=101 orphan=0
+16:07:16 AJAZZ:AK820 PRO:1: [lcd] arms=54942 slow_cmd=4382 slow_fire=12 never=0 busy=0
+16:07:16 AJAZZ:AK820 PRO:1: [lcd] tc: full=54942 short=0 (last 0/0) arms_cur_stale=54941
+16:07:16 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:07:16 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:554/0/0 624:1/0/0 7424:1/0/0 660:2410/0/52 5632:1/0/0 460:4282/0/0 5060:40/0/0 920:1/0/0 3584:86/0/0 168:45799/0/0 840:164/0/0 672:132/0/0 other:1466/0/0
+16:08:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 17 37 33 8 5 1 1 1 4 1 1 7 99 | max=31126us retried=107 orphan=0
+16:08:16 AJAZZ:AK820 PRO:1: [lcd] arms=58289 slow_cmd=4693 slow_fire=13 never=0 busy=0
+16:08:16 AJAZZ:AK820 PRO:1: [lcd] tc: full=58289 short=0 (last 0/0) arms_cur_stale=58288
+16:08:16 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:08:16 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:587/0/0 624:1/0/0 7424:1/0/0 660:2552/0/52 5632:1/0/0 460:4525/0/0 5060:42/0/0 920:1/0/0 3584:91/0/0 168:48612/0/0 840:175/0/0 672:146/0/0 other:1550/0/0
+16:09:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 18 39 34 9 5 1 1 2 4 1 1 7 105 | max=31126us retried=113 orphan=0
+16:09:16 AJAZZ:AK820 PRO:1: [lcd] arms=61473 slow_cmd=4966 slow_fire=13 never=0 busy=0
+16:09:16 AJAZZ:AK820 PRO:1: [lcd] tc: full=61473 short=0 (last 0/0) arms_cur_stale=61472
+16:09:16 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:09:16 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:620/0/0 624:1/0/0 7424:1/0/0 660:2694/0/53 5632:1/0/0 460:4789/0/0 5060:45/0/0 920:1/0/0 3584:96/0/0 168:51242/0/0 840:184/0/0 672:159/0/0 other:1635/0/0
+16:10:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 19 39 36 9 7 1 1 2 4 1 1 7 112 | max=31126us retried=120 orphan=0
+16:10:16 AJAZZ:AK820 PRO:1: [lcd] arms=64783 slow_cmd=5268 slow_fire=14 never=0 busy=0
+16:10:16 AJAZZ:AK820 PRO:1: [lcd] tc: full=64783 short=0 (last 0/0) arms_cur_stale=64782
+16:10:16 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:10:16 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:653/0/0 624:1/0/0 7424:1/0/0 660:2835/0/54 5632:1/0/0 460:5043/0/0 5060:47/0/0 920:1/0/0 3584:101/0/0 168:54012/0/0 840:188/0/0 672:169/0/0 other:1726/0/0
+16:11:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 19 40 37 12 8 1 1 2 4 1 1 8 117 | max=31126us retried=126 orphan=0
+16:11:17 AJAZZ:AK820 PRO:1: [lcd] arms=68060 slow_cmd=5582 slow_fire=14 never=0 busy=0
+16:11:17 AJAZZ:AK820 PRO:1: [lcd] tc: full=68060 short=0 (last 0/0) arms_cur_stale=68059
+16:11:17 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:11:17 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:686/0/0 624:1/0/0 7424:1/0/0 660:2977/0/60 5632:1/0/0 460:5286/0/0 5060:49/0/0 920:1/0/0 3584:106/0/0 168:56756/0/0 840:196/0/0 672:177/0/0 other:1818/0/0
+16:12:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 19 43 38 13 8 1 1 2 5 1 1 8 123 | max=31126us retried=132 orphan=0
+16:12:17 AJAZZ:AK820 PRO:1: [lcd] arms=71388 slow_cmd=5897 slow_fire=16 never=0 busy=0
+16:12:17 AJAZZ:AK820 PRO:1: [lcd] tc: full=71388 short=0 (last 0/0) arms_cur_stale=71387
+16:12:17 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:12:17 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:720/0/0 624:1/0/0 7424:1/0/0 660:3117/0/63 5632:1/0/0 460:5572/0/0 5060:52/0/0 920:1/0/0 3584:111/0/0 168:59511/0/0 840:210/0/0 672:185/0/0 other:1901/0/0
+16:13:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 19 43 43 14 8 1 1 2 5 1 1 8 129 | max=31126us retried=138 orphan=0
+16:13:17 AJAZZ:AK820 PRO:1: [lcd] arms=74577 slow_cmd=6176 slow_fire=16 never=0 busy=0
+16:13:17 AJAZZ:AK820 PRO:1: [lcd] tc: full=74577 short=0 (last 0/0) arms_cur_stale=74576
+16:13:17 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:13:17 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:753/0/0 624:1/0/0 7424:1/0/0 660:3260/0/65 5632:1/0/0 460:5826/0/0 5060:54/0/0 920:1/0/0 3584:116/0/0 168:62160/0/0 840:219/0/0 672:199/0/1 other:1981/0/0
+16:14:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 19 43 49 14 8 1 1 2 5 1 1 8 135 | max=31126us retried=144 orphan=0
+16:14:17 AJAZZ:AK820 PRO:1: [lcd] arms=77876 slow_cmd=6482 slow_fire=16 never=0 busy=0
+16:14:17 AJAZZ:AK820 PRO:1: [lcd] tc: full=77876 short=0 (last 0/0) arms_cur_stale=77875
+16:14:17 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:14:17 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:786/0/0 624:1/0/0 7424:1/0/0 660:3400/0/67 5632:1/0/0 460:6068/0/0 5060:56/0/0 920:1/0/0 3584:121/0/0 168:64935/0/0 840:229/0/0 672:207/0/1 other:2065/0/0
+16:15:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 20 44 52 15 8 1 1 2 5 1 1 8 141 | max=31126us retried=150 orphan=0
+16:15:17 AJAZZ:AK820 PRO:1: [lcd] arms=81080 slow_cmd=6772 slow_fire=16 never=0 busy=0
+16:15:17 AJAZZ:AK820 PRO:1: [lcd] tc: full=81080 short=0 (last 0/0) arms_cur_stale=81079
+16:15:17 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:15:17 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:819/0/0 624:1/0/0 7424:1/0/0 660:3542/0/69 5632:1/0/0 460:6332/0/0 5060:59/0/0 920:1/0/0 3584:126/0/0 168:67588/0/0 840:240/0/0 672:215/0/1 other:2150/0/0
+16:16:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 21 45 55 15 8 1 1 2 5 1 1 8 148 | max=32150us retried=156 orphan=0
+16:16:18 AJAZZ:AK820 PRO:1: [lcd] arms=84253 slow_cmd=7069 slow_fire=17 never=0 busy=0
+16:16:18 AJAZZ:AK820 PRO:1: [lcd] tc: full=84253 short=0 (last 0/0) arms_cur_stale=84252
+16:16:18 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:16:18 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:852/0/0 624:1/0/0 7424:1/0/0 660:3684/0/70 5632:1/0/0 460:6590/0/0 5060:61/0/0 920:1/0/0 3584:131/0/0 168:70209/0/0 840:255/0/0 672:225/0/2 other:2237/0/0
+16:17:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 23 45 55 17 9 1 1 2 6 1 1 8 154 | max=32150us retried=162 orphan=0
+16:17:18 AJAZZ:AK820 PRO:1: [lcd] arms=87712 slow_cmd=7331 slow_fire=17 never=0 busy=0
+16:17:18 AJAZZ:AK820 PRO:1: [lcd] tc: full=87712 short=0 (last 0/0) arms_cur_stale=87711
+16:17:18 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:17:18 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:886/0/0 624:1/0/0 7424:1/0/0 660:3820/0/72 5632:1/0/0 460:6845/0/0 5060:63/0/0 920:1/0/0 3584:136/0/0 168:73133/0/0 840:266/0/0 672:234/0/2 other:2320/0/0
+16:18:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 24 49 56 17 9 1 1 2 6 1 1 8 160 | max=32150us retried=168 orphan=0
+16:18:18 AJAZZ:AK820 PRO:1: [lcd] arms=90898 slow_cmd=7575 slow_fire=19 never=0 busy=0
+16:18:18 AJAZZ:AK820 PRO:1: [lcd] tc: full=90898 short=0 (last 0/0) arms_cur_stale=90897
+16:18:18 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:18:18 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:919/0/0 624:1/0/0 7424:1/0/0 660:3953/0/72 5632:1/0/0 460:7111/0/0 5060:66/0/0 920:1/0/0 3584:141/0/0 168:75775/0/0 840:277/0/0 672:242/0/2 other:2405/0/0
+16:19:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 24 51 58 17 11 1 1 2 6 1 2 8 165 | max=32150us retried=174 orphan=0
+16:19:18 AJAZZ:AK820 PRO:1: [lcd] arms=94087 slow_cmd=7841 slow_fire=19 never=0 busy=0
+16:19:18 AJAZZ:AK820 PRO:1: [lcd] tc: full=94087 short=0 (last 0/0) arms_cur_stale=94086
+16:19:18 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:19:18 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:952/0/0 624:1/0/0 7424:1/0/0 660:4089/0/74 5632:1/0/0 460:7362/0/0 5060:68/0/0 920:1/0/0 3584:146/0/0 168:78423/0/0 840:284/0/0 672:254/0/2 other:2500/0/0
+16:20:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 24 54 60 17 12 1 1 2 6 1 2 11 168 | max=32150us retried=180 orphan=0
+16:20:18 AJAZZ:AK820 PRO:1: [lcd] arms=97321 slow_cmd=8129 slow_fire=19 never=0 busy=0
+16:20:18 AJAZZ:AK820 PRO:1: [lcd] tc: full=97321 short=0 (last 0/0) arms_cur_stale=97320
+16:20:18 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:20:18 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:985/0/0 624:1/0/0 7424:1/0/0 660:4221/0/77 5632:1/0/0 460:7605/0/0 5060:70/0/0 920:1/0/0 3584:151/0/0 168:81132/0/0 840:293/0/0 672:265/0/2 other:2590/0/0
+16:21:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 24 57 62 18 12 1 1 2 6 1 2 11 174 | max=32150us retried=186 orphan=0
+16:21:19 AJAZZ:AK820 PRO:1: [lcd] arms=100425 slow_cmd=8374 slow_fire=20 never=0 busy=0
+16:21:19 AJAZZ:AK820 PRO:1: [lcd] tc: full=100425 short=0 (last 0/0) arms_cur_stale=100424
+16:21:19 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:21:19 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1018/0/0 624:1/0/0 7424:1/0/0 660:4351/0/79 5632:1/0/0 460:7863/0/0 5060:73/0/0 920:1/0/0 3584:156/0/0 168:83699/0/0 840:302/0/0 672:271/0/2 other:2683/0/0
+16:22:14 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 26 58 65 18 12 1 1 2 6 1 2 11 180 | max=32150us retried=192 orphan=0
+16:22:19 AJAZZ:AK820 PRO:1: [lcd] arms=103746 slow_cmd=8643 slow_fire=20 never=0 busy=0
+16:22:19 AJAZZ:AK820 PRO:1: [lcd] tc: full=103746 short=0 (last 0/0) arms_cur_stale=103745
+16:22:19 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:22:19 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1051/0/0 624:1/0/0 7424:1/0/0 660:4484/0/81 5632:1/0/0 460:8116/0/0 5060:76/0/0 920:1/0/0 3584:162/0/0 168:86493/0/0 840:314/0/0 672:278/0/2 other:2763/0/0
+16:23:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 27 60 67 18 13 1 1 2 6 1 2 12 185 | max=32150us retried=198 orphan=0
+16:23:19 AJAZZ:AK820 PRO:1: [lcd] arms=106957 slow_cmd=8945 slow_fire=20 never=0 busy=0
+16:23:19 AJAZZ:AK820 PRO:1: [lcd] tc: full=106957 short=0 (last 0/0) arms_cur_stale=106956
+16:23:19 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:23:19 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1084/0/0 624:1/0/0 7424:1/0/0 660:4616/0/83 5632:1/0/0 460:8354/0/0 5060:78/0/0 920:1/0/0 3584:167/0/0 168:89192/0/0 840:322/0/0 672:286/0/2 other:2849/0/0
+16:24:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 29 62 67 19 14 1 1 2 6 1 2 12 191 | max=32150us retried=204 orphan=0
+16:24:19 AJAZZ:AK820 PRO:1: [lcd] arms=110167 slow_cmd=9249 slow_fire=20 never=0 busy=0
+16:24:19 AJAZZ:AK820 PRO:1: [lcd] tc: full=110167 short=0 (last 0/0) arms_cur_stale=110166
+16:24:19 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:24:19 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1117/0/0 624:1/0/0 7424:1/0/0 660:4756/0/84 5632:1/0/0 460:8616/0/0 5060:81/0/0 920:1/0/0 3584:172/0/0 168:91855/0/0 840:331/0/0 672:296/0/2 other:2934/0/0
+16:25:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 29 63 68 19 17 1 1 3 6 1 2 12 197 | max=32150us retried=210 orphan=0
+16:25:19 AJAZZ:AK820 PRO:1: [lcd] arms=113335 slow_cmd=9523 slow_fire=20 never=0 busy=0
+16:25:19 AJAZZ:AK820 PRO:1: [lcd] tc: full=113335 short=0 (last 0/0) arms_cur_stale=113334
+16:25:19 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:25:19 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1150/0/0 624:1/0/0 7424:1/0/0 660:4894/0/85 5632:1/0/0 460:8873/0/0 5060:83/0/0 920:1/0/0 3584:177/0/0 168:94479/0/0 840:337/0/0 672:307/0/2 other:3026/0/0
+16:26:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 30 64 71 19 17 1 1 3 6 1 2 12 204 | max=32150us retried=217 orphan=0
+16:26:20 AJAZZ:AK820 PRO:1: [lcd] arms=116538 slow_cmd=9802 slow_fire=20 never=0 busy=0
+16:26:20 AJAZZ:AK820 PRO:1: [lcd] tc: full=116538 short=0 (last 0/0) arms_cur_stale=116537
+16:26:20 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:26:20 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1183/0/0 624:1/0/0 7424:1/0/0 660:5034/0/85 5632:1/0/0 460:9117/0/0 5060:85/0/0 920:1/0/0 3584:182/0/0 168:97161/0/0 840:344/0/0 672:316/0/2 other:3107/0/0
+16:27:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 30 67 73 20 17 1 1 3 6 1 2 12 210 | max=32150us retried=223 orphan=0
+16:27:20 AJAZZ:AK820 PRO:1: [lcd] arms=119782 slow_cmd=10127 slow_fire=21 never=0 busy=0
+16:27:20 AJAZZ:AK820 PRO:1: [lcd] tc: full=119782 short=0 (last 0/0) arms_cur_stale=119781
+16:27:20 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:27:20 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1216/0/0 624:1/0/0 7424:1/0/0 660:5172/0/85 5632:1/0/0 460:9379/0/0 5060:88/0/0 920:1/0/0 3584:187/0/0 168:99855/0/0 840:354/0/0 672:331/0/2 other:3191/0/0
+16:28:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 31 69 74 21 18 1 1 3 6 1 2 12 216 | max=32150us retried=229 orphan=0
+16:28:20 AJAZZ:AK820 PRO:1: [lcd] arms=123149 slow_cmd=10449 slow_fire=22 never=0 busy=0
+16:28:20 AJAZZ:AK820 PRO:1: [lcd] tc: full=123149 short=0 (last 0/0) arms_cur_stale=123148
+16:28:20 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:28:20 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1249/0/0 624:1/0/0 7424:1/0/0 660:5312/0/91 5632:1/0/0 460:9632/0/0 5060:90/0/0 920:1/0/0 3584:192/0/0 168:102681/0/0 840:363/0/0 672:339/0/2 other:3282/0/0
+16:29:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 32 73 75 21 18 1 1 3 6 1 3 12 221 | max=32150us retried=235 orphan=0
+16:29:20 AJAZZ:AK820 PRO:1: [lcd] arms=126589 slow_cmd=10768 slow_fire=22 never=0 busy=0
+16:29:20 AJAZZ:AK820 PRO:1: [lcd] tc: full=126589 short=0 (last 0/0) arms_cur_stale=126588
+16:29:20 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:29:20 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1283/0/0 624:1/0/0 7424:1/0/0 660:5460/0/92 5632:1/0/0 460:9872/0/0 5060:92/0/0 920:1/0/0 3584:197/0/0 168:105595/0/0 840:370/0/0 672:349/0/2 other:3362/0/0
+16:30:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 32 75 78 22 18 1 1 3 6 1 3 12 227 | max=32150us retried=241 orphan=0
+16:30:20 AJAZZ:AK820 PRO:1: [lcd] arms=129767 slow_cmd=11060 slow_fire=23 never=0 busy=0
+16:30:20 AJAZZ:AK820 PRO:1: [lcd] tc: full=129767 short=0 (last 0/0) arms_cur_stale=129766
+16:30:20 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:30:20 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1316/0/0 624:1/0/0 7424:1/0/0 660:5601/0/94 5632:1/0/0 460:10134/0/0 5060:95/0/0 920:1/0/0 3584:202/0/0 168:108222/0/0 840:379/0/0 672:368/0/2 other:3441/0/0
+16:31:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 33 77 79 23 19 1 1 3 6 1 3 13 232 | max=32150us retried=247 orphan=0
+16:31:21 AJAZZ:AK820 PRO:1: [lcd] arms=132983 slow_cmd=11346 slow_fire=23 never=0 busy=0
+16:31:21 AJAZZ:AK820 PRO:1: [lcd] tc: full=132983 short=0 (last 0/0) arms_cur_stale=132982
+16:31:21 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:31:21 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1349/0/0 624:1/0/0 7424:1/0/0 660:5740/0/100 5632:1/0/0 460:10391/0/0 5060:97/0/0 920:1/0/0 3584:207/0/0 168:110898/0/0 840:390/0/0 672:377/0/2 other:3525/0/0
+16:32:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 33 77 83 24 20 1 1 3 6 1 3 13 238 | max=32150us retried=253 orphan=0
+16:32:21 AJAZZ:AK820 PRO:1: [lcd] arms=136097 slow_cmd=11616 slow_fire=23 never=0 busy=0
+16:32:21 AJAZZ:AK820 PRO:1: [lcd] tc: full=136097 short=0 (last 0/0) arms_cur_stale=136096
+16:32:21 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:32:21 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1382/0/0 624:1/0/0 7424:1/0/0 660:5882/0/101 5632:1/0/0 460:10631/0/0 5060:99/0/0 920:1/0/0 3584:212/0/0 168:113486/0/0 840:399/0/0 672:390/0/2 other:3607/0/0
+16:33:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 34 77 85 26 21 1 1 3 6 1 3 14 243 | max=32150us retried=259 orphan=0
+16:33:21 AJAZZ:AK820 PRO:1: [lcd] arms=139309 slow_cmd=11904 slow_fire=23 never=0 busy=0
+16:33:21 AJAZZ:AK820 PRO:1: [lcd] tc: full=139309 short=0 (last 0/0) arms_cur_stale=139308
+16:33:21 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:33:21 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1415/0/0 624:1/0/0 7424:1/0/0 660:6025/0/102 5632:1/0/0 460:10896/0/0 5060:102/0/0 920:1/0/0 3584:217/0/0 168:116153/0/0 840:409/0/0 672:398/0/2 other:3685/0/0
+16:34:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 35 77 88 27 22 1 1 3 6 1 3 14 249 | max=32150us retried=265 orphan=0
+16:34:21 AJAZZ:AK820 PRO:1: [lcd] arms=142475 slow_cmd=12166 slow_fire=24 never=0 busy=0
+16:34:21 AJAZZ:AK820 PRO:1: [lcd] tc: full=142475 short=0 (last 0/0) arms_cur_stale=142474
+16:34:21 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:34:21 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1448/0/0 624:1/0/0 7424:1/0/0 660:6167/0/104 5632:1/0/0 460:11153/0/0 5060:104/0/0 920:1/0/0 3584:222/0/0 168:118769/0/0 840:421/0/0 672:406/0/2 other:3776/0/0
+16:35:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 35 79 91 28 22 1 1 3 6 1 3 15 254 | max=32150us retried=271 orphan=0
+16:35:21 AJAZZ:AK820 PRO:1: [lcd] arms=145746 slow_cmd=12452 slow_fire=26 never=0 busy=0
+16:35:21 AJAZZ:AK820 PRO:1: [lcd] tc: full=145746 short=0 (last 0/0) arms_cur_stale=145745
+16:35:21 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:35:21 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1481/0/0 624:1/0/0 7424:1/0/0 660:6309/0/108 5632:1/0/0 460:11398/0/0 5060:106/0/0 920:1/0/0 3584:227/0/0 168:121508/0/0 840:430/0/0 672:418/0/2 other:3860/0/0
+16:36:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 35 83 92 29 22 1 1 3 6 1 3 15 260 | max=32150us retried=277 orphan=0
+16:36:22 AJAZZ:AK820 PRO:1: [lcd] arms=149061 slow_cmd=12745 slow_fire=27 never=0 busy=0
+16:36:22 AJAZZ:AK820 PRO:1: [lcd] tc: full=149061 short=0 (last 0/0) arms_cur_stale=149060
+16:36:22 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:36:22 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1514/0/0 624:1/0/0 7424:1/0/0 660:6451/0/114 5632:1/0/0 460:11661/0/0 5060:109/0/0 920:1/0/0 3584:232/0/0 168:124268/0/0 840:444/0/0 672:434/0/2 other:3939/0/0
+16:37:15 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 36 83 93 33 22 1 1 3 6 1 3 15 266 | max=32150us retried=283 orphan=0
+16:37:22 AJAZZ:AK820 PRO:1: [lcd] arms=152319 slow_cmd=13047 slow_fire=27 never=0 busy=0
+16:37:22 AJAZZ:AK820 PRO:1: [lcd] tc: full=152319 short=0 (last 0/0) arms_cur_stale=152318
+16:37:22 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:37:22 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1547/0/0 624:1/0/0 7424:1/0/0 660:6593/0/115 5632:1/0/0 460:11916/0/0 5060:111/0/0 920:1/0/0 3584:237/0/0 168:126979/0/0 840:455/0/0 672:444/0/2 other:4028/0/0
+16:38:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 38 83 95 34 22 1 1 3 7 1 3 15 272 | max=32150us retried=289 orphan=0
+16:38:22 AJAZZ:AK820 PRO:1: [lcd] arms=155516 slow_cmd=13314 slow_fire=27 never=0 busy=0
+16:38:22 AJAZZ:AK820 PRO:1: [lcd] tc: full=155516 short=0 (last 0/0) arms_cur_stale=155515
+16:38:22 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:38:22 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1580/0/0 624:1/0/0 7424:1/0/0 660:6735/0/117 5632:1/0/0 460:12156/0/0 5060:113/0/0 920:1/0/0 3584:242/0/0 168:129653/0/0 840:461/0/0 672:449/0/2 other:4118/0/0
+16:39:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 38 86 96 35 22 1 1 4 7 1 3 15 278 | max=32150us retried=295 orphan=0
+16:39:22 AJAZZ:AK820 PRO:1: [lcd] arms=158654 slow_cmd=13565 slow_fire=28 never=0 busy=0
+16:39:22 AJAZZ:AK820 PRO:1: [lcd] tc: full=158654 short=0 (last 0/0) arms_cur_stale=158653
+16:39:22 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:39:22 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1613/0/0 624:1/0/0 7424:1/0/0 660:6879/0/119 5632:1/0/0 460:12420/0/0 5060:116/0/0 920:1/0/0 3584:247/0/0 168:132236/0/0 840:473/0/0 672:466/0/3 other:4195/0/0
+16:40:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 41 86 96 37 23 1 1 4 7 1 3 16 283 | max=32150us retried=301 orphan=0
+16:40:22 AJAZZ:AK820 PRO:1: [lcd] arms=161820 slow_cmd=13856 slow_fire=28 never=0 busy=0
+16:40:22 AJAZZ:AK820 PRO:1: [lcd] tc: full=161820 short=0 (last 0/0) arms_cur_stale=161819
+16:40:22 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:40:22 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1647/0/0 624:1/0/0 7424:1/0/0 660:7021/0/120 5632:1/0/0 460:12677/0/0 5060:118/0/0 920:1/0/0 3584:252/0/0 168:134858/0/0 840:481/0/0 672:477/0/3 other:4280/0/0
+16:41:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 42 86 100 38 23 1 1 4 7 1 3 19 286 | max=32150us retried=307 orphan=0
+16:41:23 AJAZZ:AK820 PRO:1: [lcd] arms=165204 slow_cmd=14170 slow_fire=28 never=0 busy=0
+16:41:23 AJAZZ:AK820 PRO:1: [lcd] tc: full=165204 short=0 (last 0/0) arms_cur_stale=165203
+16:41:23 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:41:23 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1680/0/0 624:1/0/0 7424:1/0/0 660:7163/0/121 5632:1/0/0 460:12927/0/0 5060:120/0/0 920:1/0/0 3584:257/0/0 168:137703/0/0 840:489/0/0 672:484/0/3 other:4372/0/0
+16:42:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 42 89 102 38 23 1 1 5 7 1 3 19 292 | max=32150us retried=313 orphan=0
+16:42:23 AJAZZ:AK820 PRO:1: [lcd] arms=168590 slow_cmd=14451 slow_fire=28 never=0 busy=0
+16:42:23 AJAZZ:AK820 PRO:1: [lcd] tc: full=168590 short=0 (last 0/0) arms_cur_stale=168589
+16:42:23 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:42:23 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1713/0/0 624:1/0/0 7424:1/0/0 660:7305/0/126 5632:1/0/0 460:13189/0/0 5060:123/0/0 920:1/0/0 3584:262/0/0 168:140540/0/0 840:497/0/0 672:494/0/3 other:4458/0/0
+16:43:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 44 89 103 41 23 1 1 5 7 1 3 19 298 | max=32150us retried=319 orphan=0
+16:43:23 AJAZZ:AK820 PRO:1: [lcd] arms=171821 slow_cmd=14736 slow_fire=28 never=0 busy=0
+16:43:23 AJAZZ:AK820 PRO:1: [lcd] tc: full=171821 short=0 (last 0/0) arms_cur_stale=171820
+16:43:23 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:43:23 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1746/0/0 624:1/0/0 7424:1/0/0 660:7447/0/130 5632:1/0/0 460:13446/0/0 5060:125/0/0 920:1/0/0 3584:267/0/0 168:143223/0/0 840:515/0/0 672:505/0/3 other:4538/0/0
+16:44:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 44 91 104 42 23 1 1 6 7 1 4 19 304 | max=32150us retried=325 orphan=0
+16:44:23 AJAZZ:AK820 PRO:1: [lcd] arms=174993 slow_cmd=15030 slow_fire=29 never=0 busy=0
+16:44:23 AJAZZ:AK820 PRO:1: [lcd] tc: full=174993 short=0 (last 0/0) arms_cur_stale=174992
+16:44:23 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:44:23 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1779/0/0 624:1/0/0 7424:1/0/0 660:7589/0/131 5632:1/0/0 460:13690/0/0 5060:127/0/0 920:1/0/0 3584:272/0/0 168:145863/0/0 840:527/0/0 672:515/0/3 other:4622/0/0
+16:45:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 45 92 106 42 25 1 1 6 7 1 4 19 310 | max=32150us retried=331 orphan=0
+16:45:23 AJAZZ:AK820 PRO:1: [lcd] arms=178385 slow_cmd=15317 slow_fire=29 never=0 busy=0
+16:45:23 AJAZZ:AK820 PRO:1: [lcd] tc: full=178385 short=0 (last 0/0) arms_cur_stale=178384
+16:45:23 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:45:23 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1812/0/0 624:1/0/0 7424:1/0/0 660:7731/0/132 5632:1/0/0 460:13953/0/0 5060:130/0/0 920:1/0/0 3584:277/0/0 168:148703/0/0 840:539/0/0 672:524/0/3 other:4707/0/0
+16:46:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 46 93 109 42 25 1 1 7 7 1 4 19 316 | max=32150us retried=337 orphan=0
+16:46:23 AJAZZ:AK820 PRO:1: [lcd] arms=181497 slow_cmd=15588 slow_fire=29 never=0 busy=0
+16:46:23 AJAZZ:AK820 PRO:1: [lcd] tc: full=181497 short=0 (last 0/0) arms_cur_stale=181496
+16:46:23 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:46:24 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1845/0/0 624:1/0/0 7424:1/0/0 660:7873/0/133 5632:1/0/0 460:14211/0/0 5060:132/0/0 920:1/0/0 3584:282/0/0 168:151265/0/0 840:547/0/0 672:538/0/3 other:4795/0/0
+16:47:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 46 96 110 42 26 1 1 8 7 1 4 19 322 | max=32150us retried=343 orphan=0
+16:47:24 AJAZZ:AK820 PRO:1: [lcd] arms=184765 slow_cmd=15838 slow_fire=29 never=0 busy=0
+16:47:24 AJAZZ:AK820 PRO:1: [lcd] tc: full=184765 short=0 (last 0/0) arms_cur_stale=184764
+16:47:24 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:47:24 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1878/0/0 624:1/0/0 7424:1/0/0 660:8015/0/136 5632:1/0/0 460:14450/0/0 5060:134/0/0 920:1/0/0 3584:287/0/0 168:154010/0/0 840:553/0/0 672:551/0/4 other:4878/0/0
+16:48:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 46 98 113 42 26 1 1 9 7 1 4 19 328 | max=32150us retried=349 orphan=0
+16:48:24 AJAZZ:AK820 PRO:1: [lcd] arms=187980 slow_cmd=16145 slow_fire=30 never=0 busy=0
+16:48:24 AJAZZ:AK820 PRO:1: [lcd] tc: full=187980 short=0 (last 0/0) arms_cur_stale=187979
+16:48:24 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:48:24 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1911/0/0 624:1/0/0 7424:1/0/0 660:8157/0/143 5632:1/0/0 460:14712/0/0 5060:137/0/0 920:1/0/0 3584:292/0/0 168:156675/0/0 840:562/0/0 672:559/0/4 other:4966/0/0
+16:49:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 46 100 115 43 26 1 1 9 8 1 5 19 333 | max=32822us retried=355 orphan=0
+16:49:24 AJAZZ:AK820 PRO:1: [lcd] arms=191228 slow_cmd=16474 slow_fire=31 never=0 busy=0
+16:49:24 AJAZZ:AK820 PRO:1: [lcd] tc: full=191228 short=0 (last 0/0) arms_cur_stale=191227
+16:49:24 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:49:24 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1944/0/0 624:1/0/0 7424:1/0/0 660:8299/0/146 5632:1/0/0 460:14967/0/0 5060:139/0/0 920:1/0/0 3584:297/0/0 168:159378/0/0 840:571/0/0 672:569/0/4 other:5055/0/0
+16:50:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 48 100 117 44 27 1 1 9 8 1 5 20 338 | max=32822us retried=361 orphan=0
+16:50:24 AJAZZ:AK820 PRO:1: [lcd] arms=194494 slow_cmd=16770 slow_fire=33 never=0 busy=0
+16:50:24 AJAZZ:AK820 PRO:1: [lcd] tc: full=194494 short=0 (last 0/0) arms_cur_stale=194493
+16:50:24 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:50:24 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:1977/0/0 624:1/0/0 7424:1/0/0 660:8441/0/149 5632:1/0/0 460:15205/0/0 5060:141/0/0 920:1/0/0 3584:302/0/0 168:162110/0/0 840:586/0/0 672:579/0/4 other:5144/0/0
+16:51:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 48 101 119 45 28 1 1 10 8 1 5 20 344 | max=32822us retried=367 orphan=0
+16:51:24 AJAZZ:AK820 PRO:1: [lcd] arms=197810 slow_cmd=17053 slow_fire=33 never=0 busy=0
+16:51:25 AJAZZ:AK820 PRO:1: [lcd] tc: full=197810 short=0 (last 0/0) arms_cur_stale=197809
+16:51:25 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:51:25 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2011/0/0 624:1/0/0 7424:1/0/0 660:8589/0/153 5632:1/0/0 460:15468/0/0 5060:144/0/0 920:1/0/0 3584:307/0/0 168:164865/0/0 840:593/0/0 672:587/0/4 other:5237/0/0
+16:52:16 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 48 103 121 47 28 1 1 10 8 1 5 20 350 | max=32822us retried=373 orphan=0
+16:52:25 AJAZZ:AK820 PRO:1: [lcd] arms=201069 slow_cmd=17351 slow_fire=33 never=0 busy=0
+16:52:25 AJAZZ:AK820 PRO:1: [lcd] tc: full=201069 short=0 (last 0/0) arms_cur_stale=201068
+16:52:25 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:52:25 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2044/0/0 624:1/0/0 7424:1/0/0 660:8733/0/155 5632:1/0/0 460:15725/0/0 5060:146/0/0 920:1/0/0 3584:312/0/0 168:167574/0/0 840:599/0/0 672:599/0/4 other:5328/0/0
+16:53:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 48 105 122 48 30 1 1 10 8 1 5 20 356 | max=32822us retried=379 orphan=0
+16:53:25 AJAZZ:AK820 PRO:1: [lcd] arms=204233 slow_cmd=17632 slow_fire=34 never=0 busy=0
+16:53:25 AJAZZ:AK820 PRO:1: [lcd] tc: full=204233 short=0 (last 0/0) arms_cur_stale=204232
+16:53:25 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:53:25 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2077/0/0 624:1/0/0 7424:1/0/0 660:8876/0/156 5632:1/0/0 460:15966/0/0 5060:148/0/0 920:1/0/0 3584:317/0/0 168:170218/0/0 840:608/0/0 672:611/0/4 other:5403/0/0
+16:54:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 49 107 123 49 31 1 1 10 8 1 5 20 362 | max=32822us retried=385 orphan=0
+16:54:25 AJAZZ:AK820 PRO:1: [lcd] arms=207315 slow_cmd=17920 slow_fire=34 never=0 busy=0
+16:54:25 AJAZZ:AK820 PRO:1: [lcd] tc: full=207315 short=0 (last 0/0) arms_cur_stale=207314
+16:54:25 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:54:25 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2110/0/0 624:1/0/0 7424:1/0/0 660:9018/0/156 5632:1/0/0 460:16227/0/0 5060:151/0/0 920:1/0/0 3584:322/0/0 168:172746/0/0 840:618/0/0 672:620/0/4 other:5494/0/0
+16:55:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 49 110 125 49 32 1 1 10 8 1 6 20 367 | max=32822us retried=391 orphan=0
+16:55:25 AJAZZ:AK820 PRO:1: [lcd] arms=210582 slow_cmd=18239 slow_fire=35 never=0 busy=0
+16:55:25 AJAZZ:AK820 PRO:1: [lcd] tc: full=210582 short=0 (last 0/0) arms_cur_stale=210581
+16:55:25 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:55:25 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2143/0/0 624:1/0/0 7424:1/0/0 660:9160/0/160 5632:1/0/0 460:16480/0/0 5060:153/0/0 920:1/0/0 3584:327/0/0 168:175472/0/0 840:625/0/0 672:629/0/4 other:5584/0/0
+16:56:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 49 110 126 51 35 1 1 10 8 1 7 20 372 | max=32822us retried=397 orphan=0
+16:56:25 AJAZZ:AK820 PRO:1: [lcd] arms=213945 slow_cmd=18547 slow_fire=35 never=0 busy=0
+16:56:25 AJAZZ:AK820 PRO:1: [lcd] tc: full=213945 short=0 (last 0/0) arms_cur_stale=213944
+16:56:25 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:56:25 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2176/0/0 624:1/0/0 7424:1/0/0 660:9302/0/163 5632:1/0/0 460:16721/0/0 5060:155/0/0 920:1/0/0 3584:332/0/0 168:178313/0/0 840:636/0/0 672:639/0/4 other:5662/0/0
+16:57:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 49 112 128 52 35 1 1 10 9 1 7 20 378 | max=32822us retried=403 orphan=0
+16:57:26 AJAZZ:AK820 PRO:1: [lcd] arms=217211 slow_cmd=18843 slow_fire=37 never=0 busy=0
+16:57:26 AJAZZ:AK820 PRO:1: [lcd] tc: full=217211 short=0 (last 0/0) arms_cur_stale=217210
+16:57:26 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:57:26 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2209/0/0 624:1/0/0 7424:1/0/0 660:9444/0/166 5632:1/0/0 460:16986/0/0 5060:158/0/0 920:1/0/0 3584:337/0/0 168:181037/0/0 840:641/0/0 672:652/0/4 other:5738/0/0
+16:58:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 50 113 131 52 36 1 1 10 9 1 7 20 384 | max=32822us retried=409 orphan=0
+16:58:26 AJAZZ:AK820 PRO:1: [lcd] arms=220511 slow_cmd=19163 slow_fire=38 never=0 busy=0
+16:58:26 AJAZZ:AK820 PRO:1: [lcd] tc: full=220511 short=0 (last 0/0) arms_cur_stale=220510
+16:58:26 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:58:26 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2242/0/0 624:1/0/0 7424:1/0/0 660:9586/0/170 5632:1/0/0 460:17241/0/0 5060:160/0/0 920:1/0/0 3584:342/0/0 168:183780/0/0 840:653/0/0 672:669/0/4 other:5829/0/0
+16:59:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 50 115 132 53 37 1 1 11 9 1 7 21 389 | max=32822us retried=415 orphan=0
+16:59:26 AJAZZ:AK820 PRO:1: [lcd] arms=223772 slow_cmd=19452 slow_fire=38 never=0 busy=0
+16:59:26 AJAZZ:AK820 PRO:1: [lcd] tc: full=223772 short=0 (last 0/0) arms_cur_stale=223771
+16:59:26 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+16:59:26 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2275/0/0 624:1/0/0 7424:1/0/0 660:9729/0/171 5632:1/0/0 460:17483/0/0 5060:162/0/0 920:1/0/0 3584:347/0/0 168:186501/0/0 840:658/0/0 672:681/0/4 other:5927/0/0
+17:00:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 50 118 134 54 37 1 1 11 9 1 7 21 395 | max=32822us retried=421 orphan=0
+17:00:26 AJAZZ:AK820 PRO:1: [lcd] arms=226986 slow_cmd=19744 slow_fire=38 never=0 busy=0
+17:00:26 AJAZZ:AK820 PRO:1: [lcd] tc: full=226986 short=0 (last 0/0) arms_cur_stale=226985
+17:00:26 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:00:26 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2308/0/0 624:1/0/0 7424:1/0/0 660:9871/0/174 5632:1/0/0 460:17745/0/0 5060:165/0/0 920:1/0/0 3584:352/0/0 168:189164/0/0 840:670/0/0 672:688/0/4 other:6014/0/0
+17:01:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 51 119 137 54 38 1 1 11 9 1 7 21 401 | max=32822us retried=427 orphan=0
+17:01:26 AJAZZ:AK820 PRO:1: [lcd] arms=230042 slow_cmd=20058 slow_fire=39 never=0 busy=0
+17:01:26 AJAZZ:AK820 PRO:1: [lcd] tc: full=230042 short=0 (last 0/0) arms_cur_stale=230041
+17:01:26 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:01:26 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2341/0/0 624:1/0/0 7424:1/0/0 660:10013/0/176 5632:1/0/0 460:18000/0/0 5060:167/0/0 920:1/0/0 3584:357/0/0 168:191683/0/0 840:681/0/0 672:696/0/4 other:6095/0/0
+17:02:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 51 120 139 56 39 1 1 11 9 1 7 21 407 | max=32822us retried=433 orphan=0
+17:02:27 AJAZZ:AK820 PRO:1: [lcd] arms=233352 slow_cmd=20367 slow_fire=39 never=0 busy=0
+17:02:27 AJAZZ:AK820 PRO:1: [lcd] tc: full=233352 short=0 (last 0/0) arms_cur_stale=233351
+17:02:27 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:02:27 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2375/0/0 624:1/0/0 7424:1/0/0 660:10155/0/178 5632:1/0/0 460:18250/0/0 5060:169/0/0 920:1/0/0 3584:362/0/0 168:194448/0/0 840:690/0/0 672:712/0/4 other:6182/0/0
+17:03:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 51 122 141 58 39 1 1 11 9 1 7 21 413 | max=32822us retried=439 orphan=0
+17:03:27 AJAZZ:AK820 PRO:1: [lcd] arms=236544 slow_cmd=20641 slow_fire=41 never=0 busy=0
+17:03:27 AJAZZ:AK820 PRO:1: [lcd] tc: full=236544 short=0 (last 0/0) arms_cur_stale=236543
+17:03:27 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:03:27 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2408/0/0 624:1/0/0 7424:1/0/0 660:10297/0/178 5632:1/0/0 460:18512/0/0 5060:172/0/0 920:1/0/0 3584:367/0/0 168:197090/0/0 840:702/0/0 672:721/0/4 other:6266/0/0
+17:04:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 51 122 145 58 40 1 1 11 9 1 7 21 420 | max=32822us retried=445 orphan=0
+17:04:27 AJAZZ:AK820 PRO:1: [lcd] arms=239812 slow_cmd=20938 slow_fire=42 never=0 busy=0
+17:04:27 AJAZZ:AK820 PRO:1: [lcd] tc: full=239812 short=0 (last 0/0) arms_cur_stale=239811
+17:04:27 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:04:27 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2441/0/0 624:1/0/0 7424:1/0/0 660:10439/0/180 5632:1/0/0 460:18768/0/0 5060:174/0/0 920:1/0/0 3584:372/0/0 168:199813/0/0 840:713/0/0 672:731/0/4 other:6352/0/0
+17:05:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 51 125 146 59 41 1 1 11 9 1 7 21 426 | max=32822us retried=451 orphan=0
+17:05:27 AJAZZ:AK820 PRO:1: [lcd] arms=243097 slow_cmd=21228 slow_fire=43 never=0 busy=0
+17:05:27 AJAZZ:AK820 PRO:1: [lcd] tc: full=243097 short=0 (last 0/0) arms_cur_stale=243096
+17:05:27 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:05:27 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2474/0/0 624:1/0/0 7424:1/0/0 660:10581/0/182 5632:1/0/0 460:19009/0/0 5060:176/0/0 920:1/0/0 3584:377/0/0 168:202564/0/0 840:724/0/0 672:740/0/4 other:6443/0/0
+17:06:17 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 51 127 148 61 41 1 1 11 9 1 7 21 432 | max=32822us retried=457 orphan=0
+17:06:27 AJAZZ:AK820 PRO:1: [lcd] arms=246236 slow_cmd=21518 slow_fire=44 never=0 busy=0
+17:06:27 AJAZZ:AK820 PRO:1: [lcd] tc: full=246236 short=0 (last 0/0) arms_cur_stale=246235
+17:06:27 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:06:27 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2507/0/0 624:1/0/0 7424:1/0/0 660:10723/0/184 5632:1/0/0 460:19273/0/0 5060:179/0/0 920:1/0/0 3584:382/0/0 168:205151/0/0 840:731/0/0 672:747/0/4 other:6534/0/0
+17:07:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 52 128 151 61 42 1 1 11 9 1 7 21 438 | max=32822us retried=463 orphan=0
+17:07:28 AJAZZ:AK820 PRO:1: [lcd] arms=249489 slow_cmd=21793 slow_fire=45 never=0 busy=0
+17:07:28 AJAZZ:AK820 PRO:1: [lcd] tc: full=249489 short=0 (last 0/0) arms_cur_stale=249488
+17:07:28 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:07:28 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2540/0/0 624:1/0/0 7424:1/0/0 660:10865/0/185 5632:1/0/0 460:19529/0/0 5060:181/0/0 920:1/0/0 3584:387/0/0 168:207862/0/0 840:745/0/0 672:756/0/4 other:6615/0/0
+17:08:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 52 129 155 62 42 1 1 11 9 1 7 21 444 | max=32822us retried=469 orphan=0
+17:08:28 AJAZZ:AK820 PRO:1: [lcd] arms=252703 slow_cmd=22071 slow_fire=46 never=0 busy=0
+17:08:28 AJAZZ:AK820 PRO:1: [lcd] tc: full=252703 short=0 (last 0/0) arms_cur_stale=252702
+17:08:28 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:08:28 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2573/0/0 624:1/0/0 7424:1/0/0 660:11007/0/187 5632:1/0/0 460:19769/0/0 5060:183/0/0 920:1/0/0 3584:392/0/0 168:210544/0/0 840:754/0/0 672:766/0/4 other:6706/0/0
+17:09:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 53 133 156 62 42 1 1 11 9 1 7 21 450 | max=32822us retried=475 orphan=0
+17:09:28 AJAZZ:AK820 PRO:1: [lcd] arms=255829 slow_cmd=22349 slow_fire=47 never=0 busy=0
+17:09:28 AJAZZ:AK820 PRO:1: [lcd] tc: full=255829 short=0 (last 0/0) arms_cur_stale=255828
+17:09:28 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:09:28 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2606/0/0 624:1/0/0 7424:1/0/0 660:11149/0/191 5632:1/0/0 460:20030/0/0 5060:186/0/0 920:1/0/0 3584:397/0/0 168:213124/0/0 840:762/0/0 672:779/0/4 other:6787/0/0
+17:10:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 55 134 157 63 42 1 1 11 9 2 7 21 456 | max=32822us retried=481 orphan=0
+17:10:28 AJAZZ:AK820 PRO:1: [lcd] arms=259166 slow_cmd=22659 slow_fire=48 never=0 busy=0
+17:10:28 AJAZZ:AK820 PRO:1: [lcd] tc: full=259166 short=0 (last 0/0) arms_cur_stale=259165
+17:10:28 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:10:28 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2639/0/0 624:1/0/0 7424:1/0/0 660:11291/0/193 5632:1/0/0 460:20285/0/0 5060:188/0/0 920:1/0/0 3584:402/0/0 168:215917/0/0 840:769/0/0 672:792/0/4 other:6874/0/0
+17:11:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 56 135 159 63 43 1 1 11 9 2 7 21 463 | max=32822us retried=488 orphan=0
+17:11:29 AJAZZ:AK820 PRO:1: [lcd] arms=262465 slow_cmd=22958 slow_fire=49 never=0 busy=0
+17:11:29 AJAZZ:AK820 PRO:1: [lcd] tc: full=262465 short=0 (last 0/0) arms_cur_stale=262464
+17:11:29 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:11:29 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2672/0/0 624:1/0/0 7424:1/0/0 660:11433/0/200 5632:1/0/0 460:20524/0/0 5060:190/0/0 920:1/0/0 3584:407/0/0 168:218688/0/0 840:777/0/0 672:807/0/4 other:6958/0/0
+17:12:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 56 138 162 63 43 1 1 11 9 2 7 21 469 | max=32822us retried=494 orphan=0
+17:12:29 AJAZZ:AK820 PRO:1: [lcd] arms=265797 slow_cmd=23237 slow_fire=49 never=0 busy=0
+17:12:29 AJAZZ:AK820 PRO:1: [lcd] tc: full=265797 short=0 (last 0/0) arms_cur_stale=265796
+17:12:29 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:12:29 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2705/0/0 624:1/0/0 7424:1/0/0 660:11575/0/202 5632:1/0/0 460:20787/0/0 5060:193/0/0 920:1/0/0 3584:412/0/0 168:221465/0/0 840:788/0/0 672:814/0/4 other:7049/0/0
+17:13:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 56 141 164 63 43 1 1 11 9 3 7 21 475 | max=32822us retried=500 orphan=0
+17:13:29 AJAZZ:AK820 PRO:1: [lcd] arms=269158 slow_cmd=23526 slow_fire=51 never=0 busy=0
+17:13:29 AJAZZ:AK820 PRO:1: [lcd] tc: full=269158 short=0 (last 0/0) arms_cur_stale=269157
+17:13:29 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:13:29 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2739/0/0 624:1/0/0 7424:1/0/0 660:11725/0/205 5632:1/0/0 460:21041/0/0 5060:195/0/0 920:1/0/0 3584:417/0/0 168:224279/0/0 840:799/0/0 672:830/0/4 other:7124/0/0
+17:14:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 56 143 165 65 43 1 1 11 9 3 7 21 482 | max=32822us retried=507 orphan=0
+17:14:29 AJAZZ:AK820 PRO:1: [lcd] arms=272526 slow_cmd=23821 slow_fire=51 never=0 busy=0
+17:14:29 AJAZZ:AK820 PRO:1: [lcd] tc: full=272526 short=0 (last 0/0) arms_cur_stale=272525
+17:14:29 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:14:29 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2772/0/0 624:1/0/0 7424:1/0/0 660:11868/0/207 5632:1/0/0 460:21286/0/0 5060:197/0/0 920:1/0/0 3584:422/0/0 168:227117/0/0 840:811/0/0 672:837/0/4 other:7207/0/0
+17:15:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 56 144 169 66 43 1 1 11 9 3 7 21 488 | max=32822us retried=513 orphan=0
+17:15:29 AJAZZ:AK820 PRO:1: [lcd] arms=275847 slow_cmd=24114 slow_fire=51 never=0 busy=0
+17:15:29 AJAZZ:AK820 PRO:1: [lcd] tc: full=275847 short=0 (last 0/0) arms_cur_stale=275846
+17:15:29 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:15:29 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2805/0/0 624:1/0/0 7424:1/0/0 660:12010/0/208 5632:1/0/0 460:21549/0/0 5060:200/0/0 920:1/0/0 3584:427/0/0 168:229878/0/0 840:823/0/0 672:853/0/4 other:7293/0/0
+17:16:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 57 145 170 69 43 1 1 11 9 3 7 21 494 | max=32822us retried=519 orphan=0
+17:16:30 AJAZZ:AK820 PRO:1: [lcd] arms=279185 slow_cmd=24398 slow_fire=51 never=0 busy=0
+17:16:30 AJAZZ:AK820 PRO:1: [lcd] tc: full=279185 short=0 (last 0/0) arms_cur_stale=279184
+17:16:30 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:16:30 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2838/0/0 624:1/0/0 7424:1/0/0 660:12152/0/211 5632:1/0/0 460:21804/0/0 5060:202/0/0 920:1/0/0 3584:432/0/0 168:232670/0/0 840:836/0/0 672:861/0/4 other:7381/0/0
+17:17:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 57 148 172 70 43 1 1 11 9 3 7 22 499 | max=32822us retried=525 orphan=0
+17:17:30 AJAZZ:AK820 PRO:1: [lcd] arms=282624 slow_cmd=24671 slow_fire=51 never=0 busy=0
+17:17:30 AJAZZ:AK820 PRO:1: [lcd] tc: full=282624 short=0 (last 0/0) arms_cur_stale=282623
+17:17:30 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:17:30 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2871/0/0 624:1/0/0 7424:1/0/0 660:12294/0/216 5632:1/0/0 460:22046/0/0 5060:204/0/0 920:1/0/0 3584:437/0/0 168:235590/0/0 840:844/0/0 672:871/0/4 other:7458/0/0
+17:18:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 57 152 172 71 43 1 1 11 9 4 7 23 504 | max=32822us retried=531 orphan=0
+17:18:30 AJAZZ:AK820 PRO:1: [lcd] arms=285852 slow_cmd=24950 slow_fire=51 never=0 busy=0
+17:18:30 AJAZZ:AK820 PRO:1: [lcd] tc: full=285852 short=0 (last 0/0) arms_cur_stale=285851
+17:18:30 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:18:30 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2904/0/0 624:1/0/0 7424:1/0/0 660:12436/0/223 5632:1/0/0 460:22311/0/0 5060:207/0/0 920:1/0/0 3584:442/0/0 168:238266/0/0 840:851/0/0 672:881/0/5 other:7545/0/0
+17:19:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 57 155 173 71 44 1 1 11 10 4 7 23 510 | max=32822us retried=537 orphan=0
+17:19:30 AJAZZ:AK820 PRO:1: [lcd] arms=289074 slow_cmd=25229 slow_fire=52 never=0 busy=0
+17:19:30 AJAZZ:AK820 PRO:1: [lcd] tc: full=289074 short=0 (last 0/0) arms_cur_stale=289073
+17:19:30 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:19:30 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2937/0/0 624:1/0/0 7424:1/0/0 660:12579/0/224 5632:1/0/0 460:22568/0/0 5060:209/0/0 920:1/0/0 3584:447/0/0 168:240940/0/0 840:863/0/0 672:892/0/5 other:7630/0/0
+17:20:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 57 157 177 71 44 1 1 11 10 4 7 24 515 | max=32822us retried=543 orphan=0
+17:20:30 AJAZZ:AK820 PRO:1: [lcd] arms=292283 slow_cmd=25508 slow_fire=53 never=0 busy=0
+17:20:30 AJAZZ:AK820 PRO:1: [lcd] tc: full=292283 short=0 (last 0/0) arms_cur_stale=292282
+17:20:30 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:20:30 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:2970/0/0 624:1/0/0 7424:1/0/0 660:12721/0/226 5632:1/0/0 460:22809/0/0 5060:211/0/0 920:1/0/0 3584:452/0/0 168:243618/0/0 840:875/0/0 672:901/0/5 other:7717/0/0
+17:21:18 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 57 159 179 72 44 1 1 12 10 4 7 24 521 | max=32822us retried=549 orphan=0
+17:21:31 AJAZZ:AK820 PRO:1: [lcd] arms=295555 slow_cmd=25793 slow_fire=54 never=0 busy=0
+17:21:31 AJAZZ:AK820 PRO:1: [lcd] tc: full=295555 short=0 (last 0/0) arms_cur_stale=295554
+17:21:31 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:21:31 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3003/0/0 624:1/0/0 7424:1/0/0 660:12863/0/228 5632:1/0/0 460:23071/0/0 5060:214/0/0 920:1/0/0 3584:457/0/0 168:246350/0/0 840:880/0/0 672:906/0/5 other:7802/0/0
+17:22:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 59 160 180 73 44 1 1 12 10 5 7 24 527 | max=32822us retried=555 orphan=0
+17:22:31 AJAZZ:AK820 PRO:1: [lcd] arms=298730 slow_cmd=26067 slow_fire=56 never=0 busy=0
+17:22:31 AJAZZ:AK820 PRO:1: [lcd] tc: full=298730 short=0 (last 0/0) arms_cur_stale=298729
+17:22:31 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:22:31 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3036/0/0 624:1/0/0 7424:1/0/0 660:13005/0/231 5632:1/0/0 460:23328/0/0 5060:216/0/0 920:1/0/0 3584:462/0/0 168:248979/0/0 840:897/0/0 672:916/0/5 other:7882/0/0
+17:23:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 59 162 182 74 44 1 1 12 10 5 7 25 533 | max=32822us retried=561 orphan=0
+17:23:31 AJAZZ:AK820 PRO:1: [lcd] arms=301931 slow_cmd=26345 slow_fire=56 never=0 busy=0
+17:23:31 AJAZZ:AK820 PRO:1: [lcd] tc: full=301931 short=0 (last 0/0) arms_cur_stale=301930
+17:23:31 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:23:31 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3070/0/0 624:1/0/0 7424:1/0/0 660:13147/0/232 5632:1/0/0 460:23578/0/0 5060:218/0/0 920:1/0/0 3584:467/0/0 168:251643/0/0 840:905/0/0 672:921/0/5 other:7973/0/0
+17:24:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 59 167 183 74 44 1 1 12 10 5 7 25 539 | max=32822us retried=567 orphan=0
+17:24:31 AJAZZ:AK820 PRO:1: [lcd] arms=305152 slow_cmd=26598 slow_fire=56 never=0 busy=0
+17:24:31 AJAZZ:AK820 PRO:1: [lcd] tc: full=305152 short=0 (last 0/0) arms_cur_stale=305151
+17:24:31 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:24:31 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3103/0/0 624:1/0/0 7424:1/0/0 660:13287/0/234 5632:1/0/0 460:23840/0/0 5060:221/0/0 920:1/0/0 3584:472/0/0 168:254309/0/0 840:915/0/0 672:933/0/5 other:8063/0/0
+17:25:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 59 170 184 75 44 1 1 12 10 5 7 25 546 | max=33968us retried=574 orphan=0
+17:25:31 AJAZZ:AK820 PRO:1: [lcd] arms=308490 slow_cmd=26849 slow_fire=56 never=0 busy=0
+17:25:31 AJAZZ:AK820 PRO:1: [lcd] tc: full=308490 short=0 (last 0/0) arms_cur_stale=308489
+17:25:31 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:25:31 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3136/0/0 624:1/0/0 7424:1/0/0 660:13428/0/234 5632:1/0/0 460:24097/0/0 5060:223/0/0 920:1/0/0 3584:477/0/0 168:257103/0/0 840:923/0/0 672:945/0/5 other:8149/0/0
+17:26:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 59 172 184 76 46 1 1 12 10 5 7 27 551 | max=33968us retried=581 orphan=0
+17:26:32 AJAZZ:AK820 PRO:1: [lcd] arms=311723 slow_cmd=27108 slow_fire=57 never=0 busy=0
+17:26:32 AJAZZ:AK820 PRO:1: [lcd] tc: full=311723 short=0 (last 0/0) arms_cur_stale=311722
+17:26:32 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:26:32 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3169/0/0 624:1/0/0 7424:1/0/0 660:13568/0/234 5632:1/0/0 460:24337/0/0 5060:225/0/0 920:1/0/0 3584:482/0/0 168:259811/0/0 840:925/0/0 672:955/0/5 other:8242/0/0
+17:27:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 60 176 185 76 46 1 1 12 10 5 7 28 556 | max=33968us retried=587 orphan=0
+17:27:32 AJAZZ:AK820 PRO:1: [lcd] arms=314973 slow_cmd=27414 slow_fire=57 never=0 busy=0
+17:27:32 AJAZZ:AK820 PRO:1: [lcd] tc: full=314973 short=0 (last 0/0) arms_cur_stale=314972
+17:27:32 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:27:32 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3202/0/0 624:1/0/0 7424:1/0/0 660:13706/0/235 5632:1/0/0 460:24602/0/0 5060:228/0/0 920:1/0/0 3584:487/0/0 168:262514/0/0 840:931/0/0 672:965/0/5 other:8329/0/0
+17:28:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 60 178 188 76 47 1 1 12 10 5 7 28 562 | max=33968us retried=593 orphan=0
+17:28:32 AJAZZ:AK820 PRO:1: [lcd] arms=318316 slow_cmd=27724 slow_fire=58 never=0 busy=0
+17:28:32 AJAZZ:AK820 PRO:1: [lcd] tc: full=318316 short=0 (last 0/0) arms_cur_stale=318315
+17:28:32 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:28:32 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3235/0/0 624:1/0/0 7424:1/0/0 660:13843/0/239 5632:1/0/0 460:24858/0/0 5060:230/0/0 920:1/0/0 3584:492/0/0 168:265318/0/0 840:939/0/0 672:975/0/5 other:8417/0/0
+17:29:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 60 180 190 77 47 1 1 13 10 5 7 28 568 | max=33968us retried=599 orphan=0
+17:29:32 AJAZZ:AK820 PRO:1: [lcd] arms=321429 slow_cmd=28028 slow_fire=58 never=0 busy=0
+17:29:32 AJAZZ:AK820 PRO:1: [lcd] tc: full=321429 short=0 (last 0/0) arms_cur_stale=321428
+17:29:32 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:29:32 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3268/0/0 624:1/0/0 7424:1/0/0 660:13980/0/242 5632:1/0/0 460:25100/0/0 5060:232/0/0 920:1/0/0 3584:497/0/0 168:267909/0/0 840:952/0/0 672:980/0/5 other:8502/0/0
+17:30:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 61 182 191 78 47 1 1 14 10 5 7 28 574 | max=33968us retried=605 orphan=0
+17:30:32 AJAZZ:AK820 PRO:1: [lcd] arms=324746 slow_cmd=28307 slow_fire=58 never=0 busy=0
+17:30:32 AJAZZ:AK820 PRO:1: [lcd] tc: full=324746 short=0 (last 0/0) arms_cur_stale=324745
+17:30:32 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:30:32 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3301/0/0 624:1/0/0 7424:1/0/0 660:14116/0/247 5632:1/0/0 460:25364/0/0 5060:235/0/0 920:1/0/0 3584:502/0/0 168:270689/0/0 840:960/0/0 672:985/0/5 other:8585/0/0
+17:31:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 62 183 193 79 47 1 1 14 11 5 7 28 580 | max=33968us retried=611 orphan=0
+17:31:33 AJAZZ:AK820 PRO:1: [lcd] arms=327888 slow_cmd=28612 slow_fire=59 never=0 busy=0
+17:31:33 AJAZZ:AK820 PRO:1: [lcd] tc: full=327888 short=0 (last 0/0) arms_cur_stale=327887
+17:31:33 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:31:33 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3334/0/0 624:1/0/0 7424:1/0/0 660:14250/0/251 5632:1/0/0 460:25619/0/0 5060:237/0/0 920:1/0/0 3584:507/0/0 168:273300/0/0 840:968/0/0 672:993/0/5 other:8671/0/0
+17:32:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 62 185 195 81 47 1 1 14 11 5 7 29 585 | max=33968us retried=617 orphan=0
+17:32:33 AJAZZ:AK820 PRO:1: [lcd] arms=331198 slow_cmd=28905 slow_fire=59 never=0 busy=0
+17:32:33 AJAZZ:AK820 PRO:1: [lcd] tc: full=331198 short=0 (last 0/0) arms_cur_stale=331197
+17:32:33 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:32:33 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3367/0/0 624:1/0/0 7424:1/0/0 660:14382/0/254 5632:1/0/0 460:25862/0/0 5060:239/0/0 920:1/0/0 3584:512/0/0 168:276097/0/0 840:970/0/0 672:1003/0/5 other:8757/0/0
+17:33:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 62 189 197 81 47 1 1 14 11 5 7 29 591 | max=33968us retried=623 orphan=0
+17:33:33 AJAZZ:AK820 PRO:1: [lcd] arms=334540 slow_cmd=29165 slow_fire=59 never=0 busy=0
+17:33:33 AJAZZ:AK820 PRO:1: [lcd] tc: full=334540 short=0 (last 0/0) arms_cur_stale=334539
+17:33:33 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:33:33 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3400/0/0 624:1/0/0 7424:1/0/0 660:14518/0/256 5632:1/0/0 460:26125/0/0 5060:242/0/0 920:1/0/0 3584:517/0/0 168:278894/0/0 840:977/0/0 672:1015/0/5 other:8843/0/0
+17:34:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 63 190 199 81 48 1 1 14 12 5 7 29 597 | max=33968us retried=629 orphan=0
+17:34:33 AJAZZ:AK820 PRO:1: [lcd] arms=337731 slow_cmd=29478 slow_fire=59 never=0 busy=0
+17:34:33 AJAZZ:AK820 PRO:1: [lcd] tc: full=337731 short=0 (last 0/0) arms_cur_stale=337730
+17:34:33 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:34:33 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3433/0/0 624:1/0/0 7424:1/0/0 660:14650/0/257 5632:1/0/0 460:26379/0/0 5060:244/0/0 920:1/0/0 3584:522/0/0 168:281556/0/0 840:981/0/0 672:1024/0/5 other:8933/0/0
+17:35:19 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 63 190 204 82 48 1 1 14 12 5 7 29 603 | max=33968us retried=635 orphan=0
+17:35:33 AJAZZ:AK820 PRO:1: [lcd] arms=340954 slow_cmd=29754 slow_fire=60 never=0 busy=0
+17:35:33 AJAZZ:AK820 PRO:1: [lcd] tc: full=340954 short=0 (last 0/0) arms_cur_stale=340953
+17:35:33 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:35:33 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3466/0/0 624:1/0/0 7424:1/0/0 660:14784/0/260 5632:1/0/0 460:26617/0/0 5060:246/0/0 920:1/0/0 3584:527/0/0 168:284262/0/0 840:991/0/0 672:1030/0/5 other:9022/0/0
+17:36:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 63 193 206 82 48 1 1 14 13 5 7 29 609 | max=33968us retried=641 orphan=0
+17:36:34 AJAZZ:AK820 PRO:1: [lcd] arms=344184 slow_cmd=30054 slow_fire=61 never=0 busy=0
+17:36:34 AJAZZ:AK820 PRO:1: [lcd] tc: full=344184 short=0 (last 0/0) arms_cur_stale=344183
+17:36:34 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:36:34 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3499/0/0 624:1/0/0 7424:1/0/0 660:14919/0/265 5632:1/0/0 460:26880/0/0 5060:249/0/0 920:1/0/0 3584:532/0/0 168:286946/0/0 840:999/0/0 672:1045/0/5 other:9106/0/0
+17:37:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 65 193 206 85 48 1 1 15 13 5 7 29 615 | max=33968us retried=647 orphan=0
+17:37:34 AJAZZ:AK820 PRO:1: [lcd] arms=347458 slow_cmd=30345 slow_fire=61 never=0 busy=0
+17:37:34 AJAZZ:AK820 PRO:1: [lcd] tc: full=347458 short=0 (last 0/0) arms_cur_stale=347457
+17:37:34 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:37:34 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3532/0/0 624:1/0/0 7424:1/0/0 660:15056/0/265 5632:1/0/0 460:27135/0/0 5060:251/0/0 920:1/0/0 3584:537/0/0 168:289674/0/0 840:1013/0/0 672:1062/0/5 other:9189/0/0
+17:38:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 65 197 208 85 48 1 1 15 13 5 7 29 621 | max=33968us retried=653 orphan=0
+17:38:34 AJAZZ:AK820 PRO:1: [lcd] arms=350645 slow_cmd=30632 slow_fire=61 never=0 busy=0
+17:38:34 AJAZZ:AK820 PRO:1: [lcd] tc: full=350645 short=0 (last 0/0) arms_cur_stale=350644
+17:38:34 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:38:34 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3565/0/0 624:1/0/0 7424:1/0/0 660:15193/0/266 5632:1/0/0 460:27382/0/0 5060:253/0/0 920:1/0/0 3584:542/0/0 168:292322/0/0 840:1020/0/0 672:1074/0/5 other:9285/0/0
+17:39:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 67 199 209 86 48 1 1 15 13 5 7 29 627 | max=33968us retried=659 orphan=0
+17:39:34 AJAZZ:AK820 PRO:1: [lcd] arms=353919 slow_cmd=30922 slow_fire=61 never=0 busy=0
+17:39:34 AJAZZ:AK820 PRO:1: [lcd] tc: full=353919 short=0 (last 0/0) arms_cur_stale=353918
+17:39:34 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:39:34 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3598/0/0 624:1/0/0 7424:1/0/0 660:15333/0/269 5632:1/0/0 460:27642/0/0 5060:256/0/0 920:1/0/0 3584:547/0/0 168:295058/0/0 840:1027/0/0 672:1083/0/5 other:9366/0/0
+17:40:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 67 200 212 87 48 1 2 15 13 5 7 29 633 | max=33968us retried=665 orphan=0
+17:40:34 AJAZZ:AK820 PRO:1: [lcd] arms=357208 slow_cmd=31199 slow_fire=61 never=0 busy=0
+17:40:34 AJAZZ:AK820 PRO:1: [lcd] tc: full=357208 short=0 (last 0/0) arms_cur_stale=357207
+17:40:34 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:40:34 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3631/0/0 624:1/0/0 7424:1/0/0 660:15473/0/272 5632:1/0/0 460:27901/0/0 5060:258/0/0 920:1/0/0 3584:552/0/0 168:297807/0/0 840:1042/0/0 672:1090/0/5 other:9445/0/0
+17:41:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 67 201 214 89 49 1 2 15 13 5 7 29 639 | max=33968us retried=671 orphan=0
+17:41:35 AJAZZ:AK820 PRO:1: [lcd] arms=360420 slow_cmd=31485 slow_fire=61 never=0 busy=0
+17:41:35 AJAZZ:AK820 PRO:1: [lcd] tc: full=360420 short=0 (last 0/0) arms_cur_stale=360419
+17:41:35 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:41:35 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3664/0/0 624:1/0/0 7424:1/0/0 660:15614/0/272 5632:1/0/0 460:28143/0/0 5060:260/0/0 920:1/0/0 3584:557/0/0 168:300493/0/0 840:1047/0/0 672:1096/0/5 other:9537/0/0
+17:42:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 67 203 216 89 49 1 2 16 13 5 7 29 646 | max=33968us retried=678 orphan=0
+17:42:35 AJAZZ:AK820 PRO:1: [lcd] arms=363688 slow_cmd=31776 slow_fire=62 never=0 busy=0
+17:42:35 AJAZZ:AK820 PRO:1: [lcd] tc: full=363688 short=0 (last 0/0) arms_cur_stale=363687
+17:42:35 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:42:35 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3697/0/0 624:1/0/0 7424:1/0/0 660:15756/0/274 5632:1/0/0 460:28406/0/0 5060:263/0/0 920:1/0/0 3584:562/0/0 168:303213/0/0 840:1055/0/0 672:1111/0/5 other:9616/0/0
+17:43:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 68 205 217 90 50 1 2 16 13 5 7 29 652 | max=33968us retried=684 orphan=0
+17:43:35 AJAZZ:AK820 PRO:1: [lcd] arms=366932 slow_cmd=32056 slow_fire=62 never=0 busy=0
+17:43:35 AJAZZ:AK820 PRO:1: [lcd] tc: full=366932 short=0 (last 0/0) arms_cur_stale=366931
+17:43:35 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:43:35 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3730/0/0 624:1/0/0 7424:1/0/0 660:15898/0/277 5632:1/0/0 460:28664/0/0 5060:265/0/0 920:1/0/0 3584:567/0/0 168:305908/0/0 840:1069/0/0 672:1134/0/6 other:9688/0/0
+17:44:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 68 206 221 91 50 1 2 16 13 5 7 31 656 | max=33968us retried=690 orphan=0
+17:44:35 AJAZZ:AK820 PRO:1: [lcd] arms=370231 slow_cmd=32363 slow_fire=64 never=0 busy=0
+17:44:35 AJAZZ:AK820 PRO:1: [lcd] tc: full=370231 short=0 (last 0/0) arms_cur_stale=370230
+17:44:35 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:44:35 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3764/0/0 624:1/0/0 7424:1/0/0 660:16039/0/280 5632:1/0/0 460:28907/0/0 5060:267/0/0 920:1/0/0 3584:572/0/0 168:308679/0/0 840:1075/0/0 672:1147/0/6 other:9772/0/0
+17:45:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 68 209 223 92 50 1 2 16 13 5 8 32 660 | max=33968us retried=696 orphan=0
+17:45:35 AJAZZ:AK820 PRO:1: [lcd] arms=373529 slow_cmd=32625 slow_fire=65 never=0 busy=0
+17:45:35 AJAZZ:AK820 PRO:1: [lcd] tc: full=373529 short=0 (last 0/0) arms_cur_stale=373528
+17:45:35 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:45:36 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3797/0/0 624:1/0/0 7424:1/0/0 660:16188/0/281 5632:1/0/0 460:29168/0/0 5060:270/0/0 920:1/0/0 3584:577/0/0 168:311423/0/0 840:1083/0/0 672:1153/0/6 other:9861/0/0
+17:46:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 69 209 226 93 50 1 2 17 13 5 8 33 665 | max=33968us retried=702 orphan=1
+17:46:36 AJAZZ:AK820 PRO:1: [lcd] arms=376797 slow_cmd=32920 slow_fire=65 never=0 busy=0
+17:46:36 AJAZZ:AK820 PRO:1: [lcd] tc: full=376797 short=0 (last 0/0) arms_cur_stale=376796
+17:46:36 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:46:36 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3829/0/0 624:1/0/0 7424:1/0/0 660:16330/0/282 5632:1/0/0 460:29412/0/0 5060:272/0/0 920:1/0/0 3584:581/0/0 168:314170/0/0 840:1094/0/0 672:1159/0/6 other:9941/0/0
+17:47:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 69 211 230 93 50 1 2 17 13 5 8 33 671 | max=33968us retried=708 orphan=1
+17:47:36 AJAZZ:AK820 PRO:1: [lcd] arms=380047 slow_cmd=33217 slow_fire=65 never=0 busy=0
+17:47:36 AJAZZ:AK820 PRO:1: [lcd] tc: full=380047 short=0 (last 0/0) arms_cur_stale=380046
+17:47:36 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:47:36 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3863/0/0 624:1/0/0 7424:1/0/0 660:16472/0/283 5632:1/0/0 460:29676/0/0 5060:274/0/0 920:1/0/0 3584:586/0/0 168:316863/0/0 840:1101/0/0 672:1170/0/6 other:10033/0/0
+17:48:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 71 212 233 93 50 1 2 17 13 5 8 33 677 | max=33968us retried=714 orphan=1
+17:48:36 AJAZZ:AK820 PRO:1: [lcd] arms=383298 slow_cmd=33511 slow_fire=65 never=0 busy=0
+17:48:36 AJAZZ:AK820 PRO:1: [lcd] tc: full=383298 short=0 (last 0/0) arms_cur_stale=383297
+17:48:36 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:48:36 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3895/0/0 624:1/0/0 7424:1/0/0 660:16614/0/287 5632:1/0/0 460:29925/0/0 5060:277/0/0 920:1/0/0 3584:590/0/0 168:319592/0/0 840:1113/0/0 672:1175/0/6 other:10108/0/0
+17:49:20 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 72 214 235 93 51 1 2 17 13 5 8 34 682 | max=33968us retried=720 orphan=1
+17:49:36 AJAZZ:AK820 PRO:1: [lcd] arms=386483 slow_cmd=33793 slow_fire=65 never=0 busy=0
+17:49:36 AJAZZ:AK820 PRO:1: [lcd] tc: full=386483 short=0 (last 0/0) arms_cur_stale=386482
+17:49:36 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:49:36 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3928/0/0 624:1/0/0 7424:1/0/0 660:16756/0/289 5632:1/0/0 460:30178/0/0 5060:279/0/0 920:1/0/0 3584:595/0/0 168:322243/0/0 840:1127/0/0 672:1182/0/6 other:10186/0/0
+17:50:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 72 215 237 95 51 1 2 17 14 5 8 35 687 | max=33968us retried=726 orphan=1
+17:50:37 AJAZZ:AK820 PRO:1: [lcd] arms=389574 slow_cmd=34048 slow_fire=65 never=0 busy=0
+17:50:37 AJAZZ:AK820 PRO:1: [lcd] tc: full=389574 short=0 (last 0/0) arms_cur_stale=389573
+17:50:37 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:50:37 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3960/0/0 624:1/0/0 7424:1/0/0 660:16898/0/290 5632:1/0/0 460:30414/0/0 5060:281/0/0 920:1/0/0 3584:599/0/0 168:324821/0/0 840:1136/0/0 672:1191/0/6 other:10265/0/0
+17:51:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 72 219 238 96 51 1 2 17 14 5 8 35 693 | max=33968us retried=732 orphan=1
+17:51:37 AJAZZ:AK820 PRO:1: [lcd] arms=392873 slow_cmd=34330 slow_fire=66 never=0 busy=0
+17:51:37 AJAZZ:AK820 PRO:1: [lcd] tc: full=392873 short=0 (last 0/0) arms_cur_stale=392872
+17:51:37 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:51:37 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:3992/0/0 624:1/0/0 7424:1/0/0 660:17040/0/291 5632:1/0/0 460:30665/0/0 5060:284/0/0 920:1/0/0 3584:603/0/0 168:327599/0/0 840:1148/0/0 672:1195/0/6 other:10338/0/0
+17:52:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 72 221 238 96 53 1 2 17 14 5 8 35 701 | max=33968us retried=739 orphan=1
+17:52:37 AJAZZ:AK820 PRO:1: [lcd] arms=396092 slow_cmd=34604 slow_fire=66 never=0 busy=0
+17:52:37 AJAZZ:AK820 PRO:1: [lcd] tc: full=396092 short=0 (last 0/0) arms_cur_stale=396091
+17:52:37 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:52:37 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4024/0/0 624:1/0/0 7424:1/0/0 660:17182/0/294 5632:1/0/0 460:30909/0/0 5060:286/0/0 920:1/0/0 3584:607/0/0 168:330291/0/0 840:1159/0/0 672:1209/0/6 other:10416/0/0
+17:53:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 72 223 241 96 54 1 2 17 14 5 8 36 706 | max=33968us retried=745 orphan=1
+17:53:37 AJAZZ:AK820 PRO:1: [lcd] arms=399320 slow_cmd=34870 slow_fire=66 never=0 busy=0
+17:53:37 AJAZZ:AK820 PRO:1: [lcd] tc: full=399320 short=0 (last 0/0) arms_cur_stale=399319
+17:53:37 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:53:37 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4056/0/0 624:1/0/0 7424:1/0/0 660:17325/0/297 5632:1/0/0 460:31149/0/0 5060:288/0/0 920:1/0/0 3584:611/0/0 168:333004/0/0 840:1164/0/0 672:1213/0/6 other:10501/0/0
+17:54:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 72 225 245 96 54 1 2 17 14 5 8 37 711 | max=33968us retried=751 orphan=1
+17:54:37 AJAZZ:AK820 PRO:1: [lcd] arms=402524 slow_cmd=35181 slow_fire=67 never=0 busy=0
+17:54:37 AJAZZ:AK820 PRO:1: [lcd] tc: full=402524 short=0 (last 0/0) arms_cur_stale=402523
+17:54:37 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:54:37 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4089/0/0 624:1/0/0 7424:1/0/0 660:17467/0/299 5632:1/0/0 460:31407/0/0 5060:291/0/0 920:1/0/0 3584:615/0/0 168:335674/0/0 840:1171/0/0 672:1220/0/6 other:10581/0/0
+17:55:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 73 227 246 98 54 1 2 17 14 5 8 38 716 | max=33968us retried=757 orphan=1
+17:55:38 AJAZZ:AK820 PRO:1: [lcd] arms=405842 slow_cmd=35486 slow_fire=67 never=0 busy=0
+17:55:38 AJAZZ:AK820 PRO:1: [lcd] tc: full=405842 short=0 (last 0/0) arms_cur_stale=405841
+17:55:38 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:55:38 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4122/0/0 624:1/0/0 7424:1/0/0 660:17609/0/302 5632:1/0/0 460:31662/0/0 5060:293/0/0 920:1/0/0 3584:620/0/0 168:338450/0/0 840:1178/0/0 672:1225/0/6 other:10674/0/0
+17:56:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 73 229 249 98 55 1 2 17 14 5 8 39 721 | max=33968us retried=763 orphan=1
+17:56:38 AJAZZ:AK820 PRO:1: [lcd] arms=409049 slow_cmd=35754 slow_fire=67 never=0 busy=0
+17:56:38 AJAZZ:AK820 PRO:1: [lcd] tc: full=409049 short=0 (last 0/0) arms_cur_stale=409048
+17:56:38 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:56:38 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4154/0/0 624:1/0/0 7424:1/0/0 660:17751/0/304 5632:1/0/0 460:31896/0/0 5060:295/0/0 920:1/0/0 3584:624/0/0 168:341146/0/0 840:1188/0/0 672:1234/0/6 other:10752/0/0
+17:57:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 73 232 250 99 55 1 2 17 14 6 8 39 727 | max=33968us retried=769 orphan=1
+17:57:38 AJAZZ:AK820 PRO:1: [lcd] arms=412352 slow_cmd=36036 slow_fire=68 never=0 busy=0
+17:57:38 AJAZZ:AK820 PRO:1: [lcd] tc: full=412352 short=0 (last 0/0) arms_cur_stale=412351
+17:57:38 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:57:38 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4186/0/0 624:1/0/0 7424:1/0/0 660:17893/0/306 5632:1/0/0 460:32146/0/0 5060:298/0/0 920:1/0/0 3584:628/0/0 168:343915/0/0 840:1201/0/0 672:1244/0/6 other:10832/0/0
+17:58:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 73 233 252 101 56 1 2 17 14 6 8 39 733 | max=33968us retried=775 orphan=1
+17:58:38 AJAZZ:AK820 PRO:1: [lcd] arms=415541 slow_cmd=36322 slow_fire=68 never=0 busy=0
+17:58:38 AJAZZ:AK820 PRO:1: [lcd] tc: full=415541 short=0 (last 0/0) arms_cur_stale=415540
+17:58:38 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:58:38 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4218/0/0 624:1/0/0 7424:1/0/0 660:18035/0/310 5632:1/0/0 460:32393/0/0 5060:300/0/0 920:1/0/0 3584:633/0/0 168:346571/0/0 840:1211/0/0 672:1256/0/6 other:10915/0/0
+17:59:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 73 234 254 103 57 1 2 17 14 6 8 39 739 | max=33968us retried=781 orphan=1
+17:59:38 AJAZZ:AK820 PRO:1: [lcd] arms=418718 slow_cmd=36595 slow_fire=69 never=0 busy=0
+17:59:38 AJAZZ:AK820 PRO:1: [lcd] tc: full=418718 short=0 (last 0/0) arms_cur_stale=418717
+17:59:38 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+17:59:38 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4250/0/0 624:1/0/0 7424:1/0/0 660:18177/0/311 5632:1/0/0 460:32630/0/0 5060:303/0/0 920:1/0/0 3584:637/0/0 168:349230/0/0 840:1221/0/0 672:1265/0/6 other:10996/0/0
+18:00:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 73 239 254 103 58 1 2 17 14 6 8 39 745 | max=36432us retried=787 orphan=1
+18:00:39 AJAZZ:AK820 PRO:1: [lcd] arms=422099 slow_cmd=36906 slow_fire=69 never=0 busy=0
+18:00:39 AJAZZ:AK820 PRO:1: [lcd] tc: full=422099 short=0 (last 0/0) arms_cur_stale=422098
+18:00:39 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:00:39 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4282/0/0 624:1/0/0 7424:1/0/0 660:18319/0/312 5632:1/0/0 460:32880/0/0 5060:305/0/0 920:1/0/0 3584:641/0/0 168:352081/0/0 840:1228/0/0 672:1269/0/6 other:11085/0/0
+18:01:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 73 242 256 104 58 1 2 17 14 6 8 40 750 | max=36432us retried=793 orphan=1
+18:01:39 AJAZZ:AK820 PRO:1: [lcd] arms=425309 slow_cmd=37176 slow_fire=69 never=0 busy=0
+18:01:39 AJAZZ:AK820 PRO:1: [lcd] tc: full=425309 short=0 (last 0/0) arms_cur_stale=425308
+18:01:39 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:01:39 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4314/0/0 624:1/0/0 7424:1/0/0 660:18461/0/313 5632:1/0/0 460:33122/0/0 5060:307/0/0 920:1/0/0 3584:645/0/0 168:354765/0/0 840:1236/0/0 672:1279/0/6 other:11171/0/0
+18:02:21 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 74 244 258 105 58 1 2 17 14 6 8 40 756 | max=36432us retried=799 orphan=1
+18:02:39 AJAZZ:AK820 PRO:1: [lcd] arms=428513 slow_cmd=37464 slow_fire=70 never=0 busy=0
+18:02:39 AJAZZ:AK820 PRO:1: [lcd] tc: full=428513 short=0 (last 0/0) arms_cur_stale=428512
+18:02:39 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:02:39 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4346/0/0 624:1/0/0 7424:1/0/0 660:18603/0/317 5632:1/0/0 460:33357/0/0 5060:310/0/0 920:1/0/0 3584:649/0/0 168:357453/0/0 840:1244/0/0 672:1282/0/6 other:11260/0/0
+18:03:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 74 246 261 105 58 1 2 17 15 6 8 40 762 | max=36432us retried=805 orphan=1
+18:03:39 AJAZZ:AK820 PRO:1: [lcd] arms=431736 slow_cmd=37753 slow_fire=71 never=0 busy=0
+18:03:39 AJAZZ:AK820 PRO:1: [lcd] tc: full=431736 short=0 (last 0/0) arms_cur_stale=431735
+18:03:39 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:03:39 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4378/0/0 624:1/0/0 7424:1/0/0 660:18745/0/319 5632:1/0/0 460:33610/0/0 5060:312/0/0 920:1/0/0 3584:653/0/0 168:360136/0/0 840:1249/0/0 672:1296/0/6 other:11348/0/0
+18:04:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 75 247 262 106 58 1 2 17 16 7 8 40 768 | max=36432us retried=811 orphan=1
+18:04:39 AJAZZ:AK820 PRO:1: [lcd] arms=434948 slow_cmd=38030 slow_fire=73 never=0 busy=0
+18:04:39 AJAZZ:AK820 PRO:1: [lcd] tc: full=434948 short=0 (last 0/0) arms_cur_stale=434947
+18:04:39 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:04:39 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4410/0/0 624:1/0/0 7424:1/0/0 660:18887/0/321 5632:1/0/0 460:33851/0/0 5060:314/0/0 920:1/0/0 3584:657/0/0 168:362831/0/0 840:1253/0/0 672:1307/0/6 other:11429/0/0
+18:05:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 75 249 265 106 58 1 2 17 17 7 8 40 774 | max=36432us retried=817 orphan=1
+18:05:40 AJAZZ:AK820 PRO:1: [lcd] arms=438207 slow_cmd=38304 slow_fire=74 never=0 busy=0
+18:05:40 AJAZZ:AK820 PRO:1: [lcd] tc: full=438207 short=0 (last 0/0) arms_cur_stale=438206
+18:05:40 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:05:40 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4443/0/0 624:1/0/0 7424:1/0/0 660:19029/0/324 5632:1/0/0 460:34085/0/0 5060:317/0/0 920:1/0/0 3584:661/0/0 168:365574/0/0 840:1256/0/0 672:1321/0/6 other:11512/0/0
+18:06:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 75 254 265 106 59 1 2 17 17 7 8 40 780 | max=36432us retried=823 orphan=1
+18:06:40 AJAZZ:AK820 PRO:1: [lcd] arms=441374 slow_cmd=38567 slow_fire=74 never=0 busy=0
+18:06:40 AJAZZ:AK820 PRO:1: [lcd] tc: full=441374 short=0 (last 0/0) arms_cur_stale=441373
+18:06:40 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:06:40 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4475/0/0 624:1/0/0 7424:1/0/0 660:19179/0/325 5632:1/0/0 460:34334/0/0 5060:319/0/0 920:1/0/0 3584:665/0/0 168:368202/0/0 840:1264/0/0 672:1328/0/6 other:11599/0/0
+18:07:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 75 256 267 108 59 1 2 17 17 7 8 40 786 | max=36432us retried=829 orphan=1
+18:07:40 AJAZZ:AK820 PRO:1: [lcd] arms=444507 slow_cmd=38843 slow_fire=74 never=0 busy=0
+18:07:40 AJAZZ:AK820 PRO:1: [lcd] tc: full=444507 short=0 (last 0/0) arms_cur_stale=444506
+18:07:40 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:07:40 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4507/0/0 624:1/0/0 7424:1/0/0 660:19322/0/326 5632:1/0/0 460:34578/0/0 5060:321/0/0 920:1/0/0 3584:669/0/0 168:370815/0/0 840:1272/0/0 672:1336/0/6 other:11678/0/0
+18:08:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 75 258 271 108 59 1 2 17 17 7 8 40 792 | max=36432us retried=835 orphan=1
+18:08:40 AJAZZ:AK820 PRO:1: [lcd] arms=447669 slow_cmd=39100 slow_fire=74 never=0 busy=0
+18:08:40 AJAZZ:AK820 PRO:1: [lcd] tc: full=447669 short=0 (last 0/0) arms_cur_stale=447668
+18:08:40 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:08:40 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4539/0/0 624:1/0/0 7424:1/0/0 660:19464/0/327 5632:1/0/0 460:34813/0/0 5060:324/0/0 920:1/0/0 3584:673/0/0 168:373459/0/0 840:1283/0/0 672:1342/0/6 other:11763/0/0
+18:09:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 75 260 274 108 60 1 2 17 17 7 8 40 798 | max=36432us retried=841 orphan=1
+18:09:41 AJAZZ:AK820 PRO:1: [lcd] arms=450895 slow_cmd=39370 slow_fire=75 never=0 busy=0
+18:09:41 AJAZZ:AK820 PRO:1: [lcd] tc: full=450895 short=0 (last 0/0) arms_cur_stale=450894
+18:09:41 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:09:41 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4571/0/0 624:1/0/0 7424:1/0/0 660:19606/0/328 5632:1/0/0 460:35060/0/0 5060:326/0/0 920:1/0/0 3584:677/0/0 168:376153/0/0 840:1291/0/0 672:1351/0/6 other:11851/0/0
+18:10:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 75 262 277 108 61 1 2 17 17 7 8 41 803 | max=36432us retried=847 orphan=1
+18:10:41 AJAZZ:AK820 PRO:1: [lcd] arms=454099 slow_cmd=39645 slow_fire=76 never=0 busy=0
+18:10:41 AJAZZ:AK820 PRO:1: [lcd] tc: full=454099 short=0 (last 0/0) arms_cur_stale=454098
+18:10:41 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:10:41 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4603/0/0 624:1/0/0 7424:1/0/0 660:19748/0/329 5632:1/0/0 460:35305/0/0 5060:328/0/0 920:1/0/0 3584:681/0/0 168:378829/0/0 840:1302/0/0 672:1361/0/6 other:11933/0/0
+18:11:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 76 265 279 108 61 1 2 17 17 7 8 42 808 | max=36432us retried=853 orphan=1
+18:11:41 AJAZZ:AK820 PRO:1: [lcd] arms=457362 slow_cmd=39950 slow_fire=76 never=0 busy=0
+18:11:41 AJAZZ:AK820 PRO:1: [lcd] tc: full=457362 short=0 (last 0/0) arms_cur_stale=457361
+18:11:41 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:11:41 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4635/0/0 624:1/0/0 7424:1/0/0 660:19891/0/331 5632:1/0/0 460:35544/0/0 5060:331/0/0 920:1/0/0 3584:685/0/0 168:381569/0/0 840:1308/0/0 672:1367/0/6 other:12023/0/0
+18:12:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 76 269 279 109 61 1 2 18 17 7 8 43 813 | max=36432us retried=859 orphan=1
+18:12:41 AJAZZ:AK820 PRO:1: [lcd] arms=460526 slow_cmd=40235 slow_fire=76 never=0 busy=0
+18:12:41 AJAZZ:AK820 PRO:1: [lcd] tc: full=460526 short=0 (last 0/0) arms_cur_stale=460525
+18:12:41 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:12:41 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4667/0/0 624:1/0/0 7424:1/0/0 660:20033/0/332 5632:1/0/0 460:35793/0/0 5060:333/0/0 920:1/0/0 3584:689/0/0 168:384200/0/0 840:1317/0/0 672:1371/0/6 other:12114/0/0
+18:13:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 76 270 281 111 61 1 2 18 18 7 8 44 818 | max=36432us retried=865 orphan=1
+18:13:41 AJAZZ:AK820 PRO:1: [lcd] arms=463799 slow_cmd=40542 slow_fire=76 never=0 busy=0
+18:13:41 AJAZZ:AK820 PRO:1: [lcd] tc: full=463799 short=0 (last 0/0) arms_cur_stale=463798
+18:13:41 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:13:41 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4699/0/0 624:1/0/0 7424:1/0/0 660:20175/0/335 5632:1/0/0 460:36033/0/0 5060:335/0/0 920:1/0/0 3584:693/0/0 168:386947/0/0 840:1325/0/0 672:1381/0/6 other:12202/0/0
+18:14:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 76 273 283 111 62 1 2 18 18 7 8 44 824 | max=36432us retried=871 orphan=1
+18:14:42 AJAZZ:AK820 PRO:1: [lcd] arms=466890 slow_cmd=40812 slow_fire=76 never=0 busy=0
+18:14:42 AJAZZ:AK820 PRO:1: [lcd] tc: full=466890 short=0 (last 0/0) arms_cur_stale=466889
+18:14:42 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:14:42 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4731/0/0 624:1/0/0 7424:1/0/0 660:20317/0/340 5632:1/0/0 460:36268/0/0 5060:338/0/0 920:1/0/0 3584:697/0/0 168:389515/0/0 840:1343/0/0 672:1392/0/6 other:12280/0/0
+18:15:22 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 76 273 285 111 62 1 2 19 18 7 8 45 832 | max=36432us retried=878 orphan=1
+18:15:42 AJAZZ:AK820 PRO:1: [lcd] arms=470275 slow_cmd=41119 slow_fire=78 never=0 busy=0
+18:15:42 AJAZZ:AK820 PRO:1: [lcd] tc: full=470275 short=0 (last 0/0) arms_cur_stale=470274
+18:15:42 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:15:42 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4764/0/0 624:1/0/0 7424:1/0/0 660:20459/0/340 5632:1/0/0 460:36514/0/0 5060:340/0/0 920:1/0/0 3584:701/0/0 168:392378/0/0 840:1352/0/0 672:1407/0/6 other:12351/0/0
+18:16:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 77 274 286 112 63 1 2 19 18 7 8 45 839 | max=36432us retried=884 orphan=1
+18:16:42 AJAZZ:AK820 PRO:1: [lcd] arms=473514 slow_cmd=41367 slow_fire=78 never=0 busy=0
+18:16:42 AJAZZ:AK820 PRO:1: [lcd] tc: full=473514 short=0 (last 0/0) arms_cur_stale=473513
+18:16:42 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:16:42 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4796/0/0 624:1/0/0 7424:1/0/0 660:20601/0/342 5632:1/0/0 460:36764/0/0 5060:342/0/0 920:1/0/0 3584:705/0/0 168:395084/0/0 840:1364/0/0 672:1414/0/6 other:12435/0/0
+18:17:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 77 276 288 113 64 1 2 19 18 7 8 45 845 | max=36432us retried=890 orphan=1
+18:17:42 AJAZZ:AK820 PRO:1: [lcd] arms=476806 slow_cmd=41658 slow_fire=78 never=0 busy=0
+18:17:42 AJAZZ:AK820 PRO:1: [lcd] tc: full=476806 short=0 (last 0/0) arms_cur_stale=476805
+18:17:42 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:17:42 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4828/0/0 624:1/0/0 7424:1/0/0 660:20743/0/343 5632:1/0/0 460:37003/0/0 5060:345/0/0 920:1/0/0 3584:709/0/0 168:397859/0/0 840:1373/0/0 672:1424/0/6 other:12513/0/0
+18:18:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 77 281 288 113 64 1 3 19 18 7 8 45 851 | max=36432us retried=896 orphan=1
+18:18:42 AJAZZ:AK820 PRO:1: [lcd] arms=479975 slow_cmd=41903 slow_fire=78 never=0 busy=0
+18:18:42 AJAZZ:AK820 PRO:1: [lcd] tc: full=479975 short=0 (last 0/0) arms_cur_stale=479974
+18:18:42 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:18:43 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4860/0/0 624:1/0/0 7424:1/0/0 660:20885/0/345 5632:1/0/0 460:37252/0/0 5060:347/0/0 920:1/0/0 3584:713/0/0 168:400500/0/0 840:1380/0/0 672:1436/0/6 other:12593/0/0
+18:19:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 77 281 291 114 66 1 3 19 18 7 8 45 857 | max=36432us retried=902 orphan=1
+18:19:43 AJAZZ:AK820 PRO:1: [lcd] arms=483164 slow_cmd=42207 slow_fire=79 never=0 busy=0
+18:19:43 AJAZZ:AK820 PRO:1: [lcd] tc: full=483164 short=0 (last 0/0) arms_cur_stale=483163
+18:19:43 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:19:43 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4892/0/0 624:1/0/0 7424:1/0/0 660:21027/0/349 5632:1/0/0 460:37495/0/0 5060:349/0/0 920:1/0/0 3584:717/0/0 168:403165/0/0 840:1387/0/0 672:1444/0/6 other:12679/0/0
+18:20:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 77 283 292 115 67 1 3 19 19 7 8 45 863 | max=36432us retried=908 orphan=1
+18:20:43 AJAZZ:AK820 PRO:1: [lcd] arms=486288 slow_cmd=42511 slow_fire=79 never=0 busy=0
+18:20:43 AJAZZ:AK820 PRO:1: [lcd] tc: full=486288 short=0 (last 0/0) arms_cur_stale=486287
+18:20:43 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:20:43 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4924/0/0 624:1/0/0 7424:1/0/0 660:21169/0/349 5632:1/0/0 460:37728/0/0 5060:352/0/0 920:1/0/0 3584:721/0/0 168:405771/0/0 840:1391/0/0 672:1455/0/6 other:12768/0/0
+18:21:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 77 286 295 115 67 1 3 19 19 7 8 45 869 | max=36432us retried=914 orphan=1
+18:21:43 AJAZZ:AK820 PRO:1: [lcd] arms=489355 slow_cmd=42761 slow_fire=79 never=0 busy=0
+18:21:43 AJAZZ:AK820 PRO:1: [lcd] tc: full=489355 short=0 (last 0/0) arms_cur_stale=489354
+18:21:43 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:21:43 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4956/0/0 624:1/0/0 7424:1/0/0 660:21310/0/351 5632:1/0/0 460:37980/0/0 5060:354/0/0 920:1/0/0 3584:725/0/0 168:408302/0/0 840:1401/0/0 672:1465/0/6 other:12853/0/0
+18:22:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 77 288 298 116 67 1 3 19 19 7 8 45 875 | max=36432us retried=920 orphan=1
+18:22:43 AJAZZ:AK820 PRO:1: [lcd] arms=492470 slow_cmd=43013 slow_fire=79 never=0 busy=0
+18:22:43 AJAZZ:AK820 PRO:1: [lcd] tc: full=492470 short=0 (last 0/0) arms_cur_stale=492469
+18:22:43 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:22:43 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:4988/0/0 624:1/0/0 7424:1/0/0 660:21451/0/355 5632:1/0/0 460:38221/0/0 5060:356/0/0 920:1/0/0 3584:729/0/0 168:410891/0/0 840:1411/0/0 672:1473/0/6 other:12941/0/0
+18:23:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 78 291 299 117 67 1 3 19 19 7 8 45 881 | max=36432us retried=926 orphan=1
+18:23:44 AJAZZ:AK820 PRO:1: [lcd] arms=495508 slow_cmd=43274 slow_fire=79 never=0 busy=0
+18:23:44 AJAZZ:AK820 PRO:1: [lcd] tc: full=495508 short=0 (last 0/0) arms_cur_stale=495507
+18:23:44 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:23:44 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5020/0/0 624:1/0/0 7424:1/0/0 660:21593/0/357 5632:1/0/0 460:38458/0/0 5060:359/0/0 920:1/0/0 3584:733/0/0 168:413409/0/0 840:1418/0/0 672:1479/0/6 other:13030/0/0
+18:24:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 78 295 301 117 67 1 3 19 19 7 8 45 887 | max=36432us retried=932 orphan=1
+18:24:44 AJAZZ:AK820 PRO:1: [lcd] arms=498722 slow_cmd=43549 slow_fire=79 never=0 busy=0
+18:24:44 AJAZZ:AK820 PRO:1: [lcd] tc: full=498722 short=0 (last 0/0) arms_cur_stale=498721
+18:24:44 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:24:44 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5052/0/0 624:1/0/0 7424:1/0/0 660:21735/0/359 5632:1/0/0 460:38709/0/0 5060:361/0/0 920:1/0/0 3584:737/0/0 168:416084/0/0 840:1428/0/0 672:1490/0/6 other:13117/0/0
+18:25:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 78 297 304 117 67 1 3 19 19 7 8 47 892 | max=36432us retried=938 orphan=1
+18:25:44 AJAZZ:AK820 PRO:1: [lcd] arms=501917 slow_cmd=43823 slow_fire=79 never=0 busy=0
+18:25:44 AJAZZ:AK820 PRO:1: [lcd] tc: full=501917 short=0 (last 0/0) arms_cur_stale=501916
+18:25:44 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:25:44 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5085/0/0 624:1/0/0 7424:1/0/0 660:21883/0/362 5632:1/0/0 460:38948/0/0 5060:363/0/0 920:1/0/0 3584:741/0/0 168:418741/0/0 840:1433/0/0 672:1500/0/6 other:13214/0/0
+18:26:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 78 299 306 117 67 1 3 19 20 7 9 47 898 | max=36432us retried=944 orphan=1
+18:26:44 AJAZZ:AK820 PRO:1: [lcd] arms=505158 slow_cmd=44075 slow_fire=79 never=0 busy=0
+18:26:44 AJAZZ:AK820 PRO:1: [lcd] tc: full=505158 short=0 (last 0/0) arms_cur_stale=505157
+18:26:44 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:26:44 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5117/0/0 624:1/0/0 7424:1/0/0 660:22024/0/364 5632:1/0/0 460:39186/0/0 5060:366/0/0 920:1/0/0 3584:745/0/0 168:421452/0/0 840:1455/0/0 672:1512/0/6 other:13292/0/0
+18:27:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 79 301 308 118 67 1 3 19 20 7 9 47 904 | max=36432us retried=950 orphan=1
+18:27:44 AJAZZ:AK820 PRO:1: [lcd] arms=508355 slow_cmd=44327 slow_fire=80 never=0 busy=0
+18:27:44 AJAZZ:AK820 PRO:1: [lcd] tc: full=508355 short=0 (last 0/0) arms_cur_stale=508354
+18:27:44 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:27:44 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5149/0/0 624:1/0/0 7424:1/0/0 660:22158/0/365 5632:1/0/0 460:39433/0/0 5060:368/0/0 920:1/0/0 3584:749/0/0 168:424128/0/0 840:1464/0/0 672:1520/0/6 other:13377/0/0
+18:28:23 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 80 303 311 118 67 1 3 19 20 7 9 48 909 | max=36432us retried=956 orphan=1
+18:28:45 AJAZZ:AK820 PRO:1: [lcd] arms=511461 slow_cmd=44634 slow_fire=80 never=0 busy=0
+18:28:45 AJAZZ:AK820 PRO:1: [lcd] tc: full=511461 short=0 (last 0/0) arms_cur_stale=511460
+18:28:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:28:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5181/0/0 624:1/0/0 7424:1/0/0 660:22293/0/371 5632:1/0/0 460:39679/0/0 5060:370/0/0 920:1/0/0 3584:753/0/0 168:426711/0/0 840:1477/0/0 672:1530/0/6 other:13458/0/0
+18:29:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 81 305 313 119 67 1 3 19 20 7 9 49 914 | max=36432us retried=962 orphan=1
+18:29:45 AJAZZ:AK820 PRO:1: [lcd] arms=514759 slow_cmd=44916 slow_fire=80 never=0 busy=0
+18:29:45 AJAZZ:AK820 PRO:1: [lcd] tc: full=514759 short=0 (last 0/0) arms_cur_stale=514758
+18:29:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:29:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5213/0/0 624:1/0/0 7424:1/0/0 660:22427/0/375 5632:1/0/0 460:39917/0/0 5060:373/0/0 920:1/0/0 3584:757/0/0 168:429497/0/0 840:1487/0/0 672:1540/0/6 other:13539/0/0
+18:30:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 81 306 316 121 67 1 3 19 20 7 9 49 920 | max=36432us retried=968 orphan=1
+18:30:45 AJAZZ:AK820 PRO:1: [lcd] arms=518045 slow_cmd=45181 slow_fire=82 never=0 busy=0
+18:30:45 AJAZZ:AK820 PRO:1: [lcd] tc: full=518045 short=0 (last 0/0) arms_cur_stale=518044
+18:30:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:30:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5245/0/0 624:1/0/0 7424:1/0/0 660:22563/0/378 5632:1/0/0 460:40167/0/0 5060:375/0/0 920:1/0/0 3584:761/0/0 168:432253/0/0 840:1497/0/0 672:1553/0/6 other:13622/0/0
+18:31:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 81 308 318 122 68 1 3 19 20 7 9 50 925 | max=36432us retried=974 orphan=1
+18:31:45 AJAZZ:AK820 PRO:1: [lcd] arms=521346 slow_cmd=45440 slow_fire=83 never=0 busy=0
+18:31:45 AJAZZ:AK820 PRO:1: [lcd] tc: full=521346 short=0 (last 0/0) arms_cur_stale=521345
+18:31:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:31:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5277/0/0 624:1/0/0 7424:1/0/0 660:22699/0/381 5632:1/0/0 460:40410/0/0 5060:377/0/0 920:1/0/0 3584:765/0/0 168:435034/0/0 840:1502/0/0 672:1562/0/6 other:13711/0/0
+18:32:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 81 310 319 124 69 1 3 19 20 7 9 50 931 | max=36432us retried=980 orphan=1
+18:32:45 AJAZZ:AK820 PRO:1: [lcd] arms=524698 slow_cmd=45703 slow_fire=83 never=0 busy=0
+18:32:45 AJAZZ:AK820 PRO:1: [lcd] tc: full=524698 short=0 (last 0/0) arms_cur_stale=524697
+18:32:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:32:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5309/0/0 624:1/0/0 7424:1/0/0 660:22831/0/382 5632:1/0/0 460:40645/0/0 5060:380/0/0 920:1/0/0 3584:769/0/0 168:437875/0/0 840:1511/0/0 672:1571/0/6 other:13798/0/0
+18:33:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 81 312 320 125 69 1 4 19 20 7 9 51 937 | max=36432us retried=987 orphan=1
+18:33:46 AJAZZ:AK820 PRO:1: [lcd] arms=528016 slow_cmd=45975 slow_fire=86 never=0 busy=0
+18:33:46 AJAZZ:AK820 PRO:1: [lcd] tc: full=528016 short=0 (last 0/0) arms_cur_stale=528015
+18:33:46 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:33:46 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5341/0/0 624:1/0/0 7424:1/0/0 660:22965/0/387 5632:1/0/0 460:40900/0/0 5060:382/0/0 920:1/0/0 3584:773/0/0 168:440671/0/0 840:1522/0/0 672:1579/0/6 other:13874/0/0
+18:34:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 82 312 322 125 71 1 5 19 20 7 9 51 943 | max=36432us retried=993 orphan=1
+18:34:46 AJAZZ:AK820 PRO:1: [lcd] arms=531308 slow_cmd=46233 slow_fire=87 never=0 busy=0
+18:34:46 AJAZZ:AK820 PRO:1: [lcd] tc: full=531308 short=0 (last 0/0) arms_cur_stale=531307
+18:34:46 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:34:46 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5373/0/0 624:1/0/0 7424:1/0/0 660:23098/0/388 5632:1/0/0 460:41143/0/0 5060:384/0/0 920:1/0/0 3584:777/0/0 168:443446/0/0 840:1526/0/0 672:1589/0/6 other:13963/0/0
+18:35:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 82 314 325 126 71 1 5 19 20 7 9 51 949 | max=36432us retried=999 orphan=1
+18:35:46 AJAZZ:AK820 PRO:1: [lcd] arms=534522 slow_cmd=46479 slow_fire=87 never=0 busy=0
+18:35:46 AJAZZ:AK820 PRO:1: [lcd] tc: full=534522 short=0 (last 0/0) arms_cur_stale=534521
+18:35:46 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:35:46 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5406/0/0 624:1/0/0 7424:1/0/0 660:23234/0/391 5632:1/0/0 460:41387/0/0 5060:387/0/0 920:1/0/0 3584:781/0/0 168:446134/0/0 840:1534/0/0 672:1600/0/6 other:14050/0/0
+18:36:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 82 317 325 129 71 1 5 19 20 7 9 51 955 | max=36432us retried=1005 orphan=1
+18:36:46 AJAZZ:AK820 PRO:1: [lcd] arms=537835 slow_cmd=46757 slow_fire=88 never=0 busy=0
+18:36:46 AJAZZ:AK820 PRO:1: [lcd] tc: full=537835 short=0 (last 0/0) arms_cur_stale=537834
+18:36:46 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:36:46 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5438/0/0 624:1/0/0 7424:1/0/0 660:23374/0/396 5632:1/0/0 460:41640/0/0 5060:389/0/0 920:1/0/0 3584:785/0/0 168:448918/0/0 840:1543/0/0 672:1610/0/6 other:14129/0/0
+18:37:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 84 318 327 129 72 1 5 19 20 7 10 51 960 | max=36432us retried=1011 orphan=1
+18:37:47 AJAZZ:AK820 PRO:1: [lcd] arms=541119 slow_cmd=47046 slow_fire=89 never=0 busy=0
+18:37:47 AJAZZ:AK820 PRO:1: [lcd] tc: full=541119 short=0 (last 0/0) arms_cur_stale=541118
+18:37:47 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:37:47 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5470/0/0 624:1/0/0 7424:1/0/0 660:23517/0/398 5632:1/0/0 460:41878/0/0 5060:391/0/0 920:1/0/0 3584:789/0/0 168:451677/0/0 840:1552/0/0 672:1617/0/6 other:14219/0/0
+18:38:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 84 319 328 131 73 1 5 20 20 7 10 52 965 | max=36432us retried=1017 orphan=1
+18:38:47 AJAZZ:AK820 PRO:1: [lcd] arms=544426 slow_cmd=47301 slow_fire=90 never=0 busy=0
+18:38:47 AJAZZ:AK820 PRO:1: [lcd] tc: full=544426 short=0 (last 0/0) arms_cur_stale=544425
+18:38:47 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:38:47 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5502/0/0 624:1/0/0 7424:1/0/0 660:23660/0/400 5632:1/0/0 460:42116/0/0 5060:394/0/0 920:1/0/0 3584:793/0/0 168:454459/0/0 840:1556/0/0 672:1630/0/6 other:14307/0/0
+18:39:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 84 323 328 133 73 1 5 20 20 7 10 54 969 | max=36432us retried=1023 orphan=1
+18:39:47 AJAZZ:AK820 PRO:1: [lcd] arms=547697 slow_cmd=47542 slow_fire=91 never=0 busy=0
+18:39:47 AJAZZ:AK820 PRO:1: [lcd] tc: full=547697 short=0 (last 0/0) arms_cur_stale=547696
+18:39:47 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:39:47 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5534/0/0 624:1/0/0 7424:1/0/0 660:23801/0/402 5632:1/0/0 460:42367/0/0 5060:396/0/0 920:1/0/0 3584:797/0/0 168:457198/0/0 840:1566/0/0 672:1642/0/6 other:14387/0/0
+18:40:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 84 325 331 134 73 1 5 20 20 7 10 54 975 | max=36432us retried=1029 orphan=1
+18:40:47 AJAZZ:AK820 PRO:1: [lcd] arms=550972 slow_cmd=47811 slow_fire=93 never=0 busy=0
+18:40:47 AJAZZ:AK820 PRO:1: [lcd] tc: full=550972 short=0 (last 0/0) arms_cur_stale=550971
+18:40:47 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:40:47 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5566/0/0 624:1/0/0 7424:1/0/0 660:23939/0/402 5632:1/0/0 460:42614/0/0 5060:398/0/0 920:1/0/0 3584:801/0/0 168:459948/0/0 840:1575/0/0 672:1654/0/6 other:14468/0/0
+18:41:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 84 326 333 135 73 1 5 20 21 8 10 54 981 | max=36432us retried=1035 orphan=1
+18:41:47 AJAZZ:AK820 PRO:1: [lcd] arms=554157 slow_cmd=48071 slow_fire=94 never=0 busy=0
+18:41:47 AJAZZ:AK820 PRO:1: [lcd] tc: full=554157 short=0 (last 0/0) arms_cur_stale=554156
+18:41:47 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:41:47 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5598/0/0 624:1/0/0 7424:1/0/0 660:24082/0/404 5632:1/0/0 460:42852/0/0 5060:401/0/0 920:1/0/0 3584:805/0/0 168:462617/0/0 840:1580/0/0 672:1661/0/6 other:14552/0/0
+18:42:24 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 84 330 335 135 73 1 5 20 21 8 10 55 986 | max=36432us retried=1041 orphan=1
+18:42:48 AJAZZ:AK820 PRO:1: [lcd] arms=557415 slow_cmd=48315 slow_fire=97 never=0 busy=0
+18:42:48 AJAZZ:AK820 PRO:1: [lcd] tc: full=557415 short=0 (last 0/0) arms_cur_stale=557414
+18:42:48 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:42:48 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5630/0/0 624:1/0/0 7424:1/0/0 660:24224/0/406 5632:1/0/0 460:43100/0/0 5060:403/0/0 920:1/0/0 3584:809/0/0 168:465340/0/0 840:1588/0/0 672:1674/0/6 other:14638/0/0
+18:43:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 85 333 336 135 74 1 5 20 21 8 10 55 992 | max=36432us retried=1047 orphan=1
+18:43:48 AJAZZ:AK820 PRO:1: [lcd] arms=560597 slow_cmd=48531 slow_fire=97 never=0 busy=0
+18:43:48 AJAZZ:AK820 PRO:1: [lcd] tc: full=560597 short=0 (last 0/0) arms_cur_stale=560596
+18:43:48 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:43:48 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5662/0/0 624:1/0/0 7424:1/0/0 660:24368/0/409 5632:1/0/0 460:43344/0/0 5060:405/0/0 920:1/0/0 3584:813/0/0 168:467990/0/0 840:1595/0/0 672:1684/0/6 other:14727/0/0
+18:44:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 85 335 338 136 75 1 5 20 21 8 10 55 998 | max=36432us retried=1053 orphan=1
+18:44:48 AJAZZ:AK820 PRO:1: [lcd] arms=563793 slow_cmd=48733 slow_fire=98 never=0 busy=0
+18:44:48 AJAZZ:AK820 PRO:1: [lcd] tc: full=563793 short=0 (last 0/0) arms_cur_stale=563792
+18:44:48 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:44:48 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5694/0/0 624:1/0/0 7424:1/0/0 660:24513/0/410 5632:1/0/0 460:43582/0/0 5060:408/0/0 920:1/0/0 3584:817/0/0 168:470658/0/0 840:1607/0/0 672:1695/0/6 other:14810/0/0
+18:45:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 85 338 339 138 75 1 5 20 21 8 10 56 1003 | max=36432us retried=1059 orphan=1
+18:45:48 AJAZZ:AK820 PRO:1: [lcd] arms=567040 slow_cmd=48997 slow_fire=98 never=0 busy=0
+18:45:48 AJAZZ:AK820 PRO:1: [lcd] tc: full=567040 short=0 (last 0/0) arms_cur_stale=567039
+18:45:48 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:45:48 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5726/0/0 624:1/0/0 7424:1/0/0 660:24658/0/412 5632:1/0/0 460:43833/0/0 5060:410/0/0 920:1/0/0 3584:821/0/0 168:473367/0/0 840:1612/0/0 672:1704/0/7 other:14900/0/0
+18:46:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 87 339 340 138 77 1 5 20 21 8 10 56 1009 | max=36432us retried=1065 orphan=1
+18:46:48 AJAZZ:AK820 PRO:1: [lcd] arms=570439 slow_cmd=49310 slow_fire=98 never=0 busy=0
+18:46:48 AJAZZ:AK820 PRO:1: [lcd] tc: full=570439 short=0 (last 0/0) arms_cur_stale=570438
+18:46:48 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:46:48 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5759/0/0 624:1/0/0 7424:1/0/0 660:24809/0/413 5632:1/0/0 460:44077/0/0 5060:412/0/0 920:1/0/0 3584:825/0/0 168:476231/0/0 840:1619/0/0 672:1712/0/7 other:14986/0/0
+18:47:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 87 343 342 138 77 1 5 20 21 8 10 57 1014 | max=36432us retried=1071 orphan=1
+18:47:49 AJAZZ:AK820 PRO:1: [lcd] arms=573642 slow_cmd=49576 slow_fire=99 never=0 busy=0
+18:47:49 AJAZZ:AK820 PRO:1: [lcd] tc: full=573642 short=0 (last 0/0) arms_cur_stale=573641
+18:47:49 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:47:49 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5791/0/0 624:1/0/0 7424:1/0/0 660:24954/0/415 5632:1/0/0 460:44314/0/0 5060:415/0/0 920:1/0/0 3584:829/0/0 168:478913/0/0 840:1632/0/0 672:1717/0/7 other:15068/0/0
+18:48:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 87 347 342 138 77 1 5 20 22 9 10 58 1019 | max=36432us retried=1077 orphan=1
+18:48:49 AJAZZ:AK820 PRO:1: [lcd] arms=576880 slow_cmd=49824 slow_fire=100 never=0 busy=0
+18:48:49 AJAZZ:AK820 PRO:1: [lcd] tc: full=576880 short=0 (last 0/0) arms_cur_stale=576879
+18:48:49 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:48:49 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5823/0/0 624:1/0/0 7424:1/0/0 660:25099/0/416 5632:1/0/0 460:44562/0/0 5060:417/0/0 920:1/0/0 3584:833/0/0 168:481624/0/0 840:1641/0/0 672:1725/0/7 other:15147/0/0
+18:49:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 87 348 343 141 77 1 5 21 22 9 10 59 1024 | max=36432us retried=1083 orphan=1
+18:49:49 AJAZZ:AK820 PRO:1: [lcd] arms=580060 slow_cmd=50092 slow_fire=100 never=0 busy=0
+18:49:49 AJAZZ:AK820 PRO:1: [lcd] tc: full=580060 short=0 (last 0/0) arms_cur_stale=580059
+18:49:49 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:49:49 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5855/0/0 624:1/0/0 7424:1/0/0 660:25244/0/417 5632:1/0/0 460:44806/0/0 5060:419/0/0 920:1/0/0 3584:837/0/0 168:484273/0/0 840:1654/0/0 672:1732/0/8 other:15231/0/0
+18:50:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 87 350 344 142 79 1 5 21 22 9 10 59 1030 | max=36432us retried=1089 orphan=1
+18:50:49 AJAZZ:AK820 PRO:1: [lcd] arms=582517 slow_cmd=50298 slow_fire=100 never=0 busy=0
+18:50:49 AJAZZ:AK820 PRO:1: [lcd] tc: full=582517 short=0 (last 0/0) arms_cur_stale=582516
+18:50:49 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:50:49 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5879/0/0 624:1/0/0 7424:1/0/0 660:25369/0/417 5632:1/0/0 460:44992/0/0 5060:422/0/0 920:1/0/0 3584:841/0/0 168:486318/0/0 840:1661/0/0 672:1736/0/8 other:15290/0/0
+18:51:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 88 355 344 142 79 1 5 21 22 9 10 59 1036 | max=36432us retried=1095 orphan=1
+18:51:49 AJAZZ:AK820 PRO:1: [lcd] arms=582584 slow_cmd=50303 slow_fire=100 never=0 busy=0
+18:51:49 AJAZZ:AK820 PRO:1: [lcd] tc: full=582584 short=0 (last 0/0) arms_cur_stale=582583
+18:51:49 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:51:49 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5879/0/0 624:1/0/0 7424:1/0/0 660:25436/0/417 5632:1/0/0 460:44992/0/0 5060:422/0/0 920:1/0/0 3584:841/0/0 168:486318/0/0 840:1661/0/0 672:1736/0/8 other:15290/0/0
+18:52:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 88 361 344 142 79 1 5 21 22 9 10 59 1042 | max=36432us retried=1101 orphan=1
+18:52:50 AJAZZ:AK820 PRO:1: [lcd] arms=582651 slow_cmd=50309 slow_fire=100 never=0 busy=0
+18:52:50 AJAZZ:AK820 PRO:1: [lcd] tc: full=582651 short=0 (last 0/0) arms_cur_stale=582650
+18:52:50 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:52:50 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5879/0/0 624:1/0/0 7424:1/0/0 660:25503/0/417 5632:1/0/0 460:44992/0/0 5060:422/0/0 920:1/0/0 3584:841/0/0 168:486318/0/0 840:1661/0/0 672:1736/0/8 other:15290/0/0
+18:53:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 88 367 344 142 79 1 5 21 22 9 10 59 1048 | max=36432us retried=1107 orphan=1
+18:53:50 AJAZZ:AK820 PRO:1: [lcd] arms=582720 slow_cmd=50315 slow_fire=100 never=0 busy=0
+18:53:50 AJAZZ:AK820 PRO:1: [lcd] tc: full=582720 short=0 (last 0/0) arms_cur_stale=582719
+18:53:50 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:53:50 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5879/0/0 624:1/0/0 7424:1/0/0 660:25570/0/418 5632:1/0/0 460:44992/0/0 5060:422/0/0 920:1/0/0 3584:841/0/0 168:486318/0/0 840:1661/0/0 672:1736/0/8 other:15292/0/0
+18:54:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 88 373 344 142 79 1 5 21 22 9 10 60 1053 | max=36432us retried=1113 orphan=1
+18:54:50 AJAZZ:AK820 PRO:1: [lcd] arms=582787 slow_cmd=50317 slow_fire=100 never=0 busy=0
+18:54:50 AJAZZ:AK820 PRO:1: [lcd] tc: full=582787 short=0 (last 0/0) arms_cur_stale=582786
+18:54:50 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:54:50 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5879/0/0 624:1/0/0 7424:1/0/0 660:25637/0/418 5632:1/0/0 460:44992/0/0 5060:422/0/0 920:1/0/0 3584:841/0/0 168:486318/0/0 840:1661/0/0 672:1736/0/8 other:15292/0/0
+18:55:25 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 89 378 344 142 79 1 5 21 22 9 10 60 1059 | max=36432us retried=1119 orphan=1
+18:55:50 AJAZZ:AK820 PRO:1: [lcd] arms=582855 slow_cmd=50322 slow_fire=100 never=0 busy=0
+18:55:50 AJAZZ:AK820 PRO:1: [lcd] tc: full=582855 short=0 (last 0/0) arms_cur_stale=582854
+18:55:50 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+18:55:50 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0/0 1152:1/0/0 3792:1/0/0 5888:5879/0/0 624:1/0/0 7424:1/0/0 660:25705/0/420 5632:1/0/0 460:44992/0/0 5060:422/0/0 920:1/0/0 3584:841/0/0 168:486318/0/0 840:1661/0/0 672:1736/0/8 other:15292/0/0

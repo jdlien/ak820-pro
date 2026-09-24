@@ -1,6 +1,6 @@
 # Current status — the crash hunt
 
-Updated 2026-09-23, 13:05. The live plan is
+Updated 2026-09-23, 19:05. The live plan is
 [`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); its codex review and every
 finding's disposition are linked from it.
 
@@ -14,20 +14,54 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## Installed right now (14:05)
+## Installed right now (19:00)
 
-- **Firmware: the DAILY build at the branch tip**,
-  `via-daily-32bb72aa53-20260923-132759.bin`, token `0x3000de57`: v7, the
-  lost-write fix and the SPI0 dispatch fix. No test hooks (`HC_PEEK`
-  verified refused).
-- **A two-hour crash hunt is running on it** (14:02 → ~16:02,
-  `~/Library/Logs/ak820pro/crash-hunt/20260923-140219/`): the SPI0 fix's first
-  run on hardware. The owner is typing on another keyboard meanwhile.
-- **Agent: booted out** since the fault tests. Restore it after the hunt:
-  `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist`.
+- **Firmware: the FINAL DAILY of the 2026-09-23 campaign**,
+  `via-daily-44e7314e65-20260923-185609.bin`, token `0xa887132e`, flashed
+  18:56. It carries v7 and every fix below:
+  - the fault record's lost write;
+  - the SPI0 lost completion;
+  - the serial and USB lock nesting;
+  - the CH582F pump order.
+
+  No test hooks (`HC_PEEK` verified refused).
+- **A ten-hour crash hunt is running on it**: 18:56 → ~04:57,
+  `~/Library/Logs/ak820pro/crash-hunt/20260923-185647/`, `--pause-agent`, so
+  it **restores the agent itself** at the end.
+- **When it ends:**
+  - if clean, move `deps.lock` to firmware `44e7314e65` and push;
+  - archive its evidence to `history/`;
+  - hand the keyboard back to the owner, who is on another keyboard
+    meanwhile.
 - Keymap and lighting: `~/Documents/ak820pro-{keymap,lighting}.json`
   (refreshed by each flash today) match the verified hunt backup of
   2026-09-22 23:00.
+
+## ✅ The DMA "never-start" is solved (2026-09-23)
+
+Every "never started" blit timeout on record was a **completed** transfer
+whose completion the SPI0 half-transfer handler erased. It read `RIS` and
+then cleared every flag, so a DMATCIF raised between those two instructions
+was lost.
+
+Only 660-byte clock digits were exposed, and the reason is timing. The
+equal-priority LED row ISR delays that handler until 188–258 µs after the
+arm, and a 660-byte transfer completes at 220 µs. The fix (ChibiOS
+`c57623d0d2`) clears only what was read and re-checks for the completion.
+E5 ran **3 hours and 580,060 blits with no timeout**.
+
+Found with `CURCNT` instrumentation. Along the way, `DMACNT` turned out never
+to count down, so "never started" was a label, not a diagnosis. A Codex review
+(`gpt-6-astra`, reasoning effort high) supplied the equal-priority
+correction. It also found the other fixes of the day:
+- the USB lock nesting;
+- the CH582F pump order;
+- the `IC` read-modify-write.
+
+Full analysis and every disposition:
+[`FIRMWARE-FINDINGS-2026-09-23.md`](FIRMWARE-FINDINGS-2026-09-23.md).
+Evidence:
+[`history/crash-hunt-2026-09-23-lost-completion/`](../history/crash-hunt-2026-09-23-lost-completion/).
 
 ## ✅ The fault recorder works, after a fix (2026-09-23)
 
@@ -101,43 +135,41 @@ file:line.
 
 ## Next
 
-1. **Flash a daily build with the lost-write fix** and restore the agent.
-   The fix is `02db293696`. Do NOT flash `via-daily-32bb72aa53-*`: it
-   carries the reverted SPI0 patch.
-2. **The DMA that never starts**: the 13:01 hunt found that **all six were
-   clock digits** (one 660-byte 15×22 cell, ~5–7% of blits), and none had a
-   slow arm (see the plan's "Fourth result",
-   [evidence](../history/crash-hunt-2026-09-23-arm-timing/)). An
-   instrumented build logging each timeout's source, size, position and the
-   blit before it, plus exposure per transfer size, is built but uncommitted:
-   `via-instrumented-32bb72aa53-dirty-20260923-140533.bin`. Run it with the
-   console captured (`scripts/consolelog.sh`) and a hunt, overnight if the
-   owner can spare the keyboard.
-3. **SPI0 ISR dispatch: tried and REVERTED.** The fix (`2a17a73b48`) routed
-   the SPI0 handler on `sn32_dma_busy` and cleared only the DMA flags it
-   read. Its first hunt, on the daily build, gave six "unknown" blit timeouts
-   in 21 minutes. Each was a DMA that started and never delivered its
-   completion, with a 1.95 s main-loop stall while the wait ran out its long
-   bound. The old dispatch gave none in ten hours. Reverted in both
-   repositories and pushed (`bf9310ca84`, firmware `7302fc1393`); the hazards
-   it aimed at are still open. An instrumented build of it (E1,
-   `via-instrumented-32bb72aa53-dirty-20260923-142322`) is being run with the
-   console to see how the completion goes missing.
-4. Stress the untouched paths: wireless (`tx_timeouts` run at ~35–50% of
-   frames in the console just now), RTC I2C, Mac sleep/wake.
-5. Keep `deps.lock` on `02db293696` until a better build has survived a hunt.
-6. Parked idea (taskmaster task 6): a QR code to the agent installer via a
-   jqr.ca redirect.
-7. Still outstanding: **reboot the Mac** to prove the agent comes back on its
-   own after login.
+1. **When the overnight hunt ends:**
+   - check it: 0 timeouts expected;
+   - move `deps.lock` to `44e7314e65` and push;
+   - archive the run;
+   - confirm the agent restored itself.
+2. **Open review items**, in [`FIRMWARE-FINDINGS-2026-09-23.md`](FIRMWARE-FINDINGS-2026-09-23.md):
+   - rework `lcd_blit_wait()`'s start detection and classification on
+     CURCNT/DMAEN;
+   - FRESET SPI0 at hand-back;
+   - check that internal-flash programming only ever targets erased lines
+     (the LLD erases the whole sector otherwise);
+   - invalidate display shadows when a glyph is dropped;
+   - give the debug-page pump a recovery path;
+   - count UART overrun.
+3. **SPI0 raw-RIS dispatch:** the patch that tried it was reverted. With the
+   lost-completion fix in, a stale DMA flag outside a transfer is unlikely,
+   but the routing is still on raw `RIS`.
+4. **CH582F ACK deadline (10 ms):** about half of the module's ACKs take
+   15–36 ms in wired mode. Measure in Bluetooth mode before changing it.
+5. **Stress the untouched paths:** RTC I2C, Mac sleep/wake, and the Mac
+   reboot test for the agent.
+6. **Parked idea** (taskmaster task 6): a QR code to the agent installer via
+   a jqr.ca redirect.
 
 ## Repository notes
 
-Pushed 2026-09-23, all three repositories. Firmware branch `ak820pro-jdlien`:
-`02db293696` (the lost-write fix and its test aids), `32bb72aa53` (the SPI0
-dispatch fix) and `7302fc1393` (its revert, gitlink `bf9310ca84`, the
-pre-patch ChibiOS tree). **`deps.lock` pins `02db293696`**, which never had
-the SPI0 patch. The tip's tree equals it apart from `PATCHES.md`. `.taskmaster/` stays untracked, as
+All pushed, 2026-09-23 ~19:00. Firmware `ak820pro-jdlien` is at `44e7314e65`;
+ChibiOS `ak820pro-patches` is at `c212e20dd2`. That branch carries three
+fixes from today: the serial fix `a3fdffe26d`, the SPI0 lost completion
+`c57623d0d2` and the USB fix `c212e20dd2`. It also carries the reverted
+dispatch attempt `2a17a73b48` and its revert `bf9310ca84`.
+
+**`deps.lock` still pins `02db293696`** (v7 plus the lost-write fix). It moves
+to `44e7314e65` once the overnight hunt passes. The recovery bundle in
+`ak820pro-builds/` holds the new ChibiOS tip. `.taskmaster/` stays untracked, as
 before; it now holds task 6, the QR idea. The hunt's raw output stays in
 `~/Library/Logs/ak820pro/crash-hunt/`; a snapshot of the 21:18 evidence is in
 [`history/crash-hunt-2026-09-22/`](../history/crash-hunt-2026-09-22/).

@@ -1,0 +1,76 @@
+14:46:45 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 0 4 1 0 1 0 0 0 0 0 0 0 5 | max=24486us retried=5 orphan=1
+14:46:45 AJAZZ:AK820 PRO:1: [lcd] arms=2079 slow_cmd=250 slow_fire=2 never=0 busy=0
+14:46:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:46:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:23/0 624:1/0 7424:1/0 660:127/0 5632:1/0 460:179/0 5060:3/0 920:1/0 3584:3/0 168:1668/0 840:7/0 1512:7/0 other:53/0
+14:47:45 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 1 8 2 0 2 0 0 0 0 0 0 0 10 | max=24486us retried=10 orphan=1
+14:47:45 AJAZZ:AK820 PRO:1: [lcd] arms=5514 slow_cmd=672 slow_fire=3 never=0 busy=0
+14:47:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:47:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:55/0 624:1/0 7424:1/0 660:268/0 5632:1/0 460:426/0 5060:5/0 920:1/0 3584:9/0 168:4562/0 840:12/0 1512:12/0 other:156/0
+14:48:45 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 1 9 7 0 3 0 0 0 0 0 0 0 15 | max=33936us retried=15 orphan=2
+14:48:45 AJAZZ:AK820 PRO:1: [lcd] arms=8839 slow_cmd=1109 slow_fire=4 never=0 busy=0
+14:48:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:48:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:87/0 624:1/0 7424:1/0 660:408/0 5632:1/0 460:664/0 5060:7/0 920:1/0 3584:15/0 168:7354/0 840:23/0 1512:18/0 other:254/0
+14:49:45 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 1 12 7 2 4 0 0 0 0 0 0 1 20 | max=33936us retried=21 orphan=3
+14:49:45 AJAZZ:AK820 PRO:1: [lcd] arms=12273 slow_cmd=1550 slow_fire=5 never=0 busy=0
+14:49:45 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:49:45 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:120/0 624:1/0 7424:1/0 660:545/0 5632:1/0 460:922/0 5060:10/0 920:1/0 3584:20/0 168:10236/0 840:30/0 1512:23/0 other:358/0
+14:50:45 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 1 15 9 2 4 0 0 0 1 0 0 1 26 | max=34182us retried=28 orphan=5
+14:50:46 AJAZZ:AK820 PRO:1: [lcd] arms=15770 slow_cmd=1938 slow_fire=5 never=0 busy=0
+14:50:46 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:50:46 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:152/0 624:1/0 7424:1/0 660:680/0 5632:1/0 460:1171/0 5060:12/0 920:1/0 3584:26/0 168:13203/0 840:39/0 1512:30/0 other:448/0
+14:50:56 AJAZZ:AK820 PRO:1: [lcd] blit timeout #1 kind=3 ris=2f cnt=659/659 s0=69 s1=25 ris1=08 cmd=1 fire=1 i2c=0
+14:50:56 AJAZZ:AK820 PRO:1: [lcd]   src=cf2d68 15x22@109,56 prev=ce5cfc/460 gap=5033 pre0=25/0a pre1=25/08
+14:51:46 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 1 15 11 4 4 0 0 1 1 1 0 1 32 | max=34182us retried=36 orphan=7
+14:51:47 AJAZZ:AK820 PRO:1: [lcd] arms=19229 slow_cmd=2386 slow_fire=5 never=0 busy=1
+14:51:47 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:51:47 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:185/0 624:1/0 7424:1/0 660:818/0 5632:1/0 460:1417/0 5060:14/0 920:1/0 3584:32/0 168:16127/0 840:45/0 1512:36/0 other:546/0
+14:52:46 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 18 12 4 5 0 0 1 1 1 0 2 37 | max=34182us retried=42 orphan=8
+14:52:47 AJAZZ:AK820 PRO:1: [lcd] arms=22534 slow_cmd=2755 slow_fire=5 never=0 busy=1
+14:52:47 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:52:47 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:217/0 624:1/0 7424:1/0 660:955/0 5632:1/0 460:1661/0 5060:16/0 920:1/0 3584:38/0 168:18901/0 840:59/0 1512:39/0 other:639/0
+14:53:46 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 19 12 9 5 0 0 1 1 1 0 2 43 | max=34182us retried=48 orphan=8
+14:53:48 AJAZZ:AK820 PRO:1: [lcd] arms=25917 slow_cmd=3138 slow_fire=5 never=0 busy=1
+14:53:48 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:53:48 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:249/0 624:1/0 7424:1/0 660:1096/0 5632:1/0 460:1916/0 5060:18/0 920:1/0 3584:44/0 168:21738/0 840:64/0 1512:52/0 other:731/0
+14:54:46 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 20 13 12 6 0 0 1 1 1 0 3 48 | max=34182us retried=54 orphan=8
+14:54:48 AJAZZ:AK820 PRO:1: [lcd] arms=29231 slow_cmd=3550 slow_fire=7 never=0 busy=1
+14:54:48 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:54:48 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:281/0 624:1/0 7424:1/0 660:1235/0 5632:1/0 460:2154/0 5060:20/0 920:1/0 3584:50/0 168:24522/0 840:75/0 1512:56/0 other:829/0
+14:55:13 AJAZZ:AK820 PRO:1: [lcd] blit timeout #2 kind=3 ris=2f cnt=659/659 s0=69 s1=25 ris1=08 cmd=46 fire=3 i2c=0
+14:55:13 AJAZZ:AK820 PRO:1: [lcd]   src=cf3290 15x22@19,56 prev=cf2ad4/660 gap=671 pre0=25/0a pre1=25/08
+14:55:43 AJAZZ:AK820 PRO:1: [lcd] blit timeout #3 kind=3 ris=2f cnt=659/659 s0=69 s1=25 ris1=08 cmd=0 fire=2 i2c=0
+14:55:43 AJAZZ:AK820 PRO:1: [lcd]   src=cf2ad4 15x22@4,56 prev=ce4d70/168 gap=728 pre0=25/0a pre1=25/08
+14:55:48 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 20 14 14 6 1 0 1 2 1 0 3 55 | max=34182us retried=62 orphan=9
+14:55:52 AJAZZ:AK820 PRO:1: [lcd] arms=32572 slow_cmd=3960 slow_fire=7 never=0 busy=1
+14:55:52 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:55:52 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:316/0 624:1/0 7424:1/0 660:1383/0 5632:1/0 460:2417/0 5060:22/0 920:1/0 3584:54/0 168:27306/0 840:89/0 1512:65/0 other:911/0
+14:56:48 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 20 16 15 8 2 0 1 2 1 0 3 61 | max=34182us retried=68 orphan=9
+14:56:52 AJAZZ:AK820 PRO:1: [lcd] arms=35748 slow_cmd=4356 slow_fire=7 never=0 busy=1
+14:56:52 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:56:52 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:349/0 624:1/0 7424:1/0 660:1527/0 5632:1/0 460:2672/0 5060:24/0 920:1/0 3584:59/0 168:29941/0 840:98/0 1512:69/0 other:1000/0
+14:57:48 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 22 18 17 8 2 0 1 2 1 0 3 67 | max=34182us retried=74 orphan=9
+14:57:53 AJAZZ:AK820 PRO:1: [lcd] arms=39045 slow_cmd=4791 slow_fire=7 never=0 busy=1
+14:57:53 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:57:53 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:382/0 624:1/0 7424:1/0 660:1669/0 5632:1/0 460:2923/0 5060:26/0 920:1/0 3584:64/0 168:32700/0 840:113/0 1512:74/0 other:1085/0
+14:58:48 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 26 18 19 8 2 0 1 2 1 0 3 73 | max=34182us retried=80 orphan=9
+14:58:53 AJAZZ:AK820 PRO:1: [lcd] arms=42329 slow_cmd=5158 slow_fire=8 never=0 busy=1
+14:58:53 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:58:53 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:416/0 624:1/0 7424:1/0 660:1820/0 5632:1/0 460:3185/0 5060:29/0 920:1/0 3584:69/0 168:35429/0 840:121/0 1512:81/0 other:1170/0
+14:59:48 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 27 21 20 9 2 0 1 2 2 0 3 78 | max=34182us retried=86 orphan=11
+14:59:53 AJAZZ:AK820 PRO:1: [lcd] arms=45539 slow_cmd=5535 slow_fire=8 never=0 busy=1
+14:59:53 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+14:59:53 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:449/0 624:1/0 7424:1/0 660:1965/0 5632:1/0 460:3441/0 5060:31/0 920:1/0 3584:75/0 168:38080/0 840:131/0 1512:91/0 other:1267/0
+14:59:59 AJAZZ:AK820 PRO:1: [lcd] blit timeout #4 kind=3 ris=2f cnt=659/659 s0=69 s1=25 ris1=08 cmd=1 fire=1 i2c=0
+14:59:59 AJAZZ:AK820 PRO:1: [lcd]   src=cf3290 15x22@19,56 prev=cf2ad4/660 gap=725 pre0=25/0a pre1=25/08
+15:00:49 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 29 22 21 10 2 0 2 2 3 0 4 82 | max=34182us retried=93 orphan=13
+15:00:55 AJAZZ:AK820 PRO:1: [lcd] arms=48689 slow_cmd=5920 slow_fire=8 never=0 busy=1
+15:00:55 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:00:55 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:484/0 624:1/0 7424:1/0 660:2112/0 5632:1/0 460:3712/0 5060:33/0 920:1/0 3584:80/0 168:40664/0 840:137/0 1512:103/0 other:1355/0
+15:01:49 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 32 23 23 10 2 0 2 2 3 0 4 88 | max=34182us retried=99 orphan=13
+15:01:56 AJAZZ:AK820 PRO:1: [lcd] arms=51972 slow_cmd=6318 slow_fire=9 never=0 busy=1
+15:01:56 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:01:56 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:517/0 624:1/0 7424:1/0 660:2257/0 5632:1/0 460:3975/0 5060:36/0 920:1/0 3584:85/0 168:43391/0 840:144/0 1512:114/0 other:1444/0
+15:02:49 AJAZZ:AK820 PRO:1: [ch582] ack ms: 0 0 0 2 33 26 24 11 2 0 2 2 3 0 4 94 | max=34182us retried=105 orphan=13
+15:02:56 AJAZZ:AK820 PRO:1: [lcd] arms=55331 slow_cmd=6697 slow_fire=10 never=0 busy=1
+15:02:56 AJAZZ:AK820 PRO:1: [lcd] pre-fire: s0_rx=0 s0_busy=0 s1_rx=0 exp=0
+15:02:56 AJAZZ:AK820 PRO:1: [lcd] sizes 32768:3/0 1152:1/0 3792:1/0 5888:550/0 624:1/0 7424:1/0 660:2400/0 5632:1/0 460:4229/0 5060:38/0 920:1/0 3584:90/0 168:46218/0 840:152/0 1512:119/0 other:1526/0
