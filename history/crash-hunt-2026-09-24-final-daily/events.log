@@ -1,0 +1,6 @@
+2026-09-23 18:56:47 crash hunt: 10.0 h, output /Users/jdlien/Library/Logs/ak820pro/crash-hunt/20260923-185647
+2026-09-23 18:56:49 backed up; originals: keycode 0x0000, brightness 105, effect 2
+2026-09-23 18:56:50 effects: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+2026-09-24 04:56:50 at exit: keymap, encoders and lighting match the backup
+2026-09-24 04:56:52 ran 10.00 h; 0 recoveries; sent 162388 text, 16797 playback, 1800 fx, 1200 keymap, 1200 rgb_save
+2026-09-24 04:56:52 this boot: blit_timeouts +0 (0.0/h), nonflash stalls >=25 ms +0, flash writes +2405, worst loop gap 43 ms (flash)

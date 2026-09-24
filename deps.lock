@@ -17,7 +17,7 @@
 # (drivers/led/sn32f2xx.c+.h, quantum/rgb_matrix/rgb_matrix.c,
 # platforms/chibios/.../wear_leveling_efl.c) -- all weak-hooked or no-op for
 # other boards. Everything else in the tree is upstream QMK.
-qmk_firmware-ak820pro  https://github.com/jdlien/qmk_firmware.git  ak820pro-jdlien  02db293696b429be0ffbdec0609ebc874a2bc236
+qmk_firmware-ak820pro  https://github.com/jdlien/qmk_firmware.git  ak820pro-jdlien  44e7314e6584ebe36328120c2b97592603d9d9db
 
 # ak820ctl (clock + flash provisioning) and the asset pipeline (mkraw.py,
 # mkanim.py). MUST be this fork's branch, not fpb/main: main has no --bias
@@ -33,4 +33,4 @@ SonixFlasherC  https://github.com/fpb/SonixFlasherC.git  fix_for_macos_tahoe  66
 # the firmware repo, pinned by its gitlink and carrying the ChibiOS patches as
 # commits (see keyboards/a_jazz/ak820pro/PATCHES.md). setup.sh
 # initializes it via `make git-submodule`; build.sh enforces gitlink == HEAD.
-#   https://github.com/jdlien/ChibiOS-Contrib.git  ak820pro-patches  94b5cb45ad8965d4fd0c8ee6272b1e4b989f7d82
+#   https://github.com/jdlien/ChibiOS-Contrib.git  ak820pro-patches  c212e20dd2d88b1432c68314d978774362df8ab9

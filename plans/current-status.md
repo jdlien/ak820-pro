@@ -1,6 +1,6 @@
 # Current status — the crash hunt
 
-Updated 2026-09-23, 19:05. The live plan is
+Updated 2026-09-24, 05:05. The live plan is
 [`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); its codex review and every
 finding's disposition are linked from it.
 
@@ -14,28 +14,18 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## Installed right now (19:00)
+## Installed right now (2026-09-24, 05:05)
 
-- **Firmware: the FINAL DAILY of the 2026-09-23 campaign**,
-  `via-daily-44e7314e65-20260923-185609.bin`, token `0xa887132e`, flashed
-  18:56. It carries v7 and every fix below:
-  - the fault record's lost write;
-  - the SPI0 lost completion;
-  - the serial and USB lock nesting;
-  - the CH582F pump order.
-
-  No test hooks (`HC_PEEK` verified refused).
-- **A ten-hour crash hunt is running on it**: 18:56 → ~04:57,
-  `~/Library/Logs/ak820pro/crash-hunt/20260923-185647/`, `--pause-agent`, so
-  it **restores the agent itself** at the end.
-- **When it ends:**
-  - if clean, move `deps.lock` to firmware `44e7314e65` and push;
-  - archive its evidence to `history/`;
-  - hand the keyboard back to the owner, who is on another keyboard
-    meanwhile.
-- Keymap and lighting: `~/Documents/ak820pro-{keymap,lighting}.json`
-  (refreshed by each flash today) match the verified hunt backup of
-  2026-09-22 23:00.
+- **Firmware: the final daily of the 2026-09-23 campaign**,
+  `via-daily-44e7314e65-20260923-185609.bin`, token `0xa887132e`.
+  **It passed ten hours of hunting: 1,964,044 blits, no timeout of any
+  kind, no busy-wait, no non-flash stall of 25 ms or more, no reset**
+  ([evidence](../history/crash-hunt-2026-09-24-final-daily/)). No test
+  hooks.
+- **`deps.lock` pins it** (committed locally, pushed with the morning batch).
+- **Agent: running again**, restored by hand at 04:57. The hunt restores
+  only an agent it paused, and this one had been booted out since the fault
+  tests. It resynced the clock and is writing health rows.
 
 ## ✅ The DMA "never-start" is solved (2026-09-23)
 
@@ -135,11 +125,7 @@ file:line.
 
 ## Next
 
-1. **When the overnight hunt ends (~04:57):**
-   - check it;
-   - move `deps.lock` to `44e7314e65` if it is clean, and push;
-   - archive the run;
-   - confirm the agent restored itself.
+1. ✅ The overnight hunt passed; `deps.lock` moved to `44e7314e65`.
 2. **Built overnight, committed locally, NOT pushed or flashed:** firmware
    `6b60458dd0` on top of `44e7314e65`. It carries:
    - `lcd_blit_wait()` tracking CURCNT and DMAEN (start, progress, stall in
