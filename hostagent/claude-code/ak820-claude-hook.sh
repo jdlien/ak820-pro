@@ -13,7 +13,16 @@
 #                                say nothing, and Claude asks in the terminal.
 #   Notification permission_prompt  the question is now in the terminal: a
 #                                "Permission / <tool>" page as a reminder
-#   UserPromptSubmit, PostToolUse, PostToolUseFailure, PermissionDenied,
+#   PermissionDenied             auto mode BLOCKED an action (it fires only for the
+#   StopFailure                  auto-mode classifier, never for a "No" you give),
+#                                or a turn ended on an error: the octopus waving
+#                                for attention (slot 2), magenta blink, until a
+#                                key. At most once a minute per session.
+#   (screensaver)                the sleeping octopus (slot 3) while no session is
+#                                at work, the busy one (slot 4) while one is:
+#                                a session is "at work" from its prompt to the
+#                                end of its turn. Delay: AMBIENT_AFTER in the conf.
+#   UserPromptSubmit, PostToolUse, PostToolUseFailure,
 #   SessionEnd                   you are back at the computer: abort a question
 #                                still waiting on the board, or close the page --
 #                                only for events from the SAME session, and for
@@ -33,7 +42,10 @@
 #   "PermissionRequest":  [{"matcher": "*", "hooks": [{"type": "command", "command": "<this script>",
 #                           "timeout": 330, "statusMessage": "AK820: answer on the keyboard"}]}],
 #   "UserPromptSubmit", "PostToolUse", "PostToolUseFailure", "PermissionDenied",
-#   "SessionEnd":         [{"matcher": "*", "hooks": [ ...async, same... ]}]
+#   "StopFailure", "SessionEnd": [{"matcher": "*", "hooks": [ ...async, same... ]}]
+#
+# GIF slots the hook uses: 1 finished, 2 help, 3 idle (sleeping), 4 at work --
+# assets-src/notify/mkoctopus*.py, uploaded with `ak820notify.py gif-upload`.
 #
 # While the PermissionRequest hook waits, Claude Code does not show a tool
 # permission in the terminal (an AskUserQuestion it does show). Esc on the
@@ -60,6 +72,24 @@ toolkey() { jq -cS '{t: .tool_name, i: .tool_input}' <<<"$input" 2>/dev/null | s
 
 log() { echo "$(date '+%F %T') $*" >>"$LOG"; }
 
+# Screensaver: slot 4 while any session is at work, slot 3 otherwise. One file
+# per working session, refreshed by its tool calls; after 30 minutes without a
+# sign of life it no longer counts (a session that died mid-turn).
+WORK_DIR=$HOME/.cache/ak820notify.working
+AMB_LAST=$HOME/.cache/ak820notify.ambient.last
+ambient_update() {
+  mkdir -p "$WORK_DIR"
+  local n slot after
+  n=$(find "$WORK_DIR" -type f -mmin -30 | wc -l)
+  slot=$([ "$n" -gt 0 ] && echo 4 || echo 3)
+  # Only on a change, or if the last send is old (the board may have rebooted).
+  if [ "$slot" != "$(cat "$AMB_LAST" 2>/dev/null)" ] || [ -z "$(find "$AMB_LAST" -mmin -10 2>/dev/null)" ]; then
+    echo "$slot" > "$AMB_LAST"
+    after=$(sed -n 's/^AMBIENT_AFTER=\([0-9]*\).*/\1/p' "$HOME/.config/ak820notify.conf" 2>/dev/null)
+    bg ambient "$slot" --after "${after:-60}"
+  fi
+}
+
 bg() {   # background
   { log "$ev ${*:1:2}"; "${NOTIFY[@]}" "$@" >>"$LOG" 2>&1; } &
   disown
@@ -67,6 +97,7 @@ bg() {   # background
 
 case "$ev" in
   Stop)
+    rm -f "$WORK_DIR/$sid"; ambient_update
     echo "$sid" > "$PAGE_OWNER"
     bg send "Claude" "finished${proj:+$nl$proj}" --page --gif 1 --color orange --effect breathe --dur until
     ;;
@@ -82,7 +113,26 @@ case "$ev" in
     bg send "Permission" "${tool:-$msg}${proj:+$nl$proj}" --page --color yellow --effect blink --dur until
     ;;
 
-  UserPromptSubmit|PostToolUse|PostToolUseFailure|PermissionDenied|SessionEnd)
+  PermissionDenied|StopFailure)
+    [ "$ev" = StopFailure ] && { rm -f "$WORK_DIR/$sid"; ambient_update; }
+    stamp=$HOME/.cache/ak820notify.help.$sid
+    if [ -e "$stamp" ] && [ $(( $(date +%s) - $(stat -c %Y "$stamp") )) -lt 60 ]; then exit 0; fi
+    touch "$stamp"
+    if [ "$ev" = PermissionDenied ]; then
+      what=$(jq -r '.tool_name // empty' <<<"$input"); title="Help"
+    else
+      what="error"; title="Stuck"
+    fi
+    echo "$sid" > "$PAGE_OWNER"
+    bg send "$title" "${what}${proj:+$nl$proj}" --page --gif 2 --color magenta --effect blink --dur until
+    ;;
+
+  UserPromptSubmit|PostToolUse|PostToolUseFailure|SessionEnd)
+    case "$ev" in
+      UserPromptSubmit) mkdir -p "$WORK_DIR"; touch "$WORK_DIR/$sid"; ambient_update ;;
+      PostToolUse|PostToolUseFailure) [ -e "$WORK_DIR/$sid" ] && touch "$WORK_DIR/$sid" ;;
+      SessionEnd) rm -f "$WORK_DIR/$sid"; ambient_update ;;
+    esac
     # A question still waiting on the board but answered here: abort it (it
     # closes its own page and releases the lock).
     # Waiting questions, one file each (<pid> -> "session fingerprint"):
@@ -94,7 +144,7 @@ case "$ev" in
       read -r asid akey <"$f" 2>/dev/null
       [ "$sid" = "$asid" ] || continue
       case "$ev" in
-        PostToolUse|PostToolUseFailure|PermissionDenied) [ "$key" = "$akey" ] || continue ;;
+        PostToolUse|PostToolUseFailure) [ "$key" = "$akey" ] || continue ;;
       esac
       pid=${f##*/}
       kill -0 "$pid" 2>/dev/null && kill -TERM "$pid" 2>/dev/null && log "$ev aborts question $pid"

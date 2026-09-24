@@ -5,6 +5,7 @@
     ak820notify.py send "Claude" "finished" --page --gif 1  full screen until a key is pressed
     ak820notify.py gif-upload 1 some.gif                    store a GIF in slot 1..5 (cable)
     ak820notify.py close [--if-open]                        close the page on the board
+    ak820notify.py ambient 3 [--after 60]                   screensaver: slot's GIF after N s idle (off = none)
     ak820notify.py ask "Permission" "Bash" "git push" --permission
     ak820notify.py ask "Which?" --options "One|Two|Three" [--multi]
                    a question answered on the board: arrows move, Space ticks
@@ -36,7 +37,8 @@ BT/2.4G besides keystrokes), read from the receiver's or the board's
 needs the same udev rules.
 
 Settings: ~/.config/ak820notify.conf, KEY=value lines. TIMEOUT=300 is how long
-`ask` waits for an answer.
+`ask` waits for an answer; AMBIENT_AFTER=60 is the screensaver delay the
+Claude Code hook sets.
 """
 import argparse
 import glob
@@ -70,7 +72,7 @@ SEND_LOCK = os.path.expanduser("~/.cache/ak820notify.lock")     # serialises eve
 SLOTS_FILE = os.path.expanduser("~/.cache/ak820notify.slots")   # question slot -> pid
 CONF = os.path.expanduser("~/.config/ak820notify.conf")
 
-KIND_SHOW, KIND_CLOSE, KIND_ASK = 0, 1, 2
+KIND_SHOW, KIND_CLOSE, KIND_ASK, KIND_AMBIENT = 0, 1, 2, 3
 ASK_PERM, ASK_MULTI = 4, 8          # bits 1-0: detail lines, bits 5-4: slot
 CLOSE_SLOT = 0x80
 ASK_SLOTS = 4
@@ -438,6 +440,10 @@ def main():
     g = sub.add_parser("gif-upload", help="store a GIF in a slot (cable)")
     g.add_argument("slot", type=int, choices=range(1, GIF_SLOTS + 1))
     g.add_argument("gif")
+    am = sub.add_parser("ambient", help="set the screensaver")
+    am.add_argument("slot", help="GIF slot 1-5, or off")
+    am.add_argument("--after", type=int, default=60, help="seconds without a key press before it starts (1-255)")
+    am.add_argument("--via", choices=["auto", "usb", "leds"], default="auto")
     cl = sub.add_parser("close", help="close the page on the board")
     cl.add_argument("--if-open", action="store_true", help="only if a page may be open")
     cl.add_argument("--via", choices=["auto", "usb", "leds"], default="auto")
@@ -463,8 +469,13 @@ def main():
         with open(out, "wb") as f:
             f.write(blob)
         addr = GIF_BASE + (a.slot - 1) * GIF_STRIDE
-        print(f"slot {a.slot}: {n} frames, {len(blob)} bytes -> 0x{addr:06X}")
-        os.execv(AK820CTL, [AK820CTL, "flash", "write", hex(addr), out])
+        print(f"slot {a.slot}: {n} frames, {len(blob)} bytes -> 0x{addr:06X}", flush=True)
+        # Under the send lock: a hook's CLOSE on the same raw-HID interface in
+        # the middle of the write interleaves the replies and spoils the slot
+        # (seen: a CRC mismatch after a hook fired mid-upload).
+        import subprocess
+        with _locked(SEND_LOCK):
+            sys.exit(subprocess.run([AK820CTL, "flash", "write", hex(addr), out]).returncode)
 
     if a.cmd in ("stats", "bootloader"):
         dev = find_rawhid() or sys.exit("board not found on the cable")
@@ -479,6 +490,11 @@ def main():
         print(f"frames ok {u16(0)}  crc {u16(2)}  length {u16(4)}  both-flipped {u16(6)}  duplicates {u16(8)}")
         print(f"LED changes {int.from_bytes(d[10:14], 'big')}  last frame {u16(14)} bits in {u16(16)} ms"
               f"  min gap {u16(18)} ms")
+        return
+
+    if a.cmd == "ambient":
+        slot = 0 if a.slot == "off" else int(a.slot)
+        send_frame(build_frame(next_seq(), 0, 0, max(1, min(255, a.after)), "", gif=slot, kind=KIND_AMBIENT), a.via)
         return
 
     if a.cmd == "close":

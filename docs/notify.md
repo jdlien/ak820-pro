@@ -16,6 +16,38 @@ The motivating use is [Claude Code](#claude-code): the octopus hops when a turn
 finishes, and a tool permission or an `AskUserQuestion` is answered with the
 arrow keys and Enter, without touching the terminal.
 
+## Status and security — read this first
+
+**This is a community contribution, not a feature built for merging.** It
+works on my board every day, but it is deliberately hacky: it abuses the
+keyboard-LED report as a data channel, answers come back disguised as media
+keys, and the host side hooks into Claude Code's permission flow. Take it as
+a worked example that may save someone hours and tokens, not as a reviewed
+feature.
+
+Things to be aware of before you install it:
+
+- **The keyboard can approve tool permissions.** With the Claude Code hook,
+  Enter on a question page answers `allow`. Anything that can make the board
+  send the "allow" consumer usage (`0x191`) with the right slot marker while
+  a question is waiting — a process with write access to the board's raw HID
+  or to uinput, or another device injecting that media key — can approve a
+  tool call. Run it only on a machine you trust, and consider a short
+  `TIMEOUT`.
+- **Anyone who can write the receiver's Num/Scroll LED files can put text and
+  GIF pages on the board**, and dismissing a page swallows one key press. The
+  udev rule limits that to group `ak820`.
+- **Reading answers needs the "Consumer Control" input device** of the board
+  and receiver (media keys only, never typing), granted to the seat user.
+- **Raw HID `NOTIFY_BOOTLOADER`** is compiled only with
+  `-DNOTIFY_RAW_BOOTLOADER`.
+- The answer usages (AL Finance, Spell Check, Info, Image/Audio/Movie
+  Browser, Instant Messaging, Network Chat, Documents, Keyboard Layout,
+  Calendar) are unbound on my desktop (niri). On yours one of them may launch
+  something — check before enabling the hook.
+- Tested on one board (fpb panel), Linux only, over the 2.4G receiver and the
+  cable. Not tested over Bluetooth.
+
 ## The hard part: BT/2.4G has no data channel
 
 Over the air the CH582F forwards exactly one thing from host to board: the
@@ -162,6 +194,16 @@ keys only, never typing) and prints `allow`, `deny`, `cancel`, `choice:N`,
 `multi:N,M`, `timeout`, or `aborted` when SIGTERM tells it the question was
 dealt with at the computer.
 
+### Screensaver (AMBIENT)
+
+`AMBIENT` sets a GIF slot and an idle time (`[3]` = slot, 0 = off; `[2]` =
+seconds, 0 = 60). After that long without a key press the GIF plays full
+screen; the first key brings the dashboard back and is **not** swallowed — it
+types as usual. Notifications and questions always take the screen from it;
+changing the slot while it shows switches the GIF in place. After boot: slot
+3 after 60 s (nothing, if the slot is empty). `ak820notify.py ambient 3
+--after 60`.
+
 ### GIF slots
 
 Five slots above the asset image, in the always-writable region:
@@ -173,8 +215,27 @@ slot n at 0xD80000 + (n-1) * 0x80000
 ```
 
 `ak820notify.py gif-upload N file.gif` converts (letterboxed on black, thinned
-to 15 frames if longer) and writes it with `ak820ctl flash write`. Slot data
-survives firmware flashes. Playback is a fixed 100 ms per frame.
+to 15 frames if longer) and writes it with `ak820ctl flash write`, under the
+same lock as every other send — a hook's CLOSE arriving mid-write interleaved
+the raw-HID replies and spoiled a slot once. Slot data survives firmware
+flashes. Playback is a fixed 100 ms per frame.
+
+The octopus family the Claude Code hook uses, all drawn in code as 32x32
+pixel art scaled 4x (`assets-src/notify/mkoctopus*.py`):
+
+| slot | GIF | shown |
+|---|---|---|
+| 1 | `claude-octopus.gif` — hopping | a turn finished |
+| 2 | `claude-octopus-help.gif` — waving, blinking "!" | auto mode blocked an action, or a turn failed |
+| 3 | `claude-octopus-sleep.gif` — asleep, "z"s | screensaver, no session at work |
+| 4 | `claude-octopus-work.gif` — typing on a tiny keyboard | screensaver, a session at work |
+| 5 | free | |
+
+<p>
+<img src="../assets-src/notify/claude-octopus-help-preview.gif" width="128" alt="waving octopus">
+<img src="../assets-src/notify/claude-octopus-sleep-preview.gif" width="128" alt="sleeping octopus">
+<img src="../assets-src/notify/claude-octopus-work-preview.gif" width="128" alt="typing octopus">
+</p>
 
 ## Host setup (Linux)
 
@@ -207,10 +268,19 @@ header):
   terminal as usual. While it waits Claude Code does not show a tool
   permission in the terminal (it does show an `AskUserQuestion`); Esc on the
   board hands it back at once.
+- **PermissionDenied** — fires only when the **auto-mode classifier** blocks an
+  action (checked in Claude Code's source: `decisionReason.type ===
+  "classifier"`), never for a "No" you give. With **StopFailure** (a turn
+  ended on an error) it puts up the waving octopus, magenta, until a key — at
+  most once a minute per session.
+- **Screensaver** — `UserPromptSubmit` marks the session at work, `Stop`,
+  `StopFailure` and `SessionEnd` clear it; the hook sets slot 4 while any
+  session works and slot 3 otherwise, after `AMBIENT_AFTER` seconds (conf,
+  default 60). A session silent for 30 minutes stops counting.
 - **Notification** `permission_prompt` — the question is in the terminal now:
   a reminder page, skipped if you just cancelled on the board.
-- **UserPromptSubmit / PostToolUse / PostToolUseFailure / PermissionDenied /
-  SessionEnd** — you are back: a question still waiting on the board is
+- **UserPromptSubmit / PostToolUse / PostToolUseFailure / SessionEnd** — you
+  are back: a question still waiting on the board is
   aborted, an open page is closed. Only events from the **same session**
   count, and a tool event only if it is the very tool whose permission was
   asked. The first version reacted to any of them: a second Claude Code
