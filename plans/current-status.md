@@ -1,6 +1,6 @@
 # Current status — the crash hunt
 
-Updated 2026-09-24, 05:05. The live plan is
+Updated 2026-09-24, 12:45. The live plan is
 [`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); its codex review and every
 finding's disposition are linked from it.
 
@@ -14,18 +14,57 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## Installed right now (2026-09-24, 05:05)
+## Installed right now (2026-09-24, 12:45) — RESUME HERE
 
-- **Firmware: the final daily of the 2026-09-23 campaign**,
-  `via-daily-44e7314e65-20260923-185609.bin`, token `0xa887132e`.
-  **It passed ten hours of hunting: 1,964,044 blits, no timeout of any
-  kind, no busy-wait, no non-flash stall of 25 ms or more, no reset**
-  ([evidence](../history/crash-hunt-2026-09-24-final-daily/)). No test
-  hooks.
-- **`deps.lock` pins it** (committed locally, pushed with the morning batch).
-- **Agent: running again**, restored by hand at 04:57. The hunt restores
-  only an agent it paused, and this one had been booted out since the fault
-  tests. It resynced the clock and is writing health rows.
+- **Firmware: the PRODUCTION daily with every fix**,
+  `via-daily-6b60458dd0-20260924-001152.bin`, token `0x70bfdc04`, flashed
+  about 12:42 at the owner's request. It is `44e7314e65` (10 h hunt-clean,
+  below) plus:
+  - `lcd_blit_wait()` on CURCNT/DMAEN;
+  - the dashboard repaint after a blit given up for good;
+  - the debug-pump recovery;
+  - the EFL refusal (ChibiOS `f247ebc639`);
+  - UART overrun reporting (ChibiOS `a4f8412134`);
+  - corrected comments.
+
+  Verified after the flash: test hooks refused, counters clean. **Not yet
+  hunted.**
+- **Agent: running** (paused for the flash, restored).
+- **The owner is testing Bluetooth now.** The slider is on BT with the cable
+  still in. On this unit the switch to BT does NOT reset the MCU; the switch
+  back to cable DOES. Baseline at 12:44:29, uptime 132 s:
+
+  | tx_sent | tx_timeouts | tx_drops | rx_malformed | key_presses |
+  |---|---|---|---|---|
+  | 487 | 6 | 0 | 0 | 231 |
+
+  That is 0.012 timeouts per frame; the old reference is 0.042 during a BT
+  typing burst.
+  - Read progress with `ak820-agent/target/release/ak820 health` (the daily
+    has no console, so no ACK histogram).
+  - Pass criteria: `tx_drops` 0, `rx_malformed` 0 or near it, timeouts per
+    frame at or below the reference, no resets, and no complaints about
+    dropped, repeated or stuck keys.
+  - Then fully wireless for a while. Replug and read the counters; if
+    `uptime_ms` shows no reset, they cover the unplugged time.
+- **Unpushed** (to push once the wireless test and some use pass):
+  - firmware `ak820pro-jdlien`: `93df5deb27` through `6b60458dd0`;
+  - ChibiOS `ak820pro-patches`: `f247ebc639`, `a4f8412134`;
+  - main: `1dcaf49` (docs), `0ca939c` and `f410769` (`deps.lock` →
+    `44e7314e65`, the overnight evidence).
+
+  Push ChibiOS first, then firmware, then main. `deps.lock` pins
+  `44e7314e65` (hunt-proven); move it to `6b60458dd0` once that has run a
+  hunt.
+- **Not yet done on the new build:** the `HC_BLITFAULT` forced-failure
+  tests (instrumented build `via-instrumented-6b60458dd0-20260924-001130`
+  only; needs Fn+Esc from the daily) and a hunt.
+
+## ✅ The overnight hunt on 44e7314e65 passed (2026-09-24 04:57)
+
+Ten hours: 1,964,044 blits, no timeout of any kind, no busy-wait, no
+non-flash stall of 25 ms or more, no reset
+([evidence](../history/crash-hunt-2026-09-24-final-daily/)).
 
 ## ✅ The DMA "never-start" is solved (2026-09-23)
 
