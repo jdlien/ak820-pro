@@ -14,6 +14,16 @@ bugs. Set in `mcuconf.h`; on Cortex-M0 a LOWER number is HIGHER priority.
 | **1** | `SN32_SERIAL_UART2` | CH582F link — the only peripheral where being late LOSES DATA. |
 | **2** | `SN32_GPT_CT16B3` | Backlight/indicator PWM tick — must be regular or the display flickers. |
 | **3** | `SN32_PWM_CT16B0/1/2` | RGB row scan — long and frequent, but µs of LED jitter is invisible. |
+| 3 | `SN32_SPI_SPI0` (driver default) | LCD SPI and its flash→LCD DMA completions — shares the row scan's level. |
+
+⚠️ **SPI0 sharing priority 3 with the row scan is load-bearing timing, not
+an accident to "fix" in passing.** Equal priorities do not pre-empt each
+other, so a DMA interrupt raised while a row ISR runs (~188 µs) waits for it:
+the half-transfer handler of a DMA armed from the main loop runs 188–258 µs
+after the arm. That window is what exposed a race in the SPI0 handler to
+660-byte clock-digit transfers only, until it was fixed (ChibiOS
+`c57623d0d2`; `plans/FIRMWARE-FINDINGS-2026-09-23.md`). If SPI0's priority
+or the row ISR's length ever changes, the exposed transfer sizes move too.
 
 What each wrong ordering did (all measured): UART at the bottom → mangled
 frames both directions (ACK timeouts, dropped keystrokes, dropped `5B 32` =

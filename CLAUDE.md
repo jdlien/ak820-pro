@@ -96,7 +96,26 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-09-03)
+## Current state (2026-09-24)
+
+**Resume from [`plans/current-status.md`](plans/current-status.md).** The
+2026-09-22/23 crash campaign fixed four things:
+
+- **The SPI hang behind the 2026-09-22 reset.** A CPU transaction ran during
+  an in-flight DMA; fixed by `bus_quiesce()`.
+- **The fault recorder.** It lost its final write, so every crash record came
+  back invalid.
+- **The DMA "never-start".** It was really a lost completion: the SPI0
+  half-transfer handler cleared a DMATCIF it had not read.
+- **Two lock-nesting bugs, in the serial and USB drivers,** plus the CH582F
+  TX pump order.
+
+Analysis, a codex review and every disposition:
+[`plans/FIRMWARE-FINDINGS-2026-09-23.md`](plans/FIRMWARE-FINDINGS-2026-09-23.md).
+The instrumented build keeps the DMA and ACK diagnostics that found them;
+the daily build carries none of it (verified by symbol diff).
+
+## Earlier state (2026-09-03)
 
 QMK VIA firmware flashed and verified (`0C45:8009`); assets provisioned. The
 hardening project (phases 0-5) is complete and hardware-verified: board code
@@ -249,6 +268,22 @@ wired mode. `Fn`+`P` (pair) is unbound by default.
   strips the XML comments. Edit `hostagent/*.plist.in` and re-run the installer.
 - ⚠️ **Multiple sessions**: coordinate via SendMessage, claim files, flash only
   provenance-named artifacts. → [hardware.md](docs/hardware.md)
+- ⚠️ **SPI0's `DMACNT` never counts down.** It holds the programmed length;
+  progress is `CURCNT`, which keeps the previous transfer's count until the
+  next one starts. And **never write SPI0's `IC` wider than the flags you
+  just read**: `IC = 0x3F` after a `RIS` read was the lost-completion bug.
+  Bitfield writes to `IC` are read-modify-writes too.
+  → [display.md](docs/display.md)
+- ⚠️ **SPI0 and the RGB row ISR share priority 3.** The row ISR's ~188 µs
+  sets when DMA handlers run; changing either moves which transfer sizes are
+  exposed to races. → [leds.md](docs/leds.md)
+- ⚠️ **The last SRAM write before a loop that never writes again is lost at a
+  watchdog reset.** Anything committed just before a spin, reset or lockup
+  needs a sacrificial write after it (`commit_terminal()`).
+  → [hardware.md](docs/hardware.md)
+- ⚠️ **SN32 LLD files may have CRLF line endings.** Editing one with a tool
+  that normalises newlines rewrites the whole file. Check `file <path>`
+  first, and look at the diffstat before committing.
 
 ## Where things live
 

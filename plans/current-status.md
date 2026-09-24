@@ -135,28 +135,44 @@ file:line.
 
 ## Next
 
-1. **When the overnight hunt ends:**
-   - check it: 0 timeouts expected;
-   - move `deps.lock` to `44e7314e65` and push;
+1. **When the overnight hunt ends (~04:57):**
+   - check it;
+   - move `deps.lock` to `44e7314e65` if it is clean, and push;
    - archive the run;
    - confirm the agent restored itself.
-2. **Open review items**, in [`FIRMWARE-FINDINGS-2026-09-23.md`](FIRMWARE-FINDINGS-2026-09-23.md):
-   - rework `lcd_blit_wait()`'s start detection and classification on
-     CURCNT/DMAEN;
-   - FRESET SPI0 at hand-back;
-   - check that internal-flash programming only ever targets erased lines
-     (the LLD erases the whole sector otherwise);
-   - invalidate display shadows when a glyph is dropped;
-   - give the debug-page pump a recovery path;
-   - count UART overrun.
-3. **SPI0 raw-RIS dispatch:** the patch that tried it was reverted. With the
-   lost-completion fix in, a stale DMA flag outside a transfer is unlikely,
-   but the routing is still on raw `RIS`.
-4. **CH582F ACK deadline (10 ms):** about half of the module's ACKs take
-   15–36 ms in wired mode. Measure in Bluetooth mode before changing it.
-5. **Stress the untouched paths:** RTC I2C, Mac sleep/wake, and the Mac
-   reboot test for the agent.
-6. **Parked idea** (taskmaster task 6): a QR code to the agent installer via
+2. **Built overnight, committed locally, NOT pushed or flashed:** firmware
+   `7af45f04f9` on top of `44e7314e65`. It carries:
+   - `lcd_blit_wait()` tracking CURCNT and DMAEN (start, progress, stall in
+     a few ms, and the class);
+   - the dashboard repainting after a blit given up for good;
+   - the debug-page pump's recovery;
+   - the internal-flash driver refusing to erase a sector behind a caller's
+     back (ChibiOS `f247ebc639`);
+   - stale comments corrected.
+
+   Test builds: `via-instrumented-df5f286193-20260924-000758` (rebuild at
+   `7af45f04f9` first; that commit is comment-only) and the daily.
+
+   **The board's daily has no remote bootloader jump, so it needs the
+   owner's Fn+Esc.** Then:
+   - `HC_BLITFAULT 1`: expect an IRQ-lost timeout and a successful repaint;
+   - `HC_BLITFAULT 2`: expect `[display] a blit was given up`, then a
+     dashboard repaint;
+   - an hour of hunting;
+   - then the daily, and push.
+3. **The owner's wireless test** can use either build: the CH582F path is
+   identical in both. It is the first real test of the serial fix and the
+   pump order.
+4. **Still open:**
+   - FRESET SPI0 at hand-back (hygiene, deferred);
+   - UART overrun counting;
+   - the LED ISR's thread-class PWM calls;
+   - the raw-HID flash-provisioning policy (anyone on the host can rewrite
+     the external flash's assets);
+   - the ACK deadline in Bluetooth mode;
+   - Mac sleep/wake and the reboot test;
+   - a tagged release.
+5. **Parked idea** (taskmaster task 6): a QR code to the agent installer via
    a jqr.ca redirect.
 
 ## Repository notes

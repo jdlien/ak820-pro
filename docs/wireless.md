@@ -216,23 +216,46 @@ throughput collapse — you can out-type the link — rather than as mild latenc
 The 24-deep queue and newest-supersedes coalescing absorb a lot, but a 10 ms
 stall on half of ~10 frames/s at speed is real.
 
-**Likely cause: `CH582_TX_ACK_TIMEOUT_MS` (10) sits at the module's actual
-turnaround.** A deadline tuned to the mean trips on roughly half the samples,
-which is what an exact 6-of-12 looks like. **Do not just raise the constant** —
-measure first: record `timer_elapsed(tx_sent_time)` in `ch582_tx_ack()`, keep a
-max and an over-8 ms count, expose them on a health page, then set the deadline
-above the observed 99th percentile. The pages are full at 28 bytes, so this
-needs an `HC_GET4`.
+**Measured 2026-09-23 (instrumented builds, wired mode, ~2,200 ACKs over three
+hours): the module's turnaround is BIMODAL**, and the 10 ms deadline sits
+between the two modes.
 
-### ⚠️ Unresolved: two comments disagree about what `61 0D 0A` is
+| ACK after first send | 3–7 ms | 8–14 ms | 15 ms and over |
+|---|---|---|---|
+| share | ~47% | ~6% | **~47%** (worst 36 ms) |
+
+The slow half is the module itself: the share was the same before and after
+the serial driver's lock fix (ChibiOS `a3fdffe26d`). The likeliest reading is
+wake-up latency, since in wired mode it hears from us only every 5 s. It is
+not established. The instrumented build prints the histogram once a minute
+(`[ch582] ack ms:` then 16 one-millisecond buckets, the last holding
+everything at 15 ms or more; then the worst case, retransmitted frames, and
+orphans). It is measured at parse time, so it is an upper bound.
+
+**Do not raise `CH582_TX_ACK_TIMEOUT_MS` from wired-mode data.** Over
+Bluetooth the module is kept busy by keystrokes and may never be in its slow
+mode, and a longer deadline slows recovery from a genuinely lost frame.
+Measure the same histogram in Bluetooth mode first. Until then a slow ACK
+costs one harmless retransmit: frames carry state, so a repeat is idempotent.
+
+**Fixed 2026-09-23: the TX pump ran BEFORE the RX drain** in `ch582_task()`,
+so an ACK already sitting in the input queue could not stop a needless
+retransmit. That retransmit's own ACK then arrived with nothing in flight
+(an orphan) or, worse, popped the NEXT frame: `61 0D 0A` carries no sequence
+number. With the pump after the drain, orphans fell from 23 in 24 minutes to
+**1 in 3 hours**.
+
+### `61 0D 0A`: an ACK, not a heartbeat (evidence 2026-09-23; one comment still disagrees)
 
 `ch582_task()`'s header comment calls it a *"periodic IDLE HEARTBEAT ... emitted
 while connected too"*. The parser 130 lines below calls it *"the per-frame ACK
 the module returns for what we send ... silent at idle"* — and treats it as the
 ACK that releases the in-flight frame.
 
-Both cannot be true, and which one is right changes the diagnosis above: if it is
-also periodic, a heartbeat can spuriously release a frame the module never
-actually acknowledged, and the send/ACK pairing is looser than the retry logic
-assumes. Settle it with a logic analyzer at idle with nothing queued before
-tuning the timeout.
+Both cannot be true. If it were also periodic, a heartbeat could release a
+frame the module never acknowledged. **The 2026-09-23 measurement favours the
+ACK reading:** with the pump reordered, an ACK arriving with nothing in flight
+happened once in three hours (about 2,200 frames). A periodic heartbeat would
+make orphans steadily. That is wired mode, observed at parse time; a logic
+analyzer at idle would still settle it outright. Until then, treat the
+header comment's "heartbeat" as the suspect one.

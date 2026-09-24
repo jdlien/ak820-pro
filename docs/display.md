@@ -86,6 +86,33 @@ CPU-bound loop, plus 5.9 KB of SRAM.
 - `[lcd] blit timeout` on the console is THE health signal: zero under load
   means the pump is not fighting the bus.
 
+### Blit timeouts: what they were, and how they are read now (2026-09-23)
+
+- **Every "never started" timeout on record was a lost completion.** The
+  transfer had finished: `CURCNT` was full and the hardware had cleared
+  `DMAEN`. But the SPI0 half-transfer handler read `RIS` and then cleared
+  every flag, wiping a DMATCIF raised between the two instructions. Only
+  660-byte clock digits were exposed (see `docs/leds.md`, priority table).
+  Fixed in ChibiOS `c57623d0d2`, which clears only what was read and then
+  re-checks. The first test build ran 580,060 blits under hunt stress with
+  no timeout.
+- ⚠️ **`DMACNT` never counts down.** It holds the programmed length through
+  and after a transfer. Progress is **`CURCNT`**, which runs 0..DMACNT and
+  keeps the *previous* transfer's count until the engine starts the next;
+  the hardware clears `DMAEN` at completion. `lcd_blit_wait()` detects start,
+  progress and completion from those two, and classifies a timeout from them
+  (health page 6: never started / stalled / IRQ lost / unknown). Any class
+  is repainted once. The repaint re-sends the window, so it is always safe,
+  whatever the first attempt did.
+- A blit given up after its retry makes the display repaint the whole
+  dashboard through the staged Fn+D restore, at most once per 5 s. The
+  shadow already claims the glyph was painted, so it would otherwise stay
+  missing until its text changed.
+- Instrumented builds print per-size arms, timeouts and the SPI0 handler's
+  rescues once a minute (`[lcd] sizes`), and `HC_BLITFAULT` (`0x77`) drops
+  the completion interrupt of the next n blits to exercise the recovery on
+  demand.
+
 ### What drawing actually costs (measured 2026-09-03)
 
 Nobody can budget a repaint without these, and their absence cost a full
