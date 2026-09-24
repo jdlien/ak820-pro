@@ -141,23 +141,28 @@ file:line.
    - archive the run;
    - confirm the agent restored itself.
 2. **Built overnight, committed locally, NOT pushed or flashed:** firmware
-   `7af45f04f9` on top of `44e7314e65`. It carries:
+   `6b60458dd0` on top of `44e7314e65`. It carries:
    - `lcd_blit_wait()` tracking CURCNT and DMAEN (start, progress, stall in
      a few ms, and the class);
    - the dashboard repainting after a blit given up for good;
    - the debug-page pump's recovery;
    - the internal-flash driver refusing to erase a sector behind a caller's
      back (ChibiOS `f247ebc639`);
+   - the UART reporting hardware overrun (ChibiOS `a4f8412134`), counted on
+     the instrumented console;
    - stale comments corrected.
 
-   Test builds: `via-instrumented-df5f286193-20260924-000758` (rebuild at
-   `7af45f04f9` first; that commit is comment-only) and the daily.
+   Clean builds: `via-instrumented-6b60458dd0-20260924-001130.bin` (token
+   `0x2d80c2ff`) and `via-daily-6b60458dd0-20260924-001152.bin` (token
+   `0x70bfdc04`).
 
    **The board's daily has no remote bootloader jump, so it needs the
-   owner's Fn+Esc.** Then:
+   owner's Fn+Esc once.** Then, on the instrumented build:
    - `HC_BLITFAULT 1`: expect an IRQ-lost timeout and a successful repaint;
    - `HC_BLITFAULT 2`: expect `[display] a blit was given up`, then a
      dashboard repaint;
+   - the wireless test, with the console captured: ACK histogram, orphans,
+     and UART overrun, framing and parity counts in Bluetooth mode;
    - an hour of hunting;
    - then the daily, and push.
 3. **The owner's wireless test** can use either build: the CH582F path is
