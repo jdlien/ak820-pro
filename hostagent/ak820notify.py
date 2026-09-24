@@ -4,6 +4,13 @@
     ak820notify.py send "Claude" "finished"                 lights + 2 lines in the text band
     ak820notify.py send "Claude" "finished" --page --gif 1  full screen until a key is pressed
     ak820notify.py gif-upload 1 some.gif                    store a GIF in slot 1..5 (cable)
+    ak820notify.py close [--if-open]                        close the page on the board
+    ak820notify.py ask "Permission" "Bash" "git push" --permission
+    ak820notify.py ask "Which?" --options "One|Two|Three" [--multi]
+                   a question answered on the board: arrows move, Space ticks
+                   (--multi), Enter answers, Esc cancels; other keys are
+                   ignored. Prints allow | deny | cancel | choice:N |
+                   multi:N,M | timeout | aborted (SIGTERM, see below)
     ak820notify.py stats                                    LED-channel decoder counters (cable)
 
 LINUX ONLY. Two transports carry the same frame (layout in the firmware's
@@ -22,11 +29,21 @@ notify.c):
             needs hostagent/linux/70-ak820-notify.rules.
 
 Picked automatically (raw HID if the cable is there), or forced with --via.
+
+Answers come back as HID consumer usages (the only board-to-host path over
+BT/2.4G besides keystrokes), read from the receiver's or the board's
+"Consumer Control" input device -- media keys only, never typing. Reading it
+needs the same udev rules.
+
+Settings: ~/.config/ak820notify.conf, KEY=value lines. TIMEOUT=300 is how long
+`ask` waits for an answer.
 """
 import argparse
 import glob
 import os
 import select
+import signal
+import struct
 import sys
 import time
 import unicodedata
@@ -36,6 +53,7 @@ PID_KB = "8009"          # the board itself (cable)
 PID_DONGLE = "fdfd"      # its 2.4G receiver
 SET_VALUE, NOTIFY_CHANNEL = 0x07, 0x14
 NOTIFY_SHOW, NOTIFY_STATS, NOTIFY_BOOTLOADER = 0x01, 0x02, 0x03
+NOTIFY_STAGE, NOTIFY_COMMIT = 0x05, 0x06
 
 EFFECTS = {"solid": 0, "blink": 1, "breathe": 2, "sweep": 3}
 COLORS = {"red": 0, "orange": 21, "yellow": 43, "green": 85, "cyan": 128,
@@ -46,6 +64,15 @@ GIF_BASE, GIF_STRIDE, GIF_SLOTS, GIF_MAXF = 0xD80000, 0x80000, 5, 15
 HERE = os.path.dirname(os.path.abspath(__file__))
 AK820CTL = os.path.join(HERE, "..", "time-util-ak820pro", "ak820ctl")
 SEQ_FILE = os.path.expanduser("~/.cache/ak820notify.seq")
+PAGE_STATE = os.path.expanduser("~/.cache/ak820notify.page")   # a page may be open
+ASK_PID = os.path.expanduser("~/.cache/ak820notify.ask.pid")    # an ask is waiting
+CONF = os.path.expanduser("~/.config/ak820notify.conf")
+
+KIND_SHOW, KIND_CLOSE, KIND_ASK = 0, 1, 2
+ASK_PERM, ASK_MULTI = 4, 8          # bits 1-0: detail lines after the title
+# Answers: HID consumer usages (MSC_SCAN = 0x000C0000 | usage), see notify.c.
+ANSWERS = {0x191: "allow", 0x1AB: "deny", 0x1BD: "cancel",
+           0x1B6: "choice:1", 0x1B7: "choice:2", 0x1B8: "choice:3", 0x1BC: "choice:4"}
 
 
 # --------------------------------------------------------------------- frame
@@ -70,10 +97,10 @@ def to_ascii(s):
     return "".join(out)
 
 
-def build_frame(seq, effect, hue, dur_ds, text, page=False, gif=0):
-    """[hdr][hue][dur][gif][len][text...][crc] -- see notify.c."""
+def build_frame(seq, effect, hue, dur_ds, text, page=False, gif=0, kind=KIND_SHOW):
+    """[hdr][hue][dur][gif|flags][len][text...][crc] -- see notify.c."""
     t = to_ascii(text).encode()[:TEXT_MAX]
-    hdr = (seq & 3) << 6 | (effect & 7) << 3 | (4 if page else 0)
+    hdr = (seq & 3) << 6 | (effect & 7) << 3 | (4 if page else 0) | (kind & 3)
     body = bytes([hdr, hue & 0xFF, dur_ds & 0xFF, gif & 0xFF, len(t)]) + t
     return body + bytes([crc8(body)])
 
@@ -147,9 +174,34 @@ def find_leds():
     return None
 
 
-def send_leds(frame, num_path, scr_path, bit_ms, repeats, gap_ms=500):
+LAST_SEND = os.path.expanduser("~/.cache/ak820notify.last")
+FRAME_GAP = 0.6   # s of silence between frames; the firmware ends a frame after 0.4
+
+
+def _gap_wait():
+    """Frames closer than the firmware's 400 ms gap merge into one oversized
+    frame that fails the length check -- measured: back-to-back runs lost 4
+    of 5. Wait out the gap since the previous send, from any process."""
+    try:
+        wait = os.path.getmtime(LAST_SEND) + FRAME_GAP - time.time()
+        if 0 < wait <= FRAME_GAP:
+            time.sleep(wait)
+    except OSError:
+        pass
+
+
+def _gap_mark():
+    try:
+        os.makedirs(os.path.dirname(LAST_SEND), exist_ok=True)
+        open(LAST_SEND, "w").close()
+    except OSError:
+        pass
+
+
+def send_leds(frame, num_path, scr_path, bit_ms, repeats, gap_ms=FRAME_GAP * 1000):
     """Toggle Num for a 0 and Scroll for a 1, MSB first. Every bit must be a
     CHANGE: the host only sends the LED report when it changes."""
+    _gap_wait()
     state = {p: int(open(p).read()) > 0 for p in (num_path, scr_path)}
     fds = {p: os.open(p, os.O_WRONLY) for p in state}
     try:
@@ -165,6 +217,107 @@ def send_leds(frame, num_path, scr_path, bit_ms, repeats, gap_ms=500):
     finally:
         for fd in fds.values():
             os.close(fd)
+        _gap_mark()
+
+
+def find_consumer_events():
+    """The board's and the receiver's "Consumer Control" evdev nodes."""
+    out = []
+    for n in glob.glob("/sys/class/input/input*/name"):
+        try:
+            name = open(n).read().strip()
+        except OSError:
+            continue
+        d = os.path.dirname(n)
+        if name.endswith("Consumer Control") and _usb_ids(d) in ((VID, PID_KB), (VID, PID_DONGLE)):
+            out += ["/dev/input/" + os.path.basename(e) for e in glob.glob(d + "/event*")]
+    return out
+
+
+def wait_answer(timeout, multi=False):
+    """The board's answer, from EV_MSC/MSC_SCAN. A multi-select arrives as the
+    ticked choices followed by "allow" as the end marker."""
+    fds = []
+    for dev in find_consumer_events():
+        try:
+            fds.append(os.open(dev, os.O_RDONLY | os.O_NONBLOCK))
+        except OSError:
+            pass
+    if not fds:
+        return "noreader"
+    fmt = "llHHi"                      # struct input_event, 64-bit
+    size = struct.calcsize(fmt)
+    end = time.time() + timeout
+    picked = []
+    try:
+        while time.time() < end:
+            for fd in select.select(fds, [], [], max(0.05, end - time.time()))[0]:
+                try:
+                    data = os.read(fd, size * 64)
+                except BlockingIOError:
+                    continue
+                for off in range(0, len(data) - size + 1, size):
+                    _, _, typ, code, val = struct.unpack_from(fmt, data, off)
+                    if typ != 4 or code != 4 or (val >> 16) != 0x0C:   # EV_MSC, MSC_SCAN, consumer page
+                        continue
+                    a = ANSWERS.get(val & 0xFFFF)
+                    if not a:
+                        continue
+                    if multi and a.startswith("choice:"):
+                        if a[7:] not in picked:
+                            picked.append(a[7:])
+                    elif multi and a == "allow":
+                        return "multi:" + ",".join(picked)
+                    else:
+                        return a
+        return "timeout"
+    finally:
+        for fd in fds:
+            os.close(fd)
+
+
+def send_frame(frame, via="auto", bit_ms=10.0, repeats=2):
+    """Raw HID if the board is on the cable (staged for long frames), else the LEDs."""
+    dev = find_rawhid() if via in ("auto", "usb") else None
+    if dev:
+        for off in range(0, len(frame), 27):   # [07 14 05 off n] + up to 27 bytes
+            chunk = list(frame[off:off + 27])
+            if rawhid_xfer(dev, [SET_VALUE, NOTIFY_CHANNEL, NOTIFY_STAGE, off, len(chunk)] + chunk)[0] != SET_VALUE:
+                sys.exit("the board rejected the frame (firmware without notify?)")
+        if rawhid_xfer(dev, [SET_VALUE, NOTIFY_CHANNEL, NOTIFY_COMMIT, len(frame)])[0] != SET_VALUE:
+            sys.exit("the board rejected the frame (firmware without notify?)")
+        return
+    if via == "usb":
+        sys.exit("board not found on the cable")
+    leds = find_leds() or sys.exit("no Num/Scroll LEDs for the receiver or the board")
+    try:
+        send_leds(frame, *leds, bit_ms, repeats)
+    except PermissionError:
+        sys.exit("cannot write the LEDs: install hostagent/linux/70-ak820-notify.rules")
+
+
+def page_state(is_open):
+    try:
+        if is_open:
+            os.makedirs(os.path.dirname(PAGE_STATE), exist_ok=True)
+            open(PAGE_STATE, "w").write(str(time.time()))
+        elif os.path.exists(PAGE_STATE):
+            os.remove(PAGE_STATE)
+    except OSError:
+        pass
+
+
+def load_conf():
+    c = {"TIMEOUT": "300"}
+    try:
+        for line in open(CONF):
+            line = line.split("#", 1)[0].strip()
+            if "=" in line:
+                k, v = line.split("=", 1)
+                c[k.strip().upper()] = v.strip()
+    except OSError:
+        pass
+    return c
 
 
 # ----------------------------------------------------------------------- gif
@@ -213,6 +366,19 @@ def main():
     g = sub.add_parser("gif-upload", help="store a GIF in a slot (cable)")
     g.add_argument("slot", type=int, choices=range(1, GIF_SLOTS + 1))
     g.add_argument("gif")
+    cl = sub.add_parser("close", help="close the page on the board")
+    cl.add_argument("--if-open", action="store_true", help="only if a page may be open")
+    cl.add_argument("--via", choices=["auto", "usb", "leds"], default="auto")
+    ak = sub.add_parser("ask", help="a question answered on the board")
+    ak.add_argument("title")
+    ak.add_argument("details", nargs="*", help="up to 2 detail lines")
+    ak.add_argument("--options", default="", help="choices, |-separated (permission default: Allow|Deny)")
+    ak.add_argument("--permission", action="store_true", help="option 1 = allow, option 2 = deny")
+    ak.add_argument("--multi", action="store_true", help="checkboxes: Space ticks, Enter answers")
+    ak.add_argument("--color", default="yellow")
+    ak.add_argument("--effect", default="blink", choices=list(EFFECTS))
+    ak.add_argument("--timeout", type=float, default=None, help="seconds (default: TIMEOUT in the conf)")
+    ak.add_argument("--via", choices=["auto", "usb", "leds"], default="auto")
     sub.add_parser("stats", help="LED-channel decoder counters (cable)")
     sub.add_parser("bootloader", help="reboot to the bootloader (firmware built with NOTIFY_RAW_BOOTLOADER)")
     a = ap.parse_args()
@@ -242,11 +408,57 @@ def main():
               f"  min gap {u16(18)} ms")
         return
 
+    if a.cmd == "close":
+        if a.if_open and not os.path.exists(PAGE_STATE):
+            return
+        page_state(False)
+        send_frame(build_frame(next_seq(), 0, 0, 0, "", kind=KIND_CLOSE), a.via)
+        return
+
     hue = COLORS.get(a.color.lower())
     hue = int(a.color) if hue is None else hue
+
+    if a.cmd == "ask":
+        details = [d for d in a.details if d][:2]
+        opts = [o for o in (a.options or ("Allow|Deny" if a.permission else "")).split("|") if o]
+        if len(opts) < (2 if a.permission else 1):
+            sys.exit("--options: nothing to choose from")
+        opts = opts[:2] if a.permission else opts[:4 - len(details)]
+        flags = len(details) | (ASK_PERM if a.permission else 0) | (ASK_MULTI if a.multi else 0)
+        frame = build_frame(next_seq(), EFFECTS[a.effect], hue, 255, "\n".join([a.title] + details + opts),
+                            True, flags, kind=KIND_ASK)
+        send_frame(frame, a.via)
+        page_state(True)
+
+        # Whoever deals with the question at the computer sends SIGTERM (the
+        # Claude Code hook does): stop waiting and close the page now rather
+        # than holding it up until the timeout.
+        def _abort(*_):
+            raise InterruptedError
+        signal.signal(signal.SIGTERM, _abort)
+        signal.signal(signal.SIGHUP, _abort)
+        with open(ASK_PID, "w") as f:
+            f.write(str(os.getpid()))
+        try:
+            ans = wait_answer(a.timeout if a.timeout is not None else float(load_conf()["TIMEOUT"]), a.multi)
+        except InterruptedError:
+            ans = "aborted"
+        finally:
+            try:
+                os.remove(ASK_PID)
+            except OSError:
+                pass
+        if ans in ("timeout", "noreader", "aborted"):
+            send_frame(build_frame(next_seq(), 0, 0, 0, "", kind=KIND_CLOSE), a.via)
+        page_state(False)
+        print(ans)
+        return
+
     dur = 255 if a.dur == "until" else min(254, round(float(a.dur) * 10))
     text = a.title + ("\n" + a.body if a.body else "")
     seq = next_seq()
+    if a.page:
+        page_state(True)
 
     dev = find_rawhid() if a.via in ("auto", "usb") else None
     if dev:

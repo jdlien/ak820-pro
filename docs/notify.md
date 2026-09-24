@@ -6,12 +6,15 @@ A host can make the board light up and put something on the LCD: a colour
 effect over whatever RGB mode is running, plus either two lines in the
 host-text band or a **full-screen page** — a GIF from flash, or big
 word-wrapped text — that stays until any key is pressed. The key that
-dismisses it is swallowed. Firmware: `notify.c`, the page in `display.c`,
+dismisses it is swallowed. The host can **close** the page itself, and a page
+can be a **question answered on the board** — a permission, a choice, or
+checkboxes — with the answer sent back to the host, over BT/2.4G too. Firmware: `notify.c`, the page in `display.c`,
 raw-HID channel `0x14` in `hid_protocol.c`. Host: `hostagent/ak820notify.py`
 (**Linux only**).
 
 The motivating use is [Claude Code](#claude-code): the octopus hops when a turn
-finishes, a yellow page says which tool wants permission.
+finishes, and a tool permission or an `AskUserQuestion` is answered with the
+arrow keys and Enter, without touching the terminal.
 
 ## The hard part: BT/2.4G has no data channel
 
@@ -57,14 +60,18 @@ measured.
 Identical on both transports:
 
 ```
-[0] hdr   seq:2 | effect:3 | page:1 | 0:2
+[0] hdr   seq:2 | effect:3 | page:1 | kind:2   (0 SHOW, 1 CLOSE, 2 ASK)
 [1] hue   0-255 (QMK scale)
 [2] dur   lighting time in 100 ms units; 0 = none, 255 = until dismissed
-[3] gif   page mode: slot 1-5, 0 = text
+[3] gif   SHOW page: slot 1-5, 0 = text.  ASK: flags (below)
 [4] len   text bytes, <= 44
 [5..]     ASCII, '\n' forces a line break
 [5+len]   CRC-8 (poly 0x07, init 0) over everything before it
 ```
+
+Frames must be at least 400 ms apart on the LED channel, or two of them merge
+into one oversized frame that fails the length check (measured: 4 of 5 lost
+when sent back to back). The host tool waits 600 ms after its previous send.
 
 Effects: `solid`, `blink`, `breathe`, `sweep` (a band left to right). They are
 drawn in `rgb_matrix_indicators_advanced_kb`, so they sit on top of any mode,
@@ -72,7 +79,10 @@ and RGB is switched on for the duration if it was off.
 
 With the cable the same frame goes in one report:
 `[0x07 SET_VALUE][0x14][0x01 NOTIFY_SHOW][frame...]` — text is limited to 23
-bytes there. `[0x07][0x14][0x02 NOTIFY_STATS]` returns the decoder counters.
+bytes there — or, for anything longer, in pieces:
+`[0x07][0x14][0x05 NOTIFY_STAGE][offset][n][n bytes]` then
+`[0x07][0x14][0x06 NOTIFY_COMMIT][len]`. Each piece states its length because
+the report length is always the full 32. `[0x07][0x14][0x02 NOTIFY_STATS]` returns the decoder counters.
 `[0x07][0x14][0x03 NOTIFY_BOOTLOADER]` jumps to the ROM bootloader, but is
 compiled only with `-DNOTIFY_RAW_BOOTLOADER`: any process that can open the
 raw-HID interface could otherwise drop the board into a state that looks
@@ -96,6 +106,49 @@ them.
 
 The "SCR" lock indicator is no longer drawn: with Scroll Lock as a data line
 it flickered on every `1` bit.
+
+### Close from the host
+
+`CLOSE` closes the page and ends an until-dismissed effect. The Claude Code
+hook sends it when you are clearly back at the computer — a new prompt, a tool
+running after you answered in the terminal — and only if a page may be open,
+so ordinary tool calls cost nothing.
+
+### Questions
+
+`ASK` is a page with a title, up to two detail lines and up to four options.
+Its flags byte: bits 1-0 = number of detail lines, bit 2 = PERM (option 1
+answers allow, option 2 deny), bit 3 = MULTI (checkboxes).
+
+| key | does |
+|---|---|
+| arrows | move the cursor (Left/Up back, Right/Down forward) |
+| Space | tick / untick (MULTI) |
+| Enter | answer |
+| Esc | cancel: the question goes back to the computer |
+| anything else | **ignored** — the question stays up |
+
+Ignoring stray keys is deliberate: the first version cancelled on any key,
+and while you are typing that is exactly the key most likely to arrive.
+
+The answer has to come back over BT/2.4G too, and besides keystrokes the only
+board-to-host path the CH582F carries is a consumer report. So it is one HID
+consumer usage, from AL usages nothing binds by default:
+
+| answer | usage | Linux key |
+|---|---|---|
+| allow | `0x191` AL Finance | `KEY_FINANCE` |
+| deny | `0x1AB` AL Spell Check | `KEY_SPELLCHECK` |
+| cancel | `0x1BD` AL Info | `KEY_INFO` |
+| option 1-4 | `0x1B6` `0x1B7` `0x1B8` `0x1BC` | `KEY_IMAGES` `AUDIO` `VIDEO` `MESSENGER` |
+
+A multi-select sends every ticked option — one per 10 Hz tick with a release
+in between, so consecutive usages are not merged into one report — then
+*allow* as the end marker. `ak820notify.py ask` reads the `MSC_SCAN` value
+from the "Consumer Control" input device of the receiver or the board (media
+keys only, never typing) and prints `allow`, `deny`, `cancel`, `choice:N`,
+`multi:N,M`, `timeout`, or `aborted` when SIGTERM tells it the question was
+dealt with at the computer.
 
 ### GIF slots
 
@@ -125,15 +178,31 @@ sudo udevadm control --reload && sudo udevadm trigger
 
 `--via auto` (the default) uses the cable when the board is on it, the LEDs
 otherwise. The rule's comments cover what it grants and why a group rather than
-uaccess.
+uaccess. `ask` waits `TIMEOUT` seconds (`~/.config/ak820notify.conf`, default
+300).
 
 ## Claude Code
 
-`hostagent/claude-code/ak820-claude-hook.sh`, registered for `Stop` and for
-`Notification` with matcher `permission_prompt` (the snippet is in the
-script's header). The send runs in the background and is serialised with
-`flock`, so Claude Code never waits on it and two frames never interleave on the
-LEDs.
+`hostagent/claude-code/ak820-claude-hook.sh` (the settings snippet is in its
+header):
+
+- **Stop** — the octopus, full screen, orange breathe, until a key.
+- **PermissionRequest**, synchronous — the question goes to the board and the
+  answer comes back as Claude Code's decision: *Allow / Deny* for a tool, the
+  options of an `AskUserQuestion` (a single choice, or checkboxes when
+  `multiSelect`). The chosen labels go back as `updatedInput.answers`. No
+  answer within `TIMEOUT`: the hook says nothing and Claude asks in the
+  terminal as usual. While it waits Claude Code does not show a tool
+  permission in the terminal (it does show an `AskUserQuestion`); Esc on the
+  board hands it back at once.
+- **Notification** `permission_prompt` — the question is in the terminal now:
+  a reminder page, skipped if you just cancelled on the board.
+- **UserPromptSubmit / PostToolUse / PostToolUseFailure / PermissionDenied /
+  SessionEnd** — you are back: a question still waiting on the board is
+  aborted, an open page is closed.
+
+Everything else runs in the background and is serialised with `flock`, so
+two frames never interleave on the LEDs.
 
 ## Not tested
 
