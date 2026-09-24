@@ -118,7 +118,14 @@ so ordinary tool calls cost nothing.
 
 `ASK` is a page with a title, up to two detail lines and up to four options.
 Its flags byte: bits 1-0 = number of detail lines, bit 2 = PERM (option 1
-answers allow, option 2 deny), bit 3 = MULTI (checkboxes).
+answers allow, option 2 deny), bit 3 = MULTI (checkboxes), bits 5-4 = SLOT.
+
+Up to **four questions wait at once** — several Claude Code sessions asking
+together. The queue lives on the board, so switching is instant: the title
+shows `n/m`, and answering one shows the next. `CLOSE` with bit 7 of the
+flags byte drops one slot (bits 5-4) — the host withdrew that question; a
+plain `CLOSE` leaves waiting questions alone, and a `SHOW` page arriving
+while questions wait only lights up instead of taking the screen.
 
 | key | does |
 |---|---|
@@ -126,6 +133,8 @@ answers allow, option 2 deny), bit 3 = MULTI (checkboxes).
 | Space | tick / untick (MULTI) |
 | Enter | answer |
 | Esc | cancel: the question goes back to the computer |
+| PgUp / PgDn, Home / End | previous / next question in the queue |
+| Fn (layer keys) | pass through, so Fn+U / Fn+O reach PgUp / PgDn |
 | anything else | **ignored** — the question stays up |
 
 Ignoring stray keys is deliberate: the first version cancelled on any key,
@@ -142,7 +151,10 @@ consumer usage, from AL usages nothing binds by default:
 | cancel | `0x1BD` AL Info | `KEY_INFO` |
 | option 1-4 | `0x1B6` `0x1B7` `0x1B8` `0x1BC` | `KEY_IMAGES` `AUDIO` `VIDEO` `MESSENGER` |
 
-A multi-select sends every ticked option — one per 10 Hz tick with a release
+Every answer is preceded by its slot's marker — `0x199` AL Network Chat,
+`0x1A7` Documents, `0x1AE` Keyboard Layout, `0x18E` Calendar (`KEY_CHAT`,
+`KEY_DOCUMENTS`, `KEY_KEYBOARD`, `KEY_CALENDAR`) — so each waiting asker takes
+only its own. A multi-select sends every ticked option — one per 10 Hz tick with a release
 in between, so consecutive usages are not merged into one report — then
 *allow* as the end marker. `ak820notify.py ask` reads the `MSC_SCAN` value
 from the "Consumer Control" input device of the receiver or the board (media
@@ -205,8 +217,11 @@ header):
   session, or a parallel tool call finishing, aborted the question a second
   before you pressed Enter on a board that was no longer listening.
 
-Everything else runs in the background and is serialised with `flock`, so
-two frames never interleave on the LEDs.
+`ak820notify.py` takes a free slot per question (`busy` if all four are
+taken: that one stays in the terminal) and serialises the sends itself,
+holding the lock only while sending — never while waiting — so questions
+from several sessions wait at the same time. Don't wrap it in another lock:
+held across the call, it deadlocks against the one inside.
 
 ## Not tested
 

@@ -65,11 +65,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 AK820CTL = os.path.join(HERE, "..", "time-util-ak820pro", "ak820ctl")
 SEQ_FILE = os.path.expanduser("~/.cache/ak820notify.seq")
 PAGE_STATE = os.path.expanduser("~/.cache/ak820notify.page")   # a page may be open
-ASK_PID = os.path.expanduser("~/.cache/ak820notify.ask.pid")    # an ask is waiting
+ASKS_DIR = os.path.expanduser("~/.cache/ak820notify.asks")      # one file per waiting ask: <pid> -> tag
+SEND_LOCK = os.path.expanduser("~/.cache/ak820notify.lock")     # serialises every send
+SLOTS_FILE = os.path.expanduser("~/.cache/ak820notify.slots")   # question slot -> pid
 CONF = os.path.expanduser("~/.config/ak820notify.conf")
 
 KIND_SHOW, KIND_CLOSE, KIND_ASK = 0, 1, 2
-ASK_PERM, ASK_MULTI = 4, 8          # bits 1-0: detail lines after the title
+ASK_PERM, ASK_MULTI = 4, 8          # bits 1-0: detail lines, bits 5-4: slot
+CLOSE_SLOT = 0x80
+ASK_SLOTS = 4
+# Slot markers, sent by the board before every answer (see notify.c).
+SLOT_MARK = {0x199: 0, 0x1A7: 1, 0x1AE: 2, 0x18E: 3}
 # Answers: HID consumer usages (MSC_SCAN = 0x000C0000 | usage), see notify.c.
 ANSWERS = {0x191: "allow", 0x1AB: "deny", 0x1BD: "cancel",
            0x1B6: "choice:1", 0x1B7: "choice:2", 0x1B8: "choice:3", 0x1BC: "choice:4"}
@@ -234,9 +240,61 @@ def find_consumer_events():
     return out
 
 
-def wait_answer(timeout, multi=False):
-    """The board's answer, from EV_MSC/MSC_SCAN. A multi-select arrives as the
-    ticked choices followed by "allow" as the end marker."""
+def _locked(path):
+    """An exclusive fcntl lock on `path`, as a context manager."""
+    import contextlib
+    import fcntl
+
+    @contextlib.contextmanager
+    def cm():
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+    return cm()
+
+
+def slot_take():
+    """A free question slot (0-3), or None if all four are taken. Slots of
+    dead processes free themselves."""
+    with _locked(SLOTS_FILE + ".lock"):
+        try:
+            owners = {int(k): int(v) for k, v in (l.split() for l in open(SLOTS_FILE) if l.strip())}
+        except (OSError, ValueError):
+            owners = {}
+        alive = {}
+        for k, pid in owners.items():
+            try:
+                os.kill(pid, 0)
+                alive[k] = pid
+            except OSError:
+                pass
+        free = [k for k in range(ASK_SLOTS) if k not in alive]
+        if not free:
+            return None
+        alive[free[0]] = os.getpid()
+        with open(SLOTS_FILE, "w") as f:
+            f.writelines(f"{k} {v}\n" for k, v in alive.items())
+        return free[0]
+
+
+def slot_release(slot):
+    with _locked(SLOTS_FILE + ".lock"):
+        try:
+            lines = [l for l in open(SLOTS_FILE) if l.strip() and int(l.split()[0]) != slot]
+            with open(SLOTS_FILE, "w") as f:
+                f.writelines(lines)
+        except (OSError, ValueError):
+            pass
+
+
+def wait_answer(timeout, multi=False, slot=0):
+    """Our slot's answer, from EV_MSC/MSC_SCAN: the board sends the slot's
+    marker, then the answer. A multi-select arrives as the ticked choices
+    followed by "allow" as the end marker."""
     fds = []
     for dev in find_consumer_events():
         try:
@@ -249,6 +307,8 @@ def wait_answer(timeout, multi=False):
     size = struct.calcsize(fmt)
     end = time.time() + timeout
     picked = []
+    mine = False     # the last marker seen was ours
+    marked = False   # any marker seen (firmware with the queue)
     try:
         while time.time() < end:
             for fd in select.select(fds, [], [], max(0.05, end - time.time()))[0]:
@@ -260,8 +320,13 @@ def wait_answer(timeout, multi=False):
                     _, _, typ, code, val = struct.unpack_from(fmt, data, off)
                     if typ != 4 or code != 4 or (val >> 16) != 0x0C:   # EV_MSC, MSC_SCAN, consumer page
                         continue
-                    a = ANSWERS.get(val & 0xFFFF)
-                    if not a:
+                    u = val & 0xFFFF
+                    if u in SLOT_MARK:
+                        mine, marked = SLOT_MARK[u] == slot, True
+                        continue
+                    a = ANSWERS.get(u)
+                    # Firmware without the queue sends no markers: slot 0 only.
+                    if not a or not (mine or (not marked and slot == 0)):
                         continue
                     if multi and a.startswith("choice:"):
                         if a[7:] not in picked:
@@ -277,7 +342,14 @@ def wait_answer(timeout, multi=False):
 
 
 def send_frame(frame, via="auto", bit_ms=10.0, repeats=2):
-    """Raw HID if the board is on the cable (staged for long frames), else the LEDs."""
+    """Raw HID if the board is on the cable (staged for long frames), else the
+    LEDs -- one send at a time across processes: interleaved frames on the LED
+    channel corrupt each other. Only the send is locked, never a wait."""
+    with _locked(SEND_LOCK):
+        _send_frame(frame, via, bit_ms, repeats)
+
+
+def _send_frame(frame, via, bit_ms, repeats):
     dev = find_rawhid() if via in ("auto", "usb") else None
     if dev:
         for off in range(0, len(frame), 27):   # [07 14 05 off n] + up to 27 bytes
@@ -378,6 +450,7 @@ def main():
     ak.add_argument("--color", default="yellow")
     ak.add_argument("--effect", default="blink", choices=list(EFFECTS))
     ak.add_argument("--timeout", type=float, default=None, help="seconds (default: TIMEOUT in the conf)")
+    ak.add_argument("--tag", default="", help="free text stored with the waiting ask (the hook: session + tool)")
     ak.add_argument("--via", choices=["auto", "usb", "leds"], default="auto")
     sub.add_parser("stats", help="LED-channel decoder counters (cable)")
     sub.add_parser("bootloader", help="reboot to the bootloader (firmware built with NOTIFY_RAW_BOOTLOADER)")
@@ -419,12 +492,16 @@ def main():
     hue = int(a.color) if hue is None else hue
 
     if a.cmd == "ask":
+        slot = slot_take()
+        if slot is None:
+            print("busy")   # four questions already waiting: this one stays at the computer
+            return
         details = [d for d in a.details if d][:2]
         opts = [o for o in (a.options or ("Allow|Deny" if a.permission else "")).split("|") if o]
         if len(opts) < (2 if a.permission else 1):
             sys.exit("--options: nothing to choose from")
         opts = opts[:2] if a.permission else opts[:4 - len(details)]
-        flags = len(details) | (ASK_PERM if a.permission else 0) | (ASK_MULTI if a.multi else 0)
+        flags = len(details) | (ASK_PERM if a.permission else 0) | (ASK_MULTI if a.multi else 0) | slot << 4
         frame = build_frame(next_seq(), EFFECTS[a.effect], hue, 255, "\n".join([a.title] + details + opts),
                             True, flags, kind=KIND_ASK)
         send_frame(frame, a.via)
@@ -437,19 +514,22 @@ def main():
             raise InterruptedError
         signal.signal(signal.SIGTERM, _abort)
         signal.signal(signal.SIGHUP, _abort)
-        with open(ASK_PID, "w") as f:
-            f.write(str(os.getpid()))
+        os.makedirs(ASKS_DIR, exist_ok=True)
+        mine = os.path.join(ASKS_DIR, str(os.getpid()))
+        with open(mine, "w") as f:
+            f.write(a.tag + "\n")
         try:
-            ans = wait_answer(a.timeout if a.timeout is not None else float(load_conf()["TIMEOUT"]), a.multi)
+            ans = wait_answer(a.timeout if a.timeout is not None else float(load_conf()["TIMEOUT"]), a.multi, slot)
         except InterruptedError:
             ans = "aborted"
         finally:
             try:
-                os.remove(ASK_PID)
+                os.remove(mine)
             except OSError:
                 pass
-        if ans in ("timeout", "noreader", "aborted"):
-            send_frame(build_frame(next_seq(), 0, 0, 0, "", kind=KIND_CLOSE), a.via)
+        if ans in ("timeout", "noreader", "aborted"):   # withdraw just this question
+            send_frame(build_frame(next_seq(), 0, 0, 0, "", gif=CLOSE_SLOT | slot << 4, kind=KIND_CLOSE), a.via)
+        slot_release(slot)
         page_state(False)
         print(ans)
         return
@@ -459,23 +539,7 @@ def main():
     seq = next_seq()
     if a.page:
         page_state(True)
-
-    dev = find_rawhid() if a.via in ("auto", "usb") else None
-    if dev:
-        # One 32-byte report: 3 bytes of framing leave 29 for the frame.
-        frame = build_frame(seq, EFFECTS[a.effect], hue, dur, text[:23], a.page, a.gif)
-        rep = rawhid_xfer(dev, [SET_VALUE, NOTIFY_CHANNEL, NOTIFY_SHOW] + list(frame))
-        if rep[0] != SET_VALUE:
-            sys.exit("the board rejected the frame (firmware without notify?)")
-        return
-    if a.via == "usb":
-        sys.exit("board not found on the cable")
-    leds = find_leds() or sys.exit("no Num/Scroll LEDs for the receiver or the board")
-    frame = build_frame(seq, EFFECTS[a.effect], hue, dur, text, a.page, a.gif)
-    try:
-        send_leds(frame, *leds, a.bit_ms, a.repeats)
-    except PermissionError:
-        sys.exit("cannot write the LEDs: install hostagent/linux/70-ak820-notify.rules")
+    send_frame(build_frame(seq, EFFECTS[a.effect], hue, dur, text, a.page, a.gif), a.via, a.bit_ms, a.repeats)
 
 
 if __name__ == "__main__":

@@ -19,8 +19,12 @@
 #                                only for events from the SAME session, and for
 #                                tool events only the tool that was waiting
 #
-# Reads the hook JSON on stdin; needs jq. Never fails. Sends are serialised
-# with flock -- two frames interleaved on the LED channel corrupt each other.
+# Reads the hook JSON on stdin; needs jq. Never fails. ak820notify.py
+# serialises the sends itself (two frames interleaved on the LED channel
+# corrupt each other) and holds that lock only while sending, so questions
+# from several sessions wait at the same time: the board queues up to four,
+# switched with PgUp/PgDn. Do NOT wrap it in another lock here -- a lock held
+# across the call deadlocks against the one inside.
 # Log: ~/.cache/ak820-claude-hook.log
 #
 # ~/.claude/settings.json (next to any hooks you already have):
@@ -38,7 +42,6 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 NOTIFY=("$HERE/../../venv/bin/python" "$HERE/../ak820notify.py")
 [ -x "${NOTIFY[0]}" ] || NOTIFY=(python3 "$HERE/../ak820notify.py")
 LOG=$HOME/.cache/ak820-claude-hook.log
-LOCK=$HOME/.cache/ak820-claude-hook.lock
 mkdir -p "$(dirname "$LOG")"
 
 input=$(cat)
@@ -51,19 +54,14 @@ nl=$'\n'
 # call in this one) finishing a tool aborted every pending question -- you
 # pressed Enter on a board that had already stopped listening.
 PAGE_OWNER=$HOME/.cache/ak820notify.page.owner   # session_id
-ASK_CTX=$HOME/.cache/ak820notify.ask.ctx         # session_id and tool fingerprint
 # Fingerprint of a tool call, to recognise the PostToolUse of the very tool
 # whose permission was asked (i.e. it was answered in the terminal).
 toolkey() { jq -cS '{t: .tool_name, i: .tool_input}' <<<"$input" 2>/dev/null | sha1sum | cut -c1-16; }
 
 log() { echo "$(date '+%F %T') $*" >>"$LOG"; }
 
-bg() {   # background, serialised
-  {
-    flock -w 30 9 || exit 0
-    log "$ev ${*:1:2}"
-    "${NOTIFY[@]}" "$@" >>"$LOG" 2>&1
-  } 9>"$LOCK" &
+bg() {   # background
+  { log "$ev ${*:1:2}"; "${NOTIFY[@]}" "$@" >>"$LOG" 2>&1; } &
   disown
 }
 
@@ -87,16 +85,20 @@ case "$ev" in
   UserPromptSubmit|PostToolUse|PostToolUseFailure|PermissionDenied|SessionEnd)
     # A question still waiting on the board but answered here: abort it (it
     # closes its own page and releases the lock).
-    # Same session only; for tool events, only the tool that was waiting.
-    pidf=$HOME/.cache/ak820notify.ask.pid
-    if [ -s "$pidf" ] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
-      read -r asid akey 2>/dev/null <"$ASK_CTX"
-      [ "$sid" = "$asid" ] || exit 0
+    # Waiting questions, one file each (<pid> -> "session fingerprint"):
+    # abort those of the same session; for a tool event, only the question
+    # about that very tool.
+    key=$(toolkey)
+    for f in "$HOME"/.cache/ak820notify.asks/*; do
+      [ -e "$f" ] || continue
+      read -r asid akey <"$f" 2>/dev/null
+      [ "$sid" = "$asid" ] || continue
       case "$ev" in
-        PostToolUse|PostToolUseFailure|PermissionDenied) [ "$(toolkey)" = "$akey" ] || exit 0 ;;
+        PostToolUse|PostToolUseFailure|PermissionDenied) [ "$key" = "$akey" ] || continue ;;
       esac
-      kill -TERM "$(cat "$pidf")" 2>/dev/null; log "$ev aborts the question"; exit 0
-    fi
+      pid=${f##*/}
+      kill -0 "$pid" 2>/dev/null && kill -TERM "$pid" 2>/dev/null && log "$ev aborts question $pid"
+    done
     [ -e "$HOME/.cache/ak820notify.page" ] || exit 0   # nothing open: no traffic
     [ "$sid" = "$(cat "$PAGE_OWNER" 2>/dev/null)" ] || exit 0   # another session's page
     bg close --if-open
@@ -121,10 +123,8 @@ case "$ev" in
       detail=${detail//$'\n'/ }
       args=(ask "Permission" "$tool" "${detail:0:12}" --permission --color yellow --effect blink)
     fi
-    echo "$sid $(toolkey)" > "$ASK_CTX"
-    # Synchronous: Claude Code waits for the decision. The lock is held for
-    # the whole wait so nothing else interleaves on the LEDs.
-    ans=$( { flock -w 30 9 || exit 0; "${NOTIFY[@]}" "${args[@]}" 2>>"$LOG"; } 9>"$LOCK" )
+    # Synchronous: Claude Code waits for the decision.
+    ans=$("${NOTIFY[@]}" "${args[@]}" --tag "$sid $(toolkey)" 2>>"$LOG")
     log "PermissionRequest $tool -> ${ans:-error}"
     [ "$ans" = cancel ] && touch "$HOME/.cache/ak820notify.cancelled"
     case "$ans" in
