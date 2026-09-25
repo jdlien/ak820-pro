@@ -161,6 +161,7 @@ document, because the upstream ones disagree with each other here.
 | `FLASH_ASSET_BASE` | `0x0CE0000` (3.12 MB, erased since manufacture, always writable) |
 | `ANIM_BASE` | `0x540000` |
 | `ANIM_HDR` / `ANIM_STRIDE` | `0x100` / `0x8000` |
+| `NOTIFY_GIF_BASE` | `0xD80000`, 5 slots x `0x80000` (notify.c, [notify.md](notify.md)) |
 | Max frames | 243 |
 | Unlockable stock slots | `0x1AA000`, `0x200000`, `0x38B000`, `0x540000` |
 

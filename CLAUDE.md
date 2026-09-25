@@ -28,6 +28,7 @@ submodule sits on our `ak820pro-patches` branch.
 | [docs/clock.md](docs/clock.md) | The two RTCs, divider trim, persisted period, the timekeeper agent |
 | [docs/leds.md](docs/leds.md) | **Interrupt priorities**, RGB field rate, indicator LEDs, the rainbow, effects |
 | [docs/hardware.md](docs/hardware.md) | Slider power quirk, bootloader, build/flash, watchdog+health, hang history, diagnostics |
+| [docs/notify.md](docs/notify.md) | Host notifications: the lock-LED data channel over BT/2.4G, raw HID 0x14, the full-screen page, GIF slots, Claude Code hook |
 
 **Resuming work? Start at
 [`plans/current-status.md`](plans/current-status.md)** — where things stand and

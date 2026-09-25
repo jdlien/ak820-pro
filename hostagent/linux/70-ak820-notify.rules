@@ -1,0 +1,26 @@
+# AK820 Pro notifications on Linux (hostagent/ak820notify.py).
+#
+#   sudo groupadd -f ak820 && sudo usermod -aG ak820 "$USER"   # then log in again
+#   sudo cp hostagent/linux/70-ak820-notify.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload && sudo udevadm trigger
+#
+# The 70- prefix matters: uaccess is applied by 73-seat-late.rules, so a tag
+# added in a later file (a 99-*.rules, say) is silently ignored.
+#
+# 1. Raw HID and the bootloader, for the logged-in seat user (uaccess): the
+#    cable transport, gif-upload, stats, and SonixFlasherC.
+# 2. Num Lock / Scroll Lock brightness of the 2.4G receiver (0c45:fdfd) and of
+#    the board, writable by group ak820: the BT/2.4G transport. Write-only
+#    access to two LEDs -- it cannot read keystrokes. Caps Lock is left alone.
+#    uaccess does not apply to sysfs attributes, hence the group.
+#    Paired over Bluetooth instead? The board's LED devices then hang off the
+#    BT HID device; add a line matching its name (see /sys/class/leds/).
+# 3. The "Consumer Control" input devices of the receiver and the board, for
+#    the seat user: answers to questions come back as consumer usages. That
+#    device carries media keys only, never typing. Vendor/product come from
+#    ENV, not ATTRS: every ATTRS key in a rule must match on the SAME parent,
+#    and the name lives on the input device while idVendor is on the USB one.
+SUBSYSTEM=="usb", ATTR{idVendor}=="0c45", ATTR{idProduct}=="8009|7140", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="8009|7140", TAG+="uaccess"
+SUBSYSTEM=="leds", KERNEL=="input*::numlock|input*::scrolllock", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="fdfd|8009", RUN+="/bin/sh -c 'chgrp ak820 /sys%p/brightness && chmod g+w /sys%p/brightness'"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="*Consumer Control", ENV{ID_VENDOR_ID}=="0c45", ENV{ID_MODEL_ID}=="fdfd|8009", TAG+="uaccess"
