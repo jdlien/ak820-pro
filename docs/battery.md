@@ -15,13 +15,39 @@ row in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. Task 8 in
 
 Every obvious source turned out to be wrong or absent:
 
-- **The CH582F's percentage (`5C`) is not a level.** It read 100 through a
-  full-brightness discharge, and 100 while recharging a pack we then believed
-  flat. It does sense the pack: a board with no pack fitted reads 0
-  (`indicators.c`). Across the whole range we have observed it only ever says
-  100. The **stock firmware's gauge was this number**: none of the nine stock
-  SN32F290 images in `fpb/ajazz-ak820-pro` (AK820 Pro v1.13, v1.14, and seven
-  sibling boards) references the ADC, comparator or op-amp base addresses.
+- **The CH582F's percentage (`5C`) is not a level** — ⚠️ **but see the
+  2026-09-26 observation below, which contradicts the strongest form of this.**
+  It read 100 through a full-brightness discharge, and 100 while recharging a
+  pack we then believed flat. It does sense the pack: a board with no pack
+  fitted reads 0 (`indicators.c`). The **stock firmware's gauge was this
+  number**: none of the nine stock SN32F290 images in `fpb/ajazz-ak820-pro`
+  (AK820 Pro v1.13, v1.14, and seven sibling boards) references the ADC,
+  comparator or op-amp base addresses.
+
+  > ⭐ **2026-09-26: `5C` moved. It is not pinned at 100.** Near the end of the
+  > 09-25 discharge the owner read **~85%** on the `Fn`+`D` debug page, row 8,
+  > which renders `ch582_get_battery()` directly (`display.c:878`). The pack was
+  > at ~3.99–4.00 V. It **snapped to 100 the instant USB was connected**, and a
+  > post-reset `HC_CONN` read on USB gave 100 with a minimum of 99 since boot.
+  >
+  > So the sentence "across the whole range we have observed it only ever says
+  > 100" is **withdrawn**. What the evidence now supports is narrower and more
+  > useful: `5C` tracks *something*, coarsely and slowly, and it is **useless
+  > while charging** — it reports charger state, not charge.
+  >
+  > ⚠️ **Do not yet treat this as a gauge.** It is one reading, recalled
+  > approximately, with no trajectory behind it: the `module_pct` column of the
+  > once-a-minute RAM log would have shown the whole curve against the pack, and
+  > that log was lost when the slider went to `cable` at 13:22. 85% at 3.99 V is
+  > also optimistic for NMC — nearer 65–75% on the standard curve — so if it is
+  > a level it is a badly calibrated one. **The next discharge must capture
+  > `module_pct` over the whole run**, which the log already records; it only
+  > needs to survive to be dumped.
+  >
+  > If `5C` does track the pack, it is a gauge reachable with no ADC work at
+  > all, which is the thing this document spent its length establishing was
+  > absent. That is worth an hour of deliberate testing before more estimator
+  > calibration.
 - **No analogue pin can see the pack.** AIN0..AIN15 are P2.0..P2.15, all
   matrix columns, RGB rows or the Win Lock LED. The op-amp and comparator
   inputs are RGB rows (B4, B5, A11), the flash's WP (B2), the encoder (A10)

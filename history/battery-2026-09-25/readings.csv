@@ -21,3 +21,6 @@ time,meter_v,screen_v,note
 21:12,4.01,,white 100%
 2026-09-26 07:42,4.00,3.90,white 100% overnight; BT out of range (connecting); untouched ~10 h
 2026-09-26 09:52,3.99,3.90,white 100%
+13:22,,,"RUN ENDED: plugged in with the slider moved to cable, which resets the board; the once-a-minute RAM log was lost."
+,,,"⭐ THE MODULE'S 5C VALUE IS NOT STUCK AT 100. Shortly before the end the owner read ~85% on the Fn+D DEBUG page, row 8, which renders ch582_get_battery() (display.c:878) -- the CH582F's 5C percent. It snapped to 100 the instant USB was connected. The pack was ~3.99-4.00 V at the time. display.c:873-877 still says 'the module's number held 100 through a full discharge (2026-09-24)'; this run went deeper and longer, and it moved. ⚠️ An earlier note here wrongly said the LCD could not be the source -- that was about the battery ROW (which shows voltage on b35d8672b3); the DEBUG page is a different screen and does show the percent."
+13:26,,,"After the reset, on USB: vdd 4538 mV, CHRG low (charging), module 5C = 100% with a minimum of 99 since boot. ⚠️ 5C reporting 99 is already one count below the 'only ever says 100' in docs/battery.md."
