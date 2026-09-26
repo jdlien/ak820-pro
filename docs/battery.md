@@ -86,6 +86,68 @@ down to around 3.95-4.0 V: not yet observed.
 **The load barely sags the pack**: RGB at full versus off moved the pack by
 10 mV, and VDD not at all.
 
+## The pack connector, and tapping it (2026-09-26)
+
+**3-pin, 1.25 mm pitch, almost certainly Molex PicoBlade** (or a clone; the
+Chinese "JST 1.25mm" listings are the same family). The housing measured
+**5.45 mm** across on calipers, which is what settles it:
+
+| family | pitch | 3-pin housing |
+|---|---|---|
+| JST SH | 1.0 mm | ~4.6 mm |
+| **PicoBlade / JST GH** | **1.25 mm** | **~5.5 mm** |
+
+⚠️ PicoBlade and JST GH differ only in the latch; GH leads mate with PicoBlade
+headers, so a mistake there costs retention, not function. The decisive check is
+pin 1 to pin 3 centres: **2.5 mm = 1.25 mm pitch**. Part numbers to match a
+listing against: header `53261-0371`, pack plug `51021-0300`, in-line mate
+`51047-0300`. Search "1.25mm 3 pin male to female extension cable"; they come in
+cheap 10-packs, and crimping this pitch by hand needs a fine crimper (Engineer
+PA-09 or similar) for no good reason.
+
+**The pinout, from JD's unit:** red **+**, black **−**, white **NTC**. The
+silkscreen beside the header says `NTC`. ⚠️ The black wire is nearly invisible
+against the black PCB in photographs — count conductors at the pack, not on
+screen.
+
+⚠️ **The NTC is present and the firmware cannot read it.** It appears nowhere in
+`battery.c`; it goes to the charger's temperature-fault input (the ASC4056 fault
+row below). And there is no route to change that: the ADC survey above found
+every AIN pin already spoken for. **So pack temperature is reachable only by an
+external tap** — worth having, because the NMC curve we are fitting shifts with
+temperature and a multi-day run on a desk sees several degrees.
+
+### The tap
+
+A **3-pin male-to-female extension** in line with the pack, with the conductors
+brought out to a logger. Nothing is soldered to the pack, and no pack terminal is
+ever exposed — which is the safety argument as much as the convenience one: the
+09-25 run had **three accidental probe shorts**, one of which rebooted the board.
+A permanent tap removes the poking that caused them.
+
+- **Voltage only, in parallel.** ADS1115 (16-bit, ±4.096 V, ~0.1 mV) with a 2:1
+  divider, or a logging DMM and no code at all.
+- A 100k/100k divider draws 21 µA: ~2.5 mAh over five days out of 4000. Ignorable.
+- Sample every 10-60 s. The pack moves ~0.008 V/h; anything faster is oversampling.
+- Take the NTC out to the same logger for temperature.
+
+⚠️ **Do not put a current shunt in the pack path while the regulator dropout is
+being characterized.** The regulator's own drop is under 0.12 V at this load
+(above); an INA219/INA226 with the usual 0.1 Ω shunt eats ~30 mV of that at
+300 mA, so VDD would appear to follow the pack **earlier than it really does**
+and the calibration would encode the test rig. If coulomb counting is wanted
+later, use 0.01 Ω (~3 mV) and re-verify the dropout.
+
+**Before connecting anything**, two checks at the header with the pack in:
+`+` to `−` reads pack voltage (~4.0 V), and NTC to `−` reads ~10 kΩ at room
+temperature for a 10k thermistor. That identifies the pins properly instead of
+trusting wire colour.
+
+⚠️ **Correction to an earlier claim here:** meter readings are *not* sensitive to
+the RGB load. "The load barely sags the pack" above is the measured fact — full
+versus off moved it 10 mV. A meter reading that wanders is probe contact, not
+lighting.
+
 ## The charger (ASC4056)
 
 A TP4056-class linear charger, ESOP8 (`fpb/ajazz-ak820-pro/docs/ASC4056.pdf`,
