@@ -14,51 +14,47 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## Installed right now (2026-09-24, 12:45) — RESUME HERE
+## Installed right now (2026-09-25, 19:45) — RESUME HERE
 
-- **Firmware: the PRODUCTION daily with every fix**,
-  `via-daily-6b60458dd0-20260924-001152.bin`, token `0x70bfdc04`, flashed
-  about 12:42 at the owner's request. It is `44e7314e65` (10 h hunt-clean,
-  below) plus:
-  - `lcd_blit_wait()` on CURCNT/DMAEN;
-  - the dashboard repaint after a blit given up for good;
-  - the debug-pump recovery;
-  - the EFL refusal (ChibiOS `f247ebc639`);
-  - UART overrun reporting (ChibiOS `a4f8412134`);
-  - corrected comments.
+**The work has moved to the battery: read [docs/battery.md](../docs/battery.md)
+first.** Task 8 in `.taskmaster/tasks/tasks.json` tracks it.
 
-  Verified after the flash: test hooks refused, counters clean. **Not yet
-  hunted.**
-- **Agent: running** (paused for the flash, restored).
-- **The owner is testing Bluetooth now.** The slider is on BT with the cable
-  still in. On this unit the switch to BT does NOT reset the MCU; the switch
-  back to cable DOES. Baseline at 12:44:29, uptime 132 s:
-
-  | tx_sent | tx_timeouts | tx_drops | rx_malformed | key_presses |
-  |---|---|---|---|---|
-  | 487 | 6 | 0 | 0 | 231 |
-
-  That is 0.012 timeouts per frame; the old reference is 0.042 during a BT
-  typing burst.
-  - Read progress with `ak820-agent/target/release/ak820 health` (the daily
-    has no console, so no ACK histogram).
-  - Pass criteria: `tx_drops` 0, `rx_malformed` 0 or near it, timeouts per
-    frame at or below the reference, no resets, and no complaints about
-    dropped, repeated or stuck keys.
-  - Then fully wireless for a while. Replug and read the counters; if
-    `uptime_ms` shows no reset, they cover the unplugged time.
-- **Unpushed** (to push once the wireless test and some use pass):
-  - firmware `ak820pro-jdlien`: `93df5deb27` through `6b60458dd0`;
-  - ChibiOS `ak820pro-patches`: `f247ebc639`, `a4f8412134`;
-  - main: `1dcaf49` (docs), `0ca939c` and `f410769` (`deps.lock` →
-    `44e7314e65`, the overnight evidence).
-
-  Push ChibiOS first, then firmware, then main. `deps.lock` pins
-  `44e7314e65` (hunt-proven); move it to `6b60458dd0` once that has run a
-  hunt.
-- **Not yet done on the new build:** the `HC_BLITFAULT` forced-failure
-  tests (instrumented build `via-instrumented-6b60458dd0-20260924-001130`
-  only; needs Fn+Esc from the daily) and a hunt.
+- **Firmware: `via-daily-b35d8672b3-20260924-205842.bin`**, token
+  `0x583b65cf`. It is the production fixes (`6b60458dd0`) plus the start of
+  the battery work:
+  - VDD from the SN32 ADC;
+  - a once-a-minute RAM log;
+  - low-battery warn and RGB cut, at 3.55 V and 3.40 V on VDD;
+  - the voltage on the battery row, in place of the CH582F's fake 100%.
+- **A discharge run is in progress.**
+  - Unplugged since about 10:54. Accidental probe shorts rebooted the board
+    around 11:11 and twice more before 13:57, so the RAM log starts at the
+    last of those.
+  - RGB at full pastel, then **solid white 100% from 15:36**.
+  - Pack readings: `history/battery-2026-09-25/readings.csv`.
+  - VDD is held at 3.90 V by a regulator; we are waiting for it to start
+    following the pack, around 3.95-4.0 V.
+  - **Next:** one meter plus screen reading, then plug in **with the slider on
+    BT** (BT → cable resets and loses the log). Then
+    `hostagent/ak820battery.py log history/battery-2026-09-25/log.csv`,
+    calibrate the `CAL` constants in `battery.c`, and flash the estimator plus
+    the idle ladder.
+- **Committed locally, not flashed, not pushed** (firmware `ak820pro-jdlien`):
+  - `91d854f2ff` and `b35d8672b3`: the flashed build;
+  - `36be68f16a`: the level estimator, uncalibrated;
+  - `3b85686ff7`: the idle ladder.
+- **Pushed 2026-09-24 ~14:00:** ChibiOS `a4f8412134`, firmware `6b60458dd0`,
+  main `882b322`.
+- **Bluetooth test, 2026-09-24:** 57 minutes on BT with the cable in: 9,597
+  frames, 0 drops, 0 malformed, 2.9% late. At idle about half of the 5 s
+  battery polls are late, and during typing almost nothing is, so the 10 ms
+  ACK deadline stays. Then, unplugged, the board **went dark with charge
+  left** and came back only on USB: unexplained (docs/battery.md).
+- **Still not done:**
+  - the `HC_BLITFAULT` forced-failure tests;
+  - a hunt on `6b60458dd0`: `deps.lock` still pins `44e7314e65`.
+- **Also open:** the unplug glitch (slot shown as 2, top strip redrawn over
+  Fn+D; task 8.6), and the RGB colour breakup at a 215 Hz field rate (task 9).
 
 ## ✅ The overnight hunt on 44e7314e65 passed (2026-09-24 04:57)
 
