@@ -41,6 +41,14 @@ offsets slew rather than jump, and a no-host reboot self-acquires to ~±15 ms.
 | `burst_ab.ps1` | The run: stop the daemon, alternate the two CLIs, restart |
 | `burst_grade.py` | The grader; re-run from here, it gives the same PASS |
 
+## macos-leak-2026-09-20/ — the leak fix holds in production (2026-09-20)
+
+The gate on `cf::Pool` in `write_report` (`plans/AK820-AGENT-MACOS-LEAK-PLAN.md`):
+Elysium's live daemon on `v0.1.1-52-g4e9d5cd`, 576 samples over 48 h, one pid.
+⚠️ **The 24–48 h window is the result — +0 KB over 288 samples and ~30,400
+writes**, where the pre-fix rate of 48 B/write would have added 1.39 MB. Day one
+is warm-up and a 0–48 h slope would misreport it as a rate.
+
 ## windows-memory-2026-09-18/ — the Windows daemon does not leak (2026-09-18)
 
 The other half of the macOS leak question (`plans/AK820-AGENT-MACOS-LEAK-PLAN.md`):
