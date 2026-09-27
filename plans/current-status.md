@@ -14,47 +14,138 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## Installed right now (2026-09-25, 19:45) — RESUME HERE
+## Installed right now (2026-09-27, 13:00) — RESUME HERE
 
-**The work has moved to the battery: read [docs/battery.md](../docs/battery.md)
+**The work is on the battery: read [docs/battery.md](../docs/battery.md)
 first.** Task 8 in `.taskmaster/tasks/tasks.json` tracks it.
 
 - **Firmware: `via-daily-b35d8672b3-20260924-205842.bin`**, token
-  `0x583b65cf`. It is the production fixes (`6b60458dd0`) plus the start of
-  the battery work:
-  - VDD from the SN32 ADC;
-  - a once-a-minute RAM log;
-  - low-battery warn and RGB cut, at 3.55 V and 3.40 V on VDD;
-  - the voltage on the battery row, in place of the CH582F's fake 100%.
-- **A discharge run is in progress.**
-  - Unplugged since about 10:54. Accidental probe shorts rebooted the board
-    around 11:11 and twice more before 13:57, so the RAM log starts at the
-    last of those.
-  - RGB at full pastel, then **solid white 100% from 15:36**.
-  - Pack readings: `history/battery-2026-09-25/readings.csv`.
-  - VDD is held at 3.90 V by a regulator; we are waiting for it to start
-    following the pack, around 3.95-4.0 V.
-  - **Next:** one meter plus screen reading, then plug in **with the slider on
-    BT** (BT → cable resets and loses the log). Then
-    `hostagent/ak820battery.py log history/battery-2026-09-25/log.csv`,
-    calibrate the `CAL` constants in `battery.c`, and flash the estimator plus
-    the idle ladder.
+  `0x583b65cf`. Production fixes (`6b60458dd0`) plus the start of the battery
+  work: VDD from the SN32 ADC; a once-a-minute RAM log; low-battery warn and
+  RGB cut at 3.55 V and 3.40 V on VDD; the voltage on the battery row.
+
+### ⚠️ Three findings that change the plan
+
+1. **VDD is a BUCK-BOOST output. It is useless as a gauge.** With the pack at
+   3.81 V the debug page read **VDD 3.903 V** — above its own input, which no
+   linear regulator can do. Across the run the pack fell **4.18 → 3.74 V
+   (−440 mV)** while VDD moved **+3 mV**. ⚠️ **This kills the prediction that
+   VDD would start following the pack below ~3.95 V.** There is no dropout
+   coming.
+2. ⚠️ **The estimator (`36be68f16a`) is dead on arrival.** It derives a level
+   from VDD via a lithium curve, and VDD is a constant. **Do NOT calibrate the
+   `CAL` constants in `battery.c`** — the earlier "Next" step in this file said
+   to, and that instruction is withdrawn. The input carries no signal.
+3. ⚠️ **The low-battery protection may be inert.** Warn (3.55 V) and RGB cut
+   (3.40 V) are thresholds **on VDD**, which is pinned at 3.90. They cannot
+   fire until the buck-boost collapses, possibly below the pack protection
+   circuit's trip point. **Unverified — confirm before relying on it.** Cheap
+   test: `ak820battery.py cfg 3950 3900` (RAM-only, resets on reboot) and see
+   whether warn and cut fire at a VDD the rail actually reaches.
+
+### ⭐ The module's `5C` value DOES track the pack
+
+The premise that `5C` is pinned at 100 is **withdrawn**. It moves, and the
+`Fn`+`D` debug page row 8 shows it (`ch582_get_battery()`, `display.c:878`).
+Settled readings against a standard NMC curve:
+
+| pack | 5C | curve | offset |
+|---|---|---|---|
+| 3.99 | 85 | 75.9% | +9.1 |
+| 3.84 | 78 | 59.8% | **+18.2** |
+| 3.81 | 74 | 56.2% | **+17.8** |
+| 3.74 | 66 | 46.6% | **+19.4** |
+
+**The last three agree within ±1 point.** `5C` moves 120 points/volt where the
+curve moves 132 %/V — it tracks the curve's *shape*, which is why the offset
+holds. ⚠️ **If it holds below 3.70 V the remap is a subtraction** (`level =
+5C − 18`). The 3.99 outlier is unexplained: charge memory, a wrong generic
+curve at the top, or real depth-dependence. **Readings below 3.70 V separate
+them, and that is the single most valuable thing to collect.**
+
+⚠️ `5C` is **noisy (±3) and useless while charging** — it snaps to 100 the
+instant USB appears and decays over hours. Any gauge built on it needs a median
+filter, a ratchet that never rises on battery, and a hold-off after charging.
+
+### The discharge run
+
+- **Started 2026-09-25 10:54.** ⚠️ Interrupted 09-26 13:22 when the slider went
+  to `cable` to wake the Mac, which **reset the board and lost the RAM log**;
+  ~20 min on the charger, unplugged again 14:03. Running since.
+- **Readings: `history/battery-2026-09-25/readings.csv`** — meter, screen, and
+  the analysis inline.
+- **At 12:54 on 09-27:** pack **3.74 V**, `5C` **66%**, 49.3 h elapsed, ~51%
+  consumed at 1.03 %/h. **Projected ~94 h total (3.9 days), ~45 h left.**
+  Lighting full pastel to 15:36 on 09-25, **solid white 100%** since.
+- **What to do:** a meter + debug-page reading whenever you pass it. That pair
+  is the calibration data. Nothing else is needed from the run.
+
+⚠️ **Two traps for the next run.** The RAM log is **720 entries at one a
+minute = 12 hours**, then it wraps — a multi-day run keeps only the last 12 h
+unless `LOG_PERIOD_MS` goes to 300000 (5 min → 60 h). And **the Mac needs USB
+to wake**, which is what ended this run; use `caffeinate -d` or a second
+keyboard.
+
+### Hardware decided on, not yet ordered
+
+- ✅ **MAX17048 fuel gauge** — DigiKey `1528-5580-ND` (Adafruit 5580). The
+  retrofit. ModelGauge, no sense resistor, ±1-2%.
+- ✅ **1.25 mm 3-pin male+female pigtails**, Amazon ~$15/20 sets, for the pack
+  tap. ⚠️ Digi-Key's ready-made PicoBlade assemblies are **female-to-female**
+  and cannot make a passthrough alone.
+- ✅ Keep the **JST SH 4-pin Qwiic cables** already in the cart — they mate
+  with the MAX17048's STEMMA QT, so no soldering to the module.
+- 🤔 **QT PY RP2040** — optional, only as a bench rig to prove the gauge before
+  touching the keyboard. Any spare MCU does.
+- ❌ **INA228 dropped.** Its purpose was fitting a load model for a
+  software coulomb count; the MAX17048 replaces that in hardware.
+- ❌ **PPK2 not now.** Right instrument for the idle-ladder work later
+  (task 9), wrong one for this. ~CA$150 at DigiKey, not the CA$255 Amazon ask.
+
+### ⭐ The retrofit is much easier than it looked
+
+**The board already has an I²C bus.** `halconf.h:15`: an external **PCF8563
+RTC on P0.14/P0.15** over the ChibiOS software (bit-banged) I²C fallback LLD.
+So SDA and SCL are routed, a driver exists and works, and **no free GPIO is
+needed**. MAX17048 is `0x36`, PCF8563 is `0x51` — no conflict. Solder targets
+become the PCF8563's SO8 pins or its passives, **not** a 0.5 mm QFP leg.
+
+Full plan, wiring, the three electrical checks (logic levels across two
+supplies, pull-ups that may not exist as components, bus capacitance) and the
+pin audit: **[docs/battery.md](../docs/battery.md)**, "A real fuel gauge,
+retrofitted".
+
+⚠️ The bus is **rationed** — one transaction per main-loop pass with the LCD
+DMA idle, because RTC I²C on port A glitches the flash SPI1 pins mid-DMA
+(`ak820pro.c:585`). A gauge read every 30 s is negligible but must go through
+that gate.
+
+### What is achievable — read before building anything
+
+A trustworthy percentage is **not reachable on the stock hardware**: no ADC
+path to the pack, `5C` is the only signal and is voltage-derived, and NMC's
+curve is flat through the middle. **The objective is a 5-bar / 10% indicator
+that never goes backwards, ±10% mid-range and better at the ends, plus a low
+warning that actually fires.** The MAX17048 is what buys a real percentage.
+
 - **Committed locally, not flashed, not pushed** (firmware `ak820pro-jdlien`):
-  - `91d854f2ff` and `b35d8672b3`: the flashed build;
-  - `36be68f16a`: the level estimator, uncalibrated;
-  - `3b85686ff7`: the idle ladder.
+  `91d854f2ff` and `b35d8672b3` (the flashed build); `36be68f16a` (the
+  estimator — ⚠️ **do not calibrate, see above**); `3b85686ff7` (the idle
+  ladder — ⚠️ **do not flash during a calibration run**, it dims the lights and
+  changes the load profile mid-measurement).
 - **Pushed 2026-09-24 ~14:00:** ChibiOS `a4f8412134`, firmware `6b60458dd0`,
   main `882b322`.
 - **Bluetooth test, 2026-09-24:** 57 minutes on BT with the cable in: 9,597
-  frames, 0 drops, 0 malformed, 2.9% late. At idle about half of the 5 s
-  battery polls are late, and during typing almost nothing is, so the 10 ms
-  ACK deadline stays. Then, unplugged, the board **went dark with charge
-  left** and came back only on USB: unexplained (docs/battery.md).
-- **Still not done:**
-  - the `HC_BLITFAULT` forced-failure tests;
-  - a hunt on `6b60458dd0`: `deps.lock` still pins `44e7314e65`.
-- **Also open:** the unplug glitch (slot shown as 2, top strip redrawn over
-  Fn+D; task 8.6), and the RGB colour breakup at a 215 Hz field rate (task 9).
+  frames, 0 drops, 0 malformed, 2.9% late. Then, unplugged, the board **went
+  dark with charge left** and came back only on USB: unexplained
+  (docs/battery.md).
+- **Still not done:** the `HC_BLITFAULT` forced-failure tests; a hunt on
+  `6b60458dd0` (`deps.lock` still pins `44e7314e65`).
+- **Also open:** the unplug glitch (task 8.6), and the RGB colour breakup at a
+  215 Hz field rate (task 9) — ⚠️ **not fixable in firmware**: the fringe
+  scales linearly with field rate and needs ~4 kHz, past this M0. Colour choice
+  is a free 2×, and a single saturated channel has none at all
+  (`docs/leds.md`).
 
 ## ✅ The overnight hunt on 44e7314e65 passed (2026-09-24 04:57)
 
