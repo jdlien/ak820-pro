@@ -222,6 +222,122 @@ the RGB load. "The load barely sags the pack" above is the measured fact — ful
 versus off moved it 10 mV. A meter reading that wanders is probe contact, not
 lighting.
 
+## A real fuel gauge, retrofitted (a plan, not done)
+
+⚠️ **Optional and personal.** This modifies one unit and helps nobody else
+running this firmware. It is recorded because it is the **only route to a
+percentage worth printing** — everything else in this document is making the
+best of a signal that cannot deliver one.
+
+**The part:** a **MAX17048** (or BQ27441). ModelGauge, so **no sense resistor**
+— it sits across the pack and reports over I²C, ~$5 on a breakout. It models the
+cell's dynamics to compensate for load and relaxation, which is exactly the
+problem that makes raw voltage useless through the NMC plateau. Typical ±1-2%.
+⚠️ Still voltage-derived, so it is not coulomb counting; it is just very good at
+the thing `5C` is bad at.
+
+### The pin mapping, verified
+
+QMK's pin names map to the MCU's ports as **`A`→P0, `B`→P1, `C`→P2, `D`→P3**.
+Proof: `keyboard.json`'s rows `B14, B15, B19, D19, A19, A18` become P1.14, P1.15,
+P1.19, P3.19, P0.19, P0.18 → physical pins **38-43**, exactly the "row pins
+38-43" in `fpb/ajazz-ak820-pro`. Columns land on 15-27, 29, 30 against its
+"column pins 15-30", with pin 28 (P2.15) being `LED_WINLOCK_PIN`.
+
+The MCU is an **HFD80CP100** — an SN32F299F clone, **80-pin LQFP, 0.5 mm pitch**,
+20 legs a side, marked `U3`. Its pin-1 dimple is at the **bottom-left of the
+package** with the part marking readable.
+
+### What every pin does
+
+| pins | use |
+|---|---|
+| 1-6, 8-14, 73, 75-78 | RGB matrix rows (`SN32F2XX_RGB_MATRIX_ROW_PINS`) |
+| 15-27, 29, 30 | key matrix columns (shared with the RGB columns) |
+| 38-43 | key matrix rows |
+| 28, 65, 68 | WinLock LED (`C15`), indicator (`D15`), charging LED (`B18`) |
+| 36, 37 | dip switch (`B12`, `B13`) |
+| 44, 45, 64 | panel `RST` (`A17`), `BKL` (`A16`), `DC` (`D14`) |
+| 50, 52, 59 | SPI `SCK` (`D0`), `MOSI` (`D2`), `SS` (`B8`) |
+| 46, 47 | RTC |
+| 72, 74 | encoder (`A10`), `BOOT` (`B3`) |
+| 48, 49, 66, 67, 69, 70, 71 | flash/BT/misc (`A13`, `A12`, `B16`, `B17`, `B0`, `B1`, `B2`) |
+| 7, 35, 53-58, 79, 80 | RESET, VREG33, USB, SWD, VDDIO1, VSS, VDD |
+
+⚠️ **The RGB rows include `D10`-`D13`, which are `LXIN`/`LXOUT`/`XIN`/`XOUT`.**
+Both crystal pairs are repurposed as LED drive, so **the board has no crystal at
+all** and runs on the internal RC — which is why `config.h` warns the oscillator
+is per-unit and temperature-dependent. Unrelated to the battery, and worth
+knowing.
+
+### Free pins — nine of them
+
+Zero references anywhere in the firmware:
+
+| QMK | port | **physical pin** | alt function |
+|---|---|---|---|
+| **A0** | P0.0 | **31** | AD0 |
+| **A1** | P0.1 | **32** | AD1/SEG10 |
+| **A2** | P0.2 | **33** | AD2/SEG11 |
+| **A3** | P0.3 | **34** | AD3 |
+| B9 | P1.9 | 56 | A5 |
+| B7 | P1.7 | 60 | COM4/SEG28 |
+| B6 | P1.6 | 61 | COM5/SEG29 |
+| B10 | P1.10 | 62 | COM6/SEG30 |
+| B11 | P1.11 | 63 | COM7/SEG31 |
+
+Two are needed for a bit-banged I²C; 31-34 are contiguous.
+
+⚠️ **`D1` (pin 51) looks free and is not.** `SPI_MISO_PIN` is `NO_PIN`, so it has
+no firmware references — but it is SPI0's hardware MISO, sitting between `SCK`
+(50) and `MOSI` (52), and the flash almost certainly uses it for reads.
+
+⚠️ **"Unused by firmware" is not "unconnected."** Before committing, probe each
+candidate with the board powered: a genuinely free pin floats or sits where its
+internal pull puts it. One held firmly high or low is wired to something the
+stock hardware used.
+
+### Identifying the legs physically
+
+Do **not** trust the dimple alone. Anchor it electrically:
+
+1. **Find VSS (pin 79)** — buzz each leg to ground; exactly one is a dead short.
+2. **Pin 80 (VDD) is adjacent to it**, and **pin 1 is immediately around the
+   corner from pin 80**. That gives both the position and the direction of
+   numbering.
+3. **Cross-check with pin 35 (`VREG33`)**, which has a decoupling capacitor to
+   ground nearby.
+
+### ⚠️ The practical obstacle, and how to avoid it
+
+0.5 mm pitch is at the edge of what is reasonable freehand, and bridging
+adjacent legs is the normal outcome. **Do not start at the legs.**
+
+**Probe for a bigger target first.** The board carries **two large round gold
+test pads**, **two columns of five rectangular gold pads**, and **`RU9`/`RU10`
+unpopulated resistor footprints** near U2. Ring each of them out against the nine
+candidate legs. **One hit turns this into soldering to a resistor pad.**
+Unpopulated strapping footprints are very often wired to a spare GPIO — that is
+what they are for.
+
+If it does come to the legs:
+
+- **Kapton tape as a solder mask** — cover the row, expose only the target leg.
+  Bridging becomes physically impossible. The single biggest improvement.
+- **0.1 mm enamelled magnet wire**, not 30 AWG. Surface tension keeps the joint
+  on one leg.
+- **A USB microscope (~$30)** does more for this than any other purchase in this
+  document.
+- Strain-relieve with UV resin or epoxy before anything moves, and
+  continuity-check before powering.
+
+### ⚠️ What this does not change
+
+The **filtered-`5C` path needs no soldering, no purchase, and meets the objective
+above**. The retrofit buys a percentage worth printing, on one unit, at the cost
+of a fiddly modification to a board in daily use. It is a want, not a need, and
+stopping after the probing step is a perfectly good outcome.
+
 ## The charger (ASC4056)
 
 A TP4056-class linear charger, ESOP8 (`fpb/ajazz-ak820-pro/docs/ASC4056.pdf`,
