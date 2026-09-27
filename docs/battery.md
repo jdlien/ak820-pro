@@ -11,54 +11,80 @@ row in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. Task 8 in
 > (`36be68f16a`) and the idle ladder (`3b85686ff7`), waiting on the discharge
 > described below to calibrate them.
 
-## What is achievable, and what is not (2026-09-26)
+## What is achievable (revised 2026-09-27 — the earlier verdict was wrong)
 
-⚠️ **Read this before working on the estimator.** The obvious goal — a
-trustworthy percentage — is **not reachable on this hardware**, and the reasons
-are structural rather than a matter of effort:
+⚠️ **This section previously said a trustworthy percentage was "not reachable
+on this hardware." That is withdrawn.** It was written believing `5C` was a
+coarse, noisy gauge. It is not: it is a **precise voltmeter on the pack**, and
+that changes the answer.
 
-- **No ADC path to the pack.** Every `AIN` pin is a matrix column, an RGB row or
-  the Win Lock LED, and VDD is a **buck-boost output pinned at 3.90 V** (above).
-  The pack fell 4.18 → 3.84 V while VDD moved 1 mV.
-- **The only signal is the module's `5C`,** which is itself voltage-derived.
-- **NMC's curve is flat through the middle.** Roughly 3.9 → 3.6 V holds about
-  half the capacity in 0.3 V. At `5C`'s measured ~47 points per volt that is
-  ~14 points spanning half the pack, with ±3 of noise on top. **No filtering
-  recovers a percentage worth printing mid-range.** This is why phones
-  coulomb-count instead, and it is not a defect in our approach.
+### What `5C` actually is
 
-**The realistic objective, and what this work should aim at:**
+Fitted against a meter across one discharge, four settled points:
 
-- a **5-bar or 10%-granularity** indicator that **never goes backwards** while
-  discharging;
-- roughly ±10% mid-range, **better near the ends** where the curve is steep and
-  where it actually matters;
-- a **low-battery warning that fires**, which ⚠️ today's VDD thresholds may not
-  (above).
+    5C = 117.8 × V_pack − 374.5      r² = 0.99947
+    inverted:  V_pack = (5C + 374.5) / 117.8      ±3 mV
 
-That is a good keyboard battery indicator. It is not a good laptop one, and no
-amount of work on this hardware will make it one. ⚠️ **Note also that the stock
-firmware's gauge was this same `5C` value showing a hardcoded 100** — anything
-that moves already beats what the board shipped with.
+So the module is doing the crudest possible thing — a **straight line from
+~3.18 V = 0% to ~4.03 V = 100%**, no cell model, no curve, no compensation.
+⚠️ That single fact explains everything this document previously found
+mysterious: a full pack at 4.18 V is **above the 4.03 V ceiling**, so it clamps
+to 100 and stays there through the first ~20% of the discharge. Every earlier
+test that concluded "it only ever says 100" was run entirely inside the clamp.
 
-### The route that does not depend on voltage
+**The important consequence: `5C` gives us the pack voltage the SN32 cannot
+see.** The MCU is behind the buck-boost; the CH582F is on the unregulated rail.
+That is the whole reason this one number matters.
 
-The log already records `led_pm` (mean LED drive per mille) and `rgb_val`, and
-the RGB is the dominant load. So the firmware can **estimate current from what
-it knows it is driving** and integrate it — a coulomb count in software, with no
-extra hardware:
+### A ±5% percentage is reachable with no new hardware
 
-    level = charge_at_last_full − ∫ f(rgb_val, led_pm, …) dt
+**Time is the coulomb counter.** The load here is essentially constant, so in a
+constant-load discharge *elapsed time is proportional to charge consumed*. A
+single full run therefore **measures this cell's own voltage→SoC curve**
+directly: at total runtime `T`, the SoC at any voltage is `remaining/T`. No
+generic NMC table, no assumed capacity.
 
-anchored by `5C` at the ends where it is informative, and reset on charge. That
-is monotonic and smooth, and it does not collapse in the plateau because it is
-not reading voltage there at all.
+⚠️ **And this board has a property that makes voltage gauging work better here
+than it usually does:** RGB full versus off moves the pack **10 mV** (Hardware
+facts, below). Load-induced sag is the usual reason voltage gauges fail, and at
+10 mV **one curve covers every load state the keyboard has.**
 
-⚠️ **This is what the INA228 tap is really for** (see the connector section): not
-just ground truth for a curve, but measuring actual milliamps against LED drive,
-effect, brightness and BT state so `f()` can be fitted. Honest about the cost:
-the model drifts with pack ageing and temperature, so it needs the `5C` anchor
-to stay honest, and it is a few evenings rather than an afternoon.
+Error budget:
+
+| source | contribution |
+|---|---|
+| `5C` quantisation (8.5 mV per count) | ±1.2% |
+| jitter, ±3 counts raw | ±3.5% |
+| ↳ **median-filtered over ~30 samples** | **±0.6%** |
+| curve fitted from our own run | ±3-5% ← dominant |
+| temperature, 10 °C swing | ±1.5-3% |
+| cell ageing after a year | ±5%, drifting |
+
+**≈±5% fresh.** The jitter is *not* the limit — it averages down as √n, so half
+a minute of sampling takes ±25 mV to ±5 mV.
+
+### The objective
+
+- **bars plus a percentage in 5% steps** — the granularity is what tells the
+  user it is an estimate; 1% resolution is a claim we cannot back;
+- **ratcheted**: never rising while on battery, reset on charge;
+- ⚠️ **a low-battery warning that fires**, which today's VDD thresholds may not;
+- volts on the `Fn`+`D` debug page only, never on the battery row.
+
+### What the MAX17048 still buys — less than this document used to claim
+
+A **refinement and a convenience, not an enabler**: ±1-2% instead of ±5%, no
+curve fitting or periodic recalibration, and ageing compensation our fitted
+curve will not have. Its load and relaxation modelling is largely wasted here,
+given the 10 mV sag. Worth doing if the accuracy or the maintenance matters;
+⚠️ **not required for a percentage worth printing.**
+
+### ❌ The software coulomb-count route is superseded
+
+An earlier version proposed estimating current from `led_pm`/`rgb_val` and
+integrating it, with the INA228 measuring milliamps to fit the model. **Dropped.**
+The voltage route above is simpler, needs no extra hardware, and does not drift
+with an unmeasured load model. The INA228 was removed from the parts list.
 
 ## Why this was hard
 
