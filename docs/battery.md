@@ -11,6 +11,55 @@ row in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. Task 8 in
 > (`36be68f16a`) and the idle ladder (`3b85686ff7`), waiting on the discharge
 > described below to calibrate them.
 
+## What is achievable, and what is not (2026-09-26)
+
+⚠️ **Read this before working on the estimator.** The obvious goal — a
+trustworthy percentage — is **not reachable on this hardware**, and the reasons
+are structural rather than a matter of effort:
+
+- **No ADC path to the pack.** Every `AIN` pin is a matrix column, an RGB row or
+  the Win Lock LED, and VDD is a **buck-boost output pinned at 3.90 V** (above).
+  The pack fell 4.18 → 3.84 V while VDD moved 1 mV.
+- **The only signal is the module's `5C`,** which is itself voltage-derived.
+- **NMC's curve is flat through the middle.** Roughly 3.9 → 3.6 V holds about
+  half the capacity in 0.3 V. At `5C`'s measured ~47 points per volt that is
+  ~14 points spanning half the pack, with ±3 of noise on top. **No filtering
+  recovers a percentage worth printing mid-range.** This is why phones
+  coulomb-count instead, and it is not a defect in our approach.
+
+**The realistic objective, and what this work should aim at:**
+
+- a **5-bar or 10%-granularity** indicator that **never goes backwards** while
+  discharging;
+- roughly ±10% mid-range, **better near the ends** where the curve is steep and
+  where it actually matters;
+- a **low-battery warning that fires**, which ⚠️ today's VDD thresholds may not
+  (above).
+
+That is a good keyboard battery indicator. It is not a good laptop one, and no
+amount of work on this hardware will make it one. ⚠️ **Note also that the stock
+firmware's gauge was this same `5C` value showing a hardcoded 100** — anything
+that moves already beats what the board shipped with.
+
+### The route that does not depend on voltage
+
+The log already records `led_pm` (mean LED drive per mille) and `rgb_val`, and
+the RGB is the dominant load. So the firmware can **estimate current from what
+it knows it is driving** and integrate it — a coulomb count in software, with no
+extra hardware:
+
+    level = charge_at_last_full − ∫ f(rgb_val, led_pm, …) dt
+
+anchored by `5C` at the ends where it is informative, and reset on charge. That
+is monotonic and smooth, and it does not collapse in the plateau because it is
+not reading voltage there at all.
+
+⚠️ **This is what the INA228 tap is really for** (see the connector section): not
+just ground truth for a curve, but measuring actual milliamps against LED drive,
+effect, brightness and BT state so `f()` can be fitted. Honest about the cost:
+the model drifts with pack ageing and temperature, so it needs the `5C` anchor
+to stay honest, and it is a few evenings rather than an afternoon.
+
 ## Why this was hard
 
 Every obvious source turned out to be wrong or absent:
