@@ -67,6 +67,29 @@ them, and that is the single most valuable thing to collect.**
 instant USB appears and decays over hours. Any gauge built on it needs a median
 filter, a ratchet that never rises on battery, and a hold-off after charging.
 
+### ⚠️ TODO before any release: the battery row must stop showing VDD
+
+`b35d8672b3` shows **VDD on the battery row**, which replaced the CH582F's
+hardcoded 100%. ⚠️ **It is a constant.** VDD is the buck-boost output and it has
+moved 3 mV while the pack fell 440 mV, so the row conveys exactly as much as the
+fake 100% it replaced — less, arguably, since "3.90 V" is not even in units a
+user can misread.
+
+It **earned its place as an instrument**: watching it sit still while the meter
+fell is what exposed the buck-boost, and a percentage derived from VDD would
+have hidden that behind a plausible-looking number. But it is a diagnostic, not
+a feature, and diagnostics survive by inertia unless someone writes them down.
+
+**Replace it with**, once the mapping is calibrated:
+
+1. `V_pack = (5C + 374.5) / 117.8` — exact to ~±3 mV, ~8.5 mV per count
+2. that voltage through **this cell's** curve, fitted from
+   `history/battery-2026-09-25/readings.csv`, not a generic NMC table
+3. displayed as **bars plus a percentage in 5% steps** — the granularity is what
+   tells the user it is an estimate; 1% resolution is a claim we cannot back
+4. **ratcheted**: never rising while on battery, reset on charge
+5. ⚠️ volts stay on the `Fn`+`D` debug page, where an engineer wants them
+
 ### The discharge run
 
 - **Started 2026-09-25 10:54.** ⚠️ Interrupted 09-26 13:22 when the slider went
