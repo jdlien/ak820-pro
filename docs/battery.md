@@ -48,6 +48,14 @@ Every obvious source turned out to be wrong or absent:
   > all, which is the thing this document spent its length establishing was
   > absent. That is worth an hour of deliberate testing before more estimator
   > calibration.
+  >
+  > ⭐ **2026-09-26, later: it does track, and it is now the ONLY signal** (see
+  > the buck-boost note above). Settled pairs, excluding the post-charge
+  > artifact: **3.99 V → 85** and **3.84 V → 78**, about **47 points per volt**,
+  > consistent and correctly signed. Over the same excursion VDD moved 1 mV.
+  > The post-charge memory is real but transient: 97 at 14:03 after ~20 min on
+  > the charger had decayed to 78 by evening. So the gauge is a filtered,
+  > ratcheted, remapped `5C` — discarded for some hours after any charge.
 - **No analogue pin can see the pack.** AIN0..AIN15 are P2.0..P2.15, all
   matrix columns, RGB rows or the Win Lock LED. The op-amp and comparator
   inputs are RGB rows (B4, B5, A11), the flash's WP (B2), the encoder (A10)
@@ -79,9 +87,26 @@ well as the mode (docs/hardware.md): BT → cable reboots the MCU.
 The regulator: with a meter at the pack connector, the pack read 4.18 V at
 rest (4.17 V with the RGB at full) while VDD read 3.90 V, and over the
 following nine hours the pack fell 4.17 → 4.01 V while VDD **never left 3.90
-V** (full table below). The regulator's own drop is therefore under 0.12 V at
-this load. VDD will follow the pack, a dropout below it, once the pack gets
-down to around 3.95-4.0 V: not yet observed.
+V** (full table below).
+
+> ⚠️ **2026-09-26: it is a BUCK-BOOST, and there is no dropout to wait for.**
+> An earlier version of this paragraph predicted "VDD will follow the pack, a
+> dropout below it, once the pack gets down to around 3.95-4.0 V". **Falsified.**
+> With the pack at **3.84 V** the debug page read **VDD 3.901 V** — VDD *above*
+> its own input, which no linear regulator can do. Across the whole excursion so
+> far the pack fell **4.18 → 3.84 V (−340 mV)** while VDD moved **+1 mV**.
+>
+> **VDD is therefore useless as a pack gauge over the entire practical range**,
+> and the two-region gauge this document was working toward — the module's `5C`
+> up top, the ADC below the dropout — has no lower region to hand over to.
+> **`5C` is the only signal available.**
+>
+> ⚠️ **Safety consequence, unconfirmed but likely:** the warn (3.55 V) and RGB
+> cut (3.40 V) thresholds below are set **on VDD**, which is pinned at 3.90 V.
+> They cannot fire until the buck-boost collapses entirely, which may be below
+> the pack protection circuit's trip point — so the firmware's low-battery net
+> may be inert, with the pack's own protection doing the real work. **Confirm
+> this before relying on those thresholds in any deep discharge.**
 
 **The load barely sags the pack**: RGB at full versus off moved the pack by
 10 mV, and VDD not at all.
