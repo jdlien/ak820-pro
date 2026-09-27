@@ -229,26 +229,88 @@ running this firmware. It is recorded because it is the **only route to a
 percentage worth printing** — everything else in this document is making the
 best of a signal that cannot deliver one.
 
-**The part:** a **MAX17048** (or BQ27441). ModelGauge, so **no sense resistor**
-— it sits across the pack and reports over I²C, ~$5 on a breakout. It models the
-cell's dynamics to compensate for load and relaxation, which is exactly the
-problem that makes raw voltage useless through the NMC plateau. Typical ±1-2%.
-⚠️ Still voltage-derived, so it is not coulomb counting; it is just very good at
-the thing `5C` is bad at.
+**The part:** a **MAX17048**. ModelGauge, so **no sense resistor** — it sits
+across the pack and reports over I²C, ~$5 on a breakout. It models the cell's
+dynamics to compensate for load and relaxation, which is exactly the problem
+that makes raw voltage useless through the NMC plateau. Typical ±1-2%. ⚠️ Still
+voltage-derived, so it is not coulomb counting; it is just very good at the
+thing `5C` is bad at.
 
-### The pin mapping, verified
+### ⭐ The board already has an I²C bus
 
-QMK's pin names map to the MCU's ports as **`A`→P0, `B`→P1, `C`→P2, `D`→P3**.
-Proof: `keyboard.json`'s rows `B14, B15, B19, D19, A19, A18` become P1.14, P1.15,
-P1.19, P3.19, P0.19, P0.18 → physical pins **38-43**, exactly the "row pins
-38-43" in `fpb/ajazz-ak820-pro`. Columns land on 15-27, 29, 30 against its
-"column pins 15-30", with pin 28 (P2.15) being `LED_WINLOCK_PIN`.
+**This is what makes the mod reasonable rather than fiddly.** `halconf.h:15-21`:
 
-The MCU is an **HFD80CP100** — an SN32F299F clone, **80-pin LQFP, 0.5 mm pitch**,
-20 legs a side, marked `U3`. Its pin-1 dimple is at the **bottom-left of the
-package** with the part marking readable.
+> External PCF8563 RTC on **P0.14/P0.15** via the ChibiOS software (bit-banged)
+> I2C fallback LLD … The SN32 HW I2C peripheral cannot reach those pins.
 
-### What every pin does
+So SDA and SCL are already routed, already working, and already driven by a
+proven driver. Consequences:
+
+- **No free GPIO needed.** The pin audit below is still useful reference, but
+  the retrofit does not consume any of it.
+- **No new driver needed.** `SW_I2C_USE_I2C1` gives `I2CD1`; add a second
+  device to the same bus.
+- **No address conflict.** MAX17048 is `0x36`, PCF8563 is `0x51`.
+- **No 0.5 mm soldering.** The targets are the PCF8563's own pins (SO8/TSSOP8,
+  1.27 or 0.65 mm pitch) or its surrounding passives — an entirely different
+  difficulty class from a QFP leg.
+
+### Wiring
+
+| MAX17048 | goes to | note |
+|---|---|---|
+| `VDD` | **pack +** | it measures its own supply; this is the whole point |
+| `GND` | **pack −** | common with board ground |
+| `SDA` | P0.14 or P0.15 | whichever `rtc.c` assigns; take it at the PCF8563 |
+| `SCL` | the other | |
+| `CTG`/`ALRT` | leave | not needed for polling |
+
+### ⚠️ Three electrical checks before committing
+
+1. **Logic levels across two supplies.** The MAX17048's `VDD` is the **pack**
+   (up to 4.2 V) while the SN32 runs at 3.3 V. Its I²C thresholds are specified
+   against its own `VDD`, so confirm `VIH` is met by a 3.3 V bus at a 4.2 V
+   `VDD` (0.7 × 4.2 = 2.94 V, so it should pass, but **check the datasheet
+   rather than this arithmetic**). Nothing exceeds 3.3 V on the SN32 side, so
+   that direction is safe.
+2. **Pull-ups may not exist as components.** ⚠️ `SW_I2C_USE_OPENDRAIN FALSE`
+   means the driver emulates open-drain by **switching the pin to input to
+   release the line** — so something else pulls it high, possibly the SN32's
+   internal pull-ups rather than external resistors. **Look for them on the
+   board before planning to solder to them.**
+3. **Bus capacitance.** Adding a second device and a length of wire slows the
+   rise time, and internal pull-ups are weak (tens of kΩ). If the bus is
+   relying on them, **fit a proper 4.7 kΩ external pull-up** on each line as
+   part of the mod. You are soldering anyway.
+
+### ⚠️ The bus is rationed, and for a reason
+
+`ak820pro.c:585`: *"RTC I2C (port A) glitches the flash SPI1 pins (A12/A13)
+mid-DMA."* I²C transactions are deliberately limited to **one per main-loop
+pass, and only with the LCD DMA idle** (`docs/clock.md`). A MAX17048 read every
+30 s is negligible traffic, but it must go **through that gate, not around it**
+— schedule it the way `rtc_task()` is scheduled, and do not add a transaction
+anywhere that can run mid-blit.
+
+### Solder targets, easiest first
+
+1. **External I²C pull-up resistors**, if they exist — 0402/0603 pads, trivial.
+2. **The PCF8563's SDA/SCL pins** — SO8 or TSSOP8, very manageable.
+3. **A via on either net** — scrape the mask, tin, done.
+4. The MCU legs, pins 46/47 — last resort, and unnecessary given the above.
+
+Pack `+`/`−` come from the connector tap (see the connector section), so no
+soldering to the pack itself.
+
+### The pin audit (reference, no longer load-bearing)
+
+Kept because it is useful for any firmware work on this board, not because the
+gauge needs it. QMK's names map as **`A`→P0, `B`→P1, `C`→P2, `D`→P3**, verified
+because `keyboard.json`'s rows land on physical pins **38-43**, exactly matching
+`fpb/ajazz-ak820-pro`'s "row pins 38-43", and the columns on 15-30. The MCU is
+an **HFD80CP100** — an SN32F299F clone, **80-pin LQFP, 0.5 mm pitch**, marked
+`U3`, pin-1 dimple at the bottom-left of the package with the marking readable.
+Datasheet: `docs/SN32F299_V1.8_EN.pdf` in that repo.
 
 | pins | use |
 |---|---|
@@ -258,85 +320,32 @@ package** with the part marking readable.
 | 28, 65, 68 | WinLock LED (`C15`), indicator (`D15`), charging LED (`B18`) |
 | 36, 37 | dip switch (`B12`, `B13`) |
 | 44, 45, 64 | panel `RST` (`A17`), `BKL` (`A16`), `DC` (`D14`) |
+| 46, 47 | **PCF8563 I²C (P0.14/P0.15)** |
 | 50, 52, 59 | SPI `SCK` (`D0`), `MOSI` (`D2`), `SS` (`B8`) |
-| 46, 47 | RTC |
 | 72, 74 | encoder (`A10`), `BOOT` (`B3`) |
 | 48, 49, 66, 67, 69, 70, 71 | flash/BT/misc (`A13`, `A12`, `B16`, `B17`, `B0`, `B1`, `B2`) |
 | 7, 35, 53-58, 79, 80 | RESET, VREG33, USB, SWD, VDDIO1, VSS, VDD |
 
+**Free — no firmware reference anywhere:** `A0`/`A1`/`A2`/`A3` (pins **31-34**,
+contiguous), `B9` (56), `B7` (60), `B6` (61), `B10` (62), `B11` (63).
+
+⚠️ **`D1` (pin 51) looks free and is not.** `SPI_MISO_PIN` is `NO_PIN`, so it
+has no firmware references — but it is SPI0's hardware MISO, sitting between
+`SCK` (50) and `MOSI` (52), and the flash almost certainly reads through it.
+
+⚠️ **"Unused by firmware" is not "unconnected."** Probe before trusting.
+
 ⚠️ **The RGB rows include `D10`-`D13`, which are `LXIN`/`LXOUT`/`XIN`/`XOUT`.**
 Both crystal pairs are repurposed as LED drive, so **the board has no crystal at
 all** and runs on the internal RC — which is why `config.h` warns the oscillator
-is per-unit and temperature-dependent. Unrelated to the battery, and worth
-knowing.
-
-### Free pins — nine of them
-
-Zero references anywhere in the firmware:
-
-| QMK | port | **physical pin** | alt function |
-|---|---|---|---|
-| **A0** | P0.0 | **31** | AD0 |
-| **A1** | P0.1 | **32** | AD1/SEG10 |
-| **A2** | P0.2 | **33** | AD2/SEG11 |
-| **A3** | P0.3 | **34** | AD3 |
-| B9 | P1.9 | 56 | A5 |
-| B7 | P1.7 | 60 | COM4/SEG28 |
-| B6 | P1.6 | 61 | COM5/SEG29 |
-| B10 | P1.10 | 62 | COM6/SEG30 |
-| B11 | P1.11 | 63 | COM7/SEG31 |
-
-Two are needed for a bit-banged I²C; 31-34 are contiguous.
-
-⚠️ **`D1` (pin 51) looks free and is not.** `SPI_MISO_PIN` is `NO_PIN`, so it has
-no firmware references — but it is SPI0's hardware MISO, sitting between `SCK`
-(50) and `MOSI` (52), and the flash almost certainly uses it for reads.
-
-⚠️ **"Unused by firmware" is not "unconnected."** Before committing, probe each
-candidate with the board powered: a genuinely free pin floats or sits where its
-internal pull puts it. One held firmly high or low is wired to something the
-stock hardware used.
-
-### Identifying the legs physically
-
-Do **not** trust the dimple alone. Anchor it electrically:
-
-1. **Find VSS (pin 79)** — buzz each leg to ground; exactly one is a dead short.
-2. **Pin 80 (VDD) is adjacent to it**, and **pin 1 is immediately around the
-   corner from pin 80**. That gives both the position and the direction of
-   numbering.
-3. **Cross-check with pin 35 (`VREG33`)**, which has a decoupling capacitor to
-   ground nearby.
-
-### ⚠️ The practical obstacle, and how to avoid it
-
-0.5 mm pitch is at the edge of what is reasonable freehand, and bridging
-adjacent legs is the normal outcome. **Do not start at the legs.**
-
-**Probe for a bigger target first.** The board carries **two large round gold
-test pads**, **two columns of five rectangular gold pads**, and **`RU9`/`RU10`
-unpopulated resistor footprints** near U2. Ring each of them out against the nine
-candidate legs. **One hit turns this into soldering to a resistor pad.**
-Unpopulated strapping footprints are very often wired to a spare GPIO — that is
-what they are for.
-
-If it does come to the legs:
-
-- **Kapton tape as a solder mask** — cover the row, expose only the target leg.
-  Bridging becomes physically impossible. The single biggest improvement.
-- **0.1 mm enamelled magnet wire**, not 30 AWG. Surface tension keeps the joint
-  on one leg.
-- **A USB microscope (~$30)** does more for this than any other purchase in this
-  document.
-- Strain-relieve with UV resin or epoxy before anything moves, and
-  continuity-check before powering.
+is per-unit and temperature-dependent, and why the clock needs a host to
+discipline it.
 
 ### ⚠️ What this does not change
 
-The **filtered-`5C` path needs no soldering, no purchase, and meets the objective
-above**. The retrofit buys a percentage worth printing, on one unit, at the cost
-of a fiddly modification to a board in daily use. It is a want, not a need, and
-stopping after the probing step is a perfectly good outcome.
+The **filtered-`5C` path needs no soldering, no purchase, and meets the
+objective above**. The retrofit buys a percentage worth printing, on one unit,
+at the cost of a modification to a board in daily use. It is a want, not a need.
 
 ## The charger (ASC4056)
 
