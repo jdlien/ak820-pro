@@ -14,19 +14,21 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## 2026-09-28, 14:20 — RESUME HERE
+## 2026-09-28, 14:55 — RESUME HERE
 
 **The battery gauge (Phase 1) is built, not flashed.** Everything is in
 [`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md): the plan, codex's review of it
 ([verbatim](review-codex-battery-gauge-plan-2026-09-28.md)) and a disposition
 per finding.
 
-- **Artifact:** `via-daily-8627554513-20260928-141918.bin` (token
-  `0x350b1d1e`), firmware `8627554513` on `ak820pro-jdlien`. The idle ladder
+- **Artifact:** `via-daily-f2bcc26f14-20260928-145123.bin` (token
+  `0x97fc73c0`), firmware `f2bcc26f14` on `ak820pro-jdlien`. The idle ladder
   is compiled out; the VDD estimator is deleted.
-- **Proven on the host only:** `scripts/battery_sim/run.sh` (14 scenarios,
-  seven mutants caught). **Next is the flash and the bench checks** — Phase 1
-  gates 1-7, which need the owner, a meter and the cable.
+- **Reviewed twice by codex** (plan, then implementation: flash after eight
+  fixes, all applied). **Proven on the host only:**
+  `scripts/battery_sim/run.sh`, 23 scenarios, 15 mutants caught. **Next is the
+  flash and the bench checks** — Phase 1 gates 1-7, which need the owner, a
+  meter and the cable.
 - `deps.lock` still pins `44e7314e65`; move it when this is released.
 - The 09-27/28 meter readings were recovered from a session transcript into
   `history/battery-2026-09-25/readings.csv`. ⚠️ Write readings there as they
