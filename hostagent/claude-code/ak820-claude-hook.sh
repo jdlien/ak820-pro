@@ -176,7 +176,13 @@ case "$ev" in
     # Synchronous: Claude Code waits for the decision.
     ans=$("${NOTIFY[@]}" "${args[@]}" --tag "$sid $(toolkey)" 2>>"$LOG")
     log "PermissionRequest $tool -> ${ans:-error}"
-    [ "$ans" = cancel ] && touch "$HOME/.cache/ak820notify.cancelled"
+    # Cancelled: Esc on the board, or the menu's notice-only mode (Fn + knob,
+    # "Domande No"), which leaves the "!" octopus up. The page is this
+    # session's: it closes when you answer at the computer.
+    if [ "$ans" = cancel ]; then
+      touch "$HOME/.cache/ak820notify.cancelled"
+      echo "$sid" > "$PAGE_OWNER"; date +%s > "$HOME/.cache/ak820notify.page"
+    fi
     case "$ans" in
       allow)
         jq -cn '{hookSpecificOutput:{hookEventName:"PermissionRequest",decision:{behavior:"allow"}}}' ;;

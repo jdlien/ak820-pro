@@ -203,6 +203,18 @@ keys only, never typing) and prints `allow`, `deny`, `cancel`, `choice:N`,
 `multi:N,M`, `timeout`, or `aborted` when SIGTERM tells it the question was
 dealt with at the computer.
 
+### Settings menu, and notices instead of questions
+
+**Fn + a turn of the knob** opens a settings menu on the LCD (`menu.c`): the
+knob or the arrows move, a knob press, Enter or Space changes the item, Esc
+leaves, and it closes by itself after 20 s. It replaces a plain page, never a
+question waiting on the board, and any notification takes it over.
+
+| item | does |
+|---|---|
+| Domande Si / No | **No**: questions arrive as notices only. The board shows GIF slot 2 (the waving octopus) instead of the question and answers `cancel` at once, so Claude Code asks at the terminal; the hook then owns the page and closes it when you answer there (the next `PostToolUse` or prompt of that session). Persisted in the kb EEPROM block (byte 5; version 3). |
+| Esci | close |
+
 ### Screensaver (AMBIENT)
 
 `AMBIENT` sets a GIF slot and an idle time (`[3]` = slot, 0 = off; `[2]` =
