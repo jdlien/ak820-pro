@@ -509,7 +509,9 @@ and B17 with pull-ups:
 | no battery | pulsing ~2 Hz | low |
 | fault (temperature, VIN < 3.8 V, VIN < VBAT) | high | high |
 
-**DONE has never been seen low.** Charging finished at 20:16 on 2026-09-24
+**DONE has never been seen low on USB.** ⚠️ **On battery it reads low**
+(every entry of the 09-28 drain log): with no VIN the charger's pin evidently
+loses its pull-up. So on battery STDBY says nothing about the charger. Charging finished at 20:16 on 2026-09-24
 (CHRG went high with USB in) and B17 stayed high, which the table calls a
 fault. B17 is probably not DONE, or DONE is not connected. The usable "full"
 signal is **CHRG going high while USB is in, after it had been low**.
