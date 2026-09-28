@@ -238,17 +238,25 @@ is another reason this is Phase 2.
 7. **Reconnect latency sets whether the radio stage exists at all.** Measure it
    before designing around it:
 
-   | reconnect | verdict |
-   |---|---|
-   | < 500 ms | imperceptible — fine anywhere |
-   | 0.5-2 s | acceptable only after long idle |
-   | 2-5 s | Power Saver only, after >= 30 min |
-   | **> 5 s** | **never**, at any timeout |
+   | reconnect | Normal (the default) | Power Saver (chosen) |
+   |---|---|---|
+   | < 500 ms | fine anywhere | fine |
+   | 0.5-2 s | only after long idle | fine |
+   | 2-5 s | no | fine |
+   | > 5 s | **never** | **fine — the mode is the consent** |
 
-   ⚠️ **The cost is the surprise, not the duration.** A NuPhy Air beside this
-   desk takes ~15 s and is reported as "very annoying" despite only reaching
-   that depth after hours — because it is hit precisely when someone has sat
-   down to start typing.
+   ⚠️ **Normal must never surprise anyone**, because nobody chose it. **Power
+   Saver should go as deep as the hardware allows**, because someone
+   deliberately traded responsiveness for runtime — and once or twice a day at
+   10-15 s is a rational deal against being tethered to a cable.
+
+   ⚠️ **But a delay is not the same as a loss.** At any depth, in any mode, the
+   keystroke that wakes the board **must still be typed**. Buffer it or hold it;
+   losing the first character of a sentence is never an acceptable trade.
+
+   Reference: a NuPhy Air beside this desk takes ~15 s and is called "very
+   annoying" — but it reaches that depth *by default*, with no mode chosen.
+   That is the distinction this table draws.
 
 ### Phase 2 gates
 
