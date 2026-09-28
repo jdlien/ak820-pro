@@ -80,6 +80,15 @@ static int jitter(void) {   /* -1, 0 or +1, deterministic */
 }
 static int c5_jitter;         /* when set, each report carries +-1 of noise */
 
+/* One `5C` frame, as the CH582F driver hands it over. */
+static void deliver(uint8_t v) {
+    module_level = v;
+    reports++;
+    last_recv = now_ms;
+    seen      = true;
+    battery_5c_report(v);
+}
+
 static void tick(void) {
     now_ms += 100;
     int mv = vdd_mv;
@@ -87,11 +96,10 @@ static void tick(void) {
     fake_adc.ADB = mv > 0 ? (uint32_t)((2000u * 4096u + (unsigned)mv / 2u) / (unsigned)mv) : 0u;
     if (chrg_pulse) chrg_low = ((now_ms / 100u) % (unsigned)chrg_pulse) < (unsigned)(chrg_pulse / 2 + 1);
     if (c5 <= 100 && now_ms % 5000u == 0) {
-        int v = c5 + (c5_jitter ? jitter() : 0);
-        module_level = (uint8_t)(v < 0 ? 0 : v > 100 ? 100 : v);
-        reports++;
-        last_recv = now_ms;
-        seen      = true;
+        /* Jitter is around the true value, and at the top clamp that value is
+         * far above 100: a pack at 4.1 V cannot read 99. Only below it. */
+        int v = c5 + ((c5_jitter && c5 < 100) ? jitter() : 0);
+        deliver((uint8_t)(v < 0 ? 0 : v > 100 ? 100 : v));
     }
     battery_task();
     watch();
@@ -169,7 +177,7 @@ static void discharge(void) {
             c5 = (uint8_t)(99 - (83u * into) / span);   /* 99 -> 16 */
         }
         if (s == clamp_s - 5) {
-            CHECK(battery_level_pct() == 90, "countdown reaches 90 before the clamp's exit, got %u (%u pm)",
+            CHECK(battery_level_pct() == 95, "the clamp reads 95 until the voltage says otherwise, got %u (%u pm)",
                   battery_level_pct(), battery_level_permille());
         }
         run_s(5);
@@ -210,6 +218,7 @@ static void charge_log(const char *path) {
     CHECK(battery_state() == BATTERY_STATE_CHARGING, "still charging at the log's end: %s",
           state_name(battery_state()));
     CHECK(w_falls == 0, "never falls while charging: %d falls", w_falls);
+    CHECK(w_big == 0, "rises one 5%% step at a time: %d bigger", w_big);
     CHECK(max_pct <= 95, "never claims 100 before the charger stops: reached %u", max_pct);
     printf("  %d minutes replayed, level at the end %u%% (%u pm)\n", rows, battery_level_pct(),
            battery_level_permille());
@@ -311,14 +320,135 @@ static void protection(void) {
 }
 
 static void critical(void) {
-    vdd_mv = 3900; c5 = 50;
+    vdd_mv = 3900; c5 = 90;
     run_s(20);
+    CHECK(battery_level_pct() >= 70, "starts high: %u", battery_level_pct());
     c5 = 0;
     run_s(14);
     CHECK(!power_lights_cut(), "two zeroes are not yet critical");
     run_s(2);
     CHECK(power_lights_cut(), "three fresh zeroes cut at once");
-    CHECK(battery_level_pct() != 0xFF, "level known");
+    CHECK(battery_level_pct() == 0, "and the panel says Low at once, not 45 min later: %u", battery_level_pct());
+}
+
+/* Three zeroes landing between two ticks are three reports, not one. */
+static void burst(void) {
+    vdd_mv = 3900; c5 = 50;
+    run_s(30);
+    c5 = 0xFF;          /* no scheduled reports from here */
+    deliver(0); deliver(0); deliver(0);
+    tick();
+    CHECK(power_lights_cut(), "a burst of three zero frames is critical");
+}
+
+/* The cut must lift on fresh evidence of USB, never on a remembered EXTERNAL. */
+static void restore_needs_evidence(void) {
+    vdd_mv = 3900; c5 = 50;
+    run_s(20);
+    c5 = 0;
+    run_s(20);
+    CHECK(power_lights_cut(), "cut");
+    c5 = 50;
+    vdd_mv = 4193; chrg_low = true;   /* plugged in for one second */
+    run_s(1);
+    vdd_mv = 0; chrg_low = false;     /* unplugged, and the ADC fails */
+    run_s(20);
+    CHECK(power_lights_cut(), "no fresh evidence of USB: the cut holds");
+}
+
+/* A charger fault at the top clamp: CHRG releases, the pack is really at 90. */
+static void charger_fault(void) {
+    vdd_mv = 4300; chrg_low = true; c5 = 100;
+    run_s(120);
+    watch_reset();
+    vdd_mv = 4470; chrg_low = false; c5 = 90;
+    int full_ticks = 0;
+    for (int i = 0; i < 600; i++) {
+        tick();
+        if (battery_state() == BATTERY_STATE_FULL) full_ticks++;
+    }
+    CHECK(full_ticks == 0, "a fault is never FULL: %d ticks", full_ticks);
+    CHECK(w_rises == 0 || battery_level_pct() < 100, "no 100 from a fault");
+    CHECK(w_big == 0, "no jump when the charger stops: %d", w_big);
+}
+
+/* CHRG drops out for 2 s mid-charge, with a report in the gap. */
+static void chrg_gap(void) {
+    vdd_mv = 4193; chrg_low = true; c5 = 80;
+    run_s(120);
+    uint8_t before = battery_level_pct();
+    watch_reset();
+    chrg_low = false;
+    run_s(2);
+    chrg_low = true;
+    run_s(60);
+    CHECK(w_big == 0, "no jump across a CHRG gap: %d", w_big);
+    CHECK(battery_level_pct() <= before + 5, "not reinterpreted without the I*R: %u -> %u", before,
+          battery_level_pct());
+}
+
+/* Booted charging, and the charge climbs fast before the session qualifies. */
+static void boot_charging_rise(void) {
+    vdd_mv = 4193; chrg_low = true; c5 = 80;
+    run_s(20);
+    watch_reset();
+    c5 = 90;
+    run_s(180);
+    CHECK(w_big == 0, "one 5%% step at a time: %d bigger", w_big);
+}
+
+/* Plugged back in within minutes of a FULL: the pack is full, and the panel
+ * keeps saying so through the charger's top-up (a deliberate choice; codex
+ * finding 3 asked for a cap, see battery.c level_report). */
+static void full_then_replug(void) {
+    become_full();
+    vdd_mv = 3900; chrg_low = false;
+    run_s(30);
+    vdd_mv = 4300; chrg_low = true;
+    run_s(600);
+    CHECK(battery_level_pct() == 100, "a just-full pack topping up shows 100: %u", battery_level_pct());
+}
+
+/* The re-seat owed after a real charge survives a brief replug. */
+static void reseat_survives_replug(void) {
+    vdd_mv = 4193; chrg_low = true; c5 = 80;
+    run_s(120);
+    vdd_mv = 3900; chrg_low = false; c5 = 70;
+    run_s(3);
+    vdd_mv = 4193; chrg_low = true; c5 = 80;
+    run_s(10);
+    vdd_mv = 3900; chrg_low = false; c5 = 70;
+    run_s(20);
+    CHECK(battery_level_permille() == 343, "re-seated after the brief replug: %u pm", battery_level_permille());
+}
+
+/* A threshold above the top clamp cannot be judged there: no cut, no warning. */
+static void threshold_at_clamp(void) {
+    vdd_mv = 3900; c5 = 100;
+    run_s(20);
+    uint8_t out[8];
+    battery_cfg(1, 4200, 4100, out);
+    run_s(120);
+    CHECK(!power_lights_cut() && n_alerts == 0, "no cut or warning on a clamp bound");
+}
+
+/* Every period closes on time, even through an ADC outage, and not at boot. */
+static void log_cadence(void) {
+    uint8_t out[29];
+    vdd_mv = 3900; c5 = 60;
+    run_s(300);
+    battery_log_read(0, out);
+    CHECK((out[1] | out[2] << 8) == 0, "no entry in the first 5 min (was an instant one at boot)");
+    run_s(301);
+    battery_log_read(0, out);
+    CHECK((out[1] | out[2] << 8) == 1, "one entry at 10 min: %u", out[1] | out[2] << 8);
+    CHECK((out[9] | out[10] << 8) == 600, "period 600 s in the reply: %u", out[9] | out[10] << 8);
+    vdd_mv = 0;
+    run_s(20 * 60);
+    battery_log_read(2, out);
+    CHECK((out[1] | out[2] << 8) == 3, "two more entries through a 20 min ADC outage: %u", out[1] | out[2] << 8);
+    CHECK((out[13] | out[14] << 8) == 0, "an outage entry says 0 mV, not a stale mean");
+    CHECK(out[19] >= 100, "and still counts every 5C report: %u", out[19]);   /* entry byte 6, c5_n */
 }
 
 /* Plugged in for 20 s mid-discharge: the charge current lifts 5C, but it is not
@@ -427,6 +557,15 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "countdown_ease"))     countdown_ease();
     else if (!strcmp(s, "stale"))              stale();
     else if (!strcmp(s, "ring_restart"))       ring_restart();
+    else if (!strcmp(s, "burst"))              burst();
+    else if (!strcmp(s, "restore_needs_evidence")) restore_needs_evidence();
+    else if (!strcmp(s, "charger_fault"))      charger_fault();
+    else if (!strcmp(s, "chrg_gap"))           chrg_gap();
+    else if (!strcmp(s, "boot_charging_rise")) boot_charging_rise();
+    else if (!strcmp(s, "full_then_replug"))   full_then_replug();
+    else if (!strcmp(s, "reseat_survives_replug")) reseat_survives_replug();
+    else if (!strcmp(s, "threshold_at_clamp")) threshold_at_clamp();
+    else if (!strcmp(s, "log_cadence"))        log_cadence();
     else { fprintf(stderr, "unknown scenario %s\n", s); return 2; }
     printf("%s %s\n", failures ? "FAIL" : "ok  ", s);
     return failures ? 1 : 0;

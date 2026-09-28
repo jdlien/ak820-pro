@@ -574,8 +574,9 @@ What `battery.c` does now; the reasoning and the review behind each part are in
   no-pack pulse); raw VDD ≥ 4100 mV for 0.5 s is USB; under 4000 mV for 1 s with
   no CHRG is the pack; between, the state holds. Replaces the 4300 mV threshold
   above.
-- **`5C`** is taken on every new report (5 s apart), stale after 20 s, as a
-  median of the last 7, emptied at every supply change. `mV = (5C × 1000000 +
+- **`5C`** is handed over by the CH582F parser report by report (5 s apart),
+  stale after 20 s, as a median of the last 7, emptied at every supply change
+  and every charger start or stop. `mV = (5C × 1000000 +
   361040000 + 57110) / 114220` for 1..99; 0 and 100 are the clamps' bounds.
 - **The level** is a provisional curve (the old generic table, scaled so
   4036 mV reads 90%). On battery it only falls, one sustained step at a time;
@@ -585,8 +586,9 @@ What `battery.c` does now; the reasoning and the review behind each part are in
   once CHRG releases with `5C` at 100. After a real charge the level re-seats
   once from post-unplug reports. The panel shows 5% steps and "Low" at 0.
 - **Protection** is on the pack voltage: warn under 3550 mV and cut the RGB
-  under 3400 mV, each after 30 s, and three fresh zeroes cut at once. The cut is
-  a power cap that a user RGB toggle cannot undo, lifted by 5 s of USB. Both
+  under 3400 mV, each after 30 s, and three fresh zeroes cut at once and show
+  "Low". The cut is a power cap that a user RGB toggle cannot undo, lifted only
+  by 5 s of *fresh* evidence of USB. No threshold is judged at the top clamp. Both
   thresholds are RAM-only, settable in pack mV: `ak820battery.py cfg WARN CUT`.
 - **The log** (v3): 720 ten-minute entries, 120 h, each with every `5C` report
   of its period as sum/count/min/max, VDD mean and min, flags at the end and
@@ -594,7 +596,8 @@ What `battery.c` does now; the reasoning and the review behind each part are in
   `ak820battery.py log out.csv` reads the period from the reply. ⚠️ **Plug in
   with the slider on BT**: a BT → cable flip resets the board and loses it.
 - **Checked on the host** by `scripts/battery_sim/run.sh`, which compiles this
-  `battery.c` and `power.c` against a simulated board.
+  `battery.c` and `power.c` against a simulated board: 23 scenarios, 15
+  mutants caught. Reviewed by codex twice (plan and implementation).
 
 ### Superseded
 

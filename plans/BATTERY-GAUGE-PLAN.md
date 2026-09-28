@@ -199,8 +199,9 @@ after the calibration run.
 
 ⭐ **The countdown** — the owner's "convincing fudge" for the top clamp, where
 the voltage says only "≥ 4.036 V": after a full charge, start at **100** and
-count down with time while `5C` sits at 100, **floored at 91** so it never
-claims the clamp's exit early. When `5C` leaves the clamp the curve takes over
+count down with time while `5C` sits at 100, **floored at 92.5** — the lowest
+value the panel still shows as 95 — so it never claims the clamp's exit (90)
+early. When `5C` leaves the clamp the curve takes over
 from 90; if the countdown ran slow, **ease down** onto the curve rather than
 jumping. Unplugged mid-charge at the clamp, it starts from the charging value.
 Booted on battery at the clamp with no history, it starts at **95** — within
@@ -283,9 +284,11 @@ mid-charge cannot satisfy.
 1. ⚠️ **Supply correct in every row of 1.1's table**, checked against the
    charge LED, the debug page and the cable — not against itself. No flicker
    through a CV taper; plug and unplug classified within 2 s.
-2. **Protection fires**: set the thresholds just under the present pack voltage
-   with `ak820battery.py cfg`, see the warning and the cut; the cut survives a
-   user RGB toggle and lifts after 5 s on USB.
+2. **Protection fires**: set the thresholds just above the present pack
+   voltage with `ak820battery.py cfg`, see the warning and the cut; the cut
+   survives a user RGB toggle and lifts after 5 s on USB. ⚠️ The pack must be
+   under the top clamp (`5C` < 100): at the clamp it is only known to be
+   ≥ 4036 mV, which is under no threshold.
 3. The level **never rises on battery** across a multi-hour run, and never
    visibly bounces.
 4. `5C` → mV agrees with a meter within **±20 mV** at three points spread
@@ -295,12 +298,14 @@ mid-charge cannot satisfy.
    dumps intact.
 7. **The ladder is absent from the artifact.**
 8. ⭐ **`scripts/battery_sim/run.sh` passes.** It compiles the firmware's own
-   `battery.c` and `power.c` on the host against a simulated board and replays
-   the 09-28 charge log, a 57.7 h discharge with jitter, every supply
-   transition, a pack-less board, the protection and the re-seat. Seven
-   deliberately broken variants (the old 4300 mV predicate, a ratchet that
-   rises, protection on VDD, charging reaching 100, no CHRG hold, no re-seat, a
-   median that reads forgotten reports) are each caught.
+   `battery.c` and `power.c` on the host against a simulated board and runs 23
+   scenarios: the 09-28 charge log, a 57.7 h discharge with jitter, every supply
+   transition, a pack-less board, the protection, the re-seat, and one per
+   defect the implementation review found. **Fifteen deliberately broken
+   variants are each caught** — the old 4300 mV predicate, a ratchet that
+   rises, protection on VDD, charging reaching 100, and one reverting each
+   review fix. ⚠️ It does not compile `indicators.c` or `display.c`: presence
+   and the panel are checked by reading, and on hardware.
 
 ---
 
@@ -501,3 +506,30 @@ Codex (gpt-6-astra, xhigh), 2026-09-28, against the first draft at `5eebd43`.
 | 12 | Phase 2's load inference is underdetermined; "a few hours" cannot resolve it | **Accepted, with a cheaper remedy**: a meter in series through the extension cable, rather than 10-16 h ABBA blocks |
 | 13 | Automatic Power Saver contradicts the radio consent; the TX queue is not lossless | **Accepted.** Low battery caps lighting only; the radio stage gets a wake-buffer contract |
 | 14 | A persistent checkpoint is possible but not free | **Deferred.** Worth it for the next unexplained shutdown, not for Phase 1 |
+
+## Implementation review dispositions
+
+Codex (gpt-6-astra, xhigh), 2026-09-28, against `b8b64162af` + `8627554513`:
+[verbatim](review-codex-battery-gauge-impl-2026-09-28.md). Verdict: flash after
+findings 1-8. It could not run the simulator (its sandbox refused `mktemp`), so
+its findings are code traces; each was re-checked against the code, and each
+fix has a simulator scenario and a mutant that reverts it.
+
+| # | finding | disposition |
+|---|---|---|
+| 1 | Failed ADC reads leave `ext_run` qualified, so a remembered EXTERNAL lifts the cut after unplugging | **Accepted.** VDD evidence expires after 1 s of failed conversions; the cut lifts only on 5 s of *fresh* evidence (CHRG, or VDD this second). `restore_needs_evidence` |
+| 2 | The median survives a charger-only change: a fault mid-CV was judged FULL on charging reports, and a CHRG gap reinterpreted a charging median without the I×R | **Accepted.** The median restarts at every charger start/stop too; FULL needs post-release reports. `charger_fault`, `chrg_gap` |
+| 3 | Charging neither caps an existing level nor bounds its upward steps | **Split.** Upward moves are now at most 1% per report (`boot_charging_rise`; `charge_log` asserts single steps). **Declined:** pulling a remembered FULL down to the cap during a top-up. A level ≥ 97.5% exists only within ~80 min of a FULL; the pack *is* full, and 100 → 95 → 100 across a top-up would read as a glitch. `full_then_replug` pins the choice |
+| 4 | A brief replug cancels the owed re-seat | **Accepted.** Owed until consumed. `reseat_survives_replug` |
+| 5 | Three zeroes cut the RGB but the level walks down for ~45 min; "Low" is not red | **Accepted.** Critical sets the level to 0 at once; "Low" keeps a red 2 px sliver in the bar (the glyphs cannot be recoloured). `critical` |
+| 6 | Two reports between ticks count as one | **Accepted.** The CH582F parser now calls `battery_5c_report()` per frame; the polled counter is gone from the gauge. `burst` |
+| 7 | A period stretched over an ADC outage misdates the log; the first entry came instantly at boot (`\| 1`) | **Accepted, both.** Every period closes on a fixed cadence (VDD 0 when there was no conversion); a started flag replaces the `\| 1`. `log_cadence` |
+| 8 | One stray 0 says "No Batt", and the bar is not repainted when presence returns | **Accepted.** Absence is judged on the fresh median; presence returning repaints the bar. ⚠️ Not simulated: check on the white unit |
+| 9 | The countdown floor (910) shows 90, the exit's value | **Accepted.** 925: the clamp reads 100, then 95 |
+| 10 | A threshold above 4036 compares against the clamp's bound | **Accepted.** No threshold comparison at the top clamp. `threshold_at_clamp` |
+| 11 | The debug row has no age | **Accepted.** `59@4 3677 3901`: 5C, seconds since it arrived, pack mV, VDD mV |
+
+**Not added from its scenario list:** an EOC timeout distinct from a zero
+conversion, report phases varied around transitions, log-ring wrap, and host
+packet fixtures for v1/v2/v3 (codex decoded synthetic packets through the
+reader and found every offset right).

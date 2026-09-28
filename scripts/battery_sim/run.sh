@@ -15,7 +15,9 @@ cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -I"$build" \
    -o "$build/sim" "$here/sim.c" "$build/battery.c" "$build/power.c"
 fail=0
 for s in boot_battery boot_battery_clamp boot_usb_full discharge charge_log transitions \
-         no_pack protection critical brief_plug unplug_mid_charge countdown_ease stale ring_restart; do
+         no_pack protection critical brief_plug unplug_mid_charge countdown_ease stale ring_restart \
+         burst restore_needs_evidence charger_fault chrg_gap boot_charging_rise full_then_replug \
+         reseat_survives_replug threshold_at_clamp log_cadence; do
     "$build/sim" "$s" "$log" || fail=1
 done
 exit $fail
