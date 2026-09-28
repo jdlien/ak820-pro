@@ -34,3 +34,4 @@ charger pins CHRG low (charging), STDBY high
 module 5C    100%  (min 1, last report 3 s ago)
 flags        on_batt charging rgb_on linked
   log rows: 452
+=== watch finished ===
