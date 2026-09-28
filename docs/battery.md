@@ -585,6 +585,8 @@ What `battery.c` does now; the reasoning and the review behind each part are in
   (I×R, provisional), only rises, stops at 97 (shows 95), and says 100 only
   once CHRG releases with `5C` at 100. After a real charge the level re-seats
   once from post-unplug reports. The panel shows 5% steps and "Low" at 0.
+  The level is saved to EEPROM (whole percent) and restored after a reboot at
+  the top clamp, where the voltage cannot place it — a slider flip reboots.
 - **Protection** is on the pack voltage: warn under 3550 mV and cut the RGB
   under 3400 mV, each after 30 s, and three fresh zeroes cut at once and show
   "Low". The cut is a power cap that a user RGB toggle cannot undo, lifted only

@@ -220,8 +220,12 @@ wide.
 - **5% steps** on the panel, 1% internally. After a charge the pack relaxes
   *downward*, which the ratchet follows without a visible bounce, so there is
   **no hold-off**: the first fresh median after unplugging is shown.
-- ⚠️ A reboot loses the ratchet. It reacquires from fresh reports; no
-  persistence in Phase 1.
+- ⚠️ A reboot loses the ratchet, and below the top clamp it reacquires from
+  fresh reports. **At the top clamp it restores the saved level** (kb eeconfig
+  byte 5, whole percent, written through the coalesced path) if that lies in
+  the clamp's 90-100 band. Added after the first flash: every cable ↔ BT
+  slider flip is a reboot, and a freshly full pack came back as the 95 guess —
+  "kinda makes you feel like you never got a full charge" (owner).
 
 ⚠️ **Charging needs its own correction** (found replaying the 09-28 log in the
 simulator, below). `5C` reads the *terminal* voltage, which the charge current
