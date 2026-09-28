@@ -171,7 +171,7 @@ while questions wait only lights up instead of taking the screen.
 
 **While a question arrives** over the LEDs (seconds, see *Measured*) the
 board already knows it is one after the first byte: it shows GIF slot 5 (the
-text "In arrivo..." if the slot is empty) and **ignores every key press**
+text "Incoming..." if the slot is empty) and **ignores every key press**
 until the question is up. Before, a key pressed then dismissed the page on
 screen and put key traffic on the link while the frame was still coming, and
 the question was lost. If no question follows within 1.5 s of the last bit
@@ -212,8 +212,8 @@ question waiting on the board, and any notification takes it over.
 
 | item | does |
 |---|---|
-| Domande Si / No | **No**: questions arrive as notices only. The board shows GIF slot 2 (the waving octopus) instead of the question and answers `cancel` at once, so Claude Code asks at the terminal; the hook then owns the page and closes it when you answer there (the next `PostToolUse` or prompt of that session). Persisted in the kb EEPROM block (byte 5; version 3). |
-| Esci | close |
+| Ask On / Off | **Off**: questions arrive as notices only. The board shows GIF slot 2 (the waving octopus) instead of the question and answers `cancel` at once, so Claude Code asks at the terminal; the hook then owns the page and closes it when you answer there (the next `PostToolUse` or prompt of that session). Persisted in the kb EEPROM block (byte 5; version 3). |
+| Exit | close |
 
 ### Screensaver (AMBIENT)
 
