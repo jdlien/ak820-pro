@@ -409,10 +409,23 @@ wrong for hours would break both.
 ## ⭐ VDD as the charge-complete signal
 
 This document records that the ASC4056's DONE pin never reads low, so "full has
-to be inferred". ⚠️ The 09-28 log shows **`done` never asserted and `charging`
-never cleared across 7.5 hours** — both pins are useless for termination.
+to be inferred". The 09-28 log shows **`done` never asserted across 7.5 hours**,
+which confirms it.
 
-**VDD infers it.** VDD is USB through a diode, so its drop scales with current:
+⚠️ **Correction, same day: `CHRG` does work.** An earlier version of this
+section said both pins were useless. The owner watched the charge LED go out at
+roughly **09½ hours** into the charge, with the pack at **4.18 V** — so CHRG
+does eventually signal termination. Our log ran out two hours short of it, and
+"never cleared across 7.5 hours" was a statement about the log's length, not the
+pin's behaviour. **CHRG is usable; only DONE is broken.**
+
+⚠️ But CHRG is *slow*: 9½ hours from a deeply discharged pack, with the display
+reading 100% for the last 5½ of them. So it answers "has charging stopped", not
+"is the pack nearly full".
+
+**VDD infers the progress CHRG cannot.** VDD is USB through a diode, so its
+drop scales with current, which makes it a live read on how far the taper has
+gone rather than a single late edge:
 
 | VDD | meaning |
 |---|---|
