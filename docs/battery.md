@@ -373,6 +373,61 @@ The **filtered-`5C` path needs no soldering, no purchase, and meets the
 objective above**. The retrofit buys a percentage worth printing, on one unit,
 at the cost of a modification to a board in daily use. It is a want, not a need.
 
+## ⚠️ `battery_on_battery()` is wrong, in two ways (2026-09-28)
+
+```c
+#define ON_USB_MIN_MV 4300u
+bool battery_on_battery(void) { return mv != 0 && mv < ON_USB_MIN_MV; }
+```
+
+**1. No hysteresis.** Observed live on 09-28: with VDD creeping up through
+4300 mV as the charge current tapered, the battery row **alternated between
+"USB" and the voltage** on every few-millivolt wobble. A slow crossing parks it
+on the boundary for a long time, so this is not a rare flicker.
+
+**2. ⚠️ It cannot tell "unplugged" from "plugged in, charging hard."** The
+09-28 charge log shows **VDD at 4193 mV for four straight hours** while on USB
+and charging — below the threshold, so the firmware believed it was on battery
+the whole time. `BATT_F_ON_BATTERY` and `charging` were set **simultaneously**.
+The threshold was set against this document's "4.31 V while charging hard", but
+a deeply discharged pack charges harder than that and pulls VDD lower.
+
+**The fix is a better signal, not a better threshold.** The charger pin is a
+direct observation:
+
+    CHRG low                                   -> on USB (charging)
+    CHRG high AND VDD >= 4300 (with hysteresis) -> on USB (idle/full)
+    otherwise                                   -> on battery
+
+VDD then only arbitrates the case CHRG cannot — which is exactly the case where
+VDD is trustworthy, because no charge current means no diode drop.
+
+⚠️ **This gates the new gauge.** The ratchet must not run while charging and
+the idle ladder must not dim a plugged-in keyboard, so a predicate that is
+wrong for hours would break both.
+
+## ⭐ VDD as the charge-complete signal
+
+This document records that the ASC4056's DONE pin never reads low, so "full has
+to be inferred". ⚠️ The 09-28 log shows **`done` never asserted and `charging`
+never cleared across 7.5 hours** — both pins are useless for termination.
+
+**VDD infers it.** VDD is USB through a diode, so its drop scales with current:
+
+| VDD | meaning |
+|---|---|
+| ~4193 mV, flat | constant-current phase, full charge current |
+| rising | CV phase, current tapering |
+| ~4470 mV | no charge current — **done** |
+
+Measured 09-28: flat at 4193 from 03:00 to 07:00, then 4241 → 4268 → 4300 as
+the taper set in. A diode's drop is logarithmic in current, roughly 50 mV per
+e-fold, so **+75 mV from the plateau is about a 4-5x fall in charge current**.
+
+So the rail that is useless as a battery gauge is a serviceable
+**charge-current** proxy, and it answers a question this document previously
+recorded as unanswerable.
+
 ## The charger (ASC4056)
 
 A TP4056-class linear charger, ESOP8 (`fpb/ajazz-ak820-pro/docs/ASC4056.pdf`,

@@ -1,0 +1,36 @@
+=== dump 1 at 20260928-0304 ===
+vdd          4183 mV  (raw 1952, since boot 4168..4298 mV)
+charger pins CHRG low (charging), STDBY high
+module 5C    8%  (min 1, last report 1 s ago)
+flags        on_batt charging rgb_on linked
+  log rows: 3
+=== dump 2 at 20260928-0434 ===
+vdd          4191 mV  (raw 1966, since boot 4168..4298 mV)
+charger pins CHRG low (charging), STDBY high
+module 5C    85%  (min 1, last report 4 s ago)
+flags        on_batt charging rgb_on linked
+  log rows: 93
+=== dump 3 at 20260928-0604 ===
+vdd          4194 mV  (raw 1949, since boot 4168..4298 mV)
+charger pins CHRG low (charging), STDBY high
+module 5C    95%  (min 1, last report 4 s ago)
+flags        on_batt charging rgb_on linked
+  log rows: 182
+=== dump 4 at 20260928-0734 ===
+vdd          4237 mV  (raw 1939, since boot 4168..4298 mV)
+charger pins CHRG low (charging), STDBY high
+module 5C    100%  (min 1, last report 3 s ago)
+flags        on_batt charging rgb_on linked
+  log rows: 272
+=== dump 5 at 20260928-0904 ===
+vdd          4247 mV  (raw 1914, since boot 4168..4298 mV)
+charger pins CHRG low (charging), STDBY high
+module 5C    100%  (min 1, last report 3 s ago)
+flags        on_batt charging rgb_on linked
+  log rows: 362
+=== dump 6 at 20260928-1034 ===
+vdd          4270 mV  (raw 1916, since boot 4168..4298 mV)
+charger pins CHRG low (charging), STDBY high
+module 5C    100%  (min 1, last report 3 s ago)
+flags        on_batt charging rgb_on linked
+  log rows: 452

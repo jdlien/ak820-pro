@@ -1,0 +1,5 @@
+# 3 entries (log v1), newest 6 s ago
+time,vdd_avg,vdd_min,module_pct,rgb_val,module_age_s,on_batt,charging,done,rgb_on,lights_cut,slider_usb,linked
+2026-09-28 03:02,4176,4129,4,255,5,1,1,0,1,0,0,1
+2026-09-28 03:03,4179,4125,5,255,0,1,1,0,1,0,0,1
+2026-09-28 03:04,4183,4137,7,255,0,1,1,0,1,0,0,1
