@@ -1,3 +1,5 @@
 time,meter_v,panel,debug_row,note
 2026-09-28 15:41,,,,"Firmware 487cb8e9f0 flashed (the Phase 1 gauge). Idle ladder compiled out. Charger topped up a full pack in BT on USB, CHRG released 15:43, gauge FULL at 100% (saved)."
 2026-09-28 15:45,,100%,,"DRAIN TEST START: unplugged, slider on BT. Lighting pure white at 100% for the whole run. LCD brightness at the post-flash default. Log v3: 10-minute entries, 120 h, first entry ~15:51. Protection at defaults: warn 3550 mV, cut RGB 3400 mV (pack). Expect 100% -> 95% around 17:05, 95% until the top clamp exits (~21:00), then the voltage takes over."
+2026-09-28 15:50,,100%,,"Reboot test (owner): slider BT -> cable -> BT, no USB. Came back at 100%, not the 95 guess: the saved level restored at the top clamp. Log restarted from this boot."
+,,,,"Owner: the LEDs flicker once in a while (low priority). Suspect: every internal-flash write (kb eeconfig) blanks the matrix for the write window (docs/leds.md), and the saved battery level adds one write per whole-% change -- ~every 32 min in the top-clamp countdown, ~100 per discharge. Note flicker times to correlate."

@@ -477,6 +477,18 @@ architectural; some may be the screen, which is fixable.
 ⚠️ **Do not flash the idle ladder during a calibration run** — it changes the
 load profile mid-measurement.
 
+**Queued for after the 09-28 drain test (each needs a flash, which wipes the
+log):**
+
+- ⚠️ **Save the level only in the top band.** Every internal-flash write blanks
+  the LEDs for its window (`docs/leds.md`, "a brief DARK flash"), and the saved
+  level writes on every whole-percent change: ~100 per discharge, one every ~32
+  min in the countdown. The owner sees an occasional flicker. The restore only
+  ever uses a saved value in 90-100%, so save only there, plus one marker write
+  on leaving the band (so a stale 9x is not restored after a pack swap): ~15
+  writes a cycle. First confirm the flicker times line up.
+- "Charge" for "Chrg" is already in `487cb8e9f0`.
+
 ---
 
 ## What this plan deliberately does not do
