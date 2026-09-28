@@ -27,7 +27,14 @@ per finding.
 - **Reviewed twice by codex** (plan, then implementation: flash after eight
   fixes, all applied). `scripts/battery_sim/run.sh`: 23 scenarios, 15 mutants
   caught.
-- ✅ **RE-FLASHED 2026-09-28 ~15:36: `27bf8a4f06`**
+- ✅ **Running since ~15:41: `487cb8e9f0`** (`via-daily-487cb8e9f0-20260928-153833.bin`)
+  -- `27bf8a4f06` plus "Charge" for "Chrg". ⚠️ **Open question:** in the BT
+  position on USB the charger has topped up a full pack for 10+ min with VDD
+  at ~4484 mV (almost no charge current) and CHRG still low. The 09-28 charge
+  LED went out "with the board off". If CHRG never releases while the board
+  runs in BT, FULL (and 100) never comes there for a pack charged from low;
+  the saved level only covers a pack that was already full.
+- (Re-flash ~15:36: `27bf8a4f06`)
   (`via-daily-27bf8a4f06-20260928-153336.bin`), which adds the saved level: a
   reboot at the top clamp (every slider flip) restores it instead of guessing
   95. First read after the flash: BT position on USB, charger topping up,
