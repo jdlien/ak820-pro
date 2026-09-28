@@ -1,7 +1,7 @@
 # The battery: what the board can know, and how the level is estimated
 
-Code: `battery.c` (VDD measurement, estimator, protection, log), `power.c`
-(idle ladder), `indicators.c` (charger pins, pack presence), and the battery
+Code: `battery.c` (the supply decision, `5C`, the level, protection, the log),
+`power.c` (the power caps: the lights cut, and the idle ladder when enabled), `indicators.c` (charger pins, pack presence), and the battery
 row in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. Task 8 in
 `.taskmaster/tasks/tasks.json` tracks the work.
 
@@ -11,7 +11,8 @@ row in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. Task 8 in
 > flashed**: the VDD level estimator (`36be68f16a`, dead — VDD is a constant)
 > and the idle ladder (`3b85686ff7`). **The work now is
 > [`plans/BATTERY-GAUGE-PLAN.md`](../plans/BATTERY-GAUGE-PLAN.md)**: a gauge on
-> `5C`, reviewed by codex and being built.
+> `5C`, reviewed by codex, **built and passing the host simulator, not yet
+> flashed** ("The gauge", at the end).
 
 ## What is achievable (revised 2026-09-27 — the earlier verdict was wrong)
 
@@ -417,6 +418,9 @@ at the cost of a modification to a board in daily use. It is a want, not a need.
 
 ## ⚠️ `battery_on_battery()` is wrong, in two ways (2026-09-28)
 
+> Fixed in the gauge (below, "The gauge"): a state machine on CHRG and VDD.
+> Kept because the two failure modes are the evidence for its design.
+
 ```c
 #define ON_USB_MIN_MV 4300u
 bool battery_on_battery(void) { return mv != 0 && mv < ON_USB_MIN_MV; }
@@ -561,44 +565,55 @@ Not reproduced yet. If it happens again: note the time and how long the board
 had been idle, then try a key press, then the slider flip with the cable still
 out, then the cable.
 
-## The level estimate (`36be68f16a`, not yet flashed)
+## The gauge (Phase 1, built 2026-09-28, not yet flashed)
 
-Three sources, each used only where it is true:
+What `battery.c` does now; the reasoning and the review behind each part are in
+[`plans/BATTERY-GAUGE-PLAN.md`](../plans/BATTERY-GAUGE-PLAN.md).
 
-1. **The charger terminating with USB in is a true 100%.**
-2. **Below the regulator**, the level comes from VDD + dropout on the NMC curve.
-3. **In the regulated band**, a countdown from the load: a base draw plus the
-   LED drive, read from `sn32f2xx_led_load()` (the sum of every channel's PWM
-   value), converted to level through the pack's 4000 mAh (1 mA = 0.025 %/h).
-   It is floored at the level where the regulator lets go, which the voltage
-   then takes over.
+- **Supply** is a state machine: CHRG low is proof of USB (held 1 s, for the
+  no-pack pulse); raw VDD ≥ 4100 mV for 0.5 s is USB; under 4000 mV for 1 s with
+  no CHRG is the pack; between, the state holds. Replaces the 4300 mV threshold
+  above.
+- **`5C`** is taken on every new report (5 s apart), stale after 20 s, as a
+  median of the last 7, emptied at every supply change. `mV = (5C × 1000000 +
+  361040000 + 57110) / 114220` for 1..99; 0 and 100 are the clamps' bounds.
+- **The level** is a provisional curve (the old generic table, scaled so
+  4036 mV reads 90%). On battery it only falls, one sustained step at a time;
+  at the top clamp a countdown from 100 (or 95 with no history) stands in for
+  the voltage. Charging reads the curve 150 mV below the terminal voltage
+  (I×R, provisional), only rises, stops at 97 (shows 95), and says 100 only
+  once CHRG releases with `5C` at 100. After a real charge the level re-seats
+  once from post-unplug reports. The panel shows 5% steps and "Low" at 0.
+- **Protection** is on the pack voltage: warn under 3550 mV and cut the RGB
+  under 3400 mV, each after 30 s, and three fresh zeroes cut at once. The cut is
+  a power cap that a user RGB toggle cannot undo, lifted by 5 s of USB. Both
+  thresholds are RAM-only, settable in pack mV: `ak820battery.py cfg WARN CUT`.
+- **The log** (v3): 720 ten-minute entries, 120 h, each with every `5C` report
+  of its period as sum/count/min/max, VDD mean and min, flags at the end and
+  OR-ed over the period, the level, and the effective LED drive and backlight.
+  `ak820battery.py log out.csv` reads the period from the reply. ⚠️ **Plug in
+  with the slider on BT**: a BT → cable flip resets the board and loses it.
+- **Checked on the host** by `scripts/battery_sim/run.sh`, which compiles this
+  `battery.c` and `power.c` against a simulated board.
 
-On USB the level holds, creeps up while charging, and jumps to 100 at
-termination. The regulator's output is learned per unit (the highest settled
-VDD on battery). Constants marked `CAL` in `battery.c` await the discharge
-log: `DROPOUT_MV`, `DRAW_BASE_MA`, `DRAW_LED_FULL_MA`, `CHARGE_MA`, and the
-curve itself.
+### Superseded
 
-## Protection and the log (`b35d8672b3`, flashed)
+- **The VDD level estimator (`36be68f16a`)** — a countdown from the LED load in
+  the "regulated band", VDD plus a dropout below it — is deleted. It rested on a
+  dropout that does not exist: VDD is a buck-boost output.
+- **Protection on VDD (`b35d8672b3`, what is flashed today)**: warn 3.55 V and
+  cut 3.40 V compared against VDD, which was still ~3.87 V with the pack at
+  3.30 V on 09-27. Whether it ever fired before the pack's protector tripped is
+  unknown.
 
-- **Warn** ("Battery low") after 30 s under 3.55 V VDD; **cut** the RGB
-  (noeeprom, so the saved setting is untouched) after 30 s under 3.40 V, until
-  USB returns. Both are RAM-only and settable: `ak820battery.py cfg WARN CUT`.
-  ⚠️ **Inert through the useful range, 09-27**: the pack reached 3.30 V with
-  VDD still at ~3.87 V, above both thresholds. Whether VDD collapsed far
-  enough for either to fire in the unobserved hours before the pack's own
-  protector tripped is unknown. The gauge plan moves both onto the pack
-  voltage from `5C`.
-- **The log**: once a minute, 12 hours, in RAM. Read it with
-  `ak820battery.py log out.csv`, and **plug in with the slider on BT**: a
-  BT → cable flip resets the board and loses it.
-
-## The idle ladder (`3b85686ff7`, not yet flashed)
+## The idle ladder (`3b85686ff7`, compiled out)
 
 On battery only: RGB to a quarter after 1 minute idle, RGB off and the screen
 capped at level 4 of 23 after 5, the screen backlight off after 15. Any key
 or knob turn restores everything within a tenth of a second, and the key
 types as normal. Each stage is a cap below the user's settings, never a
-change to them. Deep sleep (stopping the row ISR, sleeping the MCU) is next;
-key scanning lives in that ISR, so it needs its own wake path (task 8.4, and
-task 9 for making that ISR cheaper).
+change to them. ⚠️ **Built only with `POWER_LADDER_ENABLE`**, off by default
+since the gauge: it would change the load during the calibration run, and
+which of its stages pays is unmeasured (plan, 2.6). Deep sleep (stopping the
+row ISR, sleeping the MCU) is next; key scanning lives in that ISR, so it
+needs its own wake path (task 8.4, and task 9 for making that ISR cheaper).

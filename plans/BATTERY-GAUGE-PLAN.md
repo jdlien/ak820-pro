@@ -1,6 +1,7 @@
 # The battery gauge, and the power ladder — plan
 
-**Status: revised 2026-09-28 after a codex review; Phase 1 is being built.**
+**Status: revised 2026-09-28 after a codex review. Phase 1 is built and passes
+the simulator (gate 8); not yet flashed.**
 Phase 1 replaces a battery readout that currently shows a constant. Phase 2
 turns the existing idle ladder into a user-visible power mode on `Fn`+`B`.
 
@@ -166,6 +167,8 @@ connector by 02:59).
 - **`5C` arrives every 5 s**, only in reply to the `A6 53` poll. A median of 30
   is 2½ minutes, not half a minute. → **median of the last 7 fresh reports**
   (~35 s), fed only on reception, never by re-reading the cached value.
+  **Emptied at every supply change**: reports taken under charge current do not
+  describe the pack off it, and vice versa.
 - **Millivolts**, integer: `mV = (5C × 1000000 + 361040000 + 57110) / 114220`,
   for **1..99 only**. ⚠️ `5C == 100` means **≥ 4036 mV**, `5C == 0` means
   **≤ 3161 mV**: bounds, never numbers, never fed to the curve.
@@ -188,7 +191,7 @@ after the calibration run.
 
 | where | on battery | while charging |
 |---|---|---|
-| `5C` fresh, 1..99 | the curve, through the ratchet | the curve, **only rising**, capped at **99** |
+| `5C` fresh, 1..99 | the curve, through the ratchet | the curve on the voltage **less ~150 mV of I×R**, **only rising**, capped at **97** (shows 95) |
 | `5C` = 100 (≥ 4.036 V) | **the countdown**, below | creeps toward 99 over the CV phase |
 | `5C` = 0 (≤ 3.161 V) | **"Low"**, red; protection's critical path | the curve's 0, rising |
 | charger released, `5C` 100 | — | **100** |
@@ -218,6 +221,17 @@ wide.
   **no hold-off**: the first fresh median after unplugging is shown.
 - ⚠️ A reboot loses the ratchet. It reacquires from fresh reports; no
   persistence in Phase 1.
+
+⚠️ **Charging needs its own correction** (found replaying the 09-28 log in the
+simulator, below). `5C` reads the *terminal* voltage, which the charge current
+lifts by I×R: uncorrected, 5C 90 two hours into that charge read as **~77%**,
+where the charge time says **~40%**, and unplugging there would have dropped
+the level ~35 points. So while charging the curve is read at the voltage
+**less `CHARGE_IR_MV` (150 mV, provisional)**: ~0.8-0.9 A (4 h of constant
+current from flat) through ~180 mΩ. And after a real charging session the level
+**re-seats once**, from the first median of post-unplug reports, before the
+ratchet takes over — so a wrong I×R costs one correction at unplug, not hours of
+a level locked too low.
 
 ### 1.5 The display
 
@@ -280,6 +294,13 @@ mid-charge cannot satisfy.
 6. A v3 dump reconstructs timestamps at 10-minute spacing, and a ≥ 24 h run
    dumps intact.
 7. **The ladder is absent from the artifact.**
+8. ⭐ **`scripts/battery_sim/run.sh` passes.** It compiles the firmware's own
+   `battery.c` and `power.c` on the host against a simulated board and replays
+   the 09-28 charge log, a 57.7 h discharge with jitter, every supply
+   transition, a pack-less board, the protection and the re-seat. Seven
+   deliberately broken variants (the old 4300 mV predicate, a ratchet that
+   rises, protection on VDD, charging reaching 100, no CHRG hold, no re-seat, a
+   median that reads forgotten reports) are each caught.
 
 ---
 
@@ -302,6 +323,8 @@ log the pack continuously:
 - Characterize post-charge relaxation there too: tap readings at 0/5/15/30/60/
   120 min after unplugging from a few starting levels settle how optimistic the
   first minutes after a charge are.
+- **Measure `CHARGE_IR_MV`**: the step in the pack voltage at the instant of
+  unplugging mid-charge, at a few points of the constant-current phase.
 
 ---
 
@@ -431,11 +454,12 @@ architectural; some may be the screen, which is fixable.
 
 ## Order of work
 
-1. **1.0-1.3**: ladder compiled out, estimator deleted, the supply state
+1. ✅ **1.0-1.3**: ladder compiled out, estimator deleted, the supply state
    machine, protection on the pack voltage, `5C` freshness
-2. **1.4-1.6**: the level, the display, log v3 with the host tool
-3. Build, bench-check every row of 1.1's table and the protection with the
-   owner, then flash
+2. ✅ **1.4-1.6**: the level, the display, log v3 with the host tool, and the
+   simulator (gate 8)
+3. Flash, then bench-check every row of 1.1's table and the protection with
+   the owner (gates 1-7)
 4. **2.6's measurement** — a meter in series, when the extension cables arrive
 5. The **calibration run**, once the pack tap logs; swap the constants and the
    table
