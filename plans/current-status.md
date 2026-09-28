@@ -27,11 +27,17 @@ per finding.
 - **Reviewed twice by codex** (plan, then implementation: flash after eight
   fixes, all applied). `scripts/battery_sim/run.sh`: 23 scenarios, 15 mutants
   caught.
-- ✅ **FLASHED 2026-09-28 ~14:58** from the bootloader, so the keymap and
+- ✅ **RE-FLASHED 2026-09-28 ~15:36: `27bf8a4f06`**
+  (`via-daily-27bf8a4f06-20260928-153336.bin`), which adds the saved level: a
+  reboot at the top clamp (every slider flip) restores it instead of guessing
+  95. First read after the flash: BT position on USB, charger topping up,
+  level 95 -- the guess, because the flash erased the saved level. It goes to
+  100 when CHRG releases, and is saved from then on.
+- (First flash, ~14:58, `f2bcc26f14`, from the bootloader, so the keymap and
   lighting came from the 09-24 backups (lighting: effect 2, val 137 -- not the
   solid white of the 09-25 run). First read on USB, cable position: supply
   external, state full, level 100%, `5C` 100, VDD 4831 mV, log period 600 s,
-  thresholds 3550/3400 pack mV.
+  thresholds 3550/3400 pack mV.)
 - **Next: the bench checks** (Phase 1 gates 1-7). ⚠️ The meter comparison and
   the protection test need the pack **under the top clamp** (`5C` < 100),
   i.e. some hours of use on battery first.
