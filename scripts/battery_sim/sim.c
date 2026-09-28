@@ -14,6 +14,7 @@
 #include "quantum.h"
 #include "battery.h"
 #include "power.h"
+#include "kb_eeconfig.h"
 
 struct fake_adc fake_adc;
 
@@ -48,6 +49,17 @@ void     display_set_backlight_cap(uint8_t c) { (void)c; }
 uint8_t  display_backlight_effective(void) { return 10; }
 uint32_t sn32f2xx_led_load(void) { return scale ? 82u * 3u * 255u / 2u : 0u; }
 void     sn32f2xx_set_power_scale(uint8_t s) { scale = s; }
+
+/* The persisted level, as kb_eeconfig keeps it: whole percent + 1, 0 = unset. */
+static uint8_t saved_p1;
+bool kb_eeconfig_get_batt_level(uint16_t *pm) {
+    if (saved_p1 == 0 || saved_p1 > 101) return false;
+    *pm = (uint16_t)((saved_p1 - 1u) * 10u);
+    return true;
+}
+void kb_eeconfig_set_batt_level(uint16_t pm) {
+    if (pm <= 1000u) saved_p1 = (uint8_t)((pm + 5u) / 10u + 1u);
+}
 
 #define CHECK(cond, ...)                                              \
     do {                                                              \
@@ -523,6 +535,40 @@ static void ring_restart(void) {
     }
 }
 
+/* The owner's case, 2026-09-28: full on USB, then a cable -> BT slider flip,
+ * which reboots the board. It must come back at 100, not the 95 guess. */
+static void reboot_after_full(void) {
+    saved_p1 = 101;   /* 100%, saved before the reboot */
+    vdd_mv = 3900; c5 = 100;
+    run_s(20);
+    CHECK(battery_level_pct() == 100, "restored to 100 at the clamp, got %u", battery_level_pct());
+}
+
+/* A saved level that does not fit the clamp (a pack swapped, say) is ignored. */
+static void reboot_saved_mismatch(void) {
+    saved_p1 = 41;    /* 40% */
+    vdd_mv = 3900; c5 = 100;
+    run_s(20);
+    CHECK(battery_level_permille() == 950, "a saved 40%% at the clamp is not believed: %u pm", battery_level_permille());
+}
+
+/* Below the clamp the voltage is the authority: a saved level is not restored. */
+static void reboot_below_clamp(void) {
+    saved_p1 = 81;    /* 80% */
+    vdd_mv = 3900; c5 = 59;
+    run_s(20);
+    CHECK(battery_level_pct() == 10, "the curve, not the saved 80%%: %u", battery_level_pct());
+}
+
+/* What is saved follows the level. */
+static void persist_tracks(void) {
+    become_full();
+    CHECK(saved_p1 == 101, "full is saved as 100%%: p1 %u", saved_p1);
+    vdd_mv = 3900; chrg_low = false;
+    run_s(3 * 3600);
+    CHECK(saved_p1 >= 94 && saved_p1 <= 96, "three hours of countdown saved (~94%%): p1 %u", saved_p1);
+}
+
 static void stale(void) {
     vdd_mv = 3900; c5 = 60;
     run_s(40);
@@ -566,6 +612,10 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "reseat_survives_replug")) reseat_survives_replug();
     else if (!strcmp(s, "threshold_at_clamp")) threshold_at_clamp();
     else if (!strcmp(s, "log_cadence"))        log_cadence();
+    else if (!strcmp(s, "reboot_after_full"))  reboot_after_full();
+    else if (!strcmp(s, "reboot_saved_mismatch")) reboot_saved_mismatch();
+    else if (!strcmp(s, "reboot_below_clamp")) reboot_below_clamp();
+    else if (!strcmp(s, "persist_tracks"))     persist_tracks();
     else { fprintf(stderr, "unknown scenario %s\n", s); return 2; }
     printf("%s %s\n", failures ? "FAIL" : "ok  ", s);
     return failures ? 1 : 0;
