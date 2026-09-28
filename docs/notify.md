@@ -169,6 +169,15 @@ while questions wait only lights up instead of taking the screen.
 | Fn (layer keys) | pass through, so Fn+U / Fn+O reach PgUp / PgDn |
 | anything else | **ignored** — the question stays up |
 
+**While a question arrives** over the LEDs (seconds, see *Measured*) the
+board already knows it is one after the first byte: it shows GIF slot 5 (the
+text "In arrivo..." if the slot is empty) and **ignores every key press**
+until the question is up. Before, a key pressed then dismissed the page on
+screen and put key traffic on the link while the frame was still coming, and
+the question was lost. If no question follows within 1.5 s of the last bit
+(both copies spoiled), the page closes. The repeat of a question already
+shown, or a question arriving while another is on screen, shows nothing.
+
 Ignoring stray keys is deliberate: the first version cancelled on any key,
 and while you are typing that is exactly the key most likely to arrive.
 
@@ -229,7 +238,7 @@ pixel art scaled 4x (`assets-src/notify/mkoctopus*.py`):
 | 2 | `claude-octopus-help.gif` — waving, blinking "!" | auto mode blocked an action, or a turn failed |
 | 3 | `claude-octopus-sleep.gif` — asleep, "z"s | screensaver, no session at work |
 | 4 | `claude-octopus-work.gif` — typing on a tiny keyboard | screensaver, a session at work |
-| 5 | free | |
+| 5 | `claude-octopus-load.gif` — waiting, a spinner and a filling bar | a question is arriving over the LEDs |
 
 <p>
 <img src="../assets-src/notify/claude-octopus-help-preview.gif" width="128" alt="waving octopus">

@@ -293,16 +293,25 @@ def slot_release(slot):
             pass
 
 
-def wait_answer(timeout, multi=False, slot=0):
-    """Our slot's answer, from EV_MSC/MSC_SCAN: the board sends the slot's
-    marker, then the answer. A multi-select arrives as the ticked choices
-    followed by "allow" as the end marker."""
+def open_answer_readers():
+    """The "Consumer Control" nodes, opened BEFORE the question is sent: the
+    board shows it after the first copy of the frame, while the host is still
+    sending the second, and an Enter pressed in those seconds reached a node
+    nobody had opened yet and was lost. Opened first, it waits in the evdev
+    buffer."""
     fds = []
     for dev in find_consumer_events():
         try:
             fds.append(os.open(dev, os.O_RDONLY | os.O_NONBLOCK))
         except OSError:
             pass
+    return fds
+
+
+def wait_answer(fds, timeout, multi=False, slot=0):
+    """Our slot's answer, from EV_MSC/MSC_SCAN: the board sends the slot's
+    marker, then the answer. A multi-select arrives as the ticked choices
+    followed by "allow" as the end marker. Closes fds."""
     if not fds:
         return "noreader"
     fmt = "llHHi"                      # struct input_event, 64-bit
@@ -520,6 +529,7 @@ def main():
         flags = len(details) | (ASK_PERM if a.permission else 0) | (ASK_MULTI if a.multi else 0) | slot << 4
         frame = build_frame(next_seq(), EFFECTS[a.effect], hue, 255, "\n".join([a.title] + details + opts),
                             True, flags, kind=KIND_ASK)
+        fds = open_answer_readers()   # before sending: see open_answer_readers
         send_frame(frame, a.via)
         page_state(True)
 
@@ -535,7 +545,7 @@ def main():
         with open(mine, "w") as f:
             f.write(a.tag + "\n")
         try:
-            ans = wait_answer(a.timeout if a.timeout is not None else float(load_conf()["TIMEOUT"]), a.multi, slot)
+            ans = wait_answer(fds, a.timeout if a.timeout is not None else float(load_conf()["TIMEOUT"]), a.multi, slot)
         except InterruptedError:
             ans = "aborted"
         finally:
