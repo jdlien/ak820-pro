@@ -104,6 +104,11 @@ case "$ev" in
 
   Notification)
     [ "$(jq -r '.notification_type // empty' <<<"$input")" = permission_prompt ] || exit 0
+    # A question of this session is already on the board (or on its way): the
+    # reminder would cover the "!" notice of the notice-only mode.
+    for f in "$HOME"/.cache/ak820notify.asks/*; do
+      [ -e "$f" ] && kill -0 "${f##*/}" 2>/dev/null && read -r asid _ <"$f" 2>/dev/null && [ "$asid" = "$sid" ] && exit 0
+    done
     # Cancelled on the board a moment ago: you are right there, skip the reminder.
     c=$HOME/.cache/ak820notify.cancelled
     if [ -e "$c" ] && [ $(( $(date +%s) - $(stat -c %Y "$c") )) -lt 15 ]; then rm -f "$c"; exit 0; fi

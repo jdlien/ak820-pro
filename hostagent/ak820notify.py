@@ -530,8 +530,6 @@ def main():
         frame = build_frame(next_seq(), EFFECTS[a.effect], hue, 255, "\n".join([a.title] + details + opts),
                             True, flags, kind=KIND_ASK)
         fds = open_answer_readers()   # before sending: see open_answer_readers
-        send_frame(frame, a.via)
-        page_state(True)
 
         # Whoever deals with the question at the computer sends SIGTERM (the
         # Claude Code hook does): stop waiting and close the page now rather
@@ -540,11 +538,15 @@ def main():
             raise InterruptedError
         signal.signal(signal.SIGTERM, _abort)
         signal.signal(signal.SIGHUP, _abort)
+        # This too before sending: Claude Code's reminder fires while the
+        # question is still on its way, and the hook skips it when it finds this.
         os.makedirs(ASKS_DIR, exist_ok=True)
         mine = os.path.join(ASKS_DIR, str(os.getpid()))
         with open(mine, "w") as f:
             f.write(a.tag + "\n")
         try:
+            send_frame(frame, a.via)
+            page_state(True)
             ans = wait_answer(fds, a.timeout if a.timeout is not None else float(load_conf()["TIMEOUT"]), a.multi, slot)
         except InterruptedError:
             ans = "aborted"
