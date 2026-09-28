@@ -217,10 +217,38 @@ is another reason this is Phase 2.
 5. **The mode display.** A transient overlay, as `Fn`+`C` does for clock format.
    ⚠️ A full-screen `lcd_clear_rect()` blocks ~43 ms and drawing is one LCD op
    per glyph — use the glyph queue and bands (`docs/display.md`).
-6. **Does any of it matter?** ⚠️ **Unmeasured.** The idle ladder's saving has
-   never been quantified. The load is dominated by RGB, and the pack ran **62-67
-   h at full white** — so Normal might double that, or might not. **Measure one
-   stage before building three.**
+6. ⚠️ **We do not know what draws the power, and the ladder assumes we do.**
+   The design above rests on RGB dominating. `docs/battery.md` records that
+   **RGB full versus off moves the pack 10 mV** — through a plausible internal
+   resistance that is roughly 30-100 mA, against an average of ~62 mA for the
+   whole 62-67 h run. **Those do not reconcile.** The LCD backlight and an MCU
+   at 72.8% duty are both unaccounted for.
+
+   ⭐ **The test is free and comes first.** Run on battery with **RGB off** for
+   a few hours and compare `dV/dt` against the RGB-on rate at a similar
+   voltage; Phase 1's log records both with no meter and no discipline. If the
+   rate barely changes, the aggressive stage is the wrong one and **the screen
+   should be aggressive instead.**
+
+   A reference point: a NuPhy Air gets **weeks** with LEDs on. It has no
+   screen, and a single-chip nRF52840 rather than our SN32 + CH582F with an LED
+   ISR burning 72.8% of the CPU. Some of our gap is architectural and
+   unfixable; some may be the screen, which is fixable.
+
+7. **Reconnect latency sets whether the radio stage exists at all.** Measure it
+   before designing around it:
+
+   | reconnect | verdict |
+   |---|---|
+   | < 500 ms | imperceptible — fine anywhere |
+   | 0.5-2 s | acceptable only after long idle |
+   | 2-5 s | Power Saver only, after >= 30 min |
+   | **> 5 s** | **never**, at any timeout |
+
+   ⚠️ **The cost is the surprise, not the duration.** A NuPhy Air beside this
+   desk takes ~15 s and is reported as "very annoying" despite only reaching
+   that depth after hours — because it is hit precisely when someone has sat
+   down to start typing.
 
 ### Phase 2 gates
 
