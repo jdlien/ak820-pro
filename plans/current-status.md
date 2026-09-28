@@ -25,10 +25,16 @@ per finding.
   `0x97fc73c0`), firmware `f2bcc26f14` on `ak820pro-jdlien`. The idle ladder
   is compiled out; the VDD estimator is deleted.
 - **Reviewed twice by codex** (plan, then implementation: flash after eight
-  fixes, all applied). **Proven on the host only:**
-  `scripts/battery_sim/run.sh`, 23 scenarios, 15 mutants caught. **Next is the
-  flash and the bench checks** — Phase 1 gates 1-7, which need the owner, a
-  meter and the cable.
+  fixes, all applied). `scripts/battery_sim/run.sh`: 23 scenarios, 15 mutants
+  caught.
+- ✅ **FLASHED 2026-09-28 ~14:58** from the bootloader, so the keymap and
+  lighting came from the 09-24 backups (lighting: effect 2, val 137 -- not the
+  solid white of the 09-25 run). First read on USB, cable position: supply
+  external, state full, level 100%, `5C` 100, VDD 4831 mV, log period 600 s,
+  thresholds 3550/3400 pack mV.
+- **Next: the bench checks** (Phase 1 gates 1-7). ⚠️ The meter comparison and
+  the protection test need the pack **under the top clamp** (`5C` < 100),
+  i.e. some hours of use on battery first.
 - `deps.lock` still pins `44e7314e65`; move it when this is released.
 - The 09-27/28 meter readings were recovered from a session transcript into
   `history/battery-2026-09-25/readings.csv`. ⚠️ Write readings there as they
