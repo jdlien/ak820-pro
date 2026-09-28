@@ -487,6 +487,10 @@ log):**
   ever uses a saved value in 90-100%, so save only there, plus one marker write
   on leaving the band (so a stale 9x is not restored after a pack swap): ~15
   writes a cycle. First confirm the flicker times line up.
+- **Widen the log's `c5_n`.** `5C` arrives every ~2.6 s, not 5 s (the module
+  streams it as well as answering the poll): 224-237 reports per 10-minute
+  entry against a `uint8_t` that saturates at 255. Put the high byte in the
+  entry's reserved byte. The "median of 7 = ~35 s" figures are ~18 s.
 - "Charge" for "Chrg" is already in `487cb8e9f0`.
 
 ---
