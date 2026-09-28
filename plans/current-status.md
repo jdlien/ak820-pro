@@ -28,12 +28,11 @@ per finding.
   fixes, all applied). `scripts/battery_sim/run.sh`: 23 scenarios, 15 mutants
   caught.
 - ✅ **Running since ~15:41: `487cb8e9f0`** (`via-daily-487cb8e9f0-20260928-153833.bin`)
-  -- `27bf8a4f06` plus "Charge" for "Chrg". ⚠️ **Open question:** in the BT
-  position on USB the charger has topped up a full pack for 10+ min with VDD
-  at ~4484 mV (almost no charge current) and CHRG still low. The 09-28 charge
-  LED went out "with the board off". If CHRG never releases while the board
-  runs in BT, FULL (and 100) never comes there for a pack charged from low;
-  the saved level only covers a pack that was already full.
+  -- `27bf8a4f06` plus "Charge" for "Chrg". ✅ **The charger does terminate
+  with the board running in BT on USB:** a top-up of a full pack held CHRG
+  low ~11 min (VDD 4484-4489 mV), then released at 15:43 with VDD 4530 mV;
+  the gauge went to full and 100%, and saved it. (The worry was the 09-28 note
+  that the LED went out "with the board off".)
 - (Re-flash ~15:36: `27bf8a4f06`)
   (`via-daily-27bf8a4f06-20260928-153336.bin`), which adds the saved level: a
   reboot at the top clamp (every slider flip) restores it instead of guessing
