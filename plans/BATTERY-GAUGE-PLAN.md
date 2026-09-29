@@ -487,6 +487,27 @@ them if the radio sleeps. After 2 h idle, a few seconds of reconnect is a fair
 trade; a lost first keystroke is not. This belongs in Power Saver first, and in
 Normal only if reconnect proves near-instant.
 
+⭐ **A "light sleep" rung before deep sleep (JD: "can you slow down the loop?").**
+Keeps the BLE link, so no reconnect latency and no first-keystroke risk -- which
+makes it a candidate for **Normal**, not only Power Saver. Today the SN32 never
+halts: the row ISR runs ~3,900/s at ~73% of the CPU even with the LEDs dark
+(it scans keys too), and the main loop spins. In standby:
+
+1. **Scan-only, slow row ISR**: no LED PWM (they are dark), ~200 scans/s
+   instead of ~3,900 -- a press lasts >= 30 ms, so every key is still caught.
+2. **Yield in the main loop** (a few ms per pass) so the idle thread runs.
+3. **WFI in the idle thread**, standby only (a custom idle hook, not the global
+   `CORTEX_ENABLE_WFI_IDLE`). ⚠️ WFI was turned off 2026-08-28 while chasing a
+   hang; `config.h` itself records that it was not the fix -- the lost SPI0
+   DMA completion was, and that was fixed 2026-09-23. With a periodic systick
+   and scan timer the core always wakes. Still: soak it before trusting it.
+
+Lowering the core clock (48 -> 12 MHz) would save more but is invasive (the
+CH582F UART baud, timers, systick and SPI all hang off it); WFI gets most of
+the win for little risk. Size it first: with RGB and the backlight off, the
+in-series meter reading is MCU + radio + regulator + panel logic, and one
+build with the rung forced on shows the MCU's share.
+
 ⚠️ **Relevant to the 2026-09-24 unexplained power-off** (`docs/battery.md`):
 the CH582F's own idle behaviour is the first suspect there too, so learning its
 sleep states answers both.
