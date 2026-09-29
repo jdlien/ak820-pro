@@ -499,8 +499,12 @@ below). Deep sleep when idle stretches it further.
   lighting-only and never touch the radio. At ~5% a few seconds of reconnect
   after an idle beats a dead board. The rule that does not bend: **no
   keystroke is ever lost** (Phase 2 question 1's wake buffer).
-- **Say so on the LCD** ("Battery critical -- low power"), persistently, so
-  dark keys read as deliberate, not broken.
+- **Say so on the LCD** ("Battery critical -- low power"), so dark keys read
+  as deliberate, not broken -- then let the screen go fully dark, and have
+  **holding `Fn` light it for a few seconds** to show the battery and clock.
+- **The model is the Apple Watch's Power Reserve** (JD): it stops being a
+  smartwatch and stays a watch. Being a keyboard is ~90% of this thing's job;
+  the lights and screen are the other 10%, and they are what goes.
 - Reconcile with 1.2's protection: its warn (3550 mV) and RGB cut (3400 mV)
   are this ladder's first two steps expressed in volts; define them once.
 - ⚠️ **Depends on the curve's bottom end**: "5%" must mean 5% for this to fire
