@@ -706,6 +706,23 @@ What each piece changes, most valuable first:
    it averages badly, and its low ranges' burden fights the buck-boost. The
    standby work is what "right for the idle ladder, later" meant.
 
+5. ⭐ **A coulomb-counting gauge installed for good** (JD: "a device we can
+   install that actually measures current, without consuming anything
+   substantial"). The MAX17048 is voltage-only. The fit is **Maxim's
+   ModelGauge m5 -- MAX17055 or MAX1726x**: current, a coulomb count, level,
+   time-to-empty, capacity learned as the cell ages, at **~7-18 µA**. (TI's
+   BQ27441 is the same class at ~50-100 µA active; the **INA228 is a lab
+   instrument** -- ~640 µA measuring continuously is ~1% of today's draw but
+   half of a future ~1 mA standby floor.) A ~10 mΩ sense resistor in the pack
+   lead drops 0.6 mV and wastes ~36 µW at 60 mA. Installed like the MAX17048
+   retrofit: inline on the pack extension, I²C from the PCF8563's bus,
+   through the rationed I²C gate. What it buys: a counted gauge ("11 h left
+   at this rate"; the flat plateau stops mattering), the board measuring its
+   own power stages live (the budget tables fill themselves, even on `Fn`+`D`),
+   and a current trace of any unexplained power-off. ⚠️ JD's unit only, found
+   by probing the bus at boot. Check which m5 breakouts DigiKey stocks before
+   ordering; keep the INA228 as the bench logger.
+
 None of it changes the plan's order or the power-mode design. It changes the
 work from inference to measurement.
 
