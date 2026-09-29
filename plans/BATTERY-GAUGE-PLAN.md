@@ -499,9 +499,21 @@ below). Deep sleep when idle stretches it further.
   lighting-only and never touch the radio. At ~5% a few seconds of reconnect
   after an idle beats a dead board. The rule that does not bend: **no
   keystroke is ever lost** (Phase 2 question 1's wake buffer).
-- **Say so on the LCD** ("Battery critical -- low power"), so dark keys read
-  as deliberate, not broken -- then let the screen go fully dark, and have
-  **holding `Fn` light it for a few seconds** to show the battery and clock.
+- **Say so on the LCD, at the two moments someone is asking** (JD):
+  - on **entering** the mode: "Low battery -- plug in to charge", then the
+    screen goes dark;
+  - on any **lighting or screen shortcut** (`Fn`+arrows/`6`/`7`/`X`/`\`/`-`/`=`
+    for RGB, `Fn`+`PgUp`/`PgDn`/`Home` for the LCD, and the equivalent VIA
+    keycodes): the same message, briefly. It answers "why won't the screen or
+    LEDs turn on?" at exactly the moment it is asked.
+  - **Not** on `Fn` alone -- JD holds it constantly (arrow keys on the Fn
+    layer), as many people will. No clock: nobody needs it here.
+  - ⚠️ In the mode those shortcuts **show the message and change nothing.**
+    The mode works by caps below the user's settings; if a press still
+    changed the stored brightness, the user would plug in to find the lights
+    somewhere they never left them. The existing parameter overlay
+    (`param_overlay.c`, which already reacts to these keys) is the natural
+    place to substitute the message.
 - **The model is the Apple Watch's Power Reserve** (JD): it stops being a
   smartwatch and stays a watch. Being a keyboard is ~90% of this thing's job;
   the lights and screen are the other 10%, and they are what goes.
