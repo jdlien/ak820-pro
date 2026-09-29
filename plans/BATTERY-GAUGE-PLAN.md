@@ -480,13 +480,22 @@ load profile mid-measurement.
 **Queued for after the 09-28 drain test (each needs a flash, which wipes the
 log):**
 
-- ⚠️ **Save the level only in the top band.** Every internal-flash write blanks
-  the LEDs for its window (`docs/leds.md`, "a brief DARK flash"), and the saved
-  level writes on every whole-percent change: ~100 per discharge, one every ~32
-  min in the countdown. JD sees an occasional flicker. The restore only
-  ever uses a saved value in 90-100%, so save only there, plus one marker write
-  on leaving the band (so a stale 9x is not restored after a pack swap): ~15
-  writes a cycle. First confirm the flicker times line up.
+- ⚠️ **Cut the saved level's flash writes to ~5 a charge cycle.** JD sees a
+  brief whole-board blink "for a few ms" (09-28 15:50, 09-29 12:33). That is
+  the signature of an internal-flash write: interrupts are masked across the
+  write because the vector table and every ISR live in flash
+  (`efl_ramtext.diff`), and the row ISR's guard blanks every row rather than
+  leave one lit at ~18× (`docs/leds.md`). ⚠️ **It cannot be avoided per
+  write:** the SN32F29x is a Cortex-M0, which has no VTOR, so the row ISR
+  cannot run from RAM during a program. The only lever is how often we write,
+  and the saved level currently writes on every whole-percent change (~100
+  per discharge, every ~32 min in the countdown). The restore only ever uses
+  a value in 90-100%, so save at FULL, at each 2.5% boundary inside the band
+  (97.5, 95, 92.5), and once on leaving it (so a stale 9x is not restored
+  after a pack swap): ~5 writes a cycle, restore error ≤ 2.5%.
+  Also worth adding: a count of flash writes on the `Fn`+`D` page or HC_CONN,
+  so a blink can be matched to a write instead of inferred. The 15:50 blink
+  matches no write we know of.
 - **Widen the log's `c5_n`.** `5C` arrives every ~2.6 s, not 5 s (the module
   streams it as well as answering the poll): 224-237 reports per 10-minute
   entry against a `uint8_t` that saturates at 255. Put the high byte in the
