@@ -461,6 +461,38 @@ architectural; some may be the screen, which is fixable.
 
 ---
 
+## Standby: how close to zero without touching the slider (JD, 2026-09-29)
+
+JD's question: after ~2 h idle, can the board draw practically nothing until
+a keypress, with the slider left on BT? (Cable position with no USB is already
+a true off; this is the software version.) **Not zero, but perhaps 20-600×
+less than today's ~60 mA** -- weeks to months of standby instead of 2-3 days.
+Where it lands depends on two unknowns a meter in series would settle (2.6):
+
+| load | switchable? | notes |
+|---|---|---|
+| RGB | ✅ | the ladder |
+| LCD backlight | ✅ | the ladder |
+| LCD panel | ✅ probably | a sleep command; µA asleep |
+| **SN32 MCU** | ⚠️ with work | never sleeps today (no WFI), and the row ISR keeps it ~73% busy even with the lights dark. Deep sleep needs its own wake path: scanning lives in that ISR |
+| **CH582F** | ❓ | only what its stock firmware accepts over UART. Stock had a "deep sleep" state (`g_connection_mode` 0x0D) we never use -- look in `fpb/ajazz-ak820-pro`'s `CH582F_PROTOCOL.md`. A BLE link held with slave latency can itself be tens of µA; measure before assuming the radio must go down |
+| **buck-boost** | ❌ | always on with the slider on BT; its quiescent current is the floor (tens of µA to a few mA, part unknown) |
+| charger, PCF8563, SPI flash (deep power-down), pack protector | ❌ mostly | µA each |
+
+⚠️ **The two hard parts are Phase 2's design questions 1 and 2, unchanged:**
+a wake path (the matrix set so any key raises a pin interrupt; stop the row
+ISR; WFI/deep sleep; the waking key is still held when scanning resumes, so
+it types), and a reconnect that **buffers** keystrokes rather than dropping
+them if the radio sleeps. After 2 h idle, a few seconds of reconnect is a fair
+trade; a lost first keystroke is not. This belongs in Power Saver first, and in
+Normal only if reconnect proves near-instant.
+
+⚠️ **Relevant to the 2026-09-24 unexplained power-off** (`docs/battery.md`):
+the CH582F's own idle behaviour is the first suspect there too, so learning its
+sleep states answers both.
+
+---
+
 ## Order of work
 
 1. ✅ **1.0-1.3**: ladder compiled out, estimator deleted, the supply state
