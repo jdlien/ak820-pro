@@ -384,6 +384,19 @@ The screen stage is an **absolute ceiling**, backlight level 4 of 23
 below. Both are caps, never writes to the user's settings, so a keypress
 restores them exactly.
 
+⚠️ **A relative dim can change the colour, not just the brightness** (JD,
+2026-09-29): "the difference between purple and red". Each channel is scaled
+separately in 8 bits, so a dim purple (R 12, B 3) becomes R 3, B 0 -- red; and
+at very low PWM duty the red die lights before blue and green, so dim colours
+drift before rounding even bites. Candidates, for when Phase 2 is built:
+- **dim through the lighting's own brightness (HSV value), not the driver's
+  output** -- a cap on `val` applied before the effect renders, so the colours
+  behave exactly as a manual `Fn`+`↓` would;
+- **skip the dim stage when the lights are already dim** (below ~30%): little
+  power to save, and that is where the shift is worst -- go straight to off;
+- never round a lit channel to zero (keeps the hue from collapsing; the
+  ratios still drift). Leaning: the first two together.
+
 ⚠️ **Normal never touches the radio.** It appears only in Power Saver, because
 choosing Power Saver is the consent to reconnect latency.
 
