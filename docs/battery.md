@@ -116,6 +116,10 @@ An earlier version proposed estimating current from `led_pm`/`rgb_val` and
 integrating it, with the INA228 measuring milliamps to fit the model. **Dropped.**
 The voltage route above is simpler, needs no extra hardware, and does not drift
 with an unmeasured load model. The INA228 was removed from the parts list.
+⚠️ It is back in JD's 2026-09-29 DigiKey cart
+([`plans/parts/`](../plans/parts/digikey-order-2026-09-29.csv)) -- as a
+**current logger** for the power-mode work, not for coulomb counting in the
+firmware.
 
 ## Why this was hard
 
