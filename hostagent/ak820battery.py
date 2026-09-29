@@ -12,8 +12,11 @@ Three log formats exist:
     v2 (36be68f16a)  version 2; one 12-byte entry, one a minute (never flashed)
     v3 (the gauge)   version 3; one 16-byte entry, the PERIOD IN THE REPLY
                      (10 min), every `5C` report in the period aggregated
-v3 firmware says so in HC_CONN byte 31 (BATTERY_PROTO_VERSION); older firmware
-leaves the host's own zero there. ⚠️ Never assume the period: a 10-minute log
+    v4               as v3, but the report count is 16-bit (the reserved
+                     byte is its high byte) and the level is in 0.5 %
+v3+ firmware says so in HC_CONN byte 31 (BATTERY_PROTO_VERSION, 3 or 4), and
+the log reply's first byte says which of v3/v4; older firmware leaves the
+host's own zero there. ⚠️ Never assume the period: a 10-minute log
 read as one-minute entries is ten times too fast, and so is every dV/dt.
 
 Opens the board through ak820health.open_device(), which calls hid_enumerate:
@@ -74,8 +77,8 @@ def flags_str(f, names):
 
 
 def log_format(r):
-    """The log format a HC_CONN reply's firmware writes: 3, 2 or 1."""
-    if r[31] == BATT_PROTO_V3:
+    """The log family a HC_CONN reply's firmware writes: 3 (v3 or v4), 2 or 1."""
+    if r[31] >= BATT_PROTO_V3:
         return 3
     return 2 if u16(r, 26) != 0 else 1
 
@@ -96,7 +99,8 @@ def status(h):
             print("pack         no fresh 5C reports")
         else:
             bound = ">=" if med == 100 else "<=" if med == 0 else "  "
-            print(f"pack         {bound}{pk} mV  (median 5C {med})")
+            what = "median" if r[31] == 3 else "estimate"
+            print(f"pack         {bound}{pk} mV  ({what} 5C {med})")
         print(f"module 5C    last {r[5]}%, {age_s}")
         print(f"vdd          {u16(r, 12)} mV  (raw {u16(r, 14)}, since boot {u16(r, 16)}..{u16(r, 18)} mV)"
               "  -- the rail, not the pack")
@@ -129,8 +133,9 @@ def dump_v3(h):
     retried rather than silently duplicating or dropping a row."""
     for _ in range(3):
         first = xfer(h, HC_BATTLOG, [0, 0])
-        if first[3] != 3:
-            sys.exit(f"unexpected log format {first[3]}")
+        ver = first[3]
+        if ver not in (3, 4):
+            sys.exit(f"unexpected log format {ver}")
         count, since, period, written = u16(first, 4), u32(first, 8), u16(first, 12), u16(first, 14)
         newest = time.time() - since / 1000.0
         rows, torn = [], False
@@ -140,7 +145,9 @@ def dump_v3(h):
                 torn = True
                 break
             e = r[16:32]
-            c5_sum, c5_n, c5_min, c5_max = u16(e, 4), e[6], e[7], e[8]
+            c5_sum, c5_min, c5_max = u16(e, 4), e[7], e[8]
+            c5_n = e[6] | (e[15] << 8 if ver >= 4 else 0)
+            level = "" if e[11] == 0xFF else (f"{e[11] / 2:.1f}" if ver >= 4 else e[11])
             mean = c5_sum / c5_n if c5_n else None
             # Pack mV only when no report in the period sat on a clamp: a mean
             # that includes a clamped 100 or 0 is a mean of bounds.
@@ -150,13 +157,13 @@ def dump_v3(h):
                    "vdd_avg": u16(e, 0), "vdd_min": u16(e, 2),
                    "c5_mean": "" if mean is None else f"{mean:.2f}", "c5_n": c5_n,
                    "c5_min": "" if not c5_n else c5_min, "c5_max": "" if not c5_n else c5_max,
-                   "pack_mv": pack, "level": "" if e[11] == 0xFF else e[11],
+                   "pack_mv": pack, "level": level,
                    "led_pm": u16(e, 12), "bkl": e[14]}
             row.update({name: (e[9] >> i) & 1 for i, name in enumerate(FLAGS_V3)})
             row["flags_any"] = flags_str(e[10], FLAGS_V3)
             rows.append(row)
         if not torn:
-            return rows, count, since, period
+            return rows, count, since, period, ver
     sys.exit("the log kept moving under the dump; try again")
 
 
@@ -164,7 +171,7 @@ def dump_log(h, out):
     fmt = log_format(xfer(h, HC_CONN))
     rows = []
     if fmt == 3:
-        rows, count, since, period = dump_v3(h)
+        rows, count, since, period, fmt = dump_v3(h)
     else:
         first = xfer(h, HC_BATTLOG, [0, 0])
         period = 60

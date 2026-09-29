@@ -51,14 +51,18 @@ uint32_t sn32f2xx_led_load(void) { return scale ? 82u * 3u * 255u / 2u : 0u; }
 void     sn32f2xx_set_power_scale(uint8_t s) { scale = s; }
 
 /* The persisted level, as kb_eeconfig keeps it: whole percent + 1, 0 = unset. */
-static uint8_t saved_p1;
+static uint8_t saved_p1;       /* 0.5 % steps + 1, as kb_eeconfig keeps it */
+static int     saved_writes;   /* flash writes: the real setter writes only on a change */
 bool kb_eeconfig_get_batt_level(uint16_t *pm) {
-    if (saved_p1 == 0 || saved_p1 > 101) return false;
-    *pm = (uint16_t)((saved_p1 - 1u) * 10u);
+    if (saved_p1 == 0 || saved_p1 > 201) return false;
+    *pm = (uint16_t)((saved_p1 - 1u) * 5u);
     return true;
 }
 void kb_eeconfig_set_batt_level(uint16_t pm) {
-    if (pm <= 1000u) saved_p1 = (uint8_t)((pm + 5u) / 10u + 1u);
+    if (pm > 1000u) return;
+    uint8_t p1 = (uint8_t)(pm / 5u + 1u);
+    if (p1 != saved_p1) saved_writes++;
+    saved_p1 = p1;
 }
 
 #define CHECK(cond, ...)                                              \
@@ -80,7 +84,7 @@ static void watch(void) {
     if (p == 0xFF) return;
     if (w_last != 0xFF && p != w_last) {
         if (p > w_last) w_rises++; else w_falls++;
-        if (abs((int)p - (int)w_last) > 5) w_big++;
+        if (abs((int)p - (int)w_last) > 1) w_big++;   /* whole percent: one step at a time */
     }
     w_last = p;
 }
@@ -107,7 +111,7 @@ static void tick(void) {
     if (mv && vdd_dip_mv && (now_ms / 100u) % 10u == 0) mv -= vdd_dip_mv;
     fake_adc.ADB = mv > 0 ? (uint32_t)((2000u * 4096u + (unsigned)mv / 2u) / (unsigned)mv) : 0u;
     if (chrg_pulse) chrg_low = ((now_ms / 100u) % (unsigned)chrg_pulse) < (unsigned)(chrg_pulse / 2 + 1);
-    if (c5 <= 100 && now_ms % 5000u == 0) {
+    if (c5 <= 100 && now_ms % 2500u == 0) {   /* ~2.6 s measured on the board */
         /* Jitter is around the true value, and at the top clamp that value is
          * far above 100: a pack at 4.1 V cannot read 99. Only below it. */
         int v = c5 + ((c5_jitter && c5 < 100) ? jitter() : 0);
@@ -144,7 +148,7 @@ static void boot_battery(void) {
     CHECK(ticks_until(BATTERY_SUPPLY_BATTERY, 20) <= 11, "supply should reach BATTERY within ~1 s");
     CHECK(battery_state() == BATTERY_STATE_BATTERY, "state %s", state_name(battery_state()));
     run_s(20);
-    CHECK(battery_5c_median() == 59, "median %u", battery_5c_median());
+    CHECK(battery_5c_rounded() == 59, "median %u", battery_5c_rounded());
     CHECK(battery_pack_mv() >= 3670 && battery_pack_mv() <= 3685, "pack %u mV, want ~3677", battery_pack_mv());
     CHECK(battery_level_pct() == 10, "59 -> 3.677 V -> ~10%%, got %u (%u pm)", battery_level_pct(),
           battery_level_permille());
@@ -157,7 +161,7 @@ static void boot_battery_clamp(void) {
     CHECK(battery_level_permille() == 950, "no history at the clamp starts at 950, got %u", battery_level_permille());
     CHECK(battery_level_pct() == 95, "shows 95, got %u", battery_level_pct());
     run_s(3600);
-    CHECK(battery_level_pct() == 95 && battery_level_permille() < 950, "counts down but still 95, got %u (%u pm)",
+    CHECK(battery_level_pct() == 93 && battery_level_permille() < 950, "counts down: 93 after an hour, got %u (%u pm)",
           battery_level_pct(), battery_level_permille());
 }
 
@@ -177,6 +181,7 @@ static void boot_usb_full(void) {
 static void discharge(void) {
     become_full();
     CHECK(battery_level_pct() == 100, "starts full, got %u", battery_level_pct());
+    saved_writes = 0;
     vdd_mv = 3900; chrg_low = false; c5_jitter = 1;
     run_s(2);
     watch_reset();
@@ -189,15 +194,17 @@ static void discharge(void) {
             c5 = (uint8_t)(99 - (83u * into) / span);   /* 99 -> 16 */
         }
         if (s == clamp_s - 5) {
-            CHECK(battery_level_pct() == 95, "the clamp reads 95 until the voltage says otherwise, got %u (%u pm)",
-                  battery_level_pct(), battery_level_permille());
+            CHECK(battery_level_permille() == 905, "the countdown reaches its 90.5 floor as the clamp exits, got %u pm",
+                  battery_level_permille());
         }
         run_s(5);
     }
     CHECK(w_rises == 0, "never rises on battery: %d rises", w_rises);
-    CHECK(w_big == 0, "every step is 5%%: %d bigger", w_big);
-    CHECK(w_falls >= 18, "falls in 5%% steps all the way down: %d falls", w_falls);
-    CHECK(battery_level_pct() <= 5, "5C 16 (3.30 V) ends near 0, got %u", battery_level_pct());
+    CHECK(w_big == 0, "every step is 1%%: %d bigger", w_big);
+    CHECK(w_falls >= 95, "falls a percent at a time all the way down: %d falls", w_falls);
+    CHECK(battery_level_pct() <= 1, "5C 16 (3.30 V) ends near 0, got %u", battery_level_pct());
+    CHECK(saved_writes <= 5, "at most 5 saved-level writes on the way down (the flash blink): %d", saved_writes);
+    printf("  %d saved-level writes on the discharge\n", saved_writes);
     printf("  %d display changes over %.1f h, ending at %u%%\n", w_falls, end_s / 3600.0, battery_level_pct());
 }
 
@@ -230,8 +237,9 @@ static void charge_log(const char *path) {
     CHECK(battery_state() == BATTERY_STATE_CHARGING, "still charging at the log's end: %s",
           state_name(battery_state()));
     CHECK(w_falls == 0, "never falls while charging: %d falls", w_falls);
-    CHECK(w_big == 0, "rises one 5%% step at a time: %d bigger", w_big);
-    CHECK(max_pct <= 95, "never claims 100 before the charger stops: reached %u", max_pct);
+    CHECK(w_big == 0, "rises one percent at a time: %d bigger", w_big);
+    CHECK(saved_writes == 0, "nothing saved while charging: %d writes", saved_writes);
+    CHECK(max_pct <= 97, "never claims 100 before the charger stops: reached %u", max_pct);
     printf("  %d minutes replayed, level at the end %u%% (%u pm)\n", rows, battery_level_pct(),
            battery_level_permille());
     /* The log ends at 10:34; the charge went on in CV until CHRG released at
@@ -239,7 +247,7 @@ static void charge_log(const char *path) {
     vdd_mv = 4300; vdd_dip_mv = 0; c5 = 100; chrg_low = true;
     run_s(2 * 3600);
     CHECK(battery_state() == BATTERY_STATE_CHARGING, "still charging: %s", state_name(battery_state()));
-    CHECK(battery_level_pct() == 95, "95 through the rest of CV, never 100 before termination: %u (%u pm)",
+    CHECK(battery_level_pct() == 97, "97 through the rest of CV, never 100 before termination: %u (%u pm)",
           battery_level_pct(), battery_level_permille());
     /* The charger terminates. */
     chrg_low = false; vdd_mv = 4470; vdd_dip_mv = 0; c5 = 100;
@@ -317,11 +325,11 @@ static void protection(void) {
     CHECK(n_alerts == 1 && strcmp(last_alert, "Battery low") == 0, "warned once: %d \"%s\"", n_alerts, last_alert);
     CHECK(scale == 255, "not cut above 3400 mV");
     c5 = 27;   /* 3.397 V: under cut */
-    run_s(70);
+    run_s(200);   /* a 64-report mean follows a step in ~2.7 min; a real pack moves 1-3 mV in that time */
     CHECK(power_lights_cut() && scale == 0, "cut under 3400 mV");
     c5 = 0xFF; /* the module goes quiet */
     run_s(60);
-    CHECK(battery_5c_median() == 0xFF, "stale after 20 s");
+    CHECK(battery_5c_rounded() == 0xFF, "stale after 20 s");
     CHECK(power_lights_cut(), "stale never clears the cut");
     c5 = 27;
     vdd_mv = 4193; chrg_low = true;   /* plugged in */
@@ -336,9 +344,10 @@ static void critical(void) {
     run_s(20);
     CHECK(battery_level_pct() >= 70, "starts high: %u", battery_level_pct());
     c5 = 0;
-    run_s(14);
+    while (now_ms % 2500u != 0) tick();   /* align: the next report is 2.5 s away */
+    run_s(5);
     CHECK(!power_lights_cut(), "two zeroes are not yet critical");
-    run_s(2);
+    run_s(3);
     CHECK(power_lights_cut(), "three fresh zeroes cut at once");
     CHECK(battery_level_pct() == 0, "and the panel says Low at once, not 45 min later: %u", battery_level_pct());
 }
@@ -455,12 +464,13 @@ static void log_cadence(void) {
     battery_log_read(0, out);
     CHECK((out[1] | out[2] << 8) == 1, "one entry at 10 min: %u", out[1] | out[2] << 8);
     CHECK((out[9] | out[10] << 8) == 600, "period 600 s in the reply: %u", out[9] | out[10] << 8);
+    CHECK(out[0] == 4, "log v4: %u", out[0]);
     vdd_mv = 0;
     run_s(20 * 60);
     battery_log_read(2, out);
     CHECK((out[1] | out[2] << 8) == 3, "two more entries through a 20 min ADC outage: %u", out[1] | out[2] << 8);
     CHECK((out[13] | out[14] << 8) == 0, "an outage entry says 0 mV, not a stale mean");
-    CHECK(out[19] >= 100, "and still counts every 5C report: %u", out[19]);   /* entry byte 6, c5_n */
+    CHECK((out[19] | out[28] << 8) >= 200, "and still counts every 5C report: %u", out[19] | out[28] << 8);
 }
 
 /* Plugged in for 20 s mid-discharge: the charge current lifts 5C, but it is not
@@ -489,9 +499,9 @@ static void unplug_mid_charge(void) {
     CHECK(charging < 300, "charging at 5C 80 (3.861 V less 150 mV of I*R) is ~17%%, got %u pm", charging);
     vdd_mv = 3900; chrg_low = false; c5 = 70;
     run_s(3);   /* one report after the change, taken on the pack */
-    CHECK(battery_5c_median() == 0xFF, "no median from one report: the charging ones were forgotten");
+    CHECK(battery_5c_rounded() == 0xFF, "no estimate from one report: the charging ones were forgotten");
     run_s(13);
-    CHECK(battery_5c_median() == 70, "the median is post-unplug reports only: %u", battery_5c_median());
+    CHECK(battery_5c_rounded() == 70, "the estimate is post-unplug reports only: %u", battery_5c_rounded());
     CHECK(battery_level_permille() == 343, "re-seated at the first post-unplug median: %u pm",
           battery_level_permille());
     watch_reset();
@@ -528,7 +538,7 @@ static void ring_restart(void) {
         run_s(1);
         for (int r = 0; r < 7; r++) {
             run_s(5);
-            uint8_t m = battery_5c_median();
+            uint8_t m = battery_5c_rounded();
             CHECK(m == 0xFF || m == 40, "offset %d, report %d after unplugging: median %u mixes in the old supply",
                   k, r + 1, m);
         }
@@ -538,7 +548,7 @@ static void ring_restart(void) {
 /* JD's case, 2026-09-28: full on USB, then a cable -> BT slider flip,
  * which reboots the board. It must come back at 100, not the 95 guess. */
 static void reboot_after_full(void) {
-    saved_p1 = 101;   /* 100%, saved before the reboot */
+    saved_p1 = 201;   /* 100%, saved before the reboot */
     vdd_mv = 3900; c5 = 100;
     run_s(20);
     CHECK(battery_level_pct() == 100, "restored to 100 at the clamp, got %u", battery_level_pct());
@@ -546,7 +556,7 @@ static void reboot_after_full(void) {
 
 /* A saved level that does not fit the clamp (a pack swapped, say) is ignored. */
 static void reboot_saved_mismatch(void) {
-    saved_p1 = 41;    /* 40% */
+    saved_p1 = 81;    /* 40% */
     vdd_mv = 3900; c5 = 100;
     run_s(20);
     CHECK(battery_level_permille() == 950, "a saved 40%% at the clamp is not believed: %u pm", battery_level_permille());
@@ -554,7 +564,7 @@ static void reboot_saved_mismatch(void) {
 
 /* Below the clamp the voltage is the authority: a saved level is not restored. */
 static void reboot_below_clamp(void) {
-    saved_p1 = 81;    /* 80% */
+    saved_p1 = 161;   /* 80% */
     vdd_mv = 3900; c5 = 59;
     run_s(20);
     CHECK(battery_level_pct() == 10, "the curve, not the saved 80%%: %u", battery_level_pct());
@@ -563,10 +573,10 @@ static void reboot_below_clamp(void) {
 /* What is saved follows the level. */
 static void persist_tracks(void) {
     become_full();
-    CHECK(saved_p1 == 101, "full is saved as 100%%: p1 %u", saved_p1);
+    CHECK(saved_p1 == 201, "full is saved as 100%%: p1 %u", saved_p1);
     vdd_mv = 3900; chrg_low = false;
-    run_s(3 * 3600);
-    CHECK(saved_p1 >= 94 && saved_p1 <= 96, "three hours of countdown saved (~94%%): p1 %u", saved_p1);
+    run_s(3 * 3600);   /* the countdown: ~94.3% */
+    CHECK(saved_p1 == 186, "saved as 92.5%% (rounded down to the step): p1 %u", saved_p1);
 }
 
 static void stale(void) {
@@ -575,11 +585,11 @@ static void stale(void) {
     uint8_t before = battery_level_pct();
     c5 = 0xFF;
     run_s(25);
-    CHECK(battery_5c_median() == 0xFF, "stale after 20 s");
+    CHECK(battery_5c_rounded() == 0xFF, "stale after 20 s");
     CHECK(battery_level_pct() == before, "level holds while stale: %u -> %u", before, battery_level_pct());
     c5 = 60;
     run_s(20);
-    CHECK(battery_5c_median() == 60, "recovers: median %u", battery_5c_median());
+    CHECK(battery_5c_rounded() == 60, "recovers: median %u", battery_5c_rounded());
 }
 
 int main(int argc, char **argv) {
