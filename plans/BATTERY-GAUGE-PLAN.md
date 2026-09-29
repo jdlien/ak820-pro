@@ -461,6 +461,25 @@ architectural; some may be the screen, which is fixable.
 
 ---
 
+## ⭐ The principle: take the drain out of idle, not the fun out of use (JD, 2026-09-29)
+
+JD: a mode that keeps the lights and screen off and deep-sleeps after 15 min
+would last months -- "but then it'd just be annoying and a not-so-fun
+keyboard", which defeats the point of this one. Don't build that.
+
+The arithmetic says it isn't needed. Left on all day, the board is idle two
+thirds of the time and draws the same ~60 mA idle as typing:
+
+| day, left on 24 h | today | full lights while typing, asleep when idle |
+|---|---|---|
+| 8 h use at full white (~60 mA) | 480 mAh | 480 mAh |
+| 16 h idle | 960 mAh | ~16 mAh (~1 mA) |
+| **per day** | **~1,440 mAh → ~2.8 days** | **~500 mAh → ~8 days** |
+
+So the idle ladder and standby are the big lever, and they cost the typing
+experience nothing. Dimmer lights during use are then a user's choice that
+scales it further, never a mode's imposition.
+
 ## Standby: how close to zero without touching the slider (JD, 2026-09-29)
 
 JD's question: after ~2 h idle, can the board draw practically nothing until
