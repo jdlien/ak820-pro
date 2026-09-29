@@ -27,7 +27,13 @@ per finding.
 - **Reviewed twice by codex** (plan, then implementation: flash after eight
   fixes, all applied). `scripts/battery_sim/run.sh`: 23 scenarios, 15 mutants
   caught.
-- ✅ **Running since ~15:41: `487cb8e9f0`** (`via-daily-487cb8e9f0-20260928-153833.bin`)
+- ✅ **Running since 2026-09-29 ~13:58: `deef6053dd`**
+  (`via-daily-deef6053dd-20260929-135459.bin`) -- the level from a trimmed mean
+  of 64 `5C` reports, the panel in tenths (`BATTERY_SHOW_TENTHS`, for the
+  calibration), ~6 saved-level flash writes a cycle (every write blinks the
+  LEDs ~7 ms), log v4. Flashed mid-way through the 09-28 drain test after a
+  dump; the run continues. Queued fixes: plans/BATTERY-GAUGE-PLAN.md, "Queued".
+- (Previously `487cb8e9f0`, from ~15:41 on 09-28: (`via-daily-487cb8e9f0-20260928-153833.bin`)
   -- `27bf8a4f06` plus "Charge" for "Chrg". ✅ **The charger does terminate
   with the board running in BT on USB:** a top-up of a full pack held CHRG
   low ~11 min (VDD 4484-4489 mV), then released at 15:43 with VDD 4530 mV;
