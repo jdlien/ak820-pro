@@ -376,6 +376,14 @@ table above is about cost only.
 ⭐ **Normal is the ladder that already exists**, plus deep sleep when its wake
 path lands. Power Saver is the same shape, roughly 3× tighter.
 
+**What "RGB → 25%" and "screen dim" mean** (as `3b85686ff7` implements them):
+the RGB stage is **relative** -- the driver scales whatever the effect draws by
+64/255 (`sn32f2xx_set_power_scale`), so 100% becomes 25% and 40% becomes 10%.
+The screen stage is an **absolute ceiling**, backlight level 4 of 23
+(`display_set_backlight_cap`), which does nothing to a screen already at 4 or
+below. Both are caps, never writes to the user's settings, so a keypress
+restores them exactly.
+
 ⚠️ **Normal never touches the radio.** It appears only in Power Saver, because
 choosing Power Saver is the consent to reconnect latency.
 
