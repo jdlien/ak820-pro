@@ -197,7 +197,7 @@ keymap backup fails, and only warns if the lighting backup does. Bootloader is
 `Fn`+`Esc`. **A flash erases the emulated EEPROM**: VIA keymap and RGB
 effect/colour (both restored by flash.sh), BT slot, LCD brightness, persisted
 RTC period (re-converges in ~4 min with the host attached — designed, not a
-fault). The default keymap is the owner's VIA layout, regenerated with
+fault). The default keymap is JD's VIA layout, regenerated with
 `scripts/keymap_to_c.py`, never hand-edited.
 
 ⚠️ **The RGB restore is new as of 2026-09-06** —
@@ -205,7 +205,7 @@ fault). The default keymap is the owner's VIA layout, regenerated with
 `~/Documents/ak820pro-lighting.json`, over VIA's own lighting channel
 `[0x08, 3, 1..4]`. Before it, every flash silently reverted the LEDs to
 `keyboard.json`'s `rgb_matrix.default` — unnoticed through all nine flashes of
-2026-09-03. Keeping that default near the owner's setup is still worth doing as
+2026-09-03. Keeping that default near JD's setup is still worth doing as
 a backstop, because `--no-backup` and a missing backup file both fall back to
 it. On Windows `ak820 lighting` reads the same values without enumerating HID.
 

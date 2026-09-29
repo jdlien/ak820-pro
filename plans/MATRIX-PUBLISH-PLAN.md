@@ -99,7 +99,7 @@ debounce, never becomes a key event, and is invisible to `key_presses` (which
 lives in `process_record_kb`, after debounce) and to every loop-stall counter.
 This is a keystroke-loss mechanism that requires **no stall at all**.
 
-It matches the owner's long-standing symptom: intermittent, not key-specific,
+It matches JD's long-standing symptom: intermittent, not key-specific,
 not reproducible on command, clean in slow single-key tests (a deliberate 60–80
 ms press spans a sample), worse in fast typing, indistinguishable from mistyping.
 
@@ -177,7 +177,7 @@ are not comparable — `docs/hardware.md` records why):
 
 ## Risks
 
-- **This is the input path on a daily-driver keyboard.** A bug means the owner
+- **This is the input path on a daily-driver keyboard.** A bug means JD
   cannot type to fix it. Escape hatch: stock firmware image (see `README.md`,
   SHA256 recorded) and `flash.sh`, which backs up and restores the VIA keymap.
 - ~~Higher effective sample rate could surface switch chatter the slow sampling
@@ -330,7 +330,7 @@ this body: the PWM clock is not the lever, the ISR body is.
 
 Derived side result: the publish fix raised the scan rate from ~344/s to
 ~1,292/s and therefore lengthened the mean ISR — the field rate went from ~235 Hz
-to 215 Hz, an ~8% drop. No before-measurement exists; the owner reports no
+to 215 Hz, an ~8% drop. No before-measurement exists; JD reports no
 flicker. Full write-up: `docs/hardware.md`.
 
 In the same commit: the row-gap timer uses `chTimeDiffX()` in ticks (16-bit

@@ -281,7 +281,7 @@ next sync actually happened. That is the positive evidence this document
 asks for. What the log cannot give, the test states: `ref_state` is assumed
 2 where learning fired, and `elapsed` is replayed at printed precision.
 
-**3b, the measured takeover, is open** and is the owner's: `ak820 install
+**3b, the measured takeover, is open** and is JD's: `ak820 install
 --clock`, the procedure and limits in the plan's "Phase 3a evidence".
 
 Two divergences from the Python, both already recorded for the C side: the

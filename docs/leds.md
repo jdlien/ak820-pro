@@ -54,7 +54,7 @@ its own ~188 µs body sets the period. See "CPU budget" below and
 `docs/hardware.md`. **Derived baseline, never measurable again:** before the
 2026-09-03 matrix publish fix the ISR scanned a row ~344 times/s instead of
 ~1,292, which solves (160 µs body, ~84 µs scan, ~70 µs overhead) to ~4,220
-ISR/s → **~235 Hz**. The fix cost ~8% of field rate; the owner reports no
+ISR/s → **~235 Hz**. The fix cost ~8% of field rate; JD reports no
 flicker.
 
 ```

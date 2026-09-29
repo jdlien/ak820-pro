@@ -2,7 +2,7 @@
 
 ## ⚠️ Concurrent raw-HID use breaks VIA, and has been all along (2026-09-05)
 
-**Symptom the owner sees:** VIA's console fills with `Receiving incorrect
+**Symptom JD sees:** VIA's console fills with `Receiving incorrect
 response for command`, and lighting or keymap changes appear not to take.
 
 **Cause.** Windows delivers HID input reports to every open handle, so any
@@ -80,7 +80,7 @@ IOENB mask per row would plausibly halve the body; the row scan could drive the
 row pin without a mode change. Every 10 µs off the body is ~+4% ISR rate, i.e.
 +4% field rate AND +4% per-row sampling AND a proportionally faster main loop.
 Not for now: it is a rewrite of a shared core driver on the input path of a
-daily driver, and the owner's constraint is "any flickering is a non-option".
+daily driver, and JD's constraint is "any flickering is a non-option".
 Measure with `--isr` before and after; the observer effect of the hooks is nil.
 
 ## Clock: the sync interval and the firmware's frequency window must agree, and nothing checks it (2026-09-04)
@@ -303,11 +303,11 @@ page `0x13ed000`. Decoding the corrupted stream with the kernel's exact
 semantics reproduces both the bugcheck and the scribbled target page with zero
 bytes of mismatch, and flipping those three bits back matches the on-disk
 `.reloc` block exactly. The other 1,106 page streams in the block are intact.
-Recommendation to the owner was MemTest86 and the ASUS 2402 BIOS.
+Recommendation to JD was MemTest86 and the ASUS 2402 BIOS.
 
 ### ✅ CLEARED 2026-09-06 — the machine is stable, and flashing is allowed again
 
-The owner applied the **ASUS 2402 BIOS** plus tuning tweaks, then ran a **clean
+JD applied the **ASUS 2402 BIOS** plus tuning tweaks, then ran a **clean
 MemTest86 pass** and about **five hours of y-cruncher** without error. That is
 the clearance this item was waiting for: a memory test is the only thing that
 speaks to three bit flips in one cache line, and a five-hour stress run covers
@@ -495,9 +495,9 @@ What this does **not** confirm:
   window whether the agent ran or not; any effect is below the resolution.
   Music.app's cost of answering Apple events was likewise invisible.
 
-The owner's complaint that the Mac "seems to suffer a lot of overhead" from
+JD's complaint that the Mac "seems to suffer a lot of overhead" from
 this agent is therefore **confirmed on CPU**. Cost stays a supporting argument
-in the plan's terms, but it is now the owner's stated priority for the port.
+in the plan's terms, but it is now JD's stated priority for the port.
 
 ## Whole-second clock slips: four, on both boards, both OSes, both host implementations (found 2026-09-16)
 
@@ -578,7 +578,7 @@ across a 13-hour overnight on this board.
 the daemon's idle readout — tens of thousands of times, much of it while the
 bash now-playing agent was pushing state 1 for music that was playing. Each flip
 hands the band between the clock and the playback readout, which is an LCD
-redraw, and the slowest stall is marked `blit`. The owner was typing throughout.
+redraw, and the slowest stall is marked `blit`. JD was typing throughout.
 The soaks were stopped the moment the counter was seen.
 
 **Read again (2026-09-16):** `count_ge_25ms_nonflash` was **14** at 20:01:50,
@@ -595,6 +595,6 @@ keystroke-loss section applies.
 
 ⚠️ **Rule for every future transport soak:** use a command that touches only RAM
 on the board — health page 1 (`HC_GET`) — never one that can move the LCD, and
-never while the owner is typing or a now-playing agent is live. The
+never while JD is typing or a now-playing agent is live. The
 `TEXT_PLAYBACK` choice was made to be "production traffic, faster"; faster is
 exactly what production traffic is not.

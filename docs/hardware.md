@@ -614,7 +614,7 @@ Consequences:
 - **The publish fix lowered the field rate by about 8%.** The row scan used to
   run ~344 times/s (once per consume), now ~1,292. Solving the same arithmetic
   for the old scan rate gives ~4,220 ISR/s → ~235 Hz before vs 215 Hz after.
-  Above flicker fusion either way and the owner reports none — but there was
+  Above flicker fusion either way and JD reports none — but there was
   no before-measurement, so this is derived, not measured.
 - **The main loop's ~335/s is what 27% of a 48 MHz M0 buys.** Main-loop cost
   still trades 1:1 against `scan_rate`; the ceiling is the ISR.

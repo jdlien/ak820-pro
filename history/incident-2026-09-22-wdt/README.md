@@ -21,7 +21,7 @@ Times below are local (America/Edmonton).
   zero LCD blit timeouts, zero >=25 ms stalls, worst loop gap 16 ms,
   worst row sampling gap 10 ms, and 10 wireless TX timeouts.
 
-## The owner's account
+## JD's account
 
 Given at 21:30 the same day: typing normally, no media playing, on a FaceTime
 call with screen sharing, not using Fn features beyond the ordinary layer-1

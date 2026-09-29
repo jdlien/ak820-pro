@@ -563,7 +563,7 @@ fn install(flags: &[&str]) -> Result<(), String> {
     // daemon's file stays there until the new one writes — after its first
     // pass, which with --clock includes a sync a few seconds in. So wait for
     // a `started` stamp that is not the old one; what prints below is then
-    // this daemon's, not its predecessor's (the owner's first `--clock` run
+    // this daemon's, not its predecessor's (JD's first `--clock` run
     // printed the old daemon's file, "clock python timekeeper" and all).
     let status_path = dir.join("ak820-agent.status");
     let previous = started_stamp(&status_path);

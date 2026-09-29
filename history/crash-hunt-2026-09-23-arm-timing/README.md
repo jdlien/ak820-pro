@@ -5,7 +5,7 @@ v7, the lost-write fix and the arm-window timing
 (`via-instrumented-a5a06614be-dirty-20260923-125750.bin`, token `0x0a8a1d5b`;
 its source is firmware `02db293696`). `scripts/consolelog.sh` captured the
 console. Same stress as the [first](../crash-hunt-2026-09-22/) and
-[second](../crash-hunt-2026-09-23-v7/) hunts. The owner was on another
+[second](../crash-hunt-2026-09-23-v7/) hunts. JD was on another
 keyboard. Plan: [`plans/CRASH-HUNT-PLAN.md`](../../plans/CRASH-HUNT-PLAN.md).
 
 ## Result

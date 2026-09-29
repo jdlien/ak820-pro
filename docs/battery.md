@@ -131,7 +131,7 @@ Every obvious source turned out to be wrong or absent:
   comparator or op-amp base addresses.
 
   > ⭐ **2026-09-26: `5C` moved. It is not pinned at 100.** Near the end of the
-  > 09-25 discharge the owner read **~85%** on the `Fn`+`D` debug page, row 8,
+  > 09-25 discharge JD read **~85%** on the `Fn`+`D` debug page, row 8,
   > which renders `ch582_get_battery()` directly (`display.c:878`). The pack was
   > at ~3.99–4.00 V. It **snapped to 100 the instant USB was connected**, and a
   > post-reset `HC_CONN` read on USB gave 100 with a minimum of 99 since boot.
@@ -167,7 +167,7 @@ Every obvious source turned out to be wrong or absent:
   > post-charge memory.** 97 at 4.00 V is exactly what the linear fit predicts
   > (96.7), and the fall to 78 is 157 mV of fit against the meter's 160 mV
   > (4.00 → 3.84 V): `5C` tracked the pack the whole time, and the pack fell.
-  > The owner's observations reconcile on one mechanism — **`5C` reads terminal
+  > JD's observations reconcile on one mechanism — **`5C` reads terminal
   > voltage**: plugged in from a mostly charged pack it snaps to 100 because the
   > charger's CV voltage sits above the 4.04 V clamp; plugged in flat it climbs
   > slowly (4 → 100 over 3 h 55 min on 09-28), because charge current raises the
@@ -459,7 +459,7 @@ to be inferred". The 09-28 log shows **`done` never asserted across 7.5 hours**,
 which confirms it.
 
 ⚠️ **Correction, same day: `CHRG` does work.** An earlier version of this
-section said both pins were useless. The owner watched the charge LED go out at
+section said both pins were useless. JD watched the charge LED go out at
 roughly **09½ hours** into the charge, with the pack at **4.18 V** — so CHRG
 does eventually signal termination. Our log ran out two hours short of it, and
 "never cleared across 7.5 hours" was a statement about the log's length, not the
@@ -517,7 +517,7 @@ fault. B17 is probably not DONE, or DONE is not connected. The usable "full"
 signal is **CHRG going high while USB is in, after it had been low**.
 
 The stock firmware lit the charging LED in the cable position, so the pack
-does charge there too (owner, 2026-09-25). Our firmware leaves that LED off
+does charge there too (JD, 2026-09-25). Our firmware leaves that LED off
 because it is far too bright; the bolt on the battery row reads the same pin.
 
 ## Measurements, 2026-09-24/25

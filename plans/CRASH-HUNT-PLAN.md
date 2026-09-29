@@ -31,7 +31,7 @@ The first hunt, on the v6 daily firmware, hung at 21:18:52; the watchdog reset
 it 12 s later and the retained record read **`lcd_transfer within text`**
 (last pass uptime 26,197,368 ms). Settings verified intact afterwards. Blit
 timeouts had NOT moved (11 all run) and there were no stalls: the loop stopped
-while ARMING a transfer, not waiting for one. The owner was typing.
+while ARMING a transfer, not waiting for one. JD was typing.
 
 **Mechanism (from the code; the fix build tests it):** the glyph pump arms a
 DMA and returns, and on the LAST glyph resets its queue, so `gq_pending()`
@@ -49,8 +49,8 @@ which waits out a transfer still in flight through the bounded, recovering
 guarded only `lcd_blit_flash()`; codex's second pass found the same hole in
 the CPU draws (`lcd_fill_rect` -- the Caps padlock, battery fill, icons -- and
 `lcd_blit_ram`, the panel command sequences) and in every external-flash
-transaction (SPI1's vector is off during a DMA). Those CPU draws give the
-owner's 13:13 crash (typing, light load) a plausible path: a lock-indicator or
+transaction (SPI1's vector is off during a DMA). Those CPU draws give
+JD's 13:13 crash (typing, light load) a plausible path: a lock-indicator or
 battery repaint landing while the clock's last glyph is in flight. Plausible,
 not shown -- that crash left no record. Each count is an overlap that could have
 hung, not necessarily one that would have; a hunt night with counts and no
@@ -197,7 +197,7 @@ is unknown: the daemon never recorded it. The last health sample before it
 | `tx_timeouts` (wireless) | 109,030 | 2,242 |
 | worst main-loop gap | 36 ms (blit) | 21 ms (blit) |
 
-**The owner's account (added 21:30):** typing normally; no media playing (the
+**JD's account (added 21:30):** typing normally; no media playing (the
 agent showed a paused track, so LCD traffic was a keep-alive push every 30 s at
 most and the clock); a FaceTime call with screen sharing; no Fn features beyond
 ordinary layer-1 keys. The agent's log puts the stop at ~13:13:50 (unresponsive

@@ -16,7 +16,7 @@ lcd_transfer within text; last pass uptime 26197368 ms; reset flags 0x03; consec
 ```
 
 The main loop stopped inside `lcd_blit_flash()` (site `lcd_transfer`), called
-from the text band's draw (`text`), after 7.3 h of uptime. The owner was
+from the text band's draw (`text`), after 7.3 h of uptime. JD was
 typing (about 380 key presses in the 90 s before the last reading). Blit timeouts did not
 move all run (11 before, 11 at the last reading before the hang) and there
 were no stalls of 25 ms or more: the loop stopped while **arming** a transfer,

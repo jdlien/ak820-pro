@@ -42,7 +42,7 @@ No `board:` transition in the log for the whole window.
 ## What this does not say
 
 - **One machine, one workload.** Elysium, Apple silicon, macOS 27.0, mostly
-  idle media with the owner present. It does not cover sleep/wake cycles, a
+  idle media with JD present. It does not cover sleep/wake cycles, a
   board that goes absent and returns, or a machine that is busy for days.
 - **48 h, not weeks.** A leak slower than ~0.2 KB/h would hide inside the 16 KB
   page quantisation over this window.

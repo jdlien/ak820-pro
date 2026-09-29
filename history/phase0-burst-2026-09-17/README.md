@@ -13,7 +13,7 @@ written. Each window's worst sync exceeded the 09-09 → 09-15 baseline's 27.6 m
 environment had moved, though. The **pre-refactor** binary had already done
 worse over the three hours before the reinstall (worst 36.6 ms, 3 of 36 syncs
 over 27.6), after a new NVIDIA driver was installed and Windows Sandbox was
-removed on 09-16. So the owner replaced the planned night of `d8ead97` with an
+removed on 09-16. So JD replaced the planned night of `d8ead97` with an
 interleaved burst of the only path the refactor touches: the HID transport and
 the host time reads around one exchange. The scheduler, learner, cache and
 transaction are byte-identical between the two builds.

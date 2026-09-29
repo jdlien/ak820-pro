@@ -289,7 +289,7 @@ watchdog. Full mechanism and fix in `CRASH-HUNT-PLAN.md` ("First result").
 A second codex pass found the same hole in the CPU draws (Caps padlock,
 battery fill, icons) and in every external-flash transaction, so the fix is
 now `bus_quiesce()` at the start of every CPU transaction on either bus. That
-also gives the owner's 13:13 crash (typing, light load) a plausible path. A
+also gives JD's 13:13 crash (typing, light load) a plausible path. A
 narrow third codex pass verified the guard covers every runtime transaction
 ([review](review-codex-crash-hunt-impl3-2026-09-22.md)). Committed as
 firmware `1b7f781887`; flashed 22:59 (see above).
@@ -333,8 +333,8 @@ file:line.
    `0x2d80c2ff`) and `via-daily-6b60458dd0-20260924-001152.bin` (token
    `0x70bfdc04`).
 
-   **The board's daily has no remote bootloader jump, so it needs the
-   owner's Fn+Esc once.** Then, on the instrumented build:
+   **The board's daily has no remote bootloader jump, so it needs
+   JD's Fn+Esc once.** Then, on the instrumented build:
    - `HC_BLITFAULT 1`: expect an IRQ-lost timeout and a successful repaint;
    - `HC_BLITFAULT 2`: expect `[display] a blit was given up`, then a
      dashboard repaint;
@@ -342,7 +342,7 @@ file:line.
      and UART overrun, framing and parity counts in Bluetooth mode;
    - an hour of hunting;
    - then the daily, and push.
-3. **The owner's wireless test** can use either build: the CH582F path is
+3. **JD's wireless test** can use either build: the CH582F path is
    identical in both. It is the first real test of the serial fix and the
    pump order.
 4. **Still open:**

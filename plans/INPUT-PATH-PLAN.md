@@ -57,7 +57,7 @@ still filtered), release deferred per key (release chatter still filtered), and
 per-key rather than global (no batched commit, so ordering improves).
 
 **Known trade:** eager-on-press trusts the first edge, so a worn switch changes
-failure mode from a silent DROP to a visible DOUBLE. Given this owner has
+failure mode from a silent DROP to a visible DOUBLE. Given JD has
 replaced corroded switches before, that is a deliberate accepted risk — a
 double is at least actionable.
 

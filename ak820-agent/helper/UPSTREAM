@@ -1,4 +1,4 @@
-# The MediaRemote helper, vendored (decided by the owner 2026-09-16: a pinned
+# The MediaRemote helper, vendored (decided by JD 2026-09-16: a pinned
 # copy here, not a shared source). scripts/check-helper-upstream.sh compares
 # this pin with the plugin repo.
 repo      ~/code/streamdeck-now-playing (github.com/jdlien/streamdeck-now-playing)

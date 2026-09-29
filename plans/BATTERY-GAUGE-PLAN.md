@@ -40,7 +40,7 @@ below beats that trivially; the bar is the *honest* version, not the working one
 
 The first draft said the fit was "validated 3.16 → 4.17 V on charge *and*
 discharge". **It was not.** No one measured 3.16 V: the session that fitted it
-wrote "the meter says the pack is at 3.16 V" at 03:03 on 09-28, and the owner
+wrote "the meter says the pack is at 3.16 V" at 03:03 on 09-28, and JD
 never said so — **3.161 V is the fit's own zero point, repeated back as a
 reading.** The 4.17 V point is a `5C` of 100, which is the clamp and constrains
 nothing. The five real points were read out in conversation and recovered from
@@ -197,7 +197,7 @@ after the calibration run.
 | charger released, `5C` 100 | — | **100** |
 | no fresh `5C` yet | blank, bar down | "Chrg" |
 
-⭐ **The countdown** — the owner's "convincing fudge" for the top clamp, where
+⭐ **The countdown** — JD's "convincing fudge" for the top clamp, where
 the voltage says only "≥ 4.036 V": after a full charge, start at **100** and
 count down with time while `5C` sits at 100, **floored at 92.5** — the lowest
 value the panel still shows as 95 — so it never claims the clamp's exit (90)
@@ -225,7 +225,7 @@ wide.
   byte 5, whole percent, written through the coalesced path) if that lies in
   the clamp's 90-100 band. Added after the first flash: every cable ↔ BT
   slider flip is a reboot, and a freshly full pack came back as the 95 guess —
-  "kinda makes you feel like you never got a full charge" (owner).
+  "kinda makes you feel like you never got a full charge" (JD).
 
 ⚠️ **Charging needs its own correction** (found replaying the 09-28 log in the
 simulator, below). `5C` reads the *terminal* voltage, which the charge current
@@ -468,7 +468,7 @@ architectural; some may be the screen, which is fixable.
 2. ✅ **1.4-1.6**: the level, the display, log v3 with the host tool, and the
    simulator (gate 8)
 3. Flash, then bench-check every row of 1.1's table and the protection with
-   the owner (gates 1-7)
+   JD (gates 1-7)
 4. **2.6's measurement** — a meter in series, when the extension cables arrive
 5. The **calibration run**, once the pack tap logs; swap the constants and the
    table
@@ -483,7 +483,7 @@ log):**
 - ⚠️ **Save the level only in the top band.** Every internal-flash write blanks
   the LEDs for its window (`docs/leds.md`, "a brief DARK flash"), and the saved
   level writes on every whole-percent change: ~100 per discharge, one every ~32
-  min in the countdown. The owner sees an occasional flicker. The restore only
+  min in the countdown. JD sees an occasional flicker. The restore only
   ever uses a saved value in 90-100%, so save only there, plus one marker write
   on leaving the band (so a stale 9x is not restored after a pack swap): ~15
   writes a cycle. First confirm the flicker times line up.
@@ -516,9 +516,9 @@ Codex (gpt-6-astra, xhigh), 2026-09-28, against the first draft at `5eebd43`.
 | 2 | Supply predicate needs a state machine and separate presence | **Accepted.** 1.1, codex's 4100/4000 band and dwells, backed by the log's 4119 mV worst raw sample on USB; the presence bug fixed |
 | 3 | `5C` age wraps; median of 30 is 2.5 min | **Accepted, verified in the code.** 1.3 |
 | 4 | The 114.2 fit has no committed provenance | **Accepted, and resolved differently than expected**: the five points were recovered from the session transcript into `readings.csv`; the refit reproduces 114.22 / −361.04 exactly. The "3.16 V on charge" validation was **never measured** and is withdrawn |
-| 5 | Post-charge "memory" unproven; hold-off needs redesign | **Accepted in diagnosis, modified in remedy.** The owner confirms `5C` snaps to 100 only from a mostly-charged pack — the CV voltage above the clamp — and climbs from a flat one: terminal voltage both times. No "--" hold-off: relaxation runs downward, and the ratchet follows it (1.4). Relaxation is characterized in the calibration run |
+| 5 | Post-charge "memory" unproven; hold-off needs redesign | **Accepted in diagnosis, modified in remedy.** JD confirms `5C` snaps to 100 only from a mostly-charged pack — the CV voltage above the clamp — and climbs from a flat one: terminal voltage both times. No "--" hold-off: relaxation runs downward, and the ratchet follows it (1.4). Relaxation is characterized in the calibration run |
 | 6 | Charge-complete from VDD mislabels cable-mode charging | **Accepted.** 1.7; "full" needs CHRG released **and** `5C` at 100 |
-| 7 | "Full" at the clamp misleads; the ratchet can lock in an error | **Modified.** The owner rejected "High": the clamp gets the countdown (1.4). The ratchet steps down only on sustained evidence. No ±5% claim |
+| 7 | "Full" at the clamp misleads; the ratchet can lock in an error | **Modified.** JD rejected "High": the clamp gets the countdown (1.4). The ratchet steps down only on sustained evidence. No ±5% claim |
 | 8 | A log period change silently corrupts the host's timestamps | **Accepted, verified** (`* 60` in `ak820battery.py`). 1.6: version and period in the reply, host and firmware in one change, wrap detection |
 | 9 | 60 h is shorter than the run; last-value logging discards the signal | **Accepted.** 120 h at 10 min, `5C` as sum/count/min/max, effective load logged |
 | 10 | The first flash is not specified; the cut changes the calibration load | **Accepted.** 1.0 compiles the ladder out and deletes the estimator; the calibration run decides the cut before it starts |

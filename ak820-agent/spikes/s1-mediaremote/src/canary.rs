@@ -14,7 +14,7 @@
 //!   **reversible**: the moment MediaRemote names a bundle again, it is primary
 //!   again.
 //!
-//! ⚠️ One known false positive to verify with the owner before trusting the
+//! ⚠️ One known false positive to verify with JD before trusting the
 //! switch: **Spotify Connect**. Spotify can say `playing` while the audio plays
 //! on another device, and MediaRemote then rightly reports nothing here. The
 //! log line says so rather than asserting a refusal.

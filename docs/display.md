@@ -132,7 +132,7 @@ Two consequences worth internalising:
 
 - **A page of small text is catastrophic synchronously.** 9 rows × 21 columns is
   189 glyphs ≈ **300 ms**, for 32 KB of pixels. The first Fn+D debug page did
-  exactly this and made the keyboard untypeable — the owner's bug report was
+  exactly this and made the keyboard untypeable — JD's bug report was
   literally mistyped. Anything drawing in bulk goes through the queue.
 - **A big clear is data-bound, and `lcd_clear_rect()` ends in
   `lcd_blit_wait()`.** A full-screen clear parks the main loop for the whole

@@ -78,7 +78,7 @@ rather than confirming them:
 and `ak820 clock [--raw]`. Three captured replies render byte-identically
 through the pinned C and the port; see
 [Phase 2 evidence](#phase-2-evidence-2026-09-06). The audit took two runs (the
-first hit the owner's Codex usage limit) and found a P1 in the CLI's clock
+first hit JD's Codex usage limit) and found a P1 in the CLI's clock
 read, three P2s and three P3s — all acted on, one declined with its reason —
 see [Phase 2 audit disposition](#phase-2-audit--disposition-2026-09-06).
 
@@ -101,7 +101,7 @@ The daemon takes over now-playing now; the clock follows phase 3's gates.
 
 Every phase gate is met and v0.1.1 is published. The daemon owns now-playing
 **and** the clock on this machine and the Python timekeeper is gone. Nothing
-below blocks anything; all five are the owner's to run, and the first two are
+below blocks anything; all five are JD's to run, and the first two are
 the only ones where the answer could still be "something is wrong".
 
 **None of these needs a flash, and none of them writes the board.**
@@ -130,7 +130,7 @@ the only ones where the answer could still be "something is wrong".
    from the oracle with no explanation. Benign: neither learner reads
    `after`. Full entry, and the cheap experiment that would settle it, in
    [BACKLOG.md](BACKLOG.md). Needs the daemon stopped for a minute, so it is
-   the owner's call when.
+   JD's call when.
 
 3. **Suspend/resume and battery** — phase 4's last unexercised paths. Sleep
    the machine, wake it, and look for a `sync (wake)` line (the Python's
@@ -145,8 +145,8 @@ the only ones where the answer could still be "something is wrong".
    first, then `powershell -File hostagent\install-agents-windows.ps1`.
 
 5. **Two decisions, not checks.**
-   - `qmk_firmware-ak820pro` carries an **uncommitted `keymap.c`** — the
-     owner's VIA layout regenerated 2026-09-05 (Alt/GUI swapped on the Mac
+   - `qmk_firmware-ak820pro` carries an **uncommitted `keymap.c`** —
+     JD's VIA layout regenerated 2026-09-05 (Alt/GUI swapped on the Mac
      base, the Mac Fn row cleared). It was stashed and restored around both
      firmware uploads. Committing it moves `deps.lock`'s pin and the next
      release picks it up. It only affects a first flash: VIA's stored keymap
@@ -256,7 +256,7 @@ is the one artifact that only changes with a tag.
 
 ### Phase 3b evidence (2026-09-06, live on this machine)
 
-`ak820 install --clock` at 14:40:29, run by the owner from an ordinary
+`ak820 install --clock` at 14:40:29, run by JD from an ordinary
 PowerShell, not elevated. It stopped the Python timekeeper's task, waited for
 its `ak820ctl` child, removed the task, and started the daemon with `--clock`.
 The daemon's first sync landed three seconds later — an enumerated one — and
@@ -357,7 +357,7 @@ three seconds, `board present`, the paused track on the panel
 wire), `foreign_reports 0`, and the Python timekeeper syncing on its usual
 five-minute cadence with the daemon live beside it.
 
-**Still to be observed by the owner** (the 4a gate's remaining items): a
+**Still to be observed by JD** (the 4a gate's remaining items): a
 track change, a pause and resume, going idle, and an unplug and replug,
 each visible on the panel and in `ak820 status`. The rest of the gate — the
 scheduler's restart on failure, logon start, battery — is the same task
@@ -400,14 +400,14 @@ each transaction and status read on its own short handle (a fresh handle
 per transaction is also why a lost reply cannot straggle into the next one —
 the queue belongs to the file object), the sync line logged exactly as the
 Python logs it, the learner's cache write, the seed. `ak820 install --clock`
-is the owner's opt-in: it removes the Python timekeeper's task, registers
+is JD's opt-in: it removes the Python timekeeper's task, registers
 the daemon with the flag, and says in so many words that this is ahead of
 the gate. `ak820 clock` refuses while a `--clock` daemon runs, for the same
 reason it refuses beside the Python one; `ak820 uninstall` says when it has
 just removed the clock's only owner; `ak820 install` without `--clock` warns
 when nothing would own the clock.
 
-**Phase 3b, the measured takeover, was the owner's to run** — a live clock transaction beside
+**Phase 3b, the measured takeover, was JD's to run** — a live clock transaction beside
 the running Python timekeeper would have corrupted both learners — and was run at 14:40
 (the [evidence](#phase-3b-evidence-2026-09-06-live-on-this-machine)). The procedure, kept for the next machine:
 
@@ -437,7 +437,7 @@ gpt-6-astra at xhigh, read-only, against `b741289`, ~218k tokens. Its verdict
 was to block the 4b takeover, reopen the 3a replay gate and keep 4a open, and
 all three were accepted: 3a was re-met with the sequential replay (finding 8),
 4a stays live on the fixed daemon, reinstalled from the commit that records
-this table, and 4b remains the owner's. Every finding was fixed; none was
+this table, and 4b remains JD's. Every finding was fixed; none was
 declined.
 
 | # | Finding | Disposition |
@@ -707,7 +707,7 @@ environment underneath it.
 | 0 ✅ | HID discovery, transport, `ak820 info` | Same JEDEC id and writable base as `ak820ctl info`; **plus** wrong-interface and malformed-report rejection, timeout/unplug/cancellation, traced opens showing nothing unrelated was touched, and VIA coexistence measured. — **all met 2026-09-05**, [evidence](#phase-0-evidence-2026-09-05). |
 | 1 ✅ | `text/`, `smtc/`, `ak820 probe` | **Met 2026-09-06.** Captured competing sessions, the current-session tiebreak, absent metadata and timeline, a track change, Unicode folding and both line budgets — three real captures pinned as tests, plus a 2,309-case folding fixture. | Captured media fixtures: competing sessions, paused-vs-current ranking, missing metadata, absent timeline, seeks, stale/future timestamps, Unicode, keepalive, partial write failure, reconnect. |
 | 2 ✅ | Clock read + the fake wire | Identical **captured** replies decode identically. (Sequential live reads cannot match field for field.) — **Met 2026-09-06**: three captured replies, plus the SET-reply-as-GET bytes behind the oracle's own bad line, render byte-identically through the pinned C and the port. [Evidence](#phase-2-evidence-2026-09-06). |
-| 3 ✅ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **3a met 2026-09-06**: the scheduler, SOF-bias learner and seed ported (`clock::scheduler`), and replayed against the Python timekeeper's own log — 108 `bias learned` lines reproduced byte for byte, 59 holds, 171 interval choices ([evidence](#phase-3a-evidence-2026-09-06)). **3b met 2026-09-06 14:40**: the owner ran `ak820 install --clock`; the first 49 minutes are inside the Python's own baseline, with one printed number recorded as open ([evidence](#phase-3b-evidence-2026-09-06-live-on-this-machine)). The phase-3a/4a audit reopened 3a for checking no state carried between syncs; re-met with a sequential replay (8 runs, 163 consecutive syncs, 106 learning), see its [disposition](#phase-3a4a-audit--disposition-2026-09-06). |
+| 3 ✅ | Clock set + learners | C-transaction fixtures pass; deterministic replay matches decisions **and next state**, with evidence learning fired; then measured takeover on the combined daemon runtime. — **3a met 2026-09-06**: the scheduler, SOF-bias learner and seed ported (`clock::scheduler`), and replayed against the Python timekeeper's own log — 108 `bias learned` lines reproduced byte for byte, 59 holds, 171 interval choices ([evidence](#phase-3a-evidence-2026-09-06)). **3b met 2026-09-06 14:40**: JD ran `ak820 install --clock`; the first 49 minutes are inside the Python's own baseline, with one printed number recorded as open ([evidence](#phase-3b-evidence-2026-09-06-live-on-this-machine)). The phase-3a/4a audit reopened 3a for checking no state carried between syncs; re-met with a sequential replay (8 runs, 163 consecutive syncs, 106 learning), see its [disposition](#phase-3a4a-audit--disposition-2026-09-06). |
 | 4 ~ | Daemon + one Scheduled Task | Migration from the two Python tasks, restart, suspend/resume, battery, rollback, and real liveness — not merely a registered task. — **Split 2026-09-06** into 4a (now-playing now, self-install, status file) and 4b (the clock, after phase 3); see [Staged switch-over](#staged-switch-over-and-packaging-2026-09-06). **4a audited 2026-09-06**; its 18 findings fixed and the daemon reinstalled from the fix. **Both halves live and 4b measured** (see [3b evidence](#phase-3b-evidence-2026-09-06-live-on-this-machine)); **migration, restart and real liveness met**, the rollback's *refusals* exercised (the PowerShell installer threw rather than register a second clock writer). **Open: suspend/resume, battery, and the rollback carried through.** |
 | 5 ✅ | Health | **Plus finding 5 of the phase-0 audit: paged commands must correlate on the page selector**, not just channel and command. Decoding fixtures match `ak820health.py`; enough health reporting lands **before** takeover to detect added firmware stalls. — **Met 2026-09-06**: a live capture decodes and renders byte-identically to `ak820health.py` (`tests/health_parity.rs`); `ak820 health [--stalls] [--rows] [--isr] [--json] [--raw]` reads the pages over the correlated transport; the daemon reads pages 1 and 2 every five minutes into `health_*` keys of its status file, so the takeover has a before. The health pages are selected by *command* (`0x01`, `0x04`, `0x06`, `0x07`), so channel+command is the page correlation; the echo check finding 5 asked for exists now as `exchange_matched` and is what the text commands use, where the selector is in the body. |
 | 6 ✅ | Release | **Clean-machine install from Releases with no Python and no MSYS2.** This is a stated primary motivation and needs its own gate. — **6a plumbing started 2026-09-06** (static CRT, `--version`, CI, tag → Release); the clean-machine gate is 6b. **v0.1.0 released 2026-09-06** (agent zip from CI, firmware from this machine via `scripts/release-firmware.sh`); **6b met 2026-09-06** in Windows Sandbox against the published v0.1.1 zip ([evidence](#phase-6b-evidence-2026-09-06-windows-sandbox)); v0.1.0 failed it on its INSTALL.txt, which is why v0.1.1 exists. |
@@ -838,7 +838,7 @@ Consequences:
 
 ### ⚠️ VIA coexistence: the broadcast is bidirectional, and VIA is the victim
 
-Measured 2026-09-05 with usevia.app open on the Design tab and the owner
+Measured 2026-09-05 with usevia.app open on the Design tab and JD
 changing lighting values, while `ak820 watch` did flash reads twice a second.
 
 **Our side was fine.** Every request succeeded — including six consecutive
@@ -1073,13 +1073,13 @@ be designed alongside the scheduler.
 
 Full report: [review-codex-phase2-2026-09-06.md](review-codex-phase2-2026-09-06.md).
 
-**Two runs.** The first, launched at 06:53, stopped after ~109k tokens on the
-owner's Codex usage limit with no findings delivered, having read the
+**Two runs.** The first, launched at 06:53, stopped after ~109k tokens on
+JD's Codex usage limit with no findings delivered, having read the
 transaction against the C, reported that *"the normal-path arithmetic and
 packet layout match the C so far"*, and named three boundaries it was about
 to check: whether unresolved requests survive later commands, whether SET
 preparation can stall after timestamping, and what the CRT fixtures actually
-prove. The owner reset the limit and the session was **resumed** later the
+prove. JD reset the limit and the session was **resumed** later the
 same morning on its own id, told which commits had landed meanwhile, and it
 finished: seven findings and three corrections, ~208k tokens in all. Both
 transcripts are in the review file. As in phase 1, its shell could not start,
@@ -1152,7 +1152,7 @@ with `NULL` and a dereference.
 
 ### Every phase ends with an external audit
 
-**Standing rule, added 2026-09-06 at the owner's request.** A phase is not done
+**Standing rule, added 2026-09-06 at JD's request.** A phase is not done
 when its gate passes — it is done when its gate passes *and* an independent
 model has read the code it produced.
 

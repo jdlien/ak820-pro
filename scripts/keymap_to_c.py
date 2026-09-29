@@ -5,7 +5,7 @@
     ./venv/bin/python scripts/keymap_to_c.py ~/Documents/ak820pro-keymap.json --write   # rewrite keymap.c
 
 Why this exists: VIA's stored keymap overrides the firmware default, so the map
-the owner actually types on lives only in the board's EEPROM and in the dump
+JD actually types on lives only in the board's EEPROM and in the dump
 flash.sh takes. "Make my VIA layout the default" therefore means regenerating
 keymaps[] and encoder_map[] in keymaps/via/keymap.c from that dump -- by hand it
 is 360 keycodes in matrix order, and the first attempt at doing it by eye got

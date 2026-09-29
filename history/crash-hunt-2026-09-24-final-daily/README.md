@@ -10,7 +10,7 @@ and every fix of 2026-09-23:
 - the CH582F TX pump order.
 
 It ran under the same stress as the
-[2026-09-22 hunt that ran v7](../crash-hunt-2026-09-23-v7/). The owner was on
+[2026-09-22 hunt that ran v7](../crash-hunt-2026-09-23-v7/). JD was on
 another keyboard.
 
 ## Result

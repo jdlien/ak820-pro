@@ -535,7 +535,7 @@ static void ring_restart(void) {
     }
 }
 
-/* The owner's case, 2026-09-28: full on USB, then a cable -> BT slider flip,
+/* JD's case, 2026-09-28: full on USB, then a cable -> BT slider flip,
  * which reboots the board. It must come back at 100, not the 95 guess. */
 static void reboot_after_full(void) {
     saved_p1 = 101;   /* 100%, saved before the reboot */

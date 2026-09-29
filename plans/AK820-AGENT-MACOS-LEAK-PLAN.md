@@ -351,7 +351,7 @@ Zero growth across 4,500 consecutive exchanges, twice. `exchange-sync` agrees
 over 18,000. ⚠️ **This is the same error the whole per-cycle framing invited**,
 and it is why the shape instrumentation now exists: a slope quoted as a
 per-operation cost hides whether the growth is ongoing or finished. The
-reviewer's insistence on workload validity and the owner's observation that
+reviewer's insistence on workload validity and JD's observation that
 "40 B is too small to be a real leak" both pointed here.
 
 ### C3 — reduce the number of exchanges — ⚠️ **NARROWER THAN CLAIMED**
