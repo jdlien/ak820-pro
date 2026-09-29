@@ -670,13 +670,26 @@ log):**
 
 ## If the hardware arrives (JD's pending order, 2026-09-29)
 
+The DigiKey cart, verbatim: [`parts/digikey-order-2026-09-29.csv`](parts/digikey-order-2026-09-29.csv)
+(not yet placed). For this plan: **3× MAX17048** (1528-5580-ND), **1× INA228**
+(1528-5832-ND), **1× QT Py RP2040** (1528-4900-ND), **4× Qwiic/STEMMA QT
+cables** (1528-4210-ND). The rest of the cart (XIAO ESP32C3, LIS3DH, a
+14-segment display, a slide switch) is not referenced here. ⚠️ The 1.25 mm pack
+extensions are an Amazon item, not in the cart. ⚠️ `docs/battery.md` records
+the INA228 as dropped; it is in the cart, and it changes item 1 below.
+
 What each piece changes, most valuable first:
 
-1. **The 1.25 mm pack extensions** (Amazon). A meter in series with the pack's
-   + lead measures **current**, which nothing else here can: 2.6's question
-   (RGB vs screen vs radio vs MCU) and every budget table in the standby
-   sections, answered in an afternoon. Also makes voltage probing safe (the
-   09-25 run had three accidental shorts, one a reboot).
+1. **The 1.25 mm pack extensions** (Amazon) **plus the INA228** in series with
+   the pack's + lead: **current, logged continuously** beside the MAX17048's
+   voltage -- 2.6's question (RGB vs screen vs radio vs MCU) and every budget
+   table in the standby sections, each change of state a timestamped step.
+   Better than a DMM in series, which only gives spot readings. Its shunt is
+   ~15 mΩ (Adafruit's board), ~1 mV at 60 mA: the old "no shunt in the pack
+   path" warning was about a linear regulator's dropout, and this is a
+   buck-boost. Resolution is tens of µA -- right for the modes, coarse for
+   standby's floor (item 4). The extensions alone also make voltage probing
+   safe (the 09-25 run had three accidental shorts, one a reboot).
 2. **MAX17048 as a bench logger** (QT Py or any USB board, on the tap):
    continuous pack voltage to the Mac through whole discharges and charges.
    The calibration run becomes an unattended overnight run: the `5C` fit over
@@ -687,7 +700,8 @@ What each piece changes, most valuable first:
    Phase 1's workarounds (the countdown, the I×R allowance, the re-seat)
    exist only because `5C` clamps and reads terminal voltage. ⚠️ JD's unit
    only: the published firmware keeps the `5C` gauge and uses the MAX17048
-   only if it answers at 0x36 at boot. It still measures no current.
+   only if it answers at 0x36 at boot. It measures no current (the INA228
+   does).
 4. **A PPK2** (not in the order). A DMM cannot see µA sleep with radio bursts:
    it averages badly, and its low ranges' burden fights the buck-boost. The
    standby work is what "right for the idle ladder, later" meant.
