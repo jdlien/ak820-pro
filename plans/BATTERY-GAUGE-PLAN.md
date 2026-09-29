@@ -496,7 +496,17 @@ log):**
   Also worth adding: a count of flash writes on the `Fn`+`D` page or HC_CONN,
   so a blink can be matched to a write instead of inferred. The 15:50 blink
   matches no write we know of.
-- **Widen the log's `c5_n`.** `5C` arrives every ~2.6 s, not 5 s (the module
+- **Don't guess 95 while charging at the clamp with nothing saved** (seen after
+  the 09-29 flash): charge current lifts `5C` to 100, so the voltage says
+  nothing; show "Charge" (level unknown) until the charger terminates or the
+  board is unplugged.
+- **Don't spend the re-seat on a clamp reading just after unplugging.** The
+  pack relaxes for a minute or two after a charge; the first post-unplug
+  estimates can still sit at 100, and the top-clamp branch cleared `reseat`
+  and kept the charging-time level (here the 95 guess), so the ratchet then
+  walked 95 -> ~86 at 1% per ~15 s. Keep the re-seat owed until the first
+  below-clamp estimate, or until ~2 min of battery.
+- **Widen the log's `c5_n`.** ✅ done in `deef6053dd` (log v4). `5C` arrives every ~2.6 s, not 5 s (the module
   streams it as well as answering the poll): 224-237 reports per 10-minute
   entry against a `uint8_t` that saturates at 255. Put the high byte in the
   entry's reserved byte. The "median of 7 = ~35 s" figures are ~18 s.
