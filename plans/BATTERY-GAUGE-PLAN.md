@@ -508,6 +508,25 @@ the win for little risk. Size it first: with RGB and the backlight off, the
 in-series meter reading is MCU + radio + regulator + panel logic, and one
 build with the rung forced on shows the MCU's share.
 
+**The target, and a budget to fill in (JD, 2026-09-29):** "a couple of months
+on a charge for 8 h daily use with a dim backlight". 4000 mAh / 60 days is
+**~65 mAh/day**; with 16 h of deep sleep at ~1 mA (~16 mAh), the 8 h of use must
+average **~6 mA**. Guesses until 2.6's meter reading replaces them:
+
+| load while typing | guess | measured |
+|---|---|---|
+| MCU, light sleep between scans | 3-10 mA | |
+| BLE radio, connected | 2-8 mA | |
+| LCD backlight, dim | 2-5 mA | |
+| regulator losses | +10-20% | |
+| **total, RGB off** | **~8-25 mA** | |
+| deep-sleep floor (buck-boost Iq + CH582F asleep + rest) | 0.1-3 mA | |
+
+=> **~3 weeks to ~2 months**; two months only with RGB fully off during use
+and small floors. ⚠️ **Dim RGB costs more than its LED current**: any lit LED
+keeps the row ISR's PWM running at full rate, so the MCU cannot nap and most
+of the light-sleep saving is lost. Lights-off-after-a-short-idle recovers it.
+
 ⚠️ **Relevant to the 2026-09-24 unexplained power-off** (`docs/battery.md`):
 the CH582F's own idle behaviour is the first suspect there too, so learning its
 sleep states answers both.
