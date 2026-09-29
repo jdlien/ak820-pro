@@ -480,6 +480,32 @@ So the idle ladder and standby are the big lever, and they cost the typing
 experience nothing. Dimmer lights during use are then a user's choice that
 scales it further, never a mode's imposition.
 
+## ⭐ An emergency mode for the last few percent (JD, 2026-09-29)
+
+The always-dark ultra-low mode is wrong as a *mode* and right as a *last
+resort*: near empty the choice is no longer "lights or no lights" but "finish
+the work or the board dies mid-sentence". JD: "enough to allow a user to finish
+a thought or finish their work for the day".
+
+The last 5% of 4000 mAh is ~200 mAh: ~3 h at full white (~60 mA), **~8-25 h**
+with RGB off, the screen at minimum and light sleep on (the standby budget
+below). Deep sleep when idle stretches it further.
+
+- **Stages:** ~15% caps the lighting regardless of mode (already planned);
+  **~5% goes to emergency**: RGB off, backlight minimum, light sleep *always*
+  -- with every LED dark the row ISR has no PWM work, so the MCU naps between
+  keystrokes too -- and deep sleep after a few idle minutes.
+- ⚠️ **Consent bends here, and only here.** Elsewhere automatic actions are
+  lighting-only and never touch the radio. At ~5% a few seconds of reconnect
+  after an idle beats a dead board. The rule that does not bend: **no
+  keystroke is ever lost** (Phase 2 question 1's wake buffer).
+- **Say so on the LCD** ("Battery critical -- low power"), persistently, so
+  dark keys read as deliberate, not broken.
+- Reconcile with 1.2's protection: its warn (3550 mV) and RGB cut (3400 mV)
+  are this ladder's first two steps expressed in volts; define them once.
+- ⚠️ **Depends on the curve's bottom end**: "5%" must mean 5% for this to fire
+  at the right moment. The 09-28 drain run is what pins it down.
+
 ## Standby: how close to zero without touching the slider (JD, 2026-09-29)
 
 JD's question: after ~2 h idle, can the board draw practically nothing until
