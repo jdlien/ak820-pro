@@ -480,7 +480,7 @@ load profile mid-measurement.
 **Queued for after the 09-28 drain test (each needs a flash, which wipes the
 log):**
 
-- ⚠️ **Cut the saved level's flash writes to ~5 a charge cycle.** JD sees a
+- ✅ **Cut the saved level's flash writes to ~5 a charge cycle** (done in `deef6053dd`: 6 a cycle, simulated). JD sees a
   brief whole-board blink "for a few ms" (09-28 15:50, 09-29 12:33). That is
   the signature of an internal-flash write: interrupts are masked across the
   write because the vector table and every ISR live in flash
