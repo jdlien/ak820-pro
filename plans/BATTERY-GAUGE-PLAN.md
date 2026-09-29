@@ -668,6 +668,35 @@ log):**
 
 ---
 
+## If the hardware arrives (JD's pending order, 2026-09-29)
+
+What each piece changes, most valuable first:
+
+1. **The 1.25 mm pack extensions** (Amazon). A meter in series with the pack's
+   + lead measures **current**, which nothing else here can: 2.6's question
+   (RGB vs screen vs radio vs MCU) and every budget table in the standby
+   sections, answered in an afternoon. Also makes voltage probing safe (the
+   09-25 run had three accidental shorts, one a reboot).
+2. **MAX17048 as a bench logger** (QT Py or any USB board, on the tap):
+   continuous pack voltage to the Mac through whole discharges and charges.
+   The calibration run becomes an unattended overnight run: the `5C` fit over
+   the full range including charging, the real `CHARGE_IR_MV`, post-unplug
+   relaxation, and this cell's curve -- measured, not inferred.
+3. **MAX17048 retrofitted** on the PCF8563's I²C bus (plan: `docs/battery.md`):
+   a real gauge, ±1-2%, no clamps, load and relaxation modelled -- most of
+   Phase 1's workarounds (the countdown, the I×R allowance, the re-seat)
+   exist only because `5C` clamps and reads terminal voltage. ⚠️ JD's unit
+   only: the published firmware keeps the `5C` gauge and uses the MAX17048
+   only if it answers at 0x36 at boot. It still measures no current.
+4. **A PPK2** (not in the order). A DMM cannot see µA sleep with radio bursts:
+   it averages badly, and its low ranges' burden fights the buck-boost. The
+   standby work is what "right for the idle ladder, later" meant.
+
+None of it changes the plan's order or the power-mode design. It changes the
+work from inference to measurement.
+
+---
+
 ## What this plan deliberately does not do
 
 - **No MAX17048 retrofit in the firmware yet.** It is a refinement (±1-2% vs
