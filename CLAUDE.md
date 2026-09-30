@@ -97,7 +97,18 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-09-24)
+## Current state (2026-09-30)
+
+**The battery gauge (Phase 1) is flashed and a drain test is running.**
+Resume from [`plans/current-status.md`](plans/current-status.md); the work is
+[`plans/BATTERY-GAUGE-PLAN.md`](plans/BATTERY-GAUGE-PLAN.md), the evidence
+[`docs/battery.md`](docs/battery.md). The level comes from the CH582F's `5C`
+(a linear voltmeter on the pack, clamped at ~4.036/3.161 V), never from VDD
+(a buck-boost output pinned at 3.90 V). ⚠️ Every internal-flash write blinks
+the LEDs dark for ~7 ms. ⚠️ Dump the RAM battery log before any flash, with
+the slider on BT. Call JD by name in docs, not "the owner".
+
+## Earlier state (2026-09-24)
 
 **Resume from [`plans/current-status.md`](plans/current-status.md).** The
 2026-09-22/23 crash campaign fixed four things:
