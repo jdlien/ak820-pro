@@ -14,7 +14,70 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## 2026-09-28, 14:55 — RESUME HERE
+## 2026-09-30, 15:00 — RESUME HERE
+
+**A drain test is running on the Phase 1 battery gauge.** Plan, both codex
+reviews and every disposition: [`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md).
+Evidence: [`../docs/battery.md`](../docs/battery.md). Run records:
+[`../history/battery-2026-09-28-drain/`](../history/battery-2026-09-28-drain/)
+-- `readings.csv` (every observation, JD's words, corrections) and the
+`log-*.csv` dumps.
+
+**Firmware on the board: `deef6053dd`** (`via-daily-deef6053dd-20260929-135459.bin`),
+flashed mid-run 09-29 ~13:58 after a dump. Level from a trimmed mean of 64
+`5C` reports; panel in tenths (`BATTERY_SHOW_TENTHS`, calibration only);
+saved level ~6 flash writes a cycle; log v4. Idle ladder compiled out.
+Host checks: `scripts/battery_sim/run.sh` (27 scenarios, mutants caught).
+
+**The run:** pure white at 100%, discharging from FULL since **2026-09-28
+~19:55** (the 15:45 start was voided -- the board sat on USB 17:45-19:55).
+Perturbations, all in `readings.csv`: ~8% LED 19:53-21:35 on 09-28; brief
+USB plug-ins for each dump; the 13:55-14:00 flash; a loose cable 09-30 12:33
+(~2 min charging, no enumeration). **Latest (09-30 14:57):** meter 3.79 V,
+gauge 3791 mV, panel 39.3%.
+
+**Expected** (last run's pace, +-2 h): "Battery low" (3.55 V pack) ~21-22h,
+"Low: RGB off" (3.40 V) ~23:30-00:30, the 3.30 V stop ~01:00-02:00 Thursday.
+JD is choosing between staying up for the alarms, dumping before bed and
+letting it die (the protector trips), or stopping at bedtime.
+
+**Phase 1 gates:** 4 (meter vs gauge) -- 4.01 V/-9 mV, 3.81/+6, 3.79/+1;
+the ~3.45 V point pending. 2 (protection) -- due tonight: note the alert
+times, press Fn+X after the cut (lights must stay off), 5 s of USB restores.
+3 (never rises on battery), 5, 6, 7, 8 -- met. 1 (supply) -- met in use
+(unplug, replug, charging cap, FULL at termination, reboot restore).
+
+**Next, after the run:**
+1. **Fit this cell's curve** from the dumps: runtime fraction vs pack mV
+   (constant power -- see docs/battery.md), excluding the perturbations.
+   Replace `curve_mv`/`curve_pm` in `battery.c`; re-run the simulator.
+2. **The queued fixes** (plan, "Queued"): show "Charge" rather than the 95
+   guess while charging at the clamp with nothing saved; don't spend the
+   re-seat on a clamp reading just after unplug; later, drop
+   `BATTERY_SHOW_TENTHS` for whole percent.
+3. Phase 2 (power modes) is **not built**; JD is in note-taking mode -- the
+   plan holds the modes table, the principle ("take the drain out of idle,
+   not the fun out of use"), the emergency Power Reserve mode, standby and
+   light sleep. Record ideas there; build only when asked.
+
+**Open threads:** the LED blink is an internal-flash write (confirmed on a
+brightness step; ~7 ms); 40 writes in 22 h on the old build, ~20 of them
+level saves, ~10-15 unexplained (the 09-28 15:50 and 09-29 12:33 blinks
+matched no known write). Counter: `ak820health.py --stalls --json`,
+`flash_writes`. Hardware: JD's DigiKey cart (`parts/`), not yet ordered --
+the INA228 logs current; consider a MAX17055/MAX1726x for a permanent
+coulomb counter; the 1.25 mm pack extensions (Amazon) come first.
+
+**Traps from this run:**
+- `flash.sh` backs up keymap and lighting **only if the board is running** --
+  do not enter the bootloader first, or it restores the 09-24 pastel.
+- A flash wipes the RAM log and the EEPROM: **dump first**.
+- Dump with the slider on **BT**, then unplug within a minute (longer is a
+  charging session, which re-seats the level and charges the pack).
+- A loose cable charges without enumerating: check `ioreg` for `0C45`.
+- Use `set -o pipefail` in dump one-liners, or a failed dump prints "saved".
+
+## 2026-09-28, 14:55 (superseded)
 
 **The battery gauge (Phase 1) is built, not flashed.** Everything is in
 [`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md): the plan, codex's review of it
