@@ -702,6 +702,26 @@ log):**
   be 10%. And every plug-in re-arms it, so each brief dump re-fires it after
   unplugging -- re-arm only after a real charging session instead?
 
+- **A charging readout that earns its shape (JD, 10-01: "one of those
+  progress bars that creeps to 100% progressively more slowly and then snaps
+  -- or can we do better?").** Today at the clamp it creeps LINEARLY, 2%/h to
+  a 97% cap, then snaps to 100 when CHRG releases. The snap is honest (the
+  charger terminating is the one hard signal); the creep is a guess. Better,
+  in order of evidence needed:
+  1. **Decelerating is the physically right shape**, not a gimmick: in CV the
+     charge current tapers roughly exponentially, so charge per minute
+     falls. Fit the time constant and the clamp-to-termination time from
+     the two charges from flat (09-28's log and 10-01's) so the creep lands
+     at ~99% when the charger usually stops: a 1-point snap, not 3+.
+  2. **Measure `CHARGE_IR_MV`** (the 5C step at unplug mid-charge) so the
+     below-clamp part reads the pack, not a guess.
+  3. **Follow the current, not a clock**: VDD rises through the taper as the
+     charge current falls (09-28: 4193 flat in CC, then up). It is confounded
+     by the board's own load and the USB source (docs/battery.md: do not
+     threshold it) -- but the firmware knows its LED drive, and JD's
+     saturation change mid-charge on 10-01 is a free measurement of the
+     load's effect on VDD. Only if the 10-01 log shows it separable.
+
 **Ideas from the drain test's last night (JD, 2026-10-01; notes, not builds):**
 
 - **Film the next run.** The board died unobserved in a 3.4 h window and the
