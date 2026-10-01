@@ -675,6 +675,15 @@ log):**
   entry against a `uint8_t` that saturates at 255. Put the high byte in the
   entry's reserved byte. The "median of 7 = ~35 s" figures are ~18 s.
 - "Charge" for "Chrg" is already in `487cb8e9f0`.
+- **Stalls during the drain test (found 10-01 ~05:15).** Since the 20:44
+  reboot, `Fn`+`D` read `Stall 25:6 10:2449`, `Worst 35ms blit` -- against
+  an everyday `25:0` and a 20 ms worst. Six >= 25 ms matches the six
+  plug-ins since that boot (unchecked); 2449 >= 10 ms (~1 per 12 s) has no
+  candidate yet. Suspect the battery row and alert repaints the run
+  exercises (tenths text, bolt, 'Charge', the re-firing alerts). Measure
+  before fixing: `ak820health.py --stalls --json` for the per-mark maxima,
+  reset (hold `Fn`+`D`), an hour idle on the dashboard, then plug/unplug a
+  few times and watch `25:` per event. ⚠️ A >= 25 ms stall can lose a press.
 
 ---
 
