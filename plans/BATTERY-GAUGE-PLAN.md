@@ -684,6 +684,13 @@ log):**
   before fixing: `ak820health.py --stalls --json` for the per-mark maxima,
   reset (hold `Fn`+`D`), an hour idle on the dashboard, then plug/unplug a
   few times and watch `25:` per event. ⚠️ A >= 25 ms stall can lose a press.
+- **The LCD backlight flashes bright during a flash write (JD, 10-01
+  ~05:16, LEDs off).** Likely the backlight's software PWM (CT16B3 ISR)
+  frozen ON while a write masks interrupts for ~7 ms -- the LED row bug of
+  `docs/leds.md` item 3, without its guard. Candidate fix: drive the
+  backlight pin off in the existing pre-write hook (`wear_leveling_efl.c`)
+  or in the ISR when `EFLD1.state == FLASH_PGM`, restoring after. Check
+  first that it lines up with `flash_writes`.
 
 ---
 
