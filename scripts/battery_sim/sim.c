@@ -342,7 +342,9 @@ static void protection(void) {
 static void critical(void) {
     vdd_mv = 3900; c5 = 90;
     run_s(20);
-    CHECK(battery_level_pct() >= 70, "starts high: %u", battery_level_pct());
+    /* 5C 90 is 3949 mV: ~56% on the fitted curve. High enough that "Low at once"
+     * below is a drop, not a level that was already near 0. */
+    CHECK(battery_level_pct() >= 50, "starts high: %u", battery_level_pct());
     c5 = 0;
     while (now_ms % 2500u != 0) tick();   /* align: the next report is 2.5 s away */
     run_s(5);
@@ -440,7 +442,8 @@ static void reseat_survives_replug(void) {
     run_s(10);
     vdd_mv = 3900; chrg_low = false; c5 = 70;
     run_s(20);
-    CHECK(battery_level_permille() == 343, "re-seated after the brief replug: %u pm", battery_level_permille());
+    /* 5C 70 = 3774 mV; the fitted curve there is 187 pm (150 + 27 * 50 / 36). */
+    CHECK(battery_level_permille() == 187, "re-seated after the brief replug: %u pm", battery_level_permille());
 }
 
 /* A threshold above the top clamp cannot be judged there: no cut, no warning. */
@@ -496,18 +499,19 @@ static void unplug_mid_charge(void) {
     c5 = 80;
     run_s(120);
     uint16_t charging = battery_level_permille();
-    CHECK(charging < 300, "charging at 5C 80 (3.861 V less 150 mV of I*R) is ~17%%, got %u pm", charging);
+    CHECK(charging < 300, "charging at 5C 80 (3.861 V less 150 mV of I*R) is ~12%%, got %u pm", charging);
     vdd_mv = 3900; chrg_low = false; c5 = 70;
     run_s(3);   /* one report after the change, taken on the pack */
     CHECK(battery_5c_rounded() == 0xFF, "no estimate from one report: the charging ones were forgotten");
     run_s(13);
     CHECK(battery_5c_rounded() == 70, "the estimate is post-unplug reports only: %u", battery_5c_rounded());
-    CHECK(battery_level_permille() == 343, "re-seated at the first post-unplug median: %u pm",
+    /* 5C 70 = 3774 mV: 187 pm on the fitted curve. */
+    CHECK(battery_level_permille() == 187, "re-seated at the first post-unplug estimate: %u pm",
           battery_level_permille());
     watch_reset();
     run_s(20 * 60);
     CHECK(w_rises == 0, "no rise after the re-seat (%d)", w_rises);
-    printf("  charging level %u pm, re-seated on the pack at 343 pm\n", charging);
+    printf("  charging level %u pm, re-seated on the pack at 187 pm\n", charging);
 }
 
 /* A countdown that ran slow: the clamp exits early, and the level eases down to

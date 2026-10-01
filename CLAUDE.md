@@ -97,16 +97,18 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-09-30)
+## Current state (2026-10-01)
 
-**The battery gauge (Phase 1) is flashed and a drain test is running.**
-Resume from [`plans/current-status.md`](plans/current-status.md); the work is
-[`plans/BATTERY-GAUGE-PLAN.md`](plans/BATTERY-GAUGE-PLAN.md), the evidence
-[`docs/battery.md`](docs/battery.md). The level comes from the CH582F's `5C`
-(a linear voltmeter on the pack, clamped at ~4.036/3.161 V), never from VDD
-(a buck-boost output pinned at 3.90 V). ⚠️ Every internal-flash write blinks
-the LEDs dark for ~7 ms. ⚠️ Dump the RAM battery log before any flash, with
-the slider on BT. Call JD by name in docs, not "the owner".
+**The battery gauge's drain test is done and the curve is fitted, committed,
+not yet flashed.** Resume from [`plans/current-status.md`](plans/current-status.md);
+the work is [`plans/BATTERY-GAUGE-PLAN.md`](plans/BATTERY-GAUGE-PLAN.md), the
+evidence [`docs/battery.md`](docs/battery.md). The level comes from the
+CH582F's `5C` (a linear voltmeter on the pack, within ~10 mV of a meter from
+4.01 to 3.22 V, clamped at ~4.036/3.161 V), never from VDD (a buck-boost output
+pinned at 3.90 V); 0% is the RGB cut at 3400 mV. ⚠️ Every internal-flash write
+blinks the LEDs dark (and, likely, the LCD backlight bright) for ~7 ms. ⚠️ Dump the RAM
+battery log before any flash, with the slider on BT. Call JD by name in docs,
+not "the owner".
 
 ## Earlier state (2026-09-24)
 

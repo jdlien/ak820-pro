@@ -1,7 +1,8 @@
 # The battery gauge, and the power ladder — plan
 
-**Status: revised 2026-09-28 after a codex review. Phase 1 is built and passes
-the simulator (gate 8); not yet flashed.**
+**Status (2026-10-01): Phase 1 is flashed (`deef6053dd`) and its 09-28 drain
+test is done: gates 1-8 met on hardware, and the curve is fitted from the run
+(committed, not yet flashed). Revised 2026-09-28 after a codex review.**
 Phase 1 replaces a battery readout that currently shows a constant. Phase 2
 turns the existing idle ladder into a user-visible power mode on `Fn`+`B`.
 
@@ -631,11 +632,16 @@ sleep states answers both.
    machine, protection on the pack voltage, `5C` freshness
 2. ✅ **1.4-1.6**: the level, the display, log v3 with the host tool, and the
    simulator (gate 8)
-3. Flash, then bench-check every row of 1.1's table and the protection with
-   JD (gates 1-7)
+3. ✅ Flash, then bench-check every row of 1.1's table and the protection with
+   JD (gates 1-7): met by 10-01. Gate 2 on the drain test's last night; gate 4
+   with eight meter points, 4.01-3.22 V, −9 to +11 mV
 4. **2.6's measurement** — a meter in series, when the extension cables arrive
 5. The **calibration run**, once the pack tap logs; swap the constants and the
-   table
+   table. ✅ **A first curve is fitted without the tap** (2026-10-01): the
+   09-28 drain test, `scripts/battery_fit.py`, 0% at the RGB cut (3400 mV, JD's
+   choice), 51.6 h of full-white runtime; `docs/battery.md` has it and its
+   caveats. The tap run is now the **validation**: a second run, ideally
+   filmed (below), to check the curve on data it was not fitted to.
 6. Phase 2's lighting modes; radio and deep sleep each behind its own gate
 
 ⚠️ **Do not flash the idle ladder during a calibration run** — it changes the
@@ -691,6 +697,24 @@ log):**
   backlight pin off in the existing pre-write hook (`wear_leveling_efl.c`)
   or in the ISR when `EFLD1.state == FLASH_PGM`, restoring after. Check
   first that it lines up with `flash_writes`.
+- **"Battery low" may come too late** (decide, then build). On the fitted
+  curve 3550 mV is ~4.5%, ~2.3 h before the cut at full white. 3676 mV would
+  be 10%. And every plug-in re-arms it, so each brief dump re-fires it after
+  unplugging -- re-arm only after a real charging session instead?
+
+**Ideas from the drain test's last night (JD, 2026-10-01; notes, not builds):**
+
+- **Film the next run.** The board died unobserved in a 3.4 h window and the
+  RAM log died with it. JD has a UniFi camera that could watch
+  the keyboard; the lights going out and the screen going dark need no
+  legible text, which is most of what was lost.
+- **A large-font voltage readout for filmed runs**: the debug page's 6x14
+  text is too small for a camera. A calibration build could put the pack mV
+  (and the 5C age) in the band's Medium-20 font.
+- **Keep the log past a dead pack**: the deferred persistent checkpoint
+  (review dispositions). Every internal-flash write blinks the LEDs and the
+  backlight, so a checkpoint wants to be rare -- e.g. once at the cut and every
+  ~30 min below it, when the lights are off anyway.
 
 ---
 

@@ -7,11 +7,13 @@ page in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. The
 plan, two codex reviews and every disposition:
 [`plans/BATTERY-GAUGE-PLAN.md`](../plans/BATTERY-GAUGE-PLAN.md).
 
-> **State (2026-09-30):** on JD's unit is `deef6053dd`, the Phase 1 gauge.
-> A drain test at full white has run from FULL since 2026-09-28 ~19:55
-> ([`history/battery-2026-09-28-drain/`](../history/battery-2026-09-28-drain/));
-> it supplies the curve that replaces the provisional one. Its last night
-> passed Phase 1 gates 2 (protection) and 4 (eight meter points). Resume from
+> **State (2026-10-01):** on JD's unit is `deef6053dd`, the Phase 1 gauge
+> with the placeholder curve. The drain test at full white
+> ([`history/battery-2026-09-28-drain/`](../history/battery-2026-09-28-drain/))
+> ran from FULL on 09-28 ~19:52 to the RGB cut on 10-01 02:13, and the board
+> died between 05:19 and 08:45. Its last night passed Phase 1 gates 2
+> (protection) and 4 (eight meter points). **The fitted curve is committed,
+> not yet flashed.** Resume from
 > [`plans/current-status.md`](../plans/current-status.md).
 
 ## The short version
@@ -26,8 +28,8 @@ plan, two codex reviews and every disposition:
   eight checks on the 09-28 run, 4.01 V down to 3.22 V, all within 11 mV
   (below).
 - **The level is a fraction of runtime**, read off a curve of pack voltage.
-  The voltage is good; the curve in the firmware is a **placeholder** until the
-  drain test is fitted.
+  The voltage is good to ~10 mV; the curve is **fitted from one drain test**
+  on one unit (below), not yet checked against a second run.
 - **It is blind at both ends:** above ~4.036 V (the top ~8-10% of runtime) and
   below ~3.161 V. While charging, the charge current inflates the reading.
 
@@ -144,18 +146,40 @@ the level at any voltage is `remaining / T`. That is also what a user wants to
 know. Calling it state of charge would need a current measurement.
 
 **The curve is the whole accuracy question now.** The voltage is good to ~10 mV;
-how much level 10 mV is worth depends on the curve's slope — on the provisional
-curve, 1.4-1.8% on the 3.87-4.02 V plateau and 2.8-5.6% between 3.69 and
-3.87 V.
+how much level 10 mV is worth depends on the curve's slope, and on this pack
+that swings widely: **~0.3% per 10 mV near empty, 1-6% through the middle,
+and ~11% on the 4.00-4.02 V plateau**, where ~20% of the runtime passes in
+~20 mV.
 
 - ⚠️ **The textbook NMC rest-voltage curve does not fit this pack.** It puts
   3.74 V at ~47%; on 09-25 the pack reached 3.74 V at 49.3 h and was dead by
   63.4 h, so it had **at most ~25%** of its runtime left.
-- **The provisional curve** (`curve_mv`/`curve_pm` in `battery.c`) is a generic
-  Li-ion table (0% at 3.27 V … 80% at 4.02 V) scaled so the top clamp reads
-  90%: on 09-25 `5C` left 100 about 5.3 h into a run of ~52-63 h, so the clamp
-  is the top ~8-10% of runtime. It is named provisional in the source. **Only
-  those two arrays change** when the fitted curve replaces it.
+- ⭐ **The fitted curve** (`curve_mv`/`curve_pm` in `battery.c`, 2026-10-01),
+  from the 09-28 drain test by `scripts/battery_fit.py` (its output and
+  per-entry points are in the run's folder). **0% is the RGB cut at 3400 mV**
+  (JD's choice: at full white that is when the lights go; below it is the
+  lights-off reserve, which the panel calls "Low"). 100% is FULL.
+  - **Full-white runtime, FULL to the cut: 51.6 h** of equivalent full-white
+    time (54.4 h on the wall). The time axis credits each USB plug-in with the
+    charge it put back (a minute of charging ≈ 10.5 minutes of full-white
+    runtime; durations from each log entry's mean VDD, 8-72 s) and the 1.6 h
+    of dim lighting at the start at its lower power. Varying those
+    assumptions by ±20% or more moves the level at 3.70, 3.55 and 3.50 V by
+    at most 0.1 point (`--sensitivity`).
+  - **The clamp's exit fell at 89.6%**: the firmware's 90% anchor stands.
+  - Selected points: 4017 mV 85%, 4006 70%, 3999 65%, 3943 55%, 3894 50%,
+    3855 40%, 3832 30%, 3783 20%, 3747 15%, 3676 10%, 3596 6%, 3537 4%,
+    3491 2%, 3400 0%. **"Battery low" at 3550 mV is ~4.5%, ~2.3 h** before
+    the cut at full white — what the run showed (~00:00 to 02:13).
+  - The placeholder it replaced (a generic table scaled to 90% at the clamp)
+    read **44% at 3.80 V, where this run had ~23% left** — why the panel fell
+    at 4.7%/h on the afternoon of 09-30.
+  - ⚠️ **Not yet validated:** in-sample the curve is 0.1-0.5 points rms from
+    the log entries below 3.95 V (worst 1.2), and 1.5 rms on the plateau
+    (worst 5.5), but that only shows the smoothing is faithful. A second run must check it. Two features
+    to watch: the plateau, and a **shoulder at 3.83-3.87 V** (15% in 35 mV)
+    that coincided with the night of 09-29/30 — a cell feature or the night's
+    conditions, unknown.
 - **Load moves the pack only a little:** RGB full versus off moved it **10 mV**
   near full (one meter reading, pastel lighting). Near 3.40 V the RGB cut lifted
   it **~20 mV** (10-01 ~02:13: the log's mean rose 3408 → 3412 mV where it had
@@ -169,7 +193,7 @@ curve, 1.4-1.8% on the 3.87-4.02 V plateau and 2.8-5.6% between 3.69 and
 |---|---|---|
 | `5C` → mV | within ~10 mV, 3.22-4.01 V | measured, eight points |
 | one `5C` count | 8.75 mV | the raw step; the mean resolves ~0.1 count |
-| the curve | ±3-5% of level, guessed | **the dominant term**; the drain test fits it |
+| the curve | fitted to one run; in-sample 0.1-0.5 points rms below 3.95 V, 1.5 on the plateau | **the dominant term**; needs a second run |
 | temperature, 10 °C swing | ±1.5-3%, from generic NMC figures | unmeasured here |
 | cell ageing, a year | ±5%, drifting | unmeasured |
 | another unit's module | unknown | one unit fitted |
@@ -279,7 +303,7 @@ never fell far enough to fire):
 - **Battery row:** the level (`85%`; `85.9%` with tenths), an outline, and a
   fill that is green above 50%, amber 21-50%, red at 20% and below (rounded up,
   so a few percent never reads as empty). **`Low`** with a red sliver under
-  0.5% on battery (below ~3.30 V on the provisional curve). While the level is unknown: **`Charge`** charging, **`USB`** on USB,
+  0.5% on battery (below ~3.43 V on the fitted curve). While the level is unknown: **`Charge`** charging, **`USB`** on USB,
   blank on battery. **`No Batt`** and a red cross with no pack. A yellow **bolt**
   while the charger is charging (CHRG low and STDBY high).
 - **Alerts** ("Battery low", "Low: RGB off") take the text band for 60 s.
