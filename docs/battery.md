@@ -332,6 +332,14 @@ reading, and on hardware.
 graphite anode: **NMC**. The other unit (the white one) had no pack fitted as of
 2026-09-09.
 
+**Its protection board is unidentified.** No spec sheet for `JKJ606090` or its
+maker turned up (searched 2026-10-01). Other makers' 606090 4000 mAh packs
+specify an over-discharge cut-off of **2.75 V** (some 3.0 V), e.g.
+[lipobattery.us's LP606090](https://www.lipobattery.us/wp-content/uploads/2021/04/LP606090-4000mAh.pdf),
+which would put this pack's trip **below** `5C`'s zero at ~3.161 V — but that
+is the genre, not this part. The chip markings on the protection board (under
+the tape at the lead end) would settle it.
+
 **The slider is labelled POWER on the PCB.** It selects the power source as
 well as the mode ([hardware.md](hardware.md)): BT → cable reboots the MCU.
 
