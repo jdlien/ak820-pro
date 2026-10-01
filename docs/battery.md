@@ -10,7 +10,8 @@ plan, two codex reviews and every disposition:
 > **State (2026-09-30):** on JD's unit is `deef6053dd`, the Phase 1 gauge.
 > A drain test at full white has run from FULL since 2026-09-28 ~19:55
 > ([`history/battery-2026-09-28-drain/`](../history/battery-2026-09-28-drain/));
-> it supplies the curve that replaces the provisional one. Resume from
+> it supplies the curve that replaces the provisional one. Its last night
+> passed Phase 1 gates 2 (protection) and 4 (eight meter points). Resume from
 > [`plans/current-status.md`](../plans/current-status.md).
 
 ## The short version
@@ -21,8 +22,9 @@ plan, two codex reviews and every disposition:
 - **The Bluetooth module can.** The CH582F sits on the unregulated rail and
   reports a byte, `5C`, that everyone took for a (fake) percentage. It is a
   **linear voltmeter on the pack**: `5C = 114.22 × V − 361.04`.
-- **Averaged, it agrees with a meter to within the meter's resolution:**
-  four checks on the 09-28 run, 4.01 V to 3.70 V, all within 10 mV (below).
+- **Averaged, it agrees with a meter to within about the meter's resolution:**
+  eight checks on the 09-28 run, 4.01 V down to 3.22 V, all within 11 mV
+  (below).
 - **The level is a fraction of runtime**, read off a curve of pack voltage.
   The voltage is good; the curve in the firmware is a **placeholder** until the
   drain test is fitted.
@@ -72,7 +74,10 @@ Three observations, which do not yet add up to a mechanism:
   (JD, 2026-09-30 ~20:00): gaps of ~4-5 s.
 
 So **2-3 reports per 5-second poll cycle, bunched together** rather than spread
-evenly. Whether that is several replies to one poll, or the reply plus an
+evenly. ⚠️ With the lights cut (10-01, from ~02:13) the count fell to
+**194-256 per entry**, some entries with every report identical — which fits
+the module also sending a report when the reading changes. A hint, not a
+finding. Whether that is several replies to one poll, or the reply plus an
 unprompted stream, has not been checked (a capture of the serial frames would show
 it). It matters for one thing: if a bunch repeats one measurement, the 64
 reports the estimate averages are ~25 independent readings, not 64.
@@ -114,10 +119,16 @@ the debug page (`history/battery-2026-09-28-drain/readings.csv`). These are
 | 09-30 12:32 | 3.81 V | 3816 mV | +6 | trimmed mean |
 | 09-30 14:57 | 3.79 V | 3791 mV | +1 | trimmed mean |
 | 09-30 19:56 | 3.70 V | 3700 mV | 0 | trimmed mean |
+| 09-30 20:43 | 3.68 V | 3686 mV | +6 | trimmed mean |
+| 09-30 23:00 | 3.58-3.59 V | 3589 mV | 0 to +9 | trimmed mean |
+| 10-01 01:05 | 3.50 V | 3505 mV | +5 | trimmed mean |
+| 10-01 ~05:07 | 3.22 V | 3231 mV | +11 | trimmed mean |
 
-All four are inside the ±20 mV of Phase 1 gate 4, and the errors are no bigger
-than the meter's own resolution. The 4.01 V point is above the fitted range:
-the extrapolated line held there too. A point near 3.45 V is still to come.
+All eight are inside the ±20 mV of Phase 1 gate 4, and every error is within
+about one digit of the meter (10 mV). **The line held beyond both ends of its
+fitted range**: −9 mV at 4.01 V above it, +11 mV at 3.22 V below it. JD reads
+the screen first and probes after, so on a falling pack each error carries a
+small positive lag: ~1 mV at 17 mV/h, ~4 mV at 80 mV/h.
 
 ⚠️ **One reading has never fitted.** On 09-26, near the end of the first run,
 JD read **85** at a pack of ~3.99-4.00 V, where the line predicts ~95. It was
@@ -145,17 +156,18 @@ curve, 1.4-1.8% on the 3.87-4.02 V plateau and 2.8-5.6% between 3.69 and
   90%: on 09-25 `5C` left 100 about 5.3 h into a run of ~52-63 h, so the clamp
   is the top ~8-10% of runtime. It is named provisional in the source. **Only
   those two arrays change** when the fitted curve replaces it.
-- **Load hardly moves the pack:** RGB full versus off moved it **10 mV**. Sag is
-  the usual reason voltage gauges fail; at 10 mV one curve should cover every
-  lighting state. ⚠️ That is one measurement, near full, with pastel lighting,
-  on a meter that reads to 10 mV — suggestive, not established across the range
-  or temperature.
+- **Load moves the pack only a little:** RGB full versus off moved it **10 mV**
+  near full (one meter reading, pastel lighting). Near 3.40 V the RGB cut lifted
+  it **~20 mV** (10-01 ~02:13: the log's mean rose 3408 → 3412 mV where it had
+  been falling ~19 mV an entry; a rough trend estimate). Sag is the usual
+  reason voltage gauges fail; at 10-20 mV one curve should cover the lighting
+  states, but the sag does grow toward empty.
 
 ### How good it can get
 
 | source | size | status |
 |---|---|---|
-| `5C` → mV | within 10 mV, 3.70-4.01 V | measured, four points |
+| `5C` → mV | within ~10 mV, 3.22-4.01 V | measured, eight points |
 | one `5C` count | 8.75 mV | the raw step; the mean resolves ~0.1 count |
 | the curve | ±3-5% of level, guessed | **the dominant term**; the drain test fits it |
 | temperature, 10 °C swing | ±1.5-3%, from generic NMC figures | unmeasured here |
@@ -256,8 +268,11 @@ never fell far enough to fire):
   CUT`. A reboot restores the defaults.
 - This sheds load; it does not disconnect the cell. The pack's own protection
   circuit does that (the 09-25 run: 0 V at the connector by 09-28 02:59).
-- ⚠️ Gate 2 on hardware — the alerts firing, the cut surviving `Fn`+`X`, USB
-  lifting it — is due on the 09-28 run's last night (2026-09-30).
+- ✅ **Gate 2 passed on hardware**, the 09-28 run's last night: "Battery low"
+  at ~00:00 on 10-01 (3544 mV on the debug row); the cut at ~02:13 (from the
+  log's LED drive); JD could not turn the LEDs back on; 5 s of USB lifted it;
+  and ~1 min after unplugging, still under 3400 mV, it cut again. ⚠️ Every
+  plug-in re-arms the warning, so each brief dump re-fires it after unplugging.
 
 ### The panel
 
