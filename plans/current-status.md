@@ -14,7 +14,7 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## 2026-09-30, 15:00 — RESUME HERE
+## 2026-09-30, 20:45 — RESUME HERE
 
 **A drain test is running on the Phase 1 battery gauge.** Plan, both codex
 reviews and every disposition: [`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md).
@@ -33,16 +33,23 @@ Host checks: `scripts/battery_sim/run.sh` (27 scenarios, mutants caught).
 ~19:55** (the 15:45 start was voided -- the board sat on USB 17:45-19:55).
 Perturbations, all in `readings.csv`: ~8% LED 19:53-21:35 on 09-28; brief
 USB plug-ins for each dump; the 13:55-14:00 flash; a loose cable 09-30 12:33
-(~2 min charging, no enumeration). **Latest (09-30 14:57):** meter 3.79 V,
-gauge 3791 mV, panel 39.3%.
+(~2 min charging, no enumeration). **Latest (09-30 19:56):** meter 3.70 V,
+gauge 3700 mV, panel 15.5%; pack falling ~17 mV/h and rising (dump
+`log-20260930-1956.csv`).
 
 **Expected** (last run's pace, +-2 h): "Battery low" (3.55 V pack) ~21-22h,
 "Low: RGB off" (3.40 V) ~23:30-00:30, the 3.30 V stop ~01:00-02:00 Thursday.
-JD is choosing between staying up for the alarms, dumping before bed and
-letting it die (the protector trips), or stopping at bedtime.
+**JD's plan:** a few more readings, one last reading and dump before bed,
+then let it run out overnight. ⚠️ The RAM log dies with the board, so
+everything after the bedtime dump is lost unless the board is still alive in
+the morning (after the cut the LEDs stop drawing, so it may be -- an
+estimate). If it is: don't touch the slider, press `Fn`+`X` first (lights
+must stay off: gate 2), then plug in on BT and dump; the lights should
+return after ~5 s of USB. Suggested to JD, not agreed: film the `Fn`+`D`
+page overnight (pack mV, the cut, the death) with a clock in frame.
 
-**Phase 1 gates:** 4 (meter vs gauge) -- 4.01 V/-9 mV, 3.81/+6, 3.79/+1;
-the ~3.45 V point pending. 2 (protection) -- due tonight: note the alert
+**Phase 1 gates:** 4 (meter vs gauge) -- 4.01 V/-9 mV, 3.81/+6, 3.79/+1,
+3.70/0; the ~3.45 V point pending (any reading at or under ~3.5 V helps). 2 (protection) -- due tonight: note the alert
 times, press Fn+X after the cut (lights must stay off), 5 s of USB restores.
 3 (never rises on battery), 5, 6, 7, 8 -- met. 1 (supply) -- met in use
 (unplug, replug, charging cap, FULL at termination, reboot restore).
@@ -76,6 +83,19 @@ coulomb counter; the 1.25 mm pack extensions (Amazon) come first.
   charging session, which re-seats the level and charges the pack).
 - A loose cable charges without enumerating: check `ioreg` for `0C45`.
 - Use `set -o pipefail` in dump one-liners, or a failed dump prints "saved".
+- 09-30 19:57: `hostagent/ak820battery.py` refused ("no repo venv provides
+  'hid'") although `venv/bin/python3` imports `hid` fine. Run
+  `venv/bin/python3 hostagent/ak820battery.py log ...` directly. Cause:
+  `venv/bin/python3` symlinks to pyenv's 3.13.9, which is also what
+  `#!/usr/bin/env python3` runs, and `venv_bootstrap._same()` uses
+  `os.path.samefile` (follows symlinks), so its exec-loop guard calls the
+  venv "the interpreter we already are". Fix (not applied): guard on
+  `sys.prefix` against the candidate's venv root instead.
+- **Docs pass, 09-30 evening:** `docs/battery.md` restructured (current
+  facts first, withdrawn claims in a dated table at the end), the display
+  doc's battery row and debug row, firmware comments (comment-only), and
+  as-built notes in the plan. `5C` cadence: 2-3 reports per 5 s poll cycle,
+  bunched -- the mechanism is unconfirmed.
 
 ## 2026-09-28, 14:55 (superseded)
 

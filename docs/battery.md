@@ -1,237 +1,387 @@
 # The battery: what the board can know, and how the level is estimated
 
 Code: `battery.c` (the supply decision, `5C`, the level, protection, the log),
-`power.c` (the power caps: the lights cut, and the idle ladder when enabled), `indicators.c` (charger pins, pack presence), and the battery
-row in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. Task 8 in
-`.taskmaster/tasks/tasks.json` tracks the work.
+`power.c` (the power caps: the lights cut, and the idle ladder when enabled),
+`indicators.c` (charger pins, pack presence), and the battery row and debug
+page in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. The
+plan, two codex reviews and every disposition:
+[`plans/BATTERY-GAUGE-PLAN.md`](../plans/BATTERY-GAUGE-PLAN.md).
 
-> **State (2026-09-28):** flashed on JD's unit is `b35d8672b3`: it measures
-> VDD, logs once a minute, cuts the RGB at low VDD (⚠️ which never fires — VDD
-> is pinned), and shows the voltage on the battery row. Committed but **not
-> flashed**: the VDD level estimator (`36be68f16a`, dead — VDD is a constant)
-> and the idle ladder (`3b85686ff7`). **The work now is
-> [`plans/BATTERY-GAUGE-PLAN.md`](../plans/BATTERY-GAUGE-PLAN.md)**: a gauge on
-> `5C`, reviewed by codex, **built and passing the host simulator, not yet
-> flashed** ("The gauge", at the end).
+> **State (2026-09-30):** on JD's unit is `deef6053dd`, the Phase 1 gauge.
+> A drain test at full white has run from FULL since 2026-09-28 ~19:55
+> ([`history/battery-2026-09-28-drain/`](../history/battery-2026-09-28-drain/));
+> it supplies the curve that replaces the provisional one. Resume from
+> [`plans/current-status.md`](../plans/current-status.md).
 
-## What is achievable (revised 2026-09-27 — the earlier verdict was wrong)
+## The short version
 
-⚠️ **This section previously said a trustworthy percentage was "not reachable
-on this hardware." That is withdrawn.** It was written believing `5C` was a
-coarse, noisy gauge. It is not: it is a **precise voltmeter on the pack**, and
-that changes the answer.
+- **The MCU cannot see the pack.** The SN32 can measure only its own supply,
+  VDD, and on battery that is a buck-boost's output: ~3.90 V whatever the pack
+  is doing. No analogue pin reaches the pack either.
+- **The Bluetooth module can.** The CH582F sits on the unregulated rail and
+  reports a byte, `5C`, that everyone took for a (fake) percentage. It is a
+  **linear voltmeter on the pack**: `5C = 114.22 × V − 361.04`.
+- **Averaged, it agrees with a meter to within the meter's resolution:**
+  four checks on the 09-28 run, 4.01 V to 3.70 V, all within 10 mV (below).
+- **The level is a fraction of runtime**, read off a curve of pack voltage.
+  The voltage is good; the curve in the firmware is a **placeholder** until the
+  drain test is fitted.
+- **It is blind at both ends:** above ~4.036 V (the top ~8-10% of runtime) and
+  below ~3.161 V. While charging, the charge current inflates the reading.
 
-### What `5C` actually is
+## Where the pack voltage comes from: `5C`
 
-Fitted against a meter across one discharge, five settled points
-(`history/battery-2026-09-25/readings.csv`):
+### What `5C` is
+
+The CH582F sends the MCU a `5C <byte>` frame: the stock firmware's battery
+percentage, and the only battery signal the stock firmware had (none of the
+nine stock SN32F290 images in `fpb/ajazz-ak820-pro` — AK820 Pro v1.13, v1.14
+and seven sibling boards — references the ADC, comparator or op-amp base
+addresses). It is not a cell model. It is a straight line on the pack voltage,
+fitted against a meter at five settled points on the 09-25 discharge
+(`history/battery-2026-09-25/readings.csv`: 3.84 → 78, 3.81 → 74, 3.74 → 66,
+3.68 → 59, 3.30 → 16):
 
     5C = 114.22 × V_pack − 361.04      r² = 0.99987, residuals < 0.5 count
     inverted:  V_pack = (5C + 361.04) / 114.22
 
-The first four points (3.84-3.68 V) gave 117.8 / −374.5; the fifth, **3.30 V →
-16** at 21:16 on 09-27, was read out in conversation and only reached
-`readings.csv` on 09-28. ⚠️ **Validated 3.30-3.84 V, on discharge only.** Both
-ends below are extrapolations, and a claim that it was "validated 3.16-4.17 V on
-charge" is withdrawn: the 3.16 V "reading" was never taken, it is the fit's own
-zero point.
+- **One count is 8.75 mV.**
+- **It clamps:** 100 above ~4.036 V and 0 below ~3.161 V. Both ends are the
+  line extrapolated, not measured. A full pack rests at 4.18 V, above the
+  ceiling, so `5C` reads 100 for the first ~5 hours of a discharge at full
+  white — which is why every test before 09-26 concluded "it only ever says
+  100": they all ran inside the clamp.
+- **It reads terminal voltage.** Plugged in near full it snaps to 100 (the
+  charger's CV voltage is above the clamp); plugged in flat it climbs slowly
+  (4 → 100 over 3 h 55 min on 09-28). See "Charging", below.
+- **A board with no pack fitted reports 0** (`indicators.c` uses that, with
+  the charger pins, for "No Batt").
+- **Fitted on one unit, on discharge, 3.30-3.84 V.** Checked since across a
+  recharge and up to 4.01 V (below). Another unit's module may sit on a
+  different line.
 
-So the module is doing the crudest possible thing — a **straight line from
-~3.16 V = 0% to ~4.04 V = 100%**, no cell model, no curve, no compensation.
-⚠️ That single fact explains everything this document previously found
-mysterious: a full pack at 4.18 V is **above the 4.04 V ceiling**, so it clamps
-to 100 and stays there through the top of the discharge. Every earlier test
-that concluded "it only ever says 100" was run entirely inside the clamp.
+### How often it arrives
 
-⚠️ **The top clamp is ~8-10% of the runtime, not ~20%.** On 09-25 `5C` left
-100 about 5.3 h into a run of ~52-63 h at full white. "~20%" was a generic NMC
-curve's figure for 4.04 V, and this run contradicts that curve (see below).
+Three observations, which do not yet add up to a mechanism:
 
-**The important consequence: `5C` gives us the pack voltage the SN32 cannot
-see.** The MCU is behind the buck-boost; the CH582F is on the unregulated rail.
-That is the whole reason this one number matters.
+- the firmware sends `A6 53` every 5 s (`CH582_BATTERY_POLL_MS`), as the stock
+  firmware does;
+- the battery log counts **224-237 reports per 10-minute entry** on 09-28
+  (log v3) and **262-334** on 09-29/30 (v4): one per ~1.8-2.7 s;
+- the debug page's age (the `3` in `62@3`) **counts up to ~4 and resets**
+  (JD, 2026-09-30 ~20:00): gaps of ~4-5 s.
 
-### A ±5% percentage is reachable with no new hardware
+So **2-3 reports per 5-second poll cycle, bunched together** rather than spread
+evenly. Whether that is several replies to one poll, or the reply plus an
+unprompted stream, has not been checked (a capture of the serial frames would show
+it). It matters for one thing: if a bunch repeats one measurement, the 64
+reports the estimate averages are ~25 independent readings, not 64.
 
-**Time is the calibration.** At fixed settings a single full run gives voltage
-against time, and at total runtime `T` the level at any voltage is
-`remaining/T`. No generic NMC table, no assumed capacity.
+### From reports to millivolts
 
-⚠️ **Correction (2026-09-28, codex review): that is runtime, not charge.** An
-earlier version said *elapsed time is proportional to charge consumed*. Behind a
-buck-boost the board draws **constant power**, so the pack current rises as the
-voltage falls — about 27% between 4.18 and 3.30 V. A timed run measures the
-**fraction of runtime left at that load**, which is what the gauge shows, and
-which is what a user wants to know. Calling it state of charge needs a current
-measurement.
+The CH582F driver hands every report to `battery_5c_report()` as it is parsed
+— never the cached last value, which would count one report many times.
 
-⚠️ **And the textbook NMC curve does not fit this run.** It puts 3.74 V at
-~47%; on 09-25 the pack reached 3.74 V at 49.3 h and was dead by 63.4 h, so it
-had **at most ~25%** of its runtime left. The older generic table in
-`battery.c` (22.5% at 3.74 V) is the closer placeholder until the calibration
-run replaces both.
+- **The estimate is a trimmed mean of the last 64 reports**, in hundredths of
+  a count: sort, drop the highest and lowest eighth, average the rest. That
+  spans ~2-2.5 min at the current report rate. At least 5 reports before there
+  is an estimate at all.
+- **Why a mean and not a median** (the median of 7 before `deef6053dd`): a
+  median of whole counts is a whole count, and one count is 1.2-5% of level
+  depending on where the pack is, so the level moved in lumps and then sat
+  still for an hour. A single report jitters by ±2-3 counts (the log's
+  per-period min/max), and it dithers between neighbouring counts, so the mean
+  resolves about a tenth of a count (the log's means read like `62.98`). The
+  trim keeps a median's indifference to a stray report.
+- **Emptied** when no report has arrived for 20 s, at every supply change, and
+  whenever the charger starts or stops: reports taken under charge current do
+  not describe the pack without it, and vice versa.
+- **The clamps:** an estimate ≥ 99.50 is the top clamp (the pack is only known
+  to be ≥ 4036 mV) and < 0.50 is the bottom one (≤ 3161 mV). Those are bounds,
+  never fed to the curve; the debug page prints them as `>4036` and `<3161`.
+- **Millivolts:** `(estimate + 361.04) × 1000 / 114.22`, in integers
+  (`c5_to_mv`).
 
-⚠️ **And this board has a property that makes voltage gauging work better here
-than it usually does:** RGB full versus off moves the pack **10 mV** (Hardware
-facts, below). Load-induced sag is the usual reason voltage gauges fail, and at
-10 mV **one curve covers every load state the keyboard has.** ⚠️ That 10 mV
-is one measurement, near full, with pastel lighting, on a meter that reads to
-10 mV — suggestive, not established across the range or temperature.
+### Checked against a meter
 
-Error budget:
+Meter at the pack connector, which reads to 10 mV; the gauge's pack mV from
+the debug page (`history/battery-2026-09-28-drain/readings.csv`). These are
+**not** the points the line was fitted to: a different run, after a recharge.
 
-| source | contribution |
-|---|---|
-| `5C` quantisation (8.5 mV per count) | ±1.2% |
-| jitter, ±3 counts raw | ±3.5% |
-| ↳ **median-filtered over 7 fresh reports** (~35 s; they arrive every 5 s) | ~±1% (unmeasured) |
-| curve fitted from our own run | ±3-5% ← dominant |
-| temperature, 10 °C swing | ±1.5-3% |
-| cell ageing after a year | ±5%, drifting |
+| time | meter | gauge | error | firmware |
+|---|---|---|---|---|
+| 09-29 09:29 | 4.01 V | 4001 mV | −9 | median of 7 (whole counts) |
+| 09-30 12:32 | 3.81 V | 3816 mV | +6 | trimmed mean |
+| 09-30 14:57 | 3.79 V | 3791 mV | +1 | trimmed mean |
+| 09-30 19:56 | 3.70 V | 3700 mV | 0 | trimmed mean |
 
-**≈±5% fresh — a target, not a result**, until a table is checked against a run
-it was not fitted to. The jitter is *not* the limit, though ⚠️ the √n claim
-assumed independent samples, and `5C` arrives only every 5 s: half a minute is
-six reports, not thirty.
+All four are inside the ±20 mV of Phase 1 gate 4, and the errors are no bigger
+than the meter's own resolution. The 4.01 V point is above the fitted range:
+the extrapolated line held there too. A point near 3.45 V is still to come.
 
-### The objective
+⚠️ **One reading has never fitted.** On 09-26, near the end of the first run,
+JD read **85** at a pack of ~3.99-4.00 V, where the line predicts ~95. It was
+recalled, not logged, and nothing since has reproduced it.
 
-- **bars plus a percentage in 5% steps** — the granularity is what tells the
-  user it is an estimate; 1% resolution is a claim we cannot back;
-- **ratcheted**: never rising while on battery, reset on charge;
-- ⚠️ **a low-battery warning that fires**, which today's VDD thresholds may not;
-- volts on the `Fn`+`D` debug page only, never on the battery row.
+## What the level means
 
-### What the MAX17048 still buys — less than this document used to claim
+⭐ **The fraction of runtime left, at the load the curve was measured at.**
+Behind a buck-boost the board draws **constant power**, so the pack current
+rises as the voltage falls (about 27% between 4.18 and 3.30 V). A timed run at
+fixed settings therefore calibrates *runtime*, not charge: at total runtime `T`
+the level at any voltage is `remaining / T`. That is also what a user wants to
+know. Calling it state of charge would need a current measurement.
 
-A **refinement and a convenience, not an enabler**: ±1-2% instead of ±5%, no
-curve fitting or periodic recalibration, and ageing compensation our fitted
-curve will not have. Its load and relaxation modelling is largely wasted here,
-given the 10 mV sag. Worth doing if the accuracy or the maintenance matters;
-⚠️ **not required for a percentage worth printing.**
+**The curve is the whole accuracy question now.** The voltage is good to ~10 mV;
+how much level 10 mV is worth depends on the curve's slope — on the provisional
+curve, 1.4-1.8% on the 3.87-4.02 V plateau and 2.8-5.6% between 3.69 and
+3.87 V.
 
-### ❌ The software coulomb-count route is superseded
+- ⚠️ **The textbook NMC rest-voltage curve does not fit this pack.** It puts
+  3.74 V at ~47%; on 09-25 the pack reached 3.74 V at 49.3 h and was dead by
+  63.4 h, so it had **at most ~25%** of its runtime left.
+- **The provisional curve** (`curve_mv`/`curve_pm` in `battery.c`) is a generic
+  Li-ion table (0% at 3.27 V … 80% at 4.02 V) scaled so the top clamp reads
+  90%: on 09-25 `5C` left 100 about 5.3 h into a run of ~52-63 h, so the clamp
+  is the top ~8-10% of runtime. It is named provisional in the source. **Only
+  those two arrays change** when the fitted curve replaces it.
+- **Load hardly moves the pack:** RGB full versus off moved it **10 mV**. Sag is
+  the usual reason voltage gauges fail; at 10 mV one curve should cover every
+  lighting state. ⚠️ That is one measurement, near full, with pastel lighting,
+  on a meter that reads to 10 mV — suggestive, not established across the range
+  or temperature.
 
-An earlier version proposed estimating current from `led_pm`/`rgb_val` and
-integrating it, with the INA228 measuring milliamps to fit the model. **Dropped.**
-The voltage route above is simpler, needs no extra hardware, and does not drift
-with an unmeasured load model. The INA228 was removed from the parts list.
-⚠️ It is back in JD's 2026-09-29 DigiKey cart
-([`plans/parts/`](../plans/parts/digikey-order-2026-09-29.csv)) -- as a
-**current logger** for the power-mode work, not for coulomb counting in the
-firmware.
+### How good it can get
 
-## Why this was hard
+| source | size | status |
+|---|---|---|
+| `5C` → mV | within 10 mV, 3.70-4.01 V | measured, four points |
+| one `5C` count | 8.75 mV | the raw step; the mean resolves ~0.1 count |
+| the curve | ±3-5% of level, guessed | **the dominant term**; the drain test fits it |
+| temperature, 10 °C swing | ±1.5-3%, from generic NMC figures | unmeasured here |
+| cell ageing, a year | ±5%, drifting | unmeasured |
+| another unit's module | unknown | one unit fitted |
 
-Every obvious source turned out to be wrong or absent:
+**≈ ±5% fresh is the target, not a result**, until a fitted curve is checked
+against a run it was not fitted to.
 
-- **The CH582F's percentage (`5C`) is not a level** — ⚠️ **but see the
-  2026-09-26 observation below, which contradicts the strongest form of this.**
-  It read 100 through a full-brightness discharge, and 100 while recharging a
-  pack we then believed flat. It does sense the pack: a board with no pack
-  fitted reads 0 (`indicators.c`). The **stock firmware's gauge was this
-  number**: none of the nine stock SN32F290 images in `fpb/ajazz-ak820-pro`
-  (AK820 Pro v1.13, v1.14, and seven sibling boards) references the ADC,
-  comparator or op-amp base addresses.
+### What the panel should show
 
-  > ⭐ **2026-09-26: `5C` moved. It is not pinned at 100.** Near the end of the
-  > 09-25 discharge JD read **~85%** on the `Fn`+`D` debug page, row 8,
-  > which renders `ch582_get_battery()` directly (`display.c:878`). The pack was
-  > at ~3.99–4.00 V. It **snapped to 100 the instant USB was connected**, and a
-  > post-reset `HC_CONN` read on USB gave 100 with a minimum of 99 since boot.
-  >
-  > So the sentence "across the whole range we have observed it only ever says
-  > 100" is **withdrawn**. What the evidence now supports is narrower and more
-  > useful: `5C` tracks *something*, coarsely and slowly, and it is **useless
-  > while charging** — it reports charger state, not charge.
-  >
-  > ⚠️ **Do not yet treat this as a gauge.** It is one reading, recalled
-  > approximately, with no trajectory behind it: the `module_pct` column of the
-  > once-a-minute RAM log would have shown the whole curve against the pack, and
-  > that log was lost when the slider went to `cable` at 13:22. 85% at 3.99 V is
-  > also optimistic for NMC — nearer 65–75% on the standard curve — so if it is
-  > a level it is a badly calibrated one. **The next discharge must capture
-  > `module_pct` over the whole run**, which the log already records; it only
-  > needs to survive to be dumped.
-  >
-  > If `5C` does track the pack, it is a gauge reachable with no ADC work at
-  > all, which is the thing this document spent its length establishing was
-  > absent. That is worth an hour of deliberate testing before more estimator
-  > calibration.
-  >
-  > ⭐ **2026-09-26, later: it does track, and it is now the ONLY signal** (see
-  > the buck-boost note above). Settled pairs, excluding the post-charge
-  > artifact: **3.99 V → 85** and **3.84 V → 78**, about **47 points per volt**,
-  > consistent and correctly signed. Over the same excursion VDD moved 1 mV.
-  > The post-charge memory is real but transient: 97 at 14:03 after ~20 min on
-  > the charger had decayed to 78 by evening. So the gauge is a filtered,
-  > ratcheted, remapped `5C` — discarded for some hours after any charge.
-  >
-  > ⚠️ **WITHDRAWN 2026-09-28 (the fifth claim here overturned): there is no
-  > post-charge memory.** 97 at 4.00 V is exactly what the linear fit predicts
-  > (96.7), and the fall to 78 is 157 mV of fit against the meter's 160 mV
-  > (4.00 → 3.84 V): `5C` tracked the pack the whole time, and the pack fell.
-  > JD's observations reconcile on one mechanism — **`5C` reads terminal
-  > voltage**: plugged in from a mostly charged pack it snaps to 100 because the
-  > charger's CV voltage sits above the 4.04 V clamp; plugged in flat it climbs
-  > slowly (4 → 100 over 3 h 55 min on 09-28), because charge current raises the
-  > terminal voltage only a little above a low rest voltage. So there is **no
-  > hold-off**; the only post-charge effect is the pack relaxing *downward*,
-  > which the ratchet follows. (Codex review, finding 5, and the 09-28 log.)
-- **No analogue pin can see the pack.** AIN0..AIN15 are P2.0..P2.15, all
-  matrix columns, RGB rows or the Win Lock LED. The op-amp and comparator
-  inputs are RGB rows (B4, B5, A11), the flash's WP (B2), the encoder (A10)
-  and the BOOT pin (B3). There is nowhere to wire a divider, even by hand.
-- **The SN32's own supply is regulated on battery** (below), so the one
-  voltage it can measure is flat for the top fifth or so of the charge.
-- **The charger's DONE pin never reads low**, even when charging clearly
-  finished (see "The charger"), so "full" has to be inferred.
+- **Whole percent** (`deef6053dd`). The plan said 5% steps, so the granularity
+  would say "estimate"; JD found they hid how fast the level was falling — it
+  sat at 85% all day. While the curve is being fitted the panel shows **tenths**
+  (`BATTERY_SHOW_TENTHS` in `config.h`); that goes before release.
+- Ratcheted: never rising on battery, reset by a real charge.
+- Volts on the `Fn`+`D` debug page only, never on the battery row.
+- A low-battery warning that fires (it now does — below).
+
+## The gauge as built (`deef6053dd`)
+
+### Supply: what powers the board
+
+A state machine on the charger's CHRG pin and VDD, because a VDD threshold
+cannot tell "unplugged" from "plugged in and charging hard" (the old 4300 mV
+predicate called a pack charging at VDD 4193 mV "on battery" for four hours on
+09-28, and flickered in the taper):
+
+    CHRG low on 2 ticks              -> USB, held 1 s past the last low
+                                        (covers the no-pack ~2 Hz pulse)
+    raw VDD >= 4100 mV for 0.5 s     -> USB
+    raw VDD <  4000 mV for 1 s,
+      with no evidence of USB        -> battery
+    otherwise                        -> unchanged
+
+On battery VDD is ~3.90 V; on USB no raw sample went under 4119 mV across a
+7.5 h charge into a dead pack. ⚠️ The ADC reference is ±2% per part: re-check
+both margins on another unit.
+
+### The level
+
+Kept internally in tenths of a percent.
+
+- **On battery, below the top clamp:** the curve at the pack voltage, through
+  **the ratchet** — it never rises; it moves down only after **six fresh
+  estimates in a row** sit below it, and then to the *highest* of the six, at
+  most 1% per move. Observed: ~15 s per 1% step (the 09-29 post-flash walk).
+- **On battery, at the top clamp:** the voltage says only "≥ 4.036 V", so the
+  level **counts down by time** from wherever charging left it: 1% per ~32 min
+  (the 09-25 clamp span), floored at **90.5%**, just above the clamp's exit at
+  90%, so a whole-percent or tenths panel runs into the curve without a step.
+- **Booted at the top clamp** (every cable ↔ BT slider flip reboots): the saved
+  level if it is in the clamp's 90-100 band, else a guess of 95. Below the
+  clamp nothing is restored; the voltage is the authority.
+- **Charging** reads the curve **150 mV below** the terminal voltage
+  (`CHARGE_IR_MV`, the charge current's I×R: ~0.8-0.9 A through ~180 mΩ, a
+  guess, unmeasured), only rises, and only in a **real charging session** (CHRG
+  low for 60 s, so a brief plug-in cannot bump it). It stops at **97.0%**
+  (creeping there through the CV phase at the clamp), and says **100 only when
+  the charger terminates**: CHRG released for 10 s, on USB, with `5C` at 100.
+  Charging termination with the board running in BT on USB is verified
+  (09-28: a top-up released at 15:43, the gauge went to 100).
+- **The re-seat:** after a real charging session the level is taken straight
+  from the first post-unplug estimate below the clamp, once, so a wrong I×R
+  costs one correction at unplug rather than hours of a wrong level.
+- **The saved level** (kb eeconfig, 0.5% steps) is written at FULL, then at
+  97.5 / 95 / 92.5 / 90 on battery (rounded down, so a restore never
+  overstates), and once below the band, so a stale 9x is not restored after a
+  pack swap: **six writes a charge cycle**, none while charging. It was every
+  whole-percent change (~100 a cycle) until `deef6053dd`.
+  ⚠️ **Every internal-flash write blanks the whole LED matrix for ~7 ms**
+  (interrupts are masked through the program, and the vector table and row ISR
+  live in flash; the Cortex-M0 has no VTOR to move them). JD sees it as a
+  brief whole-board blink; a brightness step reproduces it. Count them with
+  `ak820health.py --stalls --json` (`flash_writes`).
+
+Queued fixes (the plan, "Queued"): show "Charge", not the 95 guess, while
+charging at the clamp with nothing saved; don't spend the re-seat on a clamp
+reading just after unplug — on 09-29 that left the level at 95 and the ratchet
+walked it to ~86 at 1% per ~15 s.
+
+### Protection
+
+On the **pack voltage** from `5C` (it compared VDD until `8627554513`, and VDD
+never fell far enough to fire):
+
+- **"Battery low"** once, after 30 s under **3550 mV**; re-armed above 3650 mV
+  or on USB.
+- **"Low: RGB off"** after 30 s under **3400 mV**. Three fresh reports of 0 in
+  a row cut at once and set the level to 0 ("Low").
+- The cut is a **power cap** (`power_set_lights_cut`), not an RGB toggle, so
+  the user's own `Fn`+`X` cannot undo it. It lifts only after **5 s of fresh
+  evidence of USB** (CHRG low or VDD read high that second, not a remembered
+  state). A stale reading never clears it.
+- No threshold is judged at the top clamp, where the pack is only known to be
+  ≥ 4036 mV.
+- Thresholds are RAM-only, in pack mV, 0 disables: `ak820battery.py cfg WARN
+  CUT`. A reboot restores the defaults.
+- This sheds load; it does not disconnect the cell. The pack's own protection
+  circuit does that (the 09-25 run: 0 V at the connector by 09-28 02:59).
+- ⚠️ Gate 2 on hardware — the alerts firing, the cut surviving `Fn`+`X`, USB
+  lifting it — is due on the 09-28 run's last night (2026-09-30).
+
+### The panel
+
+- **Battery row:** the level (`85%`; `85.9%` with tenths), an outline, and a
+  fill that is green above 50%, amber 21-50%, red at 20% and below (rounded up,
+  so a few percent never reads as empty). **`Low`** with a red sliver under
+  0.5% on battery (below ~3.30 V on the provisional curve). While the level is unknown: **`Charge`** charging, **`USB`** on USB,
+  blank on battery. **`No Batt`** and a red cross with no pack. A yellow **bolt**
+  while the charger is charging (CHRG low and STDBY high).
+- **Alerts** ("Battery low", "Low: RGB off") take the text band for 60 s.
+- **`Fn`+`D`, row 8:** `Batt 62@3 3700 3900` is the module's **last raw
+  `5C`** (62), its **age in seconds** (3; `--` once 20 s stale), the **pack mV**
+  from the estimate (`>4036` / `<3161` at the clamps), and **VDD** in mV. The
+  page recomposes once a second, so the age skips a value now and then.
+
+### The log (v4)
+
+**720 ten-minute entries, 120 h, in RAM.** Each holds VDD mean and min; every
+`5C` report of the period as sum, count (16-bit), min and max; flags at the end
+**and** OR-ed over the period, so a transition cannot fall between entries; the
+level in 0.5%; the mean effective LED drive (`led_pm`, after the power cap);
+and the effective LCD backlight. The reply carries the format version and the
+period; the host tool never assumes either.
+
+```sh
+set -o pipefail
+venv/bin/python3 hostagent/ak820battery.py log out.csv   # dump
+venv/bin/python3 hostagent/ak820battery.py               # state (HC_CONN)
+```
+
+⚠️ **The log dies with the board.** A flat pack, a flash, and a **BT → cable
+slider flip** (a reset) each lose it. Dump with the **slider on BT**, and
+unplug within a minute: longer is a charging session, which re-seats the level
+and charges the pack. ⚠️ A loose cable charges without enumerating: check for
+USB id `0C45`.
+
+`HC_CONN` (raw-HID channel 0x13) carries the live fields: VDD, charger pins,
+the rounded estimate, its age, flags, the level, pack mV, LED drive, state and
+the format version (`hid_protocol.c` has the byte map).
+
+### Checked on the host
+
+`scripts/battery_sim/run.sh` compiles this `battery.c` and `power.c` against a
+simulated board and runs **27 scenarios**: the 09-28 charge log, a 57.7 h
+discharge with jitter, every supply transition, a pack-less board, protection,
+the re-seat, reboots at and below the clamp, and one per defect the
+implementation review found. At that review fifteen deliberately broken
+variants (a ratchet that rises, protection on VDD, the old 4300 mV predicate,
+charging reaching 100, each review fix reverted) were each caught. It does not
+compile `indicators.c` or `display.c`: presence and the panel are checked by
+reading, and on hardware.
 
 ## Hardware facts
 
 **The pack** (JD's unit, printed on the cell): `JKJ606090 4000mAh 72.9g,
-3.7V 14.8Wh`, date code `202512.30`, Shenzhen Jiekejie. Chemistry
-Li/Ni/Co/Mn with a graphite anode: **NMC**, so the standard NMC
-voltage-to-level curve applies. The other unit (the white one) had no pack
-fitted as of 2026-09-09.
+3.7V 14.8Wh`, date code `202512.30`, Shenzhen Jiekejie. Li/Ni/Co/Mn with a
+graphite anode: **NMC**. The other unit (the white one) had no pack fitted as of
+2026-09-09.
 
 **The slider is labelled POWER on the PCB.** It selects the power source as
-well as the mode (docs/hardware.md): BT → cable reboots the MCU.
+well as the mode ([hardware.md](hardware.md)): BT → cable reboots the MCU.
 
-**VDD by power state** (the SN32 measuring itself, `battery.c`):
+**No analogue pin can see the pack.** AIN0..AIN15 are P2.0..P2.15, all matrix
+columns, RGB rows or the Win Lock LED. The op-amp and comparator inputs are RGB
+rows (B4, B5, A11), the flash's WP (B2), the encoder (A10) and the BOOT pin
+(B3). There is nowhere to wire a divider, even by hand.
+
+**VDD by power state** (the SN32 measuring itself against its internal 2.0 V
+reference, ±2% per part):
 
 | state | VDD | meaning |
 |---|---|---|
-| cable position, USB in | 4.79 V | USB, through a low-drop path |
-| BT position, USB in | 4.47 V (4.31 V while charging hard) | USB through a diode; the pack is not on VDD |
-| BT position, unplugged | **3.90 V, flat** | a regulator's output, fed from the pack |
+| cable position, USB in | 4.79 V (4.53 V charging) | USB, through a low-drop path |
+| BT position, USB in | 4.47 V idle; 4.12-4.31 V charging (~4.19 V through constant current from flat, rising through the taper) | USB through a diode |
+| BT position, unplugged | **3.90 V, flat** | the buck-boost's output, fed from the pack |
 
-The regulator: with a meter at the pack connector, the pack read 4.18 V at
-rest (4.17 V with the RGB at full) while VDD read 3.90 V, and over the
-following nine hours the pack fell 4.17 → 4.01 V while VDD **never left 3.90
-V** (full table below).
+**It is a buck-boost.** With the pack at 3.84 V, VDD read 3.901 V — above its
+own input, which no linear regulator can do. Over the 09-25 run the pack fell
+4.18 → 3.74 V while VDD moved +3 mV; VDD first sagged visibly (~3.87 V) with the
+pack at 3.30 V. So VDD says which supply is on, never how full the pack is.
 
-> ⚠️ **2026-09-26: it is a BUCK-BOOST, and there is no dropout to wait for.**
-> An earlier version of this paragraph predicted "VDD will follow the pack, a
-> dropout below it, once the pack gets down to around 3.95-4.0 V". **Falsified.**
-> With the pack at **3.84 V** the debug page read **VDD 3.901 V** — VDD *above*
-> its own input, which no linear regulator can do. Across the whole excursion so
-> far the pack fell **4.18 → 3.84 V (−340 mV)** while VDD moved **+1 mV**.
->
-> **VDD is therefore useless as a pack gauge over the entire practical range**,
-> and the two-region gauge this document was working toward — the module's `5C`
-> up top, the ADC below the dropout — has no lower region to hand over to.
-> **`5C` is the only signal available.**
->
-> ⚠️ **Safety consequence, unconfirmed but likely:** the warn (3.55 V) and RGB
-> cut (3.40 V) thresholds below are set **on VDD**, which is pinned at 3.90 V.
-> They cannot fire until the buck-boost collapses entirely, which may be below
-> the pack protection circuit's trip point — so the firmware's low-battery net
-> may be inert, with the pack's own protection doing the real work. **Confirm
-> this before relying on those thresholds in any deep discharge.**
+**VDD tracks charge current, qualitatively.** On USB in the BT position the
+diode's drop scales with current: flat at ~4193 mV through constant current on
+09-28 (03:00-07:00), then 4241 → 4268 → 4300 as the taper set in. ⚠️ Do not
+threshold it: in the cable position VDD reads 4530 mV *while charging*, and USB
+voltage, cable and temperature all move it. "Full" comes from CHRG.
 
-**The load barely sags the pack**: RGB at full versus off moved the pack by
-10 mV, and VDD not at all.
+**The draw at full white.** The 09-25 run lasted ~52-63 h (pastel for its
+first ~4.7 h; its end fell in a 5.7 h unobserved window, and a 20 min charge
+mid-run added an unknown few hours). From the label's 14.8 Wh that is
+~0.23-0.28 W at the pack, ~60-75 mA at 3.7 V — if the label is honest. Lights-off draw is unmeasured. The LEDs are
+multiplexed 1/18, so even full white draws modestly. **An hour unplugged at
+full pastel RGB was put back in 23 minutes** of charging (09-24, 19:53 → 20:16;
+this charger gives at most 1 A).
+
+## The charger (ASC4056)
+
+A TP4056-class linear charger, ESOP8 (`fpb/ajazz-ak820-pro/docs/ASC4056.pdf`,
+in Chinese). **Pin 5 is BAT** (the pack's +), a much easier probe point than
+the pack connector. CHRG (pin 7) and STDBY/DONE (pin 6) are open-drain, read on
+B16 and B17 with pull-ups. The datasheet's table:
+
+| state | CHRG | DONE |
+|---|---|---|
+| charging | low | high |
+| full | high | low |
+| no battery | pulsing ~2 Hz | low |
+| fault (temperature, VIN < 3.8 V, VIN < VBAT) | high | high |
+
+What the board actually shows:
+
+- **CHRG works, slowly.** It released ~9½ h into a charge from a deeply
+  discharged pack (09-28, pack 4.18 V), with `5C` at 100 for the last ~5½ h;
+  a top-up of a full pack released after ~11 min. It answers "has charging
+  stopped", not "how full". **The gauge's "full" is CHRG released with `5C` at
+  100.**
+- **DONE has never been seen low on USB**, not even after termination (09-24:
+  CHRG went high with USB in and B17 stayed high, which the table calls a
+  fault). B17 is probably not DONE, or DONE is not connected.
+- ⚠️ **On battery DONE reads low**, in every entry of the 09-28 drain log: with
+  no VIN the pin evidently loses its pull-up. So on battery it says nothing.
+- The charging LED: the stock firmware lit it in the cable position, so the
+  pack charges there too (JD, 2026-09-25). Ours leaves it off (far too bright);
+  the bolt on the battery row reads the same pin.
 
 ## The pack connector, and tapping it (2026-09-26)
 
@@ -257,12 +407,11 @@ silkscreen beside the header says `NTC`. ⚠️ The black wire is nearly invisib
 against the black PCB in photographs — count conductors at the pack, not on
 screen.
 
-⚠️ **The NTC is present and the firmware cannot read it.** It appears nowhere in
-`battery.c`; it goes to the charger's temperature-fault input (the ASC4056 fault
-row below). And there is no route to change that: the ADC survey above found
-every AIN pin already spoken for. **So pack temperature is reachable only by an
-external tap** — worth having, because the NMC curve we are fitting shifts with
-temperature and a multi-day run on a desk sees several degrees.
+⚠️ **The NTC is present and the firmware cannot read it.** It goes to the
+charger's temperature-fault input, and every AIN pin is already spoken for
+(above). **Pack temperature is reachable only by an external tap** — worth
+having, because the curve we are fitting shifts with temperature and a
+multi-day run on a desk sees several degrees.
 
 ### The tap
 
@@ -275,39 +424,36 @@ A permanent tap removes the poking that caused them.
 - **Voltage only, in parallel.** ADS1115 (16-bit, ±4.096 V, ~0.1 mV) with a 2:1
   divider, or a logging DMM and no code at all.
 - A 100k/100k divider draws 21 µA: ~2.5 mAh over five days out of 4000. Ignorable.
-- Sample every 10-60 s. The pack moves ~0.008 V/h; anything faster is oversampling.
+- The pack moves ~3-27 mV/h through most of a run at full white (slowest on
+  the ~4.0 V plateau), and ~65 mV/h at the end (09-25: 3.68 → 3.30 V in 5.8 h). A sample every 10-60 s is plenty.
 - Take the NTC out to the same logger for temperature.
-
-⚠️ **Do not put a current shunt in the pack path while the regulator dropout is
-being characterized.** The regulator's own drop is under 0.12 V at this load
-(above); an INA219/INA226 with the usual 0.1 Ω shunt eats ~30 mV of that at
-300 mA, so VDD would appear to follow the pack **earlier than it really does**
-and the calibration would encode the test rig. If coulomb counting is wanted
-later, use 0.01 Ω (~3 mV) and re-verify the dropout.
+- ⚠️ **A current shunt in the pack path drops its I×R between the pack and
+  everything downstream, the CH582F included**, so `5C` would read lower than
+  the pack by that much (~6-8 mV at a 0.1 Ω shunt and ~70 mA: about a count).
+  Measure voltage on the pack side of any shunt, or use a 0.01 Ω one.
 
 **Before connecting anything**, two checks at the header with the pack in:
 `+` to `−` reads pack voltage (~4.0 V), and NTC to `−` reads ~10 kΩ at room
 temperature for a 10k thermistor. That identifies the pins properly instead of
-trusting wire colour.
-
-⚠️ **Correction to an earlier claim here:** meter readings are *not* sensitive to
-the RGB load. "The load barely sags the pack" above is the measured fact — full
-versus off moved it 10 mV. A meter reading that wanders is probe contact, not
-lighting.
+trusting wire colour. A meter reading that wanders is probe contact, not
+lighting: full versus off moves the pack only 10 mV.
 
 ## A real fuel gauge, retrofitted (a plan, not done)
 
 ⚠️ **Optional and personal.** This modifies one unit and helps nobody else
-running this firmware. It is recorded because it is the **only route to a
-percentage worth printing** — everything else in this document is making the
-best of a signal that cannot deliver one.
+running this firmware. The filtered-`5C` gauge needs no soldering and no
+purchase, and is on track for ±5%; the retrofit is **a refinement, not an
+enabler**: ±1-2%, no curve to fit or refit, and ageing compensation our fitted
+curve will not have. Its load and relaxation modelling is largely wasted here,
+given the 10 mV sag. It is a want, not a need.
 
 **The part:** a **MAX17048**. ModelGauge, so **no sense resistor** — it sits
-across the pack and reports over I²C, ~$5 on a breakout. It models the cell's
-dynamics to compensate for load and relaxation, which is exactly the problem
-that makes raw voltage useless through the NMC plateau. Typical ±1-2%. ⚠️ Still
-voltage-derived, so it is not coulomb counting; it is just very good at the
-thing `5C` is bad at.
+across the pack and reports over I²C, ~$5 on a breakout. ⚠️ Still
+voltage-derived, so it is not coulomb counting; what it does better than us is
+the voltage-to-level model, not the voltage. (JD's 2026-09-29 DigiKey cart,
+[`plans/parts/`](../plans/parts/digikey-order-2026-09-29.csv), not yet ordered,
+has an INA228 as a **current logger** for the power-mode work; a MAX17055 or
+MAX1726x would be the permanent coulomb-counting option.)
 
 ### ⭐ The board already has an I²C bus
 
@@ -414,208 +560,24 @@ all** and runs on the internal RC — which is why `config.h` warns the oscillat
 is per-unit and temperature-dependent, and why the clock needs a host to
 discipline it.
 
-### ⚠️ What this does not change
-
-The **filtered-`5C` path needs no soldering, no purchase, and meets the
-objective above**. The retrofit buys a percentage worth printing, on one unit,
-at the cost of a modification to a board in daily use. It is a want, not a need.
-
-## ⚠️ `battery_on_battery()` is wrong, in two ways (2026-09-28)
-
-> Fixed in the gauge (below, "The gauge"): a state machine on CHRG and VDD.
-> Kept because the two failure modes are the evidence for its design.
-
-```c
-#define ON_USB_MIN_MV 4300u
-bool battery_on_battery(void) { return mv != 0 && mv < ON_USB_MIN_MV; }
-```
-
-**1. No hysteresis.** Observed live on 09-28: with VDD creeping up through
-4300 mV as the charge current tapered, the battery row **alternated between
-"USB" and the voltage** on every few-millivolt wobble. A slow crossing parks it
-on the boundary for a long time, so this is not a rare flicker.
-
-**2. ⚠️ It cannot tell "unplugged" from "plugged in, charging hard."** The
-09-28 charge log shows **VDD at 4193 mV for four straight hours** while on USB
-and charging — below the threshold, so the firmware believed it was on battery
-the whole time. `BATT_F_ON_BATTERY` and `charging` were set **simultaneously**.
-The threshold was set against this document's "4.31 V while charging hard", but
-a deeply discharged pack charges harder than that and pulls VDD lower.
-
-**The fix is a better signal, not a better threshold.** The charger pin is a
-direct observation:
-
-    CHRG low                                   -> on USB (charging)
-    CHRG high AND VDD >= 4300 (with hysteresis) -> on USB (idle/full)
-    otherwise                                   -> on battery
-
-VDD then only arbitrates the case CHRG cannot — which is exactly the case where
-VDD is trustworthy, because no charge current means no diode drop.
-
-⚠️ **This gates the new gauge.** The ratchet must not run while charging and
-the idle ladder must not dim a plugged-in keyboard, so a predicate that is
-wrong for hours would break both.
-
-## ⭐ VDD as the charge-complete signal
-
-This document records that the ASC4056's DONE pin never reads low, so "full has
-to be inferred". The 09-28 log shows **`done` never asserted across 7.5 hours**,
-which confirms it.
-
-⚠️ **Correction, same day: `CHRG` does work.** An earlier version of this
-section said both pins were useless. JD watched the charge LED go out at
-roughly **09½ hours** into the charge, with the pack at **4.18 V** — so CHRG
-does eventually signal termination. Our log ran out two hours short of it, and
-"never cleared across 7.5 hours" was a statement about the log's length, not the
-pin's behaviour. **CHRG is usable; only DONE is broken.**
-
-⚠️ But CHRG is *slow*: 9½ hours from a deeply discharged pack, with the display
-reading 100% for the last 5½ of them. So it answers "has charging stopped", not
-"is the pack nearly full".
-
-**VDD infers the progress CHRG cannot.** VDD is USB through a diode, so its
-drop scales with current, which makes it a live read on how far the taper has
-gone rather than a single late edge:
-
-| VDD | meaning |
-|---|---|
-| ~4193 mV, flat | constant-current phase, full charge current |
-| rising | CV phase, current tapering |
-| ~4470 mV | no charge current — **done** |
-
-Measured 09-28: flat at 4193 from 03:00 to 07:00, then 4241 → 4268 → 4300 as
-the taper set in. A diode's drop is logarithmic in current, roughly 50 mV per
-e-fold, so **+75 mV from the plateau is about a 4-5x fall in charge current**.
-
-So the rail that is useless as a battery gauge is a serviceable
-**charge-current** proxy, and it answers a question this document previously
-recorded as unanswerable.
-
-⚠️ **Qualitative only — do not threshold it (codex review, 2026-09-28).** The
-"~4470 mV = done" row holds in the **BT** position only: in the **cable**
-position VDD reads **4530 mV while charging** (`log.csv`, 09-26 13:24), so a
-threshold would call a charging pack full. USB voltage, cable resistance, board
-load and temperature all move it too, and the 4-5× figure assumes a diode model
-nobody measured. The gauge takes "full" from CHRG releasing with `5C` at 100
-instead.
-
-## The charger (ASC4056)
-
-A TP4056-class linear charger, ESOP8 (`fpb/ajazz-ak820-pro/docs/ASC4056.pdf`,
-in Chinese). **Pin 5 is BAT** (the pack's +), a much easier probe point than
-the pack connector. CHRG (pin 7) and DONE (pin 6) are open-drain, read on B16
-and B17 with pull-ups:
-
-| state | CHRG | DONE |
-|---|---|---|
-| charging | low | high |
-| full | high | low |
-| no battery | pulsing ~2 Hz | low |
-| fault (temperature, VIN < 3.8 V, VIN < VBAT) | high | high |
-
-**DONE has never been seen low on USB.** ⚠️ **On battery it reads low**
-(every entry of the 09-28 drain log): with no VIN the charger's pin evidently
-loses its pull-up. So on battery STDBY says nothing about the charger. Charging finished at 20:16 on 2026-09-24
-(CHRG went high with USB in) and B17 stayed high, which the table calls a
-fault. B17 is probably not DONE, or DONE is not connected. The usable "full"
-signal is **CHRG going high while USB is in, after it had been low**.
-
-The stock firmware lit the charging LED in the cable position, so the pack
-does charge there too (JD, 2026-09-25). Our firmware leaves that LED off
-because it is far too bright; the bolt on the battery row reads the same pin.
-
-## Measurements, 2026-09-24/25
-
-**Recharge after an hour's drain:** an hour unplugged at full pastel RGB was
-put back in **23 minutes** of charging (19:53 → 20:16). This charger gives at
-most 1 A, so that hour cost under ~380 mAh.
-
-**The discharge run** (meter at the pack connector, VDD from the battery row):
-
-| time | pack | VDD | lighting |
-|---|---|---|---|
-| 10:54 | 4.18 / 4.17 | 3.90 | rest / RGB full, pastel |
-| 11:28 | 4.14 | 3.90 | |
-| 12:06 | 4.12 | | |
-| 13:57 | 4.08 | | |
-| 15:34 | 4.05 | 3.90 | |
-| 15:36 | | | **switched to solid white, 100%** |
-| 16:25 | 4.03 | 3.90 | |
-| 17:07 | 4.02 | 3.90 | |
-| 19:39 | 4.01 | 3.90 | |
-
-(Raw readings with every note: `history/battery-2026-09-25/readings.csv` once
-the run's log is read.)
-
-**The draw is small:** 4.17 → 4.01 V in 8¾ hours is about 18% of an NMC
-charge, **roughly 2% an hour, 80-130 mA for the whole board at full RGB**.
-The LEDs are multiplexed 1/18, so even full white draws modestly. A full pack
-should last on the order of 30-40 hours at full brightness, and several days
-with the lights off.
-
-## The shutdown of 2026-09-24
+## The shutdown of 2026-09-24 (unexplained)
 
 After a few hours unplugged at full brightness the board went completely dark
-and came back **only when the cable was plugged in**. By the numbers above
-the pack was **nowhere near flat**. It had charged for only ~45 minutes before
-the charger stopped, and read full the same evening. Our firmware has **no
-sleep, timeout or power-down path at all**. So something cut the battery-side
-power, and USB (which reaches VDD by its own path) bypassed it. Suspects:
+and came back **only when the cable was plugged in**. The pack was **nowhere
+near flat**: it had charged for only ~45 minutes before the charger stopped, and
+read full the same evening. Our firmware has **no sleep, timeout or power-down
+path at all** (the idle ladder is compiled out). So something cut the
+battery-side power, and USB (which reaches VDD by its own path) bypassed it.
+Suspects:
 
 1. an idle or disconnect power-off in the CH582F or the power circuit (the
    stock firmware has a "deep sleep" state, `g_connection_mode` 0x0D, that
    ours never takes part in);
 2. the pack's protection circuit tripping (a charger connection resets it).
 
-Not reproduced yet. If it happens again: note the time and how long the board
-had been idle, then try a key press, then the slider flip with the cable still
-out, then the cable.
-
-## The gauge (Phase 1, built 2026-09-28, not yet flashed)
-
-What `battery.c` does now; the reasoning and the review behind each part are in
-[`plans/BATTERY-GAUGE-PLAN.md`](../plans/BATTERY-GAUGE-PLAN.md).
-
-- **Supply** is a state machine: CHRG low is proof of USB (held 1 s, for the
-  no-pack pulse); raw VDD ≥ 4100 mV for 0.5 s is USB; under 4000 mV for 1 s with
-  no CHRG is the pack; between, the state holds. Replaces the 4300 mV threshold
-  above.
-- **`5C`** is handed over by the CH582F parser report by report (5 s apart),
-  stale after 20 s, as a median of the last 7, emptied at every supply change
-  and every charger start or stop. `mV = (5C × 1000000 +
-  361040000 + 57110) / 114220` for 1..99; 0 and 100 are the clamps' bounds.
-- **The level** is a provisional curve (the old generic table, scaled so
-  4036 mV reads 90%). On battery it only falls, one sustained step at a time;
-  at the top clamp a countdown from 100 (or 95 with no history) stands in for
-  the voltage. Charging reads the curve 150 mV below the terminal voltage
-  (I×R, provisional), only rises, stops at 97 (shows 95), and says 100 only
-  once CHRG releases with `5C` at 100. After a real charge the level re-seats
-  once from post-unplug reports. The panel shows 5% steps and "Low" at 0.
-  The level is saved to EEPROM (whole percent) and restored after a reboot at
-  the top clamp, where the voltage cannot place it — a slider flip reboots.
-- **Protection** is on the pack voltage: warn under 3550 mV and cut the RGB
-  under 3400 mV, each after 30 s, and three fresh zeroes cut at once and show
-  "Low". The cut is a power cap that a user RGB toggle cannot undo, lifted only
-  by 5 s of *fresh* evidence of USB. No threshold is judged at the top clamp. Both
-  thresholds are RAM-only, settable in pack mV: `ak820battery.py cfg WARN CUT`.
-- **The log** (v3): 720 ten-minute entries, 120 h, each with every `5C` report
-  of its period as sum/count/min/max, VDD mean and min, flags at the end and
-  OR-ed over the period, the level, and the effective LED drive and backlight.
-  `ak820battery.py log out.csv` reads the period from the reply. ⚠️ **Plug in
-  with the slider on BT**: a BT → cable flip resets the board and loses it.
-- **Checked on the host** by `scripts/battery_sim/run.sh`, which compiles this
-  `battery.c` and `power.c` against a simulated board: 23 scenarios, 15
-  mutants caught. Reviewed by codex twice (plan and implementation).
-
-### Superseded
-
-- **The VDD level estimator (`36be68f16a`)** — a countdown from the LED load in
-  the "regulated band", VDD plus a dropout below it — is deleted. It rested on a
-  dropout that does not exist: VDD is a buck-boost output.
-- **Protection on VDD (`b35d8672b3`, what is flashed today)**: warn 3.55 V and
-  cut 3.40 V compared against VDD, which was still ~3.87 V with the pack at
-  3.30 V on 09-27. Whether it ever fired before the pack's protector tripped is
-  unknown.
+Not reproduced. If it happens again: note the time and how long the board had
+been idle, then try a key press, then the slider flip with the cable still out,
+then the cable.
 
 ## The idle ladder (`3b85686ff7`, compiled out)
 
@@ -628,3 +590,41 @@ since the gauge: it would change the load during the calibration run, and
 which of its stages pays is unmeasured (plan, 2.6). Deep sleep (stopping the
 row ISR, sleeping the MCU) is next; key scanning lives in that ISR, so it
 needs its own wake path (task 8.4, and task 9 for making that ISR cheaper).
+Phase 2 of the plan (power modes on `Fn`+`B`, an emergency reserve mode,
+standby) supersedes the ladder's design; JD is collecting ideas there, not
+building yet.
+
+## Open questions
+
+- **How `5C` frames arrive**: replies, a stream, or both (above).
+- **Whether the line holds on another unit**, and across temperature.
+- **`CHARGE_IR_MV`**: measure it as the step in `5C` at the moment of
+  unplugging mid-charge.
+- **The 85-at-~4.00 V reading** of 09-26 (above).
+- **~10-15 unexplained flash writes** in 22 h on the old build (blinks at
+  09-28 15:50 and 09-29 12:33 matched no known write).
+- **The 09-24 shutdown** (above).
+
+## Claims this document made and withdrew
+
+Kept so nobody re-derives them. Each was stated as fact here at the time;
+`git log -p docs/battery.md` has the full text.
+
+| claim | withdrawn | why |
+|---|---|---|
+| "A trustworthy percentage is not reachable on this hardware" | 09-27 | `5C` is a precise voltmeter on the pack |
+| "`5C` is not a level; it only ever says 100" | 09-26 | every test until then ran inside the top clamp |
+| "VDD will follow the pack below ~3.95-4.0 V" (a regulator dropout) | 09-26 | VDD is a buck-boost output: 3.901 V with the pack at 3.84 V |
+| "`5C` has a post-charge memory, discard it for hours after a charge" | 09-28 | 97 at 4.00 V is what the line predicts (96.7); the fall to 78 was 157 mV of line against the meter's 160 mV — it tracked the pack throughout |
+| "Elapsed time is proportional to charge consumed" | 09-28, codex | constant power behind a buck-boost: it is runtime, not charge |
+| "The line is validated 3.16-4.17 V on charge"; "the meter says 3.16 V" | 09-28 | nobody measured 3.16 V; it is the line's own zero point, repeated back as a reading |
+| "Both charger pins are useless" | 09-28 | CHRG works, slowly; only DONE is broken |
+| "DONE never reads low" | 09-28 | true on USB; on battery it reads low always |
+| "~20% of runtime sits above the 4.036 V clamp" | 09-28 | ~8-10%: `5C` left 100 at 5.3 h of a ~52-63 h run |
+| "~2%/h, 80-130 mA; 30-40 h at full brightness" (from an NMC curve) | 09-30 | the 09-25 run lasted ~52-63 h |
+| "Meter readings are sensitive to the RGB load" | 09-26 | full versus off moved the pack 10 mV |
+| "`5C` arrives every 5 s, only in reply to the poll" | 09-28 | 224-334 reports per 10 min: 2-3 per poll cycle (09-28 onward) |
+| "VDD ~4470 mV means charging is done" | 09-28, codex | the cable position reads 4530 mV while charging |
+| "Calibrate the VDD level estimator's constants" (`36be68f16a`) | 09-27 | VDD is a constant on battery; the estimator is deleted |
+| Protection on VDD (`b35d8672b3`) | 09-28 | VDD was ~3.87 V with the pack at 3.30 V; it could not fire. Now on the pack voltage |
+| `battery_on_battery()`: VDD < 4300 mV is "on battery" | 09-28 | no hysteresis (flickered in the taper), and a pack charging hard pulls VDD to 4193 mV. Now a state machine |

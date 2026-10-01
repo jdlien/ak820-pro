@@ -169,6 +169,11 @@ connector by 02:59).
   (~35 s), fed only on reception, never by re-reading the cached value.
   **Emptied at every supply change**: reports taken under charge current do not
   describe the pack off it, and vice versa.
+- ⚠️ **As built in `deef6053dd`: a trimmed mean of the last 64 reports**, not
+  the median of 7, and the premise above was wrong: the log counts 224-334
+  reports per 10 min, 2-3 per poll cycle, bunched. A median of whole counts
+  moved the level in 1.2-5% lumps; `5C` dithers, so a mean resolves ~0.1
+  count. Current description: `docs/battery.md`.
 - **Millivolts**, integer: `mV = (5C × 1000000 + 361040000 + 57110) / 114220`,
   for **1..99 only**. ⚠️ `5C == 100` means **≥ 4036 mV**, `5C == 0` means
   **≤ 3161 mV**: bounds, never numbers, never fed to the curve.
@@ -211,7 +216,8 @@ wide.
 
 **Smoothing, so it neither lies nor jumps:**
 
-- the 7-report median (1.3);
+- the 7-report median (1.3) — ⚠️ a trimmed mean of 64 as built, and the
+  ratchet's six estimates take ~15 s, not ~30 (observed 09-29);
 - **the ratchet**: on battery the level never rises. It moves down only after
   the curve has sat below it for **six fresh medians in a row** (~30 s), and
   then only to the *highest* of those six — so one low outlier cannot drag it
@@ -242,6 +248,10 @@ a level locked too low.
 
 - **Bars plus a percentage in 5% steps.** The granularity is what tells the
   user it is an estimate; 1% resolution is a claim we cannot back.
+  ⚠️ **Reversed in `deef6053dd`: whole percent**, tenths while the curve is
+  fitted (`BATTERY_SHOW_TENTHS`). JD, 09-29: 5% steps hid how fast the level
+  was falling — it sat at 85% all day. The countdown's floor moved from 92.5
+  to 90.5 to match.
 - ⚠️ **Remove the raw voltage from the battery row.** It is VDD, a constant.
   It earned its place as an *instrument* (it exposed the buck-boost) and must
   not survive as a *feature*.

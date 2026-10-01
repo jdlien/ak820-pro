@@ -194,8 +194,18 @@ Rowgap      6ms r1     ← worst gap between looks at one key row. THE loss metr
 Stall   25:0 10:3      ← 25 ms can lose a press; 10 ms is the leading indicator
 Worst      22ms blit   ← how big, and what caused it (flash/blit/i2c/-)
 Scan/s         346     BT Drop        0     ← non-zero = a keystroke never sent
-BT T/O    352 49%      Battery 100% min 100 ← min answers "is the % real?"
+BT T/O    352 49%      Batt 62@3 3700 3900  ← raw 5C @ age s, pack mV, VDD mV
 ```
+
+The `Batt` row keeps three readings apart because they mean different things.
+`62` is the module's **last raw `5C`**; `@3` is **how many seconds ago** it
+arrived (`--` once 20 s stale, since the module would otherwise show its last
+value forever). It counts up to ~4 and resets: reports seem to arrive in
+bunches of 2-3 about every 5 s (not yet confirmed; [battery.md](battery.md)).
+The page recomposes once a second, so the count skips a value now and then. `3700` is the **pack in mV** from
+`battery.c`'s trimmed mean of the last 64 reports — `>4036` / `<3161` at the
+clamps, which are bounds, not readings. `3900` is **VDD**, which on battery only
+says the buck-boost is running.
 
 It exists for **untethered** use. With the cable attached `ak820health.py` reads
 all of this and more in any slider position (commit `4b86d95014`); the panel is
@@ -267,17 +277,34 @@ immediately.
 
 ## Battery row
 
-Icon bottom-left (outline + independent fill), percentage right-aligned to
-`PANEL_WIDTH - 4`. Green >50%, amber 21-50%, red ≤20%; **charging overrides
-with cyan** on outline and fill, plus a 9×14 bolt while actively charging
-(`CHRG` low AND `STDBY` high — full-and-plugged-in is "done", no bolt). Fill
-rounds up so 3% doesn't read as dead. Redraw triggers on charging state as
-well as level. Drawing diagonals: rasterise a polygon and emit horizontal
-runs — hand-placed zigzags read as the digit "4".
+The level comes from `battery.c` — the CH582F's `5C`, a voltmeter on the pack,
+through a curve. What it means and how it is estimated:
+[battery.md](battery.md). This section is only how it is drawn.
 
-**Runtime estimate: considered and rejected.** 1% ≈ 1.2 h, RGB swings draw
-5-10×, board lives plugged in — it would be confidently wrong. `5C <pct>` is
-all the module reports.
+Icon bottom-left (white outline + independent fill), text right-aligned to
+`PANEL_WIDTH - 4`. Fill green >50%, amber 21-50%, red ≤20%, rounded up so 3%
+doesn't read as dead. **Charging does not recolour anything**: a yellow 9×14
+bolt beside the icon carries it (`CHRG` low AND `STDBY` high —
+full-and-plugged-in is "done", no bolt), so "15% and charging" stays readable.
+The text slot holds one of:
+
+| text | when |
+|---|---|
+| `85%` (`85.9%` with `BATTERY_SHOW_TENTHS`, on while the curve is fitted) | the level is known |
+| `Low`, with a red sliver of fill | level under 0.5% on battery (below ~3.30 V on the provisional curve), or three `5C` reports of 0 in a row |
+| `Charge` / `USB` / blank | level not known yet: charging / on USB / on battery |
+| `No Batt`, red cross in the bolt's slot | no pack fitted (`indicators.c`) |
+
+Never VDD: it showed VDD until the gauge, and on battery VDD is a buck-boost's
+output pinned at ~3.90 V. Redraw triggers on the text, the charging state and
+presence as well as the level, and repaints only what moved — the old
+whole-strip clear plus four synchronous glyphs came to ~20 ms. Drawing
+diagonals: rasterise a polygon and emit horizontal runs — hand-placed zigzags
+read as the digit "4".
+
+**A time-remaining readout: still not shown.** The level is a fraction of
+runtime at the load the curve was measured at (full white); hours would need
+the current load's draw, and lights-off draw is unmeasured.
 
 ## Param overlay (readout of what you just changed)
 
