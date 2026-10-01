@@ -579,6 +579,17 @@ Not reproduced. If it happens again: note the time and how long the board had
 been idle, then try a key press, then the slider flip with the cable still out,
 then the cable.
 
+⭐ **A known cause gives the same symptom (2026-09-30, ~20:44).** A probe slip
+shorted the pack connector mid-run, cable out: the board went **dark and stayed
+dead**. A slider flip to the cable position and back, **still with no cable**,
+brought it back (a fresh boot; the RAM log was gone). So a dark board on battery
+is recoverable without a charger. That fits the pack protector's short-circuit
+trip, which in DW01-class protectors releases once the load is removed — the
+cable position disconnects the pack — but **the protector in this pack is
+unidentified, so that is a hypothesis**, and a flip would also reset any latch
+in the board's own power path. It does make suspect 2 concrete: something that
+trips the protector, then holds it tripped while the board stays connected.
+
 ## The idle ladder (`3b85686ff7`, compiled out)
 
 On battery only: RGB to a quarter after 1 minute idle, RGB off and the screen
