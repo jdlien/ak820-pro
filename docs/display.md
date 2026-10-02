@@ -184,9 +184,10 @@ comments that send people to it.
 
 ## The Fn+D debug page
 
-Full-panel diagnostics, nine rows in the 6×14 face, toggled with `Fn`+`D`.
-**Tap toggles; hold ~800 ms resets the counters** (fires under the finger, not on
-release — see `bt_ui.c` for why that distinction matters).
+Full-panel diagnostics, nine rows in the 6×14 face, on `Fn`+`D`. **Tap cycles
+dashboard → debug page → camera page → dashboard; hold ~800 ms resets the
+counters** (fires under the finger, not on release — see `bt_ui.c` for why
+that distinction matters).
 
 ```
 Uptime      2m 14s     ISR       73% 3900   ← occupancy + rate; field rate = /18
@@ -227,6 +228,27 @@ not the page. While the restore runs, `display_housekeeping_task()` stands aside
 (it gates on `debug_exit_step`); that gate is safe only because the pump is
 called from its own site in `housekeeping_task_kb()` — the gate's comment says
 why, do not fold the pump into the housekeeping task.
+
+### The camera page (the second tap)
+
+The pack and the level in digits a camera can read across a room, for filming
+battery runs (added 2026-10-02: on JD's security camera the debug page's text is
+~3 px tall, and the board dying on the lights-off reserve is the one moment no
+RAM log survives).
+
+```
+ 3.712      ← the pack in volts; ---- no estimate, HI / LO at the 5C clamps
+    47      ← the level in percent; --- unknown
+Batt 62@3 3700 3900   ← row 8, the debug page's Batt row
+```
+
+**Seven-segment digits drawn as rectangles**, 26×48 px with 6 px segments: no
+font asset is big enough (the clock's is cropped to 15×22 and holds only `0-9:`).
+`lcd_fill_rect()` is a CPU push at wire speed (~0.1 ms a segment), and the pump
+paints **one changed segment per main-loop pass**, so no pass nears the 10 ms
+line. It shares the debug page's banded clear and staged restore. Recomposed
+once a second, like the debug page. "HI" uses the left-hand pair of segments
+for its I, so it cannot read as "H1".
 
 ## Backlight (software PWM, dimmable, persisted)
 

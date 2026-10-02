@@ -312,6 +312,9 @@ never fell far enough to fire):
   `5C`** (62), its **age in seconds** (3; `--` once 20 s stale), the **pack mV**
   from the estimate (`>4036` / `<3161` at the clamps), and **VDD** in mV. The
   page recomposes once a second, so the age skips a value now and then.
+- **The camera page** (a second tap of `Fn`+`D`): the pack in volts and the level
+  in seven-segment digits big enough for a room camera, for filming a run's end
+  ([display.md](display.md)).
 
 ### The log (v4)
 
