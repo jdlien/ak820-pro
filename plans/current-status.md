@@ -24,8 +24,10 @@ Evidence: [`../docs/battery.md`](../docs/battery.md). Run records:
 `log-*.csv` dumps, and the fit's `fit-output.txt` / `fit-points.csv`.
 
 **On the board since ~20:20 10-01: `759e265796`** (the fitted curve, whole
-percent), full. The charge from flat before it is dumped and analysed in
-`history/battery-2026-10-01-charge/`. ~~Charging from flat~~ (done). ⚠️ **Dump the
+percent). The charge from flat before it is dumped and analysed in
+`history/battery-2026-10-01-charge/`. **A validation run starts at the
+unplug, 10-01 evening**: `history/battery-2026-10-01-drain/`, white at full
+drive as on 09-28; the cut is due ~51.6 h of full white later. ⚠️ **Dump the
 charge log before any flash or slider flip** -- a charge from flat on this
 firmware is wanted for the charging side (CHARGE_IR_MV, the CV creep). The
 09-28 charge took ~9.5 h; dump when the charge LED goes out (CHRG released).
@@ -53,8 +55,10 @@ after updating three expectations that were the old curve's numbers (343 ->
 187 pm at 5C 70; "starts high" ≥ 50). Firmware commit on `ak820pro-jdlien`.
 
 **Next:**
-1. When charged: dump the charge log, then flash the fitted curve with JD at
-   the keyboard (flash.sh with the board RUNNING). Build first: `./build.sh daily`.
+1. ✅ Charged, dumped, flashed (`759e265796`). The validation run: panel
+   readings with times are the data (no plug-in needed); dump rarely, and
+   again from the 'Battery low' warning on; the security camera from there.
+   Then compare the panel against the runtime it actually had left.
 2. **The queued fixes** (plan, "Queued"): "Charge" not the 95 guess while
    charging at the clamp with nothing saved; keep the re-seat owed past a
    clamp reading just after unplug; the stalls (`25:6 10:2449`, worst 35 ms
