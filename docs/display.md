@@ -290,7 +290,7 @@ The text slot holds one of:
 
 | text | when |
 |---|---|
-| `85%` (`85.9%` with `BATTERY_SHOW_TENTHS`, on while the curve is fitted) | the level is known |
+| `85%` (`85.9%` with `BATTERY_SHOW_TENTHS`, a calibration view, off by default) | the level is known |
 | `Low`, with a red sliver of fill | level under 0.5% on battery (below ~3.43 V on the fitted curve), or three `5C` reports of 0 in a row |
 | `Charge` / `USB` / blank | level not known yet: charging / on USB / on battery |
 | `No Batt`, red cross in the bolt's slot | no pack fitted (`indicators.c`) |
