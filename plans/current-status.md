@@ -23,8 +23,9 @@ Evidence: [`../docs/battery.md`](../docs/battery.md). Run records:
 -- `readings.csv` (every observation, JD's words, corrections), the
 `log-*.csv` dumps, and the fit's `fit-output.txt` / `fit-points.csv`.
 
-**On the board: `deef6053dd`** (placeholder curve, tenths on the panel), now
-**charging from flat in the BT position since ~08:45 10-01**. ⚠️ **Dump the
+**On the board since ~20:20 10-01: `759e265796`** (the fitted curve, whole
+percent), full. The charge from flat before it is dumped and analysed in
+`history/battery-2026-10-01-charge/`. ~~Charging from flat~~ (done). ⚠️ **Dump the
 charge log before any flash or slider flip** -- a charge from flat on this
 firmware is wanted for the charging side (CHARGE_IR_MV, the CV creep). The
 09-28 charge took ~9.5 h; dump when the charge LED goes out (CHRG released).
@@ -69,6 +70,10 @@ after updating three expectations that were the old curve's numbers (343 ->
 - Dump with the slider on **BT**, then unplug within a minute (longer is a
   charging session, which re-seats the level and charges the pack).
 - A loose cable charges without enumerating: check `ioreg` for `0C45`.
+- ⚠️ **`0C45` alone does not mean running**: the bootloader is `0C45:7140`,
+  the board `0C45:8009`. Before a flash, prove it is running with a raw-HID
+  read (`ak820battery.py` answers), not the vendor id -- on 10-01 the board
+  was already in the bootloader and flash.sh restored the 09-29 backups.
 - Use `set -o pipefail` in dump one-liners, or a failed dump prints "saved".
 - 09-30 19:57: `hostagent/ak820battery.py` refused ("no repo venv provides
   'hid'") although `venv/bin/python3` imports `hid` fine. Run
