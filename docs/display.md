@@ -239,8 +239,12 @@ RAM log survives).
 ```
  3.712      ← the pack in volts; ---- no estimate, HI / LO at the 5C clamps
     47      ← the level in percent; --- unknown
-Batt 62@3 3700 3900   ← row 8, the debug page's Batt row
+14:03:27      5C 62@3 ← the board's clock, and the raw 5C @ its age
 ```
+
+The clock is for **time-lapse video**, which stamps no time on its frames
+(JD's Pixel 8 records at 5×-120×): every frame dates itself, to the second,
+from the clock the timekeeper keeps right.
 
 **Seven-segment digits drawn as rectangles**, 26×48 px with 6 px segments: no
 font asset is big enough (the clock's is cropped to 15×22 and holds only `0-9:`).
