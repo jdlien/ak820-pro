@@ -25,9 +25,10 @@ Evidence: [`../docs/battery.md`](../docs/battery.md). Run records:
 
 **On the board since ~20:20 10-01: `759e265796`** (the fitted curve, whole
 percent). The charge from flat before it is dumped and analysed in
-`history/battery-2026-10-01-charge/`. **A validation run starts at the
-unplug, 10-01 evening**: `history/battery-2026-10-01-drain/`, white at full
-drive as on 09-28; the cut is due ~51.6 h of full white later. ⚠️ **Dump the
+`history/battery-2026-10-01-charge/`. **A validation run started at the
+unplug, 10-02 11:00:00** (not 10-01 20:19: the board stayed on USB
+overnight): `history/battery-2026-10-01-drain/`, white at full drive as on
+09-28. The cut is due ~51.6 h later, ~14:36 Sunday 10-04. ⚠️ **Dump the
 charge log before any flash or slider flip** -- a charge from flat on this
 firmware is wanted for the charging side (CHARGE_IR_MV, the CV creep). The
 09-28 charge took ~9.5 h; dump when the charge LED goes out (CHRG released).
