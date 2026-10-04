@@ -698,10 +698,17 @@ log):**
   CH582F's ACK waits (BT T/O 24%), the battery row.
 - **816 internal-flash writes in ~47 h (10-03), one per ~3.5 min,** against
   ~6 a cycle for the saved level. kb_eeconfig compares and settles 5 s, so a
-  field really changes that often. Suspect the persisted RTC period (saved on
-  any move of >= 64); confirm with a counter per field, or a dprintf on the
-  instrumented build. Each write is a ~7 ms LED blink (and maybe a backlight
-  flash).
+  field really changes that often. JD (10-03): blinks "every few minutes, at
+  least, without even looking that hard". **Prime suspect, from the code:**
+  `rtc.c` persists the RTC period from TWO paths (the USB SOF windows ~line
+  665 and the PCF trim ~line 1001) whenever it is >= 64 ticks (~0.19%) from the
+  stored value -- while docs/clock.md measures the ILRC wandering 7-12 ms/s
+  (0.7-1.2%) with ~±0.1% window noise. A comment there says the threshold
+  "keeps temperature wander from causing steady rewrites"; on these numbers
+  it cannot. Confirm (read HC_RTC's period a few times over USB, or count
+  writes per field), then persist rarely: the stored period only seeds the
+  next boot, and the loop re-converges in ~4 min with a host -- e.g. at most
+  hourly, or only on a large sustained move. Each write is a ~7 ms LED blink.
 - **The LCD backlight flashes bright during a flash write (JD, 10-01
   ~05:16, LEDs off).** Likely the backlight's software PWM (CT16B3 ISR)
   frozen ON while a write masks interrupts for ~7 ms -- the LED row bug of
