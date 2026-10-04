@@ -690,6 +690,18 @@ log):**
   before fixing: `ak820health.py --stalls --json` for the per-mark maxima,
   reset (hold `Fn`+`D`), an hour idle on the dashboard, then plug/unplug a
   few times and watch `25:` per event. ⚠️ A >= 25 ms stall can lose a press.
+  ⭐ **A lead (10-03):** over the validation run's first 47 h, >= 10 ms stalls
+  ran **~400/h on battery against ~37/h on USB** (13336 vs the debug page's
+  550 at 15 h, the board on USB until 11:00). Something that runs on battery
+  and not on USB, every ~9 s. Candidates to time: the 5C path (every report
+  sorts 64 bytes -- cheap, but check), the protection and level ticks, the
+  CH582F's ACK waits (BT T/O 24%), the battery row.
+- **816 internal-flash writes in ~47 h (10-03), one per ~3.5 min,** against
+  ~6 a cycle for the saved level. kb_eeconfig compares and settles 5 s, so a
+  field really changes that often. Suspect the persisted RTC period (saved on
+  any move of >= 64); confirm with a counter per field, or a dprintf on the
+  instrumented build. Each write is a ~7 ms LED blink (and maybe a backlight
+  flash).
 - **The LCD backlight flashes bright during a flash write (JD, 10-01
   ~05:16, LEDs off).** Likely the backlight's software PWM (CT16B3 ISR)
   frozen ON while a write masks interrupts for ~7 ms -- the LED row bug of
