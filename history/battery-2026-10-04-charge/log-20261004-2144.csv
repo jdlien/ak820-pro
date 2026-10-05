@@ -1,0 +1,11 @@
+time,vdd_avg,vdd_min,c5_mean,c5_n,c5_min,c5_max,pack_mv,level,led_pm,bkl,on_batt,charging,done,rgb_on,lights_cut,slider_usb,linked,external,flags_any
+2026-10-04 20:12,4202,4123,14.22,231,0,28,,0.0,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 20:22,4217,4146,37.74,257,28,46,3491,0.0,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 20:32,4222,4146,52.01,264,46,57,3616,2.0,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 20:42,4223,4163,59.32,233,57,62,3680,4.0,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 20:52,4223,4167,64.27,253,62,67,3724,5.5,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 21:02,4224,4158,70.18,247,67,73,3775,8.0,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 21:12,4224,4169,75.65,255,73,78,3823,10.5,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 21:22,4225,4163,80.06,220,78,81,3862,12.0,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 21:32,4226,4169,83.19,206,81,84,3889,14.5,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-04 21:42,4225,4163,85.62,201,84,87,3911,17.5,1000,9,0,1,0,1,0,0,1,1,charging rgb_on linked external
