@@ -1428,4 +1428,4 @@ It found no ≥ 25 ms path in the camera page, and E5's hardware check stands.
 and 8 resolved, and 7 partly resolved: the reconstruction still capped an
 interval at 2,000 reports, and a one-report or constant interval skipped the
 assertions. **Verdict: "flash".** That last P3 is fixed anyway: a cap of 4,096
-that fails loudly when exceeded, and the constant case asserts its sum (`3e8c1c7`).
+that fails loudly when exceeded, and the constant case asserts its sum (`404888b`).
