@@ -1293,6 +1293,43 @@ median of 09-28 and 10-01, 5.22 h.**
   delivered-input check), `scripts/board_snapshot.sh` (one labelled
   before/after reading) and `scripts/acct_ab.py` (gate 3).
 
+### Gate 3 — failed, and the trim (2026-10-05)
+
+Flash 1 went on at ~12:28. Gate 3 ran 12:38-13:39 (`scripts/acct_ab.py
+--minutes 30`; `history/battery-2026-10-05-flash1/gate3-acct-ab.json`), plugged
+in, BT, FULL, the dashboard, white at full drive, with JD typing on another
+keyboard:
+
+| half | passes/s | ≥ 10 ms | ≥ 25 ms |
+|---|---|---|---|
+| ON, 12:38:49-13:08:49 | 273.43 | 16 | 0 |
+| OFF, 13:08:49-13:38:49 | 280.52 | 11 | 0 |
+
+**Passes/s −2.53% with it on: fails the 1% gate.** The ≥ 10 ms difference
+(5) is inside the noise (2√27 ≈ 10.4). The cost, 0.092 ms a pass, is under the
+0.1 ms rollback line, so flash 1 stays. As the plan says, the accounting went
+OFF at 13:39:52, and is to be trimmed before any soak.
+
+**Why it cost that much** (from the ELF): each scope made three calls (two
+`stGetCounter`, one `loop_acct_add`). Every pass then summed all twelve scopes,
+added them into 64-bit totals and cleared them. The row ISR takes ~73% of the
+CPU, so each main-loop cycle costs ~3.7× in wall time.
+
+**The trim** (firmware `7a0f28aa8f`; host test parent `5035b9c`):
+- `ACCT` reads the tick inline (`st_lld_get_counter`) and adds into a running
+  32-bit total at a fixed address;
+- a pass end is one 48-byte copy, an add and a compare. A slow pass takes its
+  own ticks as `run − pass_base`. The 64-bit all-pass totals fold in every
+  4096 passes, and the pages read the pending part without folding;
+- skipped, wrapped and on/off partial passes are dropped from every total;
+- the per-pass param repeat and user hook are no longer timed (UNACCOUNTED).
+
+`diag_sim` passes, including a new test across a fold. That test's
+unaccounted figure also shows the old per-pass rounding: 9971 ms against
+9984 for the same input. Estimated from the disassembly: ~135 cycles a pass
+against ~600, about 0.6%. **Gate 3 runs again on the trimmed build**, after
+codex's review of it.
+
 ### Flash 2 so far (host, ahead of B3)
 
 Branch `phase1b-flash2` of the firmware, local only, on top of `4293607b4b`:

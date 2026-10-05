@@ -1,0 +1,16 @@
+A narrow implementation review, read-only. Do not modify files.
+
+Context: the AK820 Pro's Phase 1b (plans/BATTERY-GAUGE-REFINE-PLAN.md). Flash 1 (firmware 4293607b4b) is on the board. Its gate 3 FAILED: D1's per-task accounting (loop_acct.c/.h) cost 0.092 ms a pass, 2.53% of main-loop passes per second (273.43 on vs 280.52 off over 30 min each; the gate is within 1%; the >= 10 ms count was not higher beyond noise; rollback is above 0.1 ms a pass). The plan says: turn it off and trim it before any soak. You reviewed D1 at gate 2 (plans/review-codex-battery-refine-impl-2026-10-05.md).
+
+The trim is firmware commit 7a0f28aa8f (`git -C qmk_firmware-ak820pro show 7a0f28aa8f`) on top of 4293607b4b, and its host test is parent commit 5035b9c (`git show 5035b9c`, scripts/diag_sim). Read the commit message first.
+
+Host results: scripts/diag_sim/run.sh passes on the trimmed code (acct, decode acct, reply validation, flash, decode flash); its new fold test fails on the untrimmed code only by the old per-pass rounding (9971 vs 9984 ms). ./build.sh daily compiles with no warnings.
+
+Check, and say for each whether it is right:
+1. Correctness of the new bookkeeping against the old semantics: drop_partial() on skip, alias (>= 340 ms), set_enabled and discard; slow_pass() deltas run - pass_base; fold() every 4096 passes; the pending part read by loop_acct_fill pages 3-4 mid-pass. Any way a pass's scope time is counted twice, lost, or leaks across an on/off, a reset (health_reset and Fn+D's hold-reset), or the boot settle?
+2. Overflow and wrap: u32 running totals read as differences; fold_gap_ms * ST_PER_2MS / 2 within a fold; slow_pass's 48-byte stack array (the main thread's stack).
+3. Whether the per-pass path is now as cheap as the commit message claims: one inline counter read either side of each scope, one add at a fixed address, and per pass a 48-byte memcpy, two adds and a compare. Look at the compiled code if you can (the dirty build's ELF is ak820pro-builds/out/via-daily-4293607b4b-dirty-20261005-152327.elf; a clean build of 7a0f28aa8f will follow). Is anything still costing more than it should?
+4. Dropping the timing of the per-pass param_repeat_task and housekeeping_task_user (now UNACCOUNTED): does that harm D2's attribution?
+5. Anything else that would make the accounting's data wrong.
+
+Then a one-line verdict: "flash" or "fix N first". Keep it short.
