@@ -1,6 +1,6 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-04): revision 4, after codex's third review
+**Status (2026-10-04): revision 5, after codex's fourth review
 ([every round verbatim](review-codex-battery-refine-plan-2026-10-04.md);
 dispositions at the end). Not started.** Phase 1 (the gauge) is built, flashed, and checked on
 two full discharges. This plan refines it on what those runs measured.
@@ -298,7 +298,8 @@ for most of its session. That is **accepted for the stated condition** (JD's Mac
 port, BT position, the board's own load), with three bounds:
 
 - the 990 cap;
-- OVERRUN: termination more than 60 min after the model reached 990 gives "Charge";
+- OVERRUN: termination more than 60 min after the model's own termination time
+  gives "Charge";
 - the re-seat at unplug. A relaxed pack below the clamp then takes its level from
   the voltage. One still at the clamp is ≥ 90%, so the error is confined to the
   clamp band (90-99%).
@@ -328,12 +329,36 @@ the 10 Hz path):
   - **it reaches 990 exactly `T_TAIL` after the knee**
     (`K_CC·τ·(1 − e^(−T_TAIL/τ)) = 990 − L_KNEE`, solved for τ by bisection).
 
-  A solution exists if and only if `K_CC·T_TAIL > 990 − L_KNEE`. It does at every
-  point of B1's ranges, checked 2026-10-04 on a 900-point grid: `K_CC` 160-230,
-  `t_knee` 3.9-4.25 h, `R` 0-60, `T_TAIL` 5.0-5.6 h. At round 3's parameter set
-  (`K_CC` 160, `t_knee` 4.1 h, `R` 30, `T_TAIL` 5.35 h) the result is `L_KNEE` 626,
-  τ 2.61 h and `A` 1044, ending at 20.6 pm/h. Round 2's formula started that same
-  tail at 253 pm/h.
+  With positive `K_CC` and `T_TAIL`, a finite positive τ exists if and only if
+  `0 < 990 − L_KNEE < K_CC·T_TAIL`. That holds at every point of B1's ranges,
+  checked 2026-10-04 on a 900-point grid: `K_CC` 160-230, `t_knee` 3.9-4.25 h,
+  `R` 0-60, `T_TAIL` 5.0-5.6 h. At round 3's parameter set (`K_CC` 160, `t_knee`
+  4.1 h, `R` 30, `T_TAIL` 5.35 h) the result is `L_KNEE` 626, τ 2.61 h and `A`
+  1044, ending at 20.6 pm/h; codex reproduced this. Round 2's formula started that
+  same tail at 253 pm/h.
+
+  **The tail is compiled in as a table, not iterated.** At one corner of the grid
+  (`K_CC` 230, `t_knee` 4.25 h, `R` 0, `T_TAIL` 5 h) the solution is nearly
+  degenerate: `L_KNEE` 977.5, τ ≈ 0.054 h, and `A − 990` ≈ 10⁻³⁹. A per-second
+  fixed-point recurrence there rounds `A` to 990 and either never reaches it or
+  reaches it ~10 min in. Either is within 1 pm of the curve, but wrong about
+  *when* it arrives (codex, round 4). So:
+  - B1's script writes **`TAIL_PM[i]` = M at `i × 60` s after the knee**, integer
+    pm, from `i = 0` (`L_KNEE`) to `i = N`. τ and `A` are solved for `T_TAIL`
+    rounded to the minute, so `N × 60 = T_TAIL` and the last entry is **exactly
+    990**. It goes into a
+    generated header with the parameters in a comment, never hand-edited. That is
+    ≤ 337 `uint16_t`, under 700 bytes.
+  - **The tail clock** `t_tail` counts charging seconds in the tail.
+    `M = TAIL_PM[t_tail / 60]`, interpolated linearly to the next entry. Checked
+    2026-10-04 at every grid point, the degenerate corner included: interpolation
+    alone is within 0.13 pm of the curve, and with the integer entries within
+    0.5 pm.
+  - **A start above the knee** enters the clock at the first index whose entry is
+    ≥ `L0`. That is an integer search with no logarithm, and the tail is
+    memoryless, so this is the same curve.
+  - **Arrival is a time:** `t_tail ≥ T_TAIL`, never "`M` = 990". OVERRUN keys on
+    the clock.
 
   ⚠️ **If the calibrated parameters are infeasible, or B3 contradicts B1 beyond
   their uncertainty:** revise the model (the knee, not the measurements), or ship
@@ -365,11 +390,11 @@ the 10 Hz path):
 `charging_now()` only; it pauses otherwise):
 
 - below `L_KNEE`: `M = L0 + K_CC × t`, until it reaches `L_KNEE`;
-- from `L_KNEE`, or from `L0` if it starts above: `h ← h − h/τ` each second, with
-  `h = A − M` in fixed point (≥ 16 fractional bits). The tail is memoryless, so a
-  start above the knee joins it at its own level, already slower than `K_CC`.
-  B2 checks the integer path against the offline float to ≤ 1 pm over a whole
-  tail.
+- from `L_KNEE`, or from `L0` if it starts above: the tail table, on the tail
+  clock, as above. A start above the knee joins the curve at its own level,
+  already slower than `K_CC`.
+- the linear phase is integer too: `M = L0 + K_CC·t / 3600`, with `K_CC` in pm/h
+  and `t` in seconds.
 - `M` is capped at 990.
 
 **The displayed level, each second.** Precedence, highest first:
@@ -391,9 +416,14 @@ the 10 Hz path):
 says; then `level = max(level, min(cand, level + RISE_PM_PER_S))`.
 
 So when a fresh `U` falls below the displayed level, the display **holds**: it
-neither falls nor rises. The display never exceeds `M`, because it only rises
-toward `min(M, …)` and `M` only rises. A held display more than `LOST_PM` above `U`
-therefore implies `M − U > LOST_PM`, which LOST catches. **`LOST_PM` is the declared
+neither falls nor rises. **In a numeric session that started at or below 990**,
+the display never exceeds `M`, because it starts at `M` (= `L0`), only rises
+toward `min(M, …)`, and `M` only rises. The one exception is the already-full
+rule below: a 1000 kept through a top-up sits above `M`'s cap, and LOST never
+applies to it. A held display more than `LOST_PM` above `U` therefore implies
+`M − U > LOST_PM`, which LOST catches **after its dwell**. Until then, a display up
+to the whole of `M − U` above a fresh `U` is permitted by design, for up to
+`LOST_S` of accumulated contradiction. **`LOST_PM` is the declared
 noise tolerance.** A held display may sit up to 50 pm above a fresh `U` for as long
 as that lasts. `U` itself overstates under charge, and near the top of the curve
 2 mV of estimate is ~50 pm (4006 → 4008 mV is 700 → 750).
@@ -410,12 +440,21 @@ as that lasts. `U` itself overstates under charge, and near the top of the curve
 **under charge**, so the pack's own voltage is lower still. That is ≥ 150 mV below
 the 3400 mV cut, which itself is a loaded voltage. Any threshold up to 3400 mV
 would be sound in principle; the margin covers the voltmeter's ±11 mV and its line
-being unvalidated under charge. **All three recorded charges qualify on their own
-data:**
+being unvalidated under charge.
 
-- 10-01 and 10-04 report 0 in their first interval;
-- 09-28's first logged value is 4 (≈ 3196 mV). `readings.csv` saw 2 → 3 → 4.
-  No zero was recorded, and none is invented.
+**What the records show about each charge's start.** No log records the first five
+reports, so every replay's opening is a **labeled reconstruction**, consistent with
+what was observed:
+
+| charge | observed at plug-in | logged first entry | reconstruction (labeled) |
+|---|---|---|---|
+| 09-28 | JD read 2 → 3 → 4 on the debug page within a minute (`readings.csv`, 03:02) | one-minute format: 4, age 5 s | the first minute's reports at 4, as logged; no zero invented |
+| 10-01 | JD read `0@1 <3161` at plug-in: raw report 0, estimate below the bottom clamp (`readings.csv`, ~08:45) | ten-minute: mean 13.45, min 0, max 27 | the first interval's reports in ascending order from 0, which matches the observation and the rising charge |
+| 10-04 | JD read `0@0` at boot (`readings.csv`, ~20:03) | ten-minute: mean 14.22, min 0, max 28 | the same |
+
+The interval statistics alone do not fix the order: other orderings reproduce
+them with the opposite classification. So the replays classify the
+reconstruction, not the record, and say so in their output.
 
 **Note 2, LOST's three conditions:**
 
@@ -424,23 +463,43 @@ data:**
   resets the timer. At the clamp, or with no fresh estimate, it **holds**: it
   neither runs nor resets.
 - **(b) No evidence.** No fresh estimate for `STALE_LOST_S` continuously.
-- **(c) OVERRUN.** `M` at 990 for `T_OVERRUN` without FULL: termination later than
-  modeled. This is the one check available above the clamp.
+- **(c) OVERRUN.** `T_OVERRUN` of charging after the tail clock reaches `T_TAIL`,
+  without FULL: termination later than modeled. This is the one check available
+  above the clamp.
 
-**A pause inside a session** means external power, CHRG released, and not FULL.
-`battery.c`'s `session` survives CHRG gaps today; it clears only on the pack.
+**Two flags, kept apart.**
+
+- **`session`**, today's flag: CHRG has been low for ≥ 60 s since the board was
+  last on the pack. It clears only on the pack, and keeps its one meaning, a
+  re-seat owed at unplug.
+- **`modeled`**, new: the model is running. It opens when CHRG has been low for
+  60 s continuously (`chrg_run ≥ SESSION_TICKS`), at a boot or after a handover.
+  It closes at FULL, at unplug, or at a pause handover. MODEL, FROM-FLAT,
+  UNKNOWN-CHG and LOST exist only while it is open.
+
+**A pause** is `charging_now()` going false while `modeled` is open, on external
+power. That is CHRG released past its existing 1 s hold (`battery.c` ~182). The
+pause is timed from that moment and ends when `charging_now()` returns.
 
 - **While paused:** `M` and every timer stop, and the display holds. Today's "on
   USB, charger idle: follow the estimate" path (`level_report`, ~570) does **not**
-  run while a modeled session is open; it would move the level on a voltage still
-  relaxing from the charge.
-- **After `PAUSE_S`:** the charger is idle or faulted, and with no charge current
-  there is nothing to model. MODEL, FROM-FLAT, UNKNOWN-CHG and LOST all hand over to
-  today's idle path, which follows a fresh estimate (the ring emptied at the
-  charger change, so the estimate is post-stop). A later resumption of ≥ 60 s is
-  MODEL from that level.
-- **Termination is always at the clamp** (the charger stops at ~4.2 V CV), so a
-  pause below the clamp is never FULL.
+  run while `modeled` is open; it would move the level on a voltage still relaxing
+  from the charge.
+- **A resumption before `PAUSE_S`** continues the model where it stopped, with no
+  requalification.
+- **At `PAUSE_S`, the handover:** the charger is idle or faulted, and with no
+  charge current there is nothing to model, so `modeled` closes.
+  - The idle path then adopts a level only from an estimate built **entirely from
+    reports received ≥ `RELAX_S` after the stop**, by the re-seat's mechanism.
+    Clearing the ring at the charger change guarantees post-stop reports, not
+    relaxed ones.
+  - Until such an estimate exists, the display holds; an unknown level shows
+    today's unknown display, not "Charge".
+  - A charge that resumes after the handover must requalify (60 s). It is then
+    MODEL from the adopted level, or UNKNOWN-CHG if none was adopted.
+- **Termination is always at the clamp** (the charger stops at ~4.2 V CV, and the
+  09-28 pack read 4.18 V at rest after it), so a pause below the clamp is never
+  FULL.
 
 - **Already full:** a level above 990 is never pulled down (keep `battery.c`'s
   existing rule at ~556: a 100 stays 100 through a top-up).
@@ -449,6 +508,12 @@ data:**
   0 or UNKNOWN-CHG's "Charge". A boot with the charger idle takes today's idle path.
 - **`LEVEL_UNKNOWN` is `0xFFFF`:** every comparison, subtraction and `max` in this
   code checks validity first. A bare `level >= 980` would pass for UNKNOWN.
+- **The log becomes v5** for gate 8: at each entry's end, `M`, in 0.5 % like
+  `level` (one byte), and the charging state (3 bits: in free `flags` bits if
+  there are any, otherwise one more byte). Today's entry is 16 bytes × 720
+  (`battery.c` ~720-738), so this costs 720-1440 bytes of RAM. Check the
+  headroom in the build's map before choosing. `ak820battery.py` and B2's replay
+  adapter read v3, v4 and v5.
 - **FULL is a heuristic:** CHRG released with `5C` clamped is also what a charger
   fault looks like while the terminal voltage is still above 4.036 V, and DONE is
   unusable on this board. A false FULL shows 100; on battery the clamp countdown
@@ -491,15 +556,15 @@ with `led_pm` alongside VDD.
   and by the re-seat at unplug.
 - **`K_CC`**: B1 only bounds it (if 70-90% of a full charge goes in before the
   knee, ~16-23%/h of runtime); **B3 measures it.**
-- **The start classification, per charge, from its own first entry:** the first
-  estimate's value and the FROM-FLAT verdict. No zero prelude is synthesized; a
-  synthetic start, if one is ever needed, is labeled.
-- **Once B3 is in:** solve τ and `A`, and report feasibility (`K_CC·T_TAIL >
-  990 − L_KNEE`) over the calibrated values and their uncertainty. For each
-  recorded charge, report the model's 990 arrival against the observed
-  termination. It must leave OVERRUN at least 30 min of margin (a 990 arrival no
-  more than 30 min before termination); otherwise revise the model, not
-  `T_OVERRUN`.
+- **The start classification, per charge**, from Note 1's labeled
+  reconstruction: the first estimate it gives, and the FROM-FLAT verdict. No zero
+  prelude is synthesized for 09-28.
+- **Once B3 is in:** solve τ and `A`, report feasibility (`0 < 990 − L_KNEE <
+  K_CC·T_TAIL`) over the calibrated values and their uncertainty, and write
+  `TAIL_PM`. For each recorded charge, report the model's termination time (the
+  tail clock reaching `T_TAIL`) against the observed termination. It must leave
+  OVERRUN at least 30 min of margin, so the model's time can be no more than
+  30 min before termination. Otherwise revise the model, not `T_OVERRUN`.
 
 ### B2. Simulator
 
@@ -518,8 +583,9 @@ test's output. The rest replay recorded data.
 
 **Replays and starts:**
 
-- **FROM-FLAT replays.** Each charge is classified by Note 1's rule on its own
-  first estimate; 09-28's is its logged 4, with no zero invented. Assert:
+- **FROM-FLAT replays.** Each charge's opening is Note 1's labeled
+  reconstruction, classified by the rule; 09-28's is its logged 4, with no zero
+  invented. Assert:
   - level 0 at the start;
   - no step > `RISE_PM_PER_S` in one second, except at FULL;
   - no rise ends above a fresh `U`;
@@ -527,8 +593,11 @@ test's output. The rest replay recorded data.
     is ≤ 30 pm);
   - 1000 at FULL;
   - LOST and OVERRUN never fire.
-- **FROM-FLAT boundary** *(synthetic)*: a first estimate of 10.00 counts gives
-  FROM-FLAT; 10.01 gives UNKNOWN-CHG.
+- **FROM-FLAT boundary** *(synthetic)*, through real reports: the first estimate
+  averages 5 whole counts untrimmed, so its resolution is 0.20 counts. Reports
+  10, 10, 10, 10, 10 (10.00) give FROM-FLAT; 10, 10, 10, 10, 11 (10.20) give
+  UNKNOWN-CHG. The 10.00/10.01 edge is tested directly on the classifying
+  helper.
 - **UNKNOWN start** (a boot on USB at the clamp, nothing known): "Charge"
   throughout; 1000 at FULL; validity asserted before any numeric comparison.
 
@@ -541,8 +610,12 @@ test's output. The rest replay recorded data.
   *(synthetic)*:
   - at every feasible point, the rate never exceeds `K_CC`;
   - from any `L0`, the 1 h rise ≤ `K_CC` + 1 (rounding);
-  - `M` reaches 990 at `T_TAIL` after the knee (± 1 min);
-  - the integer path matches the float to ≤ 1 pm;
+  - the table ends at exactly 990, at `T_TAIL` rounded to the minute;
+  - the interpolated integer table matches the float to ≤ 0.5 pm;
+  - **OVERRUN timing:** from the knee, and from starts above it, OVERRUN fires
+    after `(T_TAIL − t_tail0) + T_OVERRUN` of charging, ± 1 s. This is checked at
+    every grid point, the degenerate corner included, where `M` shows 990 hours
+    before the clock arrives;
   - infeasible points are reported, never fitted.
 - **Early clamp entry:** `L0` 600 with `5C` clamped from the first minute, at the
   calibrated set and at round 3's set (where round 2's formula gave 787.85). The
@@ -552,11 +625,11 @@ test's output. The rest replay recorded data.
 **The cap and the clamp:**
 
 - **Delayed termination at the clamp** *(synthetic)*: `L0` 600, `5C` clamped
-  throughout, CHRG held 2 h past the model's 990 arrival. Run it at the
+  throughout, CHRG held 2 h past the model's termination time. Run it at the
   calibrated set **and** at round 3's set, where `A` is 1044, so a missing cap
   shows even if the calibrated `A` lands near 990. Assert:
   - ≤ 990 throughout (never 991-999);
-  - "Charge" at `T_OVERRUN` after reaching 990;
+  - "Charge" `T_OVERRUN` after the tail clock reaches `T_TAIL`;
   - 1000 at FULL;
   - unplugged before FULL, it re-seats as UNKNOWN (clamped → 950).
 - **Just full:** 1000 stays 1000 through a top-up (the already-full exception to
@@ -564,7 +637,8 @@ test's output. The rest replay recorded data.
 
 **The ceiling** *(synthetic)*:
 
-- `U` falls 30 pm below the display: it holds, and LOST does not fire.
+- `U` falls to 30 pm below the display while `M` equals the display, so
+  `M − U` = 30: it holds, and LOST does not fire.
 - `U` is 60 pm below `M` for 29 min, then recovers: no LOST.
 - `U` is 60 pm below `M` for 30 min: LOST.
 - 20 min of `M − U` = 60, then 5 min clamped, then 10 min of `M − U` = 60: LOST.
@@ -575,14 +649,21 @@ test's output. The rest replay recorded data.
 - Reports lost for 9 min: no rise, then a catch-up at ≤ 1 pm/s.
 - Reports lost for 10 min: LOST.
 
-**Pauses** *(synthetic)*:
+**Pauses** *(synthetic)*, parameterized on the final `PAUSE_S` and `RELAX_S`:
 
 - Today's `chrg_gap` (2 s) still passes.
-- A 9 min pause below the clamp: the display holds; `M` and the timers resume
-  with no jump.
-- A 10 min pause: the display follows the post-stop estimate; a resumption is
-  MODEL from it.
-- The same 10 min pause from LOST, and from UNKNOWN-CHG: a number, not "Charge".
+- A pause of `PAUSE_S` − 1 min below the clamp, then a resumption: the display
+  holds; `M` and the timers continue with no jump and no requalification.
+- A resumption 1 s before `PAUSE_S` continues the model. One 1 s after
+  `PAUSE_S` requalifies at 60 s, from the adopted level.
+- At the handover, reports still falling (relaxing) before `RELAX_S` are not
+  adopted; the level comes from reports after it.
+- Reports missing at `PAUSE_S`: the display holds until a qualifying estimate,
+  then adopts it.
+- The handover from LOST and from UNKNOWN-CHG: a number once adopted, never
+  "Charge".
+- A handover and then an unplug: `session` is still set, so the re-seat is
+  owed.
 
 **LOST, the re-seat, FULL:**
 
@@ -804,7 +885,9 @@ power cap).
     (`CH582_TX_MAX_RETRIES` is 8 retransmits, then give up); queue-full +0;
     replacements +0.
   - **The queue filled with non-state frames:** queue-full +1, exhaustion +0.
-  - **The queue nearly full, then an `0xA1`:** replacements +1, queue-full +0.
+  - **The queue nearly full (≥ 20 of 24) with an `0xA1` already queued behind
+    the in-flight frame, then another `0xA1`:** replacements +1, queue-full +0. A
+    nearly full queue with no earlier `0xA1` behind the head does not replace.
 
   ⚠️ The daily build carries none of the instrumented build's diagnostics; a
   symbol diff verified this in the 09-23 work. An ACK-swallowing hook does not go
@@ -928,14 +1011,21 @@ Staged, so each can actually be run when it comes due.
 7. **Flash 2 build:** clean, codex-reviewed.
 8. **Flash 2 on hardware:** the protocol passes; **≤ 10 physical write sessions
    per 24 h** on battery outside the exclusions (C2); D2's stall target met or
-   its remainder explained. A real charge from below 50%, read from the log:
-   - no logged step faster than the rise limit;
+   its remainder explained. A real charge from below 50% on the Mac, checked
+   against the v5 log (B adds two fields at each entry's end: the charging state,
+   and `M`):
+   - **no LOST and no OVERRUN.** This is the stated operating condition; LOST or
+     OVERRUN here means the model is miscalibrated. Fail, and revisit B1/B3.
+   - **no rise past the evidence**, as a necessary condition the log can show.
+     For every entry below the clamp in which the level rose, the entry's ending
+     level ≤ `curve(max(c5_max of this entry, c5_max of the previous one))` + 1 pm.
+     This holds because a rise ends at ≤ a fresh `U`; the estimate is a mean of
+     ≤ 64 reports (~2.5 min), all from this entry or the previous one; and the
+     curve is monotone. The sustained case, a held display above `U`, is LOST's
+     job and is tested exactly in B2, not from ten-minute means.
    - ≤ 99 until FULL, with a FULL step ≤ 3 points;
-   - below the clamp and outside LOST, never more than `LOST_PM` above
-     `curve(pack_mv)`.
-
-   The log's ten-minute means approximate the per-second `U`; that is stated
-   alongside the result.
+   - where JD watches the LCD, the percent never skips a value except at FULL
+     (the rise limit is 0.1 points a second).
 9. Docs and status updated (E6), written to resume cold.
 
 ---
@@ -1043,3 +1133,23 @@ for a CHRG pause inside a session. `session` survives CHRG gaps, and today's
 idle path would have moved the level on a voltage still relaxing from the
 charge. A pause now holds the display; after `PAUSE_S`, it hands over to the
 idle path. There are tests for both. B, B2.
+
+### Round 4 — codex, 2026-10-04, on revision 4 ([verbatim](review-codex-battery-refine-plan-2026-10-04.md#round-4-2026-10-04-on-revision-4----verbatim))
+
+Codex counted R3-3, R3-5 and R3-6 resolved, R3-4 resolved mathematically, and
+R3-1 and R3-2 partly resolved. It confirmed the driver line numbers, the nine
+timeouts before abandonment, and the tail example (τ 2.61175 h, `A` 1043.880,
+ending at 20.62985 pm/h). It judged the host harness realistic, with more stubs
+than two headers. It found the pause handover coherent in policy. Verdict: not
+ready, on R4-1 alone.
+
+| # | finding (short) | disposition |
+|---|---|---|
+| R4-1 | P1: gate 8 forbade the held display above `U` that LOST's 30 min dwell permits | **Accepted.** Gate 8 now checks rises against a necessary condition the log can show: a rise's ending level ≤ `curve(max c5_max)` over the entry and the one before. It checks for no LOST or OVERRUN on a Mac charge, and leaves the sustained case to B2's exact tests. B adds `M` and the charging state to the log (v5). The B2 fixture now fixes `M − U` = 30. `level ≤ M` is scoped to sessions starting at or below 990. |
+| R4-2 | P2: 1 pm accuracy does not fix *when* the tail arrives at 990; in the degenerate corner a Q16 recurrence stalls or arrives ~10 min in | **Accepted, verified** (that corner gives `L_KNEE` 977.5, τ ≈ 0.054 h). The recurrence is replaced by a generated table at 60 s steps ending at exactly 990, read on a tail clock. Arrival is the clock reaching `T_TAIL`, and OVERRUN keys on it. A start above the knee enters by integer search. Checked on the whole grid: ≤ 0.13 pm from interpolation, ≤ 0.5 pm with integer entries, ≤ 337 entries. B2 tests OVERRUN timing over the grid, including starts above the knee. |
+| R4-3 | P2: interval minima are not first estimates; 10.01 is unreachable through 5 integer reports | **Accepted, verified** (`c5_trimmed_mean_x100` trims nothing below 8 reports). Each charge's opening is now a labeled reconstruction, tied to what JD observed at plug-in: 2 → 3 → 4 on 09-28, `0@1 <3161` on 10-01, `0@0` on 10-04. The boundary test is 10.00 against 10.20 through real reports, plus 10.00 against 10.01 on the helper directly. |
+| R4-4 | P2: the pause rules needed their timing, evidence and flags pinned down | **Accepted.** A new `modeled` flag is kept apart from today's `session` (which stays "re-seat owed"). A pause is timed on `charging_now()`. The handover adopts only an estimate built from reports ≥ `RELAX_S` after the stop, and holds until one exists. A resumption after the handover requalifies at 60 s. The tests are parameterized on the final `PAUSE_S` and `RELAX_S`, at both edges, with missing reports and an unplug after the handover. |
+
+Also fixed from round 4's prose: the D1 harness's replacement case now queues an
+`0xA1` behind the in-flight frame first, since a nearly full queue alone does not
+replace.

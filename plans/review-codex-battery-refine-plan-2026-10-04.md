@@ -313,3 +313,56 @@ Remaining and new findings:
 The re-seat’s revised validity handling, delayed fresh-sample requirement and replug behavior are adequate at plan level, subject to B3 determining the delay. I found no additional blocker in its specification.
 
 **Verdict: not ready to execute as written.** The blocking corrections are the recorded-start/FROM-FLAT contradiction, the incompatible ceiling/display rules, and the missing retry-exhaustion instrumentation. Preservation and host analysis can proceed; these defects should be corrected before the corresponding firmware work.
+
+---
+
+# Round 4 (2026-10-04), on revision 4 -- verbatim
+
+Model gpt-6-astra, reasoning xhigh, read-only, against commit `b954b50`.
+
+**Verdict: not ready to execute cold. The sole P1 blocker is gate 8’s contradiction with the permitted LOST dwell (R4-1).** The other corrections below can be handled during execution.
+
+| Round-3 finding | Revision-4 status | Verification |
+|---|---|---|
+| **R3-1 — FROM-FLAT** | **Partly resolved** | 10.00 counts converts to **3248 mV**, about 152 mV below cutoff. September 28’s first logged **4** qualifies. The newer logs’ first means are **13.45 and 14.22**, with minima of zero; those statistics do not establish their first five reports. Early observations support from-flat starts, but replay ordering needs an explicit reconstruction. R4-3. |
+| **R3-2 — Display precedence** | **Partly resolved** | The [new recurrence](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:375>) correctly holds under a falling ceiling, limits catch-up to 1 pm/s, freezes rises without a fresh estimate, and distinguishes clamp entry/exit. B2’s “no **rise** ends above U” now agrees. `level ≤ M` holds for properly initialized numerical model sessions; it is **not universal**, because the expressly preserved 1000 top-up exceeds capped `M=990`. Gate 8 remains inconsistent. R4-1. |
+| **R3-3 — Transport counters** | **Resolved** | The actual driver matches the revised locations: exhaustion at **507**, replacement at **563–580**, queue-full rejection at **585**, and console-gated UART collection at **480–481, 908–922**. One initial send plus eight retries produces **nine timeouts** before abandonment. |
+| **R3-4 — Tail acceleration** | **Resolved mathematically** | The new tail starts at `K_CC` and decelerates. For positive `K_CC,T_TAIL`, finite positive τ requires **`0 < 990−L_KNEE < K_CC·T_TAIL`**. All stated ranges satisfy this; their minimum feasibility slack is **374 pm**. I reproduced **L_KNEE=626, τ=2.61175 h, A=1043.880, ending rate=20.62985 pm/h**. Numerical arrival at 990 needs additional care. R4-2. |
+| **R3-5 — Qualification above clamp** | **Resolved** | [The limitation](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:291>) is now explicitly accepted for the stated operating condition. LOST is correctly described as a consistency check; delayed termination is exercised. |
+| **R3-6 — Removed cap mutant** | **Resolved** | [B2](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:554>) explicitly rejects 991–999, prolongs charging, and includes the `A≈1044` parameter set. That avoids relying on a calibrated asymptote barely above 990. |
+
+The transport harness is realistic. The [driver’s includes](</Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c:1>) require more than two stub headers: report types, Bluetooth declarations, battery/health callbacks, serial configuration and I/O, timers, and ChibiOS event APIs. These are ordinary host-stubbable interfaces. Copying unchanged sources beside stubs follows the [existing simulator approach](</Users/jdlien/code/ak820-pro/scripts/battery_sim/run.sh:2>). Gate 1’s placement is sound. Its replacement fixture must include an existing queued `0xA1` behind any in-flight frame; a nearly full queue alone does not trigger replacement. I inspected feasibility; no new harness was compiled.
+
+1. **R4-1 — P1: Gate 8 rejects behavior the display rule explicitly permits.**
+
+   **Problem:** A held display can exceed fresh `U` by more than 50 pm for almost 30 minutes before LOST. Gate 8 forbids that immediately whenever outside LOST.
+
+   **Evidence:** [The LOST dwell](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:422>), [B2’s explicit 29-minute non-LOST case](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:568>), and [gate 8](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:934>). For example, `level=M=760`, followed by `U=700`, must hold 760 before LOST qualifies. A ten-minute log entry can therefore legitimately violate the gate; averaging does not resolve this contradiction.
+
+   **Change:** Gate rises against contemporaneous `U`, and gate sustained contradictions against LOST’s accumulated dwell. Also make B2’s “30 pm below display, no LOST” fixture constrain **`M−U`**, not merely `level−U`. Scope the `level≤M` statement to sessions excluding the already-full exception.
+
+2. **R4-2 — P2: The fixed-point accuracy requirement does not ensure timely arrival at 990.**
+
+   **Problem:** Being within 1 pm of the continuous exponential does not ensure crossing 990 within one minute, or starting OVERRUN correctly.
+
+   **Evidence:** [The recurrence](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:368>) and [arrival assertion](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:540>). At the allowed corner `K=230, t_knee=4.25, R=0, T=5`, `L_KNEE=977.5`, τ≈0.054348 h, and **`A−990≈1.386×10⁻³⁹`**. A straightforward Q16 implementation rounds A to 990 and stalls around **989.997**. Flooring never reaches 990; rounding reaches it after roughly **10.5 minutes**, far before five hours. Both remain within 1 pm.
+
+   **Change:** Specify a numerically robust arrival event, such as an independently tracked analytical arrival time with defined saturation/rounding. Test OVERRUN timing across the grid, including starts above the knee. Convert τ to seconds explicitly for the per-second recurrence.
+
+3. **R4-3 — P2: “All three qualify on their own first entries” overstates the retained evidence.**
+
+   **Problem:** Interval minima are not first estimates, and one proposed boundary input is unreachable through the estimator.
+
+   **Evidence:** [10-01’s first row](</Users/jdlien/code/ak820-pro/history/battery-2026-10-01-charge/log-20261001-1947.csv:2>) contains mean/min/max **13.45/0/27**; [10-04’s](</Users/jdlien/code/ak820-pro/history/battery-2026-10-04-charge/log-20261004-2144.csv:2>) contains **14.22/0/28**. Different report orders can reproduce those statistics while producing opposite classifications. The [five-report estimator](</Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:305>) initially averages integer counts without trimming, so its resolution is **0.20 counts**: B2’s first estimate of **10.01** cannot occur.
+
+   **Change:** Cite the early zero observations and explicitly label the chosen startup reconstruction within each first interval. Do not describe its ordering as recorded. Test **10.00 versus 10.20** through real reports; reserve 10.01 for a direct classification-helper test.
+
+4. **R4-4 — P2: Finish specifying the pause handover and parameterize its tests.**
+
+   **Problem:** The policy is workable, but the new tests and estimator handover assume more than the existing machinery guarantees.
+
+   **Evidence:** [`charging_now()`](</Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:182>) includes the CHRG hold; [charger changes clear the estimator while `session` survives](</Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:228>). [PAUSE_S](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:357>) can exceed ten minutes when B3 increases RELAX_S, but [B2](</Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:578>) unconditionally expects handover at ten minutes. Clearing at charger stop guarantees post-stop samples, not samples taken after RELAX_S.
+
+   **Change:** Test relative to final `PAUSE_S`; define pause timing against the qualified charging signal. Require sufficient fresh, post-relaxation evidence before adopting an idle level. Separate the new 60-second model qualification from the historical session flag needed for unplug re-seating. Exercise resumed charging and missing reports at the boundary.
+
+The remaining new behavior is coherent: boot-on-USB shows “Charge” before qualification; short pauses suppress today’s [idle adjustment path](</Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:570>); LOST re-seating as UNKNOWN discards distrusted model provenance; and OVERRUN supplies a defined fallback above the clamp, subject to fixing its numerical trigger as described above.
