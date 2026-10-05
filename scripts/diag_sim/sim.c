@@ -133,6 +133,23 @@ static void acct(void) {
     loop_acct_fill(4, p);
     un = p[20] | p[21] << 8 | p[22] << 16 | (uint32_t)p[23] << 24;
     CHECK(un == 9984, "unaccounted unchanged too: %u", un);
+
+    /* Read MID-PASS (raw HID runs inside a pass): the pass in progress is not
+     * in the totals yet -- its gap is not known, and it may yet be dropped
+     * (codex, flash 1b: reading run, not pass_base, moved 10 ms from
+     * unaccounted to ch582 and back). Then the pass closes, slow, and counts. */
+    spend(ACCT_CH582, 1875);   /* 10 ms, the pass still open */
+    loop_acct_fill(3, p);
+    ch = p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24;
+    loop_acct_fill(4, p);
+    un = p[20] | p[21] << 8 | p[22] << 16 | (uint32_t)p[23] << 24;
+    CHECK(ch == 5012 && un == 9984, "mid-pass: the open pass is not counted: ch582 %u, unaccounted %u", ch, un);
+    pass(12);   /* closes: 10 ms of ch582, 2 unaccounted */
+    loop_acct_fill(3, p);
+    ch = p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24;
+    loop_acct_fill(4, p);
+    un = p[20] | p[21] << 8 | p[22] << 16 | (uint32_t)p[23] << 24;
+    CHECK(ch == 5022 && un == 9986, "closed: ch582 %u (want 5022), unaccounted %u (want 9986)", ch, un);
 }
 
 #define KB 37u
