@@ -1159,6 +1159,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "m_reseat_0929")) m_reseat_0929();
     else if (!strcmp(s, "m_full_fault")) m_full_fault();
     else if (!strcmp(s, "m_full_holds")) m_full_holds();
+    else if (!strcmp(s, "m_overrun"))    m_overrun(argc > 2 ? argv[2] : "0");
     else if (!strcmp(s, "m_replay_0928"))  m_replay_0928(argc > 2 ? argv[2] : "");
     else if (!strcmp(s, "m_replay_1001"))  m_replay_1001(argc > 2 ? argv[2] : "");
     else if (!strcmp(s, "m_replay_1004a")) m_replay_1004a(argc > 2 ? argv[2] : "");

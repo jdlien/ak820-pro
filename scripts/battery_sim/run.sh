@@ -30,18 +30,29 @@ done
 # charges from flat replayed against the model. sim.c compiles them only
 # against a v5 battery.h.
 if grep -qE '^#define BATTERY_LOG_VERSION +([5-9]|[1-9][0-9])\b' "$build/battery.h"; then
-    for s in m_flat_boundary m_flat_boundary_above m_unknown_start m_partial_below_knee m_early_clamp \
+    model_scenarios="m_flat_boundary m_flat_boundary_above m_unknown_start m_partial_below_knee m_early_clamp \
              m_topup_near_full m_just_full m_delayed_termination m_delayed_unplug m_log_v5 m_log_saturated \
              m_ceil_hold30 m_ceil_60_29 m_ceil_60_30 m_ceil_clamp_hold m_ceil_clamp_entry m_ceil_clamp_exit \
              m_reports_lost_9 m_reports_lost_10 m_pause_short m_pause_before m_pause_after m_pause_relaxing \
              m_pause_missing m_pause_from_lost m_pause_from_unknown m_pause_then_unplug m_slow_charge \
              m_reseat_up m_reseat_down m_reseat_clamp m_reseat_unknown m_reseat_lost m_reseat_missing \
-             m_reseat_replugs m_reseat_0929 m_full_fault m_full_holds; do
+             m_reseat_replugs m_reseat_0929 m_full_fault m_full_holds"
+    for s in $model_scenarios; do
         "$build/sim" "$s" || fail=1
     done
     "$build/sim" m_replay_0928  "$log" || fail=1
     "$build/sim" m_replay_1001  "$hist/battery-2026-10-01-charge/log-20261001-1947.csv" || fail=1
     "$build/sim" m_replay_1004a "$hist/battery-2026-10-04-charge/log-20261004-2144.csv" || fail=1
+
+    # The model's scenarios again under AddressSanitizer and UBSan (B2): an
+    # index past the tail table, or any overflow, aborts the run.
+    cc -std=c11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -Wall -Wextra \
+       -Wno-unused-parameter -I"$build" -o "$build/sim_san" "$here/sim.c" "$build/battery.c" "$build/power.c" -lm
+    san=0
+    for s in $model_scenarios; do "$build/sim_san" "$s" > /dev/null 2>&1 || { echo "FAIL $s under the sanitizers"; san=1; }; done
+    "$build/sim_san" m_replay_1001 "$hist/battery-2026-10-01-charge/log-20261001-1947.csv" > /dev/null 2>&1 \
+        || { echo "FAIL m_replay_1001 under the sanitizers"; san=1; }
+    [ $san = 0 ] && echo "ok   the model's scenarios under ASan and UBSan" || fail=1
 fi
 
 # A build of the board's battery.c and power.c AT A PINNED REVISION, straight

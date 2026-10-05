@@ -30,7 +30,7 @@ Usage: battery_charge.py [--tail K_CC L_KNEE T_TAIL_H --header out.h]
 With --tail it writes the firmware's tail table (B's TAIL_X16) for those
 parameters, using the same construction tail_grid.py checks.
 """
-import csv, os, statistics, sys
+import csv, math, os, statistics, sys
 from datetime import datetime, timedelta
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -156,6 +156,10 @@ def write_tail(k_cc, l_knee, t_tail_h, out, note):
     B1's whole grid."""
     sys.path.insert(0, os.path.join(HERE, "battery_sim"))
     import tail_grid as TG
+    # Whole pm, half up, BEFORE the table is built: the firmware's knee is an
+    # integer, and the table's first node must be that knee exactly, or the
+    # linear phase hands over to a tail up to 0.5 pm off it.
+    l_knee = math.floor(l_knee + 0.5)
     if TG.solve(k_cc, l_knee, round(t_tail_h * 60) / 60) is None:
         raise SystemExit(f"infeasible: 0 < 990 - L_KNEE < K_CC * T_TAIL fails for "
                          f"K_CC {k_cc}, L_KNEE {l_knee}, T_TAIL {t_tail_h} -- revise the model, "
@@ -174,7 +178,7 @@ def write_tail(k_cc, l_knee, t_tail_h, out, note):
         "#pragma once",
         "#include <stdint.h>",
         f"#define BATT_K_CC_PM_PER_H {k_cc}u",
-        f"#define BATT_L_KNEE_PM     {int(round(l_knee))}u",
+        f"#define BATT_L_KNEE_PM     {l_knee}u",
         f"#define BATT_T_TAIL_S      {ts}u",
         f"#define BATT_TAIL_N        {len(nodes) - 1}u   /* nodes 0..N, one a minute */",
         "static const uint16_t batt_tail_x16[BATT_TAIL_N + 1] = {",

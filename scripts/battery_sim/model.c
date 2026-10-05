@@ -6,8 +6,9 @@
  *
  * The parameters are battery_tail.h's (BATT_*: K_CC, L_KNEE, T_TAIL) and the
  * model's constants battery.h's (BATTERY_*), so every expectation below moves
- * with the values the firmware ships. run.sh also builds this against round
- * 3's parameter set for the cases the plan names. */
+ * with the values the firmware ships. tail_fw_grid.py builds this at every
+ * point of B1's grid (m_overrun) and runs the cases the plan names at round 3's
+ * set; mutants.py checks each of the plan's mutants is caught. */
 #include <math.h>
 #include "battery_tail.h"
 
@@ -690,6 +691,26 @@ static void m_full_holds(void) {
     CHECK(seen, "FULL reached");
     CHECK(dropped == 0, "FULL held: %d seconds not FULL after it", dropped);
     CHECK(battery_level_permille() == 1000, "1000 at FULL: %u", battery_level_permille());
+}
+
+/* OVERRUN timing at one start, for tail_fw_grid.py, which runs it at every grid
+ * point and checks the time against the tail clock: (T_TAIL - entry) +
+ * T_OVERRUN from a start above the knee, knee + T_TAIL + T_OVERRUN from below.
+ * 5C is clamped throughout, so neither LOST condition (a) nor (b) can fire:
+ * the "Charge" seen is OVERRUN's. Prints the level the session opened at and
+ * the charging second "Charge" came, counted as delayed() counts them. */
+static void m_overrun(const char *arg) {
+    int l0 = atoi(arg);
+    u_target = tgt_clamp;
+    uint16_t at = model_from(l0, u_follow);
+    uint32_t limit = (uint32_t)(1000u * 3600u / (unsigned)K) + TT + BATTERY_T_OVERRUN_S + 600u, lost = 0;
+    for (uint32_t s = 1; s <= limit && !lost; s++) {
+        run_s(1);
+        if (battery_chg_state() == ST_LOST) lost = s;
+    }
+    CHECK(lost, "OVERRUN fired within %u s", limit);
+    CHECK(battery_level_permille() == 0xFFFF, "\"Charge\" after OVERRUN: %u", battery_level_permille());
+    printf("  OVERRUN %u %u\n", at, lost);
 }
 
 /* --- Replays: the recorded charges from flat ------------------------------------ */
