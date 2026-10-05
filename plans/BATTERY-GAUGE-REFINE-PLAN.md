@@ -1,6 +1,6 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-04): revision 5, after codex's fourth review
+**Status (2026-10-04): revision 6, after codex's fifth review
 ([every round verbatim](review-codex-battery-refine-plan-2026-10-04.md);
 dispositions at the end). Not started.** Phase 1 (the gauge) is built, flashed, and checked on
 two full discharges. This plan refines it on what those runs measured.
@@ -343,22 +343,36 @@ the 10 Hz path):
   fixed-point recurrence there rounds `A` to 990 and either never reaches it or
   reaches it ~10 min in. Either is within 1 pm of the curve, but wrong about
   *when* it arrives (codex, round 4). So:
-  - B1's script writes **`TAIL_PM[i]` = M at `i × 60` s after the knee**, integer
-    pm, from `i = 0` (`L_KNEE`) to `i = N`. τ and `A` are solved for `T_TAIL`
-    rounded to the minute, so `N × 60 = T_TAIL` and the last entry is **exactly
-    990**. It goes into a
-    generated header with the parameters in a comment, never hand-edited. That is
-    ≤ 337 `uint16_t`, under 700 bytes.
-  - **The tail clock** `t_tail` counts charging seconds in the tail.
-    `M = TAIL_PM[t_tail / 60]`, interpolated linearly to the next entry. Checked
-    2026-10-04 at every grid point, the degenerate corner included: interpolation
-    alone is within 0.13 pm of the curve, and with the integer entries within
-    0.5 pm.
-  - **A start above the knee** enters the clock at the first index whose entry is
-    ≥ `L0`. That is an integer search with no logarithm, and the tail is
-    memoryless, so this is the same curve.
+  - B1's script writes **`TAIL_X16[i]` = M at `i × 60` s after the knee, in
+    1/16 pm**, from `i = 0` (`L_KNEE`) to `i = N`. Each node is rounded to the
+    nearest 1/16 pm, and 990 × 16 fits a `uint16_t`. τ and `A` are solved for
+    `T_TAIL` rounded to the minute, so `N × 60 = T_TAIL` and the last node is
+    **exactly 990 × 16**. It goes into a generated header with the parameters in a
+    comment, never hand-edited. That is ≤ 337 `uint16_t`, under 700 bytes.
+  - **The tail clock** `t_tail` counts charging seconds in the tail and keeps
+    counting past `T_TAIL`, for OVERRUN. **The lookup index saturates on its
+    own:** `i = min(t_tail / 60, N)`. Between nodes, `M` is interpolated linearly
+    with integer floor division (1/16 pm). It is shown in whole pm, rounded to
+    nearest.
+  - **A start above the knee** enters the clock at the first second whose
+    interpolated `M` is ≥ `L0`: a node search, then an integer ceiling within
+    the segment. There is no logarithm, and the tail is memoryless, so this is
+    the same curve.
   - **Arrival is a time:** `t_tail ≥ T_TAIL`, never "`M` = 990". OVERRUN keys on
     the clock.
+  - **Measured, not assumed:** `scripts/battery_sim/tail_grid.py` checks all of
+    this over B1's grid. Its 2026-10-04 run, the degenerate corner included:
+    - all 900 points feasible, at most 337 nodes;
+    - the interpolated 1/16 pm table is within **0.173 pm** of the curve, and
+      **0.607 pm** with the output rounded to whole pm;
+    - the firmware's 1 h rise never exceeds `K_CC` from any start, on the integer
+      path;
+    - entry above the knee is exact: `M` at the entry second equals `L0`, and the
+      second before is below it.
+
+    The rate bound, never faster than `K_CC`, is a property of the analytical
+    curve (it starts at `K_CC` and decelerates). The firmware tests use these
+    measured quantization tolerances.
 
   ⚠️ **If the calibrated parameters are infeasible, or B3 contradicts B1 beyond
   their uncertainty:** revise the model (the knee, not the measurements), or ship
@@ -508,12 +522,41 @@ pause is timed from that moment and ends when `charging_now()` returns.
   0 or UNKNOWN-CHG's "Charge". A boot with the charger idle takes today's idle path.
 - **`LEVEL_UNKNOWN` is `0xFFFF`:** every comparison, subtraction and `max` in this
   code checks validity first. A bare `level >= 980` would pass for UNKNOWN.
-- **The log becomes v5** for gate 8: at each entry's end, `M`, in 0.5 % like
-  `level` (one byte), and the charging state (3 bits: in free `flags` bits if
-  there are any, otherwise one more byte). Today's entry is 16 bytes × 720
-  (`battery.c` ~720-738), so this costs 720-1440 bytes of RAM. Check the
-  headroom in the build's map before choosing. `ak820battery.py` and B2's replay
-  adapter read v3, v4 and v5.
+- **The log becomes v5** for gate 8. Two bytes are added to each entry, making
+  18:
+  - **`m`**, `M` at the entry's end, in 0.5 % like `level`;
+  - **`chg`**, the charging byte:
+
+    | bits | meaning |
+    |---|---|
+    | 0-2 | the state at the end: none/idle, UNKNOWN-CHG, FROM-FLAT, MODEL, LOST, FULL |
+    | 3 | LOST entered during the period, by (a) or (b) |
+    | 4 | OVERRUN entered during the period |
+    | 5 | a handover during the period |
+    | 6 | the firmware's self-check: a rise ended above the then-fresh `U` (should never set; it catches integration bugs the simulator cannot see) |
+    | 7 | spare |
+
+    These are latched over the period, like `flags_any`, so a LOST followed by
+    FULL inside one entry still shows. All eight `flags` bits are taken
+    (`battery.c` 80-88), so the bits cannot go there.
+
+  **The wire must be repacked, because the reply is full.** `HC_BATTLOG` answers
+  in place at `&data[3]` (`hid_protocol.c` ~598). Today that is 3 + 13 header +
+  16 entry = **32 bytes = `RAW_EPSIZE`** (`tmk_core/protocol/usb_descriptor.h`
+  289), so a bigger entry would write past the buffer. v5 drops the period from
+  each reply, making the header 11 bytes: 3 + 11 + 18 = 32.
+  - The host reads the period once per dump from `HC_BATTCFG`, which already
+    reports it (`battery_cfg`, `out[6..7]`). That is the firmware's value, still
+    never assumed.
+  - Firmware and host change together.
+  - A `_Static_assert` that 3 + header + entry ≤ `RAW_EPSIZE`.
+  - Host decode tests on v3, v4 and v5 replies, each with its version byte.
+  - The B2 harness reads `battery_log_read`'s output into a 29-byte buffer
+    guarded on both sides.
+
+  RAM: 720 × 2 = 1440 bytes more. The rollback ELF has ~6 KB of linker heap
+  space (codex, round 5); re-check the final build's map. `ak820battery.py` and
+  B2's replay adapter read v3, v4 and v5.
 - **FULL is a heuristic:** CHRG released with `5C` clamped is also what a charger
   fault looks like while the terminal voltage is still above 4.036 V, and DONE is
   unusable on this board. A false FULL shows 100; on battery the clamp countdown
@@ -608,10 +651,17 @@ test's output. The rest replay recorded data.
   does not bind).
 - **The tail's shape over B1's whole grid**, not only the calibrated set
   *(synthetic)*:
-  - at every feasible point, the rate never exceeds `K_CC`;
-  - from any `L0`, the 1 h rise ≤ `K_CC` + 1 (rounding);
-  - the table ends at exactly 990, at `T_TAIL` rounded to the minute;
-  - the interpolated integer table matches the float to ≤ 0.5 pm;
+  - the generator: every feasible point's analytical curve starts at `K_CC` and
+    decelerates; `tail_grid.py`'s figures reproduce;
+  - the firmware path (the generated table through `battery.c`'s lookup): from
+    any `L0`, the 1 h rise ≤ `K_CC` + 1 pm;
+  - the table ends at exactly 990 × 16, at `T_TAIL` rounded to the minute;
+  - the displayed whole-pm `M` is within 0.7 pm of the curve (measured worst
+    0.607);
+  - entry above the knee: `M` at the entry second equals `L0`, and the second
+    before is below it;
+  - **past `T_TAIL`** the clock keeps counting while `M` stays at exactly 990.
+    The index saturates at `N`, with no read past the table;
   - **OVERRUN timing:** from the knee, and from starts above it, OVERRUN fires
     after `(T_TAIL − t_tail0) + T_OVERRUN` of charging, ± 1 s. This is checked at
     every grid point, the degenerate corner included, where `M` shows 990 hours
@@ -625,9 +675,8 @@ test's output. The rest replay recorded data.
 **The cap and the clamp:**
 
 - **Delayed termination at the clamp** *(synthetic)*: `L0` 600, `5C` clamped
-  throughout, CHRG held 2 h past the model's termination time. Run it at the
-  calibrated set **and** at round 3's set, where `A` is 1044, so a missing cap
-  shows even if the calibrated `A` lands near 990. Assert:
+  throughout, CHRG held 2 h past the model's termination time, at the calibrated
+  set and at round 3's set. Assert:
   - ≤ 990 throughout (never 991-999);
   - "Charge" `T_OVERRUN` after the tail clock reaches `T_TAIL`;
   - 1000 at FULL;
@@ -683,18 +732,23 @@ test's output. The rest replay recorded data.
 - **FULL heuristic:** a charger fault with `5C` clamped reads FULL (documented,
   asserted).
 
-**Mutants, each caught:**
+**Mutants, each caught.** The round-4 "990 cap removed" mutant is retired: a
+table that ends at 990 with a saturated index makes a separate cap redundant, so
+removing it changes no output. ≤ 990 until FULL is still asserted.
 
 | mutant | caught by |
 |---|---|
 | `K_CC` = 0 | the partial charge below the knee |
 | the tail started at clamp entry (round 1's formula) | early clamp entry |
-| round 2's τ formula | the shape grid and early clamp entry at round 3's set |
+| the generator using round 2's τ formula | the shape grid's 1 h rise and early clamp entry at round 3's set |
 | the ceiling `U` ignored | the ceiling cases |
 | the rise limiter removed | the clamp-entry count-up |
 | the LOST timer resetting at the clamp instead of holding | the 20 + 5 + 10 min case |
 | the re-seat before `RELAX_S` | the 09-29 case |
-| the 990 cap removed | the delayed-termination case |
+| the lookup index not saturated (reads past the table) | past `T_TAIL` in the shape grid; the new-model scenarios also run under `-fsanitize=address,undefined` |
+| OVERRUN keyed on `M` reaching 990 instead of the clock | OVERRUN timing at the degenerate corner |
+| OVERRUN timed from session start instead of the tail clock | OVERRUN timing from starts above the knee |
+| entry above the knee by node only (no in-segment solve) | the exact-entry assertion |
 | UNKNOWN treated as a number | the UNKNOWN start |
 
 ### B3. Measure `K_CC` and the relaxation on hardware (after flash 1)
@@ -1012,17 +1066,32 @@ Staged, so each can actually be run when it comes due.
 8. **Flash 2 on hardware:** the protocol passes; **≤ 10 physical write sessions
    per 24 h** on battery outside the exclusions (C2); D2's stall target met or
    its remainder explained. A real charge from below 50% on the Mac, checked
-   against the v5 log (B adds two fields at each entry's end: the charging state,
-   and `M`):
-   - **no LOST and no OVERRUN.** This is the stated operating condition; LOST or
-     OVERRUN here means the model is miscalibrated. Fail, and revisit B1/B3.
-   - **no rise past the evidence**, as a necessary condition the log can show.
-     For every entry below the clamp in which the level rose, the entry's ending
-     level ≤ `curve(max(c5_max of this entry, c5_max of the previous one))` + 1 pm.
-     This holds because a rise ends at ≤ a fresh `U`; the estimate is a mean of
-     ≤ 64 reports (~2.5 min), all from this entry or the previous one; and the
-     curve is monotone. The sustained case, a held display above `U`, is LOST's
-     job and is tested exactly in B2, not from ten-minute means.
+   against the v5 log (`m` and `chg`, B):
+   - **`chg`'s LOST (3) and OVERRUN (4) bits never set** in any entry. They are
+     latched over the period, so nothing falls between entries. This is the
+     stated operating condition; LOST or OVERRUN here means the model is
+     miscalibrated. Fail, and revisit B1/B3.
+   - **the firmware's self-check bit (6) never set.**
+   - **no rise past the evidence**, as an independent check from the log, applied
+     **only where it is a necessary condition**. That means entry *i* where:
+     - the logged level rose (`level_i > level_{i−1}`);
+     - **neither entry *i* nor *i − 1* has a report at 100**, so every estimate
+       in the window is below the clamp (all reports ≤ 99 give an estimate
+       ≤ 99.00 < 99.50) and `U` applied to every rise;
+     - **entry *i − 1* holds ≥ 64 reports**, so at every moment of entry *i* the
+       64-report ring holds only reports from *i* and *i − 1*;
+     - no FULL, no handover and no supply change inside entry *i* (`chg` bits
+       and `flags_any`).
+
+     There, `level_i ≤ curve(mv(max(c5_max_i, c5_max_{i−1})))` + 1 pm, using
+     the firmware's own integer count-to-mV conversion. This holds because a rise
+     ends at ≤ a fresh `U`, a trimmed mean is ≤ its largest report, the curve is
+     monotone, and the log floors the level to 0.5 %. A logged rise means a true
+     rise inside entry *i*: the true level is non-decreasing there and floors
+     to the logged value. Codex's two
+     counterexamples, a clamp exit and sparse reports spanning ~20 min, are
+     excluded by the second and third conditions. The sustained case, a held
+     display above `U`, is LOST's job and is tested exactly in B2.
    - ≤ 99 until FULL, with a FULL step ≤ 3 points;
    - where JD watches the LCD, the percent never skips a value except at FULL
      (the rise limit is 0.1 points a second).
@@ -1153,3 +1222,17 @@ ready, on R4-1 alone.
 Also fixed from round 4's prose: the D1 harness's replacement case now queues an
 `0xA1` behind the in-flight frame first, since a nearly full queue alone does not
 replace.
+
+### Round 5 — codex, 2026-10-04, on revision 5 ([verbatim](review-codex-battery-refine-plan-2026-10-04.md#round-5-2026-10-04-on-revision-5----verbatim))
+
+Codex counted R4-3 and R4-4 resolved, and R4-1 and R4-2 partly resolved. It
+confirmed the cited plug-in observations, the reachable 1000 against 1020
+boundary, and the 337-node / 674-byte table. Verdict: not ready, on R5-1 and
+R5-2.
+
+| # | finding (short) | disposition |
+|---|---|---|
+| R5-1 | P1: a bigger v5 entry overflows the `HC_BATTLOG` reply, which is exactly 32 bytes today; all flag bits are taken | **Accepted, verified** (`hid_protocol.c` ~598 answers at `&data[3]`; 3 + 13 + 16 = 32 = `RAW_EPSIZE`; `BATT_F_*` uses all eight bits). v5 drops the per-reply period (the host reads it from `HC_BATTCFG`, which already reports it), so 3 + 11 + 18 = 32. There is a `_Static_assert` on the sum, host decode tests for v3/v4/v5, and a guarded buffer in the harness. The entry gains `m` and a latched `chg` byte. B. |
+| R5-2 | P1: gate 8's rise check is not a necessary condition at a clamp exit, or when sparse fresh reports span more than two entries; LOST could fall between entries | **Accepted.** The check now applies only where it is sound: no report at 100 in either entry, ≥ 64 reports in the previous one, and no FULL, handover or supply change. Both of codex's counterexamples are excluded. `chg` latches LOST, OVERRUN, handover, and a firmware self-check over each period. Gate 8. |
+| R5-3 | P2: integer-table accuracy and the rate bound were overstated; the start-index search quantized | **Accepted, verified.** Nodes are now in 1/16 pm, with the index saturating apart from the clock and an exact in-segment entry. The figures come from a committed checker, `scripts/battery_sim/tail_grid.py`: 0.173 pm interpolated, 0.607 pm rounded to whole pm, 1 h rise never above `K_CC`, entry exact. The rate bound is stated on the analytical curve; the firmware tests use the measured tolerances. B, B2. |
+| R5-4 | P2: with a table ending at 990, the removed-cap mutant is equivalent | **Accepted.** That mutant is retired. New mutants: an unsaturated index (also caught under ASan/UBSan), OVERRUN keyed on `M` or on session time, and node-only entry. B2. |

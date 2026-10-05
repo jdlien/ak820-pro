@@ -366,3 +366,57 @@ The transport harness is realistic. The [driver’s includes](</Users/jdlien/cod
    **Change:** Test relative to final `PAUSE_S`; define pause timing against the qualified charging signal. Require sufficient fresh, post-relaxation evidence before adopting an idle level. Separate the new 60-second model qualification from the historical session flag needed for unplug re-seating. Exercise resumed charging and missing reports at the boundary.
 
 The remaining new behavior is coherent: boot-on-USB shows “Charge” before qualification; short pauses suppress today’s [idle adjustment path](</Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:570>); LOST re-seating as UNKNOWN discards distrusted model provenance; and OVERRUN supplies a defined fallback above the clamp, subject to fixing its numerical trigger as described above.
+
+---
+
+# Round 5 (2026-10-04), on revision 5 -- verbatim
+
+Model gpt-6-astra, reasoning xhigh, read-only, against commit `d3ed566`.
+
+**Verdict: not ready to execute cold. Two P1 blockers remain: the v5 wire format and gate 8’s invalid rise check.**
+
+| Round-4 finding | Revision-5 status | Verification |
+|---|---|---|
+| **R4-1** | **Partly resolved** | The held-display/LOST-dwell contradiction is fixed, and `level ≤ M` is properly scoped. But the replacement rise check is not universally necessary, and v5 needs a transport redesign. R5-1/R5-2 below. |
+| **R4-2** | **Partly resolved** | The independent tail clock fixes arrival and OVERRUN timing. **337 entries = 674 bytes** is correct. Numerical checks reproduced a maximum unrounded interpolation error of **0.12638 pm**, but not the general **≤0.5 pm** integer-table claim. The start-index search also introduces quantization. R5-3. |
+| **R4-3** | **Resolved** | The cited observations exist: [09-28’s 2→3→4](/Users/jdlien/code/ak820-pro/history/battery-2026-09-25/readings.csv:50), [10-01’s `0@1 <3161`](/Users/jdlien/code/ak820-pro/history/battery-2026-10-01-charge/readings.csv:2), and [10-04’s `0@0`](/Users/jdlien/code/ak820-pro/history/battery-2026-10-04-charge/readings.csv:2). The openings are now explicitly reconstructions. Five untrimmed reports produce exactly **1000 versus 1020** in the estimator’s units, so the real-report boundary cases are reachable. |
+| **R4-4** | **Resolved** | Separate `modeled`/`session` flags preserve unplug re-seating. Pause timing follows the held charging signal; adoption requires entirely post-relaxation evidence; resumption and missing-report tests use the final parameters. This agrees with [the existing charging/session machinery](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:182). |
+
+**P1 blockers, ranked**
+
+1. **R5-1 — P1: The proposed v5 entry overflows the existing HID reply.**
+
+   **Problem/evidence:** [The plan](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:511) adds one or two bytes. All eight existing flag bits are assigned, so straightforward storage needs **18 bytes**, adding **1,440 bytes RAM**. That is provisionally feasible: the rollback ELF has **6,080 bytes of linker heap space**, before new diagnostics.
+
+   The transport has no spare bytes: [the caller](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/hid_protocol.c:598) passes `&data[3]`; [serialization](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:790) adds 13 metadata bytes and the entry. Today that is **3 + 13 + 16 = 32**, exactly [RAW_EPSIZE](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/tmk_core/protocol/usb_descriptor.h:289). Simply increasing the entry size writes past the buffer.
+
+   **Change:** Specify a repacked or paged v5 wire layout, update firmware and host together, and require buffer-boundary and v3/v4/v5 decoding checks before flash 2. Retain the final-build RAM check.
+
+2. **R5-2 — P1: Gate 8 still rejects permitted rises.**
+
+   **Problem/evidence:** [The gate’s proof](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:1019) assumes both a bounded time window and an applicable voltage ceiling. Neither always holds.
+
+   - **Normal-rate clamp exit:** With the ring initially holding 100s, new reports of 99 every two seconds leave the trimmed estimate clamped briefly. A legal **954→955 pm** rise can occur then. The current entry has `c5_max=99`, the previous one 100; the gate demands **≤901 pm**. Logging floors the values to **950→955**, so it still rejects the rise.
+   - **Sparse fresh reports:** Reports every 19 seconds never become stale, but 64 reports span almost 20 minutes. Samples can therefore predate the previous entry. I reproduced logged **225→230 pm** with both entries’ maxima 60, whose proposed bound is **106 pm**. No supply/charger change occurs to clear the ring.
+
+   These follow directly from [ring size, freshness and clamp thresholds](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:266). Five reports establish an estimate; they do not bound its oldest sample.
+
+   **Change:** Restrict the check to demonstrably covered, unclamped estimator history—for example, sufficient previous-entry report count and neither entry containing 100—or log the actual rise-bound check. Also latch LOST/OVERRUN occurrence: an end-state-only field can miss LOST followed by FULL within one interval.
+
+**P2 corrections that can be handled during execution**
+
+3. **R5-3 — P2: Integer-table assertions need explicit rounding tolerances.**
+
+   **Problem/evidence:** [The table specification](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:346) and [shape tests](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:609) overstate accuracy and rate preservation.
+
+   With nearest-integer entries, `(K,t_knee,R,T)=(210,3.9,60,5.2)` gives **0.501292 pm** interpolation error at 616 seconds. At round 3’s parameter set, rounding the interpolated output to whole pm gives **0.958627 pm** error. Its first table segment is **626→629 in 60 seconds**, or **180 pm/h**, exceeding `K=160`. Starting at `L0=627` selects 629, so initialization is also approximate.
+
+   **Change:** Define node/output rounding and start-index error explicitly. Apply the continuous rate bound to the analytical curve, and use justified quantization tolerances for firmware checks. Commit the generator and exact grid.
+
+4. **R5-4 — P2: The removed-cap mutant can now be equivalent to correct behavior.**
+
+   **Problem/evidence:** The [table ends at 990](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:346), yet [the delayed-termination test](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:627) still relies on `A≈1044` exposing a removed cap. A bounded table lookup never evaluates that later exponential; removing a redundant numeric cap need not change any output.
+
+   **Change:** Retire that equivalent mutant. Specify saturation of the table index independently of the continuing tail clock, and test missing end-of-table bounds and incorrect OVERRUN timing.
+
+Verification was read-only: source/data inspection, ELF inspection, and numerical checks; no firmware build or hardware execution.
