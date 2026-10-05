@@ -248,7 +248,12 @@ static void charge_log(const char *path) {
     CHECK(w_falls == 0, "never falls while charging: %d falls", w_falls);
     CHECK(w_big == 0, "rises one percent at a time: %d bigger", w_big);
     CHECK(saved_writes == 0, "nothing saved while charging: %d writes", saved_writes);
+#if BATTERY_LOG_VERSION >= 5
+    /* Flash 2: the charging model's cap is 990 pm (BATTERY_MODEL_CAP), 99 %. */
+    CHECK(max_pct <= 99, "never claims 100 before the charger stops: reached %u", max_pct);
+#else
     CHECK(max_pct <= 97, "never claims 100 before the charger stops: reached %u", max_pct);
+#endif
     printf("  %d minutes replayed, level at the end %u%% (%u pm)\n", rows, battery_level_pct(),
            battery_level_permille());
     /* The log ends at 10:34; the charge went on in CV until CHRG released at
@@ -256,8 +261,13 @@ static void charge_log(const char *path) {
     vdd_mv = 4300; vdd_dip_mv = 0; c5 = 100; chrg_low = true;
     run_s(2 * 3600);
     CHECK(battery_state() == BATTERY_STATE_CHARGING, "still charging: %s", state_name(battery_state()));
+#if BATTERY_LOG_VERSION >= 5
+    CHECK(battery_level_permille() != 0xFFFF && battery_level_permille() <= BATTERY_MODEL_CAP,
+          "<= 990 through the rest of CV, never 100 before termination: %u pm", battery_level_permille());
+#else
     CHECK(battery_level_pct() == 97, "97 through the rest of CV, never 100 before termination: %u (%u pm)",
           battery_level_pct(), battery_level_permille());
+#endif
     /* The charger terminates. */
     chrg_low = false; vdd_mv = 4470; vdd_dip_mv = 0; c5 = 100;
     run_s(30);
@@ -453,7 +463,17 @@ static void reseat_survives_replug(void) {
     run_s(20);
     /* 5C 70 = 3774 mV; the curve between 3748 (150) and 3785 (200):
      * 150 + 26 * 50 / 37 = 185 pm. */
+#if BATTERY_LOG_VERSION >= 5
+    /* Flash 2: the re-seat waits RELAX_S from the LAST unplug, then takes the
+     * first estimate built only from reports after it. Booted charging at 5C
+     * 80 (not flat), the session was UNKNOWN-CHG, so the level is unknown
+     * until then. */
+    CHECK(battery_level_permille() == 0xFFFF, "held through RELAX_S: %u pm", battery_level_permille());
+    run_s(BATTERY_RELAX_S);
     CHECK(battery_level_permille() == 185, "re-seated after the brief replug: %u pm", battery_level_permille());
+#else
+    CHECK(battery_level_permille() == 185, "re-seated after the brief replug: %u pm", battery_level_permille());
+#endif
 }
 
 /* A threshold above the top clamp cannot be judged there: no cut, no warning. */
@@ -476,14 +496,27 @@ static void log_cadence(void) {
     run_s(301);
     battery_log_read(0, out);
     CHECK((out[1] | out[2] << 8) == 1, "one entry at 10 min: %u", out[1] | out[2] << 8);
+#if BATTERY_LOG_VERSION >= 5
+    uint8_t cfg[8];
+    battery_cfg(0, 0, 0, cfg);
+    CHECK((cfg[6] | cfg[7] << 8) == 600, "period 600 s, from HC_BATTCFG: %u", cfg[6] | cfg[7] << 8);
+    CHECK(out[0] == 5, "log v5: %u", out[0]);
+#else
     CHECK((out[9] | out[10] << 8) == 600, "period 600 s in the reply: %u", out[9] | out[10] << 8);
     CHECK(out[0] == 4, "log v4: %u", out[0]);
+#endif
     vdd_mv = 0;
     run_s(20 * 60);
     battery_log_read(2, out);
     CHECK((out[1] | out[2] << 8) == 3, "two more entries through a 20 min ADC outage: %u", out[1] | out[2] << 8);
-    CHECK((out[13] | out[14] << 8) == 0, "an outage entry says 0 mV, not a stale mean");
-    CHECK((out[19] | out[28] << 8) >= 200, "and still counts every 5C report: %u", out[19] | out[28] << 8);
+#if BATTERY_LOG_VERSION >= 5
+    enum { H = 11 };   /* v5: version, count, idx, since, written */
+#else
+    enum { H = 13 };   /* v4: and the period */
+#endif
+    CHECK((out[H] | out[H + 1] << 8) == 0, "an outage entry says 0 mV, not a stale mean");
+    CHECK((out[H + 6] | out[H + 15] << 8) >= 200, "and still counts every 5C report: %u",
+          out[H + 6] | out[H + 15] << 8);
 }
 
 /* Plugged in for 20 s mid-discharge: the charge current lifts 5C, but it is not
@@ -509,19 +542,31 @@ static void unplug_mid_charge(void) {
     c5 = 80;
     run_s(120);
     uint16_t charging = battery_level_permille();
+#if BATTERY_LOG_VERSION >= 5
+    /* Flash 2: booted charging at 5C 50 (not flat), the session has no trusted
+     * start -- UNKNOWN-CHG, "Charge" -- and no voltage guess while charging. */
+    CHECK(charging == 0xFFFF, "charging with no trusted start reads unknown, got %u pm", charging);
+#else
     CHECK(charging < 300, "charging at 5C 80 (3.861 V less 150 mV of I*R) is ~12%%, got %u pm", charging);
+#endif
     vdd_mv = 3900; chrg_low = false; c5 = 70;
     run_s(3);   /* one report after the change, taken on the pack */
     CHECK(battery_5c_rounded() == 0xFF, "no estimate from one report: the charging ones were forgotten");
     run_s(13);
     CHECK(battery_5c_rounded() == 70, "the estimate is post-unplug reports only: %u", battery_5c_rounded());
+#if BATTERY_LOG_VERSION >= 5
+    /* ...but the re-seat waits RELAX_S for the pack to relax, then takes the
+     * first estimate built after it. */
+    CHECK(battery_level_permille() == 0xFFFF, "held through RELAX_S: %u pm", battery_level_permille());
+    run_s(BATTERY_RELAX_S);
+#endif
     /* 5C 70 = 3774 mV: 150 + 26 * 50 / 37 = 185 pm (as reseat_survives_replug). */
     CHECK(battery_level_permille() == 185, "re-seated at the first post-unplug estimate: %u pm",
-          battery_level_permille());
+          battery_level_permille());   /* flash 2: the first after RELAX_S */
     watch_reset();
     run_s(20 * 60);
     CHECK(w_rises == 0, "no rise after the re-seat (%d)", w_rises);
-    printf("  charging level %u pm, re-seated on the pack at 185 pm\n", charging);
+    printf("  charging level %u pm (0xFFFF: unknown), re-seated on the pack at 185 pm\n", charging);
 }
 
 /* A countdown that ran slow: the clamp exits early, and the level eases down to
