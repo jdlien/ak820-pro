@@ -57,6 +57,19 @@ def _same(a, b):
         return os.path.realpath(a).lower() == os.path.realpath(b).lower()
 
 
+def _is_us(py):
+    """Is candidate `py` the venv we are already running in?
+
+    Compare VENVS, not interpreter files: a venv's python is usually a symlink
+    to the base interpreter (venv/bin/python3 -> pyenv's 3.13.9 on JD's Mac),
+    so samefile() calls the venv "the interpreter we already are" whenever the
+    script was started by that same base python through `#!/usr/bin/env
+    python3` -- and refuses, although the venv has the module (2026-09-30).
+    sys.prefix is the venv's root inside a venv and the base install outside
+    one, and every candidate sits at <venv root>/{bin,Scripts}/<python>."""
+    return _same(os.path.dirname(os.path.dirname(py)), sys.prefix)
+
+
 def _provides(py, module):
     """Does interpreter `py` have `module`? One cheap subprocess per candidate.
 
@@ -86,7 +99,7 @@ def ensure(module="hid"):
     # Guard against an exec loop: never re-exec into the interpreter we already
     # are. If that one lacks the module, the venv is incomplete -- say so
     # rather than spinning.
-    others = [p for p in present if not _same(p, sys.executable)]
+    others = [p for p in present if not _is_us(p)]
 
     for py in others:
         if _provides(py, module):
