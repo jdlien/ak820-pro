@@ -14,6 +14,9 @@ Three log formats exist:
                      (10 min), every `5C` report in the period aggregated
     v4               as v3, but the report count is 16-bit (the reserved
                      byte is its high byte) and the level is in 0.5 %
+    v5 (Phase 1b)    an 18-byte entry: v4 plus the charging model m and the
+                     chg byte; the reply drops the period to fit, and the
+                     host reads it once from HC_BATTCFG
 v3+ firmware says so in HC_CONN byte 31 (BATTERY_PROTO_VERSION, 3 or 4), and
 the log reply's first byte says which of v3/v4; older firmware leaves the
 host's own zero there. ⚠️ Never assume the period: a 10-minute log
@@ -127,40 +130,79 @@ def stamp(t):
     return time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
 
 
+CHG_STATES = ["none", "unknown_chg", "from_flat", "model", "lost", "full"]
+
+
+def parse_reply(r):
+    """One HC_BATTLOG reply's header and entry bytes. v3/v4: [3] version,
+    [4..5] count, [6..7] idx, [8..11] ms since the newest entry, [12..13] the
+    period in s, [14..15] entries ever written, entry 16 bytes at [16..31]. v5
+    drops the period to make room for an 18-byte entry: written at [12..13],
+    entry at [14..31]; the period comes once per dump from HC_BATTCFG."""
+    ver = r[3]
+    if ver >= 5:
+        return ver, u16(r, 4), u16(r, 6), u32(r, 8), None, u16(r, 12), r[14:32]
+    return ver, u16(r, 4), u16(r, 6), u32(r, 8), u16(r, 12), u16(r, 14), r[16:32]
+
+
+def decode_entry(e, ver):
+    """An entry's fields, without its time. v4 widened c5_n with the reserved
+    byte and put the level in 0.5 %; v5 adds m (the charging model, 0.5 %) and
+    chg (the charging state and what was latched over the period)."""
+    c5_sum, c5_min, c5_max = u16(e, 4), e[7], e[8]
+    c5_n = e[6] | (e[15] << 8 if ver >= 4 else 0)
+    level = "" if e[11] == 0xFF else (f"{e[11] / 2:.1f}" if ver >= 4 else e[11])
+    mean = c5_sum / c5_n if c5_n else None
+    # Pack mV only when no report in the period sat on a clamp: a mean that
+    # includes a clamped 100 or 0 is a mean of bounds. v5 keeps the extrema
+    # for every report even when the sum saturates (chg bit 7), so this still
+    # holds there; c5_mean then covers only the reports before saturation.
+    pack = "" if mean is None or c5_min == 0 or c5_max == 100 \
+        else f"{(mean + FIT_OFFSET) / FIT_SLOPE * 1000:.0f}"
+    row = {"vdd_avg": u16(e, 0), "vdd_min": u16(e, 2),
+           "c5_mean": "" if mean is None else f"{mean:.2f}", "c5_n": c5_n,
+           "c5_min": "" if not c5_n else c5_min, "c5_max": "" if not c5_n else c5_max,
+           "pack_mv": pack, "level": level,
+           "led_pm": u16(e, 12), "bkl": e[14]}
+    row.update({name: (e[9] >> i) & 1 for i, name in enumerate(FLAGS_V3)})
+    row["flags_any"] = flags_str(e[10], FLAGS_V3)
+    if ver >= 5:
+        chg = e[17]
+        row["m"] = "" if e[16] == 0xFF else f"{e[16] / 2:.1f}"
+        st = chg & 0x07
+        row["chg_state"] = CHG_STATES[st] if st < len(CHG_STATES) else st
+        row["chg_lost"] = (chg >> 3) & 1        # LOST entered by (a) or (b) this period
+        row["chg_overrun"] = (chg >> 4) & 1     # OVERRUN entered this period
+        row["chg_handover"] = (chg >> 5) & 1    # a pause handover this period
+        row["chg_selfcheck"] = (chg >> 6) & 1   # a rise ended above the fresh U: never expected
+        row["c5_saturated"] = (chg >> 7) & 1    # the sum or count saturated: the mean is partial
+    return row
+
+
 def dump_v3(h):
     """Read every entry. The ring can take a new entry mid-dump, which shifts
     every index by one; the reply's written-count says so, and the dump is
     retried rather than silently duplicating or dropping a row."""
     for _ in range(3):
         first = xfer(h, HC_BATTLOG, [0, 0])
-        ver = first[3]
-        if ver not in (3, 4):
+        ver, count, _, since, period, written, _ = parse_reply(first)
+        if ver not in (3, 4, 5):
             sys.exit(f"unexpected log format {ver}")
-        count, since, period, written = u16(first, 4), u32(first, 8), u16(first, 12), u16(first, 14)
+        if period is None:
+            # v5: the firmware's period, from HC_BATTCFG [10..11] -- never assumed.
+            period = u16(xfer(h, HC_BATTCFG, [0]), 10)
+            if not period:
+                sys.exit("HC_BATTCFG gave no log period")
         newest = time.time() - since / 1000.0
         rows, torn = [], False
         for n in range(count):
             r = first if n == 0 else xfer(h, HC_BATTLOG, [n & 0xFF, n >> 8])
-            if u16(r, 6) != n or u16(r, 14) != written:
+            v, _, idx, _, _, wr, e = parse_reply(r)
+            if v != ver or idx != n or wr != written:
                 torn = True
                 break
-            e = r[16:32]
-            c5_sum, c5_min, c5_max = u16(e, 4), e[7], e[8]
-            c5_n = e[6] | (e[15] << 8 if ver >= 4 else 0)
-            level = "" if e[11] == 0xFF else (f"{e[11] / 2:.1f}" if ver >= 4 else e[11])
-            mean = c5_sum / c5_n if c5_n else None
-            # Pack mV only when no report in the period sat on a clamp: a mean
-            # that includes a clamped 100 or 0 is a mean of bounds.
-            pack = "" if mean is None or c5_min == 0 or c5_max == 100 \
-                else f"{(mean + FIT_OFFSET) / FIT_SLOPE * 1000:.0f}"
-            row = {"time": stamp(newest - (count - 1 - n) * period),
-                   "vdd_avg": u16(e, 0), "vdd_min": u16(e, 2),
-                   "c5_mean": "" if mean is None else f"{mean:.2f}", "c5_n": c5_n,
-                   "c5_min": "" if not c5_n else c5_min, "c5_max": "" if not c5_n else c5_max,
-                   "pack_mv": pack, "level": level,
-                   "led_pm": u16(e, 12), "bkl": e[14]}
-            row.update({name: (e[9] >> i) & 1 for i, name in enumerate(FLAGS_V3)})
-            row["flags_any"] = flags_str(e[10], FLAGS_V3)
+            row = {"time": stamp(newest - (count - 1 - n) * period)}
+            row.update(decode_entry(e, ver))
             rows.append(row)
         if not torn:
             return rows, count, since, period, ver
