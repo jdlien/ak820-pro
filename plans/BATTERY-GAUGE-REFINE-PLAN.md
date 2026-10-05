@@ -1,9 +1,9 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-05, ~12:40): executing.** Gates 1 and 2 are met, and
-**flash 1 (`4293607b4b`, token `0xa7adc2d1`) is on the board since ~12:28**,
-the keymap and lighting restored and checked. Gate 3 (D1's cost) runs
-12:38-13:39; the soaks follow
+**Status (2026-10-05, ~17:45): executing.** Gates 1-3 are met. Gate 3
+failed on flash 1 (2.5%), so the accounting was trimmed: **flash 1b
+(`97a24c6e20`, token `0x5425251f`) is on the board since 16:28, and gate 3
+passed on it.** The battery soak and B3's drain began ~17:40
 ([`history/battery-2026-10-05-flash1/`](../history/battery-2026-10-05-flash1/)). Flash 2's host work is under way ahead of B3 (the
 model with a placeholder tail; B2 done but for B3's parameters). See "As
 built", just before the review dispositions. Revision 7 came after codex's sixth review
@@ -1343,6 +1343,18 @@ verdict "fix 1 first":
 No second round: the one fix is small and has a test that fails before it.
 Flash 1b is `ak820pro-builds/out/via-daily-97a24c6e20-20261005-152818.bin`,
 token `0x5425251f`, clean.
+
+**Flash 1b went on at 16:28, and gate 3 passed** (16:39:40-17:39:40, same
+conditions; `gate3b-acct-ab.json`):
+
+| half | passes/s | ≥ 10 ms | ≥ 25 ms |
+|---|---|---|---|
+| ON | 291.88 | 18 | 0 |
+| OFF | 290.90 | 21 | 0 |
+
+That is +0.34% with it on: the cost is below what 30 minutes can resolve
+(it was −2.53%). The accounting stays on. The battery soak and B3's drain
+began at ~17:40, at the `battery-soak-start` snapshot.
 
 ### Flash 2 so far (host, ahead of B3)
 

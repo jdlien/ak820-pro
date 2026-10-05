@@ -1,0 +1,51 @@
+{
+ "on": {
+  "seconds": 1799.6,
+  "passes": 525278,
+  "pps": 291.88,
+  "ge10": 18,
+  "ge10_per_h": 36.0,
+  "ge25": 0
+ },
+ "off": {
+  "seconds": 1799.6,
+  "passes": 523497,
+  "pps": 290.9,
+  "ge10": 21,
+  "ge10_per_h": 42.0,
+  "ge25": 0
+ },
+ "pps_rel_change": 0.0034,
+ "cost_ms_per_pass": -0.0115,
+ "ge10_on_minus_off": -3,
+ "ge10_noise_2sqrt": 12.5,
+ "pps_within_1pct": true,
+ "ge10_not_higher": true,
+ "rollback": false,
+ "snaps": [
+  {
+   "wall": 1791239980.6128058,
+   "uptime_ms": 630747,
+   "enabled": true,
+   "passes": 183863,
+   "c10": 4,
+   "c25": 0
+  },
+  {
+   "wall": 1791241780.7495801,
+   "uptime_ms": 2430389,
+   "enabled": false,
+   "passes": 709141,
+   "c10": 22,
+   "c25": 0
+  },
+  {
+   "wall": 1791243580.8781812,
+   "uptime_ms": 4229997,
+   "enabled": true,
+   "passes": 1232638,
+   "c10": 43,
+   "c25": 0
+  }
+ ]
+}
