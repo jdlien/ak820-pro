@@ -1,0 +1,30 @@
+A narrow verification pass, read-only. Do not modify files.
+
+You reviewed flash 1 of the AK820 Pro's Phase 1b (plans/BATTERY-GAUGE-REFINE-PLAN.md) at firmware f4ad230326 and parent d19adc2. Your verdict was "flash after findings 1..5". Your findings were:
+1. P1: clean build.
+2. P2: boot settle and partial passes.
+3. P2: Python reply validation.
+4. P2: 16-bit wrap.
+5. P2: erase units.
+6. P2: the 10-04 baseline.
+7. P3: the reconstruction sum.
+8. P3: printf.
+
+The fixes:
+- Firmware commit 4293607b4b (`git -C qmk_firmware-ak820pro show 4293607b4b`): loop_acct.c/.h, health.c, flash_stats.c/.h.
+- Parent commit ba696c7 (`git show ba696c7`): hostagent/ak820health.py, scripts/diag_sim (sim.c, test_decode.py, stubs), scripts/battery_sim (sim.c, run.sh, baseline-dd5c94fdd9.txt).
+- Finding 1 is a clean build of the final tree, done after this pass.
+
+Host results, run on the Mac:
+- scripts/diag_sim/run.sh: ok for acct, decode acct, flash, decode flash, and reply validation (twice).
+- scripts/battery_sim/run.sh: 35 ok, including the pinned baselines and the self-check (worst +5 pm).
+- scripts/ch582_sim/run.sh: 6 ok.
+- ./build.sh daily: compiles with no warnings.
+
+For each of findings 2-8, say resolved, partly resolved, or not resolved, and why. Look specifically for regressions the fixes introduce, for example:
+- skip_next swallowing passes it should count, or interacting with health_reset or Fn+D's hold-reset;
+- ALIAS_MS mis-classifying ordinary slow passes;
+- _read_reply looping or blocking past its deadline;
+- the pinned baseline's diff being brittle in a way that will fail on an unrelated change.
+
+Then a one-line verdict: "flash" or "fix N first". Keep it short.

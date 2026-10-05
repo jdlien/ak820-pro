@@ -1397,3 +1397,29 @@ bytes 12-13, the entry from 14, and `HC_BATTCFG`'s period at packet bytes
 
 **The plan is ready for a new session to execute.** Step 0 now records the
 2026-10-04 22:37 bootloader event and what the charge's end can still give B1.
+
+### Gate 2 — codex on flash 1, 2026-10-05 ([verbatim](review-codex-battery-refine-impl-2026-10-05.md))
+
+Codex (gpt-6-astra, xhigh), against firmware `759e265796..f4ad230326` and the
+parent `ae17255..d19adc2`. **Verdict: "flash after findings 1..5".** It confirmed:
+- D1's scopes are mutually exclusive, with the pass boundary right;
+- C1's address map (RGB 23-30, kb 37-42, VIA from 43) and its equivalence to the
+  planned last-flushed copy;
+- E1/E2, the transport counters, and the protocol-8 offsets in the Python. Rust
+  accepts version 8 but does not read the new pages;
+- the refit as A1/A2 describe it. It reproduced both fit outputs and all three
+  points files byte for byte, and judged whole-mV `pack_mv` with T = 50.56 the
+  right reading of the stated figures.
+
+It found no ≥ 25 ms path in the camera page, and E5's hardware check stands.
+
+| # | finding (short) | disposition |
+|---|---|---|
+| 1 | P1: the candidate was a `-dirty` build of `b94b030bdf` | **Accepted.** After the fixes: `via-daily-4293607b4b-20261005-012019.bin`, token `0xa7adc2d1`, `dirty: false`. |
+| 2 | P2: boot's settle and partial passes corrupt the first counted pass | **Accepted, verified.** `health_loop_tick` discards scope time during the settle. The pass in progress at a reset, an enable or a disable is not counted. diag_sim covers both (`4293607b4b`). |
+| 3 | P2: the Python accepts another command's or page's reply | **Accepted, verified** (an `HC_LINK` reply was accepted as `HC_GET`). Every read now takes only a report answering its own command and page, discarding others until a deadline, and `HC_ACCT`'s dimensions are checked. diag_sim feeds it foreign replies first (`ba696c7`). |
+| 4 | P2: a scope ≥ 349.5 ms wraps the 16-bit tick and lands in "unaccounted" | **Accepted.** A pass ≥ 340 ms is counted slow and ringed with 0xFF scopes, but kept out of the totals and winners, and counted on page 0 (`long_passes`). A scope can only wrap inside a pass that long. |
+| 5 | P2: an "erase" is one whole-store erase of both 1 KB sectors | **Accepted, verified** in `wear_leveling_efl.c`. Documented, and the store size is on `HC_FLASHW` page 2. For C3's endurance, each page takes one cycle per count. |
+| 6 | P2: the 10-04 baseline could pass with no numeric level; the baseline must not move with flash 2 | **Accepted.** A numeric level from 20:32 on, and 18.1% ±10 pm at 21:42. The baselines run against flash 1's `battery.c` pinned from git (`dd5c94fdd9`), and their output must equal `scripts/battery_sim/baseline-dd5c94fdd9.txt`. |
+| 7 | P3: the reconstruction missed its sum by up to 3 counts | **Accepted, verified** (its 11:36 and 11:46 figures). The nudging sweeps to an exact sum, and every interval asserts count, sum, extrema and monotonicity. |
+| 8 | P3: `%.0s` fed doubles | **Accepted.** Removed. |

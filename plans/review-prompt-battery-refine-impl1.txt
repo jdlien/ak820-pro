@@ -1,0 +1,40 @@
+You are reviewing an implementation before it is flashed to a keyboard. This is gate 2 of a reviewed plan. Be adversarial and concrete. Do not modify any files.
+
+PROJECT. /Users/jdlien/code/ak820-pro: QMK firmware for an AJAZZ AK820 Pro ("Jackrabbit"), SN32F299 Cortex-M0, with a CH582F Bluetooth module, an LCD, a buck-boost supply and a 5C-byte pack voltmeter. Read CLAUDE.md first. The firmware is the submodule-like clone qmk_firmware-ak820pro/ (branch ak820pro-jdlien), board code in qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/.
+
+THE PLAN. plans/BATTERY-GAUGE-REFINE-PLAN.md (revision 7, six codex rounds, "ready to execute"). Its "Order of work" says flash 1 is the DIAGNOSTIC build: C1 (write-boundary counters by writer and kb field, the RTC period's proposals), D1 (per-task duration accounting with a runtime flag, plus transport counters in every build), A3 (the refitted curve), E1/E2 (the warning threshold and re-arm), E4 (the countdown rate), and the camera page as committed (D5). Not the charging model (B) and not the persistence fix (C2); those are flash 2. Gate 1 (host) and gate 2 (this review) come before flash 1. Gate 3, right after flash 1, measures D1's cost: passes per second within 1% and no more >=10 ms gaps with it on, with rollback above 0.1 ms per pass.
+
+WHAT TO REVIEW.
+Firmware, `git -C qmk_firmware-ak820pro log 759e265796..f4ad230326` (759e265796 is what is on the board now):
+- 188092ac71, 241ef8fdad: the Fn+D "camera page" in graphics/display.c. Built, never run on hardware, never reviewed.
+- fe191f38d1: comment only.
+- dd5c94fdd9: battery.c. A3 curve_mv from the refit. E1: warn_mv 3680 (the curve's 10%). E2: `warned` re-arms only when `session` is set on EXTERNAL, or on a new HC_BATTCFG threshold; the old voltage hysteresis is gone. E4: COUNTDOWN_S_PER_PM 190 -> 184.
+- b94b030bdf: bluetooth/ch582f_ajazz.c and .h. New tx_stat_giveup (the retry give-up branch) and tx_stat_replaced (the 0xA1/0xA3 coalesce). The UART overrun/framing/parity listener comes out from under CONSOLE_ENABLE, so it is in the daily build. ch582_link_stats().
+- cc04408e01: drivers/eeprom/eeprom_wear_leveling.c, a weak eeprom_wear_leveling_write_hook() before wear_leveling_write(). A core file. The repo's convention is weak hooks that are no-ops for other boards.
+- f4ad230326: the new flash_stats.c/.h (C1) and loop_acct.c/.h (D1). ACCT() scopes in ak820pro.c's housekeeping and in bluetooth_task. loop_acct_pass_end() in health.c's health_loop_tick. flash_stats_session/op in the backing-store hooks. flash_stats_rtc_proposal at both rtc.c persistence sites. Health protocol 8 adds HC_FLASHW, HC_ACCT (with 0xF0 on/off and 0xF1 reset) and HC_LINK in hid_protocol.c. health_reset() also clears C1 and D1.
+Parent repo, `git log ae17255..d19adc2`:
+- 43c808b: scripts/battery_fit.py --refit, plan section A1/A2. Output: history/battery-2026-10-01-drain/refit-output.txt.
+- d91cef1 (E3, hostagent/venv_bootstrap.py) and ed2e942 (E7, flash.sh).
+- c9d3f78, c87472e: scripts/battery_sim/sim.c and run.sh. Curve-tied expectations, E2 scenarios, and B2's replay adapter with a self-check against 759e265796's battery.c and a baseline on three recorded charges.
+- 29e89d1: scripts/ch582_sim, the transport-counter harness (gate 1).
+- d19adc2: hostagent/ak820health.py protocol-8 decoders, and scripts/diag_sim, an end-to-end check of C1 and D1.
+
+HOST RESULTS. Your sandbox may refuse mktemp, so these were run on the Mac at 00:40-01:00 on 2026-10-05:
+- scripts/battery_sim/run.sh: 35 ok (31 scenarios, 3 baselines, and replay_selfcheck built against 759e265796's battery.c: worst +5 pm against the logged level). Three E2 mutants are each caught: re-arm on any USB, the old +100 mV re-arm, and cfg not re-arming.
+- scripts/ch582_sim/run.sh: 6 ok. Every ACK withheld gives timeouts +9 and giveups +1. A full queue gives queue_full +1. Nearly full with an 0xA1 behind the in-flight frame gives replaced +1 and sends only the newest state; with no 0xA1 behind it, or with it as the head, nothing is replaced. UART flags are counted without CONSOLE_ENABLE. Three mutants are each caught.
+- scripts/diag_sim/run.sh: ok for acct, flash and both decodes.
+- python3 scripts/battery_fit.py (legacy path): fit-output.txt and fit-points.csv byte-identical. --refit: leave-one-out meets the plan's thresholds both ways. Below 3.95 V: rms 0.54 / 0.59, worst +2.05 / -1.52. Plateau: rms 3.13 / 3.21, worst -8.66 / +8.86 against a limit of 9.
+- ./build.sh daily: clean, no warnings, 118,478 bytes. .bss +720 B against the rollback ELF, heap 6080 -> 5360 B.
+
+FOCUS. Answer each:
+1. D1: are the scopes really mutually exclusive, is each pass closed on the right boundary, and is anything double-counted or missed? Check the overflow arithmetic, the 16-bit systime wrap (scopes over ~349 ms), the cost on the per-pass path, and the off state. Can the instrument itself plausibly cause the >= 10 ms gaps it counts?
+2. C1: is attribution by logical address correct for this QMK tree? Check the EECONFIG_* map, the field mask read from the cache before wear_leveling_write, the pending-writer lifecycle (cleared per pass), sessions with no EEPROM write, and consolidation. The plan said kb_eeconfig would keep a last-flushed copy and pass a mask; this does it at the EEPROM boundary instead. Is that equivalent, or does it miss or misattribute something?
+3. E1/E2: any path where the warning never re-arms, re-arms when it should not, or interacts badly with the cut, critical zeros, or the clamp?
+4. The transport counters, and the UART listener now in the daily build: any risk to the link (ISR cost, event flags) or to keystrokes?
+5. Health protocol 8: buffer bounds (32-byte reports, payload [4..31]), reply validation, the version bump against hostagent/ak820health.py and ak820-agent/src/health.rs. Are the decoders' offsets right?
+6. The refit (A): does it implement A1/A2 as written? Check the inclusion, censoring, smoothing in time, the gap and plug-in sensitivities, and whether the pooled curve and the acceptance are honestly reported. The reproduction of the stated figures needed whole-mV pack_mv and T = 50.56; is that the right reading?
+7. The replay adapter and baseline (B2): any way the reconstruction or the assertions mislead the comparison flash 2 will be held to?
+8. The camera page: blocking draws, glyph-queue use, the Fn+D cycle, the clock row. Any >= 25 ms stall, or a way to wedge the display?
+9. Anything that would make flash 1 unsafe (a hang, a watchdog reset, lost keystrokes, a bricked EEPROM) or make its measurements misleading.
+
+FORMAT. Numbered findings, most severe first, each labelled P1 (must fix before flashing), P2 (fix soon, or it affects the measurements) or P3. Give file:line, a concrete trigger or failing input, and a fix. Then a one-line verdict: "flash", "flash after findings N..M", or "do not flash". Say which checks you actually ran and which are code reading.
