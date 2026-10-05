@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "quantum.h"
 #include "battery.h"
 #include "power.h"
@@ -639,6 +640,340 @@ static void warn_cfg_rearms(void) {
     CHECK(n_alerts == 2, "a new threshold over HC_BATTCFG re-arms it: %d alerts", n_alerts);
 }
 
+/* --- The replay adapter (Phase 1b, B2) ------------------------------------------
+ * Replays a battery log in either format ak820battery.py writes:
+ *   one-minute (the 09-28 charge, pre-gauge firmware): one module_pct value a
+ *     minute and the flags at the minute's end;
+ *   v3/v4, ten-minute: every 5C report of the period as c5_mean, c5_n, c5_min,
+ *     c5_max; flags at the period's end (on_batt, charging, ...) AND OR-ed over
+ *     it (flags_any), kept apart.
+ * Each interval's length comes from consecutive timestamps, never assumed.
+ * What a log does not hold is reconstructed, and every reconstruction is
+ * printed with a [synthetic] label:
+ *   - the reports inside a v3/v4 interval: c5_n of them, evenly spaced, on a
+ *     monotone ramp from the logged min to the logged max whose sum matches
+ *     the logged mean (rp_values); ascending when the mean rose from the
+ *     previous interval, descending when it fell (the order inside a period
+ *     is not logged);
+ *   - a charger change inside an interval (the end state differs from the
+ *     OR-ed flags, or from the previous end): at the interval's middle;
+ *   - the one-minute format's single value: a report every 2.5 s at it.
+ * The opening of a v3/v4 charge from flat is therefore the plan's Note 1
+ * reconstruction (ascending from the logged min of 0), and the 09-28 log's
+ * first minute is its logged 4, with no zero invented. */
+#define RP_MAX 1024
+typedef struct {
+    char     time[20];
+    long     t_s;          /* seconds since the epoch of the file's first row */
+    int      dur_s;
+    int      vdd_avg, vdd_min;
+    bool     v34;          /* the ten-minute formats */
+    double   c5_mean;
+    int      c5_n, c5_min, c5_max, c5_single;
+    int      level_pm;     /* the logged level, per mille, -1 if none */
+    bool     chg_end, chg_any, ext_end;
+    /* what the replay showed at the interval's end */
+    uint16_t r_level;
+    uint8_t  r_state;
+} rp_row_t;
+static rp_row_t rp[RP_MAX];
+static int      rp_n;
+static int      rp_synth_lines;
+static int      rp_writes_before_full;   /* saved-level writes before the first FULL */
+static bool     rp_seen_full;
+
+static void rp_label(const char *fmt, const char *time, double a, double b) {
+    if (rp_synth_lines++ < 6) {
+        printf("  [synthetic] %s: ", time);
+        printf(fmt, a, b);
+        printf("\n");
+    }
+}
+
+static long rp_epoch(const char *t) {   /* "YYYY-MM-DD HH:MM", days from a fixed month */
+    int y, mo, d, h, mi;
+    if (sscanf(t, "%d-%d-%d %d:%d", &y, &mo, &d, &h, &mi) != 5) return -1;
+    static const int cum[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+    long days = (long)y * 365 + y / 4 + cum[mo - 1] + d;
+    return ((days * 24 + h) * 60 + mi) * 60;
+}
+
+static int rp_col(char **cols, int n, const char *name) {
+    for (int i = 0; i < n; i++) if (!strcmp(cols[i], name)) return i;
+    return -1;
+}
+
+static int rp_split(char *line, char **cols, int max) {
+    int n = 0;
+    line[strcspn(line, "\r\n")] = 0;
+    for (char *p = line; n < max;) {
+        cols[n++] = p;
+        char *c = strchr(p, ',');
+        if (!c) break;
+        *c = 0;
+        p = c + 1;
+    }
+    return n;
+}
+
+static bool rp_load(const char *path) {
+    FILE *f = fopen(path, "r");
+    if (!f) { printf("  FAIL cannot open %s\n", path); failures++; return false; }
+    char line[1024], hdr[1024];
+    char *h[40], *c[40];
+    if (!fgets(hdr, sizeof hdr, f)) { fclose(f); return false; }
+    int hn = rp_split(hdr, h, 40);
+    int i_t = rp_col(h, hn, "time"), i_va = rp_col(h, hn, "vdd_avg"), i_vm = rp_col(h, hn, "vdd_min");
+    int i_mean = rp_col(h, hn, "c5_mean"), i_n = rp_col(h, hn, "c5_n"), i_mn = rp_col(h, hn, "c5_min"),
+        i_mx = rp_col(h, hn, "c5_max"), i_lvl = rp_col(h, hn, "level"), i_pct = rp_col(h, hn, "module_pct"),
+        i_chg = rp_col(h, hn, "charging"), i_ext = rp_col(h, hn, "external"), i_any = rp_col(h, hn, "flags_any");
+    bool v34 = i_mean >= 0;
+    rp_n = 0;
+    while (fgets(line, sizeof line, f) && rp_n < RP_MAX) {
+        if (line[0] == '#') continue;
+        int n = rp_split(line, c, 40);
+        if (n < hn) continue;
+        rp_row_t *r = &rp[rp_n];
+        memset(r, 0, sizeof *r);
+        snprintf(r->time, sizeof r->time, "%s", c[i_t]);
+        r->t_s = rp_epoch(c[i_t]);
+        r->vdd_avg = atoi(c[i_va]); r->vdd_min = atoi(c[i_vm]);
+        r->v34 = v34;
+        r->chg_end = atoi(c[i_chg]) != 0;
+        r->level_pm = -1;
+        if (v34) {
+            r->c5_n = atoi(c[i_n]);
+            r->c5_mean = c[i_mean][0] ? atof(c[i_mean]) : -1.0;
+            r->c5_min = c[i_mn][0] ? atoi(c[i_mn]) : -1;
+            r->c5_max = c[i_mx][0] ? atoi(c[i_mx]) : -1;
+            r->chg_any = strstr(c[i_any], "charging") != NULL;
+            r->ext_end = atoi(c[i_ext]) != 0;
+            if (c[i_lvl][0]) r->level_pm = (int)(atof(c[i_lvl]) * 10.0 + 0.5);
+        } else {
+            r->c5_single = atoi(c[i_pct]);
+            r->chg_any = r->chg_end;
+            r->ext_end = true;
+        }
+        rp_n++;
+    }
+    fclose(f);
+    /* Durations from the timestamps; the first row takes the next row's. */
+    for (int i = 1; i < rp_n; i++) rp[i].dur_s = (int)(rp[i].t_s - rp[i - 1].t_s);
+    if (rp_n > 1) rp[0].dur_s = rp[1].dur_s;
+    printf("  %s: %d rows, %s format, %d s intervals\n", path, rp_n, v34 ? "ten-minute (v3/v4)" : "one-minute",
+           rp_n ? rp[0].dur_s : 0);
+    return rp_n > 0;
+}
+
+/* c5_n report values: a monotone ramp from the logged min to the logged max,
+ * bent (v = min + (max - min) * x^g, x from 0 to 1) so its mean is the logged
+ * mean, then nudged by single counts so the sum matches it exactly. A ramp,
+ * not a constant at the mean: inside a charging interval the reports climb,
+ * and the estimate at its end is near the max, not the mean. */
+static int rp_values(const rp_row_t *r, bool ascending, uint8_t *v) {
+    int n = r->c5_n;
+    if (n <= 0 || r->c5_mean < 0) return 0;
+    if (n > 2000) n = 2000;
+    int  lo = r->c5_min, hi = r->c5_max;
+    long sum = lround(r->c5_mean * n);
+    if (n == 1 || lo == hi) { for (int i = 0; i < n; i++) v[i] = (uint8_t)lo; return n; }
+    double target = (double)sum / n, glo = 1e-3, ghi = 1e3, g = 1.0;
+    for (int it = 0; it < 100; it++) {          /* the mean falls as g rises */
+        g = sqrt(glo * ghi);
+        double m = 0;
+        for (int i = 0; i < n; i++) m += lo + (hi - lo) * pow((double)i / (n - 1), g);
+        if (m / n > target) glo = g; else ghi = g;
+    }
+    long have = 0;
+    for (int i = 0; i < n; i++) {
+        v[i] = (uint8_t)lround(lo + (hi - lo) * pow((double)i / (n - 1), g));
+        have += v[i];
+    }
+    /* Nudge interior values one count at a time, keeping the ramp monotone. */
+    for (int pass = 0; have != sum && pass < 4 * n; pass++) {
+        int i = 1 + pass % (n - 2 > 0 ? n - 2 : 1);
+        if (have < sum && v[i] < hi && v[i] + 1 <= v[i + 1]) { v[i]++; have++; }
+        else if (have > sum && v[i] > lo && v[i] - 1 >= v[i - 1]) { v[i]--; have--; }
+    }
+    if (!ascending) for (int i = 0; i < n / 2; i++) { uint8_t t = v[i]; v[i] = v[n - 1 - i]; v[n - 1 - i] = t; }
+    return n;
+}
+
+/* Play one interval: VDD, CHRG (moved at the middle if it changed inside),
+ * and the reports, evenly spaced. */
+static void rp_play(int i) {
+    rp_row_t *r = &rp[i];
+    static uint8_t vals[2000];
+    vdd_mv = r->vdd_avg; vdd_dip_mv = r->vdd_avg - r->vdd_min;
+    bool prev_chg = i ? rp[i - 1].chg_end : r->chg_any;
+    bool chg_first = r->chg_any && (prev_chg || !r->chg_end) ? true : r->chg_end;
+    bool chg_second = r->chg_end;
+    if (r->v34 && r->chg_any && !r->chg_end) rp_label("CHRG released at the interval's middle%.0s%.0s", r->time, 0, 0);
+    if (r->v34 && r->chg_end && i && !prev_chg) {
+        chg_first = false;
+        rp_label("CHRG low from the interval's middle%.0s%.0s", r->time, 0, 0);
+    }
+    int ticks = r->dur_s * 10;
+    if (!r->v34) {
+        c5 = (uint8_t)r->c5_single; chrg_low = r->chg_end;
+        for (int t = 0; t < ticks; t++) tick();
+    } else {
+        c5 = 0xFF;   /* reports come only from the schedule below */
+        bool asc = !i || rp[i - 1].c5_mean < 0 || r->c5_mean >= rp[i - 1].c5_mean;
+        int n = rp_values(r, asc, vals);
+        if (i == 0 && n)
+            rp_label("first interval: %.0f reports from %.0f, ascending (the plan's Note 1 opening)", r->time, n,
+                     r->c5_min);
+        int next = 0;
+        for (int t = 0; t < ticks; t++) {
+            chrg_low = (t < ticks / 2) ? chg_first : chg_second;
+            while (next < n && (long)(next * 2 + 1) * ticks / (2L * n) <= t) deliver(vals[next++]);
+            tick();
+        }
+    }
+    r->r_level = battery_level_permille();
+    r->r_state = (uint8_t)battery_state();
+    if (r->r_state != BATTERY_STATE_FULL && !rp_seen_full) rp_writes_before_full = saved_writes;
+    if (r->r_state == BATTERY_STATE_FULL) rp_seen_full = true;
+}
+
+/* Replays a whole log; returns the seconds not on EXTERNAL. Watches every step. */
+static int rp_run(const char *path) {
+    if (!rp_load(path)) return -1;
+    int off = 0;
+    /* The board booted into the first row's world (on USB for a charge),
+     * not into the default 3900 mV: that would be a second on the pack. */
+    vdd_mv = rp[0].vdd_avg; chrg_low = rp[0].chg_any; c5 = 0xFF;
+    run_s(2);
+    watch_reset();
+    for (int i = 0; i < rp_n; i++) {
+        rp_play(i);
+        if (battery_supply() != BATTERY_SUPPLY_EXTERNAL) off++;
+    }
+    if (rp_synth_lines > 6) printf("  [synthetic] ... %d reconstructions in all\n", rp_synth_lines);
+    return off;
+}
+
+/* The first interval whose every report sat at the clamp. */
+static int rp_first_clamped(void) {
+    for (int i = 0; i < rp_n; i++)
+        if ((rp[i].v34 && rp[i].c5_min == 100) || (!rp[i].v34 && rp[i].c5_single == 100)) return i;
+    return -1;
+}
+
+static void rp_table(int every) {
+    printf("  %-16s %7s %9s %8s\n", "entry end", "5C", "replayed", "logged");
+    for (int i = 0; i < rp_n; i++) {
+        if (i % every && i != rp_n - 1) continue;
+        double m = rp[i].v34 ? rp[i].c5_mean : rp[i].c5_single;
+        printf("  %-16s %7.2f %7.1f %% ", rp[i].time, m, rp[i].r_level == 0xFFFF ? -1.0 : rp[i].r_level / 10.0);
+        if (rp[i].level_pm >= 0) printf("%6.1f %%\n", rp[i].level_pm / 10.0); else printf("%8s\n", "-");
+    }
+}
+
+/* What TODAY's charging logic does with each recorded charge from flat: the
+ * baseline Phase 1b's model is compared with. It reads low below the clamp
+ * (curve(V - 150 mV) on the fitted discharge curve), then races to 90.5 at
+ * 0.4 %/min once 5C clamps, creeps to the 97.0 cap, and says 100 only at the
+ * charger's termination. */
+static void baseline_common(const char *what, int off, uint8_t max_before_full) {
+    CHECK(off == 0, "%s: EXTERNAL throughout: %d intervals were not", what, off);
+    CHECK(w_falls == 0, "%s: never falls while charging: %d falls", what, w_falls);
+    CHECK(max_before_full <= 97, "%s: never past 97 before the charger stops: %u", what, max_before_full);
+    CHECK(rp_writes_before_full == 0, "%s: nothing saved while charging: %d writes", what, rp_writes_before_full);
+}
+
+static uint8_t rp_max_before_full(void) {
+    uint16_t m = 0;
+    for (int i = 0; i < rp_n; i++)
+        if (rp[i].r_state != BATTERY_STATE_FULL && rp[i].r_level != 0xFFFF && rp[i].r_level > m) m = rp[i].r_level;
+    return (uint8_t)((m + 5u) / 10u);
+}
+
+/* 09-28 charge, one-minute log, 03:02 -> 10:34. Its end is before the
+ * termination (~12:32, readings.csv): a [synthetic] tail of 2 h at the clamp,
+ * then CHRG released. */
+static void baseline_0928(const char *path) {
+    int off = rp_run(path);
+    if (off < 0) return;
+    rp_table(60);
+    CHECK(w_big == 0, "09-28: rises one percent at a time: %d bigger", w_big);
+    baseline_common("09-28", off, rp_max_before_full());
+    int k = rp_first_clamped();
+    printf("  5C first clamped: %s (%.2f h in); level then %.1f %%\n", rp[k].time,
+           (rp[k].t_s - rp[0].t_s + rp[0].dur_s) / 3600.0, rp[k].r_level / 10.0);
+    printf("  [synthetic] tail: 2 h at the clamp, charging, then CHRG released (termination ~12:32)\n");
+    vdd_mv = 4300; vdd_dip_mv = 0; c5 = 100; chrg_low = true;
+    run_s(2 * 3600);
+    CHECK(battery_level_permille() == 970, "09-28: at the 97.0 cap before termination: %u pm", battery_level_permille());
+    chrg_low = false; vdd_mv = 4470;
+    run_s(30);
+    CHECK(battery_state() == BATTERY_STATE_FULL && battery_level_pct() == 100, "09-28: 100 at termination: %s %u",
+          state_name(battery_state()), battery_level_pct());
+}
+
+/* 10-01 charge, ten-minute log, boot ~08:46 -> 19:46, termination in the 18:16
+ * entry. Logged on deef6053dd (the PLACEHOLDER curve), so its logged levels are
+ * not today's and are shown, not compared. */
+static void baseline_1001(const char *path) {
+    int off = rp_run(path);
+    if (off < 0) return;
+    rp_table(3);
+    baseline_common("10-01", off, rp_max_before_full());
+    CHECK(w_big <= 1, "10-01: one percent at a time, but for the FULL step: %d bigger", w_big);
+    /* The last interval below the clamp, 12:36: mean 98.03 -> 4019 mV under
+     * charge; less 150 mV is 3869 mV, which the curve puts at 450 + 1 * 50 / 28
+     * = 451 pm. The level, which only rises, is near that: it reads low. */
+    int k = rp_first_clamped();
+    const rp_row_t *b = &rp[k - 2];
+    printf("  the last interval below the clamp, %s: level %.1f %% (curve(4019 - 150 mV) = 45.1 %%)\n", b->time,
+           b->r_level / 10.0);
+    CHECK(b->r_level >= 430 && b->r_level <= 460, "10-01: reads ~45%% at 12:36, 3.8 h into a charge from flat: %u pm",
+          b->r_level);
+    int full_at = -1, cap_at = -1;
+    for (int i = 0; i < rp_n; i++) {
+        if (cap_at < 0 && rp[i].r_level == 970) cap_at = i;
+        if (full_at < 0 && rp[i].r_state == BATTERY_STATE_FULL) full_at = i;
+    }
+    CHECK(full_at >= 0 && rp[full_at].r_level == 1000, "10-01: 100 at termination");
+    CHECK(cap_at >= 0 && cap_at < full_at, "10-01: reaches the 97 cap before termination");
+    if (cap_at >= 0 && full_at >= 0)
+        printf("  at the 97 cap from %s; FULL at %s: %.1f h at the cap, then a 3-point step\n", rp[cap_at].time,
+               rp[full_at].time, (rp[full_at].t_s - rp[cap_at].t_s) / 3600.0);
+}
+
+/* 10-04 charge, ten-minute log, boot ~20:02 -> 21:42 (the preservation dump; the
+ * rest of that boot was lost to the bootloader). */
+static void baseline_1004a(const char *path) {
+    int off = rp_run(path);
+    if (off < 0) return;
+    rp_table(1);
+    baseline_common("10-04", off, rp_max_before_full());
+    CHECK(w_big == 0, "10-04: one percent at a time: %d bigger", w_big);
+}
+
+/* The adapter checked against the firmware that WROTE the log: run.sh builds
+ * this one scenario against 759e265796's battery.c, which logged the 10-04
+ * charge. The replay must land on the logged level in every interval (the log
+ * floors to 0.5 %). It cannot be exact: the order and timing of the reports
+ * inside an interval are reconstructed. */
+static void replay_selfcheck(const char *path) {
+    int off = rp_run(path);
+    if (off < 0) return;
+    int worst = 0, n = 0;
+    for (int i = 0; i < rp_n; i++) {
+        if (rp[i].level_pm < 0 || rp[i].r_level == 0xFFFF) continue;
+        int got = (rp[i].r_level / 5) * 5;
+        int d = got - rp[i].level_pm;
+        if (abs(d) > abs(worst)) worst = d;
+        n++;
+    }
+    rp_table(1);
+    printf("  replayed vs logged: %d intervals, worst %+d pm\n", n, worst);
+    CHECK(n == rp_n, "every interval compared: %d of %d", n, rp_n);
+    CHECK(abs(worst) <= 10, "the replay lands within 1 point of the logged level: worst %+d pm", worst);
+}
+
 static void stale(void) {
     vdd_mv = 3900; c5 = 60;
     run_s(40);
@@ -690,6 +1025,10 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "warn_brief_plug"))    warn_brief_plug();
     else if (!strcmp(s, "warn_after_charge"))  warn_after_charge();
     else if (!strcmp(s, "warn_cfg_rearms"))    warn_cfg_rearms();
+    else if (!strcmp(s, "baseline_0928"))      baseline_0928(argc > 2 ? argv[2] : "");
+    else if (!strcmp(s, "baseline_1001"))      baseline_1001(argc > 2 ? argv[2] : "");
+    else if (!strcmp(s, "baseline_1004a"))     baseline_1004a(argc > 2 ? argv[2] : "");
+    else if (!strcmp(s, "replay_selfcheck"))   replay_selfcheck(argc > 2 ? argv[2] : "");
     else { fprintf(stderr, "unknown scenario %s\n", s); return 2; }
     printf("%s %s\n", failures ? "FAIL" : "ok  ", s);
     return failures ? 1 : 0;
