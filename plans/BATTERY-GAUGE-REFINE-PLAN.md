@@ -1327,8 +1327,22 @@ CPU, so each main-loop cycle costs ~3.7× in wall time.
 `diag_sim` passes, including a new test across a fold. That test's
 unaccounted figure also shows the old per-pass rounding: 9971 ms against
 9984 for the same input. Estimated from the disassembly: ~135 cycles a pass
-against ~600, about 0.6%. **Gate 3 runs again on the trimmed build**, after
-codex's review of it.
+against ~600, about 0.6%. **Gate 3 runs again on the trimmed build.**
+
+**Codex on the trim** ([verbatim](review-codex-battery-refine-impl1b-2026-10-05.md)),
+verdict "fix 1 first":
+
+| # | finding | disposition |
+|---|---|---|
+| 1 | Pages 3-4 read `run − fold_base`, so a mid-pass read counted the open pass's scope time but not its gap, or a pass about to be dropped | **Fixed, verified** (`97a24c6e20`): they read `pass_base − fold_base`. A new mid-pass test (`9a83613`) fails at `7a0f28aa8f` (ch582 5022, unaccounted 9974) and passes after. |
+| 2 | Overflow and stack | Right, no change. |
+| 3 | `slow_pass()`/`fold()` inlined: every pass end saved nine registers and set up a 112-byte frame, off included | **Fixed** (`97a24c6e20`): those and `ring_put()` are `noinline`. The fast path now pushes six registers and allocates no frame (from the ELF). |
+| 4 | Untiming the param repeat and user hook | Acceptable for D2, no change. |
+| 5 | Slow-pass u32 totals wrap after ~6.36 accumulated hours a scope | Noted, no change: at gate 3's ~12 ms a slow pass and ~30 an hour, that is years. |
+
+No second round: the one fix is small and has a test that fails before it.
+Flash 1b is `ak820pro-builds/out/via-daily-97a24c6e20-20261005-152818.bin`,
+token `0x5425251f`, clean.
 
 ### Flash 2 so far (host, ahead of B3)
 
