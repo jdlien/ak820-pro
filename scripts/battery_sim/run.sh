@@ -18,7 +18,8 @@ for s in boot_battery boot_battery_clamp boot_usb_full discharge charge_log tran
          no_pack protection critical brief_plug unplug_mid_charge countdown_ease stale ring_restart \
          burst restore_needs_evidence charger_fault chrg_gap boot_charging_rise full_then_replug \
          reseat_survives_replug threshold_at_clamp log_cadence \
-         reboot_after_full reboot_saved_mismatch reboot_below_clamp persist_tracks; do
+         reboot_after_full reboot_saved_mismatch reboot_below_clamp persist_tracks \
+         warn_once warn_brief_plug warn_after_charge warn_cfg_rearms; do
     "$build/sim" "$s" "$log" || fail=1
 done
 exit $fail

@@ -150,6 +150,8 @@ static void boot_battery(void) {
     run_s(20);
     CHECK(battery_5c_rounded() == 59, "median %u", battery_5c_rounded());
     CHECK(battery_pack_mv() >= 3670 && battery_pack_mv() <= 3685, "pack %u mV, want ~3677", battery_pack_mv());
+    /* 5C 59 = 3677 mV; the curve between 3640 (80) and 3680 (100):
+     * 80 + 37 * 20 / 40 = 98 pm, which shows as 10%. */
     CHECK(battery_level_pct() == 10, "59 -> 3.677 V -> ~10%%, got %u (%u pm)", battery_level_pct(),
           battery_level_permille());
     CHECK(battery_ran_from_pack(), "a board running on battery has a pack");
@@ -342,8 +344,8 @@ static void protection(void) {
 static void critical(void) {
     vdd_mv = 3900; c5 = 90;
     run_s(20);
-    /* 5C 90 is 3949 mV: ~56% on the fitted curve. High enough that "Low at once"
-     * below is a drop, not a level that was already near 0. */
+    /* 5C 90 is 3949 mV: 550 + 4 * 50 / 36 = 555 pm on the curve. High enough that
+     * "Low at once" below is a drop, not a level that was already near 0. */
     CHECK(battery_level_pct() >= 50, "starts high: %u", battery_level_pct());
     c5 = 0;
     while (now_ms % 2500u != 0) tick();   /* align: the next report is 2.5 s away */
@@ -442,8 +444,9 @@ static void reseat_survives_replug(void) {
     run_s(10);
     vdd_mv = 3900; chrg_low = false; c5 = 70;
     run_s(20);
-    /* 5C 70 = 3774 mV; the fitted curve there is 187 pm (150 + 27 * 50 / 36). */
-    CHECK(battery_level_permille() == 187, "re-seated after the brief replug: %u pm", battery_level_permille());
+    /* 5C 70 = 3774 mV; the curve between 3748 (150) and 3785 (200):
+     * 150 + 26 * 50 / 37 = 185 pm. */
+    CHECK(battery_level_permille() == 185, "re-seated after the brief replug: %u pm", battery_level_permille());
 }
 
 /* A threshold above the top clamp cannot be judged there: no cut, no warning. */
@@ -505,13 +508,13 @@ static void unplug_mid_charge(void) {
     CHECK(battery_5c_rounded() == 0xFF, "no estimate from one report: the charging ones were forgotten");
     run_s(13);
     CHECK(battery_5c_rounded() == 70, "the estimate is post-unplug reports only: %u", battery_5c_rounded());
-    /* 5C 70 = 3774 mV: 187 pm on the fitted curve. */
-    CHECK(battery_level_permille() == 187, "re-seated at the first post-unplug estimate: %u pm",
+    /* 5C 70 = 3774 mV: 150 + 26 * 50 / 37 = 185 pm (as reseat_survives_replug). */
+    CHECK(battery_level_permille() == 185, "re-seated at the first post-unplug estimate: %u pm",
           battery_level_permille());
     watch_reset();
     run_s(20 * 60);
     CHECK(w_rises == 0, "no rise after the re-seat (%d)", w_rises);
-    printf("  charging level %u pm, re-seated on the pack at 187 pm\n", charging);
+    printf("  charging level %u pm, re-seated on the pack at 185 pm\n", charging);
 }
 
 /* A countdown that ran slow: the clamp exits early, and the level eases down to
@@ -522,7 +525,7 @@ static void countdown_ease(void) {
     run_s(2);
     watch_reset();
     run_s(3600);   /* one hour at the clamp */
-    c5 = 90;       /* 3.949 V: the curve says ~77% */
+    c5 = 90;       /* 3.949 V: the curve says 550 + 4 * 50 / 36 = 555 pm */
     run_s(20 * 60);
     CHECK(w_rises == 0, "no rise (%d)", w_rises);
     CHECK(w_big == 0, "no jump bigger than one 5%% step (%d)", w_big);
@@ -579,8 +582,61 @@ static void persist_tracks(void) {
     become_full();
     CHECK(saved_p1 == 201, "full is saved as 100%%: p1 %u", saved_p1);
     vdd_mv = 3900; chrg_low = false;
-    run_s(3 * 3600);   /* the countdown: ~94.3% */
+    run_s(3 * 3600);   /* the countdown: 1000 - 10800 / 184 = ~942 pm */
     CHECK(saved_p1 == 186, "saved as 92.5%% (rounded down to the step): p1 %u", saved_p1);
+}
+
+/* E2: "Battery low" fires once per discharge, whatever the voltage does, and
+ * re-arms only after a real charging session (or a new threshold). 5C 55 is
+ * 3642 mV, under the 3680 warning and over the 3400 cut; 62 is 3704 mV and 75
+ * is 3818 mV, past where the old rule (warn + 100 mV) re-armed it. */
+static void warn_once(void) {
+    vdd_mv = 3900; c5 = 70;
+    run_s(30);
+    c5 = 55;
+    run_s(200);
+    CHECK(n_alerts == 1 && strcmp(last_alert, "Battery low") == 0, "warned once: %d \"%s\"", n_alerts, last_alert);
+    for (int k = 0; k < 3; k++) {
+        c5 = 75; run_s(200);
+        c5 = 55; run_s(200);
+    }
+    CHECK(n_alerts == 1, "repeated crossings on battery do not re-fire it: %d alerts", n_alerts);
+}
+
+static void warn_brief_plug(void) {
+    vdd_mv = 3900; c5 = 55;
+    run_s(200);
+    CHECK(n_alerts == 1, "warned: %d", n_alerts);
+    vdd_mv = 4193; chrg_low = true; c5 = 68;     /* a dump: 40 s on USB, charging */
+    run_s(40);
+    vdd_mv = 3900; chrg_low = false; c5 = 55;
+    run_s(300);
+    CHECK(n_alerts == 1, "a brief plug-in does not re-arm it (10-01 01:06): %d alerts", n_alerts);
+}
+
+static void warn_after_charge(void) {
+    vdd_mv = 3900; c5 = 55;
+    run_s(200);
+    CHECK(n_alerts == 1, "warned: %d", n_alerts);
+    vdd_mv = 4193; chrg_low = true; c5 = 70;     /* a real charge, 20 min */
+    run_s(20 * 60);
+    vdd_mv = 3900; chrg_low = false; c5 = 62;    /* on the pack, above the warning */
+    run_s(300);
+    CHECK(n_alerts == 1, "nothing above the threshold: %d alerts", n_alerts);
+    c5 = 55;                                     /* the next crossing */
+    run_s(200);
+    CHECK(n_alerts == 2 && strcmp(last_alert, "Battery low") == 0, "re-fires after a real charge: %d \"%s\"",
+          n_alerts, last_alert);
+}
+
+static void warn_cfg_rearms(void) {
+    vdd_mv = 3900; c5 = 55;
+    run_s(200);
+    CHECK(n_alerts == 1, "warned: %d", n_alerts);
+    uint8_t out[8];
+    battery_cfg(1, 3700, 3400, out);
+    run_s(60);
+    CHECK(n_alerts == 2, "a new threshold over HC_BATTCFG re-arms it: %d alerts", n_alerts);
 }
 
 static void stale(void) {
@@ -630,6 +686,10 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "reboot_saved_mismatch")) reboot_saved_mismatch();
     else if (!strcmp(s, "reboot_below_clamp")) reboot_below_clamp();
     else if (!strcmp(s, "persist_tracks"))     persist_tracks();
+    else if (!strcmp(s, "warn_once"))          warn_once();
+    else if (!strcmp(s, "warn_brief_plug"))    warn_brief_plug();
+    else if (!strcmp(s, "warn_after_charge"))  warn_after_charge();
+    else if (!strcmp(s, "warn_cfg_rearms"))    warn_cfg_rearms();
     else { fprintf(stderr, "unknown scenario %s\n", s); return 2; }
     printf("%s %s\n", failures ? "FAIL" : "ok  ", s);
     return failures ? 1 : 0;
