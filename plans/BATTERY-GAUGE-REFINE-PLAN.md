@@ -1,8 +1,10 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-05, ~02:00): executing.** Gates 1 and 2 are met: flash 1
-(`4293607b4b`, token `0xa7adc2d1`) is built clean and codex said "flash"; it
-waits for JD at the keyboard. Flash 2's host work is under way ahead of B3 (the
+**Status (2026-10-05, ~12:40): executing.** Gates 1 and 2 are met, and
+**flash 1 (`4293607b4b`, token `0xa7adc2d1`) is on the board since ~12:28**,
+the keymap and lighting restored and checked. Gate 3 (D1's cost) runs
+12:38-13:39; the soaks follow
+([`history/battery-2026-10-05-flash1/`](../history/battery-2026-10-05-flash1/)). Flash 2's host work is under way ahead of B3 (the
 model with a placeholder tail; B2 done but for B3's parameters). See "As
 built", just before the review dispositions. Revision 7 came after codex's sixth review
 ([every round verbatim](review-codex-battery-refine-plan-2026-10-04.md);
