@@ -13,9 +13,12 @@
 # is a rule a human has to remember; this is the version the script does.
 #
 # Usage:
-#   ./flash.sh [firmware.bin] [--no-backup]
+#   ./flash.sh [firmware.bin] [--no-backup] [--no-lighting]
 #
-# Defaults to $QMK_HOME/a_jazz_ak820pro_via.bin.
+# Defaults to $QMK_HOME/a_jazz_ak820pro_via.bin. A failed backup of either the
+# keymap or the lighting refuses to flash: --no-backup skips both (and both
+# restores), --no-lighting only the lighting. Each backup prints its file's
+# time and size, so "is this backup from just now?" reads off the output.
 #
 # ⚠️ That path is SHARED: `qmk compile` always writes it, so a concurrent build
 # in another session silently replaces your binary. The timestamp is printed
@@ -31,11 +34,12 @@ source ./env.sh                          # must be sourced from the repo root
 PY="${PY:-$AK820_VENV/bin/python}"
 [ -x "$PY" ] || PY=python3
 
-FW="" ; BACKUP=1
+FW="" ; BACKUP=1 ; LIGHTS=1
 for a in "$@"; do
     case "$a" in
         --no-backup) BACKUP=0 ;;
-        -h|--help)   sed -n '2,16p' "$0"; exit 0 ;;
+        --no-lighting) LIGHTS=0 ;;
+        -h|--help)   sed -n '2,21p' "$0"; exit 0 ;;
         *)           FW="$a" ;;
     esac
 done
@@ -110,27 +114,36 @@ if [ "$BACKUP" = 1 ]; then
         if ! "$PY" hostagent/ak820keymap.py dump "$KEYMAP"; then
             echo
             echo "Backup FAILED -- not flashing."
-            echo "  Raw HID needs QMK running and the dip switch on 'cable'."
+            echo "  Raw HID needs QMK running and the USB cable; the slider position"
+            echo "  does not matter (raw-HID replies go over USB in any mode, 4b86d95014)."
             echo "  Re-run with --no-backup to flash anyway and lose the keymap."
             exit 1
         fi
+        echo "   saved: $KEYMAP  $(fstat "$KEYMAP")"
         echo
     fi
 
-    # Lighting, same story as the keymap. Not fatal if it fails: losing the
-    # lighting is annoying, losing the keymap is not, so this warns where the
-    # keymap refuses. In the bootloader there is nothing to read and an
-    # existing backup is used as-is.
-    if ! usb "$BOOTLOADER"; then
-        echo "== backing up the RGB lighting =="
-        "$PY" hostagent/ak820lighting.py dump "$LIGHTING" || {
-            echo "  lighting backup FAILED -- flashing anyway, but the LEDs will"
-            echo "  come back as keyboard.json's rgb_matrix.default."
-        }
-        echo
-    elif [ -f "$LIGHTING" ]; then
-        echo "   lighting: using existing backup from $(fstat "$LIGHTING")"
-        echo
+    # Lighting, same story as the keymap, and fatal the same way: a failed dump
+    # used to warn and flash anyway, which put the LEDs back on keyboard.json's
+    # default -- or, with an old file present, restored THAT (10-01: the 09-29
+    # backup). --no-lighting is the deliberate way past it. In the bootloader
+    # there is nothing to read and an existing backup is used as-is.
+    if [ "$LIGHTS" = 1 ]; then
+        if ! usb "$BOOTLOADER"; then
+            echo "== backing up the RGB lighting =="
+            if ! "$PY" hostagent/ak820lighting.py dump "$LIGHTING"; then
+                echo
+                echo "Lighting backup FAILED -- not flashing."
+                echo "  Re-run with --no-lighting to flash anyway; the LEDs then come back"
+                echo "  as keyboard.json's rgb_matrix.default."
+                exit 1
+            fi
+            echo "   saved: $LIGHTING  $(fstat "$LIGHTING")"
+            echo
+        elif [ -f "$LIGHTING" ]; then
+            echo "   lighting: using existing backup from $(fstat "$LIGHTING")"
+            echo
+        fi
     fi
 fi
 
@@ -173,8 +186,8 @@ if [ "$BACKUP" = 1 ]; then
     # After the keymap, because the keymap is the one worth failing over. A
     # lighting restore that does not take leaves the LEDs on the firmware
     # default, which is visible and fixable by hand.
-    echo "== restoring the RGB lighting =="
-    for try in 1 2 3; do
+    [ "$LIGHTS" = 1 ] && echo "== restoring the RGB lighting =="
+    [ "$LIGHTS" = 1 ] && for try in 1 2 3; do
         "$PY" hostagent/ak820lighting.py restore "$LIGHTING" && break
         [ "$try" = 3 ] && {
             echo "  lighting restore failed -- run it by hand once the board settles:"
