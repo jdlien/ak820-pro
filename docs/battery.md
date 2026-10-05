@@ -7,14 +7,18 @@ page in `graphics/display.c`. Host tool: `hostagent/ak820battery.py`. The
 plan, two codex reviews and every disposition:
 [`plans/BATTERY-GAUGE-PLAN.md`](../plans/BATTERY-GAUGE-PLAN.md).
 
-> **State (2026-10-01):** on JD's unit is `deef6053dd`, the Phase 1 gauge
-> with the placeholder curve. The drain test at full white
-> ([`history/battery-2026-09-28-drain/`](../history/battery-2026-09-28-drain/))
-> ran from FULL on 09-28 ~19:52 to the RGB cut on 10-01 02:13, and the board
-> died between 05:19 and 08:45. Its last night passed Phase 1 gates 2
-> (protection) and 4 (eight meter points). **The fitted curve is committed,
-> not yet flashed.** Resume from
-> [`plans/current-status.md`](../plans/current-status.md).
+> **State (2026-10-04):** on JD's unit is `759e265796`, the Phase 1 gauge
+> with **the fitted curve** (flashed ~20:20 10-01).
+> - **Two drain tests at full white.** Run 1
+>   ([`history/battery-2026-09-28-drain/`](../history/battery-2026-09-28-drain/))
+>   gave the curve. Run 2
+>   ([`history/battery-2026-10-01-drain/`](../history/battery-2026-10-01-drain/))
+>   checked it ("The second run", below).
+> - **Next:** [`plans/BATTERY-GAUGE-REFINE-PLAN.md`](../plans/BATTERY-GAUGE-REFINE-PLAN.md)
+>   (Phase 1b): a refit on both runs, the charging display, the flash-write
+>   blink, and the battery-only stalls. It is reviewed and ready to execute.
+>
+> Resume from [`plans/current-status.md`](../plans/current-status.md).
 
 ## The short version
 
@@ -28,8 +32,10 @@ plan, two codex reviews and every disposition:
   eight checks on the 09-28 run, 4.01 V down to 3.22 V, all within 11 mV
   (below).
 - **The level is a fraction of runtime**, read off a curve of pack voltage.
-  The voltage is good to ~10 mV; the curve is **fitted from one drain test**
-  on one unit (below), not yet checked against a second run.
+  The voltage is good to ~10 mV. The curve is **fitted from one drain test**
+  and **checked on a second** (below): within 0.1-0.6 points rms below
+  3.95 V, and 3.2 rms (worst −8.5) on the 3.95-4.036 V plateau. That is one
+  unit, one load, a fresh pack.
 - **It is blind at both ends:** above ~4.036 V (the top ~8-10% of runtime) and
   below ~3.161 V. While charging, the charge current inflates the reading.
 
@@ -193,13 +199,51 @@ and ~11% on the 4.00-4.02 V plateau**, where ~20% of the runtime passes in
 |---|---|---|
 | `5C` → mV | within ~10 mV, 3.22-4.01 V | measured, eight points |
 | one `5C` count | 8.75 mV | the raw step; the mean resolves ~0.1 count |
-| the curve | fitted to one run; in-sample 0.1-0.5 points rms below 3.95 V, 1.5 on the plateau | **the dominant term**; needs a second run |
+| the curve | fitted to run 1; **on run 2: 0.1-0.6 points rms below 3.95 V, 3.2 rms (worst −8.5) on the plateau, 2.2 overall** | **the dominant term**, and the plateau is its weak part |
 | temperature, 10 °C swing | ±1.5-3%, from generic NMC figures | unmeasured here |
 | cell ageing, a year | ±5%, drifting | unmeasured |
 | another unit's module | unknown | one unit fitted |
 
-**≈ ±5% fresh is the target, not a result**, until a fitted curve is checked
-against a run it was not fitted to.
+**±5% fresh now holds on one out-of-sample run** (2.2 points rms overall) —
+except on the plateau, where the worst error is −8.5 points. A two-run
+consistency check, not a validation of the method; the refit on both runs is
+Phase 1b's A.
+
+### The second run: a check of the curve (2026-10-02 → 10-04)
+
+Run 2 used the same white at full drive, on `759e265796`. Every observation, in
+JD's words with the corrections, is in
+[`history/battery-2026-10-01-drain/readings.csv`](../history/battery-2026-10-01-drain/readings.csv).
+
+- **Unplugged 11:00:00 10-02** (JD). **The RGB cut came at 13:33:25 10-04**
+  (±5 s), after **50.56 h of full white**. That is 1.9% shorter than run 1's
+  51.55 h, with one ~1 min dump plug-in inside it. From JD's 12:50 reading
+  (3473 mV, 1.42%), the curve had predicted the cut at ~13:34.
+- **The lights-off reserve: 5 h 01 min 29 s**, to the death at **18:34:54**
+  (±2 s). `5C` reached 0 (≤ ~3.16 V) ~45-55 min before the death. Run 1's
+  death went unobserved; it fits ~07:15 10-01 if its reserve was the same.
+- **A flat spot at 3222 mV for ~30 min** on the reserve (~16:10-16:30). JD saw
+  the same voltage hold on run 1 (10-01 ~05:19), so it belongs to the cell.
+  The **3.83-3.87 V shoulder** recurred too, so it is the cell's, not the
+  conditions of 09-29's night.
+- **The curve against run 2** (216 points: the 19:29 10-03 dump's entries and
+  the video's full-white samples; level = runtime left to the cut over
+  50.56 h):
+  - below 3.95 V, 0.1-0.6 points rms (worst +2.1);
+  - on the plateau, 3.2 rms, worst −8.5 (the curve reads low: this run's
+    plateau ran longer, or a few mV higher).
+- **How the end was recorded.** The RAM log after 19:29 10-03 was lost: the
+  pack died before JD could plug in. JD's Pixel 8 time-lapse (~30×, the debug
+  page and an Apple Watch in frame) is the only record of the cut, the reserve
+  and the death.
+  - Video time maps to wall time by the watch's minute flips: the capture ran
+    6-91 s ahead of start + 30 × video time.
+  - The cut is the LED glow's step; the death is the screen going dark.
+  - `video-trace.csv` is the debug page's `Batt` row read from frame crops:
+    every 15 min lit, every 10 min on the reserve.
+  - The method, crop boxes and frame times are in `readings.csv`.
+  - The video (6.1 GB, not in git) is on JD's Mac at
+    `~/Downloads/PXL_20261004_052815043.mp4`.
 
 ### What the panel should show
 
@@ -439,7 +483,27 @@ What the board actually shows:
   no VIN the pin evidently loses its pull-up. So on battery it says nothing.
 - The charging LED: the stock firmware lit it in the cable position, so the
   pack charges there too (JD, 2026-09-25). Ours leaves it off (far too bright);
-  the bolt on the battery row reads the same pin.
+  the bolt on the battery row reads the same pin. ⚠️ **Both are firmware-driven**
+  (the LED is B18, `CHARGING_LED_BRIGHTNESS` 0). **In the bootloader nothing
+  shows whether the pack is charging**, so "when the charge finished" can only
+  come from a running board's CHRG.
+- **Charges from flat, timed against the sensor and VDD**: these are timings,
+  not measured CC/CV phases (Phase 1b's B).
+
+  | charge | `5C` reaches the clamp | VDD starts rising | CHRG released |
+  |---|---|---|---|
+  | 09-28 | 3 h 55 min | ~4 h | ~9.5 h |
+  | 10-01 | 4.0-4.2 h | ~4.25 h | ~9.4 h |
+
+  During the stretch before the clamp, the board's own load moves VDD: LED
+  drive 1000 → 499 ‰ raised it **+59 mV** on 10-01. Records:
+  `history/battery-2026-10-01-charge/`, the 09-28 rows in
+  `history/battery-2026-09-25/readings.csv`.
+- **The charging display reads low on the fitted curve.** It is
+  `curve(V − 150 mV)`, which gave **18.4% 1.7 h into the 10-04 charge from
+  flat**, where the curve predicted ~18.6%. By charge time it would be roughly
+  30%; that figure is unmeasured. Then it races to ~90% once `5C` clamps.
+  Phase 1b's B replaces it with a time model bounded by the voltage.
 
 ## The pack connector, and tapping it (2026-09-26)
 
@@ -668,7 +732,8 @@ building yet.
 - **How `5C` frames arrive**: replies, a stream, or both (above).
 - **Whether the line holds on another unit**, and across temperature.
 - **`CHARGE_IR_MV`**: measure it as the step in `5C` at the moment of
-  unplugging mid-charge.
+  unplugging mid-charge. Phase 1b's B3 measures the post-unplug relaxation and
+  the charge rate instead, and its model drops the I×R guess.
 - **The 85-at-~4.00 V reading** of 09-26 (above).
 - **~10-15 unexplained flash writes** in 22 h on the old build (blinks at
   09-28 15:50 and 09-29 12:33 matched no known write).

@@ -41,10 +41,13 @@ on USB, so a dump costs nothing.
    board is RUNNING with a raw-HID read — `venv/bin/python3 hostagent/ak820battery.py`
    must answer. The USB vendor id alone does not: the bootloader is `0C45:7140`
    and the board `0C45:8009`.
-2. **The final dump** at least **one full log period (10 min) after the charge
-   LED goes out**, so a completed entry records the termination. The 09-28 and
-   10-01 charges from flat took ~9.5 h and ~9.4 h, so expect it ~05:30 10-05.
-   Record the LED-out time as observed (JD) separately from the log.
+2. **The final dump** at least **one full log period (10 min) after charging
+   stops**, so a completed entry records the termination. Charging stops when
+   CHRG is released: the battery row's bolt goes, and `ak820battery.py` stops
+   showing `charging`. The charge LED is firmware-driven and off by default
+   (`CHARGING_LED_BRIGHTNESS` 0). The 09-28 and 10-01 charges from flat took
+   ~9.5 h and ~9.4 h, so expect it ~05:30 10-05. Record the time JD saw the
+   bolt go separately from the log.
 
    ⚠️ **2026-10-04 22:37: the board was found in the bootloader** (`0C45:7140`).
    JD entered it before bed, for an overnight flash that is not coming, so the
@@ -55,9 +58,9 @@ on USB, so a dump costs nothing.
    - **If the board is running:** take the dump. Its log starts mid-charge at the
      reboot. Note that in `readings.csv`; B1 uses its timings from the reboot on.
    - **If it stayed in the bootloader all night:** there is no log of this
-     charge's end. The 10-04 charge then gives B1 only its start, its first 1.7 h,
-     and JD's LED-out time if he saw it. `T_TAIL` is the median of two, stated as
-     such.
+     charge's end. Nothing shows charging in the bootloader, because the LED and
+     the bolt are both firmware-driven. The 10-04 charge then gives B1 only its
+     start and its first 1.7 h. `T_TAIL` is the median of two, stated as such.
 3. Also capture the health counters before anything resets them:
    `venv/bin/python3 hostagent/ak820health.py --stalls --json` and
    `ak820-agent/target/release/ak820 health --crash --json` (the Rust CLI is
