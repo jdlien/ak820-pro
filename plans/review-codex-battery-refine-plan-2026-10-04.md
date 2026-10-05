@@ -81,6 +81,7 @@ gpt-6-astra, reasoning xhigh, read-only, codex-cli 0.160.0. Verbatim. Dispositio
    **Change:** Choose one rule explicitly. If retaining voltage hysteresis, specify settled battery-only evidence so transient charging lift cannot re-arm it. Add tests for a short dump plug-in, genuine charge, voltage recovery and repeated low-voltage crossings; preserve the existing light-cut protections.
 
 **Overall verdict:** The plan is not ready to execute as written. After these changes, it can be ready for staged diagnosis and calibration. Shipping the charging model and RTC persistence fix should remain conditional on those measurements, rather than being predetermined contents of flash 1.
+
 ---
 
 # Round 2 (2026-10-04), on revision 2 -- verbatim
@@ -208,3 +209,107 @@ The remaining and new findings follow; their identifiers are **R2-1 through R2-1
     **Change:** Label 7 ms as the observed maximum *flash-marked loop interval*. Measure program, erase and preceding-drain durations separately before assigning the visible blink a duration or mechanism. Keep C4’s erase explanation explicitly hypothetical.
 
 **Verdict: not ready to execute as written.** The preservation and host-analysis steps are usable, but the charging contradictions, calibration gaps, stall attribution and input-delivery gate need correction before the corresponding firmware work proceeds.
+
+---
+
+# Round 3 (2026-10-04), on revision 3 -- verbatim
+
+Model gpt-6-astra, reasoning xhigh, read-only, against commit `bb33583`.
+
+Revision 3 resolves **7 of the 11 round-2 findings**. Four remain partly resolved. Of the ten round-1 findings previously marked partly resolved, **five are now resolved**.
+
+I reproduced run 1’s fit output and points byte-for-byte. A2 still produces **159 log + 57 video = 216 points**, plateau RMS **3.156**, and worst error **−8.490 percentage points**.
+
+“Resolved” below means the revised plan adequately addresses the finding; implementation and hardware verification remain future work.
+
+| Round-2 finding | Revision-3 status | Verification |
+|---|---|---|
+| R2-1 — Qualification/fallback and physical-phase claims | **Partly resolved** | The CC/CV claims are corrected and LOST has an executable trigger. The ceiling rule contradicts its invariant, and LOST cannot qualify clamped charging. R3-2, R3-5 below. |
+| R2-2 — UNKNOWN versus from-flat replays | **Partly resolved** | Sentinel checks and UNKNOWN’s clamped re-seat are specified. The claim that all three recorded charges qualify for FROM-FLAT is false. R3-1. |
+| R2-3 — B3 calibration | **Resolved** | B3 reads the starting voltage without USB, requires two trials, compensates settling discharge, and checks the endpoint. The current curve confirms 5–8% = 3566–3640 mV; the shortened trial’s expected endpoint fits the 3810 mV limit. `L_KNEE` is explicitly an extrapolation. |
+| R2-4 — Tail acceleration | **Partly resolved** | Changing phases by model level removes the clamp-triggered acceleration mechanism. The replacement equation can still accelerate within the stated parameter range. R3-4. |
+| R2-5 — Cumulative stall attribution | **Resolved** | Slow-pass totals and the per-pass ring retain co-occurrence; mutually exclusive scopes and the “unaccounted” remainder address the attribution problem. |
+| R2-6 — Input delivery/watchdog gate | **Partly resolved** | Delivered-text checks, unconditional transport inspection and watchdog rejection are added. The proposed retry-abandonment counter is misidentified. R3-3. |
+| R2-7 — Censoring and gap sensitivity | **Resolved** | A1 excludes clamp-containing intervals, matching the host’s `pack_mv` rule, and requires both monotone gap extremes. Legacy reproduction remains separate. |
+| R2-8 — Physical write attribution | **Resolved** | The persisted-snapshot difference mask and explicit mixed-session treatment match the coalesced write mechanism. |
+| R2-9 — Executable gate staging | **Resolved** | Baseline replay, instrumentation qualification and calibrated-model tests now occur at workable stages. Existing health counters supply the pass-rate denominator for A/B qualification. |
+| R2-10 — Backup verification | **Resolved** | The explicit filesystem check works while `flash.sh` waits; E7 is required before flash 1 and makes lighting-backup failure fatal. The stated rollback artifact exists. |
+| R2-11 — Meaning of 7 ms | **Resolved** | The evidence table now correctly calls this a flash-marked loop interval, consistent with `health_loop_tick()` and the preceding DMA-drain hook. |
+
+The previously partly resolved round-1 findings now stand as follows:
+
+| Round-1 finding | Revision-3 status | Reason |
+|---|---|---|
+| 3 — Estimators, smoothing, gaps | **Resolved** | Source separation, time-based smoothing, censoring and sensitivities are specified. |
+| 5 — Charging model as measured physics | **Partly resolved** | Empirical framing is corrected; qualification/bounding limitations remain. R3-5. |
+| 6 — Charging states and parameters | **Partly resolved** | State handling is substantially clearer, but FROM-FLAT, ceiling behavior and tail constraints remain inconsistent. |
+| 7 — B3 calibration | **Resolved** | The revised measurement procedure addresses the original defects. |
+| 10 — Replay adapter/assertions | **Partly resolved** | Adapter requirements are adequate; recorded-start classification and some numerical assertions/mutants remain problematic. |
+| 14 — Attribution/endurance | **Resolved** | Physical field masks and the 127-slot accounting address the finding. |
+| 15 — Stall attribution/cost | **Resolved** | Co-occurrence evidence and staged A/B qualification are sufficient for this plan. |
+| 16 — CH582F transport risks | **Partly resolved** | Blocking and queue replacement are recognized, but retry exhaustion still lacks the promised counter. |
+| 17 — Hardware verification | **Partly resolved** | Typing and watchdog requirements are fixed; the transport-counter gap weakens acceptance. |
+| 18 — Preservation/flash checks | **Resolved** | Preservation/final dumps, fresh backups, settings restoration, identity and rollback are covered. |
+
+Remaining and new findings:
+
+1. **R3-1 — P1: The September 28 replay cannot enter FROM-FLAT under the specified rule.**
+
+   [B2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:383) says all three charges start with `5C = 0`, then requires numerical progress to ≥970 before FULL. But the [September 28 CSV](/Users/jdlien/code/ak820-pro/history/battery-2026-09-25/charge-dumps/log-20260928-1034.csv:2) starts at **4**; its [observation record](/Users/jdlien/code/ak820-pro/history/battery-2026-09-25/readings.csv:50) says **2 → 3 → 4**. No zero is recorded.
+
+   Under the [state table](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:317), that replay enters UNKNOWN-CHG and remains nonnumerical until FULL. Adding an invented zero prelude would conceal the contradiction.
+
+   **Change:** Either classify September 28 as an unknown-start recorded replay and test FROM-FLAT separately, or broaden trusted-zero qualification to a fresh charging voltage demonstrably below the 3400 mV runtime cutoff, with an appropriate margin. Its first `5C = 4` corresponds to approximately **3196 mV**, so the latter approach can use the actual evidence. Keep any synthetic startup ordering explicitly labeled.
+
+2. **R3-2 — P1: The display equation does not enforce its voltage ceiling.**
+
+   The [equation](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:314) is:
+
+   `level = max(level, min(M, U, 990))`
+
+   Whenever `U` falls below the previous display, this necessarily leaves `level > U`. Using the [current curve](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:381), an estimate falling from **4008 to 4006 mV** lowers `U` from **750 to 700 pm**. With the previous display at 750 and `M = 760`, the new display remains 750. LOST waits another 30 minutes, while B2’s “never above U” assertion already fails.
+
+   Conversely, releasing a binding ceiling can produce a jump larger than 10 pm because the equation contains no rise limiter. The table also lacks a defined MODEL action when the fresh estimate expires and `U` is unavailable.
+
+   **Change:** Define precedence between monotonicity, ceiling enforcement and uncertainty. Specify the transition when a fresh ceiling contradicts the displayed level, including any noise tolerance; define stale-estimate behavior separately from clamped behavior; and retain an explicit rise limiter if the one-second step requirement stands. Test falling estimates, clamp entry/exit and report loss.
+
+3. **R3-3 — P1: “Existing drops” does not count abandoned retransmissions.**
+
+   [D1](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:577) proposes “abandoned retransmissions (the existing drops).” In the actual driver, [retry exhaustion](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c:503) calls `ch582_tx_pop()` and returns without incrementing `tx_stat_drop`. That counter increments only on [queue-full rejection](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c:584).
+
+   Consequently, the planned diagnostics can report zero drops despite abandoned frames. Existing UART-error collection is also inside `CONSOLE_ENABLE`, whereas this plan builds `daily`.
+
+   **Change:** Require a distinct retry-exhaustion counter at the abandonment branch, alongside queue-full and replacement counters. Explicitly provide UART-error collection in the diagnostic daily build. Verify an exhausted-retry case with no queue overflow: exhaustion must increment while queue-full remains zero.
+
+4. **R3-4 — P2: A fixed τ still does not guarantee a decelerating tail.**
+
+   The [tail formula](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:297) starts with rate:
+
+   `(1000 − L_KNEE) / τ`
+
+   Nothing requires that rate to be ≤ `K_CC`. A parameter set entirely within B1’s stated assumptions gives:
+
+   - `K_CC = 160 pm/h`, `t_knee = 4.1 h`, `R = 30 pm`.
+   - `L_KNEE = 626 pm`, `T_TAIL = 5.35 h`, `τ = 1.477 h`.
+   - Initial tail rate **253.2 pm/h**, exceeding the preceding **160 pm/h**.
+   - From `L0 = 600`, the one-hour result is **787.85 pm**, violating B2’s early-clamp limit of **770 pm**.
+
+   **Change:** Add parameter-domain and rate constraints, including `τ ≥ (1000 − L_KNEE) / K_CC` with consistent units. Define what happens if measured parameters cannot satisfy both deceleration and the termination-step target: revise the model or retain “Charge”; do not adjust measured values merely to pass the assertions.
+
+5. **R3-5 — P2: LOST is a below-clamp consistency check, not operating-condition qualification.**
+
+   [B’s bounding claim](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:281) remains stronger than its mechanism. The plan expressly removes `U` at the clamp and acknowledges that a partial charge can clamp almost immediately.
+
+   Thus a known 600 pm start, continuous CHRG and fresh clamped reports can advance toward 990 indefinitely without any LOST check—even if charging has slowed substantially. The re-seat corrects this only after unplugging. This is the same observable input shape already used by B2’s early-clamp test.
+
+   **Change:** State explicitly that charging above the sensor ceiling proceeds by elapsed time without voltage validation, and that LOST detects only sufficiently large, sustained contradictions below the clamp. Either explicitly accept this limitation for the experimental operating condition or specify when to use “Charge.” Add a prolonged clamped, delayed-termination case; do not present the existing slow-charge test as general supply qualification.
+
+6. **R3-6 — P2: B2 does not explicitly reject the removed-990-cap mutant.**
+
+   [B2’s assertions](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:383) permit values such as **991–994 pm** while clamped: they satisfy ≥970 before FULL, need no large step, have no voltage ceiling, and still round to 99%. Removing the cap from the exponential can produce exactly this behavior.
+
+   **Change:** For sessions starting at or below 990, assert valid numerical output **≤990 until FULL**, and keep CHRG asserted beyond the predicted termination time to exercise saturation. Preserve the separately specified already-full exception. Require this case to fail when the cap is removed.
+
+The re-seat’s revised validity handling, delayed fresh-sample requirement and replug behavior are adequate at plan level, subject to B3 determining the delay. I found no additional blocker in its specification.
+
+**Verdict: not ready to execute as written.** The blocking corrections are the recorded-start/FROM-FLAT contradiction, the incompatible ceiling/display rules, and the missing retry-exhaustion instrumentation. Preservation and host analysis can proceed; these defects should be corrected before the corresponding firmware work.
