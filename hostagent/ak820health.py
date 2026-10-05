@@ -106,11 +106,7 @@ def read_health(h=None, timeout_ms=500):
     if own:
         h = open_device()
     try:
-        h.write(bytes([0x00, SET_VALUE, HEALTH_CHANNEL, HC_GET] + [0x00] * 29))
-        rep = h.read(32, timeout_ms)
-        if not rep or len(rep) < 32 or rep[0] != SET_VALUE or rep[1] != HEALTH_CHANNEL:
-            raise SystemExit("no/garbled health reply (BT mode routes replies "
-                             "over the air -- dip switch to cable)")
+        rep = _txn(h, HC_GET, timeout_ms)
         vals = struct.unpack_from("<6IHBB", bytes(rep), 4)
         d = dict(zip(FIELDS, vals))
         d["version"] = rep[3]
@@ -122,12 +118,29 @@ def read_health(h=None, timeout_ms=500):
             h.close()
 
 
+def _read_reply(h, want, timeout_ms):
+    """Read until a report answers THIS request: `want(rep)` is true. Another
+    process's reply (the host agents talk on this channel; Windows hands every
+    input report to every open handle) is discarded, never decoded as ours
+    (CLAUDE.md: validate every read against the command it answers)."""
+    import time
+    deadline = time.monotonic() + timeout_ms / 1000.0
+    while True:
+        left = int((deadline - time.monotonic()) * 1000)
+        if left <= 0:
+            return None
+        rep = h.read(32, left)
+        if not rep:
+            return None
+        if len(rep) >= 32 and want(rep):
+            return bytes(rep)
+
+
 def _txn(h, cmd, timeout_ms=500):
     h.write(bytes([0x00, SET_VALUE, HEALTH_CHANNEL, cmd] + [0x00] * 29))
-    rep = h.read(32, timeout_ms)
-    if not rep or len(rep) < 32 or rep[0] != SET_VALUE or rep[1] != HEALTH_CHANNEL:
-        raise SystemExit("no/garbled health reply (BT mode routes replies "
-                         "over the air -- dip switch to cable)")
+    rep = _read_reply(h, lambda r: r[0] == SET_VALUE and r[1] == HEALTH_CHANNEL and r[2] == cmd, timeout_ms)
+    if rep is None:
+        raise SystemExit(f"no reply to health command {cmd:#04x}")
     return rep
 
 
@@ -216,13 +229,16 @@ def isr_rates(a, b, wall_s, rows=6):
 
 def _txn_page(h, cmd, page, arg=0, timeout_ms=500):
     """A paged protocol-8 command: [cmd, page, arg] -> [cmd, page, 28 bytes].
-    The reply must answer THIS command (CLAUDE.md: validate every read)."""
+    The reply must answer THIS command AND page; HC_ACCT's ops 0xF0/0xF1
+    answer as page 0."""
     h.write(bytes([0x00, SET_VALUE, HEALTH_CHANNEL, cmd, page, arg] + [0x00] * 27))
-    rep = h.read(32, timeout_ms)
-    if not rep or len(rep) < 32 or rep[0] != SET_VALUE or rep[1] != HEALTH_CHANNEL or rep[2] != cmd:
-        raise SystemExit(f"no/garbled reply to health command {cmd:#04x} page {page} "
+    want_page = 0 if page in (0xF0, 0xF1) else page
+    rep = _read_reply(h, lambda r: r[0] == SET_VALUE and r[1] == HEALTH_CHANNEL and r[2] == cmd
+                      and r[3] == want_page, timeout_ms)
+    if rep is None:
+        raise SystemExit(f"no reply to health command {cmd:#04x} page {page} "
                          "(protocol 8 firmware needed)")
-    return bytes(rep)
+    return rep
 
 
 def read_link(h):
@@ -240,7 +256,7 @@ def read_flashw(h):
     p2 = _txn_page(h, HC_FLASHW, 2)
     v0 = struct.unpack_from("<4I4H2H", p0, 4)
     v1 = struct.unpack_from("<4I5H", p1, 4)
-    v2 = struct.unpack_from("<HBBH4II", p2, 4)
+    v2 = struct.unpack_from("<HBBH4IIH", p2, 4)
     return {
         "sessions": dict(zip(WRITERS, v0[0:4])),
         "erases": dict(zip(WRITERS, v0[4:8])),
@@ -252,6 +268,7 @@ def read_flashw(h):
         "rtc_proposals": {"sof": v2[4], "pcf": v2[5]},
         "rtc_stores": {"sof": v2[6], "pcf": v2[7]},
         "last_erase_uptime_ms": v2[8],
+        "store_bytes": v2[9],   # an erase erases all of it (two 1 KB pages here)
     }
 
 
@@ -264,7 +281,11 @@ def read_acct(h, op=None):
     else:
         p0 = _txn_page(h, HC_ACCT, 0)
     enabled, n, ring_len, ring_next = p0[4:8]
-    passes, slow, st_hz, uptime, written = struct.unpack_from("<5I", p0, 8)
+    passes, slow, st_hz, uptime, written, long_passes = struct.unpack_from("<6I", p0, 8)
+    # The layout this decoder knows: refuse rather than misread another one.
+    if n != len(SCOPES) or ring_len != 16 or st_hz != 187500:
+        raise SystemExit(f"HC_ACCT layout not understood: {n} scopes, ring {ring_len}, "
+                         f"{st_hz} Hz (this decoder knows {len(SCOPES)}, 16, 187500)")
     slow_t = list(struct.unpack_from("<7I", _txn_page(h, HC_ACCT, 1), 4)) + \
              list(struct.unpack_from("<6I", _txn_page(h, HC_ACCT, 2), 4))
     all_ms = list(struct.unpack_from("<7I", _txn_page(h, HC_ACCT, 3), 4)) + \
@@ -275,11 +296,12 @@ def read_acct(h, op=None):
         r = _txn_page(h, HC_ACCT, 16 + i)
         up = struct.unpack_from("<I", r, 4)[0]
         if up:
-            ring.append({"uptime_ms": up, "pass_ms": r[8],
-                         "scopes_ms": dict(zip(SCOPES, r[9:9 + n]))})
+            long_ = all(b == 0xFF for b in r[9:9 + n])   # >= 340 ms: not attributed
+            ring.append({"uptime_ms": up, "pass_ms": r[8], "long": long_,
+                         "scopes_ms": {} if long_ else dict(zip(SCOPES, r[9:9 + n]))})
     ring.sort(key=lambda e: e["uptime_ms"])
     return {
-        "enabled": bool(enabled), "passes": passes, "slow_passes": slow,
+        "enabled": bool(enabled), "passes": passes, "slow_passes": slow, "long_passes": long_passes,
         "st_freq": st_hz, "uptime_ms": uptime, "ring_written": written,
         "slow_ms": {k: round(t * 1000 / st_hz, 2) for k, t in zip(SCOPES, slow_t)},
         "all_ms": dict(zip(SCOPES, all_ms)),
@@ -308,11 +330,14 @@ def print_phase1b(d):
               f"proposals sof {fw['rtc_proposals']['sof']} pcf {fw['rtc_proposals']['pcf']}, "
               f"stores sof {fw['rtc_stores']['sof']} pcf {fw['rtc_stores']['pcf']}")
         le = fw["last_erase_uptime_ms"]
-        print(f"  last page erase at uptime {le / 1000:.1f} s" if le else "  no page erase since reset")
+        print(f"  (an erase is a whole-store erase: all {fw['store_bytes']} bytes, "
+              f"{fw['store_bytes'] // 1024} x 1 KB pages)")
+        print(f"  last erase at uptime {le / 1000:.1f} s" if le else "  no erase since reset")
     ac = d.get("acct")
     if ac:
         print(f"\nper-task accounting ({'ON' if ac['enabled'] else 'OFF'}): {ac['passes']} passes, "
-              f"{ac['slow_passes']} slow (>= 10 ms)")
+              f"{ac['slow_passes']} slow (>= 10 ms), of which {ac['long_passes']} >= 340 ms "
+              "(counted, not attributed: the 16-bit tick may have wrapped)")
         tot = sum(ac["slow_ms"].values()) or 1
         print(f"  {'scope':12} {'slow ms':>9} {'share':>6} {'largest':>7} {'all ms':>10}")
         for k in SCOPES:
@@ -321,7 +346,8 @@ def print_phase1b(d):
         if ac["ring"]:
             print(f"  last {len(ac['ring'])} slow passes (uptime s, pass ms: scopes > 0 ms):")
             for e in ac["ring"]:
-                parts = ", ".join(f"{k} {v}" for k, v in e["scopes_ms"].items() if v)
+                parts = "(>= 340 ms, not attributed)" if e["long"] else \
+                    ", ".join(f"{k} {v}" for k, v in e["scopes_ms"].items() if v)
                 print(f"    {e['uptime_ms'] / 1000:10.1f}  {e['pass_ms']:3} ms: {parts}")
 
 

@@ -39,6 +39,7 @@ def check(cond, msg):
 if ("ACCT", 0) in pages:
     a = H.read_acct(None)
     check(a["passes"] == 104 and a["slow_passes"] == 3, f"passes {a['passes']} slow {a['slow_passes']}")
+    check(a["long_passes"] == 0, f"long passes {a['long_passes']}")
     check(a["st_freq"] == 187500, f"st_freq {a['st_freq']}")
     check(abs(a["slow_ms"]["display_hk"] - 8.0) < 0.01, f"display slow ms {a['slow_ms']['display_hk']}")
     check(abs(a["slow_ms"]["battery"] - 3.0) < 0.01, f"battery slow ms {a['slow_ms']['battery']}")
@@ -65,6 +66,31 @@ if ("FLASHW", 0) in pages:
     check(f["rtc_last_stored"] == 33300 and f["rtc_stores"] == {"sof": 0, "pcf": 1}, f"rtc stores {f}")
     check(f["rtc_proposals"] == {"sof": 1, "pcf": 1}, f"proposals {f['rtc_proposals']}")
     check(f["last_erase_uptime_ms"] == 20000, f"last erase {f['last_erase_uptime_ms']}")
+    check(f["store_bytes"] == 2048, f"store bytes {f['store_bytes']}")
     print(f"{'FAIL' if fails else 'ok  '} decode flash")
+
+# The reply readers must take only a reply to THEIR request (codex, gate 2).
+class FakeDev:
+    def __init__(self, replies):
+        self.q = list(replies)
+    def write(self, b):
+        pass
+    def read(self, n, t):
+        return self.q.pop(0) if self.q else b""
+
+def rep_(cmd, page, fill=0):
+    return bytes([H.SET_VALUE, H.HEALTH_CHANNEL, cmd, page] + [fill] * 28)
+
+import importlib
+H2 = importlib.reload(H)
+d = FakeDev([rep_(H2.HC_FLASHW, 2, 9), rep_(H2.HC_LINK, 8, 7), rep_(H2.HC_FLASHW, 0, 5)])
+got = H2._txn_page(d, H2.HC_FLASHW, 0)
+check(got[3] == 0 and got[4] == 5, f"page 0 taken, the page-2 and HC_LINK replies discarded: {got[:6]}")
+d = FakeDev([rep_(H2.HC_LINK, 8), rep_(H2.HC_GET, 8, 3)])
+got = H2._txn(d, H2.HC_GET)
+check(got[2] == H2.HC_GET, f"HC_GET's reply, not HC_LINK's: {got[:4]}")
+d = FakeDev([rep_(H2.HC_ACCT, 0, 1)])
+check(H2._txn_page(d, H2.HC_ACCT, 0xF0, 1)[3] == 0, "0xF0 answers as page 0")
+print(f"{'FAIL' if fails else 'ok  '} reply validation")
 
 sys.exit(1 if fails else 0)

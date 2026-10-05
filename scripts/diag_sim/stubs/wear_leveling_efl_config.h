@@ -1,0 +1,2 @@
+#pragma once
+#define WEAR_LEVELING_BACKING_SIZE 2048

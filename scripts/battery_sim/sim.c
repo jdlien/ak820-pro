@@ -760,8 +760,9 @@ static bool rp_load(const char *path) {
     /* Durations from the timestamps; the first row takes the next row's. */
     for (int i = 1; i < rp_n; i++) rp[i].dur_s = (int)(rp[i].t_s - rp[i - 1].t_s);
     if (rp_n > 1) rp[0].dur_s = rp[1].dur_s;
-    printf("  %s: %d rows, %s format, %d s intervals\n", path, rp_n, v34 ? "ten-minute (v3/v4)" : "one-minute",
-           rp_n ? rp[0].dur_s : 0);
+    const char *base = strrchr(path, '/');
+    printf("  %s: %d rows, %s format, %d s intervals\n", base ? base + 1 : path, rp_n,
+           v34 ? "ten-minute (v3/v4)" : "one-minute", rp_n ? rp[0].dur_s : 0);
     return rp_n > 0;
 }
 
@@ -789,12 +790,27 @@ static int rp_values(const rp_row_t *r, bool ascending, uint8_t *v) {
         v[i] = (uint8_t)lround(lo + (hi - lo) * pow((double)i / (n - 1), g));
         have += v[i];
     }
-    /* Nudge interior values one count at a time, keeping the ramp monotone. */
-    for (int pass = 0; have != sum && pass < 4 * n; pass++) {
-        int i = 1 + pass % (n - 2 > 0 ? n - 2 : 1);
-        if (have < sum && v[i] < hi && v[i] + 1 <= v[i + 1]) { v[i]++; have++; }
-        else if (have > sum && v[i] > lo && v[i] - 1 >= v[i - 1]) { v[i]--; have--; }
+    /* Nudge interior values one count at a time, keeping the ramp monotone,
+     * sweeping until the sum is exact or a whole sweep changes nothing. A
+     * deficit is filled from the top down, a surplus taken from the bottom up,
+     * so each sweep makes room for the next. */
+    while (have != sum) {
+        bool moved = false;
+        if (have < sum) {
+            for (int i = n - 2; i >= 1 && have < sum; i--)
+                if (v[i] < v[i + 1]) { v[i]++; have++; moved = true; }
+        } else {
+            for (int i = 1; i <= n - 2 && have > sum; i++)
+                if (v[i] > v[i - 1]) { v[i]--; have--; moved = true; }
+        }
+        if (!moved) break;
     }
+    /* What the reconstruction promises, checked rather than assumed (codex). */
+    bool mono = true;
+    for (int i = 1; i < n; i++) if (v[i] < v[i - 1]) mono = false;
+    CHECK(have == sum && v[0] == lo && v[n - 1] == hi && mono,
+          "%s: reconstruction: sum %ld of %ld, ends %u/%u of %d/%d, monotone %d", r->time, have, sum, v[0],
+          v[n - 1], lo, hi, mono);
     if (!ascending) for (int i = 0; i < n / 2; i++) { uint8_t t = v[i]; v[i] = v[n - 1 - i]; v[n - 1 - i] = t; }
     return n;
 }
@@ -808,10 +824,10 @@ static void rp_play(int i) {
     bool prev_chg = i ? rp[i - 1].chg_end : r->chg_any;
     bool chg_first = r->chg_any && (prev_chg || !r->chg_end) ? true : r->chg_end;
     bool chg_second = r->chg_end;
-    if (r->v34 && r->chg_any && !r->chg_end) rp_label("CHRG released at the interval's middle%.0s%.0s", r->time, 0, 0);
+    if (r->v34 && r->chg_any && !r->chg_end) rp_label("CHRG released at the interval's middle", r->time, 0, 0);
     if (r->v34 && r->chg_end && i && !prev_chg) {
         chg_first = false;
-        rp_label("CHRG low from the interval's middle%.0s%.0s", r->time, 0, 0);
+        rp_label("CHRG low from the interval's middle", r->time, 0, 0);
     }
     int ticks = r->dur_s * 10;
     if (!r->v34) {
@@ -950,6 +966,16 @@ static void baseline_1004a(const char *path) {
     rp_table(1);
     baseline_common("10-04", off, rp_max_before_full());
     CHECK(w_big == 0, "10-04: one percent at a time: %d bigger", w_big);
+    /* A number, not "unknown", from the third interval on (the first estimate
+     * comes in the first, the session qualifies at 60 s), and the endpoint
+     * where today's logic puts it. Tolerance +-10 pm: the self-check lands the
+     * reconstruction within +5 pm of the log on the firmware that wrote it,
+     * and the refitted curve moves curve(V - 150) by under 5 pm here. */
+    int unknown = 0;
+    for (int i = 2; i < rp_n; i++) if (rp[i].r_level == 0xFFFF) unknown++;
+    CHECK(rp_n == 10 && unknown == 0, "10-04: numeric from 20:32 on: %d unknown of %d", unknown, rp_n - 2);
+    CHECK(rp[rp_n - 1].r_level >= 171 && rp[rp_n - 1].r_level <= 191,
+          "10-04: ~18.1%% at 21:42 (+-10 pm): %u pm", rp[rp_n - 1].r_level);
 }
 
 /* The adapter checked against the firmware that WROTE the log: run.sh builds

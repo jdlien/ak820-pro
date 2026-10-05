@@ -26,23 +26,38 @@ for s in boot_battery boot_battery_clamp boot_usb_full discharge charge_log tran
     "$build/sim" "$s" "$log" || fail=1
 done
 
-# Phase 1b, B2: every recorded charge from flat replayed against TODAY's
-# charging logic -- the baseline the new charging model is compared with.
-"$build/sim" baseline_0928  "$log" || fail=1
-"$build/sim" baseline_1001  "$hist/battery-2026-10-01-charge/log-20261001-1947.csv" || fail=1
-"$build/sim" baseline_1004a "$hist/battery-2026-10-04-charge/log-20261004-2144.csv" || fail=1
-
-# The replay adapter checked against the firmware that wrote the 10-04 log:
-# 759e265796's battery.c, straight from git. Skipped for a mutant run.
-if [ -z "${BATTERY_SIM_SRC:-}" ]; then
-    old="$build/759e265796"
-    mkdir -p "$old"
-    cp -R "$here/stubs/." "$old/"
+# A build of the board's battery.c and power.c AT A PINNED REVISION, straight
+# from git, so what it checks cannot move when the working tree does.
+pinned() {   # pinned <rev> <dir>
+    mkdir -p "$2"
+    cp -R "$here/stubs/." "$2/"
     for f in battery.c battery.h power.c power.h; do
-        git -C "$fw" show "759e265796:keyboards/a_jazz/ak820pro/$f" > "$old/$f"
+        git -C "$fw" show "$1:keyboards/a_jazz/ak820pro/$f" > "$2/$f"
     done
-    cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -I"$old" \
-       -o "$old/sim" "$here/sim.c" "$old/battery.c" "$old/power.c" -lm
+    cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -I"$2" \
+       -o "$2/sim" "$here/sim.c" "$2/battery.c" "$2/power.c" -lm
+}
+
+if [ -z "${BATTERY_SIM_SRC:-}" ]; then
+    # Phase 1b, B2: every recorded charge from flat replayed against TODAY's
+    # charging logic -- flash 1's battery.c, dd5c94fdd9 -- the baseline flash
+    # 2's model is compared with. Pinned (codex, gate 2): its output must equal
+    # baseline-dd5c94fdd9.txt line for line, or the baseline has moved.
+    base="$build/dd5c94fdd9"
+    pinned dd5c94fdd9 "$base"
+    { "$base/sim" baseline_0928  "$log"
+      "$base/sim" baseline_1001  "$hist/battery-2026-10-01-charge/log-20261001-1947.csv"
+      "$base/sim" baseline_1004a "$hist/battery-2026-10-04-charge/log-20261004-2144.csv"
+    } > "$build/baseline.out" 2>&1 || fail=1
+    grep -E '^(ok|FAIL)' "$build/baseline.out"
+    if ! diff -u "$here/baseline-dd5c94fdd9.txt" "$build/baseline.out"; then
+        echo "FAIL the pinned baseline's output changed (diff above)"; fail=1
+    fi
+
+    # The replay adapter checked against the firmware that wrote the 10-04
+    # log: 759e265796's battery.c.
+    old="$build/759e265796"
+    pinned 759e265796 "$old"
     "$old/sim" replay_selfcheck "$hist/battery-2026-10-04-charge/log-20261004-2144.csv" || fail=1
 fi
 exit $fail

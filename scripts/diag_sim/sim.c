@@ -46,6 +46,10 @@ static void pass(uint32_t gap_ms) {
 }
 
 static void acct(void) {
+    /* Boot: health_loop_tick discards during its settle, and the first closed
+     * pass is never counted (it began before). */
+    spend(ACCT_ANIM, 9000); loop_acct_discard();
+    spend(ACCT_CH582, 100); pass(3);
     /* 100 fast passes: 1 ms of CH582, 3 ms in all. */
     for (int i = 0; i < 100; i++) { spend(ACCT_CH582, 188); pass(3); }
     /* A slow pass made of two scopes: 8 ms display + 3 ms battery, 12 ms long
@@ -74,16 +78,30 @@ static void acct(void) {
     for (uint8_t pg = 0; pg <= 5; pg++) dump("ACCT", pg, loop_acct_fill);
     for (uint8_t pg = 16; pg < 19; pg++) dump("ACCT", pg, loop_acct_fill);
 
-    /* Off: nothing accumulates, and nothing is left over for the next pass. */
+    /* Off: nothing accumulates, nothing is left over, and the pass in progress
+     * when it came back on is not counted either (it began while off). */
     loop_acct_set_enabled(false);
     spend(ACCT_ANIM, 5000); pass(30);
     loop_acct_set_enabled(true);
-    pass(3);
+    spend(ACCT_ANIM, 100); pass(3);
     loop_acct_fill(0, p);
     passes = p[4] | p[5] << 8 | p[6] << 16 | (uint32_t)p[7] << 24;
-    CHECK(passes == 105, "a disabled pass is not counted: %u", passes);
+    CHECK(passes == 104, "neither the disabled pass nor the one after re-enabling counts: %u", passes);
     loop_acct_fill(4, p);   /* scopes 7-12: anim is 10 -> offset (10-7)*4 */
-    CHECK(p[12] == 0 && p[13] == 0, "no anim time leaked across the off period");
+    CHECK(p[12] == 0 && p[13] == 0, "no anim time leaked across the off period (boot's 9000 ticks included)");
+
+    /* A pass of 400 ms: the 16-bit tick wraps every 349.5 ms, so its scopes
+     * cannot be trusted. Counted slow, ringed as 0xFF, kept out of the totals. */
+    spend(ACCT_RTC, 60000); pass(400);
+    loop_acct_fill(0, p);
+    uint32_t slow2 = p[8] | p[9] << 8 | p[10] << 16 | (uint32_t)p[11] << 24;
+    uint32_t lng   = p[24] | p[25] << 8 | p[26] << 16 | (uint32_t)p[27] << 24;
+    CHECK(slow2 == 4 && lng == 1, "the long pass is slow (%u) and long (%u)", slow2, lng);
+    loop_acct_fill(16 + 3, p);
+    CHECK(p[4] == 255 && p[5] == 0xFF && p[5 + ACCT_UNACCOUNTED] == 0xFF, "ringed unattributed");
+    loop_acct_fill(1, p);   /* slow ticks, scopes 0-6: rtc_task is 4 */
+    uint32_t rtc = p[16] | p[17] << 8 | p[18] << 16 | (uint32_t)p[19] << 24;
+    CHECK(rtc == 1875, "the long pass's rtc time stays out of the totals: %u", rtc);
 }
 
 #define KB 37u
