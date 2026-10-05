@@ -263,9 +263,10 @@ Kept internally in tenths of a percent.
   overstates), and once below the band, so a stale 9x is not restored after a
   pack swap: **six writes a charge cycle**, none while charging. It was every
   whole-percent change (~100 a cycle) until `deef6053dd`.
-  ⚠️ **Every internal-flash write blanks the whole LED matrix for ~7 ms**: the
-  row ISR deliberately de-selects every row while the flash driver is in its
-  program state ([leds.md](leds.md) item 3). Interrupts themselves are masked
+  ⚠️ **Every internal-flash write blanks the whole LED matrix for a few ms**
+  (the longest flash-marked main-loop interval measured is 7 ms; the blank's own
+  duration is unmeasured): the row ISR deliberately de-selects every row while
+  the flash driver is in its program state ([leds.md](leds.md) item 3). Interrupts themselves are masked
   only for each per-line program window (tens of µs; `hal_efl_lld.c`), because
   the vector table and ISRs live in flash and the Cortex-M0 has no VTOR; a
   row left energized across one would flash at ~18×. Page ERASE (1-2 ms per

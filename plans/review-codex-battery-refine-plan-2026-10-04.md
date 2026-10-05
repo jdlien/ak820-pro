@@ -81,3 +81,130 @@ gpt-6-astra, reasoning xhigh, read-only, codex-cli 0.160.0. Verbatim. Dispositio
    **Change:** Choose one rule explicitly. If retaining voltage hysteresis, specify settled battery-only evidence so transient charging lift cannot re-arm it. Add tests for a short dump plug-in, genuine charge, voltage recovery and repeated low-voltage crossings; preserve the existing light-cut protections.
 
 **Overall verdict:** The plan is not ready to execute as written. After these changes, it can be ready for staged diagnosis and calibration. Shipping the charging model and RTC persistence fix should remain conditional on those measurements, rather than being predetermined contents of flash 1.
+---
+
+# Round 2 (2026-10-04), on revision 2 -- verbatim
+
+**Revision 2 is not ready to execute as written.** Of the 19 round-1 findings, **9 are resolved and 10 are partly resolved**.
+
+I reproduced run 1’s committed fit output and points exactly. A2’s inclusion rule produces **159 log entries + 57 video samples = 216 points**, with plateau RMS **3.156** and worst error **−8.490 percentage points**.
+
+The round-1 dispositions are:
+
+| Round-1 finding | Status | Verification |
+|---|---|---|
+| 1. Flash sequence versus measurement gates | **Resolved** | The [order of work](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:107) moves B, C2 and the D fix after diagnostic measurements and permits another iteration. A separate gate-placement problem remains below. |
+| 2. Unlogged 19:29 plug-in | **Resolved** | [A1](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:183) explicitly assumes its duration, requests sensitivity, and clips the initial interval without double correction. This matches the CSV and observation record. |
+| 3. Estimators, smoothing and gaps | **Partly resolved** | Source separation, time windows, jitter tolerance and offset sensitivity are specified. Clamp censoring remains incomplete, and flagging interpolated knots does not provide gap sensitivity. **R2-7.** |
+| 4. Validation claims and acceptance | **Resolved** | [A2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:200) separates directional holdouts from training diagnostics, gives the reproducible inclusion rule, and labels thresholds appropriately. D4 reports the actual plateau error. |
+| 5. Charging model presented as measured physics | **Partly resolved** | The empirical framing is improved, but the promised fallback has no executable qualification rule; the four-hour interval is still called established constant current. **R2-1.** |
+| 6. Charging states and CV parameters | **Partly resolved** | States, caps, reboot behavior and a formula for τ now exist. UNKNOWN behavior conflicts with replay gates, and the formula introduces problematic partial-charge behavior. **R2-2, R2-4.** |
+| 7. B3 calibration | **Partly resolved** | Offline voltage endpoints, settling compensation and a relaxation trajectory are added. The starting measurement is disturbed by USB, the numerical endpoint claim is wrong, and `L_CC_CAP` is not measured. **R2-3.** |
+| 8. Re-seat timeout and underestimated level | **Resolved** | [The re-seat rule](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:308) now defines freshness, an upward correction, clamped behavior, missing reports and replugs. UNKNOWN arithmetic needs separate handling under R2-2. |
+| 9. FULL heuristic | **Resolved** | [B](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:302) explicitly accepts and documents the high-voltage fault ambiguity and adds its simulator case. This resolves the unsupported certainty claim, not the hardware ambiguity itself. |
+| 10. Replay adapter and assertions | **Partly resolved** | Version-aware parsing, durations, aggregate flags and synthetic tails are specified. Several new assertions conflict with the proposed state machine. **R2-2, R2-4.** |
+| 11. Clock evidence | **Resolved** | [C1](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:403) accurately distinguishes initial drift from convergence, retains the writer hypothesis, and specifies separate reference-mode measurements. |
+| 12. RTC persistence starvation | **Resolved** | [C2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:436) separates saving from correction, retains the latest valid candidate, and supplies first-save and later-save scheduling independent of further changes. |
+| 13. Backlight guard versus ISR | **Resolved** | [C4](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:475) specifies an ISR-observed inhibit flag, a brief critical section, effective brightness, cleanup and preserved watchdog scopes. This matches the driver’s interrupt constraints. |
+| 14. Write attribution and endurance | **Partly resolved** | The 127-slot calculation and 20,000-cycle minimum are correct. Caller-level write context plus setter counts still cannot identify the fields responsible for physical writes or apply the milestone exclusions reliably. **R2-8.** |
+| 15. Stall attribution and instrumentation cost | **Partly resolved** | Task timing improves the evidence, but retaining only the largest task loses cumulative causes. The cost gate also needs an executable measurement stage. **R2-5, R2-9.** |
+| 16. CH582F blocking and transport risks | **Partly resolved** | The `sdWrite` correction and PCF frequency distinction are correct. Transport measurements remain conditional on stall attribution, omitting losses that need no long stall. **R2-6.** |
+| 17. Hardware verification | **Partly resolved** | Active typing, fixed conditions, reset invalidation and interval-based write rates are added. There is still no delivered-input acceptance criterion or rejection of an already degraded watchdog. **R2-6.** |
+| 18. Preservation and flash completion checks | **Partly resolved** | Preservation/final dumps, settings, build identity and the existing rollback artifact are covered. The prescribed backup timestamp check does not match script output. **R2-10.** |
+| 19. Warning re-arm contradiction | **Resolved** | [E2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:552) and D2 consistently require a real charging session and remove voltage hysteresis while preserving the cut protections. |
+
+The remaining and new findings follow; their identifiers are **R2-1 through R2-11**.
+
+1. **P1 — The “outside validated conditions → Charge” fallback cannot be implemented from the stated rules.**
+
+   [B’s qualification promise](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:258) lists weak supplies, cable losses, thermal limiting and changing load, but its state table enters CC using only a known level, CHRG qualification and an unclamped reading. None identifies the Mac’s source or establishes nominal charging current. Reduced-current charging can satisfy every entry condition and advance the percentage indefinitely.
+
+   The same section still describes roughly four hours of constant current as observed. The records establish sensor-clamp timing and rail behavior; the ASC4056’s regulated voltage is approximately **4.2 V**, above the **4.036 V sensor ceiling**. Clamp entry is not a measured CC/CV transition. :codex-file-citation{path="/Users/jdlien/code/ajazz-ak820-pro/docs/ASC4056.pdf" purpose="source"}
+
+   **Change:** Define an implementable qualification policy, including how qualification is lost and restored. Where these conditions cannot be verified, retain “Charge” or make the numerical model an explicitly selected experimental mode. Describe the observed phases as *before/after sensor clamp*, with physical CC/CV interpretations qualified.
+
+2. **P1 — UNKNOWN charging contradicts the charge-from-flat replay gate.**
+
+   The [state table](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:284) makes boot-on-USB charging UNKNOWN, with no transition to a trusted numerical start before FULL. All three charge-from-flat inputs begin after a boot on USB. Yet [B2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:354) requires every such replay to reach **≥980 pm before FULL**.
+
+   There is also a numerical trap: [`LEVEL_UNKNOWN` is `0xFFFF`](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:425). A bare `level >= 980` assertion would pass for UNKNOWN, and the proposed clamped re-seat’s `max(level, 905)` would preserve UNKNOWN.
+
+   **Change:** Separate unknown-start replay assertions from known-start numerical assertions. Explicitly check validity before comparisons, subtraction or `max`. Define the battery-side result when an unknown-start charge is unplugged while still clamped. Do not seed recorded replays with an invented trusted percentage.
+
+3. **P1 — B3 still cannot deliver its promised calibration.**
+
+   [B3 step 2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:375) asks for a settled battery estimate over USB. The firmware [empties the estimator on supply and charging changes](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:222). The read can therefore return no estimate or an estimate already affected by charging, rather than the requested settled starting voltage.
+
+   Its numerical claims also fail against the [current curve](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:381):
+
+   - **5–8% corresponds to 3566–3640 mV**, not 3550–3600 mV.
+   - Starting at 5–8% and adding 16–23 points produces **21–31%**, approximately **3789–3835 mV** before settling discharge. That does not guarantee an endpoint below 3.80 V and can enter the shoulder.
+   - A low-level one-hour trial does not independently measure the pre-clamp `L_CC_CAP`, although [gate 5 requires it](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:618).
+
+   **Change:** Capture the starting estimate by camera/debug page before connecting USB. Choose duration from the refitted curve with an explicit endpoint margin and rejection rule. Require repeat measurements. Add a separate near-clamp endpoint experiment for `L_CC_CAP`, or explicitly identify it as an extrapolation and remove the claim that B3 measures it.
+
+4. **P2 — The new CV equation can accelerate charging and violate the partial-charge assertion.**
+
+   [The τ formula](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:290) forces every starting level toward 99% over the same from-flat clamp duration.
+
+   With `T_CV = 5.4 h` and `L_cv = 500`, its initial rate is approximately **36.2 percentage points/hour**, faster than B1’s proposed **16–23 points/hour** CC range. After one hour it predicts approximately **758 pm**. For `K_CC = 200 pm/h`, B2’s partial-charge assertion expects **670–730 pm**. Immediate clamp entry from a known partial level is explicitly permitted by the state table.
+
+   Furthermore, fitting one median duration does not validate termination behavior for partial charges and top-ups.
+
+   **Change:** Define numerical behavior and tests separately for unclamped charging, early clamp entry and near-full top-ups. Constrain any intended deceleration explicitly. Calibrate or qualify phase duration by starting condition; do not demand a linear-rise assertion after entering the exponential phase.
+
+5. **P1 — Largest-task attribution still cannot distinguish cumulative stall causes.**
+
+   [D1](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:518) retains the winning task’s attribution count and each task’s maximum. A pass containing **8 ms of display work plus 3 ms of battery work** is attributed to display, even if the battery contribution is what changed a previously subthreshold pass into a stall. Separate maxima cannot reconstruct that co-occurrence.
+
+   The proposed `keyboard_task` “remainder” is also broader than that function: the [main loop](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/quantum/main.c:47) includes protocol, raw-HID and other work outside it.
+
+   **Change:** Retain bounded duration/co-occurrence evidence for slow passes—such as per-task accumulated time within slow passes and a small slow-pass record ring. Use mutually exclusive scopes and name the remainder “unaccounted,” then split it when material. Ensure fast RTC/display paths and deferred EEPROM flushing are covered.
+
+6. **P1 — The typing gate can pass despite lost input or a disabled watchdog.**
+
+   [D2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:535) collects TX queue events only if timing attribution points toward CH582F. The [verification protocol](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:590) requires typing but accepts events based only on loop gaps.
+
+   The driver can [replace queued keyboard-state frames](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c:543) or abandon retransmissions without a ≥25 ms pass. Queue replacement also does not increment the ordinary queue-full drop counter. Recording watchdog degradation without rejecting it permits a soak that starts with [the watchdog disabled](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/watchdog.c:89).
+
+   **Change:** Add a known input sequence and host-side delivered-input check, including missing, duplicate and stuck-key outcomes. Capture transport failures, replacements and UART errors independently of stall attribution. Require a non-degraded watchdog at soak start and end, alongside reset invalidation.
+
+7. **P2 — A1 still treats some censored means as measurements and omits gap sensitivity.**
+
+   [A1’s filter](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:191) excludes means ≥99.5. However, the [15:59 entry](/Users/jdlien/code/ak820-pro/history/battery-2026-10-01-drain/log-20261003-1929.csv:119) has mean **99.36**, maximum **100**, and blank `pack_mv`. Several following entries have the same issue. The host deliberately [withholds voltage whenever any report hits a clamp](/Users/jdlien/code/ak820-pro/hostagent/ak820battery.py:152).
+
+   Flagging knots in the four-hour gap identifies missing evidence but does not quantify how interpolation affects the pooled curve.
+
+   **Change:** For the new fit, either exclude any clamp-containing interval or explicitly model its censoring. Preserve the legacy reproduction path separately. Report sensitivity of gap-dependent knots and scores to alternative monotone interpolations or endpoint bounds.
+
+8. **P2 — C1’s counters still cannot support physical per-field write exclusions.**
+
+   [C1](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:417) attributes physical writes to callers such as `kb_eeconfig`, while counting individual fields only at their setters. [The write-rate gate](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:600) then assumes those counts separate physical milestone writes.
+
+   [`kb_eeconfig_task()` flushes the entire coalesced block](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/kb_eeconfig.c:48). Several fields can share a flush, and a changed field can return to its persisted value before another field causes the actual write.
+
+   **Change:** Carry a mask of fields that differ from the last flushed snapshot into the physical write context. Count mixed-field sessions explicitly and define their treatment in the gate. Do not subtract setter counts from physical write-session counts.
+
+9. **P2 — The gates need executable staging and an instrumentation comparison.**
+
+   [Gate 2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:611) requires the new charging assertions, although the pre-flash-1 work contains only replay infrastructure and B3 has not calibrated the model. Gate 3 requires measured D1 overhead at the build stage, before the diagnostic firmware has run.
+
+   The cited [loop-budget plan](/Users/jdlien/code/ak820-pro/plans/LOOP-BUDGET-PLAN.md:84) also explicitly qualifies the historical “2 ms/pass” attribution and calls for console-off A/B measurements.
+
+   **Change:** Place adapter checks and existing-model regressions before flash 1; place instrumentation A/B qualification immediately after the diagnostic flash and before long soaks; place new-model assertions and mutants after B3, before flash 2. Define the timing measurement and rollback criterion.
+
+10. **P2 — The flash procedure requests timestamps that normal backup output does not contain.**
+
+    [The procedure](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:149) says to confirm both fresh backup timestamps “in its output.” In the running-board path, [`flash.sh`](/Users/jdlien/code/ak820-pro/flash.sh:109) prints dump results, not their timestamps; timestamps are printed for the already-in-bootloader fallback. A lighting failure still continues toward flashing and can leave an old backup available for restoration.
+
+    **Change:** Specify an explicit filesystem timestamp/content check while the script waits for Fn+Esc, and require aborting before bootloader entry on failure. Alternatively, make lighting backup failure fatal and print verified backup metadata.
+
+11. **P2 — The revised evidence table still misidentifies the 7 ms measurement.**
+
+    [The table](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:69) calls `flash_gap_max_ms ≈ 7 ms` the driver’s whole program-state duration. But [`health_loop_tick()`](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/health.c:136) measures the complete interval between housekeeping passes. A flash-marked interval includes preceding DMA drainage and other work; it does not measure `FLASH_PGM` occupancy.
+
+    The datasheet specifies **10 µs typical / 20 µs maximum per 64-bit program operation**, separately from page erasure. :codex-file-citation{path="/Users/jdlien/code/ajazz-ak820-pro/docs/SN32F299_V1.8_EN.pdf" purpose="source"}
+
+    **Change:** Label 7 ms as the observed maximum *flash-marked loop interval*. Measure program, erase and preceding-drain durations separately before assigning the visible blink a duration or mechanism. Keep C4’s erase explanation explicitly hypothetical.
+
+**Verdict: not ready to execute as written.** The preservation and host-analysis steps are usable, but the charging contradictions, calibration gaps, stall attribution and input-delivery gate need correction before the corresponding firmware work proceeds.
