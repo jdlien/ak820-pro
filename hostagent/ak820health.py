@@ -16,8 +16,14 @@ demanded "wired mode" describe pre-fix firmware. The counters accumulate in
 every mode; with no host attached the LCD debug page (Fn+D) is the readout.
 
 Pages 2-4 (--stalls, --rows, --isr) are documented in firmware health.h.
+Protocol 8 (Phase 1b) adds three paged commands, all shown by --stalls:
+HC_LINK (every way the CH582F link can lose a frame), HC_FLASHW (internal-flash
+write sessions by writer and kb field; flash_stats.h) and HC_ACCT (the per-task
+accounting of slow passes; loop_acct.h). --acct-on / --acct-off / --acct-reset
+drive the accounting for the cost A/B (the plan's gate 3).
 
 Usage:  ak820health.py [--json] [--stalls] [--rows] [--isr]
+                       [--acct-on | --acct-off | --acct-reset]
 Exit 0 always when the read works; interpreting the numbers is the caller's
 job (scripts/soak.py does thresholds).
 """
@@ -29,6 +35,7 @@ VID, PID = 0x0C45, 0x8009
 USAGE_PAGE, USAGE = 0xFF60, 0x61
 SET_VALUE, HEALTH_CHANNEL, HC_GET = 0x07, 0x13, 0x01
 HC_GET2, HC_RESET, HC_GET3, HC_GET4 = 0x04, 0x05, 0x06, 0x07   # stall / reset / per-row / ISR pages
+HC_FLASHW, HC_ACCT, HC_LINK = 0x0C, 0x0D, 0x0E                  # protocol 8: Phase 1b diagnostics
 
 FIELDS = ["blit_timeouts", "tx_sent", "tx_timeouts", "tx_drops",
           "rx_malformed", "loop_gap_max_ms", "scan_rate",
@@ -54,6 +61,20 @@ FIELDS3 = ["row_samples", "row_gap_max_ms", "raw_edges", "consumes",
 # timer -- sets the row rate and caps the main loop. Ticks at st_freq per second.
 FIELDS4 = ["isr_entries", "isr_ticks_sum", "isr_ticks_min", "isr_ticks_max",
            "st_freq", "uptime_ms", "row_samples_total", "_reserved4"]
+
+
+# Protocol 8. HC_LINK: every way the CH582F link can lose a frame
+# (ch582_link_stats). "<5I3HH"
+LINK_FIELDS = ["sent", "timeouts", "queue_full", "giveups", "replaced",
+               "uart_overrun", "uart_framing", "uart_parity", "_reserved"]
+# HC_FLASHW: write sessions/programs/erases by writer (flash_stats.h).
+WRITERS = ["other", "kb", "rgb", "via"]
+KB_FIELDS = ["bt", "rtc_period", "lcd_brightness", "clock_mode", "batt_level"]
+RTC_PATHS = {0: "-", 1: "sof", 2: "pcf"}
+# HC_ACCT: scope order is loop_acct.h's enum acct_scope, unaccounted last.
+SCOPES = ["ch582", "battery", "display_hk", "blit_pump", "rtc_task", "rtc_fast",
+          "leds", "health", "eeconfig", "second_edge", "anim", "hk_other",
+          "unaccounted"]
 
 
 def open_device(tries=12, delay=0.25):
@@ -193,6 +214,117 @@ def isr_rates(a, b, wall_s, rows=6):
     }
 
 
+def _txn_page(h, cmd, page, arg=0, timeout_ms=500):
+    """A paged protocol-8 command: [cmd, page, arg] -> [cmd, page, 28 bytes].
+    The reply must answer THIS command (CLAUDE.md: validate every read)."""
+    h.write(bytes([0x00, SET_VALUE, HEALTH_CHANNEL, cmd, page, arg] + [0x00] * 27))
+    rep = h.read(32, timeout_ms)
+    if not rep or len(rep) < 32 or rep[0] != SET_VALUE or rep[1] != HEALTH_CHANNEL or rep[2] != cmd:
+        raise SystemExit(f"no/garbled reply to health command {cmd:#04x} page {page} "
+                         "(protocol 8 firmware needed)")
+    return bytes(rep)
+
+
+def read_link(h):
+    rep = _txn(h, HC_LINK)
+    if rep[2] != HC_LINK or rep[3] < 8:
+        raise SystemExit(f"firmware health proto v{rep[3]}; HC_LINK needs v8 -- flash the current build")
+    d = dict(zip(LINK_FIELDS, struct.unpack_from("<5I3HH", bytes(rep), 4)))
+    d.pop("_reserved")
+    return d
+
+
+def read_flashw(h):
+    p0 = _txn_page(h, HC_FLASHW, 0)
+    p1 = _txn_page(h, HC_FLASHW, 1)
+    p2 = _txn_page(h, HC_FLASHW, 2)
+    v0 = struct.unpack_from("<4I4H2H", p0, 4)
+    v1 = struct.unpack_from("<4I5H", p1, 4)
+    v2 = struct.unpack_from("<HBBH4II", p2, 4)
+    return {
+        "sessions": dict(zip(WRITERS, v0[0:4])),
+        "erases": dict(zip(WRITERS, v0[4:8])),
+        "programs": dict(zip(WRITERS, v1[0:4])),
+        "kb_field_sessions": dict(zip(KB_FIELDS, v1[4:9])),
+        "kb_mixed": v0[8], "kb_unknown": v0[9],
+        "rtc_last_proposed": v2[0], "rtc_last_proposed_path": RTC_PATHS.get(v2[1], v2[1]),
+        "rtc_last_stored_path": RTC_PATHS.get(v2[2], v2[2]), "rtc_last_stored": v2[3],
+        "rtc_proposals": {"sof": v2[4], "pcf": v2[5]},
+        "rtc_stores": {"sof": v2[6], "pcf": v2[7]},
+        "last_erase_uptime_ms": v2[8],
+    }
+
+
+def read_acct(h, op=None):
+    """op: None (read), 'on', 'off' or 'reset' (then read)."""
+    if op in ("on", "off"):
+        p0 = _txn_page(h, HC_ACCT, 0xF0, 1 if op == "on" else 0)
+    elif op == "reset":
+        p0 = _txn_page(h, HC_ACCT, 0xF1)
+    else:
+        p0 = _txn_page(h, HC_ACCT, 0)
+    enabled, n, ring_len, ring_next = p0[4:8]
+    passes, slow, st_hz, uptime, written = struct.unpack_from("<5I", p0, 8)
+    slow_t = list(struct.unpack_from("<7I", _txn_page(h, HC_ACCT, 1), 4)) + \
+             list(struct.unpack_from("<6I", _txn_page(h, HC_ACCT, 2), 4))
+    all_ms = list(struct.unpack_from("<7I", _txn_page(h, HC_ACCT, 3), 4)) + \
+             list(struct.unpack_from("<6I", _txn_page(h, HC_ACCT, 4), 4))
+    top = list(struct.unpack_from("<13H", _txn_page(h, HC_ACCT, 5), 4))
+    ring = []
+    for i in range(ring_len):
+        r = _txn_page(h, HC_ACCT, 16 + i)
+        up = struct.unpack_from("<I", r, 4)[0]
+        if up:
+            ring.append({"uptime_ms": up, "pass_ms": r[8],
+                         "scopes_ms": dict(zip(SCOPES, r[9:9 + n]))})
+    ring.sort(key=lambda e: e["uptime_ms"])
+    return {
+        "enabled": bool(enabled), "passes": passes, "slow_passes": slow,
+        "st_freq": st_hz, "uptime_ms": uptime, "ring_written": written,
+        "slow_ms": {k: round(t * 1000 / st_hz, 2) for k, t in zip(SCOPES, slow_t)},
+        "all_ms": dict(zip(SCOPES, all_ms)),
+        "slow_top": dict(zip(SCOPES, top)),
+        "ring": ring,
+    }
+
+
+def print_phase1b(d):
+    lk = d.get("link")
+    if lk:
+        print("\ntransport (every way the CH582F link can lose a frame):")
+        print(f"  sent {lk['sent']}  timeouts {lk['timeouts']}  queue_full {lk['queue_full']}  "
+              f"giveups {lk['giveups']}  replaced {lk['replaced']}  "
+              f"| uart overrun {lk['uart_overrun']} framing {lk['uart_framing']} parity {lk['uart_parity']}")
+    fw = d.get("flash")
+    if fw:
+        print("\ninternal-flash writes by writer (sessions / programs / erases):")
+        for w in WRITERS:
+            print(f"  {w:6} {fw['sessions'][w]:7} {fw['programs'][w]:8} {fw['erases'][w]:6}")
+        kf = fw["kb_field_sessions"]
+        print("  kb sessions by field: " + "  ".join(f"{k} {v}" for k, v in kf.items()) +
+              f"  mixed {fw['kb_mixed']}  unknown {fw['kb_unknown']}")
+        print(f"  rtc period: last proposed {fw['rtc_last_proposed']} ({fw['rtc_last_proposed_path']}), "
+              f"last stored {fw['rtc_last_stored']} ({fw['rtc_last_stored_path']}); "
+              f"proposals sof {fw['rtc_proposals']['sof']} pcf {fw['rtc_proposals']['pcf']}, "
+              f"stores sof {fw['rtc_stores']['sof']} pcf {fw['rtc_stores']['pcf']}")
+        le = fw["last_erase_uptime_ms"]
+        print(f"  last page erase at uptime {le / 1000:.1f} s" if le else "  no page erase since reset")
+    ac = d.get("acct")
+    if ac:
+        print(f"\nper-task accounting ({'ON' if ac['enabled'] else 'OFF'}): {ac['passes']} passes, "
+              f"{ac['slow_passes']} slow (>= 10 ms)")
+        tot = sum(ac["slow_ms"].values()) or 1
+        print(f"  {'scope':12} {'slow ms':>9} {'share':>6} {'largest':>7} {'all ms':>10}")
+        for k in SCOPES:
+            print(f"  {k:12} {ac['slow_ms'][k]:9.1f} {100 * ac['slow_ms'][k] / tot:5.1f}% "
+                  f"{ac['slow_top'][k]:7} {ac['all_ms'][k]:10}")
+        if ac["ring"]:
+            print(f"  last {len(ac['ring'])} slow passes (uptime s, pass ms: scopes > 0 ms):")
+            for e in ac["ring"]:
+                parts = ", ".join(f"{k} {v}" for k, v in e["scopes_ms"].items() if v)
+                print(f"    {e['uptime_ms'] / 1000:10.1f}  {e['pass_ms']:3} ms: {parts}")
+
+
 def reset_counters(h=None, timeout_ms=500):
     """Clear the resettable counters. Watchdog counters are boot facts and
     survive deliberately -- a reset must not erase evidence that the board
@@ -219,14 +351,35 @@ def main():
     ap.add_argument("--isr", action="store_true",
                     help="row-ISR cost: two page-4 reads 2 s apart -> entries/s, "
                          "mean/min/max us, CPU share")
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--acct-on", action="store_true", help="turn the per-task accounting on, then show it")
+    g.add_argument("--acct-off", action="store_true", help="turn it off (gate 3's A/B), then show it")
+    g.add_argument("--acct-reset", action="store_true", help="clear the accounting only, then show it")
     a = ap.parse_args()
     if a.reset:
         reset_counters()
         print("counters reset (watchdog counters kept -- they are boot facts)")
         return
     d = read_health()
+    op = "on" if a.acct_on else "off" if a.acct_off else "reset" if a.acct_reset else None
+    if op:
+        h = open_device()
+        try:
+            d["acct"] = read_acct(h, op)
+        finally:
+            h.close()
+        a.stalls = True
     if a.stalls:
         d.update(read_stalls())
+        if d.get("version", 0) >= 8:
+            h = open_device()
+            try:
+                d["link"] = read_link(h)
+                d["flash"] = read_flashw(h)
+                if "acct" not in d:
+                    d["acct"] = read_acct(h)
+            finally:
+                h.close()
     if a.rows:
         d.update(read_rows())
     if a.isr:
@@ -261,6 +414,11 @@ def main():
             else:
                 print("\n  no stall >= 25 ms since reset "
                       "(shorter stalls delay a press, they cannot drop it)")
+            if d.get("version", 0) >= 8:
+                print_phase1b(d)
+            else:
+                print(f"\n  (protocol v{d.get('version')}: no transport, flash-writer or "
+                      "per-task pages before v8)")
 
         # NOT nested under --stalls: `--rows` alone must print the row page.
         # It used to be, so `ak820health.py --rows` silently read the page and
