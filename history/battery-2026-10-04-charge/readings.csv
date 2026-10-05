@@ -1,0 +1,2 @@
+time,meter_v,panel,debug_row,note
+2026-10-04 ~20:03,,,0@0,"CHARGE FROM FLAT on 759e265796 -- the FITTED curve's first charge. Booted on USB ~20:02-20:03 after the validation run's pack died (../battery-2026-10-01-drain/). Prediction (../battery-2026-10-01-charge/readings.csv): curve(V - 150 mV) reads low late in constant current (~45% around 4 h in), then the 0.4%/min catch-up to 90.5% once 5C reaches 100. Dump before any flash or slider flip."
