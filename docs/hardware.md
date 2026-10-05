@@ -42,6 +42,17 @@ ioreg -p IOUSB -w0 -l | grep -q '"idProduct" = 28992' && echo BOOTLOADER
 | `ak820ctl info` | interface absent | I/O timeout |
 | fix | re-flash | power cycle |
 
+**Leaving the bootloader without flashing takes a cold power-off** (slider to
+`cable` and unplugged). With the slider on BT, a replug alone leaves it in the
+bootloader, because the pack holds the MCU up. A flip alone, with USB attached,
+does too, because it is at most a brownout. Observed twice, on 2026-10-05 at
+00:29 and 11:58: each exit took a replug and a flip together, and the second
+booted with RSTST `0x11` (POR). The likely reason, not verified:
+`bootloader_jump()` leaves a magic word in RAM (`watchdog.c`), and any reset
+that keeps RAM returns to the bootloader. It used to look easier because the
+slider sat on `cable`, or the pack was flat, so a replug was already a cold
+power-off.
+
 USB product IDs in `ioreg` (decimal): 28992 = `0x7140` bootloader, 32777 =
 `0x8009` QMK. `system_profiler SPUSBDataType` returns empty under the agent
 sandbox — use `ioreg`.
