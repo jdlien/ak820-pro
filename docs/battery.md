@@ -263,10 +263,16 @@ Kept internally in tenths of a percent.
   overstates), and once below the band, so a stale 9x is not restored after a
   pack swap: **six writes a charge cycle**, none while charging. It was every
   whole-percent change (~100 a cycle) until `deef6053dd`.
-  ⚠️ **Every internal-flash write blanks the whole LED matrix for ~7 ms**
-  (interrupts are masked through the program, and the vector table and row ISR
-  live in flash; the Cortex-M0 has no VTOR to move them). JD sees it as a
-  brief whole-board blink; a brightness step reproduces it. Count them with
+  ⚠️ **Every internal-flash write blanks the whole LED matrix for ~7 ms**: the
+  row ISR deliberately de-selects every row while the flash driver is in its
+  program state ([leds.md](leds.md) item 3). Interrupts themselves are masked
+  only for each per-line program window (tens of µs; `hal_efl_lld.c`), because
+  the vector table and ISRs live in flash and the Cortex-M0 has no VTOR; a
+  row left energized across one would flash at ~18×. Page ERASE (1-2 ms per
+  1 KB page, datasheet) is left unmasked to protect the CH582F's UART. JD
+  sees the blank as a brief whole-board blink; a brightness step reproduces it.
+  (An earlier version of this paragraph said interrupts are masked for the
+  whole write. They are not.) Count them with
   `ak820health.py --stalls --json` (`flash_writes`).
 
 Queued fixes (the plan, "Queued"): show "Charge", not the 95 guess, while

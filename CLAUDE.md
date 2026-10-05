@@ -106,7 +106,7 @@ evidence [`docs/battery.md`](docs/battery.md). The level comes from the
 CH582F's `5C` (a linear voltmeter on the pack, within ~10 mV of a meter from
 4.01 to 3.22 V, clamped at ~4.036/3.161 V), never from VDD (a buck-boost output
 pinned at 3.90 V); 0% is the RGB cut at 3400 mV. ⚠️ Every internal-flash write
-blinks the LEDs dark (and, likely, the LCD backlight bright) for ~7 ms. ⚠️ Dump the RAM
+blinks the LEDs dark for ~7 ms (the row ISR's guard, not interrupt masking). ⚠️ Dump the RAM
 battery log before any flash, with the slider on BT. Call JD by name in docs,
 not "the owner".
 

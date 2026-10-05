@@ -652,10 +652,11 @@ log):**
 
 - ✅ **Cut the saved level's flash writes to ~5 a charge cycle** (done in `deef6053dd`: 6 a cycle, simulated). JD sees a
   brief whole-board blink "for a few ms" (09-28 15:50, 09-29 12:33). That is
-  the signature of an internal-flash write: interrupts are masked across the
-  write because the vector table and every ISR live in flash
-  (`efl_ramtext.diff`), and the row ISR's guard blanks every row rather than
-  leave one lit at ~18× (`docs/leds.md`). ⚠️ **It cannot be avoided per
+  the signature of an internal-flash write: the row ISR's guard blanks every
+  row for the whole program state rather than leave one lit at ~18× across a
+  masked per-line program window (`docs/leds.md`; the vector table and every
+  ISR live in flash, `efl_ramtext.diff`). (Corrected 2026-10-04: interrupts
+  are masked only per program line, tens of µs, not across the write.) ⚠️ **It cannot be avoided per
   write:** the SN32F29x is a Cortex-M0, which has no VTOR, so the row ISR
   cannot run from RAM during a program. The only lever is how often we write,
   and the saved level currently writes on every whole-percent change (~100
