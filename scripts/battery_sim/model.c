@@ -672,6 +672,26 @@ static void m_full_fault(void) {
           battery_chg_state(), battery_level_permille());
 }
 
+/* FULL holds once it is reached. The pause before it starts RELAX_S; that
+ * timer must not empty the ring after FULL, or FULL drops until the ring
+ * refills (10-01's replay: 18 s at 1000 reading NONE). */
+static void m_full_holds(void) {
+    synthetic("charging at the clamp, CHRG released (termination), then 30 min on USB");
+    u_target = tgt_clamp;
+    model_from(800, u_follow);
+    run_s(10 * 60);
+    chrg_low = false; vdd_mv = 4470;
+    int seen = 0, dropped = 0;
+    for (int i = 0; i < 30 * 60; i++) {
+        run_s(1);
+        if (battery_chg_state() == ST_FULL) seen = 1;
+        else if (seen) dropped++;
+    }
+    CHECK(seen, "FULL reached");
+    CHECK(dropped == 0, "FULL held: %d seconds not FULL after it", dropped);
+    CHECK(battery_level_permille() == 1000, "1000 at FULL: %u", battery_level_permille());
+}
+
 /* --- Replays: the recorded charges from flat ------------------------------------ */
 
 static uint16_t rr_prev, rr_last_before_full;
