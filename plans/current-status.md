@@ -14,7 +14,36 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## 2026-10-01, morning — RESUME HERE
+## 2026-10-04, night — RESUME HERE
+
+**Next: execute [`BATTERY-GAUGE-REFINE-PLAN.md`](BATTERY-GAUGE-REFINE-PLAN.md)
+top to bottom, starting at its Step 0.** That is Phase 1b: refit the curve on
+both runs, the charging display, the internal-flash writes behind the LED
+blink, and the battery-only stalls. It is at revision 7, after six codex
+rounds (gpt-6-astra, xhigh); round 6's verdict was "ready to execute". Every
+round is verbatim in
+[`review-codex-battery-refine-plan-2026-10-04.md`](review-codex-battery-refine-plan-2026-10-04.md),
+and the dispositions are at the end of the plan. **Phase 2, the power
+ladder, comes after it.** It is note-taking only until JD asks.
+
+- **Run 2, the validation drain, is done.** Unplugged 10-02 11:00:00, the RGB
+  cut came at 13:33:25 10-04 (50.56 h), and the board died at 18:34:54 (from
+  JD's time-lapse). See [`../history/battery-2026-10-01-drain/`](../history/battery-2026-10-01-drain/)
+  and [`../docs/battery.md`](../docs/battery.md).
+- **The 10-04 charge from flat** started ~20:02, with a preservation dump at
+  21:44. ⚠️ **At 22:37 the board was in the bootloader**: JD entered it before
+  bed for an overnight flash, but no firmware was ready, so the log after 21:44
+  is lost. **Check the board's state first:** in `ioreg`, product 28992
+  (`0x7140`) is the bootloader and 32777 (`0x8009`) is running. Then follow the
+  plan's Step 0, which covers both cases.
+- **On the board: `759e265796`** (the fitted curve, whole percent), unless
+  something else has been flashed since. Rollback artifact and build token:
+  the plan's "Firmware, branch, and artifacts".
+- ⚠️ **The keymap and lighting backups date from 09-29 13:57.** `flash.sh`
+  must take fresh ones from the RUNNING board; see the plan's flash
+  procedure.
+
+## 2026-10-01, morning (superseded by the block above)
 
 **The 09-28 drain test is over, and the curve is fitted, committed and NOT yet
 flashed.** Plan and dispositions: [`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md).

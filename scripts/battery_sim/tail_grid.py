@@ -5,8 +5,10 @@ From the knee the model approaches an asymptote A, M = A - (A - L_KNEE) e^(-t/ta
 starting at K_CC (A - L_KNEE = K_CC tau) and reaching 990 exactly T_TAIL after the
 knee. This script solves tau and A at every grid point, reports feasibility, and
 measures what the firmware's table costs: nodes every 60 s in 1/16 pm, linear
-interpolation, the output rounded to whole pm. It also checks the integer
-start-above-the-knee entry. Run it with no arguments; it prints the worst cases.
+interpolation, the output rounded to whole pm (half up, as the C does:
+(x16 + 8) / 16). It also checks the integer start-above-the-knee entry, in X16
+units. Every integer second of every tail is checked, not a sample (codex,
+round 6). Run it with no arguments; it prints the worst cases (~10 s).
 """
 import itertools
 import math
@@ -54,6 +56,11 @@ def m_fw(nodes, s):
     return nodes[i] + (nodes[i + 1] - nodes[i]) * f // NODE_S
 
 
+def show_pm(x16):
+    """Whole pm for display, half up, exactly as the firmware rounds."""
+    return (x16 + 8) // 16
+
+
 def enter(nodes, l0):
     """First tail-clock second whose M >= l0 (pm): node search, then integer solve."""
     target = l0 * FRAC
@@ -79,32 +86,36 @@ def main():
             continue
         tau, a, ts, curve, nodes = table(k, lk, t_h)
         max_nodes = max(max_nodes, len(nodes))
-        for s in range(0, ts, 7):
+        fw = [m_fw(nodes, s) for s in range(ts + 3601)]      # X16, every second
+        for s in range(ts + 1):
             exact = curve(s)
-            fw = m_fw(nodes, s) / FRAC
-            e1 = abs(fw - exact)
-            e2 = abs(round(fw) - exact)
+            e1 = abs(fw[s] / FRAC - exact)
+            e2 = abs(show_pm(fw[s]) - exact)
             if e1 > worst_interp:
                 worst_interp, where['interp'] = e1, (k, tk, r, t_h, s)
             if e2 > worst_out:
                 worst_out, where['out'] = e2, (k, tk, r, t_h, s)
-        # firmware 1-hour rise from any start, against K_CC (pm/h)
-        for s in range(0, max(ts - 3600, 1), 300):
-            rise = (m_fw(nodes, s + 3600) - m_fw(nodes, s)) / FRAC
+        # firmware 1-hour rise from every start second, against K_CC (pm/h)
+        for s in range(ts + 1):
+            rise = (fw[s + 3600] - fw[s]) / FRAC
             if rise - k > worst_rate:
                 worst_rate, where['rate'] = rise - k, (k, tk, r, t_h, s)
-        # integer entry above the knee: M at entry >= L0, and by how much
+        # past T_TAIL the index saturates: exactly 990, no read past the table
+        assert fw[ts] == fw[ts + 3600] == 990 * FRAC, (k, tk, r, t_h)
+        # integer entry above the knee, in X16: the FIRST second at or above L0
         for l0 in range(int(math.ceil(lk)), 990):
             s = enter(nodes, l0)
-            over = m_fw(nodes, s) / FRAC - l0
-            assert over >= 0, (k, tk, r, t_h, l0)
+            assert fw[s] >= l0 * FRAC, (k, tk, r, t_h, l0)
+            assert s == 0 or fw[s - 1] < l0 * FRAC, (k, tk, r, t_h, l0)
+            over = (fw[s] - l0 * FRAC) / FRAC
             if over > worst_entry:
                 worst_entry, where['entry'] = over, (k, tk, r, t_h, l0)
     print(f"grid points {n}, infeasible {infeasible}, max table length {max_nodes}")
-    print(f"interpolated 1/16-pm table vs curve: worst {worst_interp:.3f} pm at {where.get('interp')}")
-    print(f"  ... with the output rounded to whole pm: worst {worst_out:.3f} pm at {where.get('out')}")
-    print(f"firmware 1 h rise above K_CC: worst +{worst_rate:.3f} pm at {where.get('rate')}")
-    print(f"entry above the knee overshoots L0 by at most {worst_entry:.3f} pm at {where.get('entry')}")
+    print(f"interpolated 1/16-pm table vs curve: worst {worst_interp:.6f} pm at {where.get('interp')}")
+    print(f"  ... shown in whole pm, half up: worst {worst_out:.6f} pm at {where.get('out')}")
+    print(f"firmware 1 h rise above K_CC, every start second: worst +{worst_rate:.6f} pm at {where.get('rate')}")
+    print(f"entry above the knee (X16, first crossing): overshoot at most {worst_entry:.6f} pm at {where.get('entry')}")
+    print("index saturation past T_TAIL: exactly 990 at every grid point")
     k, tk, r, t_h = 160, 4.1, 30, 5.35
     tau, a, ts, _, _ = table(k, k * tk - r, t_h)
     print(f"round 3's set: L_KNEE {k*tk-r:.1f}, tau {tau:.5f} h, A {a:.3f}, "

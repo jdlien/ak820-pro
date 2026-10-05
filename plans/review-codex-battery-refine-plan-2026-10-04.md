@@ -420,3 +420,40 @@ Model gpt-6-astra, reasoning xhigh, read-only, against commit `d3ed566`.
    **Change:** Retire that equivalent mutant. Specify saturation of the table index independently of the continuing tail clock, and test missing end-of-table bounds and incorrect OVERRUN timing.
 
 Verification was read-only: source/data inspection, ELF inspection, and numerical checks; no firmware build or hardware execution.
+
+---
+
+# Round 6 (2026-10-04), on revision 6 -- verbatim
+
+Model gpt-6-astra, reasoning xhigh, read-only, against commit `608e4f6`.
+
+**Verdict: ready to execute. No P1 blockers remain.** Two P2 corrections can be handled during execution.
+
+| Round-5 finding | Revision-6 status | Verification |
+|---|---|---|
+| **R5-1 — v5 wire layout** | **Resolved** | [HC_BATTLOG]( /Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/hid_protocol.c:598) passes `&data[3]`. Removing the period from [the existing serializer](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:790) leaves **11 header bytes**, so **3 + 11 + 18 = 32**. The written-count moves to packet bytes 12–13; the entry starts at 14. [HC_BATTCFG’s period](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:819) is at output bytes 6–7, meaning packet bytes **10–11**. The [current host](/Users/jdlien/code/ak820-pro/hostagent/ak820battery.py:130) rejects v5 and uses the old offsets; the plan explicitly requires coordinated changes, version-specific tests and guarded serialization. |
+| **R5-2 — gate 8** | **Partly resolved; remaining issue is P2** | The restricted mathematical condition is sound: ≥64 previous-entry reports covers the ring; neither entry containing 100 excludes clamped estimates; excluding FULL/handover/supply changes removes exceptional transitions. Flooring `level / 5` preserves the necessary upper bound. [Latched bits 3–6](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:528) retain LOST/OVERRUN even if FULL follows within the same entry. However, existing log extrema can omit reports after accumulator saturation: **R6-2**. |
+| **R5-3 — tail arithmetic** | **Partly resolved** | Running `tail_grid.py` reproduces every quoted figure: **900 feasible sets, 337 nodes, 0.173/0.607 pm errors, zero entry overshoot**. The 1/16-pm nodes, floor interpolation, ceiling-based entry search and saturated lookup are coherent. Its sampling understates the actual maxima: **R6-1**. |
+| **R5-4 — equivalent mutant** | **Resolved** | [B2](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:735) retires the redundant cap mutant and tests unsaturated indexing, incorrect OVERRUN clocks and node-only entry, including ASan/UBSan. The lookup saturates independently of the continuing tail clock. |
+
+**P2 corrections during execution**
+
+1. **R6-1 — P2: The checker’s reported maxima are sampled, and rounding/entry assertions need explicit units.**
+
+   **Evidence:** [tail_grid.py:82](/Users/jdlien/code/ak820-pro/scripts/battery_sim/tail_grid.py:82) checks errors every seven seconds; [line 92](/Users/jdlien/code/ak820-pro/scripts/battery_sim/tail_grid.py:92) checks rises every 300 seconds. Scanning **every integer second** across all 900 sets gives:
+   
+   - Maximum interpolation error: **0.180470 pm**, not 0.173.
+   - Maximum whole-pm error using Python’s ties-to-even `round`: **0.656810 pm**, not 0.607.
+   - All tail-start seconds still satisfy the one-hour rise bound. Both errors remain within [B2’s 0.7-pm acceptance](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:659).
+
+   Exact entry and a strictly lower predecessor hold on the grid **in X16 units**. They do not describe rounded output: at round 3’s parameters, `L0=627` enters at second 23; second 22 is **626.9375**, already rounded to **627**.
+
+   **Change:** Check every second, update the figures, specify the tie-breaking rule shared with C, and assert first crossing against unrounded X16 values.
+
+2. **R6-2 — P2: Gate 8 must account for incomplete extrema after log saturation.**
+
+   **Evidence:** [battery.c:332](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:332) updates count, minimum and maximum only while the 16-bit sum accepts the report. **661 reports of 99** produce sum **65439**; subsequent reports of **100** are omitted from the log but enter the estimator. Thus logged `c5_max=99` does not always establish [gate 8’s no-100 condition](/Users/jdlien/code/ak820-pro/plans/BATTERY-GAUGE-REFINE-PLAN.md:1078).
+
+   **Change:** Maintain extrema for every accepted sensor report independently of sum saturation, or mark incomplete entries and exclude them from this check. Add a saturation fixture. This is nonblocking for the recorded runs: their maximum report count is **344**, comfortably below the overflow region.
+
+Verification was read-only: source/data inspection, the committed checker, and independent numerical checks. No firmware build or hardware execution.

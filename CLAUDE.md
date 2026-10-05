@@ -97,7 +97,18 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-10-01)
+## Current state (2026-10-04)
+
+**Next: execute [`plans/BATTERY-GAUGE-REFINE-PLAN.md`](plans/BATTERY-GAUGE-REFINE-PLAN.md)**
+(Phase 1b: the refit, the charging display, the flash-write blink, the
+battery-only stalls). It is at revision 7, and six codex rounds ended "ready
+to execute". Resume from [`plans/current-status.md`](plans/current-status.md).
+Run 2's validation drain is done: 50.56 h to the RGB cut, then 5 h of reserve.
+The fitted curve `759e265796` is on the board. ⚠️ On 10-04 at 22:37 the board
+was left in the bootloader. Check `ioreg` for 28992 (`0x7140`) before
+assuming anything.
+
+## Earlier state (2026-10-01)
 
 **The battery gauge's drain test is done and the curve is fitted, committed,
 not yet flashed.** Resume from [`plans/current-status.md`](plans/current-status.md);

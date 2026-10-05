@@ -1,6 +1,6 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-04): revision 6, after codex's fifth review
+**Status (2026-10-04): revision 7, after codex's sixth review
 ([every round verbatim](review-codex-battery-refine-plan-2026-10-04.md);
 dispositions at the end). Not started.** Phase 1 (the gauge) is built, flashed, and checked on
 two full discharges. This plan refines it on what those runs measured.
@@ -45,6 +45,19 @@ on USB, so a dump costs nothing.
    LED goes out**, so a completed entry records the termination. The 09-28 and
    10-01 charges from flat took ~9.5 h and ~9.4 h, so expect it ~05:30 10-05.
    Record the LED-out time as observed (JD) separately from the log.
+
+   ⚠️ **2026-10-04 22:37: the board was found in the bootloader** (`0C45:7140`).
+   JD entered it before bed, for an overnight flash that is not coming, so the
+   RAM log after 21:44 is lost (`readings.csv`). It was suggested that JD cold
+   power-cycle it back to running (slider to cable, unplug ~10 s, slider to BT,
+   replug). Then a fresh log covers the sensor ceiling and the termination, and
+   this dump still applies. Check which happened before relying on it:
+   - **If the board is running:** take the dump. Its log starts mid-charge at the
+     reboot. Note that in `readings.csv`; B1 uses its timings from the reboot on.
+   - **If it stayed in the bootloader all night:** there is no log of this
+     charge's end. The 10-04 charge then gives B1 only its start, its first 1.7 h,
+     and JD's LED-out time if he saw it. `T_TAIL` is the median of two, stated as
+     such.
 3. Also capture the health counters before anything resets them:
    `venv/bin/python3 hostagent/ak820health.py --stalls --json` and
    `ak820-agent/target/release/ak820 health --crash --json` (the Rust CLI is
@@ -361,14 +374,19 @@ the 10 Hz path):
   - **Arrival is a time:** `t_tail ≥ T_TAIL`, never "`M` = 990". OVERRUN keys on
     the clock.
   - **Measured, not assumed:** `scripts/battery_sim/tail_grid.py` checks all of
-    this over B1's grid. Its 2026-10-04 run, the degenerate corner included:
+    this over B1's grid, **at every integer second of every tail**, not a sample
+    (codex, round 6). Its 2026-10-04 run, the degenerate corner included:
     - all 900 points feasible, at most 337 nodes;
-    - the interpolated 1/16 pm table is within **0.173 pm** of the curve, and
-      **0.607 pm** with the output rounded to whole pm;
-    - the firmware's 1 h rise never exceeds `K_CC` from any start, on the integer
-      path;
-    - entry above the knee is exact: `M` at the entry second equals `L0`, and the
-      second before is below it.
+    - the interpolated 1/16 pm table is within **0.180 pm** of the curve, and
+      **0.601 pm** shown in whole pm. The rounding is **half up, `(x16 + 8) / 16`,
+      the same rule in the C and the checker**;
+    - the firmware's 1 h rise never exceeds `K_CC` from any start second, on the
+      integer path;
+    - past `T_TAIL` the saturated index holds exactly 990;
+    - entry above the knee is the **first crossing in X16 units**: `M_x16` at the
+      entry second is ≥ `L0 × 16`, and the second before is < `L0 × 16`. The
+      *displayed* predecessor can already round to `L0`, so this is not
+      asserted on rounded output.
 
     The rate bound, never faster than `K_CC`, is a property of the analytical
     curve (it starts at `K_CC` and decelerates). The firmware tests use these
@@ -534,11 +552,19 @@ pause is timed from that moment and ends when `charging_now()` returns.
     | 4 | OVERRUN entered during the period |
     | 5 | a handover during the period |
     | 6 | the firmware's self-check: a rise ended above the then-fresh `U` (should never set; it catches integration bugs the simulator cannot see) |
-    | 7 | spare |
+    | 7 | the period's report sum or count saturated, so `c5_mean` and `c5_n` cover only the reports before it |
 
     These are latched over the period, like `flags_any`, so a LOST followed by
     FULL inside one entry still shows. All eight `flags` bits are taken
     (`battery.c` 80-88), so the bits cannot go there.
+
+    **v5 also keeps `c5_min`/`c5_max` for every accepted report.** Today
+    (`battery.c` ~332) they update only while the 16-bit sum accepts the
+    report, so after ~661 reports of 99 a later 100 reaches the estimator but
+    not the log (codex, round 6). Only the sum and count saturate, and they set
+    bit 7. The recorded runs peak at 344 reports a period, far from that. B2
+    has a fixture: 661 reports of 99, then 100s, must log `c5_max` 100 with
+    bit 7 set.
 
   **The wire must be repacked, because the reply is full.** `HC_BATTLOG` answers
   in place at `&data[3]` (`hid_protocol.c` ~598). Today that is 3 + 13 header +
@@ -656,10 +682,10 @@ test's output. The rest replay recorded data.
   - the firmware path (the generated table through `battery.c`'s lookup): from
     any `L0`, the 1 h rise ≤ `K_CC` + 1 pm;
   - the table ends at exactly 990 × 16, at `T_TAIL` rounded to the minute;
-  - the displayed whole-pm `M` is within 0.7 pm of the curve (measured worst
-    0.607);
-  - entry above the knee: `M` at the entry second equals `L0`, and the second
-    before is below it;
+  - the displayed whole-pm `M`, rounded half up, is within 0.7 pm of the curve
+    (measured worst 0.601);
+  - entry above the knee, in X16 units: `M_x16` at the entry second is
+    ≥ `L0 × 16`, and the second before is < `L0 × 16`;
   - **past `T_TAIL`** the clock keeps counting while `M` stays at exactly 990.
     The index saturates at `N`, with no read past the table;
   - **OVERRUN timing:** from the knee, and from starts above it, OVERRUN fires
@@ -1075,9 +1101,10 @@ Staged, so each can actually be run when it comes due.
    - **no rise past the evidence**, as an independent check from the log, applied
      **only where it is a necessary condition**. That means entry *i* where:
      - the logged level rose (`level_i > level_{i−1}`);
-     - **neither entry *i* nor *i − 1* has a report at 100**, so every estimate
-       in the window is below the clamp (all reports ≤ 99 give an estimate
-       ≤ 99.00 < 99.50) and `U` applied to every rise;
+     - **neither entry *i* nor *i − 1* has a report at 100** (`c5_max` < 100;
+       complete in v5 even when the sum saturates), so every estimate in the
+       window is below the clamp (all reports ≤ 99 give an estimate ≤ 99.00 <
+       99.50) and `U` applied to every rise;
      - **entry *i − 1* holds ≥ 64 reports**, so at every moment of entry *i* the
        64-report ring holds only reports from *i* and *i − 1*;
      - no FULL, no handover and no supply change inside entry *i* (`chg` bits
@@ -1236,3 +1263,19 @@ R5-2.
 | R5-2 | P1: gate 8's rise check is not a necessary condition at a clamp exit, or when sparse fresh reports span more than two entries; LOST could fall between entries | **Accepted.** The check now applies only where it is sound: no report at 100 in either entry, ≥ 64 reports in the previous one, and no FULL, handover or supply change. Both of codex's counterexamples are excluded. `chg` latches LOST, OVERRUN, handover, and a firmware self-check over each period. Gate 8. |
 | R5-3 | P2: integer-table accuracy and the rate bound were overstated; the start-index search quantized | **Accepted, verified.** Nodes are now in 1/16 pm, with the index saturating apart from the clock and an exact in-segment entry. The figures come from a committed checker, `scripts/battery_sim/tail_grid.py`: 0.173 pm interpolated, 0.607 pm rounded to whole pm, 1 h rise never above `K_CC`, entry exact. The rate bound is stated on the analytical curve; the firmware tests use the measured tolerances. B, B2. |
 | R5-4 | P2: with a table ending at 990, the removed-cap mutant is equivalent | **Accepted.** That mutant is retired. New mutants: an unsaturated index (also caught under ASan/UBSan), OVERRUN keyed on `M` or on session time, and node-only entry. B2. |
+
+### Round 6 — codex, 2026-10-04, on revision 6 ([verbatim](review-codex-battery-refine-plan-2026-10-04.md#round-6-2026-10-04-on-revision-6----verbatim))
+
+**Codex's verdict: ready to execute, no P1 blockers.** It counted R5-1 and R5-4
+resolved, and R5-2 and R5-3 resolved but for a P2 each. It reproduced every
+`tail_grid.py` figure, and confirmed the v5 offsets: written count at packet
+bytes 12-13, the entry from 14, and `HC_BATTCFG`'s period at packet bytes
+10-11. Both P2s are fixed in revision 7 rather than left to execution:
+
+| # | finding (short) | disposition |
+|---|---|---|
+| R6-1 | P2: the checker sampled (every 7 s and 300 s), so its maxima were low; rounding and entry needed units | **Accepted, verified.** `tail_grid.py` now checks every integer second, with C's half-up rounding `(x16 + 8) / 16`, and asserts saturation past `T_TAIL`. It gives 0.180 pm interpolated (codex: 0.180470) and 0.601 pm displayed. Codex's 0.657 used Python's ties-to-even; the C rounds half up. Entry is asserted as the first crossing in X16 units, not on rounded output. B, B2. |
+| R6-2 | P2: the log's extrema stop updating when the 16-bit sum saturates, so `c5_max` < 100 does not prove no 100 | **Accepted, verified** (`battery.c` ~332). v5 keeps the extrema for every accepted report, and bit 7 of `chg` marks a saturated sum or count. B2 has a fixture. The recorded runs peak at 344 reports a period. |
+
+**The plan is ready for a new session to execute.** Step 0 now records the
+2026-10-04 22:37 bootloader event and what the charge's end can still give B1.
