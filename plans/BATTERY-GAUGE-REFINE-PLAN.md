@@ -1,8 +1,10 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-05, ~01:30): executing.** Gate 1 (host) is met, and flash 1 is
-built and in its codex implementation review (gate 2). See "As built", just
-before the review dispositions. Revision 7 came after codex's sixth review
+**Status (2026-10-05, ~02:00): executing.** Gates 1 and 2 are met: flash 1
+(`4293607b4b`, token `0xa7adc2d1`) is built clean and codex said "flash"; it
+waits for JD at the keyboard. Flash 2's host work is under way ahead of B3 (the
+model with a placeholder tail; B2 done but for B3's parameters). See "As
+built", just before the review dispositions. Revision 7 came after codex's sixth review
 ([every round verbatim](review-codex-battery-refine-plan-2026-10-04.md);
 dispositions at the end). Phase 1 (the gauge) is built, flashed, and checked on
 two full discharges. This plan refines it on what those runs measured.
@@ -1278,6 +1280,56 @@ health and vitals 12 min after CHRG releases. Records:
 - **Tools for the measurements** (`3a1686e`): `scripts/typing_check.py` (the
   delivered-input check), `scripts/board_snapshot.sh` (one labelled
   before/after reading) and `scripts/acct_ab.py` (gate 3).
+
+### Flash 2 so far (host, ahead of B3)
+
+Branch `phase1b-flash2` of the firmware, local only, on top of `4293607b4b`:
+`5706451217` (B's model, the re-seat after `RELAX_S`, log v5), `0338829109` (M,
+the charging state and the curve exposed for the simulator), `cc337781df` (two
+fixes below), `f9a794dad5` (`hid_protocol.c`'s battery comments for v5). The
+tail is a **placeholder** until B3: `K_CC` 190, `L_KNEE` 775, `T_TAIL` 313 min.
+
+- **Two bugs the scenarios found, fixed in `cc337781df`:**
+  - a brief replug between the unplug and the re-seat (no new session) left
+    the re-seat owed with no `RELAX_S` running, so it never resolved
+    (`m_reseat_replugs`). The unplug now restarts `RELAX_S` whenever a re-seat
+    is owed;
+  - FULL closing the model left the pause's `RELAX_S` pending. At its end the
+    ring was emptied and FULL dropped until it refilled: 10-01's replay read
+    1000 with the state NONE for 18 s. FULL now cancels it (`m_full_holds`
+    fails without the fix, 12 s, and passes with it).
+- **B2, all of it but B3's numbers** (parent `39d92fd`, `bab08fe`, `11f6965`):
+  - `run.sh` against a v5 `battery.h` runs the 38 model scenarios, the three
+    replays, and flash 1's 31 scenarios (four of them now check v5's intended
+    behaviour: the 990 cap, "Charge" with no trusted start, the re-seat after
+    `RELAX_S`, v5's header). 72 ok; then the model's scenarios again under ASan
+    and UBSan, ok. Against flash 1 it is unchanged: 35 ok, the baselines equal.
+  - **The firmware path over B1's whole grid**: `tail_fw.c` #includes
+    `battery.c` verbatim; `tail_fw_grid.py` generates the header with the real
+    generator at each of the 900 points (and the shipped one) and requires
+    `tail_x16`, `tail_entry_s` and the model's trajectories to equal
+    `tail_grid.py`'s construction exactly. On top: the X16 entry, exactly 990
+    past `T_TAIL`, a 1 h rise ≤ `K_CC` + 1 from every start second, ≤ 0.7 pm
+    from the curve. It times OVERRUN through the whole charging path from
+    starts below, at and above the knee, ±1 s. **901 points ok, none
+    infeasible.** Starts above ~900 cannot be made on the pack, so there the
+    entry and the clock are checked by the lookup alone.
+  - **The mutants table** (`mutants.py`): every catching test passes unmutated,
+    then **12 of 12 mutants are caught** by the test the plan names.
+  - The generator now rounds `L_KNEE` to whole pm before building the table,
+    so its first node is the firmware's knee exactly (a fractional knee such as
+    682.5 left a half-pm seam). The placeholder's table is unchanged.
+- **One display edge, left as is:** in a short pause with the level unknown
+  (UNKNOWN-CHG or LOST), the text reads "USB", not "Charge": it follows the
+  charger pin, as today. It is accurate (the charger is not charging); the
+  state table's "Charge until a `PAUSE_S` pause" describes the level, which
+  stays unknown.
+- **Left for flash 2:** B3's `K_CC` and `RELAX_S`, then
+  `battery_charge.py --tail K_CC L_KNEE T_TAIL --header .../battery_tail.h` and
+  `run.sh`, `tail_fw_grid.py`, `mutants.py` again (if `K_CC` falls outside
+  160-230, widen the grid first); C2 and the D fix from flash 1's soaks; the
+  final map's RAM (heap was 5360 B on flash 1, and v5's log takes 1440); codex's
+  gate-7 review.
 
 ---
 
