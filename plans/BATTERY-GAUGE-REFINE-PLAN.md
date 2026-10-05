@@ -1358,10 +1358,15 @@ began at ~17:40, at the `battery-soak-start` snapshot.
 
 ### Flash 2 so far (host, ahead of B3)
 
-Branch `phase1b-flash2` of the firmware, local only, on top of `4293607b4b`:
-`5706451217` (B's model, the re-seat after `RELAX_S`, log v5), `0338829109` (M,
-the charging state and the curve exposed for the simulator), `cc337781df` (two
-fixes below), `f9a794dad5` (`hid_protocol.c`'s battery comments for v5). The
+Branch `phase1b-flash2` of the firmware, local only, **rebased 10-05 ~17:50
+onto flash 1b (`97a24c6e20`)**: `7e6b850d55` (B's model, the re-seat after
+`RELAX_S`, log v5), `3665f33fd3` (M, the charging state and the curve exposed
+for the simulator), `d4d46e24a1` (two fixes below), `99128c48ca`
+(`hid_protocol.c`'s battery comments for v5). Before the rebase they were
+`5706451217`, `0338829109`, `cc337781df` and `f9a794dad5`, the hashes the
+records below cite. Every host check passed again after it: `run.sh` 73 ok
+(with the sanitizer pass), mutants 12 of 12, the grid's 901 points,
+`diag_sim`, `ch582_sim`. The
 tail is a **placeholder** until B3: `K_CC` 190, `L_KNEE` 775, `T_TAIL` 313 min.
 
 - **Two bugs the scenarios found, fixed in `cc337781df`:**
