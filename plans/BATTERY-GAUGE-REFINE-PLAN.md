@@ -1423,3 +1423,9 @@ It found no ≥ 25 ms path in the camera page, and E5's hardware check stands.
 | 6 | P2: the 10-04 baseline could pass with no numeric level; the baseline must not move with flash 2 | **Accepted.** A numeric level from 20:32 on, and 18.1% ±10 pm at 21:42. The baselines run against flash 1's `battery.c` pinned from git (`dd5c94fdd9`), and their output must equal `scripts/battery_sim/baseline-dd5c94fdd9.txt`. |
 | 7 | P3: the reconstruction missed its sum by up to 3 counts | **Accepted, verified** (its 11:36 and 11:46 figures). The nudging sweeps to an exact sum, and every interval asserts count, sum, extrema and monotonicity. |
 | 8 | P3: `%.0s` fed doubles | **Accepted.** Removed. |
+
+**Verification pass** (same file, appended verbatim). Codex counted findings 2-6
+and 8 resolved, and 7 partly resolved: the reconstruction still capped an
+interval at 2,000 reports, and a one-report or constant interval skipped the
+assertions. **Verdict: "flash".** That last P3 is fixed anyway: a cap of 4,096
+that fails loudly when exceeded, and the constant case asserts its sum (`3e8c1c7`).

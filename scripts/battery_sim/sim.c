@@ -96,6 +96,9 @@ static int jitter(void) {   /* -1, 0 or +1, deterministic */
     return (int)((rng >> 16) % 3u) - 1;
 }
 static int c5_jitter;         /* when set, each report carries +-1 of noise */
+/* When set, each scheduled report's value comes from here instead of c5 (the
+ * charging-model scenarios drive U this way); return > 100 for no report. */
+static int (*c5_src)(void);
 
 /* One `5C` frame, as the CH582F driver hands it over. */
 static void deliver(uint8_t v) {
@@ -112,7 +115,10 @@ static void tick(void) {
     if (mv && vdd_dip_mv && (now_ms / 100u) % 10u == 0) mv -= vdd_dip_mv;
     fake_adc.ADB = mv > 0 ? (uint32_t)((2000u * 4096u + (unsigned)mv / 2u) / (unsigned)mv) : 0u;
     if (chrg_pulse) chrg_low = ((now_ms / 100u) % (unsigned)chrg_pulse) < (unsigned)(chrg_pulse / 2 + 1);
-    if (c5 <= 100 && now_ms % 2500u == 0) {   /* ~2.6 s measured on the board */
+    if (c5_src && now_ms % 2500u == 0) {
+        int v = c5_src();
+        if (v >= 0 && v <= 100) deliver((uint8_t)v);
+    } else if (c5 <= 100 && now_ms % 2500u == 0) {   /* ~2.6 s measured on the board */
         /* Jitter is around the true value, and at the top clamp that value is
          * far above 100: a pack at 4.1 V cannot read 99. Only below it. */
         int v = c5 + ((c5_jitter && c5 < 100) ? jitter() : 0);
@@ -678,6 +684,7 @@ typedef struct {
 } rp_row_t;
 static rp_row_t rp[RP_MAX];
 static int      rp_n;
+static void   (*rp_second_hook)(void);   /* called once a simulated second during a replay */
 static int      rp_synth_lines;
 static int      rp_writes_before_full;   /* saved-level writes before the first FULL */
 static bool     rp_seen_full;
@@ -771,13 +778,22 @@ static bool rp_load(const char *path) {
  * mean, then nudged by single counts so the sum matches it exactly. A ramp,
  * not a constant at the mean: inside a charging interval the reports climb,
  * and the estimate at its end is near the max, not the mean. */
+#define RP_VALS_MAX 4096   /* a 10-minute period has held at most 344 reports */
 static int rp_values(const rp_row_t *r, bool ascending, uint8_t *v) {
     int n = r->c5_n;
     if (n <= 0 || r->c5_mean < 0) return 0;
-    if (n > 2000) n = 2000;
+    CHECK(n <= RP_VALS_MAX, "%s: %d reports in one interval, more than the reconstruction holds", r->time, n);
+    if (n > RP_VALS_MAX) return 0;
     int  lo = r->c5_min, hi = r->c5_max;
     long sum = lround(r->c5_mean * n);
-    if (n == 1 || lo == hi) { for (int i = 0; i < n; i++) v[i] = (uint8_t)lo; return n; }
+    if (n == 1 || lo == hi) {
+        /* One report, or every report equal: the only reconstruction there is,
+         * and it must still match the logged mean (codex, gate 2 check). */
+        for (int i = 0; i < n; i++) v[i] = (uint8_t)lo;
+        CHECK(lo == hi && sum == (long)lo * n, "%s: %d report(s) at %d cannot make sum %ld (max %d)", r->time, n, lo,
+              sum, hi);
+        return n;
+    }
     double target = (double)sum / n, glo = 1e-3, ghi = 1e3, g = 1.0;
     for (int it = 0; it < 100; it++) {          /* the mean falls as g rises */
         g = sqrt(glo * ghi);
@@ -819,7 +835,7 @@ static int rp_values(const rp_row_t *r, bool ascending, uint8_t *v) {
  * and the reports, evenly spaced. */
 static void rp_play(int i) {
     rp_row_t *r = &rp[i];
-    static uint8_t vals[2000];
+    static uint8_t vals[RP_VALS_MAX];
     vdd_mv = r->vdd_avg; vdd_dip_mv = r->vdd_avg - r->vdd_min;
     bool prev_chg = i ? rp[i - 1].chg_end : r->chg_any;
     bool chg_first = r->chg_any && (prev_chg || !r->chg_end) ? true : r->chg_end;
@@ -832,7 +848,10 @@ static void rp_play(int i) {
     int ticks = r->dur_s * 10;
     if (!r->v34) {
         c5 = (uint8_t)r->c5_single; chrg_low = r->chg_end;
-        for (int t = 0; t < ticks; t++) tick();
+        for (int t = 0; t < ticks; t++) {
+            tick();
+            if (rp_second_hook && t % 10 == 9) rp_second_hook();
+        }
     } else {
         c5 = 0xFF;   /* reports come only from the schedule below */
         bool asc = !i || rp[i - 1].c5_mean < 0 || r->c5_mean >= rp[i - 1].c5_mean;
@@ -845,6 +864,7 @@ static void rp_play(int i) {
             chrg_low = (t < ticks / 2) ? chg_first : chg_second;
             while (next < n && (long)(next * 2 + 1) * ticks / (2L * n) <= t) deliver(vals[next++]);
             tick();
+            if (rp_second_hook && t % 10 == 9) rp_second_hook();
         }
     }
     r->r_level = battery_level_permille();
@@ -1000,6 +1020,10 @@ static void replay_selfcheck(const char *path) {
     CHECK(abs(worst) <= 10, "the replay lands within 1 point of the logged level: worst %+d pm", worst);
 }
 
+#if BATTERY_LOG_VERSION >= 5
+#include "model.c"   /* Phase 1b, B2: the charging model's scenarios (flash 2) */
+#endif
+
 static void stale(void) {
     vdd_mv = 3900; c5 = 60;
     run_s(40);
@@ -1051,6 +1075,48 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "warn_brief_plug"))    warn_brief_plug();
     else if (!strcmp(s, "warn_after_charge"))  warn_after_charge();
     else if (!strcmp(s, "warn_cfg_rearms"))    warn_cfg_rearms();
+#if BATTERY_LOG_VERSION >= 5
+    else if (!strcmp(s, "m_flat_boundary"))       m_flat_boundary();
+    else if (!strcmp(s, "m_flat_boundary_above")) m_flat_boundary_above();
+    else if (!strcmp(s, "m_unknown_start"))       m_unknown_start();
+    else if (!strcmp(s, "m_partial_below_knee"))  m_partial_below_knee();
+    else if (!strcmp(s, "m_early_clamp"))         m_early_clamp();
+    else if (!strcmp(s, "m_topup_near_full"))     m_topup_near_full();
+    else if (!strcmp(s, "m_just_full"))           m_just_full();
+    else if (!strcmp(s, "m_delayed_termination")) m_delayed_termination();
+    else if (!strcmp(s, "m_delayed_unplug"))      m_delayed_unplug();
+    else if (!strcmp(s, "m_log_v5"))              m_log_v5();
+    else if (!strcmp(s, "m_log_saturated"))       m_log_saturated();
+    else if (!strcmp(s, "m_ceil_hold30")) m_ceil_hold30();
+    else if (!strcmp(s, "m_ceil_60_29")) m_ceil_60_29();
+    else if (!strcmp(s, "m_ceil_60_30")) m_ceil_60_30();
+    else if (!strcmp(s, "m_ceil_clamp_hold")) m_ceil_clamp_hold();
+    else if (!strcmp(s, "m_ceil_clamp_entry")) m_ceil_clamp_entry();
+    else if (!strcmp(s, "m_ceil_clamp_exit")) m_ceil_clamp_exit();
+    else if (!strcmp(s, "m_reports_lost_9")) m_reports_lost_9();
+    else if (!strcmp(s, "m_reports_lost_10")) m_reports_lost_10();
+    else if (!strcmp(s, "m_pause_short")) m_pause_short();
+    else if (!strcmp(s, "m_pause_before")) m_pause_before();
+    else if (!strcmp(s, "m_pause_after")) m_pause_after();
+    else if (!strcmp(s, "m_pause_relaxing")) m_pause_relaxing();
+    else if (!strcmp(s, "m_pause_missing")) m_pause_missing();
+    else if (!strcmp(s, "m_pause_from_lost")) m_pause_from_lost();
+    else if (!strcmp(s, "m_pause_from_unknown")) m_pause_from_unknown();
+    else if (!strcmp(s, "m_pause_then_unplug")) m_pause_then_unplug();
+    else if (!strcmp(s, "m_slow_charge")) m_slow_charge();
+    else if (!strcmp(s, "m_reseat_up")) m_reseat_up();
+    else if (!strcmp(s, "m_reseat_down")) m_reseat_down();
+    else if (!strcmp(s, "m_reseat_clamp")) m_reseat_clamp();
+    else if (!strcmp(s, "m_reseat_unknown")) m_reseat_unknown();
+    else if (!strcmp(s, "m_reseat_lost")) m_reseat_lost();
+    else if (!strcmp(s, "m_reseat_missing")) m_reseat_missing();
+    else if (!strcmp(s, "m_reseat_replugs")) m_reseat_replugs();
+    else if (!strcmp(s, "m_reseat_0929")) m_reseat_0929();
+    else if (!strcmp(s, "m_full_fault")) m_full_fault();
+    else if (!strcmp(s, "m_replay_0928"))  m_replay_0928(argc > 2 ? argv[2] : "");
+    else if (!strcmp(s, "m_replay_1001"))  m_replay_1001(argc > 2 ? argv[2] : "");
+    else if (!strcmp(s, "m_replay_1004a")) m_replay_1004a(argc > 2 ? argv[2] : "");
+#endif
     else if (!strcmp(s, "baseline_0928"))      baseline_0928(argc > 2 ? argv[2] : "");
     else if (!strcmp(s, "baseline_1001"))      baseline_1001(argc > 2 ? argv[2] : "");
     else if (!strcmp(s, "baseline_1004a"))     baseline_1004a(argc > 2 ? argv[2] : "");

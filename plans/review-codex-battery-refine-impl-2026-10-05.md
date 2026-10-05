@@ -41,3 +41,20 @@ The remaining requested checks:
 I ran read-only Git/diff and shell/Python syntax checks, inspected the existing ELF’s disassembly/symbols/memory, exercised the Python reply readers with fake HID input, reproduced reconstruction arithmetic, and reproduced **both fit outputs and all three points CSVs byte-for-byte in memory**. I did not rebuild or rerun the C harnesses because those write files; their supplied pass counts remain external evidence. Hardware timing, link behavior and camera operation were code review only. No files were modified.
 
 flash after findings 1..5
+---
+
+## Verification pass, 2026-10-05 ~01:25-01:35, on the fixes (`4293607b4b`, `ba696c7`) -- verbatim
+
+Prompt: [`review-prompt-battery-refine-impl1-verify.txt`](review-prompt-battery-refine-impl1-verify.txt).
+
+Reviewed the specified commits read-only; no files changed. C/build results are your supplied evidence.
+
+2. **Resolved.** Settling clears accumulated scopes. Reset/on/off discard one partial pass, then counting resumes. Fn+D fires once per hold; its enclosing scope cannot leak past the discarded boundary.
+3. **Resolved.** Command, page and accounting-layout validation are present. In-memory checks confirmed continuous foreign replies consume one deadline; reads never receive a zero/negative timeout.
+4. **Resolved.** Passes ≥340 ms remain counted but lose attribution explicitly. Ordinary 10–339 ms passes, including short scopes crossing timer zero, retain attribution. The conservative threshold is sound.
+5. **Resolved.** Firmware documentation and host output consistently identify whole-store erases: 2,048 bytes, one endurance cycle per sector per count.
+6. **Resolved.** Numeric checkpoints reject UNKNOWN, and pinned firmware/output preserve the baseline. The [full-text diff](/Users/jdlien/code/ak820-pro/scripts/battery_sim/run.sh:53) also fails on cosmetic label/spacing changes—a maintenance nuisance, not a flash blocker.
+7. **Partly resolved.** Recorded reconstructions now have exact sums, including **17,508** and **20,428**. However, [rp_values](/Users/jdlien/code/ak820-pro/scripts/battery_sim/sim.c) still silently caps counts at 2,000, and singleton/constant intervals bypass assertions. This remaining P3 gap does not affect the supplied fixtures.
+8. **Resolved.** The mismatched `%s` conversions are removed; unused extra double arguments are harmless.
+
+flash
