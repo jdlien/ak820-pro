@@ -1,8 +1,8 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-04): revision 2, after codex's first review
-([verbatim](review-codex-battery-refine-plan-2026-10-04.md); dispositions at
-the end). Not started.** Phase 1 (the gauge) is built, flashed, and checked on
+**Status (2026-10-04): revision 3, after codex's second review
+([both rounds verbatim](review-codex-battery-refine-plan-2026-10-04.md);
+dispositions at the end). Not started.** Phase 1 (the gauge) is built, flashed, and checked on
 two full discharges. This plan refines it on what those runs measured.
 **Phase 2, the power ladder, comes after it**
 ([`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md), "Phase 2"); nothing here
@@ -34,7 +34,8 @@ The board has been charging from flat on USB, slider on BT, since ~20:02 on
 and **any flash, slider flip, or loss of USB power erases it.** It is already
 on USB, so a dump costs nothing.
 
-1. **A preservation dump now**, whatever the charge's progress:
+1. **A preservation dump** (✅ taken 2026-10-04 21:44, `log-20261004-2144.csv`,
+   commit `602f8fd`; take another if in doubt), whatever the charge's progress:
    `set -o pipefail; venv/bin/python3 hostagent/ak820battery.py log history/battery-2026-10-04-charge/log-$(date +%Y%m%d-%H%M).csv`
    (call `venv/bin/python3` directly until E3 is fixed). Before it, prove the
    board is RUNNING with a raw-HID read — `venv/bin/python3 hostagent/ak820battery.py`
@@ -62,11 +63,11 @@ on USB, so a dump costs nothing.
 | the run-1 curve scored on run 2 | 216 points (inclusion rule in A2): **below 3.95 V, 0.1-0.6 points rms, worst +2.1; on 3.95-4.036 V, 3.2 rms, worst −8.5 (the curve reads low)** — two runs of one pack, so a consistency check, not a confidence bound | run 2 `readings.csv` |
 | the lights-off reserve | run 2: cut 13:33:25 → dead **18:34:54** = **5 h 01 min**; `5C` reached 0 (≤ 3.161 V) ~17:45; a **flat spot at 3222 mV** for ~30 min, also seen in run 1 | run 2 `readings.csv` |
 | lights-off draw | ~1/3 of full white: rough, an upper bound (the slope after the cut over the full-white slope extrapolated to that voltage) | `scripts/battery_fit.py` `BASE` |
-| charges from flat | 09-28: CHRG low ~03:02, `5C` 100 at 06:57, termination ~12:32 (~9.5 h). 10-01: boot ~08:46, `5C` 100 first logged 12:56, VDD rising from the 13:06 entry, termination ~18:12 (~9.4 h) | the charge folders, history/battery-2026-09-25/readings.csv |
-| VDD vs the board's own load | in a constant-current stretch, LED drive 1000 → 499 ‰ raised VDD **+59 mV** | 10-01 charge `readings.csv` |
+| charges from flat | 09-28: CHRG low ~03:02, `5C` at the clamp 06:57, VDD rising ~07:00, termination ~12:32 (~9.5 h). 10-01: boot ~08:46, `5C` at the clamp from the 12:56 entry, VDD rising from the 13:06 entry, termination ~18:12 (~9.4 h). These are timings against the sensor clamp and VDD, **not** measured CC/CV phases (B) | the charge folders, history/battery-2026-09-25/readings.csv |
+| VDD vs the board's own load | during the charge's flat-VDD stretch before the sensor clamp, LED drive 1000 → 499 ‰ raised VDD **+59 mV** (4200 → 4259) with nothing else changing | 10-01 charge `readings.csv` |
 | the charging display on the fitted curve | `curve(V − 150 mV)` would read **~45% at 12:36 on 10-01** (3.83 h into a charge from flat), then race at 0.4%/min to 90.5 when `5C` clamps; and the creep sits at the 97 cap ~1.1 h before termination, then steps 3 | 10-01 charge `readings.csv` |
 | internal-flash writes | **816 write sessions in ~47 h** on `759e265796` (counted once per backing-store unlock), ~15 h of it on USB and ~32 h on battery; JD sees the blink "every few minutes, at least" | run 2 `readings.csv` (19:29 10-03) |
-| what a write does to the LEDs | the row ISR de-selects every row for the driver's whole program state (~7 ms, `flash_gap_max_ms`); interrupts are masked only per program line (tens of µs, `hal_efl_lld.c:37-59`); page erase (1-2 ms per 1 KB page, datasheet) is unmasked | `docs/leds.md` item 3, the driver |
+| what a write does to the LEDs | the row ISR de-selects every row while the driver is in its program state (`docs/leds.md` item 3); interrupts are masked only per program line (`hal_efl_lld.c:37-59`; the datasheet gives 10 µs typical, 20 µs maximum per 64-bit program); page erase (1-2 ms per 1 KB page) is unmasked. **7 ms (`flash_gap_max_ms`) is the longest flash-marked main-loop interval**, which includes the DMA drain before the write — not a measured blink or program duration | the driver, `health.c`, the datasheet |
 | flash endurance | **20,000 erase+program cycles minimum, 100,000 typical**; page 1024 bytes | `SN32F299_V1.8_EN.pdf` (the `fpb/ajazz-ak820-pro` clone at `../ajazz-ak820-pro/docs/`), FLASH table |
 | main-loop stalls | **≥10 ms: ~37/h on USB, ~400/h on battery** (550 at 15 h mostly on USB → 13,336 at 47 h); ≥25 ms: 3-4 in two days; worst 36 ms (`blit`); `i2c_gap_max` 17 ms; `flash_gap_max` 7 ms | run 2 `readings.csv` |
 | BT ACK timeouts | 24% of frames mostly on USB, 42-48% on battery. The ACK wait itself does not block (`ch582f_ajazz.c:505` returns), but `sdWrite` does block when the TX queue is full (`hal_serial.h`, `TIME_INFINITE`) | debug-page frames, code |
@@ -113,7 +114,8 @@ not a forced ship.
 
 1. **Step 0.**
 2. **Host-only, no board traffic:** A (the refit), B1 (charge analysis), E3
-   (venv bootstrap), the simulator's replay adapter (B2's infrastructure).
+   (venv bootstrap), E7 (`flash.sh`), and B2's replay adapter with today's
+   charging logic replayed as a baseline.
 3. **Flash 1 — diagnostics plus changes that need no new measurement:**
    - C1: per-field `kb_eeconfig` counters and write-boundary counters (program
      and erase, by writer context);
@@ -127,8 +129,9 @@ not a forced ship.
    both wait for their measurements. ⚠️ So flash 1 knowingly keeps today's
    charging display, which on the fitted curve reads low through constant
    current and then races (tell JD before flashing).
-4. **Measure on flash 1** (the verification protocol below): C1's writer, D2's
-   per-task stall attribution, B3's partial charges.
+4. **Measure on flash 1**: first D1's A/B qualification (gate 3), then the
+   verification protocol's soaks — C1's writer, D2's stall attribution, the
+   transport counters — and B3's partial charges.
 5. **Flash 2:** C2 (and C4 if D3 says so), the D fix, B's charging model.
    Simulator, a codex implementation review, then flash; then the same
    verification protocol.
@@ -143,14 +146,15 @@ not a forced ship.
    state shows LED drive; `hostagent/ak820lighting.py show`). The test lighting
    for comparable runs is white at full drive (effect 2, sat 0, val 225).
 3. **Prove the board is running** by raw HID (`ak820battery.py` answers), JD at
-   the keyboard. Never put it in the bootloader first: `flash.sh` backs up the
-   keymap and lighting only from a running board (on 10-01 it was already in the
-   bootloader and the 09-29 backups were restored).
-4. `./flash.sh <the exact artifact path build.sh printed>`. ⚠️ `flash.sh`
-   refuses on a failed keymap backup but **only warns** on a failed lighting
-   backup: confirm both backup files' timestamps are fresh in its output before
-   the flash proceeds (`~/Documents/ak820pro-keymap.json`,
-   `~/Documents/ak820pro-lighting.json`).
+   the keyboard. **Do not press `Fn`+`Esc` yet.**
+4. `./flash.sh <the exact artifact path build.sh printed>`. It dumps the keymap
+   and the lighting from the running board, then prints "press Fn+Esc to enter
+   the bootloader" and waits. **While it waits**, check both backups are fresh:
+   `ls -l ~/Documents/ak820pro-keymap.json ~/Documents/ak820pro-lighting.json`
+   (modified within the last minute). Only then JD presses `Fn`+`Esc`. If either
+   is stale, Ctrl-C. (On 10-01 `Fn`+`Esc` was pressed before the script ran, so it
+   found the bootloader and restored the 09-29 backups. Until E7 lands, a failed
+   lighting backup only warns.)
 5. **After:** `ak820 health --crash --json` shows the new `build_token`
    (`build.sh` printed it); the keymap and lighting are back; re-apply the LCD
    brightness, clock format and BT slot recorded in 2; the clock syncs.
@@ -191,11 +195,17 @@ byte-identical (diff it).
 - **Smoothing in time, not in samples.** A common time bandwidth for both
   sources (e.g. a 50-min centered window, by timestamp), segments split only at
   real gaps (> 1.5× the source's nominal interval, so 15-min video samples with
-  timestamp jitter do not split), clamp-censored entries (`5C` mean ≥ 99.5)
-  excluded, and the source boundary (19:29 → 23:30) treated as a gap.
-- **The 4-hour gap** 19:29 → 23:30 10-03 has no data. Any knot whose voltage
-  falls inside it is interpolated, not measured — flag those knots in the
-  output.
+  timestamp jitter do not split), and the source boundary (19:29 → 23:30)
+  treated as a gap.
+- **Censoring:** in the new fit, exclude every interval with **any** clamped
+  report (`c5_max` = 100, or `c5_min` = 0) — the host withholds `pack_mv` for
+  exactly those (`ak820battery.py` ~152), and a mean like 15:59's 99.36 with a
+  max of 100 is not a measurement. The legacy run-1 path keeps its own rule, for
+  the byte-identical reproduction.
+- **The 4-hour gap** 19:29 → 23:30 10-03 has no data. Flag every knot whose
+  voltage falls inside it, and report how those knots and the scores move under
+  the two monotone extremes (the gap's endpoint voltages held to each side) as
+  well as linear interpolation in time.
 
 ### A2. Fit, and validate by leave-one-out
 
@@ -243,67 +253,84 @@ While charging, the level is `curve(terminal mV − CHARGE_IR_MV)`, only rising,
 capped at 97.0%; once `5C` reaches the clamp a 0.4%/min catch-up to 90.5% and a
 0.1%/3 min creep to the cap; 100 when the charger releases. On the placeholder
 curve that looked plausible by accident. **On the fitted curve it reads ~45%
-3.8 h into a charge from flat**: the discharge curve's 4.00-4.02 V plateau has
+3.8 h into a charge from flat** (10-01), and the 10-04 charge confirms the
+direction (18.4% at 1.7 h, 21:44): the discharge curve's 4.00-4.02 V plateau has
 no counterpart on charge, where the terminal voltage climbs steadily, so **no
 constant offset maps the charging voltage onto the discharge curve.** The creep
 also reaches its cap ~1.1 h before termination, then steps 3 points.
 
-Two queued Phase 1 fixes belong here: "Charge", not the 95 guess, while
-charging at the clamp with nothing known; and the re-seat after unplugging
-(on 09-29 it was spent on a still-relaxing clamp reading; the ratchet then
-walked 95 → 86 at 1%/15 s).
+Two queued Phase 1 fixes belong here: "Charge", not the 95 guess, while charging
+at the clamp with nothing known; and the re-seat after unplugging (on 09-29 it was
+spent on a still-relaxing clamp reading; the ratchet then walked 95 → 86).
 
 ### What the model is, and is not
 
-An **empirical display estimate for a stated operating condition** — charging
-from the board's usual USB source (JD's Mac, BT position) through the ASC4056
-— not a physical measurement. Its quantity is the gauge's own: **fraction of
-full-white runtime**, which behind a buck-boost is closer to stored energy than
-to charge. It rests on the observation that, from flat, the charger's
-constant-current stretch was ~4 h on both logged charges and termination came
-~9.4-9.5 h in.
+An **empirical display estimate for a stated operating condition** — charging from
+the board's usual USB source (JD's Mac, BT position) through the ASC4056 — not a
+physical measurement. Its quantity is the gauge's own, the fraction of full-white
+runtime, which behind a buck-boost is closer to stored energy than to charge.
 
-Known ways the real charge departs from it, each a reason the model must stay
-bounded and correctable: the ASC4056's precharge below ~2.9 V and thermal
-regulation (datasheet, linked in codex's review); an input source that cannot
-supply the programmed current (a weak port, a long cable); the board's own load
-on the same USB input (the +59 mV VDD step shows the input is shared); CHRG low
-does not prove constant current; and VDD's rise is not a clean constant-voltage
-marker because the board's own load moves VDD too. **Outside its validated
-conditions the display falls back to "Charge" (level unknown)** rather than
-advancing a percentage on time alone — and every charge is corrected once by
-the voltage at unplug (the re-seat).
+What the logs show is **timing relative to the `5C` sensor clamp and to VDD**, not
+the charger's constant-current/constant-voltage phases: the ASC4056 regulates to
+~4.2 V, above the sensor's 4.036 V ceiling, so `5C` reaching the clamp is not the
+CC→CV transition, and VDD's rise through a charge is load-confounded (+59 mV for a
+50% LED change). From flat, `5C` reached the clamp ~4.0-4.2 h in and termination
+came ~9.4-9.5 h in, on both logged charges. The physical CC/CV reading of those
+spans is an interpretation.
 
-### The design (parameters fitted in B1, checked in B3)
+Known departures, each a reason the model is bounded and correctable: the
+ASC4056's precharge below ~2.9 V and thermal regulation (its datasheet, in the
+`ajazz-ak820-pro` clone's `docs/ASC4056.pdf`); a source that cannot supply the
+programmed current; the board's own load on the same USB input; and CHRG low does
+not prove constant current. **The model is bounded above by the voltage, and it
+gives up ("Charge") when the voltage says it is running ahead** — rules below.
 
-All level arithmetic in per mille, integer, at most once per second; no floats
-in the 10 Hz path. States while on external power:
+### The design (parameters from B1 and B3)
 
-| state | entered when | level | display |
-|---|---|---|---|
-| **UNKNOWN-CHG** | charging with no trusted start level (boot on USB; a level never known; a reboot mid-charge) | unchanged (unknown) | "Charge" |
-| **CC** | a real session begins (CHRG low ≥ 60 s, as now) with a known level `L0` and `5C` below the clamp | `L0 + K_CC × t_chg`, where `t_chg` counts only seconds with `charging_now()`; capped at `L_CC_CAP` | the level |
-| **CV** | `5C` reaches the clamp (≥ 99.50) during a real session, from CC or with a known level | at entry latch `L_cv = level` and `g0 = 1000 − L_cv`; then the gap decays `g ← g − g/τ_s` each second (fixed point), level `= 1000 − g`, capped at **990** | the level (≤ 99) |
-| **FULL** | as now: CHRG released ≥ 10 s on external power with `5C` at the clamp | 1000 | 100 |
-| (hold) | CHRG high briefly, stale `5C`, `5C` leaving the clamp mid-session | unchanged; `t_chg` pauses | the level |
+**Phase by level, not by the sensor clamp.** A partial charge from ~50% puts the
+terminal voltage over 4.036 V almost at once (the charge current's lift), so the
+clamp marks nothing about the charge's phase there.
 
-- `τ_s` is computed **once, at CV entry**, so the approach reaches 99.0% at the
-  median clamp-to-termination time `T_CV` whatever `L_cv` is:
-  `τ = T_CV / ln((1000 − L_cv) / 10)` (in seconds; for `L_cv` ≥ 980 no
-  approach is needed — hold until FULL). Computed with a small lookup table or
-  an integer log, not `logf`, and bounded (`τ` between 10 min and 6 h).
-- **Already full** (the just-full top-up the code handles today): a level above
-  the CV cap is never pulled down to it (keep `battery.c`'s existing rule at
-  ~556: a 100 stays 100 through a top-up).
+Quantities, all per mille, integer, updated at most once a second (no floats in
+the 10 Hz path):
+
+- `K_CC` — the rise per hour of charging before the knee (B3 measures it).
+- `L_KNEE` — the level at which the rise starts to slow (B1 derives it; an
+  extrapolation, stated as one).
+- `T_TAIL` — from the knee to termination, from flat (B1).
+- `τ = T_TAIL / ln((1000 − L_KNEE) / 10)`, a constant computed offline and
+  compiled in, so the tail reaches 990 at `T_TAIL` after the knee.
+- **The voltage ceiling** `U = curve(estimate)` below the clamp, with no I×R
+  subtraction: the charge current lifts the terminal voltage above the pack's own,
+  and the curve maps the (lower) full-white discharge voltage, so `U` is an
+  over-estimate of the level — a ceiling, never a target. At the clamp, no ceiling.
+
+The model, from a start level `L0` and charging time `t` (seconds with
+`charging_now()` only; it pauses otherwise):
+
+- if the level is below `L_KNEE`: `M = L0 + K_CC × t` until it reaches `L_KNEE`;
+- from `L_KNEE` (or from `L0` if it starts above): the gap to 1000 decays,
+  `g ← g − g/τ` each second in fixed point (≥ 16 fractional bits), `M = 1000 − g`;
+- **displayed** `level = max(level, min(M, U, 990))` — only rising, never above
+  the ceiling, never 100 before termination.
+
+| state | entered when | level shown |
+|---|---|---|
+| **UNKNOWN-CHG** | charging and no trusted `L0`: a boot on USB with a fresh `5C` estimate above 0; a reboot mid-charge (the phase and `t` are lost; the saved level is not a charging checkpoint) | "Charge" |
+| **FROM-FLAT** | a boot on USB with fresh `5C` at the bottom clamp (≤ 3.161 V even under charge — the pack is at or below the cut), then a real session | `L0 = 0`, then the model |
+| **MODEL** | a real session (CHRG low ≥ 60 s, as now) from a known level (on battery before, or a continuing session) | the model |
+| **LOST** | in MODEL or FROM-FLAT, `M − U > 50 pm` continuously for ≥ 30 min below the clamp (the model running ahead of what the voltage allows: a slower charge than modeled) | "Charge" until FULL or unplug; not regained in that session |
+| **FULL** | as now: CHRG released ≥ 10 s on external power with `5C` at the clamp | 100 |
+
+- **Already full:** a level above 990 is never pulled down (keep `battery.c`'s
+  existing rule at ~556: a 100 stays 100 through a top-up).
 - **Brief plug-ins** (no real session): nothing moves, as now.
-- **Session restart:** a replug starts a new session from the current level
-  (known). A reboot mid-charge loses `t_chg` and the phase → UNKNOWN-CHG. The
-  saved level is not a charging checkpoint and is not used to resume.
-- **FULL is a heuristic** (codex P2-9): CHRG released with `5C` clamped is also
-  what a charger fault looks like while the terminal voltage is still above
-  4.036 V; DONE is unusable on this board. A false FULL shows 100, then the
-  clamp countdown and the voltage correct it on battery within hours. Document
-  it; add the simulator scenario; do not build more on it.
+- **`LEVEL_UNKNOWN` is `0xFFFF`:** every comparison, subtraction and `max` in this
+  code checks validity first. A bare `level >= 980` would pass for UNKNOWN.
+- **FULL is a heuristic:** CHRG released with `5C` clamped is also what a charger
+  fault looks like while the terminal voltage is still above 4.036 V, and DONE is
+  unusable on this board. A false FULL shows 100; on battery the clamp countdown
+  and the voltage then correct it within hours. Documented, simulated, not built on.
 
 ### The re-seat at unplug (the queued fix, defined)
 
@@ -311,90 +338,103 @@ After a real session ends with the board on the pack:
 
 1. The correction is **owed** from the moment the supply becomes BATTERY.
 2. It is resolved by the first estimate built **only from reports received at
-   least `RELAX_S` after the unplug** (initial `RELAX_S` = 120 s; B3's relaxation
-   trajectory sets it) — the estimate is emptied at the supply change, so this
-   is a freshness rule on top:
-   - **below the clamp:** `level = curve(estimate)`, **up or down, once** (the
-     one permitted upward move on battery);
-   - **at the clamp:** the relaxed pack is ≥ 4.036 V, i.e. ≥ 90%: `level =
-     max(level, LEVEL_CLAMP_FLOOR)`, and the countdown takes over from there.
-3. A replug before resolution keeps it owed; `RELAX_S` restarts at the next
-   unplug. Missing or stale reports keep it owed.
+   least `RELAX_S` after the unplug** (initial 120 s; B3's relaxation trajectory
+   sets it):
+   - **below the clamp:** `level = curve(estimate)`, **up or down, once** (the one
+     permitted upward move on battery);
+   - **at the clamp:** the relaxed pack is ≥ 4.036 V, so ≥ 90%: a known level
+     becomes `max(level, LEVEL_CLAMP_FLOOR)`; an UNKNOWN one becomes
+     `LEVEL_CLAMP_GUESS` (950, as a boot at the clamp does today). The countdown
+     takes over from there.
+3. A replug before resolution keeps it owed; `RELAX_S` restarts at the next unplug.
+   Missing or stale reports keep it owed.
 4. Without a real session (a brief plug-in), nothing is owed, as now.
 
-### B1. Calibrate (host analysis, before flash 2)
+### B1. Calibrate from the charges (host analysis)
 
 Inputs: the three charges from flat — 09-28
 (`history/battery-2026-09-25/charge-dumps/log-20260928-1034.csv`, one-minute
-entries; ⚠️ it ends before termination, which `readings.csv` records at
-~12:32), 10-01 (`history/battery-2026-10-01-charge/log-20261001-1947.csv`,
-ten-minute), 10-04 (Step 0's dump). Per charge: start, `5C`-reaches-clamp time,
-termination, and VDD/`led_pm` through it.
+entries; ⚠️ it ends before termination, which `readings.csv` records at ~12:32),
+10-01 (`history/battery-2026-10-01-charge/log-20261001-1947.csv`, ten-minute), 10-04
+(Step 0's dumps). Per charge: start, `5C`-reaches-clamp, the VDD rise, termination,
+with `led_pm` alongside VDD.
 
-- **`T_CV`**: the median clamp-to-termination time (two values today: ~5.5 h
-  09-28, ~5.3 h 10-01).
-- **`L_CC_CAP`**: the level the model may reach before the clamp; set it from
-  B3, not assumed. Until B3, a conservative 80%.
-- **`K_CC`**: needs one quantity these logs cannot give — the share of a full
-  charge delivered before the clamp. Do not assume it into firmware; **B3
-  measures `K_CC` directly.** B1 only bounds it (with that share between 0.7 and
-  0.9, `K_CC` ≈ 16-23%/h of runtime from the 4.0-4.25 h constant-current spans)
-  so B3's result can be sanity-checked.
-- The reserve below 0% (~5 h lights-off) is refilled before the level reaches 0:
-  B3 starts above 0%, so `K_CC` does not depend on it.
+- **`T_TAIL`**: from the knee to termination. With the knee taken at the VDD
+  rise, ~5.5 h (09-28) and ~5.2 h (10-01); the median of three once 10-04 is in.
+- **`L_KNEE`**: `K_CC × t_knee − R`, where `t_knee` is the time from plug-in to
+  the VDD rise (~3.9-4.25 h) and `R` the refill of the reserve below 0% (small,
+  unmeasured: take 30 pm, range 0-60, and report the sensitivity). **An
+  extrapolation**: what it can cost is limited by the ceiling `U` below the clamp
+  and by the re-seat at unplug.
+- **`K_CC`**: B1 only bounds it (if 70-90% of a full charge goes in before the
+  knee, ~16-23%/h of runtime); **B3 measures it.**
 
-### B2. Simulator (gate 8 grows)
+### B2. Simulator
 
-- **A replay adapter first.** `sim.c`'s replay parses the old seven-field
-  one-minute format and advances 60 s per row, and supplies a labeled
-  synthetic tail and termination for the 09-28 log. Extend it: version-aware
-  parsing (v3/v4 ten-minute entries), explicit interval durations, end-state vs
-  OR-ed flags kept distinct, `5C` reports synthesized per interval to match the
-  logged mean/min/max, and every synthetic tail labeled as synthetic.
-- **Assertions, numeric:** across each charge-from-flat replay the level never
-  rises by more than 10 pm in one second-step except at FULL; at CV entry no
-  step > 10 pm; **the last value before FULL ≥ 980** (so the FULL step is ≤ 20);
-  100 at FULL. A partial charge from 500 pm with 1 h of charging ends within
-  `500 + K_CC ± 30` pm. A boot on USB at the clamp with nothing known reads
-  unknown with state CHARGING ("Charge"). A brief plug-in moves nothing.
+**Before flash 1 (infrastructure and a baseline):** a replay adapter — `sim.c`'s
+replay parses the old seven-field one-minute format and advances 60 s per row,
+with a labeled synthetic tail for the 09-28 log. Extend it: version-aware parsing
+(v3/v4 ten-minute entries), explicit interval durations, end-state vs OR-ed flags
+kept apart, `5C` reports synthesized per interval to match the logged mean/min/max,
+every synthetic segment labeled. Then **replay all three charges against TODAY's
+charging logic** and assert what it does now (the baseline the new model is
+compared with).
+
+**After B3, before flash 2 (the new model):**
+- **FROM-FLAT replays** (each of the three charges starts with `5C` at 0 under
+  charge): level 0 at the start; never a step > 10 pm in one second except at
+  FULL; never above `U` below the clamp; **the last value before FULL ≥ 970**
+  (so the FULL step is ≤ 30 pm); 1000 at FULL.
+- **UNKNOWN start** (boot on USB at the clamp, nothing known): "Charge"
+  throughout; 1000 at FULL; validity asserted before any numeric comparison.
+- **Partial charge below the knee:** `L0` 500, 60 min → `500 + K_CC ± 30` pm, when
+  that stays below `L_KNEE`.
+- **Early clamp entry:** `L0` 600 with `5C` clamped from the first minute → the
+  1 h rise ≤ `K_CC + 10` (no acceleration at the clamp).
+- **Near-full top-up:** `L0` 950, FULL after 15 min → the FULL step ≤ 50 pm.
+- **Just full:** 1000 stays 1000 through a top-up.
+- **A slow charge:** `5C` rising at half the modeled rate → LOST ("Charge") after
+  30 min of `M − U > 50`.
 - **The re-seat:** an underestimate (charging level 700, relaxed voltage worth
-  850 → one upward step to 850); an overestimate (850 vs 700 → down); a
-  prolonged clamp (≥ 10 min at the clamp after unplug → `max(level, 905)`);
-  missing reports (owed until fresh ones); repeated replugs; the 09-29 case
-  (charging-time level 950 guess, first post-unplug reports still at the clamp
-  — the correction must not be spent on them).
+  850 → one step up to 850); an overestimate (850 vs 700 → down); a prolonged
+  clamp after unplug (→ `max(level, 905)`; UNKNOWN → 950); missing reports (owed
+  until fresh ones); repeated replugs; the 09-29 case (the first post-unplug
+  reports still at the clamp must not spend it).
 - **FULL heuristic:** a charger fault with `5C` clamped reads FULL (documented,
   asserted).
-- **Mutants:** `K_CC` = 0; a CV jump; the re-seat spent before `RELAX_S`; the
-  CV cap removed.
+- **Mutants**, each caught: `K_CC` = 0; the tail started at clamp entry (round 1's
+  formula); the ceiling `U` ignored; the re-seat before `RELAX_S`; the 990 cap
+  removed; UNKNOWN treated as a number.
 
-### B3. Measure `K_CC` and the relaxation on hardware (flash 1)
+### B3. Measure `K_CC` and the relaxation on hardware (after flash 1)
 
-The experiment, once or (better) twice:
+At least two trials, each:
 
-1. On battery at full white, run the pack down into a **well-resolved band**:
-   start near **5-8%** (3.55-3.60 V on the current curve), where 1 point is
-   ~10 mV and nowhere near the plateau or the 3.83-3.87 V shoulder.
-2. Record the settled voltage estimate (the gauge's trimmed mean via
-   `ak820battery.py` state, over USB — note the plug-in) after ≥ 30 min on
-   battery at constant load.
-3. Charge from the Mac's port for **exactly 60 min** (wall clock), BT position,
-   same lighting. Expect roughly +16-23 points: the end stays below ~3.80 V.
-4. Unplug. Log the relaxation: the estimate at 0, 5, 15, 30, 60 and 120 min
-   (each a raw-HID read; keep the board on battery between them only if the
-   reads can be taken on USB without charging — otherwise read the debug page
-   by eye or camera at those times).
-5. **`K_CC` = (L_after − L_before + D) / 1 h**, where `L` is the fitted curve at
-   the settled estimates and `D` is the full-white runtime consumed during the
-   settling time (≈ 1.95 points/h) — computed offline from the raw voltages, not
-   read off the displayed level (which the ratchet and the re-seat shape).
-6. Uncertainty: from the `5C` estimate's spread (±1-2 mV), the curve's
-   leave-one-out error in that band, and timing. Change the firmware's `K_CC`
-   only if the measurement disagrees beyond its uncertainty.
+1. On battery at full white, run the pack down to **5-8%** — 3566-3640 mV on the
+  current curve (re-derive on the refitted one): a band where one point is ~10 mV,
+  well below the 3.83-3.87 V shoulder and the plateau.
+2. **The starting estimate, read on the board with no USB:** the debug page's
+  `Batt` row (pack mV, the trimmed mean) by eye or camera, with the time, after ≥
+  30 min at constant load; two readings 5 min apart. (A USB read is not used: the
+  estimator is emptied at every supply change and charging lifts it.)
+3. Charge from the Mac's port for **exactly 40 min** (wall clock), BT position, the
+  same lighting. Expect roughly +11-15 points.
+4. Unplug. The relaxation, by eye or camera on the debug page: 0, 5, 15, 30, 60
+  and 120 min.
+5. **Endpoint rule:** the 60-min estimate must be ≤ 3810 mV (below the shoulder);
+  if higher, reject the trial and shorten the next.
+6. **`K_CC` = (L(60 min) − L(start) + D) / (40/60 h)**, offline from the refitted
+  curve at the raw estimates, where `D` is the full-white runtime spent in the
+  60 min settle (≈ 1.95 points). Not from the displayed level, which the ratchet
+  and re-seat shape.
+7. Uncertainty: the estimate's spread (±2 mV ≈ ±0.2 point here), the curve's
+  leave-one-out error in this band (~0.5 point), timing (±1 min). Use the trials'
+  mean; change the model only if B1's bound and B3 disagree beyond it.
 
-The relaxation trajectory also sets `RELAX_S`, and characterizes how optimistic
-the first post-charge minutes are (BATTERY-GAUGE-PLAN.md, "The calibration
-run"). Record in a new `history/battery-<date>-partial-charge/`.
+B3 measures `K_CC` and `RELAX_S`; it does not measure `L_KNEE` (B1's extrapolation)
+— the ceiling and the re-seat bound what that can cost. Each trial plus the
+discharge back to ~5% is ~8 h at full white; two trials are a day. Record in a new
+`history/battery-<date>-partial-charge/`.
 
 ---
 
@@ -420,11 +460,13 @@ writer):
   that started it — a "current writer" context set by the callers
   (`kb_eeconfig`'s flush, QMK's RGB/VIA eeconfig, and "other"). Wear-leveling's
   consolidation happens inside an existing session and shows as erases.
-- **In `kb_eeconfig.c`**: per-field change counts (BT slot, RTC period, LCD
-  brightness, clock mode, battery level) at each setter's real change, and the
-  number of `eeconfig_update_kb_datablock` flushes. (A field that changes and
-  changes back before the 5 s settle produces a flush but maybe no physical
-  write — which is why the boundary counters are the authority.)
+- **In `kb_eeconfig.c`**: keep a copy of the last flushed block; at each flush
+  compute the **mask of fields that differ from it** and carry that mask into the
+  write context, so a physical write session is attributed to the fields it
+  actually changed. Count sessions per field and **mixed-field sessions**
+  separately. (Setter counts are not subtracted from physical counts: a field
+  that changes and changes back before the 5 s settle costs nothing; one that
+  rides along on another field's flush is in the mask.)
 - **For the RTC:** the last proposed and last stored period, and which path
   proposed it; expose on the existing `HC_RTC` status pages
   (`hostagent/rtc_phase0.py` reads them) or a health page.
@@ -517,25 +559,34 @@ power cap).
 
 ### D1. Per-task duration accounting (flash 1)
 
-- Wrap each main-loop task the board owns with a start/stop timestamp
-  (`timer_read32()`, ms; or a µs counter if a cheap one exists — check before
-  adding one): CH582F task, `battery_task`, display housekeeping, the blit pump,
-  `rtc_task`, indicators, health, and QMK's own `keyboard_task` as a remainder
-  (the pass minus the wrapped tasks).
-- **Per pass, attribute a ≥ 10 ms gap to the task that consumed the most of it**,
-  and keep per-task counts of ≥ 10 ms and ≥ 25 ms attributions plus each task's
-  maximum. Also keep the existing marks (as correlations).
-- **The instrumentation's own cost is a gate**: ≤ 0.1 ms per pass, measured
-  (the repository has dropped keystrokes before to a profiler costing ~2 ms per
-  pass — `plans/LOOP-BUDGET-PLAN.md`).
-- Expose on a health page and in `ak820health.py --stalls`.
+- **Mutually exclusive scopes** around each board task in the main loop: the
+  CH582F task, `battery_task`, display housekeeping, the blit pump, `rtc_task`,
+  the indicators, `health`, and `kb_eeconfig_task` (the deferred EEPROM flush);
+  the rest of the pass is **"unaccounted"** (QMK's `keyboard_task`, the protocol
+  and raw-HID work in `quantum/main.c`'s loop, anything unwrapped). Split
+  "unaccounted" further if it turns out material.
+- Per scope and per pass: elapsed time from a timestamp at entry and exit — ms
+  from `timer_read32()`, or a µs counter if a cheap one exists (check SysTick's
+  `VAL` before adding anything).
+- **On a slow pass (≥ 10 ms):** add each scope's time to that scope's **"time in
+  slow passes"** total; count the scope that took the most; and push the pass
+  into a **16-entry ring** (pass length plus each scope's time, a byte each) — so
+  a stall made of 8 ms of display plus 3 ms of battery shows as both.
+- **A runtime enable flag** (RAM, set over raw HID), default on in the diagnostic
+  build, for the A/B check in the gates.
+- **Transport counters, independent of the stall accounting:** the CH582F TX
+  queue full events; keyboard-state frames replaced in the queue
+  (`ch582f_ajazz.c` ~543 — today they bump no counter); abandoned retransmissions
+  (the existing drops); UART errors if the driver exposes them; RX malformed
+  (existing). These can lose input without any ≥ 25 ms gap.
+- Expose all of it on a health page and in `ak820health.py --stalls`.
 
 ### D2. Measure, then decide (between flash 1 and flash 2)
 
 Under the verification protocol's soak conditions: ≥ 12 h on battery and ≥ 12 h
-on USB, then the per-task attribution. Design the fix for whichever task carries
-the battery-only excess. Also record the CH582F's TX-queue-full events if the
-attribution points at it — those can cost keystrokes without a ≥ 25 ms gap.
+on USB, then the attribution (the slow-pass totals and the ring, not only the
+largest scope). Design the fix for whichever scopes carry the battery-only
+excess. The transport counters are read in every soak regardless.
 
 **Target:** on battery, ≥ 10 ms gaps ≤ 50/h and **no ≥ 25 ms gap in a 12 h
 soak**, or a documented reason the remainder cannot be removed. ⚠️ A ≥ 25 ms gap
@@ -576,6 +627,11 @@ can lose a keypress (docs/hardware.md).
   persistence policy; and the stale "128-s windows" text, which predates the
   current 32-sample SOF loop), docs/leds.md (the corrected masking account),
   `plans/current-status.md`, CLAUDE.md's current state.
+- **E7. `flash.sh`.** Make a failed lighting backup **fatal** (as the keymap's
+  is), unless `--no-backup` or a new `--no-lighting` says otherwise; after each
+  dump print the file's mtime and size, so the fresh-backup check in the flash
+  procedure reads off the output. Fix its stale comment that raw HID needs the
+  dip switch on 'cable' (any slider position works since `4b86d95014`).
 
 ---
 
@@ -587,42 +643,58 @@ Idle soaks alone do not exercise the paths this plan changes.
   page) unless the test is about a page; BT position; white at full drive; LCD
   brightness as recorded; the host timekeeper in its usual state (note it); no
   VIA.
-- **Record at each start and end:** uptime, `build_token`, the watchdog's reset
-  count and degraded flag, and the crash record (`ak820 health --crash --json`).
-  **A reset invalidates the soak** (it clears RAM evidence; three watchdog
-  resets put the watchdog in degraded mode — docs/hardware.md).
-- **Per-event checks with active typing** (the stall counters read before and
-  after each, ~1 min of typing around it): plug in and unplug (BT position);
-  "Battery low" firing (set the threshold just above the pack with
-  `ak820battery.py cfg`); the RGB cut and its lift; FULL; a level going from
-  unknown to known; `Fn`+`D` page transitions; a forced internal-flash write (a
-  brightness step). **No ≥ 25 ms gap attributable to any of them.**
+- **The watchdog, at the start and the end of every soak:** not degraded,
+  consecutive resets 0, the reset count unchanged across the soak, uptime
+  continuous (`ak820 health --crash --json`: `wdt_degraded`,
+  `wdt_consecutive_resets`, `vitals.uptime_ms`, `build_token`). **A reset, or a
+  degraded watchdog at either end, invalidates the soak** (a reset clears RAM
+  evidence; three resets leave the watchdog disabled — docs/hardware.md).
+- **Delivered input, not just loop gaps.** Each per-event check below is done
+  while JD types a fixed reference text (the pangram five times, ~220
+  characters) into a plain-text file on the Mac; a host script diffs it against
+  the reference and reports missing, duplicated and stuck keys. Alongside: D1's
+  transport counters, read before and after.
+- **Per-event checks** (stall and transport counters read before and after each):
+  plug in and unplug (BT position); "Battery low" firing (threshold set just
+  above the pack with `ak820battery.py cfg`); the RGB cut and its lift; FULL; a
+  level going from unknown to known; `Fn`+`D` page transitions; a forced
+  internal-flash write (a brightness step). **Pass: no input diff, no transport
+  loss, and no ≥ 25 ms gap attributable to the event.**
 - **The write-rate gate** is measured over a stated interval (≥ 12 h on
-  battery), excluding the saved level's milestones and JD's own setting
-  changes, which C1's per-field counters separate.
+  battery) and counts physical write sessions by C1's field mask, excluding the
+  saved level's milestones and JD's own setting changes; mixed-field sessions are
+  reported, and count against the gate if any field in them is not excluded.
 
 ---
 
 ## Gates
 
-1. **A:** leave-one-out results committed with A2's report; acceptance met or D4
-   decided; run 1's `fit-output.txt` reproduced byte-identical; `run.sh` passes
-   with each curve-tied expectation's arithmetic in a comment.
-2. **B (host):** the replay adapter and B2's assertions pass; the new mutants
-   are caught.
-3. **Flash 1 build:** `./build.sh daily` clean (no `-dirty`); a codex
-   implementation review with every finding dispositioned; D1's cost ≤ 0.1 ms
-   per pass.
-4. **Flash 1 on hardware:** the verification protocol passes; C1 names the
-   writer from its counters; D2's attribution recorded; E5 checked.
-5. **B3:** `K_CC` and the relaxation measured with an uncertainty; `RELAX_S`
-   and `L_CC_CAP` set from them.
-6. **Flash 2 build:** clean, codex-reviewed, simulator passes with B's model.
-7. **Flash 2 on hardware:** the protocol passes; **≤ 10 write sessions per
-   24 h** on battery (C2's goal); D2's stall target met or its remainder
-   explained; a charge from below 50% shows a smooth rise and a ≤ 2-point step
-   at FULL.
-8. Docs and status updated (E6), written to resume cold.
+Staged, so each can actually be run when it comes due.
+
+1. **Before flash 1 (host):** A complete — leave-one-out committed with A2's
+   report, acceptance met or D4 decided, run 1's `fit-output.txt` reproduced
+   byte-identical; `run.sh` passing with each curve-tied expectation's arithmetic
+   in a comment; B2's replay adapter in, with the three charges replayed against
+   today's charging logic as a baseline; E3 and E7 done.
+2. **Flash 1 build:** `./build.sh daily` clean (no `-dirty`); a codex
+   implementation review with every finding dispositioned.
+3. **Immediately after flash 1 — D1's cost:** 30 min with the accounting on and
+   30 min off (the runtime flag), same conditions: main-loop passes per second
+   within 1% and the ≥ 10 ms count no higher with it on, beyond noise. If not,
+   turn it off and trim it before any soak (rollback criterion: a measured cost
+   above 0.1 ms per pass).
+4. **Flash 1 soaks:** the verification protocol passes; C1 names the writer by
+   its field mask; D2's attribution recorded; E5 checked.
+5. **B3:** `K_CC` from ≥ 2 trials with its uncertainty; `RELAX_S` from the
+   relaxation trajectory.
+6. **Before flash 2 (host):** B's model in, with B2's new-model assertions and
+   mutants passing; any C2/D-fix simulation.
+7. **Flash 2 build:** clean, codex-reviewed.
+8. **Flash 2 on hardware:** the protocol passes; **≤ 10 physical write sessions
+   per 24 h** on battery outside the exclusions (C2); D2's stall target met or
+   its remainder explained; a real charge from below 50% rises smoothly, never
+   above the voltage ceiling, with a FULL step ≤ 3 points.
+9. Docs and status updated (E6), written to resume cold.
 
 ---
 
@@ -635,7 +707,7 @@ Idle soaks alone do not exercise the paths this plan changes.
 | D3 | the LCD's bright flash during a write | after C4's test and C2: if write sessions are ≤ 10/day, leave it; if not, add the inhibit-flag guard |
 | D4 | the plateau, if A2 misses | **voltage only**, reporting the measured plateau error (worst −8.5 today) rather than a rounder number; the alternative — a time-based countdown across the plateau, like the clamp's — reads low at lighter loads and needs its own design |
 | D5 | the camera page in flash 1 | **ship it** with E5's check; revert if it misbehaves |
-| D6 | the charging display | B's model: linear in constant current, decelerating at the clamp, ≤ 99 until FULL, "Charge" when the start is unknown |
+| D6 | the charging display | B's model: linear until a knee level, decelerating after it, capped by the voltage ceiling and at 99 until FULL; "Charge" when the start is unknown or the model runs ahead of the voltage |
 
 ---
 
@@ -688,3 +760,22 @@ Idle soaks alone do not exercise the paths this plan changes.
 | 17 | P1: idle soaks miss the new transition paths; resets must invalidate | **Accepted.** A verification protocol: fixed conditions, per-event checks with typing, start/end vitals, reset invalidates, the write gate over a stated interval. |
 | 18 | P2: Step 0 and the flash steps need completion checks | **Accepted.** A preservation dump now plus a final dump one period after termination; a flash procedure with fresh-backup checks (`flash.sh` only warns on lighting), settings recorded and reapplied, the build token verified, a rollback artifact. |
 | 19 | P2: E2 and D2 disagreed on the re-arm rule | **Accepted.** One rule: re-arm only after a real charging session; tests listed. E2, D2. |
+
+### Round 2 — codex, 2026-10-04, on revision 2 ([verbatim](review-codex-battery-refine-plan-2026-10-04.md#round-2-2026-10-04-on-revision-2----verbatim))
+
+Codex counted 9 of round 1's findings resolved and 10 partly resolved, and
+reproduced the 216 points and the plateau figures exactly. Its new findings:
+
+| # | finding (short) | disposition |
+|---|---|---|
+| R2-1 | P1: the "Charge" fallback had no implementable rule; clamp timing is not CC/CV | **Accepted.** A voltage ceiling `U` (no I×R subtraction) bounds the model; LOST ("Charge") when the model runs > 50 pm above it for 30 min; the logs described as timing against the sensor clamp and VDD, not phases. B. |
+| R2-2 | P1: UNKNOWN on boot-on-USB contradicted the from-flat replays; `LEVEL_UNKNOWN` = `0xFFFF` passes numeric checks | **Accepted.** A FROM-FLAT state: a boot on USB with `5C` at 0 under charge is a trusted `L0` = 0 (all three charges start so); validity checks before every comparison; an UNKNOWN unplugged at the clamp becomes 950. B, B2. |
+| R2-3 | P1: B3 read the start over USB, had wrong voltages, and claimed to measure `L_CC_CAP` | **Accepted, verified** (5-8% = 3566-3640 mV). The start is read on the board without USB; 40 min with an endpoint rule (≤ 3810 mV at 60 min); ≥ 2 trials; `L_CC_CAP` dropped for the ceiling, `L_KNEE` stated as B1's extrapolation. |
+| R2-4 | P2: the CV formula accelerated partial charges | **Accepted.** Phases by level (linear to `L_KNEE`, then a decay with one compiled-in τ), not by clamp entry; tests for early clamp entry and near-full top-ups. B, B2. |
+| R2-5 | P1: largest-task attribution hides cumulative causes | **Accepted.** Per-scope time-in-slow-passes totals and a 16-entry slow-pass ring; mutually exclusive scopes with an "unaccounted" remainder; `kb_eeconfig_task` and the RTC/display paths covered. D1. |
+| R2-6 | P1: the typing gate could pass with lost input or a disabled watchdog | **Accepted.** A delivered-input check (a reference text typed and diffed on the host), transport counters independent of stall attribution (queue replacements included), and a non-degraded watchdog required at both ends. The protocol, D1. |
+| R2-7 | P2: censored means treated as measurements; no gap sensitivity | **Accepted, verified** (the 15:59 entry). Every interval with a clamped report excluded in the new fit; gap knots reported under both monotone extremes and linear interpolation. A1. |
+| R2-8 | P2: setter counts cannot attribute physical writes | **Accepted.** The flush carries a mask of fields changed since the last flushed block; per-field and mixed-field sessions counted; the gate counts physical sessions by mask. C1, the protocol. |
+| R2-9 | P2: gates could not run when due | **Accepted.** Gates staged: baseline replays before flash 1, D1's A/B qualification right after it with a rollback criterion, new-model assertions after B3. |
+| R2-10 | P2: `flash.sh` prints no timestamps on the normal path; a lighting failure continues | **Accepted, verified** in `flash.sh`. The procedure checks the backups' mtimes while the script waits for `Fn`+`Esc`; E7 makes the lighting failure fatal and prints mtimes. |
+| R2-11 | P2: 7 ms is a loop interval, not the program state | **Accepted, verified** (`health.c`; the datasheet's 10/20 µs per 64-bit program). Relabelled here and in docs/battery.md and CLAUDE.md (commit `80e96b5`). |
