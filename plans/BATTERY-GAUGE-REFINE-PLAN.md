@@ -1,8 +1,10 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-04): revision 7, after codex's sixth review
+**Status (2026-10-05, ~01:30): executing.** Gate 1 (host) is met, and flash 1 is
+built and in its codex implementation review (gate 2). See "As built", just
+before the review dispositions. Revision 7 came after codex's sixth review
 ([every round verbatim](review-codex-battery-refine-plan-2026-10-04.md);
-dispositions at the end). Not started.** Phase 1 (the gauge) is built, flashed, and checked on
+dispositions at the end). Phase 1 (the gauge) is built, flashed, and checked on
 two full discharges. This plan refines it on what those runs measured.
 **Phase 2, the power ladder, comes after it**
 ([`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md), "Phase 2"); nothing here
@@ -1163,6 +1165,119 @@ Staged, so each can actually be run when it comes due.
 - Claim state of charge: the level stays "fraction of full-white runtime left".
 - Run another multi-day drain (deferred: two runs give a consistency check).
 - Build any power mode.
+
+---
+
+## As built
+
+### Step 0 (2026-10-05)
+
+The board stayed in the bootloader overnight until JD power-cycled it, on request,
+at 00:29:43 10-05. A replug alone left it in the bootloader; the cable → BT slider
+flip booted the firmware. It had charged in the bootloader: the terminal voltage
+under charge went from `5C` 85.6 (21:42) to the clamp by 00:31. Its rate there is
+unknown, so the 10-04 charge's total time from flat is not comparable. The
+post-reboot log gives its termination and, if VDD has not yet risen, its knee. A
+background watcher (one `HC_CONN` read every 3 min) takes the final dump and the
+health and vitals 12 min after CHRG releases. Records:
+`history/battery-2026-10-04-charge/readings.csv`.
+
+### Gate 1 (host) — met
+
+- **A, the refit** (`scripts/battery_fit.py --refit --write`, commit `43c808b`;
+  `history/battery-2026-10-01-drain/refit-output.txt`; each run's
+  `refit-points.csv`). Run 1's legacy output is byte-identical. Leave-one-out
+  meets the thresholds both ways:
+
+  | direction | below 3.95 V (rms / worst) | plateau (rms / worst) |
+  |---|---|---|
+  | run 1 → run 2 | 0.54 / +2.05 | 3.13 / −8.66 |
+  | run 2 → run 1 | 0.59 / −1.52 | 3.21 / +8.86 |
+
+  So no D4. The plateau passes with little room. Shifting the log source by
+  −2 mV takes its worst to −10.09 (run 1 → run 2) and +10.73 (run 2 → run 1), a
+  sensitivity, not a correction. The 30% and 35% knots fall in run 2's 4 h gap.
+  Linear in time, run 2 gives 3831.1/3846.5 mV against run 1's 3831.7/3846.5; the
+  monotone extremes move the pooled knots by up to 11 mV (35%, held low). The plug-in's 15-90 s moves no pooled knot more than 1 mV. The
+  firmware gets the pooled curve: no knot moved more than 5 mV.
+
+  ⚠️ **The stated run-1-on-run-2 figures** (plateau rms 3.156, worst −8.490)
+  reproduce only when scored as they were: wall-clock levels with T = 50.56, and
+  the log's **whole-mV `pack_mv`**. The refit uses the unrounded mV from
+  `c5_mean` and t_eff levels. On the plateau, 1 mV of rounding moves a point's
+  error by up to ~1 point. Both are printed.
+- **E3** (`d91cef1`): the venv guard compares `sys.prefix` with the candidate's
+  venv root. The old module refuses by shebang with the venv off PATH; the new
+  one works.
+- **E7** (`ed2e942`): a failed lighting backup is fatal (`--no-lighting` to
+  override), and each backup prints its mtime and size. Both paths were tested
+  against the running board with scratch files, stopped at the `Fn`+`Esc` prompt.
+- **B2's replay adapter and baseline** (`c87472e`). Each interval's reports are
+  reconstructed as a monotone ramp from the logged min to max, summing to the
+  logged mean; reports all at the mean lagged by up to 10 pm. **Self-check:**
+  replayed against `759e265796`'s own `battery.c` (from git), the 10-04 log's
+  levels come back within +5 pm (one log step). **Baseline on today's logic,
+  refitted curve:**
+  - 09-28 reads 47.3% when `5C` first clamps (3.93 h);
+  - 10-01 reads 45.1% at 12:36, 3.8 h in, exactly `curve(4019 − 150)`; it sits
+    at the 97 cap for 0.5 h, then steps 3 to FULL;
+  - 10-04 reads 18.1% at 1.67 h.
+- **D1's transport counters and harness** (`b94b030bdf`, `29e89d1`). New
+  `giveups` and `replaced` counters; the UART error counters move into every
+  build. `scripts/ch582_sim` compiles the driver verbatim with the daily flags.
+  The plan's three cases pass, plus three more, and three mutants are each
+  caught.
+- `scripts/battery_sim/run.sh`: 35 pass. The curve-tied expectations moved with
+  their arithmetic (187 → 185 pm). E2 has four scenarios and three mutants.
+
+### Flash 1, as built (firmware `ak820pro-jdlien`, `dd5c94fdd9`..`f4ad230326`)
+
+- **A3**: the pooled curve; `battery.c`'s comment carries both runs and the
+  leave-one-out numbers.
+- **E1**: "Battery low" at 3680 mV, the curve's 10%. **E2**: it re-arms only when
+  `session` is set on USB, or on a new threshold over `HC_BATTCFG` (so it can be
+  tested on demand). **E4**: `COUNTDOWN_S_PER_PM` 184, the mean of 185.5 (run 1)
+  and 181.5 (run 2).
+- **C1, as built differently from the plan's wording.** The writer is decided at
+  the EEPROM boundary, by logical address. A new weak core hook,
+  `eeprom_wear_leveling_write_hook()` in `drivers/eeprom/eeprom_wear_leveling.c`
+  (`cc04408e01`), maps the address to the kb datablock, the RGB matrix config,
+  VIA's region, or other. For the kb datablock, it ORs into a field mask each
+  byte that differs from the cache. The plan had the callers set a context, and
+  kb_eeconfig keep a last-flushed copy. That breaks on RGB:
+  `rgb_matrix_eeprom_flush_allowed()` returns true on every settled pass, not
+  only when a flush writes, so a caller-set context would bleed onto other
+  writers. The address is exact. `wear_leveling_write()`'s own skip of unchanged
+  data makes the mask the fields actually written. The pending writer is cleared
+  every pass.
+
+  Sessions are counted at unlock, programs and erases at
+  `backing_store_operation_begin`, each by the session's writer, with the
+  uptime of the last erase (for C4). Both RTC persistence paths count their
+  proposals and stores, with the last value and path. Persistence behaviour is
+  unchanged; that is C2.
+- **D1's accounting** (`loop_acct.c`). Twelve mutually exclusive scopes:
+  - the CH582F task (in `bluetooth_task`), battery+power;
+  - display housekeeping, the blit pump, `rtc_task`, `rtc_fast_task`;
+  - the LEDs, health, the kb-eeconfig flush, the second edge, the animation;
+  - the rest of housekeeping.
+
+  They are timed with the 16-bit system tick (5.33 µs, one register read), and
+  the remainder is "unaccounted". A pass is `health_loop_tick`'s own, so a slow
+  pass is exactly one of `count_ge_10ms`. Per slow pass, every scope's time is
+  added, the largest is counted, and a 16-entry ring stores the pass length and
+  each scope's ms, with uptime. All-pass totals are kept too. The runtime flag
+  defaults on.
+- **Health protocol 8**: `HC_FLASHW` (C1), `HC_ACCT` (D1; page `0xF0` on/off,
+  `0xF1` reset) and `HC_LINK` (the transport counters). `health_reset()` clears
+  C1 and D1 too. `ak820health.py --stalls` shows all three. `scripts/diag_sim`
+  compiles both modules verbatim and decodes their pages with the Python's own
+  decoders (`d19adc2`).
+- RAM: `.bss` +720 B over the rollback ELF; heap 6080 → 5360 B (flash 2's v5 log
+  needs 1440).
+- **Tools for the measurements** (`3a1686e`): `scripts/typing_check.py` (the
+  delivered-input check), `scripts/board_snapshot.sh` (one labelled
+  before/after reading) and `scripts/acct_ab.py` (gate 3).
 
 ---
 
