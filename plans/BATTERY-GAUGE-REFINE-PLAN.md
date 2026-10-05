@@ -1184,6 +1184,16 @@ background watcher (one `HC_CONN` read every 3 min) takes the final dump and the
 health and vitals 12 min after CHRG releases. Records:
 `history/battery-2026-10-04-charge/readings.csv`.
 
+**Done at 05:43:13.** CHRG released between 05:28:12 and 05:31:12 (the polls on
+either side; the log agrees). The final dump is `log-20261005-0543.csv` (31
+entries since the 00:29 boot), with `health-` and `vitals-20261005-0543.json`:
+the boot was continuous, with no new ≥ 25 ms stall. **The knee was not
+observable:** VDD at the first post-boot entry was already 15 mV over the last
+pre-clamp reading. So this charge bounds `T_TAIL` below only (≥ 4.82 h). Its
+VDD, timed back from termination, tracks 10-01's at the LED load's offset (−46
+to −61 mV): consistent, not a third measurement. **B1 stands: `T_TAIL` is the
+median of 09-28 and 10-01, 5.22 h.**
+
 ### Gate 1 (host) — met
 
 - **A, the refit** (`scripts/battery_fit.py --refit --write`, commit `43c808b`;
