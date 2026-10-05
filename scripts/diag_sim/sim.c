@@ -16,6 +16,7 @@ static uint32_t now_ms = 20000;
 static uint16_t now_tick;
 uint32_t  timer_read32(void) { return now_ms; }
 systime_t chVTGetSystemTimeX(void) { return now_tick; }
+systime_t st_lld_get_counter(void) { return now_tick; }   /* loop_acct.h's inline read */
 
 /* The emulated EEPROM's cache, as the hook reads it. */
 static uint8_t eeprom[1024];
@@ -102,6 +103,36 @@ static void acct(void) {
     loop_acct_fill(1, p);   /* slow ticks, scopes 0-6: rtc_task is 4 */
     uint32_t rtc = p[16] | p[17] << 8 | p[18] << 16 | (uint32_t)p[19] << 24;
     CHECK(rtc == 1875, "the long pass's rtc time stays out of the totals: %u", rtc);
+
+    /* The all-pass totals across a fold (every 4096 passes since the trim
+     * after gate 3): 5000 passes of 188 ch582 ticks in 3 ms, the first not
+     * counted (it began before the reset). Counted: 4999 x 188 = 939,812
+     * ticks = 5012.33 ms of ch582; 4999 x 3 ms = 14,997 ms of passes, so
+     * 9984.67 ms unaccounted: fold 1 (4096 passes) 2,304,000 - 770,048 =
+     * 1,533,952 ticks, then pending 903 passes 507,937 - 169,764 = 338,173,
+     * 1,872,125 ticks = 9984 ms. (The per-pass version gave 9971: it floored
+ * each 3 ms pass's 562.5 ticks to 562, 4999 times.) */
+    loop_acct_reset();
+    for (int i = 0; i < 5000; i++) { spend(ACCT_CH582, 188); pass(3); }
+    loop_acct_fill(0, p);
+    passes = p[4] | p[5] << 8 | p[6] << 16 | (uint32_t)p[7] << 24;
+    CHECK(passes == 4999, "4999 counted after the reset: %u", passes);
+    loop_acct_fill(3, p);   /* all-pass ms, scopes 0-6: ch582 is 0 */
+    uint32_t ch = p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24;
+    CHECK(ch == 5012, "ch582 all-pass ms across the fold: %u, want 5012", ch);
+    loop_acct_fill(4, p);   /* scopes 7-12: unaccounted is 12 -> offset (12-7)*4 */
+    uint32_t un = p[20] | p[21] << 8 | p[22] << 16 | (uint32_t)p[23] << 24;
+    CHECK(un == 9984, "unaccounted all-pass ms across the fold: %u, want 9984", un);
+    /* ...and a long pass and a disabled stretch leave them alone. */
+    spend(ACCT_CH582, 60000); pass(400);
+    loop_acct_set_enabled(false); spend(ACCT_CH582, 5000); pass(30); loop_acct_set_enabled(true);
+    spend(ACCT_CH582, 7000); pass(5);   /* the pass after re-enabling: not counted */
+    loop_acct_fill(3, p);
+    ch = p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24;
+    CHECK(ch == 5012, "ch582 all-pass ms unchanged by the long pass and the off stretch: %u", ch);
+    loop_acct_fill(4, p);
+    un = p[20] | p[21] << 8 | p[22] << 16 | (uint32_t)p[23] << 24;
+    CHECK(un == 9984, "unaccounted unchanged too: %u", un);
 }
 
 #define KB 37u
