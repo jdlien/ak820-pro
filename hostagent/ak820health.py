@@ -242,8 +242,15 @@ def _txn_page(h, cmd, page, arg=0, timeout_ms=500):
 
 
 def read_link(h):
-    rep = _txn(h, HC_LINK)
-    if rep[2] != HC_LINK or rep[3] < 8:
+    # Page 0: the reply echoes the protocol VERSION in [3], so take only a
+    # version (< 0x21), never a profile page (0x21-0x2A) another reader asked
+    # for (codex, flash 1c; Windows hands every reply to every open handle).
+    h.write(bytes([0x00, SET_VALUE, HEALTH_CHANNEL, HC_LINK, 0] + [0x00] * 28))
+    rep = _read_reply(h, lambda r: r[0] == SET_VALUE and r[1] == HEALTH_CHANNEL and r[2] == HC_LINK
+                      and r[3] < PROF_PAGE0, 500)
+    if rep is None:
+        raise SystemExit("no reply to HC_LINK (protocol 8 firmware needed)")
+    if rep[3] < 8:
         raise SystemExit(f"firmware health proto v{rep[3]}; HC_LINK needs v8 -- flash the current build")
     d = dict(zip(LINK_FIELDS, struct.unpack_from("<5I3HH", bytes(rep), 4)))
     d.pop("_reserved")

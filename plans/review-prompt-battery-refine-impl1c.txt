@@ -1,0 +1,16 @@
+A narrow implementation review, read-only. Do not modify files.
+
+Context: the AK820 Pro's Phase 1b (plans/BATTERY-GAUGE-REFINE-PLAN.md; "Gate 3 — failed, and the trim" and the soak records in history/battery-2026-10-05-flash1/readings.csv). Flash 1b (firmware 97a24c6e20, the trimmed per-task accounting you reviewed as 7a0f28aa8f) is on the board, and passed gate 3. Its first battery soak (19.1 h) found the battery-only stalls in ch582_task: the largest scope in 4720 of 5494 slow (>= 10 ms) passes, ~7-8 ms of each, while ch582's MEAN cost per pass was the same on USB and battery (0.47 vs 0.49 ms) -- so occasional long calls. On battery the module sends 5C about twice as often and its values vary, so battery_5c_report's trimmed-mean insertion sort has work to do; that is a candidate, but by estimate too small to be all of it.
+
+Flash 1c is a DIAGNOSTIC to localize that before flash 2's fix: firmware commit 647c12f26d (`git -C qmk_firmware-ak820pro show 647c12f26d`) on top of 97a24c6e20, and host commit 66d82c9 (`git show 66d82c9`: hostagent/ak820health.py's read_link_prof, scripts/ch582_sim's profile case and test_prof_decode.py). Read the firmware commit message first.
+
+Host results: scripts/ch582_sim/run.sh passes (the six existing cases, profile, profile decode); scripts/diag_sim/run.sh passes; ./build.sh daily is clean with no warnings (via-daily-647c12f26d-20261006-135833.bin); heap 5048 B.
+
+Check, and say for each whether it is right:
+1. Does the section split attribute a slow call correctly: control (p0..p1), RX net of the two hooks, the 5C hook, the ack writes, the TX pump (p2..end)? Anything in ch582_task outside those, any early exit that skips prof_end, or a double count?
+2. The HC_LINK paging: pages 0x21-0x2A, page 0 unchanged for older hosts, an unknown nonzero page unhandled, and the Python's page-echo check. Can flash 1b's firmware (which ignores data[3] and echoes version 8) or any other reply be misread as a profile page? Does anything else that sends HC_LINK (ak820health.py's read_link, the Rust daemon in ak820-agent/) now get a different answer?
+3. Cost and safety: the profile runs under loop_acct_on with inline ticks; every pass adds three reads and a compare, and a 5C report two more. Gate 3 is NOT being re-run for this diagnostic: is the added per-pass cost plausibly negligible against gate 3b's result (+0.34%, below resolution)? Any risk to the link itself (the ack writes' order, the TX pump)?
+4. The 16-bit tick: sections and totals are u16 deltas; a call over 349.5 ms would alias. Acceptable for this purpose?
+5. Will this data actually answer the question -- which part of ch582_task makes the 7-8 ms calls on battery -- or is something missing (for example time spent in interrupts during the call, which every section includes)?
+
+Then a one-line verdict: "flash" or "fix N first". Keep it short.

@@ -1356,6 +1356,57 @@ That is +0.34% with it on: the cost is below what 30 minutes can resolve
 (it was −2.53%). The accounting stays on. The battery soak and B3's drain
 began at ~17:40, at the `battery-soak-start` snapshot.
 
+### The first battery soak, and D2 round 2 — flash 1c (2026-10-06)
+
+**Soak read 1** (17:40:14 10-05 → 12:48:36 10-06, 19.1 h, on the pack
+throughout but the minutes at either end;
+`history/battery-2026-10-05-flash1/readings.csv`):
+- **D2: the battery-only stalls are in `ch582_task`.**
+  - On battery: 5,494 passes ≥ 10 ms (~287/h). ch582 was the largest scope in
+    4,720 of them, with 64.1% of their time (~8.2 ms each); unaccounted
+    23.6%, `rtc_task` 5.5%.
+  - On USB, in the 40 accounted minutes before: 23 slow passes, ch582 the
+    largest in none.
+  - Yet ch582's MEAN per pass was the same on both (0.47 vs 0.49 ms): the
+    cost is in occasional long calls.
+  - On battery the module sends `5C` ~2× as often (306 vs 167 a period), and
+    its values vary, so `battery_5c_report`'s trimmed-mean sort has work to
+    do. It is a candidate, but by estimate too small to be all of it.
+- **C1: the writer is the RTC period, on its PCF path.** 6 stores of 27
+  proposals, plus 5 level milestones and 1 LCD-brightness session; RGB, VIA
+  and other 0. That is 12 sessions in 19.1 h, ~7.5 per 24 h outside the
+  exclusions (if the brightness change was JD's). C2 is the plan's
+  persistence scheduler.
+- **One ≥ 25 ms gap**: 25 ms, probably at the plug-in for the read (the
+  ring's 25 ms pass is ~12 s before it, `second_edge` 20 ms of it). That is
+  a per-event finding, not the soak's.
+- **Transport:** no loss. 13,968 sent, 7,624 ACK timeouts, 0 give-ups, 0
+  replaced, 0 queue-full; UART overrun 3, framing 1.
+
+**Flash 1c** (firmware `647c12f26d`, host `66d82c9`) is diagnostic only. It
+splits each `ch582_task` call ≥ 4 ms into its parts:
+- control, the RX drain and parse, the `5C` hook, the `5B`/`5C`
+  acknowledgement writes, and the TX pump;
+- with the bytes and `5C` reports the call handled, and every `5C` hook's
+  cost.
+
+It runs under D1's flag, with inline ticks, on `HC_LINK` pages 0x21-0x2A
+(page 0 and the protocol version unchanged). `ch582_sim` drives a slow `5C`
+through the real parser and decodes the pages with the real Python. The
+artifact is `via-daily-647c12f26d-20261006-135833.bin`, token `0x0c93c530`,
+clean, heap 5048 B.
+
+**Codex on flash 1c** ([verbatim](review-codex-battery-refine-impl1c-2026-10-06.md)),
+verdict "flash":
+
+| # | finding | disposition |
+|---|---|---|
+| 1 | The split attributes correctly. Only watchdog bookkeeping and the final record fall outside it | No change. |
+| 2 | Paging right. But `read_link` (page 0) checked the command, not the page, so a concurrent reader's profile reply could be decoded as link stats | **Fixed, host only**: it takes only a reply whose [3] is a version (< 0x21). A new `diag_sim` check fails on the old reader. |
+| 3 | The cost is understated (four reads a pass, four more per `5C` with ACKs, `prof_end`'s call and frame). Plausibly small, not shown below gate 3b's resolution | **Accepted, no gate rerun**: a temporary diagnostic, its cost recorded here. Flash 2's build drops it or keeps it under the flag, and gate 3's comparison will be read again on flash 2. |
+| 4 | The 16-bit tick aliases past 349.5 ms | Accepted. |
+| 5 | It localizes elapsed time, not CPU: each section includes interrupts during it | **Noted for the reading**: a large `5C` section implicates that interval, not necessarily the sort. |
+
 ### Flash 2 so far (host, ahead of B3)
 
 Branch `phase1b-flash2` of the firmware, local only, **rebased 10-05 ~17:50
