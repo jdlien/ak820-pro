@@ -1455,6 +1455,21 @@ tail is a **placeholder** until B3: `K_CC` 190, `L_KNEE` 775, `T_TAIL` 313 min.
   charger pin, as today. It is accurate (the charger is not charging); the
   state table's "Charge until a `PAUSE_S` pause" describes the level, which
   stays unknown.
+- **The camera page, redrawn in the clock's font (JD, 2026-10-06).** JD
+  found the seven-segment digits ugly and cryptic ("like a kid went into MS
+  Paint in 1993"). The clock atlas, cropped for the clock, still holds all 95
+  ASCII glyphs. So the page is now four centred lines: the volts and the
+  percent in the clock face (15×22), the board's clock in the same face, and
+  the raw `5C` in the status face. Each is a fixed grid repainted one changed
+  glyph a pass, like the debug page. Previews were rendered from the shipped
+  atlases before any code (`scripts/camera_page_preview.py`, which mirrors
+  `cam_lines[]`), and JD approved them ("night and day"). Firmware
+  `6eadbd0e3a` on the branch.
+- **The branch is rebased onto flash 1c (`647c12f26d`)**, so flash 2 keeps
+  the ch582 profile under D1's flag. Its first full build
+  (`via-daily-6eadbd0e3a-20261006-143050.bin`, WIP: the placeholder tail, not
+  for flashing) is clean with no warnings. Heap 3496 B, against 5048 on flash
+  1c: the v5 log takes its 1440.
 - **Left for flash 2:** B3's `K_CC` and `RELAX_S`, then
   `battery_charge.py --tail K_CC L_KNEE T_TAIL --header .../battery_tail.h` and
   `run.sh`, `tail_fw_grid.py`, `mutants.py` again (if `K_CC` falls outside
