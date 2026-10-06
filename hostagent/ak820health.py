@@ -250,6 +250,46 @@ def read_link(h):
     return d
 
 
+# D2 round 2 (flash 1c): the profile of slow ch582_task calls, HC_LINK pages
+# 0x21-0x2A (ch582_prof_fill). Ticks at CH_CFG_ST_FREQUENCY.
+PROF_PAGE0 = 0x21
+PROF_SECTIONS = ["control", "rx", "c5_hook", "ack_writes", "tx_pump"]
+PROF_ST_HZ = 187500
+
+
+def read_link_prof(h):
+    """None on firmware without the profile: it answers page 0's layout with
+    the version in the page byte, which the page check rejects (and pages
+    start at 0x21 so no version can pose as one)."""
+    def page(p):
+        h.write(bytes([0x00, SET_VALUE, HEALTH_CHANNEL, HC_LINK, p] + [0x00] * 28))
+        return _read_reply(h, lambda r: r[0] == SET_VALUE and r[1] == HEALTH_CHANNEL and r[2] == HC_LINK
+                           and r[3] == p, 300)
+    ms = lambda t: round(t * 1000 / PROF_ST_HZ, 2)
+    p1, p2 = page(PROF_PAGE0), None
+    if p1 is not None:
+        p2 = page(PROF_PAGE0 + 1)
+    if p1 is None or p2 is None:
+        return None
+    v = struct.unpack_from("<6I", bytes(p1), 4)
+    c5n, c5t, c5max, _nxt, rlen, slow_t = struct.unpack_from("<IIHBBH", bytes(p2), 4)
+    ring = []
+    for i in range(rlen):
+        r = page(PROF_PAGE0 + 2 + i)
+        if r is None:
+            return None
+        f = struct.unpack_from("<IH5HBB", bytes(r), 4)
+        if f[0]:
+            ring.append({"uptime_ms": f[0], "total_ms": ms(f[1]),
+                         "sections_ms": dict(zip(PROF_SECTIONS, (ms(x) for x in f[2:7]))),
+                         "rx_bytes": f[7], "c5_reports": f[8]})
+    ring.sort(key=lambda e: e["uptime_ms"])
+    return {"slow_calls": v[0], "slow_threshold_ms": ms(slow_t),
+            "slow_ms": dict(zip(PROF_SECTIONS, (ms(x) for x in v[1:6]))),
+            "c5_reports": c5n, "c5_hook_ms": ms(c5t), "c5_hook_max_ms": ms(c5max),
+            "c5_hook_mean_ms": ms(c5t / c5n) if c5n else None, "ring": ring}
+
+
 def read_flashw(h):
     p0 = _txn_page(h, HC_FLASHW, 0)
     p1 = _txn_page(h, HC_FLASHW, 1)
@@ -317,6 +357,16 @@ def print_phase1b(d):
         print(f"  sent {lk['sent']}  timeouts {lk['timeouts']}  queue_full {lk['queue_full']}  "
               f"giveups {lk['giveups']}  replaced {lk['replaced']}  "
               f"| uart overrun {lk['uart_overrun']} framing {lk['uart_framing']} parity {lk['uart_parity']}")
+    pf = d.get("link_prof")
+    if pf:
+        print(f"  slow ch582 calls (>= {pf['slow_threshold_ms']} ms): {pf['slow_calls']}; their time, ms: " +
+              "  ".join(f"{k} {v}" for k, v in pf["slow_ms"].items()))
+        print(f"  5C reports {pf['c5_reports']}: hook {pf['c5_hook_ms']} ms in all, mean {pf['c5_hook_mean_ms']}, "
+              f"longest {pf['c5_hook_max_ms']}")
+        for e in pf["ring"]:
+            print(f"    {e['uptime_ms'] / 1000:10.1f} s {e['total_ms']:6} ms: " +
+                  " ".join(f"{k} {v}" for k, v in e["sections_ms"].items() if v) +
+                  f" | {e['rx_bytes']} bytes, {e['c5_reports']} 5C")
     fw = d.get("flash")
     if fw:
         print("\ninternal-flash writes by writer (sessions / programs / erases):")
@@ -401,6 +451,9 @@ def main():
             h = open_device()
             try:
                 d["link"] = read_link(h)
+                prof = read_link_prof(h)
+                if prof is not None:
+                    d["link_prof"] = prof
                 d["flash"] = read_flashw(h)
                 if "acct" not in d:
                     d["acct"] = read_acct(h)

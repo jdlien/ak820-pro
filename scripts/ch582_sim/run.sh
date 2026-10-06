@@ -16,4 +16,9 @@ fail=0
 for c in withheld queue_full replaced not_replaced_none_behind not_replaced_head uart_errors; do
     "$build/harness" "$c" || fail=1
 done
+# D2's profile (flash 1c): the C case, then hostagent/ak820health.py's own
+# decoder over the pages the driver filled.
+"$build/harness" profile > "$build/profile.out" || fail=1
+grep -v '^PAGE ' "$build/profile.out"
+python3 "$here/test_prof_decode.py" < "$build/profile.out" || fail=1
 exit $fail

@@ -65,7 +65,13 @@ eventflags_t chEvtGetAndClearFlags(event_listener_t *el) {
 
 static int rx_malformed;
 void health_note_rx_malformed(void) { rx_malformed++; }
-void battery_5c_report(uint8_t pct) { (void)pct; }
+/* D2's profile (flash 1c): the simulated system tick, and a 5C hook whose cost
+ * the case sets -- the stand-in for battery_5c_report's trimmed-mean sort. */
+bool            loop_acct_on = true;
+static uint16_t tick;
+static uint16_t c5_cost;
+uint16_t        sim_tick(void) { return tick; }
+void battery_5c_report(uint8_t pct) { (void)pct; tick = (uint16_t)(tick + c5_cost); }
 void send_raw_hid(uint8_t *data, uint8_t length) { (void)data; (void)length; }
 
 static int failures;
@@ -192,6 +198,50 @@ static void uart_errors(void) {
           s.uart_overrun, s.uart_framing, s.uart_parity);
 }
 
+/* A slow 5C hook makes a slow call, recorded with its section split; a cheap
+ * one is not recorded; with the flag off nothing is. Then the pages, as hex
+ * for run.sh's decode check. */
+static void dump_pages(void) {
+    for (uint8_t pg = 0x21; pg <= 0x2A; pg++) {
+        uint8_t out[28];
+        if (!ch582_prof_fill(pg, out)) continue;
+        printf("PAGE %u ", pg);
+        for (int i = 0; i < 28; i++) printf("%02x", out[i]);
+        printf("\n");
+    }
+}
+static void profile(void) {
+    static const uint8_t c5[3] = {0x5C, 47, (uint8_t)(0x5C + 47)};
+    uint8_t out[28];
+    c5_cost = 100;                    /* 0.53 ms: not slow */
+    rx_feed(c5, 3); run_ms(1);
+    ch582_prof_fill(0x21, out);
+    CHECK(out[0] == 0, "a cheap call is not recorded: %u", out[0]);
+    c5_cost = 900;                    /* 4.8 ms: slow */
+    rx_feed(c5, 3); rx_feed(c5, 3); run_ms(1);
+    ch582_prof_fill(0x21, out);
+    uint32_t calls = out[0] | out[1] << 8, c5t = out[12] | out[13] << 8 | out[14] << 16;
+    CHECK(calls == 1 && c5t == 1800, "one slow call, 2 x 900 ticks in the 5C hook: %u %u", calls, c5t);
+    ch582_prof_fill(0x22, out);
+    uint32_t n5c = out[0] | out[1] << 8, hookt = out[4] | out[5] << 8;
+    uint16_t mx = out[8] | out[9] << 8;
+    CHECK(n5c == 3 && hookt == 1900 && mx == 900 && out[11] == 8 && (out[12] | out[13] << 8) == 750,
+          "every report counted (%u), hook ticks %u, longest %u, ring %u, threshold %u", n5c, hookt, mx, out[11],
+          out[12] | out[13] << 8);
+    ch582_prof_fill(0x23, out);
+    uint16_t total = out[4] | out[5] << 8, sc5 = out[10] | out[11] << 8;
+    CHECK(total == 1800 && sc5 == 1800 && out[16] == 6 && out[17] == 2,
+          "ring 0: total %u, 5C %u, %u bytes, %u reports", total, sc5, out[16], out[17]);
+    loop_acct_on = false;             /* off: nothing is timed or recorded */
+    rx_feed(c5, 3); run_ms(1);
+    ch582_prof_fill(0x21, out);
+    CHECK(out[0] == 1, "off: still one slow call: %u", out[0]);
+    loop_acct_on = true;
+    CHECK(!ch582_prof_fill(0x20, out) && !ch582_prof_fill(0x2B, out) && !ch582_prof_fill(8, out),
+          "pages outside 0x21-0x2A are refused");
+    dump_pages();
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) { fprintf(stderr, "usage: harness CASE\n"); return 2; }
     const char *c = argv[1];
@@ -201,6 +251,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(c, "not_replaced_none_behind")) not_replaced_none_behind();
     else if (!strcmp(c, "not_replaced_head"))        not_replaced_head();
     else if (!strcmp(c, "uart_errors"))              uart_errors();
+    else if (!strcmp(c, "profile"))                  profile();
     else { fprintf(stderr, "unknown case %s\n", c); return 2; }
     printf("%s %s\n", failures ? "FAIL" : "ok  ", c);
     return failures ? 1 : 0;
