@@ -513,6 +513,17 @@ is built until JD says so.**
    ⚠️ Inserting the meter disconnects the pack, which reboots the board, so it
    waits until no soak needs the RAM state. JD's board was open on 10-06:
    keep the pack lead reachable.
+
+   **JD has pack connectors now (10-06)** to make adapters that stay in place
+   for a whole run:
+   - **a Y (parallel) tap for VOLTAGE.** It is the pack voltage below `5C`'s
+     3.161 V floor (the reserve's last ~50 min), and under charge, where
+     `5C`'s line was never checked against a meter (B, Note 1);
+   - **a series breakout for CURRENT**: the + lead through the meter, − straight
+     through. Step 2 needs this one. An INA228-style logger would sit in the
+     same place.
+
+   Either goes in only between runs, since inserting it reboots the board.
 3. **The lighting and screen modes on `Fn`+`B`**, on the ladder
    `3b85686ff7` already holds:
    - Full Power, Normal (the default) and Power Saver, shown as an overlay;
