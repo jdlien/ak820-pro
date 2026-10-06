@@ -1160,6 +1160,10 @@ Staged, so each can actually be run when it comes due.
 - Phase 2's own "measure before building" (2.6) still applies; the current
   logger (INA228) is not ordered. D1's per-task accounting will help Phase 2's
   load questions too.
+- **The agreed order for Phase 2 (JD, 2026-10-06)** is in
+  `BATTERY-GAUGE-PLAN.md`, "Phase 2: the agreed order": this plan first, then
+  the meter, the lighting modes, light sleep, the emergency Power Reserve, a
+  matched runtime run, and radio and deep sleep last.
 
 ---
 

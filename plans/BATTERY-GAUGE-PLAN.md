@@ -491,6 +491,48 @@ architectural; some may be the screen, which is fixable.
    lighting setups. If Normal is not measurably better, it is complexity for
    nothing.
 
+### Phase 2: the agreed order (JD, 2026-10-06)
+
+Agreed when JD asked whether the board was ready for the ladder (it was not
+yet), and recorded while Phase 2 is still in note-taking mode. **Nothing here
+is built until JD says so.**
+
+1. **Finish Phase 1b first** (`BATTERY-GAUGE-REFINE-PLAN.md`): flash 2 after
+   B3, with C2 (the RTC period's writes) and the D fix (the battery stalls).
+   - A mode that dims the lights must not still blink for flash writes or
+     stall on battery.
+   - And no ladder while B3's drain or a soak runs: each needs a constant
+     full-white load.
+2. **An afternoon with the meter (2.6).** A meter in series with the pack's +
+   lead, on the 1.25 mm extension. Read in turn, at a fixed pack voltage:
+   - RGB full and off;
+   - the screen full, dim and off;
+   - BT linked and idle;
+   - and one build with the light-sleep rung forced on, for the MCU's share.
+
+   ⚠️ Inserting the meter disconnects the pack, which reboots the board, so it
+   waits until no soak needs the RAM state. JD's board was open on 10-06:
+   keep the pack lead reachable.
+3. **The lighting and screen modes on `Fn`+`B`**, on the ladder
+   `3b85686ff7` already holds:
+   - Full Power, Normal (the default) and Power Saver, shown as an overlay;
+   - the mode persisted and defaulting sanely after a flash, its keycode
+     appended to via.json's list;
+   - the ~15% lighting cap;
+   - **the dim through the lighting's own brightness (HSV value), not the
+     driver's output**, so purple stays purple.
+4. **The light-sleep rung**: scan-only at a slow row rate when every LED is
+   dark, a yield in the main loop, WFI in the idle thread. It keeps the BLE
+   link, so no reconnect and no first-keystroke risk. The meter in step 2
+   says what it is worth; soak it before trusting WFI again.
+5. **The emergency Power Reserve** (below). It needs steps 3 and 4.
+6. **A matched runtime run** (gate 5): Normal against a baseline at the same
+   settings, ~2 days at full white each. If Normal is not measurably better,
+   it is complexity for nothing.
+7. **Radio-down and deep sleep last**, each behind its own gate: a wake
+   buffer that never loses the waking keystroke (question 1), and a wake path
+   that does not exist yet (question 2).
+
 ---
 
 ## ⭐ The principle: take the drain out of idle, not the fun out of use (JD, 2026-09-29)
@@ -553,6 +595,34 @@ below). Deep sleep when idle stretches it further.
   are this ladder's first two steps expressed in volts; define them once.
 - ⚠️ **Depends on the curve's bottom end**: "5%" must mean 5% for this to fire
   at the right moment. The 09-28 drain run is what pins it down.
+
+**Still on the table (JD, 2026-10-06):** "basically just for the last 1% to try
+to eke as much life out of a nearly-dead board as possible." What Phase 1b
+settled for it:
+- **The bottom of the curve is pinned.** Two drains fitted it, and 0% is the
+  RGB cut at 3400 mV. The warning is now 3680 mV (10%), fired once a
+  discharge. The "define them once" item above means these two values.
+- **A reserve already exists below 0%, and it is measured**: run 2 ran **5 h
+  01 min 29 s** past the RGB cut, to the death at 18:34:54 10-04
+  (`docs/battery.md`). That was with the lights off, but the screen on (the
+  debug page) and the MCU at full rate, ISR included.
+- **The mode's job is to stretch that reserve**, in three steps, cheapest
+  first:
+  1. **At the cut, the screen goes dark too**, with the "plug in" message.
+     The shortcuts show the message and change nothing (above). That is
+     cheap and needs no sleep work. Its value is the backlight's share, which
+     the meter (2.6) gives.
+  2. **The light-sleep rung, always on in the mode**: with every LED dark
+     the row ISR has no PWM work, so scan-only at a slow rate plus WFI. This
+     is the likely big lever, because today the MCU spends ~73% of its time
+     in that ISR even with the lights dark. How big is what the meter
+     measures. Until then, any reserve figure past 5 h is a guess.
+  3. **Deep sleep when idle**, once the wake path exists (question 2).
+- **"The SOC into a very low power state"** is steps 2 and 3. Step 2 keeps
+  the link and every keystroke. Step 3 is blocked on the wake path and the
+  wake buffer like everything else.
+- **Where it fits:** after the lighting modes and the light-sleep rung (the
+  agreed order, step 5). Step 1 alone could come sooner if JD wants it.
 
 ## Standby: how close to zero without touching the slider (JD, 2026-09-29)
 
@@ -642,7 +712,8 @@ sleep states answers both.
    choice), 51.6 h of full-white runtime; `docs/battery.md` has it and its
    caveats. The tap run is now the **validation**: a second run, ideally
    filmed (below), to check the curve on data it was not fitted to.
-6. Phase 2's lighting modes; radio and deep sleep each behind its own gate
+6. Phase 2's lighting modes; radio and deep sleep each behind its own gate.
+   **The agreed order, 2026-10-06, is in "Phase 2: the agreed order" above.**
 
 ⚠️ **Do not flash the idle ladder during a calibration run** — it changes the
 load profile mid-measurement.
