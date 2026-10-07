@@ -1065,6 +1065,69 @@ static void replay_selfcheck(const char *path) {
     CHECK(abs(worst) <= 10, "the replay lands within 1 point of the logged level: worst %+d pm", worst);
 }
 
+/* The trimmed mean by counting (Phase 1b, D: c5_trimmed_mean_x100 walks a
+ * histogram instead of sorting) against the SORT IT REPLACED, copied verbatim
+ * from 759e265796's battery.c: every report of 100,000, through the firmware's
+ * own battery_5c_report, across ring wrap-around and forgets, in eight
+ * patterns (constant, +-1, +-3, uniform 0-100, ramps, 0/100 alternation, the
+ * clamp with dips, bursts). Must agree to the bit. */
+static uint16_t ref_trimmed_x100(const uint8_t *ring, uint8_t count) {
+    uint8_t s[64];
+    for (uint8_t i = 0; i < count; i++) {
+        uint8_t v = ring[i], j = i;
+        while (j > 0 && s[j - 1] > v) {
+            s[j] = s[j - 1];
+            j--;
+        }
+        s[j] = v;
+    }
+    uint8_t  trim = (uint8_t)(count / 8u);
+    uint8_t  n    = (uint8_t)(count - 2u * trim);
+    uint16_t sum  = 0;
+    for (uint8_t i = trim; i < count - trim; i++) sum += s[i];
+    return (uint16_t)(((uint32_t)sum * 100u + n / 2u) / n);
+}
+static void c5_equivalence(void) {
+    uint8_t  ring[64], count = 0, pos = 0;
+    uint32_t r = 12345u, checked = 0, bad = 0, forgets = 0;
+    vdd_mv = 3900; c5 = 101; run_s(5);   /* on the pack, no reports */
+    for (int phase = 0; phase < 20; phase++) {
+        int center = 3 + (int)((r >> 8) % 95u);
+        for (int i = 0; i < 5000; i++) {
+            r = r * 1103515245u + 12345u;
+            int rv = (int)((r >> 16) & 0x7FFF), v;
+            switch (phase % 8) {
+                case 0:  v = center; break;
+                case 1:  v = center + rv % 3 - 1; break;
+                case 2:  v = center + rv % 7 - 3; break;
+                case 3:  v = rv % 101; break;
+                case 4:  v = (i / 40) % 101; break;
+                case 5:  v = (rv & 1) ? 100 : 0; break;
+                case 6:  v = (rv % 50 == 0) ? 96 + rv % 4 : 100; break;
+                default: v = (i % 300 < 3) ? rv % 101 : center; break;
+            }
+            v = v < 0 ? 0 : v > 100 ? 100 : v;
+            deliver((uint8_t)v);
+            if (count == 64) { ring[pos] = (uint8_t)v; pos = (uint8_t)((pos + 1u) % 64u); }
+            else { ring[pos] = (uint8_t)v; pos = (uint8_t)((pos + 1u) % 64u); count++; }
+            if (count >= 5) {
+                uint16_t want = ref_trimmed_x100(ring, count), got = battery_5c_x100();
+                checked++;
+                if (got != want && bad++ < 5)
+                    printf("  report %u: counting %u, the sort %u (count %u)\n", checked, got, want, count);
+            }
+        }
+        /* A forget: reports stop until the estimate is stale and the ring empties. */
+        if (phase % 3 == 2) {
+            run_s(25);
+            CHECK(battery_5c_x100() == 0xFFFF, "stale after 25 s without reports");
+            count = 0; pos = 0; forgets++;
+        }
+    }
+    CHECK(bad == 0, "the counting trimmed mean differs from the sort in %u of %u reports", bad, checked);
+    printf("  %u estimates compared, %u forgets, %u differences\n", checked, forgets, bad);
+}
+
 #if BATTERY_LOG_VERSION >= 5
 #include "model.c"   /* Phase 1b, B2: the charging model's scenarios (flash 2) */
 #endif
@@ -1120,6 +1183,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "warn_brief_plug"))    warn_brief_plug();
     else if (!strcmp(s, "warn_after_charge"))  warn_after_charge();
     else if (!strcmp(s, "warn_cfg_rearms"))    warn_cfg_rearms();
+    else if (!strcmp(s, "c5_equivalence"))     c5_equivalence();
 #if BATTERY_LOG_VERSION >= 5
     else if (!strcmp(s, "m_flat_boundary"))       m_flat_boundary();
     else if (!strcmp(s, "m_flat_boundary_above")) m_flat_boundary_above();

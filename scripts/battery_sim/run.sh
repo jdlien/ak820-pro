@@ -22,7 +22,7 @@ for s in boot_battery boot_battery_clamp boot_usb_full discharge charge_log tran
          burst restore_needs_evidence charger_fault chrg_gap boot_charging_rise full_then_replug \
          reseat_survives_replug threshold_at_clamp log_cadence \
          reboot_after_full reboot_saved_mismatch reboot_below_clamp persist_tracks \
-         warn_once warn_brief_plug warn_after_charge warn_cfg_rearms; do
+         warn_once warn_brief_plug warn_after_charge warn_cfg_rearms c5_equivalence; do
     "$build/sim" "$s" "$log" || fail=1
 done
 
