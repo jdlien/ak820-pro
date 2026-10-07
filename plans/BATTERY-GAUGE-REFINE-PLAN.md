@@ -1474,12 +1474,38 @@ tail is a **placeholder** until B3: `K_CC` 190, `L_KNEE` 775, `T_TAIL` 313 min.
   (`via-daily-6eadbd0e3a-20261006-143050.bin`, WIP: the placeholder tail, not
   for flashing) is clean with no warnings. Heap 3496 B, against 5048 on flash
   1c: the v5 log takes its 1440.
+- **D, the battery stalls: fixed** (`2e7155b2db`, 10-07). Flash 1c's profile,
+  read at 13:44 10-07 after 23.6 h, settled it:
+  - 73.5% of the slow ch582 calls' time was `battery_5c_report`, mean 1.75
+    ms a report, worst 3.6. It insertion-sorted the 64-report ring on every
+    report.
+  - The module answers each 5 s poll with three reports in one burst, so
+    ~6 ms of one pass.
+  - On USB at the clamp every report is 100 and the sort moved nothing,
+    hence battery-only.
+
+  The trimmed mean is now taken from a histogram of the ring's values, kept
+  on insert, eviction and forget: skip the lowest eighth, sum the next three
+  quarters. It is identical to the old sort, verbatim, on 99,972 estimates
+  (`battery_sim` `c5_equivalence`, `190e634`), and a top-only-trim mutant
+  differs in 74,565.
+- **C2, the flash writes: built** (`54c437028b`). C1 named the RTC period's
+  PCF path: 6-8 saves a day on battery.
+  - Both correction paths now only propose; `rtc/rtc_persist.c` owns every
+    save. The first comes at 10 min if nothing is stored, later ones only
+    ≥ 64 ticks off and ≥ 6 h after this boot's last.
+  - `diag_sim` `persist` (`e947ee6`): first save at 10 min; 3 saves in a
+    day of the worst both-paths wander; 1 in two settled days. Mutants
+    without the budget (1440 a day) or the 10-min wait are caught.
+  - The `rtc.c` comment that claimed the 64-tick threshold prevented steady
+    rewrites is corrected.
+- Flash 2's branch with both builds clean (`via-daily-54c437028b-20261007-135059.bin`,
+  WIP, placeholder tail).
 - **Left for flash 2:** B3's `K_CC` and `RELAX_S`, then
   `battery_charge.py --tail K_CC L_KNEE T_TAIL --header .../battery_tail.h` and
   `run.sh`, `tail_fw_grid.py`, `mutants.py` again (if `K_CC` falls outside
-  160-230, widen the grid first); C2 and the D fix from flash 1's soaks; the
-  final map's RAM (heap was 5360 B on flash 1, and v5's log takes 1440); codex's
-  gate-7 review.
+  160-230, widen the grid first); the final map's RAM; codex's gate-7 review.
+  C2 and the D fix are in (above).
 
 ---
 
