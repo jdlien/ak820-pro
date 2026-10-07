@@ -11,6 +11,10 @@
 #include "ch.h"
 #include "loop_acct.h"
 #include "flash_stats.h"
+#if __has_include("rtc_persist.h")
+#include "rtc_persist.h"   /* C2 (flash 2) */
+#define HAVE_RTC_PERSIST 1
+#endif
 
 static uint32_t now_ms = 20000;
 static uint16_t now_tick;
@@ -22,6 +26,12 @@ systime_t st_lld_get_counter(void) { return now_tick; }   /* loop_acct.h's inlin
 static uint8_t eeprom[1024];
 uint8_t eeprom_read_byte(const uint8_t *addr) { return eeprom[(uintptr_t)addr]; }
 void eeprom_wear_leveling_write_hook(uint32_t addr, const void *buf, size_t len);
+
+/* C2's EEPROM field and its writes. */
+static uint16_t ee_rtc_period;
+static int      ee_rtc_writes;
+uint16_t kb_eeconfig_get_rtc_period(void) { return ee_rtc_period; }
+void     kb_eeconfig_set_rtc_period(uint16_t p) { ee_rtc_period = p; ee_rtc_writes++; }
 
 static int failures;
 #define CHECK(cond, ...) do { if (!(cond)) { failures++; printf("  FAIL line %d: ", __LINE__); \
@@ -193,10 +203,61 @@ static void flash(void) {
     for (uint8_t pg = 0; pg <= 2; pg++) dump("FLASHW", pg, flash_stats_fill);
 }
 
+#ifdef HAVE_RTC_PERSIST
+/* C2: the persistence scheduler, minute by minute, through its real task. */
+static void persist_run_min(uint32_t minutes, void (*each)(uint32_t)) {
+    for (uint32_t m = 0; m < minutes; m++) {
+        now_ms += 60000u;
+        if (each) each(now_ms);
+        rtc_persist_task();
+    }
+}
+static uint16_t persist_val;
+static void prop_sof(uint32_t t) { (void)t; rtc_persist_propose(persist_val, FLASH_RTC_PATH_SOF); }
+static void prop_flip(uint32_t t) {   /* both paths, alternating 100 ticks apart: the worst wander */
+    rtc_persist_propose((t / 60000u) % 2u ? 33300 : 33400, (t / 60000u) % 3u ? FLASH_RTC_PATH_PCF : FLASH_RTC_PATH_SOF);
+}
+static void persist(void) {
+    /* The pure rule. */
+    CHECK(!rtc_persist_due(599999u, 0, 33300, 0) && rtc_persist_due(600000u, 0, 33300, 0), "first save at 10 min");
+    CHECK(rtc_persist_due(600000u, 50000, 33300, 0), "garbage stored counts as nothing stored");
+    CHECK(!rtc_persist_due(30u * 3600000u, 33300, 33363, 0), "63 ticks off: never");
+    CHECK(!rtc_persist_due(6u * 3600000u - 1u, 33300, 33364, 0) && rtc_persist_due(6u * 3600000u, 33300, 33364, 0),
+          "64 ticks off: only 6 h after boot");
+    CHECK(!rtc_persist_due(10u * 3600000u, 33300, 33400, 5u * 3600000u), "and 6 h after this boot's last save");
+    CHECK(!rtc_persist_due(3600000u, 0, 0, 0) && !rtc_persist_due(3600000u, 0, 27999, 0), "no candidate, or insane: never");
+
+    /* A fresh EEPROM (after a flash), a loop that converges at 2 min and
+     * then never proposes again: saved once, at 10 min (the starvation trap). */
+    now_ms = 0; ee_rtc_period = 0; ee_rtc_writes = 0;
+    rtc_persist_propose(33250, FLASH_RTC_PATH_SOF);
+    persist_run_min(9, NULL);
+    CHECK(ee_rtc_writes == 0, "nothing before 10 min: %d", ee_rtc_writes);
+    persist_run_min(2, NULL);
+    CHECK(ee_rtc_writes == 1 && ee_rtc_period == 33250, "saved at 10 min: %d writes, %u", ee_rtc_writes, ee_rtc_period);
+
+    /* Then 24 h of the worst wander, both paths, 100 ticks apart every minute:
+     * at most one save per 6 h. */
+    persist_run_min(24 * 60, prop_flip);
+    CHECK(ee_rtc_writes - 1 <= 4, "a day of worst wander: %d saves, at most 4", ee_rtc_writes - 1);
+    int day = ee_rtc_writes - 1;
+
+    /* A reboot with a good seed: within 64 ticks it never saves. */
+    persist_val = 33320;
+    persist_run_min(48 * 60, prop_sof);
+    int quiet = ee_rtc_writes - 1 - day;
+    CHECK(quiet <= 1, "a settled loop within 64 ticks: %d saves in 2 days (the last wander may owe one)", quiet);
+    printf("  first save at 10 min; %d saves in a day of worst wander; %d in 2 settled days\n", day, quiet);
+}
+#endif
+
 int main(int argc, char **argv) {
     if (argc < 2) return 2;
     if (!strcmp(argv[1], "acct")) acct();
     else if (!strcmp(argv[1], "flash")) flash();
+#ifdef HAVE_RTC_PERSIST
+    else if (!strcmp(argv[1], "persist")) persist();
+#endif
     else return 2;
     printf("%s %s\n", failures ? "FAIL" : "ok  ", argv[1]);
     return failures ? 1 : 0;
