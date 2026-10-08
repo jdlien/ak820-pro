@@ -118,27 +118,31 @@ the plan's "B3 trial 1" in "As built"):
   - JD has filmed its relaxation from 11:51:30, which gives the 0-6 min
     trial 1 missed.
 
+**Since 12:54, flash 2 is on the board** (token `0xdf1e8b99`, verified).
+- **Trial 2** charged 14:32:15-15:15:18 (43 min 00 s). Its `K_CC` is 148.5
+  pm/h, preliminary (138-159); with trial 1's 133 the mean is ~141.
+- **The bench** (`docs/test-bench.md`, `scripts/bench_power.py`): the HomeKit
+  outlet "Christmas Tree" powers the Acasis hub.
+  - A port switched OFF still carries data, so **the board can be read on
+    battery without charging**.
+  - With its port switched ON, the outlet switches charging.
+- **Now:** the board sits on a switched-off port (data only), discharging at
+  full white. A watcher reads it every 5 min into
+  `../history/battery-2026-10-08-partial-charge/watch-rgb-cut.log`, and at the
+  RGB cut it dumps the log (`log-*-rgbcut.csv`).
+
 **Next, in order:**
-1. **~12:50: the flash**, by the plan's procedure:
-   - JD plugs in, slider on BT;
-   - dump the log and take a snapshot;
-   - `./flash.sh` with the artifact above;
-   - check the backup timestamps, and only then does JD press Fn+Esc;
-   - verify the token;
-   - JD unplugs.
-
-   The LCD backlight is effective level 2 today (trial 1: 5). The flash
-   resets it to the default 5.
-2. **Trial 2 proper:**
-   - two start readings off the video, ≥ 1 h after the flash's plug-in and
-     ≥ 2 h after 11:50 (so ≥ ~13:55);
-   - exactly 40 min on the Mac;
-   - film from before the plug-in to the RGB cut.
-
-   One action per message; "leave it plugged in until I say unplug".
-3. **Pull both videos** with adb (the commands above); read them with ffmpeg crops.
-4. **Decide `K_CC`** (the mean of the trials) and `RELAX_S`. If they move,
-   regenerate the tail and reflash.
+1. **At the RGB cut** (expected ~22:30, ±45 min): the runtime cross-check for
+   trial 2. That is `K = (D × t_on_battery − L(start)) / t_charge`, with the
+   on-battery time from 14:32:15 less the charge. Tell JD the lights are out.
+2. **JD switches the port ON** (any time after the cut). From then on
+   `bench_power.py on|off` controls charging.
+   - **Gate 8's charge from below 50%:** a full charge on the outlet, then a
+     dump; check that the chg LOST/OVERRUN/self-check bits never set.
+   - **Then a battery soak** for gate 8's flash-write budget and stalls.
+3. **Decide `K_CC`** (~141?). If it moves, regenerate the tail, rerun the
+   checks, get a codex review, and reflash.
+4. **Pull JD's videos** (13:03-~14:35, 14:40-?) when convenient.
 
 **Also:**
 - **The hardware:** JD is ordering the DigiKey cart
