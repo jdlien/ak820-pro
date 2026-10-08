@@ -146,6 +146,22 @@ static void m_flat_burst(void) {
     boot_flat_bursts(seq);
     CHECK(battery_chg_state() == ST_FROM_FLAT, "the first five are 10.00 -> FROM-FLAT: %u", battery_chg_state());
 }
+/* The boot's FIRST estimate decides, even one taken before the supply is
+ * known: five reports of 50 with no VDD reading, then USB and five of 10, is
+ * no flat boot (codex, gate 7's verification). */
+static void m_flat_unknown_first(void) {
+    synthetic("five reports of 50 before the supply is known, then USB, charging, and five of 10");
+    vdd_mv = 0; chrg_low = false; c5 = 0xFF;
+    run_s(2);
+    CHECK(battery_supply() == BATTERY_SUPPLY_UNKNOWN, "the supply not yet known: %u", battery_supply());
+    for (int i = 0; i < 5; i++) deliver(50);
+    run_s(1);
+    static const int seq[6] = {10, 10, 10, 10, 10, 10};
+    boot_flat_bursts(seq);
+    CHECK(battery_chg_state() == ST_UNKNOWN && battery_level_permille() == 0xFFFF,
+          "the first estimate was 50.00, not flat -> UNKNOWN-CHG: %u %u", battery_chg_state(),
+          battery_level_permille());
+}
 static void m_flat_burst_above(void) {
     synthetic("a boot on USB, charging, reports in bursts 10,10,10 then 10,11,9");
     static const int seq[6] = {10, 10, 10, 10, 11, 9};    /* five: 10.20; six: 10.00 */
@@ -537,7 +553,7 @@ static void m_pause_after(void) {
 }
 static void m_pause_after_unadopted(void) {
     synthetic("a pause 2 s past PAUSE_S with no reports in it: handed over, nothing adopted, then resumed");
-    u_target = tgt_m_minus; u_delta = -100;
+    u_target = tgt_stoppable; u_delta = -100; stopped = 0;
     model_from(300, u_follow);
     run_s(5 * 60);
     uint16_t held = battery_level_permille();
@@ -558,6 +574,28 @@ static void m_pause_after_unadopted(void) {
 /* At the handover, reports still falling before RELAX_S are not adopted. */
 static int relax_phase;
 static int tgt_relaxing(void) { return relax_phase == 0 ? m_now() + 100 : relax_phase == 1 ? 600 : 400; }
+/* The held number stays no start through an unplug: handed over with
+ * nothing adopted, unplugged for less than RELAX_S, then a charge qualifies
+ * before the re-seat (codex, gate 7's verification). */
+static void m_handover_unplug_replug(void) {
+    synthetic("a handover with nothing adopted, 60 s unplugged, then a new charge qualifies before the re-seat");
+    u_target = tgt_stoppable; u_delta = -100; stopped = 0;
+    model_from(300, u_follow);
+    run_s(5 * 60);
+    uint16_t held = battery_level_permille();
+    stopped = 1;
+    pause_for(BATTERY_PAUSE_S + 2);   /* pause_for resumes CHRG: undo that at once */
+    chrg_low = false; vdd_mv = 3900;  /* unplugged */
+    run_s(60);
+    CHECK(battery_supply() == BATTERY_SUPPLY_BATTERY && battery_level_permille() == held,
+          "on the pack, the held number shown: %u %u (held %u)", battery_supply(), battery_level_permille(), held);
+    stopped = 0;
+    vdd_mv = 4193; chrg_low = true;   /* replugged, charging */
+    run_s(80);
+    CHECK(battery_chg_state() == ST_UNKNOWN && battery_level_permille() == 0xFFFF,
+          "UNKNOWN-CHG, not MODEL from the held number: %u %u", battery_chg_state(), battery_level_permille());
+}
+
 static void m_pause_relaxing(void) {
     synthetic("during a long pause the voltage reads 600-worth until RELAX_S - 20 s, then settles at 400-worth");
     relax_phase = 0;

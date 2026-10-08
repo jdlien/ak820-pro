@@ -36,6 +36,16 @@ CHG_TICK = "/* Once a second while the model is open. */\nstatic void chg_tick_1
 # (name, [(old, new), ...] on battery.c, [catchers]); a catcher is
 # ("sim", scenario), ("asan", scenario) or ("grid", point).
 MUTANTS = [
+    ("the log's sum and count accept again after the first rejection",
+     [("    if (!lg_c5_saturated && lg_c5_n < UINT16_MAX", "    if (lg_c5_n < UINT16_MAX")],
+     [("sim", "m_log_saturated")]),
+    ("the boot's first estimate skipped while the supply is unknown",
+     [("    if (boot_first_taken) return;\n    boot_first_taken = true;\n",
+       "    if (boot_first_taken || supply != BATTERY_SUPPLY_EXTERNAL) return;\n    boot_first_taken = true;\n")],
+     [("sim", "m_flat_unknown_first")]),
+    ("a handover's held number trusted again after an unplug",
+     [("    bool unadopted = adopt_owed || level_held;\n", "    bool unadopted = adopt_owed;\n")],
+     [("sim", "m_handover_unplug_replug")]),
     ("FULL leaves the pause's relax timer running",
      [("        chg_close(CHG_FULL);\n"
        "        /* The pause that led here started RELAX_S; FULL needs no relaxed\n"
@@ -49,8 +59,8 @@ MUTANTS = [
        "            if (m != C5_EST_NONE) boot_first_latch(m);\n            level_report(m);")],
      [("sim", "m_flat_burst"), ("sim", "m_flat_burst_above")]),
     ("a resumption after an unadopted handover starts from the held number",
-     [("    bool unadopted = adopt_owed;\n", "    bool unadopted = false;\n")],
-     [("sim", "m_pause_after_unadopted")]),
+     [("    bool unadopted = adopt_owed || level_held;\n", "    bool unadopted = false;\n")],
+     [("sim", "m_pause_after_unadopted"), ("sim", "m_handover_unplug_replug")]),
     ("K_CC = 0",
      [("uint32_t m = m_l0 + (BATT_K_CC_PM_PER_H * m_lin_s) / 3600u;",
        "uint32_t m = m_l0 + (0u * m_lin_s) / 3600u;")],
