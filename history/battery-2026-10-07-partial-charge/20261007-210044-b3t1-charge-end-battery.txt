@@ -1,0 +1,8 @@
+supply       external (USB)  (charging)
+level        9.7 %
+pack           3824 mV  (estimate 5C 76)
+module 5C    last 76%, 4 s ago
+vdd          4230 mV  (raw 1949, since boot 3868..4374 mV)  -- the rail, not the pack
+charger pins CHRG low (charging), STDBY high
+led drive    100.0 % of maximum
+flags        charging rgb_on linked external
