@@ -1574,6 +1574,12 @@ Record: `history/battery-2026-10-07-partial-charge/` (`readings.csv`, and
     `.bss` unchanged at 30112 B.
   - Gate 7's codex review:
     [`review-codex-battery-refine-impl2-2026-10-08.md`](review-codex-battery-refine-impl2-2026-10-08.md).
+- **`RELAX_S` confirmed (2026-10-08).** Trial 2's recharge from flat, 65 min
+  to ~9%, was filmed from 1.2 min after its unplug. Measured against the
+  60-min value, a re-seat would read ~1.7 points high at 1-2 min (the old 120
+  s), ~0.9 at 6-13 min, ~0.6 at 15-21 and ~0.35 at 25-37. That is trial 1's
+  shape where they overlap. **`RELAX_S` 1800 s stands**
+  (`history/battery-2026-10-08-partial-charge/relaxation-video-recharge.csv`).
 - **Trial 2, from the lessons:** film the whole trial, start readings included.
   Start ≥ 2 h after any earlier charge, because the relaxation inflates the
   start for an hour or more. Start in the band, and keep filming to the RGB cut
