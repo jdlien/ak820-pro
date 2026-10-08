@@ -1,0 +1,33 @@
+An implementation review before a flash (gate 7), read-only. Do not modify files.
+
+Context: the AK820 Pro's Phase 1b, plans/BATTERY-GAUGE-REFINE-PLAN.md (revision 7). Read its "B" section (the charging model, the re-seat, the pause, the ceiling, the constants), then "As built": "Flash 2 so far" and "B3 trial 1". Flash 1c (firmware 647c12f26d) is on the board. Flash 2 is the firmware branch phase1b-flash2, 647c12f26d..872f1f8a67, eight commits (`git -C qmk_firmware-ak820pro log 647c12f26d..872f1f8a67`, then `git -C qmk_firmware-ak820pro diff 647c12f26d 872f1f8a67`). Read the commit messages first. Its tree is checked out at /Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2 if you prefer files; git is enough. Host side, in this repo: scripts/battery_sim/ (sim.c, model.c, tail_fw.c, run.sh, tail_grid.py, tail_fw_grid.py, mutants.py), scripts/battery_charge.py (--tail writes keyboards/a_jazz/ak820pro/battery_tail.h), scripts/diag_sim/, scripts/ch582_sim/, scripts/camera_page_preview.py, and hostagent/ak820battery.py (the v5 log reader). Today's host commit is b793644.
+
+What flash 2 carries: B's charging model and log v5 (5c799c80cd, e459d0638a, 4a6b25a9a0, 8ecbdc0fa2); the camera page in the clock font (6eadbd0e3a); D, the 5C trimmed mean by a histogram instead of an insertion sort, the battery-only stalls (2e7155b2db); C2, the RTC period saved by a scheduler, at most ~4 writes a day (54c437028b); and B3 trial 1's numbers (872f1f8a67): K_CC 133 pm/h, L_KNEE 533, T_TAIL 313 min, RELAX_S and PAUSE_S 1800 s.
+
+Host results today, against flash 2's tree:
+- battery_sim/run.sh: 75 ok, including the model's scenarios under ASan and UBSan and the replays of the three charges from flat.
+- tail_grid.py: 1380 points, all feasible, its K_CC range widened to 120-230.
+- tail_fw_grid.py: 1381 of 1381 ok.
+- mutants.py: 12 of 12 caught.
+- diag_sim and ch582_sim pass.
+- ./build.sh daily is clean: via-daily-872f1f8a67-20261008-105323.bin, with .bss 30112 B, the same as the last flash-2 build.
+
+Check each of these, and say for each whether it is right:
+
+1. The model against the plan as written: the states (MODEL, UNKNOWN-CHG, LOST, OVERRUN, FULL), FROM-FLAT, the pause and its handover, the re-seat after the unplug (owed, RELAX_S, below and at the clamp, LOST as UNKNOWN, a replug keeps it owed), the ceiling U from fresh estimates below the clamp, the rise limiter, the 990 cap, FULL. Anything that diverges from the plan, or that the scenarios do not exercise?
+
+2. Trial 1's numbers. K_CC came out at 133 (122-142), two ways that agree. B1 had bounded it at 165-213 by assuming 70-90% of a charge goes in before the knee, the VDD rise at ~4.24 h. With L_KNEE = K_CC x t_knee - R the knee is 533, so the tail carries half the charge (tau 5.78 h), and it is still rising at 54 pm/h when it reaches 990 at T_TAIL. The plan says that if B3 contradicts B1 beyond the uncertainty: "revise the model (the knee, not the measurements), or ship flash 2 with 'Charge' for every session plus the re-seat". Is shipping the model at these numbers, marked provisional until trial 2, defensible? Which way does its display err if the charger really stays at constant current past the VDD rise, and by how much? Is anything worse than the placeholder tail (K 190, L_KNEE 775) it replaces? Or should flash 2 show "Charge" for every session until the knee is measured (a bench logger with a current sensor is on order)?
+
+3. RELAX_S and PAUSE_S at 1800 s (they were 120 and 600). Is any timer, product or comparison keyed on them sized or written for short values (u16 seconds, ms products, LOST_S or STALE_LOST_S interplay)? What does a user see for those 30 min after unplugging an UNKNOWN-CHG or LOST session, and after a charger pause? Is that acceptable, or should an unknown level re-seat sooner than a known one?
+
+4. D, the histogram trimmed mean: is it exactly the old sort's result (eviction, c5_forget, the trim counts at every ring fill, the rounding)? Can the counts or the sum overflow?
+
+5. C2, the RTC persist scheduler: the first save at 10 min only when the stored period is outside 28000-40000; then saves only when the period is >= 64 ticks off AND >= 6 h since the last. Can it write more than the plan's budget (<= 10 physical write sessions a day on battery)? Does it ever skip a needed first save, or save a period that is not converged? Is there any path where a host sync and the scheduler both write?
+
+6. The camera page: one glyph per pass through lcd_draw_flash_glyph_try, and the entry and exit drawing. The repo's rules: no synchronous bulk drawing on the main loop (lcd_draw_flash_text is ~1.6 ms a glyph; a full-screen lcd_clear_rect blocks ~43 ms, so big clears go in bands). Can any path here stall the loop by 25 ms or more?
+
+7. The test changes in b793644 (m_delayed_termination's entry, m_reseat_missing's stale time, the new m_early_clamp_below and the mutant's added catchers). Do they still test what the plan names, or were they loosened to pass?
+
+8. Anything that could hang, reset or brick: the watchdog, flash writes, log v5 and its host reader, the HID replies the Rust daemon in ak820-agent/ or ak820health.py read (does any older reader misparse a v5 reply?).
+
+Then a one-line verdict: "flash" or "fix N first". Be concrete: file and line for each finding, and what fails. Keep it tight.

@@ -1547,6 +1547,33 @@ Record: `history/battery-2026-10-07-partial-charge/` (`readings.csv`, and
 - **The reserve:** 5 h 31 min from the RGB cut to death (07:56:00-07:56:08,
   LEDs off, camera page lit, BT), against run 2's 5 h 01 min. The estimate went
   below the clamp (LO) at ~07:05. The board's RAM log died with it.
+- **Flash 2 with trial 1's numbers** (firmware `872f1f8a67`, host `b793644`,
+  2026-10-08), built so JD can flash before trial 2. The display model plays
+  no part in B3's raw-estimate measurement.
+  - **The tail:** `battery_charge.py --tail 133 533.255 5.22`. That gives
+    `L_KNEE` 533, τ 5.78 h and `A` 1301.8, and the tail ends at 54 pm/h.
+  - **Constants:** `RELAX_S` and `PAUSE_S` are 1800 s.
+  - **The tail ends steep.** If the charger stays at constant current past
+    the VDD rise, the model reads low mid-charge (by up to ~5 points), and
+    the re-seat corrects it upward once at the unplug. The placeholder it
+    replaces (`K_CC` 190, knee 775) would run ahead of a 133 pm/h pack by
+    ~14 points at 2 h and ~26 at 4 h, held back only by the ceiling below
+    the clamp.
+  - **The checks:** `tail_grid`'s `K_CC` range is now 120-230 (1380
+    feasible), and `tail_fw_grid` passes 1381 of 1381.
+  - **Two scenarios assumed the old numbers.** `m_delayed_termination` now
+    times OVERRUN from the tail entry when `L0` is above the knee, with an
+    independent scan of the table. `m_reseat_missing` now stays stale past
+    `RELAX_S`.
+  - **The clamp-entry mutant survived the new header.** With the knee at 533,
+    `m_early_clamp`'s `L0` of 600 lies above it. The new
+    `m_early_clamp_below` (`L_KNEE − 100`) and round 3's grid point, the set
+    this plan names, catch it: 12 of 12.
+  - **The build:** `run.sh` 75 ok; `diag_sim` and `ch582_sim` pass;
+    `via-daily-872f1f8a67-20261008-105323.bin` (token `0x314c6d7a`), with
+    `.bss` unchanged at 30112 B.
+  - Gate 7's codex review:
+    [`review-codex-battery-refine-impl2-2026-10-08.md`](review-codex-battery-refine-impl2-2026-10-08.md).
 - **Trial 2, from the lessons:** film the whole trial, start readings included.
   Start ≥ 2 h after any earlier charge, because the relaxation inflates the
   start for an hour or more. Start in the band, and keep filming to the RGB cut
