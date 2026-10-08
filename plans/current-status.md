@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-07, ~21:30 (the newest block is first below; the crash hunt's notes follow it). The crash hunt's section was last updated 2026-09-24, 12:45; its plan is
+Updated 2026-10-08 (the newest block is first below; the crash hunt's notes follow it). The crash hunt's section was last updated 2026-09-24, 12:45; its plan is
 [`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md). The live work is Phase 1b,
 below.
 
@@ -14,7 +14,7 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## 2026-10-07, night — RESUME HERE
+## 2026-10-08 — RESUME HERE
 
 **Phase 1b is mid-B3, and flash 2 is built but for B3's numbers.** The plan is
 [`BATTERY-GAUGE-REFINE-PLAN.md`](BATTERY-GAUGE-REFINE-PLAN.md); its "As
@@ -73,49 +73,48 @@ commit detached in `qmk_firmware-ak820pro`, run `./build.sh daily`, then
 5. The flash procedure.
 6. Gate 8: the soaks and the per-event checks.
 
-**B3 trial 1 is running**
-([`../history/battery-2026-10-07-partial-charge/readings.csv`](../history/battery-2026-10-07-partial-charge/readings.csv)):
-- **Start:** 3494 mV at 20:08:50 and 3482 mV at ~20:21 (on the Batt row,
-  ~2%), at full white all day.
-- **Charge:** 20:21:37-21:01:35 (39 min 58 s), timed by `ioreg` polls.
-- **Relaxation from 21:01:35.** JD's phone time-lapse of the camera page runs
-  from ~21:07:40 until JD is back in the morning (10-08). The page's bottom
-  row shows the board's clock, so every frame dates itself.
-- The board stays on battery at full white overnight. It will probably reach
-  the RGB cut (very rough: 03:00-08:30) and may be in the reserve or dead by
-  morning.
+**B3 trial 1 is done and analyzed**
+([`../history/battery-2026-10-07-partial-charge/`](../history/battery-2026-10-07-partial-charge/);
+the plan's "B3 trial 1" in "As built"):
+- **`K_CC` ≈ 133 pm/h, measured two ways.** On the curve at the 60-min
+  point it is 132.3 (122-142). By runtime from the unplug to the RGB cut it is
+  133.5. That is below B1's 165-213 bound, beyond the uncertainty, and the
+  charge current matched 10-01's and 10-04's. The tail stays feasible at
+  `K_CC` 120-145, with `L_KNEE` ~515. The plan's rule: trial 2, then decide.
+- **`RELAX_S`, provisionally 1800 s.** A re-seat reads ~1 point high at
+  6-10 min and ~0.3 at 30. The first 6 min were not filmed.
+- **The board died at 07:56 on 10-08**, by its clock in the video. The RGB cut
+  was at ~02:25, and the reserve lasted 5 h 31 min. The RAM log is gone, and
+  the pack is flat: recharge it soon.
+- **The video:** `~/Downloads/PXL_20261008_030743525.mp4` (3.9 GB) and the
+  `-trimmed.mp4` (3.26 GB), not in git. Pulled with adb as below; read with
+  ffmpeg crops (the camera was on a tripod, so fixed crops work: LCD
+  `crop=500:450:740:150`, keys `crop=460:460:200:620`; `signalstats` YAVG
+  finds the cut and the death).
+  ```sh
+  ADB=~/Library/Android/sdk/platform-tools/adb
+  $ADB devices -l                                    # the phone, authorized
+  $ADB shell 'ls -lt /sdcard/DCIM/Camera | head -8'  # the newest PXL_*.mp4
+  $ADB pull /sdcard/DCIM/Camera/PXL_<name>.mp4 ~/Downloads/
+  ```
 
 **Next, in order:**
-1. **JD plugs in** (slider on BT) → dump the log at once, and
-   `scripts/board_snapshot.sh`. The 10-min entries give the relaxation; the
-   one spanning 50-60 min after 21:01:35 gives L(60) to within ~5 min. If
-   the board died, the RAM log is gone, and the video is the record.
-2. **Pull the video** (JD wants it in `~/Downloads`), over USB with USB
-   debugging on, as on 10-04:
-   ```sh
-   ADB=~/Library/Android/sdk/platform-tools/adb
-   $ADB devices -l                                    # the phone, authorized
-   $ADB shell 'ls -lt /sdcard/DCIM/Camera | head -8'  # the newest PXL_*.mp4
-   $ADB pull /sdcard/DCIM/Camera/PXL_<name>.mp4 ~/Downloads/
-   ```
-   It will be large: an all-night time-lapse. Read the camera page's volts at
-   15, 30, 60 and 120 min (ffmpeg crops; the 10-04 method is in
-   `../history/battery-2026-10-01-drain/readings.csv`).
-3. **Compute** `K_CC = (L(60) − L(start) + D) / (40/60 h)` on the refitted
-   curve at the raw estimates, with `D` ≈ 1.95 points (B3, step 6). Then
-   `RELAX_S` from the trajectory. The video starts ~6 min in, so a settle
-   faster than that cannot be shown: keep RELAX_S conservative.
-4. **Trial 2.**
-   - If the pack is above 0% at full white: 30 min at full white, two
-     readings 5 min apart, then the 40-min charge.
-   - If not: charge ~25 min to ~5%, then at least 60 min at full white
-     first.
-   - ⚠️ **JD is often busy and skims. One action per message.** Say "leave it
-     plugged in until I say unplug" in so many words, and start the camera
-     BEFORE the unplug. Trial 1's first try was lost when JD unplugged at
-     once.
-   - Time it with a 1 s `ioreg` watcher for 0x8009 and a background timer.
-5. **The hardware:** JD is ordering the DigiKey cart
+1. **Trial 2.** The board is dead, so:
+   - charge ~1 h on the Mac (the reserve refills first);
+   - then ≥ 2 h at full white, because the relaxation inflates a start reading
+     for an hour or more, into the 5-8% band (3564-3640 mV);
+   - then the 40-min charge;
+   - then keep filming to the RGB cut, for the runtime cross-check.
+
+   Film the whole trial, so the start readings come off the video too. Time
+   the plug and the unplug with a 1 s `ioreg` watcher for 0x8009.
+
+   ⚠️ **JD is often busy and skims. One action per message.** Say "leave it
+   plugged in until I say unplug" in so many words, and start the camera
+   BEFORE the plug-in.
+2. **Decide `K_CC`** from the mean of the two trials (plan, B3 step 7), and
+   `RELAX_S`. Then follow "Left for flash 2" above.
+3. **The hardware:** JD is ordering the DigiKey cart
    (`parts/digikey-order-2026-09-29.csv`: INA228, QT Py RP2040, MAX17048s)
    and needs a `uhubctl`-capable hub, so trials run unattended
    (`BATTERY-GAUGE-PLAN.md`, "If the hardware arrives").

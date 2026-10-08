@@ -97,17 +97,19 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-10-07)
+## Current state (2026-10-08)
 
-**Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-07,
-night — RESUME HERE"). Phase 1b ([`plans/BATTERY-GAUGE-REFINE-PLAN.md`](plans/BATTERY-GAUGE-REFINE-PLAN.md))
-is in B3, the partial-charge trials: trial 1's relaxation was filmed
-overnight 10-07/08. Flash 1c (`647c12f26d`, a diagnostic build) is on the
-board. Flash 2 is built on the local branch `phase1b-flash2`: the charging
-model, the camera page in the clock font, the battery-stall fix and the
-RTC-save scheduler. It waits only for B3's K_CC and RELAX_S. ⚠️ JD is often
-busy: one action per message, and say "leave it plugged in until I say
-unplug" outright.
+**Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-08
+— RESUME HERE"). Phase 1b ([`plans/BATTERY-GAUGE-REFINE-PLAN.md`](plans/BATTERY-GAUGE-REFINE-PLAN.md))
+is in B3, the partial-charge trials. **Trial 1 is analyzed off JD's overnight
+video:** `K_CC` ≈ 133 pm/h by two independent methods, below B1's 165-213
+bound, and `RELAX_S` provisionally 1800 s. The board ran flat at 07:56 10-08,
+so trial 2 starts with a recharge. Flash 1c (`647c12f26d`, a diagnostic
+build) is on the board. Flash 2 is built on the local branch
+`phase1b-flash2`: the charging model, the camera page in the clock font, the
+battery-stall fix and the RTC-save scheduler. It waits for trial 2's `K_CC`
+and `RELAX_S`. ⚠️ JD is often busy: one action per message, and say "leave
+it plugged in until I say unplug" outright.
 
 ## Earlier state (2026-10-04)
 

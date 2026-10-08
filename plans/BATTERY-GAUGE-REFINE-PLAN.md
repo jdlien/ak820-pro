@@ -1,6 +1,8 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-07, ~21:30): executing, in B3.** Gates 1-4 are met:
+**Status (2026-10-08): executing, in B3.** Trial 1 is analyzed: `K_CC`
+~133 pm/h, two ways, below B1's 165-213; provisional `RELAX_S` 1800 s; trial 2
+next ("B3 trial 1", in "As built"). Gates 1-4 are met:
 - gate 3 passed on flash 1b, after flash 1's 2.5% failure and a trim;
 - the soaks named C1's writer (the RTC period's PCF path) and D2's stall
   (`battery_5c_report`'s sort; flash 1c's profile).
@@ -1510,6 +1512,45 @@ tail is a **placeholder** until B3: `K_CC` 190, `L_KNEE` 775, `T_TAIL` 313 min.
   `run.sh`, `tail_fw_grid.py`, `mutants.py` again (if `K_CC` falls outside
   160-230, widen the grid first); the final map's RAM; codex's gate-7 review.
   C2 and the D fix are in (above).
+
+### B3 trial 1 (2026-10-07/08)
+
+Record: `history/battery-2026-10-07-partial-charge/` (`readings.csv`, and
+`relaxation-video.csv` read off JD's overnight time-lapse of the camera page).
+
+- **The charge:** 20:21:37-21:01:35 on the Mac (39 min 58 s by ioreg), from
+  3482 mV (1.8% on the curve), at full white. That is **below the 5-8% band**:
+  JD restarted from 2% after the first try was lost. The 60-min estimate
+  (22:01:21, 3652 mV) is ≤ 3810: the trial counts.
+- **`K_CC` = (86.00 − 17.65 + 19.78) / 0.6661 h = 132.3 pm/h** (122-142 with
+  ±2 mV and ±5 pm of curve error), on the curve on the board (`dd5c94fdd9`'s).
+  **Cross-check by runtime:** the RGB cut came 5 h 23 min after the unplug
+  (02:24:42-02:25:03 by the board's clock). At 50.56 h per 1000 pm that is
+  106.6 pm at the unplug and **133.5 pm/h**. This check uses the curve only at
+  the start.
+- **It contradicts B1's bound** (165-213, from assuming 70-90% of a charge goes
+  in before the knee) beyond the uncertainty. It is not a different charge
+  current: the charging `5C` climbed 59→71 in 20 min here, as on 10-01 and
+  10-04 (all at `led_pm` 1000). One trial; **the rule stands: trial 2, then
+  decide.** The model can absorb it. At `K_CC` 120-145 every point of B1's
+  other ranges is feasible (360 of 360, `tail_grid.solve`). `L_KNEE` would be
+  ~515 (`K_CC` 133, `t_knee` 4.1 h, `R` 30) instead of ~626, so the tail would
+  carry half the charge. That is the knee's meaning to revisit, not the
+  measurement.
+- **The relaxation:** take each reading's curve level, plus the full-white
+  drain since the unplug. That gives the implied level at the unplug: ~115 pm
+  at 6-10 min, ~112 at 15, ~109 at 30, ~106 at 60 and ~103 at 120, against
+  106.6 by runtime. A re-seat would therefore read ~1 point high at 6-10 min,
+  ~0.6 at 15 and ~0.3 at 30. The first 6 min were not filmed, so the initial
+  `RELAX_S` (120 s) is only known to be ≥ 1 point high. Provisional: **`RELAX_S`
+  1800 s**, to be confirmed by trial 2 filmed from before the unplug.
+- **The reserve:** 5 h 31 min from the RGB cut to death (07:56:00-07:56:08,
+  LEDs off, camera page lit, BT), against run 2's 5 h 01 min. The estimate went
+  below the clamp (LO) at ~07:05. The board's RAM log died with it.
+- **Trial 2, from the lessons:** film the whole trial, start readings included.
+  Start ≥ 2 h after any earlier charge, because the relaxation inflates the
+  start for an hour or more. Start in the band, and keep filming to the RGB cut
+  for the runtime cross-check.
 
 ---
 
