@@ -37,10 +37,11 @@ order").
     every 5 s.
 - The records: [`../history/battery-2026-10-05-flash1/readings.csv`](../history/battery-2026-10-05-flash1/readings.csv).
 
-**Flash 2: firmware branch `phase1b-flash2`**, local only, at `54c437028b` on
-top of flash 1c. It holds:
-- B's charging model, with the PLACEHOLDER tail (K 190, L_KNEE 775, T_TAIL
-  313 min);
+**Flash 2: firmware branch `phase1b-flash2`**, local only, on top of flash
+1c. As of 10-07 it was at `54c437028b`; **its head is now `28f260225f`, with
+trial 1's tail** (see "2026-10-08 so far" below). It holds:
+- B's charging model, with the tail from B3 trial 1 (was a placeholder: K 190,
+  L_KNEE 775, T_TAIL 313 min);
 - log v5;
 - the camera page in the clock's font (JD approved it from
   `scripts/camera_page_preview.py`'s render);
@@ -53,8 +54,8 @@ Every host check passes (`scripts/battery_sim/run.sh`, `tail_fw_grid.py`,
 `mutants.py`, `scripts/diag_sim`, `scripts/ch582_sim`), and it builds clean
 (heap 3496 B).
 
-⚠️ **Its worktree was in a session scratchpad**
-(`/private/tmp/claude-501/.../0821da9b-.../scratchpad/qmk-flash2`). If it is
+⚠️ **Its worktree is in a session's job directory**
+(`/Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2`, moved there 10-08). If it is
 gone: `git -C qmk_firmware-ak820pro worktree prune`, then `... worktree add
 <dir> phase1b-flash2`. The simulators take its keyboard directory through
 `BATTERY_SIM_SRC=`, `DIAG_SIM_SRC=` or `--src`. To build it, check out its
@@ -98,26 +99,53 @@ the plan's "B3 trial 1" in "As built"):
   $ADB pull /sdcard/DCIM/Camera/PXL_<name>.mp4 ~/Downloads/
   ```
 
+**2026-10-08 so far (newest last):**
+- **Flash 2 is rebuilt on trial 1's numbers and cleared by codex.**
+  - Firmware `28f260225f` on `phase1b-flash2`, host `91804d9`:
+    `K_CC` 133, `L_KNEE` 533, and `RELAX_S`/`PAUSE_S` 1800 s.
+  - Gate 7 found 3 bugs; two verification passes followed. The second
+    said **"flash"**.
+  - JD chose to show the model's number while charging (F3, option A).
+  - The artifact: `ak820pro-builds/out/via-daily-28f260225f-20261008-112003.bin`,
+    token **`0xdf1e8b99`**.
+  - The worktree is now `/Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2`.
+  - Every disposition is in the plan, "Gate 7"; the review is in
+    `review-codex-battery-refine-impl2-2026-10-08.md`, with both
+    verification passes.
+- **Trial 2 is under way** in `../history/battery-2026-10-08-partial-charge/`.
+  - The recharge from flat ran 10:45:06-11:50:23, stopped at a charging 5C
+    of 75 (≈ trial 1's end).
+  - JD has filmed its relaxation from 11:51:30, which gives the 0-6 min
+    trial 1 missed.
+
 **Next, in order:**
-1. **Trial 2.** The board is dead, so:
-   - charge ~1 h on the Mac (the reserve refills first);
-   - then ≥ 2 h at full white, because the relaxation inflates a start reading
-     for an hour or more, into the 5-8% band (3564-3640 mV);
-   - then the 40-min charge;
-   - then keep filming to the RGB cut, for the runtime cross-check.
+1. **~12:50: the flash**, by the plan's procedure:
+   - JD plugs in, slider on BT;
+   - dump the log and take a snapshot;
+   - `./flash.sh` with the artifact above;
+   - check the backup timestamps, and only then does JD press Fn+Esc;
+   - verify the token;
+   - JD unplugs.
 
-   Film the whole trial, so the start readings come off the video too. Time
-   the plug and the unplug with a 1 s `ioreg` watcher for 0x8009.
+   The LCD backlight is effective level 2 today (trial 1: 5). The flash
+   resets it to the default 5.
+2. **Trial 2 proper:**
+   - two start readings off the video, ≥ 1 h after the flash's plug-in and
+     ≥ 2 h after 11:50 (so ≥ ~13:55);
+   - exactly 40 min on the Mac;
+   - film from before the plug-in to the RGB cut.
 
-   ⚠️ **JD is often busy and skims. One action per message.** Say "leave it
-   plugged in until I say unplug" in so many words, and start the camera
-   BEFORE the plug-in.
-2. **Decide `K_CC`** from the mean of the two trials (plan, B3 step 7), and
-   `RELAX_S`. Then follow "Left for flash 2" above.
-3. **The hardware:** JD is ordering the DigiKey cart
+   One action per message; "leave it plugged in until I say unplug".
+3. **Pull both videos** with adb (the commands above); read them with ffmpeg crops.
+4. **Decide `K_CC`** (the mean of the trials) and `RELAX_S`. If they move,
+   regenerate the tail and reflash.
+
+**Also:**
+- **The hardware:** JD is ordering the DigiKey cart
    (`parts/digikey-order-2026-09-29.csv`: INA228, QT Py RP2040, MAX17048s)
-   and needs a `uhubctl`-capable hub, so trials run unattended
-   (`BATTERY-GAUGE-PLAN.md`, "If the hardware arrives").
+   and needs a `uhubctl`-capable hub (`BATTERY-GAUGE-PLAN.md`, "If the
+   hardware arrives"). The INA228's current shows where charging really
+   slows: the knee F3 left open.
 
 ## 2026-10-04, night (superseded by the block above)
 
