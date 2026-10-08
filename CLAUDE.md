@@ -97,16 +97,23 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-10-04)
+## Current state (2026-10-07)
 
-**Next: execute [`plans/BATTERY-GAUGE-REFINE-PLAN.md`](plans/BATTERY-GAUGE-REFINE-PLAN.md)**
-(Phase 1b: the refit, the charging display, the flash-write blink, the
-battery-only stalls). It is at revision 7, and six codex rounds ended "ready
-to execute". Resume from [`plans/current-status.md`](plans/current-status.md).
-Run 2's validation drain is done: 50.56 h to the RGB cut, then 5 h of reserve.
-The fitted curve `759e265796` is on the board. ⚠️ On 10-04 at 22:37 the board
-was left in the bootloader. Check `ioreg` for 28992 (`0x7140`) before
-assuming anything.
+**Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-07,
+night — RESUME HERE"). Phase 1b ([`plans/BATTERY-GAUGE-REFINE-PLAN.md`](plans/BATTERY-GAUGE-REFINE-PLAN.md))
+is in B3, the partial-charge trials: trial 1's relaxation was filmed
+overnight 10-07/08. Flash 1c (`647c12f26d`, a diagnostic build) is on the
+board. Flash 2 is built on the local branch `phase1b-flash2`: the charging
+model, the camera page in the clock font, the battery-stall fix and the
+RTC-save scheduler. It waits only for B3's K_CC and RELAX_S. ⚠️ JD is often
+busy: one action per message, and say "leave it plugged in until I say
+unplug" outright.
+
+## Earlier state (2026-10-04)
+
+Phase 1b was about to start (revision 7, after six codex rounds). Run 2's
+validation drain was done: 50.56 h to the RGB cut, then 5 h of reserve. The
+fitted curve `759e265796` was on the board.
 
 ## Earlier state (2026-10-01)
 

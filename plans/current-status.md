@@ -1,8 +1,8 @@
-# Current status — the crash hunt
+# Current status
 
-Updated 2026-09-24, 12:45. The live plan is
-[`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); its codex review and every
-finding's disposition are linked from it.
+Updated 2026-10-07, ~21:30 (the newest block is first below; the crash hunt's notes follow it). The crash hunt's section was last updated 2026-09-24, 12:45; its plan is
+[`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md). The live work is Phase 1b,
+below.
 
 ## Why
 
@@ -14,7 +14,113 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## 2026-10-04, night — RESUME HERE
+## 2026-10-07, night — RESUME HERE
+
+**Phase 1b is mid-B3, and flash 2 is built but for B3's numbers.** The plan is
+[`BATTERY-GAUGE-REFINE-PLAN.md`](BATTERY-GAUGE-REFINE-PLAN.md); its "As
+built" section (just before the review dispositions) has every step with
+hashes. Nothing is pushed (JD: push only when told). Phase 2 is still
+note-taking only, but its order is agreed
+([`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md), "Phase 2: the agreed
+order").
+
+**On the board: flash 1c**, `647c12f26d` (token `0x0c93c530`), since 14:05
+10-06.
+- Flash 1 (`4293607b4b`, 10-05 12:28) failed gate 3: the accounting cost
+  2.5%. Flash 1b (`97a24c6e20`) trimmed it and passed.
+- Flash 1c adds a diagnostic profile of slow CH582F calls.
+- The soaks named both culprits:
+  - **C1:** the RTC period's PCF path, 6-8 flash writes a day on battery,
+    each blinking the LEDs.
+  - **D2:** the battery-only stalls are `battery_5c_report`'s 64-byte
+    insertion sort, run for each of the three reports that arrive together
+    every 5 s.
+- The records: [`../history/battery-2026-10-05-flash1/readings.csv`](../history/battery-2026-10-05-flash1/readings.csv).
+
+**Flash 2: firmware branch `phase1b-flash2`**, local only, at `54c437028b` on
+top of flash 1c. It holds:
+- B's charging model, with the PLACEHOLDER tail (K 190, L_KNEE 775, T_TAIL
+  313 min);
+- log v5;
+- the camera page in the clock's font (JD approved it from
+  `scripts/camera_page_preview.py`'s render);
+- **the D fix** (the trimmed mean by histogram, identical to the sort on
+  99,972 estimates);
+- **C2** (`rtc/rtc_persist.c`: the first save at 10 min, then at most one per
+  6 h).
+
+Every host check passes (`scripts/battery_sim/run.sh`, `tail_fw_grid.py`,
+`mutants.py`, `scripts/diag_sim`, `scripts/ch582_sim`), and it builds clean
+(heap 3496 B).
+
+⚠️ **Its worktree was in a session scratchpad**
+(`/private/tmp/claude-501/.../0821da9b-.../scratchpad/qmk-flash2`). If it is
+gone: `git -C qmk_firmware-ak820pro worktree prune`, then `... worktree add
+<dir> phase1b-flash2`. The simulators take its keyboard directory through
+`BATTERY_SIM_SRC=`, `DIAG_SIM_SRC=` or `--src`. To build it, check out its
+commit detached in `qmk_firmware-ak820pro`, run `./build.sh daily`, then
+`git checkout ak820pro-jdlien` again.
+
+**Left for flash 2**, after B3:
+1. `scripts/battery_charge.py --tail K_CC L_KNEE T_TAIL_H --header
+   <worktree>/keyboards/a_jazz/ak820pro/battery_tail.h`, with T_TAIL 5.22 h
+   from B1. Widen `tail_grid.py`'s grid first if K_CC falls outside 160-230.
+2. Rerun every check.
+3. The RAM.
+4. A codex gate-7 review (`codex exec -m gpt-6-astra -c
+   model_reasoning_effort=xhigh -s read-only ... < /dev/null`, in the
+   background, saved verbatim beside the plan, every finding dispositioned).
+5. The flash procedure.
+6. Gate 8: the soaks and the per-event checks.
+
+**B3 trial 1 is running**
+([`../history/battery-2026-10-07-partial-charge/readings.csv`](../history/battery-2026-10-07-partial-charge/readings.csv)):
+- **Start:** 3494 mV at 20:08:50 and 3482 mV at ~20:21 (on the Batt row,
+  ~2%), at full white all day.
+- **Charge:** 20:21:37-21:01:35 (39 min 58 s), timed by `ioreg` polls.
+- **Relaxation from 21:01:35.** JD's phone time-lapse of the camera page runs
+  from ~21:07:40 until JD is back in the morning (10-08). The page's bottom
+  row shows the board's clock, so every frame dates itself.
+- The board stays on battery at full white overnight. It will probably reach
+  the RGB cut (very rough: 03:00-08:30) and may be in the reserve or dead by
+  morning.
+
+**Next, in order:**
+1. **JD plugs in** (slider on BT) → dump the log at once, and
+   `scripts/board_snapshot.sh`. The 10-min entries give the relaxation; the
+   one spanning 50-60 min after 21:01:35 gives L(60) to within ~5 min. If
+   the board died, the RAM log is gone, and the video is the record.
+2. **Pull the video** (JD wants it in `~/Downloads`), over USB with USB
+   debugging on, as on 10-04:
+   ```sh
+   ADB=~/Library/Android/sdk/platform-tools/adb
+   $ADB devices -l                                    # the phone, authorized
+   $ADB shell 'ls -lt /sdcard/DCIM/Camera | head -8'  # the newest PXL_*.mp4
+   $ADB pull /sdcard/DCIM/Camera/PXL_<name>.mp4 ~/Downloads/
+   ```
+   It will be large: an all-night time-lapse. Read the camera page's volts at
+   15, 30, 60 and 120 min (ffmpeg crops; the 10-04 method is in
+   `../history/battery-2026-10-01-drain/readings.csv`).
+3. **Compute** `K_CC = (L(60) − L(start) + D) / (40/60 h)` on the refitted
+   curve at the raw estimates, with `D` ≈ 1.95 points (B3, step 6). Then
+   `RELAX_S` from the trajectory. The video starts ~6 min in, so a settle
+   faster than that cannot be shown: keep RELAX_S conservative.
+4. **Trial 2.**
+   - If the pack is above 0% at full white: 30 min at full white, two
+     readings 5 min apart, then the 40-min charge.
+   - If not: charge ~25 min to ~5%, then at least 60 min at full white
+     first.
+   - ⚠️ **JD is often busy and skims. One action per message.** Say "leave it
+     plugged in until I say unplug" in so many words, and start the camera
+     BEFORE the unplug. Trial 1's first try was lost when JD unplugged at
+     once.
+   - Time it with a 1 s `ioreg` watcher for 0x8009 and a background timer.
+5. **The hardware:** JD is ordering the DigiKey cart
+   (`parts/digikey-order-2026-09-29.csv`: INA228, QT Py RP2040, MAX17048s)
+   and needs a `uhubctl`-capable hub, so trials run unattended
+   (`BATTERY-GAUGE-PLAN.md`, "If the hardware arrives").
+
+## 2026-10-04, night (superseded by the block above)
 
 **Next: execute [`BATTERY-GAUGE-REFINE-PLAN.md`](BATTERY-GAUGE-REFINE-PLAN.md)
 top to bottom, starting at its Step 0.** That is Phase 1b: refit the curve on

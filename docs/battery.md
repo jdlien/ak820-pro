@@ -243,7 +243,10 @@ JD's words with the corrections, is in
     every 15 min lit, every 10 min on the reserve.
   - The method, crop boxes and frame times are in `readings.csv`.
   - The video (6.1 GB, not in git) is on JD's Mac at
-    `~/Downloads/PXL_20261004_052815043.mp4`.
+    `~/Downloads/PXL_20261004_052815043.mp4`. It came off the phone (USB,
+    USB debugging on) with `~/Library/Android/sdk/platform-tools/adb`:
+    `adb devices -l`, `adb shell 'ls -lt /sdcard/DCIM/Camera | head'`, then
+    `adb pull /sdcard/DCIM/Camera/PXL_<name>.mp4 ~/Downloads/`.
 
 ### What the panel should show
 

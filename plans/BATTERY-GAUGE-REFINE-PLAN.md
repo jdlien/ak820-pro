@@ -1,11 +1,15 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-05, ~17:45): executing.** Gates 1-3 are met. Gate 3
-failed on flash 1 (2.5%), so the accounting was trimmed: **flash 1b
-(`97a24c6e20`, token `0x5425251f`) is on the board since 16:28, and gate 3
-passed on it.** The battery soak and B3's drain began ~17:40
-([`history/battery-2026-10-05-flash1/`](../history/battery-2026-10-05-flash1/)). Flash 2's host work is under way ahead of B3 (the
-model with a placeholder tail; B2 done but for B3's parameters). See "As
+**Status (2026-10-07, ~21:30): executing, in B3.** Gates 1-4 are met:
+- gate 3 passed on flash 1b, after flash 1's 2.5% failure and a trim;
+- the soaks named C1's writer (the RTC period's PCF path) and D2's stall
+  (`battery_5c_report`'s sort; flash 1c's profile).
+
+Flash 1c is on the board. Flash 2 (branch `phase1b-flash2`) carries B's model
+with a placeholder tail, the D fix, C2 and the new camera page. It is built
+and host-verified, and waits for B3's `K_CC` and `RELAX_S`. B3 trial 1's
+charge ran 20:21:37-21:01:35 10-07; its relaxation was filmed overnight.
+Resume from `current-status.md`, "2026-10-07". See "As
 built", just before the review dispositions. Revision 7 came after codex's sixth review
 ([every round verbatim](review-codex-battery-refine-plan-2026-10-04.md);
 dispositions at the end). Phase 1 (the gauge) is built, flashed, and checked on
