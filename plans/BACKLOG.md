@@ -1,5 +1,31 @@
 # Backlog — known, accepted, or deferred items
 
+## USB connects with no 5 V in the wireless positions: a spec deviation we now rely on (2026-10-08)
+
+**What:** in the BT and 2.4G positions the board runs from its battery, and
+QMK connects USB at boot regardless of VBUS (`init_usb_driver()`,
+`tmk_core/protocol/chibios/usb_main.c:346`, an unconditional
+`usbConnectBus`). The board has no VBUS sensing. So on a cable whose 5 V is
+cut but whose data lines are not, the board enumerates and works over data
+alone, without charging. Found on the Acasis hub, whose port buttons cut VBUS
+only: `docs/test-bench.md`, and `history/battery-2026-10-08-partial-charge/`
+from 15:41 to 16:10. On cable the board runs from USB, so with no 5 V it is
+simply off.
+
+**Strictly a violation:** USB 2.0 §7.1.5.1 requires a self-powered device's
+D+ pull-up to be powered from, or switched by, VBUS, so that with no VBUS it
+puts no current on the data line. The cost here is ~1 mA through the 1.5 kΩ
+pull-up into an unpowered port (a laptop that is off, say). No harm is known.
+
+**Kept deliberately:** it is the test bench's data-only mode. The board can be
+read and dumped while it discharges, without charging it.
+
+**If it is ever fixed:** gate `usbConnectBus` on `battery.c`'s supply decision
+(EXTERNAL), and disconnect when the supply returns to BATTERY. That costs the
+dwell (~0.5 s) at every plug-in, and the bench loses its data-only mode. Offered
+upstream as a note (`ak820pro-builds/UPSTREAM-CONTRIBUTIONS.md`, 3.3), not as
+a patch.
+
 ## ⚠️ Concurrent raw-HID use breaks VIA, and has been all along (2026-09-05)
 
 **Symptom JD sees:** VIA's console fills with `Receiving incorrect

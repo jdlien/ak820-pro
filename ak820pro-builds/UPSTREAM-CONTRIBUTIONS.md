@@ -269,6 +269,23 @@ other boards, and the general case is real — any board whose flash program/era
 stalls instruction fetch (XIP, memory-mapped) has this problem, not just this one.
 But it is a harder sell and should not be bundled with the debounce change.
 
+### 3.3 A battery board connects USB with no VBUS → fpb (a note, not a patch)
+
+In the wireless positions the AK820 Pro runs from its pack, and QMK's
+`init_usb_driver()` (`tmk_core/protocol/chibios/usb_main.c`) calls
+`usbConnectBus` unconditionally. The board has no VBUS sense. On a cable or
+port whose 5 V is cut but whose data lines are not, the board enumerates over
+data alone (measured 2026-10-08 on a hub whose port buttons switch VBUS
+only). That breaks USB 2.0 §7.1.5.1: a self-powered device's D+ pull-up must
+follow VBUS. The cost is ~1 mA back-driven into an unpowered port.
+
+The fix would be to connect the bus only once the firmware's own supply
+detection sees USB power, and to disconnect when it returns to battery. **Not
+applied here on purpose.** JD's test bench uses this behaviour to read the
+board on battery without charging it (`docs/test-bench.md`). Worth telling
+fpb as a known deviation of every QMK battery board without VBUS sensing,
+not worth pushing as a default.
+
 ---
 
 ## Tier 4 — offer, don't push
