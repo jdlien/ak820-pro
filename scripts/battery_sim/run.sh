@@ -30,7 +30,7 @@ done
 # charges from flat replayed against the model. sim.c compiles them only
 # against a v5 battery.h.
 if grep -qE '^#define BATTERY_LOG_VERSION +([5-9]|[1-9][0-9])\b' "$build/battery.h"; then
-    model_scenarios="m_flat_boundary m_flat_boundary_above m_unknown_start m_partial_below_knee m_early_clamp \
+    model_scenarios="m_flat_boundary m_flat_boundary_above m_unknown_start m_partial_below_knee m_early_clamp m_early_clamp_below \
              m_topup_near_full m_just_full m_delayed_termination m_delayed_unplug m_log_v5 m_log_saturated \
              m_ceil_hold30 m_ceil_60_29 m_ceil_60_30 m_ceil_clamp_hold m_ceil_clamp_entry m_ceil_clamp_exit \
              m_reports_lost_9 m_reports_lost_10 m_pause_short m_pause_before m_pause_after m_pause_relaxing \

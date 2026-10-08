@@ -1190,6 +1190,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "m_unknown_start"))       m_unknown_start();
     else if (!strcmp(s, "m_partial_below_knee"))  m_partial_below_knee();
     else if (!strcmp(s, "m_early_clamp"))         m_early_clamp();
+    else if (!strcmp(s, "m_early_clamp_below"))   m_early_clamp_below();
     else if (!strcmp(s, "m_topup_near_full"))     m_topup_near_full();
     else if (!strcmp(s, "m_just_full"))           m_just_full();
     else if (!strcmp(s, "m_delayed_termination")) m_delayed_termination();

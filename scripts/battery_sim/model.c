@@ -165,10 +165,9 @@ static void m_partial_below_knee(void) {
 
 /* Early clamp entry: L0 600, 5C at the clamp from the first minute. The 1 h
  * rise stays <= K_CC + 10 (round 1's formula started the tail at clamp entry). */
-static void m_early_clamp(void) {
-    synthetic("L0 600, 5C clamped from the start");
+static void early_clamp(uint16_t l0) {
     u_target = tgt_clamp;
-    model_from(600, u_follow);
+    model_from(l0, u_follow);
     uint16_t a = battery_level_permille();
     pw_reset();
     run_pw(3600);
@@ -176,6 +175,17 @@ static void m_early_clamp(void) {
     CHECK(b - a <= K + 10, "1 h rise at the clamp %u -> %u, <= %d", a, b, K + 10);
     CHECK(pw_rise_big == 0 && pw_fall == 0 && pw_over_cap == 0, "rules: %d %d %d", pw_rise_big, pw_fall, pw_over_cap);
     printf("  L0 %u: %u -> %u in the first hour at the clamp\n", a, a, b);
+}
+static void m_early_clamp(void) {
+    synthetic("L0 600, 5C clamped from the start");
+    early_clamp(600);
+}
+/* The same 100 pm below the knee, wherever the header puts it: with B3's
+ * L_KNEE (533) a start at 600 is above the knee, where the tail is entered
+ * anyway, so only this one sees a tail started at the clamp. */
+static void m_early_clamp_below(void) {
+    synthetic("L0 = L_KNEE - 100, 5C clamped from the start");
+    early_clamp(LK > 100 ? (uint16_t)(LK - 100) : 0u);
 }
 
 /* Near-full top-up: L0 950, FULL after 15 min -> the FULL step <= 50 pm. */
@@ -206,6 +216,18 @@ static void m_just_full(void) {
 
 /* --- The cap and the clamp ---------------------------------------------------- */
 
+/* The tail clock's entry for a start at l0 above the knee, by a plain scan of
+ * the table (tail_grid.py's m_fw, second by second), not battery.c's node
+ * search: the first second whose interpolated M, in 1/16 pm, is >= l0 * 16. */
+static uint32_t tail_entry_scan(uint16_t l0) {
+    for (uint32_t s = 0; s < TT; s++) {
+        uint32_t i = s / 60u, f = s % 60u;
+        uint32_t x = batt_tail_x16[i] + (uint32_t)(batt_tail_x16[i + 1] - batt_tail_x16[i]) * f / 60u;
+        if (x >= (uint32_t)l0 * 16u) return s;
+    }
+    return TT;
+}
+
 /* Delayed termination at the clamp: L0 600, clamped throughout, CHRG held 2 h
  * past the model's own termination. <= 990 throughout; "Charge" exactly
  * T_OVERRUN after the tail clock reaches T_TAIL; 1000 at FULL. */
@@ -214,9 +236,13 @@ static void delayed(bool unplug_instead) {
     u_target = tgt_clamp;
     model_from(600, u_follow);
     uint16_t l0 = battery_level_permille();
-    /* The knee comes at the first second whose L0 + K t / 3600 >= L_KNEE. */
+    /* Below the knee, the knee comes at the first second whose L0 + K t / 3600
+     * >= L_KNEE, and the tail clock starts there. Above it (L_KNEE 533 since
+     * B3 trial 1), the tail clock enters at the first second whose M >= L0, so
+     * OVERRUN comes (T_TAIL - entry) + T_OVERRUN in. */
     uint32_t s_knee = (l0 >= LK) ? 0 : (uint32_t)(((LK - l0) * 3600 + K - 1) / K);
-    uint32_t want   = s_knee + TT + BATTERY_T_OVERRUN_S;
+    uint32_t entry  = (l0 >= LK) ? tail_entry_scan(l0) : 0;
+    uint32_t want   = s_knee + TT - entry + BATTERY_T_OVERRUN_S;
     uint32_t lost_at = 0;
     pw_reset();
     for (uint32_t s = 1; s <= want + 2 * 3600 - BATTERY_T_OVERRUN_S + 60; s++) {
@@ -613,14 +639,14 @@ static void m_reseat_lost(void) {
     CHECK(battery_level_permille() == 950, "LOST re-seats as UNKNOWN -> 950: %u", battery_level_permille());
 }
 static void m_reseat_missing(void) {
-    synthetic("unplugged with no reports for 5 min");
+    synthetic("unplugged with no reports until 5 min past RELAX_S");
     u_target = tgt_stoppable; u_delta = -100; stopped = 0;
     model_from(600, u_follow);
     run_s(90);
     uint16_t l = battery_level_permille();
     stopped = 1;
     vdd_mv = 3900; chrg_low = false;
-    run_s(5 * 60);
+    run_s(BATTERY_RELAX_S + 5 * 60);   /* stale until well past RELAX_S */
     CHECK(battery_level_permille() == l, "owed while stale: %u", battery_level_permille());
     stopped = 0; u_target = tgt_fixed; tgt_fixed_pm = 520;
     run_s(60);

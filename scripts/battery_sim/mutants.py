@@ -45,7 +45,7 @@ MUTANTS = [
        "    { uint16_t e0 = battery_5c_x100();\n"
        "      if (!m_in_tail && e0 != C5_EST_NONE && c5_top(e0)) { m_in_tail = true; t_tail = 0; } }\n"
        "    model_advance();\n    uint16_t e     = battery_5c_x100();")],
-     [("sim", "m_early_clamp")]),
+     [("sim", "m_early_clamp"), ("sim", "m_early_clamp_below"), ("grid", ROUND3)]),
     ("the ceiling U ignored",
      [("    if (cand > bound) cand = bound;\n", "    (void)bound;\n")],
      [("sim", "m_ceil_hold30"), ("sim", "m_ceil_60_29"), ("sim", "m_ceil_clamp_exit")]),

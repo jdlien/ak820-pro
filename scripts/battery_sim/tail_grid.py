@@ -13,7 +13,7 @@ round 6). Run it with no arguments; it prints the worst cases (~10 s).
 import itertools
 import math
 
-K_RANGE = range(160, 235, 5)          # pm/h
+K_RANGE = range(120, 235, 5)          # pm/h: B1 bounded 160-230; B3 trial 1 measured ~133
 TKNEE = [3.9, 4.0, 4.1, 4.25]         # h, plug-in to the VDD rise
 R_RANGE = [0, 30, 60]                 # pm, the reserve refilled below 0%
 TTAIL = [5.0, 5.2, 5.35, 5.5, 5.6]    # h, knee to termination

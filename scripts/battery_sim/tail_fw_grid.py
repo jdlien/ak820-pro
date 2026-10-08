@@ -59,7 +59,7 @@ ROOT = os.path.join(HERE, "..", "..")
 CC = ["cc", "-std=c11", "-O1", "-Wall", "-Wextra", "-Wno-unused-parameter", "-Wno-unused-function"]
 T_OVERRUN = 3600
 ROUND3 = (160, 4.1, 30, 5.35)
-NAMED = ["m_partial_below_knee", "m_early_clamp", "m_delayed_termination", "m_delayed_unplug",
+NAMED = ["m_partial_below_knee", "m_early_clamp", "m_early_clamp_below", "m_delayed_termination", "m_delayed_unplug",
          "m_topup_near_full", "m_just_full"]
 
 
