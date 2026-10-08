@@ -1,0 +1,5 @@
+action,requested,confirmed,requested_epoch,confirmed_epoch,result,note
+off,2026-10-08 16:10:10.74,2026-10-08 16:10:11.79,,,confirmed,unintended: run as a test of the already-absent guard; the keyboard was present (on USB since 15:41:25)
+off,2026-10-08 16:10:10.74,2026-10-08 16:10:11.79,,,confirmed,"unintended: run as a test of the already-absent guard; the keyboard was present (on USB since 15:41:25, a PD 30W port JD thought switched off)"
+on,2026-10-08 16:12:35,,,,"shortcut hung 60 s, outlet stayed off (the hub absent from USB)","JD asked: on, for JD's port tests"
+on,2026-10-08 16:14:07,2026-10-08 16:14:11,,,"shortcut returned in 2 s; the hub's chips back on USB 16:14:11-16:14:15 (hub count 12 -> 25); the keyboard NOT on USB (its port off, or moved)","retry by hand with a 45 s limit"

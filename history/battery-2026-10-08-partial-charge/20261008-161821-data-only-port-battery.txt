@@ -1,0 +1,8 @@
+supply       battery  (battery)
+level        13.6 %
+pack           3734 mV  (estimate 5C 65)
+module 5C    last 66%, 2 s ago
+vdd          3898 mV  (raw 2104, since boot 3879..4357 mV)  -- the rail, not the pack
+charger pins CHRG high, STDBY low
+led drive    100.0 % of maximum
+flags        on_batt done rgb_on linked
