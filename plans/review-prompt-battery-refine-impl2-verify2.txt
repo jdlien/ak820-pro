@@ -1,0 +1,19 @@
+A second verification pass, read-only. Do not modify files.
+
+Your first verification of the gate-7 fixes (on c4d7b3702b) said: F1 partly, F2 partly, 7 partly, 8 resolved, and "fix 3 first". The fixes for those:
+- firmware 28f260225f (`git -C qmk_firmware-ak820pro show 28f260225f`; the tree is at /Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2);
+- host 91804d9 (`git show 91804d9`).
+
+What changed:
+- F1: boot_first_latch consumes the boot's first estimate whatever the supply, and only one taken on USB before any time on the pack can be flat.
+- F2: level_held marks a handover's held number until adopt_relaxed or FULL replaces it, and chg_open treats it as no start, through an unplug too.
+- 7: m_pause_after_unadopted's reports really stop (tgt_stoppable).
+- 8: a mutant for the log prefix.
+
+New scenarios: m_flat_unknown_first and m_handover_unplug_replug, both failing on c4d7b3702b and passing on 28f260225f. run.sh: 80 ok. mutants: 18 of 18. Build: clean, via-daily-28f260225f-20261008-112003.bin, .bss 30112 B.
+
+For F1, F2, 7 and 8: resolved, partly, or not, and why. Look especially for any other path where level_held is left set or wrongly cleared: the clamp re-seat of a held known level, LOST, an UNKNOWN session's handover, the battery ratchet, a reboot. Say whether FROM-FLAT can now be refused on a genuine boot on USB, given EXT_ENTER_TICKS against the module's report timing.
+
+F3 is JD's decision. Do not re-argue it.
+
+One-line verdict: "flash" (with F3 resolved either way) or "fix N first". Keep it short.

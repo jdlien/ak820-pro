@@ -39,3 +39,21 @@ Three pre-flash blockers, **F1–F3**, below. No files modified. I reran the Pyt
    The Rust daemon and `ak820health.py` filter by command and read unchanged health layouts. Previous v3/v4 battery readers reject v5 logs. Much older `1c08e26:hostagent/ak820battery.py:74` can misinterpret HC_CONN units, and its line-104 v1 fallback can misparse logs when pack mV is zero; that incompatibility predates flash 2.
 
 **fix 3 first**
+
+---
+
+## Verification pass 1 (2026-10-08, on c4d7b3702b / c95d0a2) -- verbatim
+
+Read-only audit; no files modified or builds rerun.
+
+- **F1 — partly.** The burst error is fixed, but this captures the **first qualifying EXTERNAL estimate**, not necessarily the boot’s first estimate. Supply, charger and staleness resets restart the five-report count; they never reset an established latch. At report time, latching requires EXTERNAL and `!ran_from_pack`. Estimates while UNKNOWN are neither captured nor marked consumed: five high reports while UNKNOWN, followed by EXTERNAL/reset and five low reports, can therefore qualify FROM-FLAT. The burst scenarios start after supply qualification and miss this. [Latch](/Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2/keyboards/a_jazz/ak820pro/battery.c:595)
+
+- **F2 — partly.** Direct resumption is fixed: the number holds through handover/requalification, then becomes **“Charge”**, camera `--%`. A later unplug shows an empty bar/blank number until relaxed re-seat; an unknown clamped pack becomes 950. But **handover → unplug before adoption → replug and qualify before re-seat** still starts MODEL from the held number: unplug clears `adopt_owed`, preserves the number under `reseat`, and `chg_open` ignores `reseat`. [Unplug path](/Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2/keyboards/a_jazz/ak820pro/battery.c:874)
+
+- **7 — partly.** The adopted-level test now demonstrates adoption, and FULL monitoring crosses relaxation and refill. However, `m_pause_after_unadopted` selects `tgt_m_minus`, which ignores `stopped`: reports **continue throughout the pause**. It catches today’s equal-timer boundary, but does not test its claimed missing-report case independently of `RELAX_S`. The burst tests are valid; all actual mutant sites are unique and correctly placed, including UNKNOWN. [Test](/Users/jdlien/code/ak820-pro/scripts/battery_sim/model.c:538)
+
+- **8 — resolved.** Saturation now freezes sum/count until period reset while extrema continue. The scenario correctly checks **65439/661** after rejected 100s and subsequent 1s. However, there is **no log-prefix mutant** among the 15, so “each fix … a mutant” overstates coverage. [Accumulator](/Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2/keyboards/a_jazz/ak820pro/battery.c:370)
+
+**F3:** The disposition states my figures correctly, with rounding.
+
+**fix 3 first**

@@ -1,0 +1,15 @@
+A verification pass on your gate-7 review, read-only. Do not modify files.
+
+Your review is plans/review-codex-battery-refine-impl2-2026-10-08.md, verdict "fix 3 first". The dispositions are at the end of plans/BATTERY-GAUGE-REFINE-PLAN.md, "Gate 7 -- codex on flash 2, 2026-10-08". The fixes:
+- firmware c4d7b3702b on top of 872f1f8a67 (`git -C qmk_firmware-ak820pro show c4d7b3702b`; the tree is checked out at /Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2);
+- host c95d0a2 (`git show c95d0a2`: model.c, sim.c, run.sh, mutants.py).
+Results: run.sh 78 ok, mutants 15 of 15 caught, and every new scenario fails on 872f1f8a67 and passes on c4d7b3702b. The build is clean: via-daily-c4d7b3702b-20261008-111212.bin, .bss 30112 B.
+
+For each of F1, F2, 7 and 8, say: resolved, partly, or not, and why. Check especially:
+- F1: the latch now runs inside battery_5c_report at c5_count == 5. Is that exactly "the boot's first estimate"? Cover the ring emptying at the supply and charger changes, a ring emptied by staleness, the conditions on supply and ran_from_pack at report time, and reports while supply is still UNKNOWN.
+- F2: chg_open makes the session UNKNOWN-CHG with level UNKNOWN when adopt_owed is set. Is there any other path into a session, or out of the handover, that still treats a held number as a start? What does the display show at that moment, and at a later unplug?
+- Do the new scenarios test what they claim? Are the mutants' sites right?
+
+F3 is still JD's decision: ship the model, or "Charge" for every session. Do not re-argue it; say only whether the disposition table states your figures correctly.
+
+Then a one-line verdict: "flash" (given F3 resolved either way) or "fix N first". Keep it short.
