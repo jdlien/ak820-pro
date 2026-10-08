@@ -1,8 +1,10 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-08): executing, in B3.** Trial 1 is analyzed: `K_CC`
-~133 pm/h, two ways, below B1's 165-213; provisional `RELAX_S` 1800 s; trial 2
-next ("B3 trial 1", in "As built"). Gates 1-4 are met:
+**Status (2026-10-08, ~16:25): executing, B3 and gate 8.** Flash 2 (`28f260225f`,
+token `0xdf1e8b99`) is on the board since 12:54. B3: trial 1 gave `K_CC` 133 and
+trial 2 148.5 (preliminary, mean ~141). `RELAX_S` 1800 s is confirmed by two
+relaxations. Trial 2's runtime cross-check waits for tonight's RGB cut
+("B3 trial 1" and "Trial 2" in "As built"). Gates 1-4 are met:
 - gate 3 passed on flash 1b, after flash 1's 2.5% failure and a trim;
 - the soaks named C1's writer (the RTC period's PCF path) and D2's stall
   (`battery_5c_report`'s sort; flash 1c's profile).
@@ -1580,6 +1582,21 @@ Record: `history/battery-2026-10-07-partial-charge/` (`readings.csv`, and
   s), ~0.9 at 6-13 min, ~0.6 at 15-21 and ~0.35 at 25-37. That is trial 1's
   shape where they overlap. **`RELAX_S` 1800 s stands**
   (`history/battery-2026-10-08-partial-charge/relaxation-video-recharge.csv`).
+- **Trial 2 (2026-10-08), on flash 2**, recorded in
+  `history/battery-2026-10-08-partial-charge/`:
+  - **The run:** a recharge from flat, then the flash at 12:54. On USB
+    14:32:15-15:15:18, 43 min 00 s with a 3 s cable swap, from 5.0%
+    (~50 pm).
+  - **`K_CC` 148.5 pm/h, preliminary** (138-159). L(60) came from a read over
+    a **data-only port** at 16:18 (62 min). The runtime cross-check waits for
+    the RGB cut.
+  - **With trial 1:** the two overlap at ~138-142, and the mean is ~141. Both
+    are below B1's 165-213. Flash 2 carries 133. A move to ~141 would mean
+    regenerating the tail and reflashing once the cut is in.
+  - **The bench** (`docs/test-bench.md`): a switched-off Acasis port cuts VBUS
+    but not data, so **the board can be read on battery without charging**.
+    The HomeKit outlet switches charging when the port is on
+    (`scripts/bench_power.py`).
 - **Trial 2, from the lessons:** film the whole trial, start readings included.
   Start ≥ 2 h after any earlier charge, because the relaxation inflates the
   start for an hour or more. Start in the band, and keep filming to the RGB cut
