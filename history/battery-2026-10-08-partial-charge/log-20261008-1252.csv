@@ -1,0 +1,13 @@
+time,vdd_avg,vdd_min,c5_mean,c5_n,c5_min,c5_max,pack_mv,level,led_pm,bkl,on_batt,charging,done,rgb_on,lights_cut,slider_usb,linked,external,flags_any
+2026-10-08 10:55,4189,3801,12.04,188,0,25,,0.0,1000,2,0,1,0,1,0,0,1,1,on_batt charging done rgb_on linked external
+2026-10-08 11:05,4220,4163,36.82,233,25,45,3483,0.0,1000,2,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-08 11:15,4225,4163,51.09,258,45,57,3608,2.0,1000,2,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-08 11:25,4227,4163,59.02,242,57,61,3678,4.0,1000,2,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-08 11:35,4228,4163,64.03,235,61,67,3722,5.5,1000,2,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-08 11:45,4228,4163,69.67,251,67,73,3771,7.5,1000,2,0,1,0,1,0,0,1,1,charging rgb_on linked external
+2026-10-08 11:55,4076,3877,67.70,266,59,76,3754,10.5,1000,2,1,0,1,1,0,0,1,0,on_batt charging done rgb_on linked external
+2026-10-08 12:05,3898,3871,59.54,320,58,61,3682,9.5,1000,2,1,0,1,1,0,0,1,0,on_batt done rgb_on linked
+2026-10-08 12:15,3898,3850,58.41,293,57,60,3672,9.5,1000,2,1,0,1,1,0,0,1,0,on_batt done rgb_on linked
+2026-10-08 12:25,3896,3850,56.86,350,55,58,3659,8.5,1000,2,1,0,1,1,0,0,1,0,on_batt done rgb_on linked
+2026-10-08 12:35,3896,3850,55.95,301,54,57,3651,8.0,1000,2,1,0,1,1,0,0,1,0,on_batt done rgb_on linked
+2026-10-08 12:45,3895,3850,54.82,308,53,56,3641,7.5,1000,2,1,0,1,1,0,0,1,0,on_batt done rgb_on linked
