@@ -1729,3 +1729,23 @@ and 8 resolved, and 7 partly resolved: the reconstruction still capped an
 interval at 2,000 reports, and a one-report or constant interval skipped the
 assertions. **Verdict: "flash".** That last P3 is fixed anyway: a cap of 4,096
 that fails loudly when exceeded, and the constant case asserts its sum (`404888b`).
+
+### Gate 7 — codex on flash 2, 2026-10-08 ([verbatim](review-codex-battery-refine-impl2-2026-10-08.md))
+
+On `872f1f8a67` (B3 trial 1's numbers). Verdict: **"fix 3 first"**. Fixed in
+firmware `c4d7b3702b` and host `c95d0a2`. Each fix has a scenario that fails
+before it and passes after, and a mutant (15 of 15 caught); `run.sh` 78 ok.
+The build is `via-daily-c4d7b3702b-20261008-111212.bin` (token
+`0x267a2e50`), `.bss` unchanged at 30112 B.
+
+| # | finding (short) | disposition |
+|---|---|---|
+| F1 | FROM-FLAT latched the estimate at the next task, which can hold a sixth report from the same burst | **Accepted, verified** (10,10,10 then 10,10,11 read UNKNOWN; 10,10,10 then 10,11,9 read FROM-FLAT). Now latched in `battery_5c_report` at exactly five. `m_flat_burst`, `m_flat_burst_above`. |
+| F2 | a charge resuming after an unadopted handover started MODEL from the held display | **Accepted, verified** (MODEL at 324). Now UNKNOWN-CHG, as the plan says. `m_pause_after_unadopted`; `m_pause_after` waits for a real adoption, 150 pm off the display. |
+| F3 | `K_CC` 133 with B1's VDD knee: the plan's contradiction rule is not met; codex recommends "Charge" for every session until the knee is measured. The model may read ~6-9 points low late in a long charge (not "~5"), and a slow top-up from 950 reaches OVERRUN after 1.70 h (was 4.35) | **Pending JD's choice** (asked 2026-10-08 ~11:10): (A) ship the model, provisional, erring low, or (B) "Charge" for every session. The "~5 points" claim is withdrawn. Codex's figures stand. |
+| 3 | 30 min of blank after unplugging an UNKNOWN or LOST session; the clamp countdown runs while the re-seat is owed | **Accepted as a known cost** for now. Re-seating an unknown level sooner is a policy change, to decide when trial 2 settles `RELAX_S`. **No change for the countdown:** the pack is discharging during `RELAX_S`, the countdown tracks it at its usual rate, and the plan does not say the display holds while owed. |
+| 4 | the histogram is exact; no overflow | Agreed. |
+| 5 | C2: a fresh EEPROM with an already-matching seed can propose nothing, so no first save; the integration cases are untested | **Deferred, watched in gate 8.** After a flash the period re-converges with the host attached, and a moving period proposes. Gate 8 checks for an RTC write in `HC_FLASHW` on the first day; if none comes, this is the reason. An integration case in `diag_sim` follows. |
+| 6 | the camera page draws one glyph a pass; no ≥ 25 ms path | Agreed. |
+| 7 | `b793644`'s changes are legitimate; `m_pause_after` called any held number adopted; `m_full_holds` no longer crossed `RELAX_S` | **Accepted, fixed** (above, with F2). `m_full_holds` now runs `RELAX_S` + 5 min and fails without FULL's relax cancel (mutant added). |
+| 8 | the log's sum and count kept accepting after the first rejection, so not the promised prefix | **Accepted, verified** (65444 / 666 against 65439 / 661). Nothing accumulates after the first rejection. `m_log_saturated`. |
