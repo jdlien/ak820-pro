@@ -898,6 +898,21 @@ What each piece changes, most valuable first:
 None of it changes the plan's order or the power-mode design. It changes the
 work from inference to measurement.
 
+**JD is placing the order (2026-10-07)**, after B3's first trial showed that
+by-hand relaxation readings at 0-120 min cannot be relied on ("I won't be able
+to do that manually... I think I really will need some way to monitor this").
+The cart above is unchanged (re-checked against JD's download: identical). For
+**unattended trials** it needs one thing it lacks:
+- **switched USB power** for the charge, so the 40 min is timed by the Mac.
+  The simplest is a hub that `uhubctl` supports (per-port power switching
+  from the Mac; check its supported-hub list, since most hubs cannot). The
+  alternative is a MOSFET on the cable's VBUS driven by the logger MCU.
+
+With it, a B3 trial becomes a script: log V and I at 1 Hz (INA228 on the
+pack's + lead, read by the QT Py over USB serial), cut the hub port at a
+stamped time, log the relaxation, done. The INA228's bus voltage (~2 mV) also
+gives the start and 60-min readings without the board's `5C` at all.
+
 ---
 
 ## What this plan deliberately does not do
