@@ -29,6 +29,7 @@ submodule sits on our `ak820pro-patches` branch.
 | [docs/leds.md](docs/leds.md) | **Interrupt priorities**, RGB field rate, indicator LEDs, the rainbow, effects |
 | [docs/hardware.md](docs/hardware.md) | Slider power quirk, bootloader, build/flash, watchdog+health, hang history, diagnostics |
 | [docs/battery.md](docs/battery.md) | What the board can know about the pack, the regulator hiding it, the level estimate, idle ladder, the unexplained power-off |
+| [docs/test-bench.md](docs/test-bench.md) | Cutting the keyboard's USB power from the host (the Acasis hub on the "Christmas Tree" HomeKit outlet), hub depth limits, why uhubctl can't |
 
 **Resuming work? Start at
 [`plans/current-status.md`](plans/current-status.md)** — where things stand and

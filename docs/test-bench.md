@@ -82,12 +82,12 @@ The hub (JD, 10-08) has a USB-C upstream port and, downstream:
 There is a button with a blue LED for every port. The power brick is rated
 150 W.
 
-- **Use a blue 10Gb USB-A port, or a USB-C port not marked PD 30W.** The
-  keyboard only uses USB full speed, so any of these does.
-- **Not the USB 2.0 ports, and probably not the PD 30W ports.** They hang off
-  an extra USB 2.0 hub chip one level deeper, whose ports macOS never sets up
-  (next section). The keyboard would charge there but never appear to the
-  host, so a cut could not be confirmed.
+- **Use a blue 10Gb USB-A port or any USB-C port.** The keyboard only uses
+  USB full speed, so any of these does. The PD 30W ports carry data too: the
+  keyboard enumerated on one from 15:41 to 16:10 10-08.
+- **Not the USB 2.0 ports.** They hang off an extra USB 2.0 hub chip one level
+  deeper, whose ports macOS never sets up (next section). The keyboard would
+  charge there but never appear to the host, so a cut could not be confirmed.
 - **Known mapping:** the first USB-C port at the far end is the top chip's
   port 4 (USB2 `1-1.4` port 4 when the hub is on the Studio Display). An ESP32
   in a USB-A port came up on the USB 2.0 chip's port 2. Which USB-A port that
