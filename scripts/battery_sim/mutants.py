@@ -36,6 +36,21 @@ CHG_TICK = "/* Once a second while the model is open. */\nstatic void chg_tick_1
 # (name, [(old, new), ...] on battery.c, [catchers]); a catcher is
 # ("sim", scenario), ("asan", scenario) or ("grid", point).
 MUTANTS = [
+    ("FULL leaves the pause's relax timer running",
+     [("        chg_close(CHG_FULL);\n"
+       "        /* The pause that led here started RELAX_S; FULL needs no relaxed\n"
+       "         * estimate, and emptying the ring would drop FULL until it refills. */\n"
+       "        relax_cancel();",
+       "        chg_close(CHG_FULL);")],
+     [("sim", "m_full_holds")]),
+    ("FROM-FLAT latched at the next task, not the fifth report",
+     [("    if (c5_count == C5_MIN_EST) boot_first_latch(c5_est);\n", ""),
+      ("            level_report(m);",
+       "            if (m != C5_EST_NONE) boot_first_latch(m);\n            level_report(m);")],
+     [("sim", "m_flat_burst"), ("sim", "m_flat_burst_above")]),
+    ("a resumption after an unadopted handover starts from the held number",
+     [("    bool unadopted = adopt_owed;\n", "    bool unadopted = false;\n")],
+     [("sim", "m_pause_after_unadopted")]),
     ("K_CC = 0",
      [("uint32_t m = m_l0 + (BATT_K_CC_PM_PER_H * m_lin_s) / 3600u;",
        "uint32_t m = m_l0 + (0u * m_lin_s) / 3600u;")],
@@ -77,8 +92,8 @@ MUTANTS = [
        "            (void)d;\n            return (i + 1u) * 60u;")],
      [("grid", ROUND3)]),
     ("UNKNOWN treated as a number",
-     [("    if (level != LEVEL_UNKNOWN) {\n        chg_st   = CHG_MODEL;",
-       "    if (true) {\n        chg_st   = CHG_MODEL;")],
+     [("    } else if (level != LEVEL_UNKNOWN) {\n        chg_st   = CHG_MODEL;",
+       "    } else if (true) {\n        chg_st   = CHG_MODEL;")],
      [("sim", "m_unknown_start")]),
 ]
 

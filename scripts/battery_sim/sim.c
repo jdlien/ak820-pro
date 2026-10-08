@@ -1187,6 +1187,8 @@ int main(int argc, char **argv) {
 #if BATTERY_LOG_VERSION >= 5
     else if (!strcmp(s, "m_flat_boundary"))       m_flat_boundary();
     else if (!strcmp(s, "m_flat_boundary_above")) m_flat_boundary_above();
+    else if (!strcmp(s, "m_flat_burst"))          m_flat_burst();
+    else if (!strcmp(s, "m_flat_burst_above"))    m_flat_burst_above();
     else if (!strcmp(s, "m_unknown_start"))       m_unknown_start();
     else if (!strcmp(s, "m_partial_below_knee"))  m_partial_below_knee();
     else if (!strcmp(s, "m_early_clamp"))         m_early_clamp();
@@ -1208,6 +1210,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "m_pause_short")) m_pause_short();
     else if (!strcmp(s, "m_pause_before")) m_pause_before();
     else if (!strcmp(s, "m_pause_after")) m_pause_after();
+    else if (!strcmp(s, "m_pause_after_unadopted")) m_pause_after_unadopted();
     else if (!strcmp(s, "m_pause_relaxing")) m_pause_relaxing();
     else if (!strcmp(s, "m_pause_missing")) m_pause_missing();
     else if (!strcmp(s, "m_pause_from_lost")) m_pause_from_lost();

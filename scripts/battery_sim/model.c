@@ -129,6 +129,31 @@ static void m_flat_boundary_above(void) {
           battery_chg_state(), battery_level_permille());
 }
 
+/* The same boundary as the module delivers it: three reports a poll, with no
+ * battery task between them, so the fifth and sixth arrive together. The
+ * first estimate is the fifth's (codex, gate 7). */
+static void boot_flat_bursts(const int *seq) {
+    vdd_mv = 4193; chrg_low = true; c5 = 0xFF;
+    run_s(2);
+    for (int b = 0; b < 16; b++) {   /* 80 s: past the session's 60 s qualification */
+        for (int j = 0; j < 3; j++) deliver((uint8_t)(b < 2 ? seq[b * 3 + j] : 40));
+        run_s(5);
+    }
+}
+static void m_flat_burst(void) {
+    synthetic("a boot on USB, charging, reports in bursts 10,10,10 then 10,10,11");
+    static const int seq[6] = {10, 10, 10, 10, 10, 11};   /* five: 10.00; six: 10.17 */
+    boot_flat_bursts(seq);
+    CHECK(battery_chg_state() == ST_FROM_FLAT, "the first five are 10.00 -> FROM-FLAT: %u", battery_chg_state());
+}
+static void m_flat_burst_above(void) {
+    synthetic("a boot on USB, charging, reports in bursts 10,10,10 then 10,11,9");
+    static const int seq[6] = {10, 10, 10, 10, 11, 9};    /* five: 10.20; six: 10.00 */
+    boot_flat_bursts(seq);
+    CHECK(battery_chg_state() == ST_UNKNOWN && battery_level_permille() == 0xFFFF,
+          "the first five are 10.20 -> UNKNOWN-CHG: %u %u", battery_chg_state(), battery_level_permille());
+}
+
 /* A boot on USB at the clamp, nothing known: "Charge" throughout, 1000 at FULL. */
 static void m_unknown_start(void) {
     synthetic("a boot on USB at the clamp, charging, nothing saved");
@@ -294,17 +319,20 @@ static void m_log_v5(void) {
 /* 661 reports of 99, then 100s: c5_max must reach 100 with the saturated bit
  * set (the sum stops accepting at ~661 x 99). */
 static void m_log_saturated(void) {
-    synthetic("661 reports of 99 then 100s, inside one period");
+    synthetic("661 reports of 99, then 100s, then 1s, inside one period");
     vdd_mv = 3900; c5 = 0xFF;
     run_s(5);
     for (int i = 0; i < 661; i++) deliver(99);
     for (int i = 0; i < 20; i++) deliver(100);
+    for (int i = 0; i < 5; i++) deliver(1);   /* each would still fit the sum */
     run_s(10 * 60);
     uint8_t o[29];
     battery_log_read(0, o);
     const uint8_t *e = o + 11;
-    CHECK(e[8] == 100, "c5_max 100: %u", e[8]);
+    unsigned sum = e[4] | (e[5] << 8), n = e[6] | (e[15] << 8);
+    CHECK(e[8] == 100 && e[7] == 1, "the extrema take every report: max %u min %u", e[8], e[7]);
     CHECK(e[17] & 0x80, "the saturated bit: chg %02x", e[17]);
+    CHECK(sum == 661u * 99u && n == 661u, "mean and count are the prefix before the first rejection: %u / %u", sum, n);
 }
 
 /* --- The ceiling (SYNTHETIC) --------------------------------------------------- */
@@ -474,31 +502,58 @@ static void m_pause_short(void) {
     CHECK(m1 >= m0 && m1 <= m0 + 2, "M continued from where it stopped: %u -> %u", m0, m1);
 }
 
-/* A resumption 1 s before PAUSE_S continues; 2 s after, it requalifies at
- * 60 s from the adopted level. (The pause clock starts at the first 1 Hz tick
- * after charging_now() drops, itself 1 s after CHRG: the handover comes
- * PAUSE_S + [0, 1) s after CHRG is released.) */
-static void pause_edge(bool after) {
-    synthetic(after ? "a pause 2 s past PAUSE_S" : "a pause 1 s short of PAUSE_S");
+/* A resumption 1 s before PAUSE_S continues. After the handover it
+ * requalifies at 60 s: MODEL from the adopted level, or UNKNOWN-CHG when none
+ * was adopted (codex, gate 7: holding a number is not adopting one). (The
+ * pause clock starts at the first 1 Hz tick after charging_now() drops,
+ * itself 1 s after CHRG: the handover comes PAUSE_S + [0, 1) s after CHRG is
+ * released.) */
+static void m_pause_before(void) {
+    synthetic("a pause 1 s short of PAUSE_S");
     u_target = tgt_m_minus; u_delta = -100;
     model_from(300, u_follow);
     run_s(5 * 60);
-    pause_for(after ? BATTERY_PAUSE_S + 2 : BATTERY_PAUSE_S - 1);
+    pause_for(BATTERY_PAUSE_S - 1);
     run_s(2);
-    if (!after) {
-        CHECK(battery_chg_state() == ST_MODEL, "continues: %u", battery_chg_state());
-        return;
-    }
+    CHECK(battery_chg_state() == ST_MODEL, "continues: %u", battery_chg_state());
+}
+static void m_pause_after(void) {
+    synthetic("a pause past PAUSE_S until a relaxed level is adopted, the pack reading 150 above the display");
+    u_target = tgt_m_minus; u_delta = -100;
+    model_from(300, u_follow);
+    run_s(5 * 60);
+    uint16_t held = battery_level_permille();
+    u_target = tgt_fixed; tgt_fixed_pm = held + 150;   /* adoption must show */
+    pause_for(BATTERY_PAUSE_S + 30);   /* >= 5 reports past RELAX_S: one relaxed estimate */
+    run_s(2);
     uint16_t adopted = battery_level_permille();
-    CHECK(battery_chg_state() == ST_NONE && adopted != 0xFFFF, "handed over, a level adopted: %u %u",
-          battery_chg_state(), adopted);
+    CHECK(battery_chg_state() == ST_NONE && abs((int)adopted - (held + 150)) <= 12,
+          "handed over, the relaxed level adopted: %u, %u (held %u)", battery_chg_state(), adopted, held);
     run_s(50);
     CHECK(battery_chg_state() == ST_NONE, "requalifying: %u", battery_chg_state());
     run_s(15);
-    CHECK(battery_chg_state() == ST_MODEL, "MODEL again after 60 s: %u", battery_chg_state());
+    CHECK(battery_chg_state() == ST_MODEL && battery_level_permille() >= adopted,
+          "MODEL again after 60 s, from the adopted level: %u %u", battery_chg_state(), battery_level_permille());
 }
-static void m_pause_before(void) { pause_edge(false); }
-static void m_pause_after(void) { pause_edge(true); }
+static void m_pause_after_unadopted(void) {
+    synthetic("a pause 2 s past PAUSE_S with no reports in it: handed over, nothing adopted, then resumed");
+    u_target = tgt_m_minus; u_delta = -100;
+    model_from(300, u_follow);
+    run_s(5 * 60);
+    uint16_t held = battery_level_permille();
+    stopped = 1;   /* no relaxed estimate can exist, whatever RELAX_S is */
+    pause_for(BATTERY_PAUSE_S + 2);
+    stopped = 0;
+    run_s(2);
+    CHECK(battery_chg_state() == ST_NONE && battery_level_permille() == held,
+          "handed over, nothing adopted, the display held: %u %u (held %u)", battery_chg_state(),
+          battery_level_permille(), held);
+    run_s(50);
+    CHECK(battery_chg_state() == ST_NONE, "requalifying: %u", battery_chg_state());
+    run_s(15);
+    CHECK(battery_chg_state() == ST_UNKNOWN && battery_level_permille() == 0xFFFF,
+          "UNKNOWN-CHG, not MODEL from the held number: %u %u", battery_chg_state(), battery_level_permille());
+}
 
 /* At the handover, reports still falling before RELAX_S are not adopted. */
 static int relax_phase;
@@ -703,13 +758,13 @@ static void m_full_fault(void) {
  * timer must not empty the ring after FULL, or FULL drops until the ring
  * refills (10-01's replay: 18 s at 1000 reading NONE). */
 static void m_full_holds(void) {
-    synthetic("charging at the clamp, CHRG released (termination), then 30 min on USB");
+    synthetic("charging at the clamp, CHRG released (termination), then RELAX_S + 5 min on USB");
     u_target = tgt_clamp;
     model_from(800, u_follow);
     run_s(10 * 60);
     chrg_low = false; vdd_mv = 4470;
     int seen = 0, dropped = 0;
-    for (int i = 0; i < 30 * 60; i++) {
+    for (uint32_t i = 0; i < BATTERY_RELAX_S + 5 * 60; i++) {   /* across the relax timer, and a refill */
         run_s(1);
         if (battery_chg_state() == ST_FULL) seen = 1;
         else if (seen) dropped++;
