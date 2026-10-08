@@ -1749,3 +1749,24 @@ The build is `via-daily-c4d7b3702b-20261008-111212.bin` (token
 | 6 | the camera page draws one glyph a pass; no ≥ 25 ms path | Agreed. |
 | 7 | `b793644`'s changes are legitimate; `m_pause_after` called any held number adopted; `m_full_holds` no longer crossed `RELAX_S` | **Accepted, fixed** (above, with F2). `m_full_holds` now runs `RELAX_S` + 5 min and fails without FULL's relax cancel (mutant added). |
 | 8 | the log's sum and count kept accepting after the first rejection, so not the promised prefix | **Accepted, verified** (65444 / 666 against 65439 / 661). Nothing accumulates after the first rejection. `m_log_saturated`. |
+
+**Verification pass 1** (on `c4d7b3702b`, appended verbatim): F1, F2 and 7
+**partly**, 8 resolved, and "fix 3 first". The three gaps, all fixed in
+firmware `28f260225f` and host `91804d9`:
+- **F1:** an estimate taken while the supply was unknown was never counted,
+  so a later one could become the "first". The first estimate is now
+  consumed whatever the supply (`m_flat_unknown_first`).
+- **F2:** handover, then unplug, then a qualifying replug before the re-seat
+  still started MODEL from the held number. `level_held` carries it until
+  `adopt_relaxed` or FULL replaces it (`m_handover_unplug_replug`).
+- **7:** `m_pause_after_unadopted`'s reports did not really stop. It now
+  uses `tgt_stoppable`. A log-prefix mutant was added.
+
+Both new scenarios fail on `c4d7b3702b`; 18 of 18 mutants are caught. The
+build is `via-daily-28f260225f-20261008-112003.bin` (token `0xdf1e8b99`),
+`.bss` 30112 B.
+
+**Verification pass 2** (on `28f260225f`, appended verbatim): F1, F2, 7 and
+8 all **resolved**. FROM-FLAT is not refused on a genuine USB boot (the supply
+qualifies in ~0.2-0.5 s, long before five reports). **Verdict: "flash (with
+F3 resolved either way)".**

@@ -57,3 +57,19 @@ Read-only audit; no files modified or builds rerun.
 **F3:** The disposition states my figures correctly, with rounding.
 
 **fix 3 first**
+
+---
+
+## Verification pass 2 (2026-10-08, on 28f260225f / 91804d9) -- verbatim
+
+Read-only audit; no files modified. Existing logs confirm 80 OK and 18/18 mutants; I did not rebuild.
+
+- **F1 — resolved.** The first estimate is consumed regardless of supply; subsequent ring resets cannot replace it. Normal USB timing should **not** refuse FROM-FLAT: supply qualifies within ~0.5 s, or ~0.2 s via CHRG, before five reports at the observed cadence. If five nevertheless arrive while supply remains UNKNOWN, even a physically USB-powered boot is deliberately refused.
+
+- **F2 — resolved.** `level_held` survives unplug/replug. Clamp re-seat clears it unconditionally, including when the known number stays unchanged. LOST and UNKNOWN handovers remain untrusted until adoption; the battery ratchet cannot bypass the owed re-seat. `chg_open` safely consumes the flag while replacing the number with UNKNOWN; FULL clears it when replacing the level. Reboot resets both flag and live level; a charging boot does not restore the saved number. No additional lifetime defect found.
+
+- **7 — resolved.** `tgt_stoppable` actually suppresses reports throughout the pause. Both new scenarios exercise their claimed failures; adoption and FULL-duration checks remain valid. All firmware mutant replacement sites occur exactly once.
+
+- **8 — resolved.** Saturation freezes sum/count while extrema continue. The new prefix mutant correctly fails with **65444/666**, against the required **65439/661**.
+
+**flash (with F3 resolved either way)**
