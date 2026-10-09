@@ -908,6 +908,16 @@ The cart above is unchanged (re-checked against JD's download: identical). For
   from the Mac; check its supported-hub list, since most hubs cannot). The
   alternative is a MOSFET on the cable's VBUS driven by the logger MCU.
 
+**ORDERED 2026-10-09** (JD): the cart's battery parts (INA228, QT Py RP2040,
+3× MAX17048, 4× STEMMA QT cables), ETA about a week. The switched USB power is
+already solved without a hub: the bench's USB relay (`docs/test-bench.md`,
+`scripts/usb_relay.py`). **Deferred: a Nordic PPK2** (`NRF-PPK2`, $181.62 CAD
+at digikey.ca on 10-09), to buy when Phase 2's light-sleep rung starts (step 4).
+It resolves well under 1 µA, catches the radio's bursts, and can stand in for
+the pack at a set voltage, so low-battery tests take minutes instead of drains.
+As far as known it measures current one way only, and it logs no pack voltage
+in meter mode, so the INA228 stays the tool for charging and real-pack runs.
+
 With it, a B3 trial becomes a script: log V and I at 1 Hz (INA228 on the
 pack's + lead, read by the QT Py over USB serial), cut the hub port at a
 stamped time, log the relaxation, done. The INA228's bus voltage (~2 mV) also
