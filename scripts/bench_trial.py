@@ -13,7 +13,9 @@ Phases, in order (each optional):
   --wait-cut        read every --poll s (every 60 s once past --fine-after)
                     until the RGB cut shows in `flags` (lights_cut), then dump
                     the log;
-  --charge-min N    relay on for exactly N minutes from the switch, then off;
+  --charge-min N    relay on for exactly N minutes from the switch, then off,
+                    reading every 60 s and logging any read off USB power
+                    (VBUS-DROP: a loose splice);
   --relax-min N     read every 60 s for N minutes, then dump the log;
   --full            relay on until the charger stops (CHRG high on USB for two
                     reads 5 min apart), then wait 10 min and dump the log. The
@@ -172,12 +174,17 @@ def main():
             fail(log, "relay on not confirmed")
         log.row("CHARGE-ON", None, f"charge timed from the relay command at {t_on:.2f}")
         end = t_on + a.charge_min * 60
-        while time.time() < end - 75:
-            time.sleep(min(300, end - 75 - time.time()))
-            log.read("charge")
+        drops = 0
+        while time.time() < end - 15:
+            time.sleep(min(60, end - 15 - time.time()))
+            b = log.read("charge")
+            if b and b["supply"] != "external":   # a loose 5 V splice
+                drops += 1
+                log.row("VBUS-DROP", b, f"supply {b['supply']} mid-charge ({drops} so far)")
         time.sleep(max(0, end - time.time()))
         ok, t_off = relay(log, False)
-        log.row("CHARGE-OFF", None, f"on {t_off - t_on:.1f} s")
+        log.row("CHARGE-OFF", None, f"on {t_off - t_on:.1f} s; {drops} reads off USB power"
+                + (": THE TRIAL IS SUSPECT" if drops else ""))
         if not ok or not confirm(log, "battery", "relax"):
             fail(log, "relay off not confirmed")
 
@@ -197,6 +204,8 @@ def main():
         while stopped < 2:
             time.sleep(300)
             b = log.read("full")
+            if b and b["supply"] != "external":
+                log.row("VBUS-DROP", b, f"supply {b['supply']} during the full charge")
             stopped = stopped + 1 if b and b["supply"] == "external" and b["chrg"] == "high" else 0
         log.row("FULL", b, "CHRG high on USB, two reads 5 min apart")
         time.sleep(600)
