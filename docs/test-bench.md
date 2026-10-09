@@ -6,6 +6,10 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
 
 ## The short version
 
+- **For the keyboard's charging, use the USB relay**
+  ([below](#the-usb-relay-the-keyboards-charging-from-the-host), since 18:30
+  10-08). It cuts only the keyboard's 5 V, the keyboard stays on USB, and the
+  host switches it. The outlet is for cutting the whole hub.
 - The keyboard goes on JD's **Acasis 16-port hub**. The hub's power brick is
   plugged into a **HomeKit smart outlet named "Christmas Tree"**. Without its
   brick the hub has no USB at all, so cutting the outlet cuts every port.
@@ -31,6 +35,72 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
   over data alone** and simply stops charging (next section).
 - ⚠️ The outlet is named for what it powers in December. Check nothing else
   is plugged into it before running the shortcuts.
+
+## The USB relay: the keyboard's charging, from the host
+
+Set up 18:30 10-08. **This is how to control the keyboard's charging.** Unlike
+the outlet, it cuts only the keyboard's 5 V, the keyboard never leaves USB,
+and the rest of the hub stays up. Unlike the port buttons, the host switches
+it.
+
+**The hardware.** A DCT Tech USB HID relay (`16c0:05df`, the board JD's
+`hdd-toggle` drives) sits on the Thunderbolt dock's built-in hub (`0-1.4`
+port 3). It names itself "USBRelay4" but has two relays.
+- A USB cable's red 5 V wire runs through **RELAY2** (silkscreened on the
+  board), between COM and NO. The cable's data wires bypass the relay.
+- The cable's host end is on the dock's built-in hub too (`0-1.4` port 2 on
+  10-08).
+- **Off is the safe state.** If the relay board loses power or is unplugged,
+  its contacts open and the keyboard stops charging.
+
+**Switching it.** No driver is needed: it is a plain HID device, and the script
+opens only its VID/PID. Each switch is read back from the relay's state byte,
+and the script exits 0 only if the read-back matches.
+
+```sh
+venv/bin/python scripts/usb_relay.py status
+venv/bin/python scripts/usb_relay.py on 2     # VBUS: the keyboard charges
+venv/bin/python scripts/usb_relay.py off 2    # no VBUS: on battery, still on USB
+```
+
+**Measured 18:28 10-08, with a bus-powered ESP32 on the cable:** it left USB
+within 1 s of `off 2` and was back within 1 s of `on 2`, in both directions,
+twice. Relay 1 has nothing wired to it: `on 1` did nothing.
+
+**Verified with the keyboard, 18:32:35 10-08.** It moved onto the relay cable
+at ~18:31, and had no VBUS on either side of the move: its Acasis port's
+button was off. With relay 2 off, it enumerated on `0-1.4` port 2 and one
+`ak820battery.py` read gave:
+- `supply battery`, flags `on_batt`;
+- CHRG high (not charging);
+- VDD 3897 mV, the pack's regulator rather than USB;
+- level 7.8 %, pack 3634 mV, mid-drain to the RGB cut.
+
+⚠️ **While the keyboard is on the relay cable it is not on the Acasis, so the
+outlet no longer reaches it.** `scripts/bench_power.py off` would cut the hub,
+wait for the keyboard to leave the bus, and fail, because the keyboard stays
+on the dock. Use the relay.
+
+**With the keyboard on the cable:**
+- ⚠️ **The slider must be on BT or 2.4G.** On cable the MCU runs from VBUS,
+  so `off 2` is a cold power-off.
+- **`off 2`:** the keyboard stays enumerated over data alone (next section),
+  runs on battery and does not charge. The host can still read it, and
+  `venv/bin/python hostagent/ak820battery.py` prints `supply battery`.
+- **`on 2`:** VBUS appears and the keyboard charges. The same read prints
+  `supply external (USB)`.
+- **Confirm a switch from the board, not from USB.** The keyboard stays on the
+  bus either way, so the IORegistry check below cannot see this cut. One
+  `ak820battery.py` read after the switch is the check. It is board traffic,
+  so read once, not in a loop; the Mac's agent already samples health every
+  5 minutes.
+- **Every `on` is a plug-in to the battery gauge.** It re-arms the low-battery
+  warning, and the next `off` is an unplug, which can re-seat the level
+  ([battery.md](battery.md)). Plan trials around that, and log the times.
+
+What it buys: charge for exactly N minutes, or hold the board on battery and
+read it whenever needed, all from the host. That is B3's partial-charge trial
+without anyone pulling a cable.
 
 ## A port switched off still carries data: reading the board on battery
 
