@@ -131,6 +131,19 @@ the plan's "B3 trial 1" in "As built"):
   `../history/battery-2026-10-08-partial-charge/watch-rgb-cut.log`, and at the
   RGB cut it dumps the log (`log-*-rgbcut.csv`).
 
+**The night of 10-08/09 runs unattended** (JD authorized it): `scripts/bench_trial.py`
+in the background since 18:38, logging every read to
+`../history/battery-2026-10-08-partial-charge/night-run.csv`. In order:
+- wait for the RGB cut (reads every 5 min, then every minute from 21:00), and
+  dump the log;
+- **trial 3:** relay on for exactly 40:00, from L = 0 (the cut is the curve's
+  zero), then relay off;
+- 2 h of relaxation, a read a minute, and a dump;
+- relay on to FULL (gate 8's charge), and a dump.
+
+The relay is left ON at the end. If the run failed, the relay is off and
+the CSV says why.
+
 **Next, in order:**
 1. **At the RGB cut** (expected ~22:30, ±45 min): the runtime cross-check for
    trial 2. That is `K = (D × t_on_battery − L(start)) / t_charge`, with the
