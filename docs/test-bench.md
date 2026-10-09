@@ -126,6 +126,28 @@ run. Two caveats:
   port **on** for the outlet to switch charging, and **off** to read without
   charging. Only the button moves between the two.
 
+## Truly unplugged, from software: the relay plus `uhubctl` (proven 10-09)
+
+The relay cuts the keyboard's 5 V. `uhubctl` cuts the data on the port the
+relay cable plugs into. Here that is the dock's hub `0-1.4`, port 2; port 3
+is the relay itself and port 4 JD's Stream Deck, so name the port. With both
+off, the keyboard is unplugged except for the ~0.2 mA its D+ pull-up drives
+into the hub's pull-down.
+
+```sh
+uhubctl -l 0-1.4 -p 2 -a off -e   # data off; -e: this hub only, no USB3 twin
+uhubctl -l 0-1.4 -p 2 -a on  -e
+```
+
+- **Measured 13:10-13:11 10-09**, with relay 2 off and the board on battery:
+  - `off` at 13:10:28.34: the keyboard left USB 0.9 s later;
+  - `on` at 13:11:29.28: back 0.7 s later, with no hang;
+  - the board stayed on battery and linked throughout.
+- **Check the port map first** (`uhubctl -l 0-1.4`, status only) after any
+  re-cabling, and run it under a timeout: an `-a on` once hung on macOS.
+- **In software, the keyboard can now be:** unplugged (both off), data-only
+  (relay off, port on), or charging and readable (both on).
+
 ## Confirm every cut from the USB side
 
 `shortcuts run` returns 0 once HomeKit accepts the request, not once the
