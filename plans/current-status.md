@@ -131,33 +131,30 @@ the plan's "B3 trial 1" in "As built"):
   `../history/battery-2026-10-08-partial-charge/watch-rgb-cut.log`, and at the
   RGB cut it dumps the log (`log-*-rgbcut.csv`).
 
-**The night of 10-08/09 runs unattended** (JD authorized it): `scripts/bench_trial.py`
-in the background since 18:38, logging every read to
-`../history/battery-2026-10-08-partial-charge/night-run.csv`. In order:
-- wait for the RGB cut (reads every 5 min, then every minute from 21:00), and
-  dump the log;
-- **trial 3:** relay on for exactly 40:00, from L = 0 (the cut is the curve's
-  zero), then relay off;
-- 2 h of relaxation, a read a minute, and a dump;
-- relay on to FULL (gate 8's charge), and a dump.
-
-The relay is left ON at the end. If the run failed, the relay is off and
-the CSV says why.
+**The night of 10-08/09 ran unattended** on the USB relay
+(`scripts/bench_trial.py`; every read is in
+`../history/battery-2026-10-08-partial-charge/night-run.csv`):
+- **Trial 2's cut** came at 22:43:33. By runtime trial 2 gives 136.4 pm/h
+  (curve 148.5).
+- **Trial 3:** exactly 2400 s from that cut, then relaxation and the next cut
+  at 03:41:59. It gives 120.4 on the curve and 127.0 by runtime.
+- **B3 IS MET:** the three trials' mean `K_CC` is **133.0**, the value flash
+  2 carries, so no reflash. `RELAX_S` 1800 s is confirmed three times. The
+  runtime/curve gaps (−5.6%, +5.3%) cancel, so there is no USB overhead.
+- **Gate 8's full charge** from 0 has run since 03:43:30. The script dumps the
+  log at FULL and leaves the relay ON.
 
 **Next, in order:**
-1. **At the RGB cut** (expected ~22:30, ±45 min): the runtime cross-check for
-   trial 2. That is `K = (D × t_on_battery − L(start)) / t_charge`, with the
-   on-battery time from 14:32:15 less the charge. Tell JD the lights are out.
-2. **Charging is now mine, by the relay** (no button needed): since ~18:31 the
-   board is on the relay cable (`scripts/usb_relay.py status | on 2 | off 2`;
-   `docs/test-bench.md`, "The USB relay"). Confirm each switch with one
-   `ak820battery.py` read (`supply`). `bench_power.py` no longer reaches it.
-   - **Gate 8's charge from below 50%:** a full charge on the outlet, then a
-     dump; check that the chg LOST/OVERRUN/self-check bits never set.
-   - **Then a battery soak** for gate 8's flash-write budget and stalls.
-3. **Decide `K_CC`** (~141?). If it moves, regenerate the tail, rerun the
-   checks, get a codex review, and reflash.
-4. **Pull JD's videos** (13:03-~14:35, 14:40-?) when convenient.
+1. **When the full charge ends** (~13:00 10-09), run gate 8's charge check on
+   `log-*-full.csv`: chg bits LOST/OVERRUN/self-check never set, no rise past
+   the evidence, and FULL at 1000.
+2. **Prove `uhubctl` data-off on the dock port** (`-l 0-1.4 -p 2`, under a
+   timeout, after checking the status). With relay 2 off, that is a truly
+   unplugged board, all in software: `docs/test-bench.md`.
+3. **Gate 8's battery soak:** ≥ 24 h on the pack. Check ≤ 10 flash write
+   sessions a day, the stalls, and C2's RTC saves.
+4. **Later:** the charge-then-drain runs to map `K_CC` against the level and
+   the knee (F3). Phase 2 stays note-taking.
 
 **Also:**
 - **The hardware:** JD is ordering the DigiKey cart
