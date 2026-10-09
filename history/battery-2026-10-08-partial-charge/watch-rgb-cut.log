@@ -1,0 +1,27 @@
+2026-10-08 16:20:15 supply battery (battery)|level 13.5 %|pack 3732 mV (estimate 5C 65)|flags on_batt done rgb_on linked|
+2026-10-08 16:25:15 supply battery (battery)|level 13.0 %|pack 3727 mV (estimate 5C 65)|flags on_batt done rgb_on linked|
+2026-10-08 16:30:15 supply battery (battery)|level 12.7 %|pack 3726 mV (estimate 5C 65)|flags on_batt done rgb_on linked|
+2026-10-08 16:35:15 supply battery (battery)|level 12.7 %|pack 3726 mV (estimate 5C 65)|flags on_batt done rgb_on linked|
+2026-10-08 16:40:15 supply battery (battery)|level 12.5 %|pack 3723 mV (estimate 5C 64)|flags on_batt done rgb_on linked|
+2026-10-08 16:45:15 supply battery (battery)|level 12.0 %|pack 3716 mV (estimate 5C 63)|flags on_batt done rgb_on linked|
+2026-10-08 16:50:15 supply battery (battery)|level 12.0 %|pack 3713 mV (estimate 5C 63)|flags on_batt done rgb_on linked|
+2026-10-08 16:55:16 supply battery (battery)|level 11.8 %|pack 3711 mV (estimate 5C 63)|flags on_batt done rgb_on linked|
+2026-10-08 17:00:16 supply battery (battery)|level 11.6 %|pack 3708 mV (estimate 5C 62)|flags on_batt done rgb_on linked|
+2026-10-08 17:05:16 supply battery (battery)|level 11.5 %|pack 3707 mV (estimate 5C 62)|flags on_batt done rgb_on linked|
+2026-10-08 17:10:16 supply battery (battery)|level 11.2 %|pack 3702 mV (estimate 5C 62)|flags on_batt done rgb_on linked|
+2026-10-08 17:15:16 supply battery (battery)|level 11.1 %|pack 3700 mV (estimate 5C 62)|flags on_batt done rgb_on linked|
+2026-10-08 17:20:16 supply battery (battery)|level 10.9 %|pack 3697 mV (estimate 5C 61)|flags on_batt done rgb_on linked|
+2026-10-08 17:25:16 supply battery (battery)|level 10.5 %|pack 3690 mV (estimate 5C 60)|flags on_batt done rgb_on linked|
+2026-10-08 17:30:16 supply battery (battery)|level 10.5 %|pack 3690 mV (estimate 5C 60)|flags on_batt done rgb_on linked|
+2026-10-08 17:35:17 supply battery (battery)|level 10.1 %|pack 3681 mV (estimate 5C 59)|flags on_batt done rgb_on linked|
+2026-10-08 17:40:17 supply battery (battery)|level 10.0 %|pack 3683 mV (estimate 5C 60)|flags on_batt done rgb_on linked|
+2026-10-08 17:45:17 supply battery (battery)|level 10.0 %|pack 3680 mV (estimate 5C 59)|flags on_batt done rgb_on linked|
+2026-10-08 17:50:17 supply battery (battery)|level 9.8 %|pack 3676 mV (estimate 5C 59)|flags on_batt done rgb_on linked|
+2026-10-08 17:55:17 supply battery (battery)|level 9.6 %|pack 3673 mV (estimate 5C 58)|flags on_batt done rgb_on linked|
+2026-10-08 18:00:17 supply battery (battery)|level 9.3 %|pack 3667 mV (estimate 5C 58)|flags on_batt done rgb_on linked|
+2026-10-08 18:05:17 supply battery (battery)|level 9.1 %|pack 3665 mV (estimate 5C 58)|flags on_batt done rgb_on linked|
+2026-10-08 18:10:17 supply battery (battery)|level 8.9 %|pack 3658 mV (estimate 5C 57)|flags on_batt done rgb_on linked|
+2026-10-08 18:15:17 supply battery (battery)|level 8.8 %|pack 3656 mV (estimate 5C 57)|flags on_batt done rgb_on linked|
+2026-10-08 18:20:18 supply battery (battery)|level 8.6 %|pack 3651 mV (estimate 5C 56)|flags on_batt done rgb_on linked|
+2026-10-08 18:25:18 supply battery (battery)|level 8.3 %|pack 3646 mV (estimate 5C 55)|flags on_batt done rgb_on linked|
+2026-10-08 18:30:18 supply battery (battery)|level 8.0 %|pack 3640 mV (estimate 5C 55)|flags on_batt done rgb_on|

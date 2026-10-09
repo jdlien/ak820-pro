@@ -135,8 +135,10 @@ the plan's "B3 trial 1" in "As built"):
 1. **At the RGB cut** (expected ~22:30, ±45 min): the runtime cross-check for
    trial 2. That is `K = (D × t_on_battery − L(start)) / t_charge`, with the
    on-battery time from 14:32:15 less the charge. Tell JD the lights are out.
-2. **JD switches the port ON** (any time after the cut). From then on
-   `bench_power.py on|off` controls charging.
+2. **Charging is now mine, by the relay** (no button needed): since ~18:31 the
+   board is on the relay cable (`scripts/usb_relay.py status | on 2 | off 2`;
+   `docs/test-bench.md`, "The USB relay"). Confirm each switch with one
+   `ak820battery.py` read (`supply`). `bench_power.py` no longer reaches it.
    - **Gate 8's charge from below 50%:** a full charge on the outlet, then a
      dump; check that the chg LOST/OVERRUN/self-check bits never set.
    - **Then a battery soak** for gate 8's flash-write budget and stalls.
