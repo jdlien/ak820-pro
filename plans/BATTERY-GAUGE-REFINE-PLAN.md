@@ -1,10 +1,10 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-08, ~16:25): executing, B3 and gate 8.** Flash 2 (`28f260225f`,
-token `0xdf1e8b99`) is on the board since 12:54. B3: trial 1 gave `K_CC` 133 and
-trial 2 148.5 (preliminary, mean ~141). `RELAX_S` 1800 s is confirmed by two
-relaxations. Trial 2's runtime cross-check waits for tonight's RGB cut
-("B3 trial 1" and "Trial 2" in "As built"). Gates 1-4 are met:
+**Status (2026-10-09, ~03:45): executing, gate 8.** Flash 2 (`28f260225f`,
+token `0xdf1e8b99`) has been on the board since 12:54 10-08. **B3 is met:** three
+trials give a mean `K_CC` of 133.0, the value flash 2 carries, and `RELAX_S`
+1800 s is confirmed three times. Gate 8's full charge runs unattended on the
+USB relay from 03:43. Gates 1-4 are met:
 - gate 3 passed on flash 1b, after flash 1's 2.5% failure and a trim;
 - the soaks named C1's writer (the RTC period's PCF path) and D2's stall
   (`battery_5c_report`'s sort; flash 1c's profile).
@@ -1597,6 +1597,32 @@ Record: `history/battery-2026-10-07-partial-charge/` (`readings.csv`, and
     but not data, so **the board can be read on battery without charging**.
     The HomeKit outlet switches charging when the port is on
     (`scripts/bench_power.py`).
+- **Trial 3 (the night of 10-08/09), unattended on the USB relay**
+  (`scripts/bench_trial.py`, `night-run.csv`):
+  - **The run:** charged exactly 2400.0 s from the RGB cut (L = 0, the curve's
+    zero), then read every minute through the relaxation and on to the next
+    cut.
+  - **`K_CC`:** 120.4 on the curve, 127.0 by runtime. Trial 2's runtime had
+    read 5.6% low against its curve; trial 3's reads 5.3% high. Both runs were
+    on data-only USB on flash 2, so these are the curve's local errors, **not
+    a USB load overhead**.
+- **B3 MET (gate 5).** The trials, each the mean of its two methods:
+
+  | Trial | Start | `K_CC` (pm/h) |
+  |---|---|---|
+  | T3 | 0% | 123.7 |
+  | T1 | 1.8% | 132.9 |
+  | T2 | 5.0% | 142.4 |
+  | **Mean** | | **133.0** |
+
+  The mean is the value flash 2 already carries, so there is no reflash for
+  `K_CC`. `K_CC` rises with the starting level (~+18 pm/h over the bottom 5
+  points), which a constant cannot follow. A charge from empty reads a little
+  high early. The bench's charge-then-drain runs can map that, and the knee
+  with it.
+- **`RELAX_S` 1800 s holds across three relaxations** (trial 1, the 10-08
+  recharge, trial 3). At 30 min the voltage-implied level sits 0.1-0.35 point
+  above its 60-min value.
 - **Trial 2, from the lessons:** film the whole trial, start readings included.
   Start ≥ 2 h after any earlier charge, because the relaxation inflates the
   start for an hour or more. Start in the band, and keep filming to the RGB cut
