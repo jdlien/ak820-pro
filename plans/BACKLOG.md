@@ -38,6 +38,30 @@ a Claude Code hook. Ideas worth taking:
    host side is Linux-only: driving one keyboard's LEDs from macOS or Windows
    is "the open question". **For us:** clock sync and now-playing without the
    cable (both are USB raw HID today), at ~100 bit/s.
+   **Assessed 10-10 (JD asked about the drawbacks). Worth one experiment,
+   Mac only:**
+   - **Host side effects depend on the OS.** On Linux each keyboard's LEDs
+     are separate, so the system lock state never moves (proven by
+     quill4gen7). On macOS no system-wide Num or Scroll behaviour depends on
+     them, so the risk is low, but whether the Mac can set one Bluetooth
+     keyboard's LED is unknown. On Windows the lock states are global:
+     toggling them hits other keyboards' number pads, Excel's scroll mode and
+     anything that watches. Avoid Windows unless per-device indicator calls
+     prove clean. A KVM in the path may drop or merge the updates; the CRC
+     rejects those frames, so it fails safe.
+   - **Board side: a stall hazard here.** The LCD's lock band shows Scroll
+     Lock (`display.c` ~1834), and each repaint costs ~25-30 ms. The decoder
+     must own Num and Scroll, the band must ignore them, and Caps is never
+     touched.
+   - **Power: negligible.** One BLE output report and one `5A` UART frame per
+     bit, in bursts of 1-2 s. Only a constant stream would show.
+   - **Limits:** ~100 bit/s, one way, each frame sent twice; timing to
+     ~0.1 s at best (BLE connection-interval jitter), against ~3 ms on USB.
+   - **The payoff:** clock sync and now-playing over BT. Off USB the clock
+     drifts: it was 1.6 s off after 26 min on battery on 10-08.
+   - **First step, an evening:** can macOS set this keyboard's Num and Scroll
+     LEDs over BT with no other effect, and do the `5A` frames reach the
+     board (it counts them)? If not, drop it.
 2. **A board-to-host channel over the air:** answers sent as unbound consumer
    usages (media keys).
 3. **A raw-HID jump to the bootloader**, compiled in only with
