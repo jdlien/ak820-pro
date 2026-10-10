@@ -544,6 +544,69 @@ is built until JD says so.**
    buffer that never loses the waking keystroke (question 1), and a wake path
    that does not exist yet (question 2).
 
+### A gauge that learns its pack: an idea, outside the agreed order (JD, 2026-10-10)
+
+JD asked how hard recalibrating for a replacement pack would be, and whether
+the board could learn it. Recorded as a possibly useful idea for after the
+order above. Nothing is built.
+
+**What a new pack moves:**
+- **The ends do not move.** 0% (the RGB cut at 3400 mV, set in firmware) and
+  100% (the charger's FULL) do not depend on the cell.
+- **The curve between them may move a little.** Its shape is mostly
+  chemistry, with some shift from a different internal resistance's sag
+  under the LEDs.
+- **`K_CC` scales inversely with capacity.**
+- JD's pack is a 606090 4000 mAh (`docs/battery.md`). Another 606090
+  4000 mAh probably needs nothing.
+
+**By hand today:**
+1. One drain at full white (~50 h, hands off; dump the log before the reserve
+   runs out).
+2. `scripts/battery_fit.py`.
+3. One timed charge from flat for `K_CC` (`scripts/battery_charge.py` fits the
+   tail).
+4. A rebuild and a flash.
+
+**A cheaper middle ground:** upload the curve and the charging constants over
+raw HID into the emulated EEPROM. A host script fits and uploads, and nobody
+rebuilds.
+
+**On the board, in two tiers:**
+1. **`K_CC` from ordinary charges, with no new hardware.** Each charge from a
+   relaxed level to FULL is a B3 trial the board can run on itself: it already
+   has the plug-in, the relaxed level, the charger's FULL and the elapsed time.
+   Average across charges, bound the result, and persist it rarely. It would
+   also follow the pack as it ages.
+2. **Capacity from discharges, after step 2's per-load currents.** The board
+   knows what it drives: the LED drive, BT and the LCD. With a current for
+   each, it can estimate the charge used. That charge between two relaxed
+   readings, set against the curve's level difference, gives capacity, which
+   is roughly how commercial fuel gauges learn. The ladder's dark idle
+   (steps 3-4) supplies relaxed readings for free.
+
+   ⚠️ This reopens "No software coulomb counting" (below) for a different job:
+   learning capacity, not giving the level. Decide it then.
+
+**The curve's shape is the hard part to learn.** It may not need learning, if
+it is mostly chemistry. One drain on a second pack would tell (fpb's: BACKLOG,
+"Community").
+
+**The rule for any learner:** a gauge that is quietly wrong is worse than a
+fixed table.
+- Learn only from clean events: no LOST or OVERRUN, and a real FULL.
+- Bound every value.
+- Show the learned values in `ak820battery.py`'s read.
+- Give a reset for a new pack.
+
+**The hardware route** is "If the hardware arrives", item 5: a ModelGauge m5
+chip learns capacity as the cell ages, at ~7-18 µA. It is a mod.
+
+**JD's caveat (10-10):** the payoff is for a board kept for years, and most
+mechanical keyboards are short runs that enthusiasts replace. Tier 1 is cheap,
+and it also tracks the pack's aging. Tier 2 and the middle ground are worth
+it only if they come cheap after the ladder.
+
 ---
 
 ## ⭐ The principle: take the drain out of idle, not the fun out of use (JD, 2026-09-29)
@@ -930,7 +993,9 @@ gives the start and 60-min readings without the board's `5C` at all.
 - **No MAX17048 retrofit in the firmware yet.** It is a refinement (±1-2% vs
   ±5%), not an enabler. As a **bench instrument** on the pack tap it is exactly
   what the calibration run needs.
-- **No software coulomb counting.** Superseded by the voltage route.
+- **No software coulomb counting.** Superseded by the voltage route. (Reopened
+  as a question, not a decision, by "A gauge that learns its pack": an
+  estimated charge used to learn capacity, not to give the level.)
 - **No claim of ±5%.** The error budget in `docs/battery.md` is a target until
   a second run checks the table against data it was not fitted to.
 
