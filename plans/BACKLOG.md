@@ -6,7 +6,15 @@
 done** (JD, 10-10). JD has never contacted him. Bring:
 - an offer to test his **v2 panel** builds (JD's unit is one; his are
   "untested on real hardware");
-- pointers to the battery gauge, the clock sync and the test bench.
+- pointers to the battery gauge, the clock sync and the test bench;
+- **the battery gauge first.** JD (10-10): it is the biggest win for other
+  forks because it is the part they can least reproduce. It took weeks of
+  bench trials, a cable with its 5 V routed through a relay, and soon an
+  INA228 wired to the pack; adopting it costs a flash. fpb would likely do
+  such hardware work himself (his repo traces the module's pads and the
+  pinouts), and he already uses our work, but none of his commits is battery
+  work. ⚠️ The curve is fitted to JD's pack: one drain on a second unit
+  would show how well it carries over before it is offered as general.
 
 **fpb (Fernando Birra), the upstream port**, is using this work:
 - he **starred `jdlien/ak820-pro`**;
@@ -59,11 +67,38 @@ a Claude Code hook. Ideas worth taking:
      ~0.1 s at best (BLE connection-interval jitter), against ~3 ms on USB.
    - **The payoff:** clock sync and now-playing over BT. Off USB the clock
      drifts: it was 1.6 s off after 26 min on battery on 10-08.
-   - **First step, an evening:** can macOS set this keyboard's Num and Scroll
-     LEDs over BT with no other effect, and do the `5A` frames reach the
-     board (it counts them)? If not, drop it.
-2. **A board-to-host channel over the air:** answers sent as unbound consumer
-   usages (media keys).
+   - **First step, one evening on the Mac, testing item 2 at the same time:**
+     can macOS set this keyboard's Num and Scroll LEDs over BT with no other
+     effect, and do the `5A` frames reach the board (it counts them)? And the
+     other way: can a Mac app read an unbound usage the board sends over BT?
+     Both hinge on the Mac exchanging these reports with one BT keyboard. If
+     neither works, drop both. A distraction from the battery work (JD,
+     10-10): after Phase 1b, not during it.
+2. ⭐ **A board-to-host channel over the air: unbound media keys.** Besides
+   keystrokes, the only thing the CH582F carries from board to host is a
+   consumer report (`A3`), and it passes unusual usages through. quill4gen7
+   answers questions with "AL" (application launch) usages that nothing binds
+   on his desktop:
+   - allow `0x191` AL Finance, deny `0x1AB` AL Spell Check, cancel `0x1BD`
+     AL Info, options 1-4 `0x1B6` `0x1B7` `0x1B8` `0x1BC`;
+   - each answer follows a marker naming the question it answers (`0x199`,
+     `0x1A7`, `0x1AE`, `0x18E`), at 10 Hz with a release between, so reports
+     never merge;
+   - the host reads the "Consumer Control" input device (media keys only,
+     never typing).
+
+   **Proven on one board, Linux only, over the 2.4G receiver and the cable;
+   not over Bluetooth** (his `docs/notify.md`, branch `notify`). **For us:**
+   - **the real battery level on the host:** a marker and two digit usages
+     every few minutes, under a second of reports each, so negligible power.
+     A menu-bar item on the Mac, the Rust daemon on Windows. It cannot change
+     System Settings' number ("macOS shows the module's battery percent",
+     below);
+   - with item 1, a two-way channel over BT: clock sync and now-playing
+     without the cable.
+   - **Unknowns:** Bluetooth; whether a Mac app can read these usages from a
+     BT keyboard (likely behind Input Monitoring); whether macOS or any app
+     acts on one, so check each usage before using it.
 3. **A raw-HID jump to the bootloader**, compiled in only with
    `-DNOTIFY_RAW_BOOTLOADER`. **For us:** unattended flashing on the bench. Its
    caveat stands: any process that can open raw HID could drop the board into
@@ -75,6 +110,63 @@ a Claude Code hook. Ideas worth taking:
 **Nothing new elsewhere:** `naviltsev/qmk_ak820pro_firmware` is a copy of fpb's
 branches (created and last pushed in the same minute); `smsourov` and the older
 `ajazz-ak820-pro` forks have no commits of their own.
+
+## macOS shows the module's battery percent, not ours: what could change it (2026-10-10)
+
+**What:** macOS's Bluetooth battery (System Settings) is the CH582F's own
+`5C`, a straight line on the pack voltage, served over Bluetooth's battery
+service. It reads high most of the way down: 96% against our 66.4% at 03:50
+10-10, and, computed from the line and our curve, ~59% at our 10% and ~27% at
+the RGB cut. Our firmware runs on the SN32 and reaches the module only over
+UART. The right number is already on the LCD; this is about the host. Three
+routes:
+
+1. **A module command that sets it: low odds, desk work first** (flash 2b
+   item 5, task 8.7). All known traffic runs the other way: the SN32 polls
+   (`A6 53`) and the module answers `5C`. Three commands the stock firmware
+   sends are unexplained: `A4` (a 2-byte "parameter"), `A8` and `AB`. Do not
+   probe them blind. `A7` drops the link and `A9` writes the advertised name
+   into the module's storage, so a stored setting changed by mistake could
+   not be put back. Find where the stock SN32 image sends them and what feeds
+   them. Only a 0-100 value from something battery-like earns one live test.
+2. **The level on the host instead, over media keys** (Community, quill4gen7
+   item 2): a menu-bar item on the Mac, the daemon on Windows. Never System
+   Settings.
+3. **Replace the module's firmware: the big hammer, not for now.**
+   - **Access is not through the keyboard's USB port.** The module's traced
+     link to the SN32 is serial only. fpb's README ("MCU-BT Module wiring")
+     traces five pads of a 2×5 header beside the module:
+     - the module's pins 10 and 11 (the SN32 link);
+     - pins 6 and 7 (`RXD1`/`TXD1`, its UART1);
+     - pin 17 (`PB22`).
+
+     On WCH's CH58x chips `PB22` selects the ROM bootloader at power-on, and
+     UART1 is a serial ISP port (from memory: verify against the CH583
+     datasheet). It looks like the factory's programming header. Using it
+     means opening the case.
+   - **No way back yet.** Nobody has published the stock module image, and as
+     far as we know WCH's ISP bootloader has no read-out command. Erase it and
+     the board's wireless is whatever we write.
+   - **What we would write:** WCH's SDK has a BLE HID keyboard example with a
+     battery service, so the percent is easy. The work is:
+     - bonding with three hosts;
+     - Bluetooth as solid as stock;
+     - the 2.4G dongle, whose protocol is undocumented: likely lost unless
+       the dongle is reflashed too.
+   - **The reason it might be worth it is power, not the percent.** With stock
+     firmware the module's idle draw is out of our hands. If Phase 2's INA228
+     measurements show the module is what limits Bluetooth life, owning its
+     firmware is the only fix. Decide then.
+   - **A first look that changes nothing:**
+     - check whether AJAZZ's updater ships a module image, which would be a
+       way back;
+     - case open: a 3.3 V USB-serial adapter on `RXD1`/`TXD1`, with `PB22`
+       held low at power-on, should reach the bootloader. It reports the chip
+       ID and its protection settings without erasing, and a normal power-up
+       returns it to stock;
+     - if read protection is off, the chip's 2-wire debug link might dump the
+       stock firmware, making the project reversible. Its pins are not among
+       the five traced pads; they may be among the other five.
 
 ## USB connects with no 5 V in the wireless positions: a spec deviation we now rely on (2026-10-08)
 
