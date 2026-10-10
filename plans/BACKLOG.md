@@ -1,5 +1,57 @@
 # Backlog — known, accepted, or deferred items
 
+## Community: who is building on this, and when to reach out (2026-10-10)
+
+**TOUCH BASE WITH fpb once the battery work and the power ladder are close to
+done** (JD, 10-10). JD has never contacted him. Bring:
+- an offer to test his **v2 panel** builds (JD's unit is one; his are
+  "untested on real hardware");
+- pointers to the battery gauge, the clock sync and the test bench.
+
+**fpb (Fernando Birra), the upstream port**, is using this work:
+- he **starred `jdlien/ak820-pro`**;
+- `jdlien/qmk_firmware` is a GitHub fork of `fpb/qmk_firmware`, in his fork
+  network;
+- `jdlien/time-util-ak820pro` forks his `time-util-ak820pro`.
+
+From 09-02 to 09-27 he shipped 38 firmware commits, among them this list's
+upstream items:
+- 1.1, 1.3 and 3.2;
+- **2.1-2.4 in one commit (`21f103fd19`) that nearly repeats the write-up**;
+- `LCD_PANEL_V1/V2`, "cross-referenced against a fork that hit and fixed this
+  on its own unit".
+
+None of it is battery work (`ak820pro-builds/UPSTREAM-CONTRIBUTIONS.md`, "Upstream
+status").
+
+**quill4gen7, the one other fork with original work.** Forked both of JD's repos
+on 09-24 and built on `ak820pro-jdlien` (merge base `44e7314e65`): branches
+`notify` (ak820-pro), `ak820pro-notify` and `quill-personal` (qmk_firmware),
+the personal one with Italian commit messages. Its `docs/notify.md` describes
+host notifications on the LCD, with questions answered from the keyboard and
+a Claude Code hook. Ideas worth taking:
+1. ⭐ **A host-to-board data channel over the air.** The only thing the CH582F
+   forwards from host to board is the keyboard-LED bitmap (`5A <leds>`). It
+   toggles Num and Scroll Lock (keys this board lacks) as bits: ~10 ms a bit,
+   CRC-8, each frame sent twice. Measured 42/42 frames intact at 8-40 ms a bit
+   on the 2.4G receiver. Bluetooth takes the same path but is untested. The
+   host side is Linux-only: driving one keyboard's LEDs from macOS or Windows
+   is "the open question". **For us:** clock sync and now-playing without the
+   cable (both are USB raw HID today), at ~100 bit/s.
+2. **A board-to-host channel over the air:** answers sent as unbound consumer
+   usages (media keys).
+3. **A raw-HID jump to the bootloader**, compiled in only with
+   `-DNOTIFY_RAW_BOOTLOADER`. **For us:** unattended flashing on the bench. Its
+   caveat stands: any process that can open raw HID could drop the board into
+   a state that looks dead.
+4. **An AMBIENT screensaver** (a GIF after N s idle) where the waking key is not
+   swallowed: prior art for Phase 2's wake rule.
+5. A settings menu on Fn plus the knob, and per-key-category "cyber" lighting.
+
+**Nothing new elsewhere:** `naviltsev/qmk_ak820pro_firmware` is a copy of fpb's
+branches (created and last pushed in the same minute); `smsourov` and the older
+`ajazz-ak820-pro` forks have no commits of their own.
+
 ## USB connects with no 5 V in the wireless positions: a spec deviation we now rely on (2026-10-08)
 
 **What:** in the BT and 2.4G positions the board runs from its battery, and

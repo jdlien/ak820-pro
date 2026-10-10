@@ -157,6 +157,10 @@ the plan's "B3 trial 1" in "As built"):
    the knee (F3). Phase 2 stays note-taking.
 
 **Also:**
+- **The community** (`BACKLOG.md`, "Community"): fpb is using this work, and
+  JD will reach out once the battery work and the power ladder are near done.
+  quill4gen7's fork has a lock-LED data channel over the air and a raw-HID
+  bootloader jump, both worth borrowing.
 - **The hardware:** JD is ordering the DigiKey cart
    (`parts/digikey-order-2026-09-29.csv`: INA228, QT Py RP2040, MAX17048s)
    and needs a `uhubctl`-capable hub (`BATTERY-GAUGE-PLAN.md`, "If the
