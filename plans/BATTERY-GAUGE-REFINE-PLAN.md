@@ -1623,6 +1623,25 @@ Record: `history/battery-2026-10-07-partial-charge/` (`readings.csv`, and
 - **`RELAX_S` 1800 s holds across three relaxations** (trial 1, the 10-08
   recharge, trial 3). At 30 min the voltage-implied level sits 0.1-0.35 point
   above its 60-min value.
+- **Flash 2b, the list so far (2026-10-10)**, to build after gate 8's soak
+  (each item with its scenario and the usual codex review):
+  1. **Stage the plug-in redraw.** Every USB-power arrival on flash 2 costs
+     one 33 ms blit (3 of 3: 14:38, 22:45 and 03:43, 10-08/09). Spread it over
+     passes, as the debug page's exit already is.
+  2. **The camera or debug page's exit**, if it caused the 37-39 ms blits at
+     ~10:30-11:12 10-09: confirm, then stage it.
+  3. **The bootloader jump in the daily build, for development** (JD,
+     10-10). `HC_BOOTLOADER` (`0x79`) exists but lives under `WDT_TEST_HOOKS`
+     with the console and fault hooks. Give it its own flag, on in daily
+     builds while development lasts. `flash.sh` sends it after its backup
+     checks, so a flash needs no hands. ⚠️ Any raw-HID process can then drop
+     the board into the bootloader, and a failed flash leaves it there until
+     a cold power-off. Drop it again for a public release.
+  4. *Optional, JD's call:* a provisional level soon after an unplug that
+     re-seats as UNKNOWN, instead of a blank for `RELAX_S`.
+  5. *Investigation, not code:* whether the CH582F accepts a level from the
+     MCU, so the host's Bluetooth battery shows the gauge instead of the
+     module's linear `5C` (96% against the gauge's 66% on 10-10).
 - **Trial 2, from the lessons:** film the whole trial, start readings included.
   Start ≥ 2 h after any earlier charge, because the relaxation inflates the
   start for an hour or more. Start in the band, and keep filming to the RGB cut
