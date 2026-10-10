@@ -1,19 +1,23 @@
 # Battery gauge, Phase 1b: the curve, charging, the blinks, the stalls — plan
 
-**Status (2026-10-09, ~03:45): executing, gate 8.** Flash 2 (`28f260225f`,
-token `0xdf1e8b99`) has been on the board since 12:54 10-08. **B3 is met:** three
-trials give a mean `K_CC` of 133.0, the value flash 2 carries, and `RELAX_S`
-1800 s is confirmed three times. Gate 8's full charge runs unattended on the
-USB relay from 03:43. Gates 1-4 are met:
+**Status (2026-10-10, ~13:30): gate 8 met for the charge and the soak; flash 2b
+next.** Flash 2 (`28f260225f`, token `0xdf1e8b99`) has been on the board since
+12:54 10-08.
+- **B3 is met:** three trials give a mean `K_CC` of 133.0, the value flash 2
+  carries, and `RELAX_S` 1800 s is confirmed three times.
+- **Gate 8:** the charge from 0 passed (10-09), and so did the 24 h battery
+  soak (10-10): 3 write sessions outside the exclusions, no ≥ 25 ms gap, and
+  ≥ 10 ms gaps at 47.5/h against D2's ≤ 50.
+- **Gate 8's per-event checks are carried to flash 2b.** The plug-in (33 ms)
+  and probably the page exit (37-39 ms) break the ≥ 25 ms rule; they are
+  flash 2b's items 1-2.
+
+Gates 1-7 are met:
 - gate 3 passed on flash 1b, after flash 1's 2.5% failure and a trim;
 - the soaks named C1's writer (the RTC period's PCF path) and D2's stall
   (`battery_5c_report`'s sort; flash 1c's profile).
 
-Flash 1c is on the board. Flash 2 (branch `phase1b-flash2`) carries B's model
-with a placeholder tail, the D fix, C2 and the new camera page. It is built
-and host-verified, and waits for B3's `K_CC` and `RELAX_S`. B3 trial 1's
-charge ran 20:21:37-21:01:35 10-07; its relaxation was filmed overnight.
-Resume from `current-status.md`, "2026-10-07". See "As
+Resume from `current-status.md`, "2026-10-10". See "As
 built", just before the review dispositions. Revision 7 came after codex's sixth review
 ([every round verbatim](review-codex-battery-refine-plan-2026-10-04.md);
 dispositions at the end). Phase 1 (the gauge) is built, flashed, and checked on
@@ -1623,6 +1627,41 @@ Record: `history/battery-2026-10-07-partial-charge/` (`readings.csv`, and
 - **`RELAX_S` 1800 s holds across three relaxations** (trial 1, the 10-08
   recharge, trial 3). At 30 min the voltage-implied level sits 0.1-0.35 point
   above its 60-min value.
+- **Gate 8 (10-09/10), on flash 2** (`history/battery-2026-10-08-partial-charge/`,
+  `readings.csv`):
+  - **The charge from 0: PASS** (03:43-12:53 10-09, unattended on the relay;
+    `log-20261009-1308-full.csv`):
+    - LOST, OVERRUN, handover and self-check are 0 in all 56 entries;
+    - no rise past the evidence;
+    - the knee (VDD's rise) came at ~4.0 h, where the model puts it;
+    - FULL was a 2.6-point step.
+  - **The 24 h battery soak: PASS** (13:10 10-09 to 13:12 10-10, truly
+    unplugged; `soak-run.log`, snapshots `soak-start`, `soak-mid` and
+    `soak-end`):
+    - no reset, the watchdog not degraded, and uptime continuous;
+    - **write sessions:** 8. Five are the level milestones (excluded), and
+      three are RTC-period stores by C2's scheduler (3 stores of 29
+      proposals): 3 against ≤ 10. Codex's deferred finding 5 (C2 proposing
+      nothing after a flash) did not occur: the period stored on the first
+      day;
+    - **D2 met:** no ≥ 25 ms gap, and ≥ 10 ms gaps at 47.5/h against ≤ 50.
+      The remainder is `rtc_task`'s PCF read (~5 ms on battery), the largest
+      scope in 1,009 of 1,140. ch582 was the largest in 9 (flash 1c: 4,720
+      of 5,494);
+    - **no transport loss** (giveups, queue-full and replacements 0). UART
+      overruns +4, malformed frames +2.
+  - **The per-event checks are carried to flash 2b.** The plug-in's 33 ms
+    blit (3 of 3) and probably the page exit's 37-39 ms break "no ≥ 25 ms gap
+    attributable to the event"; they are flash 2b's items 1-2. The per-event
+    protocol, with JD's typed text, runs on flash 2b.
+  - **Accuracy, which is not a gate.** Against the runtime line the soak's
+    ends agree: −0.4 at the start, −0.1 after 24 h. But the gauge dips to
+    −8.3 points at 71.5% (10.2 h), with a mean of −2.2.
+    - That is the curve's flat top: 4003-4016 mV spans 70-85%, ~1.15 points
+      per mV, against `5C`'s ~±10 mV.
+    - **The ±5% target fails on that band in this run.**
+    - The drain continues to the cut (`post-soak-drain.csv`) for the lower
+      half and the total runtime. For E6's error budget.
 - **Flash 2b, the list so far (2026-10-10)**, to build after gate 8's soak
   (each item with its scenario and the usual codex review):
   1. **Stage the plug-in redraw.** Every USB-power arrival on flash 2 costs
@@ -1813,7 +1852,7 @@ The build is `via-daily-c4d7b3702b-20261008-111212.bin` (token
 | F3 | `K_CC` 133 with B1's VDD knee: the plan's contradiction rule is not met; codex recommends "Charge" for every session until the knee is measured. The model may read ~6-9 points low late in a long charge (not "~5"), and a slow top-up from 950 reaches OVERRUN after 1.70 h (was 4.35) | **JD chose (A), 2026-10-08 ~11:55:** ship the model at trial 1's numbers, provisional until trial 2, erring low; not "Charge" for every session. This knowingly departs from the plan's contradiction rule (B3 against B1's *assumed* 70-90%), as a measured experiment on JD's own board; the bench logger's current sensor is to locate the real knee. The "~5 points" claim is withdrawn: codex's figures stand (~6-9 points low late in a long charge if constant current continues past the VDD rise; a slow top-up from 950 reaches OVERRUN, "Charge", after 1.70 h). Gate 8 watches the OVERRUN bit. |
 | 3 | 30 min of blank after unplugging an UNKNOWN or LOST session; the clamp countdown runs while the re-seat is owed | **Accepted as a known cost** for now. Re-seating an unknown level sooner is a policy change, to decide when trial 2 settles `RELAX_S`. **No change for the countdown:** the pack is discharging during `RELAX_S`, the countdown tracks it at its usual rate, and the plan does not say the display holds while owed. |
 | 4 | the histogram is exact; no overflow | Agreed. |
-| 5 | C2: a fresh EEPROM with an already-matching seed can propose nothing, so no first save; the integration cases are untested | **Deferred, watched in gate 8.** After a flash the period re-converges with the host attached, and a moving period proposes. Gate 8 checks for an RTC write in `HC_FLASHW` on the first day; if none comes, this is the reason. An integration case in `diag_sim` follows. |
+| 5 | C2: a fresh EEPROM with an already-matching seed can propose nothing, so no first save; the integration cases are untested | **Deferred, watched in gate 8. Did not occur (10-10): the period stored on the first day.** After a flash the period re-converges with the host attached, and a moving period proposes. Gate 8 checks for an RTC write in `HC_FLASHW` on the first day; if none comes, this is the reason. An integration case in `diag_sim` follows. |
 | 6 | the camera page draws one glyph a pass; no ≥ 25 ms path | Agreed. |
 | 7 | `b793644`'s changes are legitimate; `m_pause_after` called any held number adopted; `m_full_holds` no longer crossed `RELAX_S` | **Accepted, fixed** (above, with F2). `m_full_holds` now runs `RELAX_S` + 5 min and fails without FULL's relax cancel (mutant added). |
 | 8 | the log's sum and count kept accepting after the first rejection, so not the promised prefix | **Accepted, verified** (65444 / 666 against 65439 / 661). Nothing accumulates after the first rejection. `m_log_saturated`. |

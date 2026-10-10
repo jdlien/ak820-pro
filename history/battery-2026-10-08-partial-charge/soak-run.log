@@ -13,3 +13,16 @@ led drive    100.0 % of maximum
 flags        on_batt done rgb_on linked
   Port 2: 0000 off
 2026-10-10 03:50:45 data off again: truly unplugged
+2026-10-10 13:11:59 24 h: data on
+  Port 2: 0101 power connect []
+history/battery-2026-10-08-partial-charge/20261010-131215-soak-end-{health,vitals}.json, -battery.txt
+# 289 entries (log v5, one per 600 s), newest 444 s ago
+supply       battery  (battery)
+level        52.4 %
+pack           3920 mV  (estimate 5C 87)
+module 5C    last 87%, 1 s ago
+vdd          3903 mV  (raw 2102, since boot 3862..4428 mV)  -- the rail, not the pack
+charger pins CHRG high, STDBY low
+led drive    100.0 % of maximum
+flags        on_batt done rgb_on linked
+2026-10-10 13:12:17 soak done

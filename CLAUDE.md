@@ -107,7 +107,9 @@ is at gate 8.
   1800 s.
 - **Flash 2** is on the board: `28f260225f`, on the local branch
   `phase1b-flash2`, since 12:54 10-08.
-- **Gate 8's charge check passed.** Its 24 h battery soak ends ~13:12 10-10.
+- **Gate 8 is met:** the charge from 0 passed (10-09), and so did the 24 h
+  battery soak (10-10). Its per-event checks move to flash 2b. The board is
+  draining to the light cut (~15:44 10-11), then charges itself.
 - **Then:** flash 2b (the plan's list, including a raw-HID bootloader jump so
   flashing needs no Fn+Esc), the E6 docs, and Phase 2 when JD says build.
 

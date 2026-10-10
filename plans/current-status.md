@@ -19,9 +19,11 @@ the next reset instead of waiting for it.
 **Where things stand:** Phase 1b
 ([`BATTERY-GAUGE-REFINE-PLAN.md`](BATTERY-GAUGE-REFINE-PLAN.md)) is nearly
 done.
-- **Done:** flash 2 is on the board; **B3 is met**; gate 8's charge check
-  **passed**.
-- **Running:** gate 8's 24 h battery soak, until **13:12 10-10**.
+- **Done:** flash 2 is on the board; **B3 is met**; **gate 8 is met** for
+  the charge (10-09) and the 24 h battery soak (10-10). Its per-event checks
+  move to flash 2b.
+- **Running:** a drain to the light cut, then a charge to full, unattended
+  (below).
 - **Left:** flash 2b, the E6 docs, then Phase 2 (the power ladder), and only
   when JD says build.
 - **Parts:** the INA228 bench-logger kit is ordered (10-09, ~a week).
@@ -75,7 +77,12 @@ Codex cleared it: gate 7 plus two verification passes, all in the plan's
   power-off, and the RAM log is lost.
 - The HomeKit outlet "Christmas Tree" (`scripts/bench_power.py`) powers the
   Acasis hub. It is **no longer in the keyboard's path**.
-- **Now:** relay 2 OFF, data OFF (the soak).
+- **Now (from 13:14 10-10):** relay 2 OFF, data ON. `bench_trial.py --wait-cut
+  --poll 300 --full` reads every 5 min until the light cut (~15:44 10-11 if
+  the runtime matches run 2's). Then it dumps the log and turns the relay ON
+  to charge to full, and leaves it on (`post-soak-drain.csv`, `.log`). It runs
+  in session `dbe817d8`'s background. ⚠️ Before flashing, stop it and dump the
+  log.
 
 ### Gate 8 ([`../history/battery-2026-10-08-partial-charge/readings.csv`](../history/battery-2026-10-08-partial-charge/readings.csv))
 
@@ -84,22 +91,22 @@ Codex cleared it: gate 7 plus two verification passes, all in the plan's
   - the model stayed under the voltage's ceiling;
   - the knee came where the model puts it (VDD rose at ~4.0 h);
   - FULL came 2.6 points above the model.
-- **The 24 h battery soak, truly unplugged since 13:11:56 10-09.** The mid-soak
-  read at 03:50 10-10 was clean:
+- **The 24 h battery soak: PASS** (13:10 10-09 to 13:12 10-10, truly
+  unplugged):
   - no reboot;
-  - 0 new stalls ≥ 25 ms;
-  - 7 flash write sessions: 2 RTC, and 5 level milestones, which are excluded.
-- **At 13:12 10-10** a background shell of session `dbe817d8` reconnects the
-  data (never the charging), snapshots `soak-end` and dumps the log
-  (`soak-run.log`). ⚠️ **If that session is gone, do it by hand:**
-  `uhubctl -l 0-1.4 -p 2 -a on -e`, then
-  `scripts/board_snapshot.sh history/battery-2026-10-08-partial-charge soak-end`
-  and a log dump.
-- **Then compare `soak-end` with `soak-start`:**
-  - flash write sessions outside the milestones per 24 h (≤ 10);
-  - `count_ge_25ms` (should stay 6);
-  - C2's RTC saves (one at 10 min, then at most one per 6 h).
-- **Record the result in the plan.**
+  - **no stall ≥ 25 ms** (`count_ge_25ms` stayed 6);
+  - ≥ 10 ms gaps at 47.5/h, against D2's ≤ 50. The rest is the RTC's PCF
+    read on battery;
+  - **3 write sessions outside the milestones**, against ≤ 10. All three are
+    C2's RTC-period stores; the 5 level milestones are excluded.
+- **The per-event checks move to flash 2b.** The plug-in's 33 ms blit, and
+  probably the page exit's 37-39 ms, break their ≥ 25 ms rule. They are flash
+  2b's items 1-2, and the checks (with JD typing the reference text) run on
+  flash 2b.
+- **Accuracy, which is not a gate:** the gauge agreed with the runtime line at
+  both ends of the soak (−0.1 after 24 h). It dipped 8.3 points low around
+  71% on the curve's flat top (4003-4016 mV covers 70-85%). The drain to the
+  cut checks the lower half. For E6.
 
 ### Results to keep
 
@@ -122,7 +129,9 @@ Codex cleared it: gate 7 plus two verification passes, all in the plan's
 
 ### Next, in order
 
-1. **13:12 10-10:** the gate 8 soak result (above).
+1. **~15:44 10-11, unattended:** the drain reaches the cut. Compare the log
+   with the runtime line below 52%, and the total runtime with run 2's
+   50.56 h. Then the charge to full.
 2. **Flash 2b** (the plan's "Flash 2b" list):
    - stage the plug-in redraw;
    - confirm and stage the page-exit draw;
