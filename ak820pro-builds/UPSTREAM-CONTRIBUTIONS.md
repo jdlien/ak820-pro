@@ -7,6 +7,28 @@ flicker, the LED field rate, and four wireless state-tracking bugs.
 lines. Everything else lives in `keyboards/a_jazz/ak820pro/`, which is fpb's
 out-of-tree port — exactly where board work belongs.
 
+**Upstream status (checked 2026-10-10).** fpb's `ak820pro-lcd-flash` has 38
+commits since our fork point (`ee3772a970`, 08-27), from 09-02 to 09-27. Several
+match items below:
+- **1.1** (`e064de70b8`, the PWM period off-by-one);
+- **1.3** (`2bf1f3de2d`, the IRQ priorities);
+- **2.1-2.4** (`21f103fd19`, "four fire-and-forget frame-loss bugs", nearly
+  this file's wording);
+- **3.2** (`c00cf748b7`, the RGB eeconfig flush gated on the LCD DMA).
+
+He also shipped:
+- a hardware watchdog;
+- bounded blit spin-waits;
+- CH582 TX backpressure;
+- a now-playing view on HID channel `0x12`, our text slot's channel;
+- idle sleep: LCD and RGB blank after 3 min idle, or on a USB suspend;
+- `LCD_PANEL_V1/V2` (`8777e05bd0`), "cross-referenced against a fork that hit
+  and fixed this on its own unit". JD's unit is the v2 kind, and fpb's v2
+  binaries are marked untested on hardware.
+
+None of it touches the battery. Nothing there is needed here: this tree has
+its own equivalents.
+
 Three destinations, and the split matters:
 
 | Destination | What goes there |
