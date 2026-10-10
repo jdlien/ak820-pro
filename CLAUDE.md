@@ -98,23 +98,28 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-10-08)
+## Current state (2026-10-10)
 
-**Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-08
+**Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-10
 — RESUME HERE"). Phase 1b ([`plans/BATTERY-GAUGE-REFINE-PLAN.md`](plans/BATTERY-GAUGE-REFINE-PLAN.md))
-is in B3, the partial-charge trials.
-- **Trial 1** (off JD's overnight video): `K_CC` ≈ 133 pm/h, two ways, below
-  B1's 165-213.
-- **Flash 2** is rebuilt on trial 1's numbers and cleared by codex's gate-7
-  review and two verification passes: `28f260225f`, artifact
-  `via-daily-28f260225f-20261008-112003.bin`, token `0xdf1e8b99`. JD chose to
-  show the model's number while charging. The flash is due ~12:50 10-08.
-- **Trial 2** runs on it: the recharge from flat is done, and its relaxation
-  is being filmed.
+is at gate 8.
+- **B3 is met:** `K_CC` 133.0 pm/h, the mean of three trials. `RELAX_S` is
+  1800 s.
+- **Flash 2** is on the board: `28f260225f`, on the local branch
+  `phase1b-flash2`, since 12:54 10-08.
+- **Gate 8's charge check passed.** Its 24 h battery soak ends ~13:12 10-10.
+- **Then:** flash 2b (the plan's list, including a raw-HID bootloader jump so
+  flashing needs no Fn+Esc), the E6 docs, and Phase 2 when JD says build.
 
-Flash 1c (`647c12f26d`) is on the board until then. ⚠️ JD is often busy: one
-action per message, and say "leave it plugged in until I say unplug"
-outright.
+**The bench now runs trials without JD's hands:** a USB relay on the
+keyboard's 5 V, plus `uhubctl` on its data
+([`docs/test-bench.md`](docs/test-bench.md)). ⚠️ Keep the slider on BT or 2.4G.
+⚠️ JD is often busy: one action per message.
+
+## Earlier state (2026-10-08)
+
+B3 trial 1 gave `K_CC` ≈ 133. Flash 2 was rebuilt on it and cleared by codex,
+then flashed at 12:54 10-08.
 
 ## Earlier state (2026-10-04)
 

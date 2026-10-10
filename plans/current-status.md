@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-08 (the newest block is first below; the crash hunt's notes follow it). The crash hunt's section was last updated 2026-09-24, 12:45; its plan is
+Updated 2026-10-10 (the newest block is first below; the crash hunt's notes follow it). The crash hunt's section was last updated 2026-09-24, 12:45; its plan is
 [`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md). The live work is Phase 1b,
 below.
 
@@ -14,158 +14,155 @@ loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
 versus a hang, the PC, stack depth, why blits time out) and tries to provoke
 the next reset instead of waiting for it.
 
-## 2026-10-08 — RESUME HERE
+## 2026-10-10 — RESUME HERE
 
-**Phase 1b is mid-B3, and flash 2 is built but for B3's numbers.** The plan is
-[`BATTERY-GAUGE-REFINE-PLAN.md`](BATTERY-GAUGE-REFINE-PLAN.md); its "As
-built" section (just before the review dispositions) has every step with
-hashes. Nothing is pushed (JD: push only when told). Phase 2 is still
-note-taking only, but its order is agreed
-([`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md), "Phase 2: the agreed
-order").
+**Where things stand:** Phase 1b
+([`BATTERY-GAUGE-REFINE-PLAN.md`](BATTERY-GAUGE-REFINE-PLAN.md)) is nearly
+done.
+- **Done:** flash 2 is on the board; **B3 is met**; gate 8's charge check
+  **passed**.
+- **Running:** gate 8's 24 h battery soak, until **13:12 10-10**.
+- **Left:** flash 2b, the E6 docs, then Phase 2 (the power ladder), and only
+  when JD says build.
+- **Parts:** the INA228 bench-logger kit is ordered (10-09, ~a week).
+- **Pushed:** `jdlien/ak820-pro` is pushed (JD allowed it on 10-08). The
+  firmware branches are local only.
 
-**On the board: flash 1c**, `647c12f26d` (token `0x0c93c530`), since 14:05
-10-06.
-- Flash 1 (`4293607b4b`, 10-05 12:28) failed gate 3: the accounting cost
-  2.5%. Flash 1b (`97a24c6e20`) trimmed it and passed.
-- Flash 1c adds a diagnostic profile of slow CH582F calls.
-- The soaks named both culprits:
-  - **C1:** the RTC period's PCF path, 6-8 flash writes a day on battery,
-    each blinking the LEDs.
-  - **D2:** the battery-only stalls are `battery_5c_report`'s 64-byte
-    insertion sort, run for each of the three reports that arrive together
-    every 5 s.
-- The records: [`../history/battery-2026-10-05-flash1/readings.csv`](../history/battery-2026-10-05-flash1/readings.csv).
-
-**Flash 2: firmware branch `phase1b-flash2`**, local only, on top of flash
-1c. As of 10-07 it was at `54c437028b`; **its head is now `28f260225f`, with
-trial 1's tail** (see "2026-10-08 so far" below). It holds:
-- B's charging model, with the tail from B3 trial 1 (was a placeholder: K 190,
-  L_KNEE 775, T_TAIL 313 min);
+**On the board: flash 2**, firmware `28f260225f` on the local branch
+`phase1b-flash2`: `ak820pro-builds/out/via-daily-28f260225f-20261008-112003.bin`,
+token `0xdf1e8b99`, flashed 12:54 10-08. It holds:
+- B's charging model: `K_CC` 133, `L_KNEE` 533, `T_TAIL` 313 min;
+- `RELAX_S` and `PAUSE_S` at 1800 s;
 - log v5;
-- the camera page in the clock's font (JD approved it from
-  `scripts/camera_page_preview.py`'s render);
-- **the D fix** (the trimmed mean by histogram, identical to the sort on
-  99,972 estimates);
-- **C2** (`rtc/rtc_persist.c`: the first save at 10 min, then at most one per
-  6 h).
+- the D fix (the trimmed mean by histogram);
+- C2 (`rtc/rtc_persist.c`: the first RTC-period save at 10 min, then at
+  most one per 6 h);
+- the clock-font camera page;
+- gate 7's fixes.
 
-Every host check passes (`scripts/battery_sim/run.sh`, `tail_fw_grid.py`,
-`mutants.py`, `scripts/diag_sim`, `scripts/ch582_sim`), and it builds clean
-(heap 3496 B).
+Codex cleared it: gate 7 plus two verification passes, all in the plan's
+"Gate 7". JD chose to show the model's number while charging (F3, option A).
+- **Worktree:** `/Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2`, in this
+  session's job directory. If it is gone: `git -C qmk_firmware-ak820pro
+  worktree prune`, then `worktree add <dir> phase1b-flash2`.
+- **Build:** check the commit out detached in `qmk_firmware-ak820pro`, run
+  `./build.sh daily`, then `git checkout ak820pro-jdlien`.
+- **Simulators:** they take the tree via `BATTERY_SIM_SRC=` (and
+  `DIAG_SIM_SRC=`, `CH582_SIM_SRC=<...>/bluetooth`).
 
-⚠️ **Its worktree is in a session's job directory**
-(`/Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2`, moved there 10-08). If it is
-gone: `git -C qmk_firmware-ak820pro worktree prune`, then `... worktree add
-<dir> phase1b-flash2`. The simulators take its keyboard directory through
-`BATTERY_SIM_SRC=`, `DIAG_SIM_SRC=` or `--src`. To build it, check out its
-commit detached in `qmk_firmware-ak820pro`, run `./build.sh daily`, then
-`git checkout ak820pro-jdlien` again.
+### The bench: tests without JD's hands ([`../docs/test-bench.md`](../docs/test-bench.md))
 
-**Left for flash 2**, after B3:
-1. `scripts/battery_charge.py --tail K_CC L_KNEE T_TAIL_H --header
-   <worktree>/keyboards/a_jazz/ak820pro/battery_tail.h`, with T_TAIL 5.22 h
-   from B1. Widen `tail_grid.py`'s grid first if K_CC falls outside 160-230.
-2. Rerun every check.
-3. The RAM.
-4. A codex gate-7 review (`codex exec -m gpt-6-astra -c
-   model_reasoning_effort=xhigh -s read-only ... < /dev/null`, in the
-   background, saved verbatim beside the plan, every finding dispositioned).
-5. The flash procedure.
-6. Gate 8: the soaks and the per-event checks.
+- **Charging:** the keyboard's USB cable runs its 5 V through **relay 2** of a
+  USB HID relay (`16c0:05df`, on the dock hub `0-1.4` port 3).
+  `venv/bin/python scripts/usb_relay.py status | on 2 | off 2`.
+- **Confirm every switch with one `ak820battery.py` read** (its `supply` line).
+  IORegistry presence cannot show it: the data wires bypass the relay.
+- **Data:** `uhubctl -l 0-1.4 -p 2 -a off|on -e` cuts or restores the
+  keyboard's data on port 2.
+  - Always pass `-l 0-1.4 -p 2 -e`: port 3 is the relay itself, port 4
+    JD's Stream Deck.
+  - Check the status (`uhubctl -l 0-1.4`) after any re-cabling.
+  - Run it under a timeout.
+- **The states:**
+  - relay off, data on: **read the board on battery without charging it**
+    (QMK connects USB without VBUS; `BACKLOG.md`);
+  - both off: truly unplugged (~0.2 mA left on D+);
+  - both on: charging and readable.
+- **`scripts/bench_trial.py`** runs a trial end to end: wait for the RGB cut,
+  charge N min, relax, charge to full. It logs every read to a CSV and turns
+  the relay off on any failure.
+- ⚠️ **The slider must stay on BT or 2.4G.** On cable, a cut is a cold
+  power-off, and the RAM log is lost.
+- The HomeKit outlet "Christmas Tree" (`scripts/bench_power.py`) powers the
+  Acasis hub. It is **no longer in the keyboard's path**.
+- **Now:** relay 2 OFF, data OFF (the soak).
 
-**B3 trial 1 is done and analyzed**
-([`../history/battery-2026-10-07-partial-charge/`](../history/battery-2026-10-07-partial-charge/);
-the plan's "B3 trial 1" in "As built"):
-- **`K_CC` ≈ 133 pm/h, measured two ways.** On the curve at the 60-min
-  point it is 132.3 (122-142). By runtime from the unplug to the RGB cut it is
-  133.5. That is below B1's 165-213 bound, beyond the uncertainty, and the
-  charge current matched 10-01's and 10-04's. The tail stays feasible at
-  `K_CC` 120-145, with `L_KNEE` ~515. The plan's rule: trial 2, then decide.
-- **`RELAX_S`, provisionally 1800 s.** A re-seat reads ~1 point high at
-  6-10 min and ~0.3 at 30. The first 6 min were not filmed.
-- **The board died at 07:56 on 10-08**, by its clock in the video. The RGB cut
-  was at ~02:25, and the reserve lasted 5 h 31 min. The RAM log is gone, and
-  the pack is flat: recharge it soon.
-- **The video:** `~/Downloads/PXL_20261008_030743525.mp4` (3.9 GB) and the
-  `-trimmed.mp4` (3.26 GB), not in git. Pulled with adb as below; read with
-  ffmpeg crops (the camera was on a tripod, so fixed crops work: LCD
-  `crop=500:450:740:150`, keys `crop=460:460:200:620`; `signalstats` YAVG
-  finds the cut and the death).
-  ```sh
-  ADB=~/Library/Android/sdk/platform-tools/adb
-  $ADB devices -l                                    # the phone, authorized
-  $ADB shell 'ls -lt /sdcard/DCIM/Camera | head -8'  # the newest PXL_*.mp4
-  $ADB pull /sdcard/DCIM/Camera/PXL_<name>.mp4 ~/Downloads/
-  ```
+### Gate 8 ([`../history/battery-2026-10-08-partial-charge/readings.csv`](../history/battery-2026-10-08-partial-charge/readings.csv))
 
-**2026-10-08 so far (newest last):**
-- **Flash 2 is rebuilt on trial 1's numbers and cleared by codex.**
-  - Firmware `28f260225f` on `phase1b-flash2`, host `91804d9`:
-    `K_CC` 133, `L_KNEE` 533, and `RELAX_S`/`PAUSE_S` 1800 s.
-  - Gate 7 found 3 bugs; two verification passes followed. The second
-    said **"flash"**.
-  - JD chose to show the model's number while charging (F3, option A).
-  - The artifact: `ak820pro-builds/out/via-daily-28f260225f-20261008-112003.bin`,
-    token **`0xdf1e8b99`**.
-  - The worktree is now `/Users/jdlien/.claude/jobs/dbe817d8/tmp/qmk-flash2`.
-  - Every disposition is in the plan, "Gate 7"; the review is in
-    `review-codex-battery-refine-impl2-2026-10-08.md`, with both
-    verification passes.
-- **Trial 2 is under way** in `../history/battery-2026-10-08-partial-charge/`.
-  - The recharge from flat ran 10:45:06-11:50:23, stopped at a charging 5C
-    of 75 (≈ trial 1's end).
-  - JD has filmed its relaxation from 11:51:30, which gives the 0-6 min
-    trial 1 missed.
+- **The charge from 0: PASS** (03:43-12:53 10-09, unattended):
+  - LOST, OVERRUN and self-check never set;
+  - the model stayed under the voltage's ceiling;
+  - the knee came where the model puts it (VDD rose at ~4.0 h);
+  - FULL came 2.6 points above the model.
+- **The 24 h battery soak, truly unplugged since 13:11:56 10-09.** The mid-soak
+  read at 03:50 10-10 was clean:
+  - no reboot;
+  - 0 new stalls ≥ 25 ms;
+  - 7 flash write sessions: 2 RTC, and 5 level milestones, which are excluded.
+- **At 13:12 10-10** a background shell of session `dbe817d8` reconnects the
+  data (never the charging), snapshots `soak-end` and dumps the log
+  (`soak-run.log`). ⚠️ **If that session is gone, do it by hand:**
+  `uhubctl -l 0-1.4 -p 2 -a on -e`, then
+  `scripts/board_snapshot.sh history/battery-2026-10-08-partial-charge soak-end`
+  and a log dump.
+- **Then compare `soak-end` with `soak-start`:**
+  - flash write sessions outside the milestones per 24 h (≤ 10);
+  - `count_ge_25ms` (should stay 6);
+  - C2's RTC saves (one at 10 min, then at most one per 6 h).
+- **Record the result in the plan.**
 
-**Since 12:54, flash 2 is on the board** (token `0xdf1e8b99`, verified).
-- **Trial 2** charged 14:32:15-15:15:18 (43 min 00 s). Its `K_CC` is 148.5
-  pm/h, preliminary (138-159); with trial 1's 133 the mean is ~141.
-- **The bench** (`docs/test-bench.md`, `scripts/bench_power.py`): the HomeKit
-  outlet "Christmas Tree" powers the Acasis hub.
-  - A port switched OFF still carries data, so **the board can be read on
-    battery without charging**.
-  - With its port switched ON, the outlet switches charging.
-- **Now:** the board sits on a switched-off port (data only), discharging at
-  full white. A watcher reads it every 5 min into
-  `../history/battery-2026-10-08-partial-charge/watch-rgb-cut.log`, and at the
-  RGB cut it dumps the log (`log-*-rgbcut.csv`).
+### Results to keep
 
-**The night of 10-08/09 ran unattended** on the USB relay
-(`scripts/bench_trial.py`; every read is in
-`../history/battery-2026-10-08-partial-charge/night-run.csv`):
-- **Trial 2's cut** came at 22:43:33. By runtime trial 2 gives 136.4 pm/h
-  (curve 148.5).
-- **Trial 3:** exactly 2400 s from that cut, then relaxation and the next cut
-  at 03:41:59. It gives 120.4 on the curve and 127.0 by runtime.
-- **B3 IS MET:** the three trials' mean `K_CC` is **133.0**, the value flash
-  2 carries, so no reflash. `RELAX_S` 1800 s is confirmed three times. The
-  runtime/curve gaps (−5.6%, +5.3%) cancel, so there is no USB overhead.
-- **Gate 8's full charge** from 0 has run since 03:43:30. The script dumps the
-  log at FULL and leaves the relay ON.
+- **`K_CC` = 133.0 pm/h**, the mean of three trials. Each trial is the mean of
+  its curve and runtime methods: 124 from 0%, 133 from 1.8%, 142 from 5%. It
+  rises with the start level. **`RELAX_S` 1800 s** is confirmed by three
+  relaxations.
+- **No measurable USB-data overhead at full white.** Trials 2 and 3, both on
+  data-only USB, put their runtime checks −5.6% and +5.3% off the curve. A USB
+  load would push both the same way.
+- **Flash 2's six stalls ≥ 25 ms all came before the soak:** 33 ms at each
+  USB-power arrival (3 of 3), and 37-39 ms around JD's camera → dashboard page
+  switch. These are flash 2b's items 1-2.
+- **macOS's Bluetooth battery is the CH582F's linear `5C`, not our gauge.** At
+  03:50 10-10 macOS said 96% while our gauge read 66.4%; it says ~27% when the
+  lights cut.
+  - System Settings reads it live; **`system_profiler` shows a stale cached
+    value.**
+  - The fix needs a module command we don't know of: task 8.7, flash 2b item 5.
 
-**Next, in order:**
-1. **When the full charge ends** (~13:00 10-09), run gate 8's charge check on
-   `log-*-full.csv`: chg bits LOST/OVERRUN/self-check never set, no rise past
-   the evidence, and FULL at 1000.
-2. **Prove `uhubctl` data-off on the dock port** (`-l 0-1.4 -p 2`, under a
-   timeout, after checking the status). With relay 2 off, that is a truly
-   unplugged board, all in software: `docs/test-bench.md`.
-3. **Gate 8's battery soak:** ≥ 24 h on the pack. Check ≤ 10 flash write
-   sessions a day, the stalls, and C2's RTC saves.
-4. **Later:** the charge-then-drain runs to map `K_CC` against the level and
-   the knee (F3). Phase 2 stays note-taking.
+### Next, in order
 
-**Also:**
-- **The community** (`BACKLOG.md`, "Community"): fpb is using this work, and
-  JD will reach out once the battery work and the power ladder are near done.
-  quill4gen7's fork has a lock-LED data channel over the air and a raw-HID
-  bootloader jump, both worth borrowing.
-- **The hardware:** JD is ordering the DigiKey cart
-   (`parts/digikey-order-2026-09-29.csv`: INA228, QT Py RP2040, MAX17048s)
-   and needs a `uhubctl`-capable hub (`BATTERY-GAUGE-PLAN.md`, "If the
-   hardware arrives"). The INA228's current shows where charging really
-   slows: the knee F3 left open.
+1. **13:12 10-10:** the gate 8 soak result (above).
+2. **Flash 2b** (the plan's "Flash 2b" list):
+   - stage the plug-in redraw;
+   - confirm and stage the page-exit draw;
+   - **`HC_BOOTLOADER` on its own flag in daily builds during development, with
+     `flash.sh` sending it** (JD approved 10-10). After this flash, flashing
+     needs no Fn+Esc;
+   - optionally a provisional level after an UNKNOWN unplug (JD's call);
+   - investigate a module level command.
+
+   Each item gets a scenario, then a codex review, then JD's last Fn+Esc.
+3. **E6 docs:** `docs/battery.md` gets the model, B3 and the bench. Merge
+   `phase1b-flash2` into `ak820pro-jdlien`. Push the fork when JD says, and
+   move `deps.lock`.
+4. **When the INA228 kit arrives:** walk JD through the wiring, checking the
+   breakout's pinout first. Write the QT Py logger. Map `K_CC` against the
+   level and find the knee (task 12).
+5. **Phase 2,** note-taking until JD says build: the agreed order in
+   [`BATTERY-GAUGE-PLAN.md`](BATTERY-GAUGE-PLAN.md). Step 2 is the INA228's
+   per-load currents. The PPK2 is deferred to step 4.
+
+### Also
+
+- **The community** (`BACKLOG.md`, "Community"):
+  - **fpb** starred `jdlien/ak820-pro` and shipped our upstream items
+    (`UPSTREAM-CONTRIBUTIONS.md`, "Upstream status"). **Touch base once the
+    battery work and the ladder are near done**, offering to test his v2 panel
+    builds.
+  - **quill4gen7** forked both repos on 09-24. Worth borrowing:
+    - an over-the-air host-to-board channel on the Num and Scroll Lock LEDs
+      (assessed: a Mac-only experiment first);
+    - a raw-HID bootloader jump;
+    - a screensaver whose waking key still types.
+- **The task list:** `.taskmaster/tasks/tasks.json` (local, untracked), tasks
+  11-15.
+- **Working rules this week taught:**
+  - one hands-on action per message; JD's manual trials are costly, so
+    automate them (memory);
+  - **never test a command that can act.** On 10-08 a test of
+    `bench_power.py off` switched the outlet off;
+  - confirm relay switches by the board's `supply` line.
 
 ## 2026-10-04, night (superseded by the block above)
 
