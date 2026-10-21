@@ -94,7 +94,11 @@ a { color: var(--accent); }
 .knob input[type=checkbox] { margin: 0; accent-color: var(--accent); }
 .knob input[type=range] { flex: 1 1 auto; min-width: 60px; margin: 0; accent-color: var(--accent); }
 .knob output { min-width: 2.6em; text-align: right; font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.knob output .swatch { width: 14px; height: 14px; border-radius: 4px; margin: 0; vertical-align: -2px; }
+/* The LED colour beside Lights: twice a swatch's size, the negative block
+   margin keeping it from growing the row. */
+.chip { width: 26px; height: 26px; margin-block: -4px; border-radius: 7px; border: 1px solid var(--border); flex: none; transition: opacity 0.15s; }
+.chip.off { opacity: 0.3; }
+.knob output:empty { display: none; }
 .knob:has(input[type=range]:disabled) :is(.name, output) { opacity: 0.45; }
 .selects { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding-top: 14px; border-top: 1px solid var(--border); }
 .selects label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary); }
@@ -105,6 +109,7 @@ a { color: var(--accent); }
   .knobs { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px 10px; }
   .knob { display: contents; }
   .knob.lights { display: flex; grid-column: 1 / -1; }
+  .knob output:empty { display: block; }   /* hue's empty slot keeps the columns */
   .selects { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 12px; }
   .selects label { display: contents; }
   .selects select { min-width: 0; width: 100%; }
@@ -171,7 +176,7 @@ footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border
 
   <section class="card controls" aria-label="Settings">
     <div class="knobs">
-      <label class="knob lights"><input type="checkbox" id="rgbOn"> Lights</label>
+      <label class="knob lights"><input type="checkbox" id="rgbOn"> Lights <span class="chip" id="chip" aria-hidden="true"></span></label>
       <div class="knob" id="vKnob"><label class="name" for="v">Bright</label><input type="range" id="v" min="0" max="255" step="1" aria-label="RGB brightness"><output id="vOut" for="v"></output></div>
       <div class="knob" id="sKnob"><label class="name" for="s">Sat.</label><input type="range" id="s" min="0" max="255" step="1" aria-label="RGB saturation"><output id="sOut" for="s"></output></div>
       <div class="knob" id="hKnob"><label class="name" for="h">Hue</label><input type="range" id="h" min="0" max="255" step="1" aria-label="RGB hue"><output id="hOut" for="h"></output></div>
@@ -653,7 +658,10 @@ function update() {
   const lcdPct = M.lcdPercent(fw, state.lcd);
   $("vOut").textContent = pct(state.v);
   $("sOut").textContent = pct(state.s);
-  $("hOut").replaceChildren(el("span", { class: "swatch", style: { background: swatchColour() } }));
+  const chip = $("chip");
+  chip.style.background = swatchColour();
+  chip.classList.toggle("off", !state.rgbOn);
+  chip.title = colour ? `${colour[0].toUpperCase()}${colour.slice(1)}` : `Hue ${state.h}, saturation ${state.s}`;
   $("lcdOut").textContent = `${lcdPct}%`;
   const exact = {
     v: `Brightness ${state.v} of 255`, s: `Saturation ${state.s} of 255`,
