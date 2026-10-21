@@ -54,6 +54,22 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
    call: a trim from the frames' offsets, or a faster cadence. Gremlin runs
    the same test by hand on Windows.
 
+**The next flash (JD's go is given), when both are cleared:**
+- **Gremlin's frame trim**, `gremlin/lockchan-clock` (`01abfe0e` in codex's
+  verify at 10:4x 10-21): each type-4 frame trims the ILRC from its offset.
+  It waits for codex and a BT test on Gremlin's own board.
+- **ak820-pro-1e's 81-LED fix**, `rgb-81-leds` (`36330d5ec8`, battery.c's
+  RGB slopes; codex cleared it, `plans/review-codex-rgb-81-leds-2026-10-21.md`).
+  Its host branch `rgb-81-leds` (`df8553b`, `7178afb`) lands in the SAME
+  commit as the `deps.lock` pin; then `./setup.sh`, then
+  `scripts/battery_sim/run.sh` with no override.
+- Merge both into `ak820pro-jdlien` and push, build dev, switch relay 2 on
+  (JD runs on battery now), flash, put relay 2 back off. Then rerun
+  `history/lockchan-clock-mac-cut-20261021/run.sh` with JD on the NuPhy.
+- ⚠️ **The Mac's daemon must not get Gremlin's STEPPED change** (main, not
+  yet pushed at 10:4x) **before the board has `01abfe0e` or later**: older
+  firmware rejects a STEPPED frame. The board first, then the daemon.
+
 **Owed:** codex's RTC failure-path tests (Gremlin); the stack watermarks
 after a long run (the type-4 flash reset them before they were read).
 
