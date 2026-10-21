@@ -18,7 +18,9 @@ building"; the architecture stood, the arithmetic and the claims did not.
 
 ## Build status (10-21)
 
-**Built, on the data that exists; not published.** Everything below runs
+**Built on the data that exists, and published 10-21:
+<https://jdlien.github.io/ak820-pro/power/>** (a private preview copy too,
+<https://claude.ai/artifact/9m3ww1k2oxLSS2GdAHvWi4>). Everything below runs
 without the board:
 
 - `scripts/power_model.py` writes `site/power/power.json` from the firmware at
@@ -41,14 +43,14 @@ without the board:
   identity; white is a neutral line on purpose), settings in the URL. Checked
   rendered at 1100 px, light and dark, and at 375 px.
 - `.github/workflows/power-page.yml`: on PRs and `main`, a blob-less fetch of
-  the pinned firmware commit, `--check`, the tests. No deploy job yet.
+  the pinned firmware commit, `--check`, the tests; on `main`, a deploy job
+  publishes `site/` alone to GitHub Pages (Pages set to build from Actions).
 
 Preview: `cd site && python3 -m http.server`, then `/power/`.
 
 **Left:** the `knobs` sweep set in `current_map.py` with structured output;
 the overnight sweep (with the session holding the board), which replaces the
-dots and tightens the gate; GitHub Pages turned on (a repo setting) and the
-deploy job; a private artifact copy if wanted; a codex review of the build.
+dots and tightens the gate; a codex review of the build.
 Also: measure the reserve after 0% on current firmware. The one observation
 (~5 h, run 2) predates deep sleep, which may stretch it a lot, so the page
 says "at least five more hours, depending on how often you type" until there
