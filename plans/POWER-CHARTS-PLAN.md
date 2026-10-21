@@ -51,7 +51,9 @@ dots and tightens the gate; GitHub Pages turned on (a repo setting) and the
 deploy job; a private artifact copy if wanted; a codex review of the build.
 Also: measure the reserve after 0% on current firmware. The one observation
 (~5 h, run 2) predates deep sleep, which may stretch it a lot, so the page
-says only "several more hours" until there is a number to give.
+says "at least five more hours, depending on how often you type" until there
+is a number to give (an energy estimate from that run: ~0.56 Wh, ~5 h typing,
+~42 h asleep).
 
 ## Order and blockers
 
