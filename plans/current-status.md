@@ -65,7 +65,11 @@ for an attended test after four rounds,
 trims the ILRC from its offset. It is on Gremlin's board since 11:07; the
 flash here waits for JD's attended BT test there. It merges with
 `36330d5ec8` (disjoint files) as a merge commit.
-- Merge it into `ak820pro-jdlien` and push, pin `deps.lock`, build dev, switch relay 2 on
+- Merge it into `ak820pro-jdlien` and push, pin `deps.lock` (and run
+  `python3 scripts/power_model.py --check` before pushing the pin: a
+  `deps.lock` change triggers the power page's deploy, which fails if
+  battery.c's constants moved without `site/power/power.json`; the trim
+  doesn't touch battery.c), build dev, switch relay 2 on
   (JD runs on battery now), flash, put relay 2 back off. Then rerun
   `history/lockchan-clock-mac-cut-20261021/run.sh` with JD on the NuPhy.
 - ⚠️ **The Mac's daemon must not get Gremlin's STEPPED change** (main from
