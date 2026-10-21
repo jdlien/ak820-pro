@@ -242,25 +242,27 @@ every step of the LED brightness and colour sweep:
 - **base: 106.9 mW**, awake (deep sleep: 13.35 mW in all);
 - **plus the backlight: 39.1 mW × duty / 48** (the duty for each level is in
   [display.md](display.md), "Backlight");
-- **plus, while any LED is lit, 8.64 mW, and for each LED:**
-  - **3.636 µW per unit of red drive,**
-  - **2.533 µW per unit of green,**
-  - **2.294 µW per unit of blue.**
+- **plus, while any LED is lit, 8.64 mW, and for each of the 81 LEDs:**
+  - **3.681 µW per unit of red drive,**
+  - **2.565 µW per unit of green,**
+  - **2.322 µW per unit of blue.**
 
-  Drive is the value after QMK's CIE curve, 0-255 a channel.
+  Drive is the value after QMK's CIE curve, 0-255 a channel. (Until 10-21
+  these were 3.636, 2.533 and 2.294: the fit counted 82 LEDs, so the RGB
+  read ~1.2% low.)
 
-For white at one brightness, the LEDs come to about **8.6 + 0.71 × drive
-mW**: 189 mW at drive 255, 43 at 48 (value 128), 17 at 12 (value 64).
+For white at one brightness, the LEDs come to about **8.6 + 0.69 × drive
+mW**: 186 mW at drive 255, 42 at 48 (value 128), 17 at 12 (value 64).
 
 **A worked example:** white at value 128, the screen at level 8, the default
 mode, 4 h of typing a day:
 
-- **awake:** 106.9 + 6.5 (backlight, 8 of 48) + 42.7 (LEDs) = 156 mW, × 4 h
-  = 624 mWh;
+- **awake:** 106.9 + 6.5 (backlight, 8 of 48) + 42.0 (LEDs) = 155 mW, × 4 h
+  = 622 mWh;
 - **the ladder before each sleep,** say three absences a day: 10 min more at
-  156 mW, then 10 dimmed at ~131 mW, ~48 mWh each, ~143 mWh;
+  155 mW, then 10 dimmed at ~130 mW, ~48 mWh each, ~143 mWh;
 - **asleep:** the other 19 h × 13.35 mW = 254 mWh;
-- **total:** ~1,021 mWh a day, so 15,579 ÷ 1,021 = **~15.3 days**.
+- **total:** ~1,019 mWh a day, so 15,579 ÷ 1,019 = **~15.3 days**.
 
 ## The power modes
 

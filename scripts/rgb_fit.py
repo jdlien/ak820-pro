@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The RGB's power per colour, fitted from a `current_map.py --set rgb-curve`
 summary: P = P_off + A + B_r S_r + B_g S_g + B_b S_b, where S_c is a
-colour's channel sum in LED-buffer units (82 LEDs x 0-255, from the board's
+colour's channel sum in LED-buffer units (81 LEDs x 0-255, from the board's
 own drive per mille, so QMK's CIE curve is already applied) and P_off the
 map's "rgb off" steps. Prints the fit, each step against it and against the
 board's one-B model, and the stage map's purple as an out-of-sample check.
@@ -12,7 +12,11 @@ import os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SUMMARY = os.path.join(HERE, "..", "history", "power-bench-2026-10-15", "rgb-curve-20261019", "summary.txt")
-N = 82 * 255          # one channel full on every LED
+# One channel full on every LED. 81, the rgb_matrix layout in keyboard.json:
+# the drive per mille divides by LED_LOAD_MAX = RGB_MATRIX_LED_COUNT * 3 * 255
+# (battery.c). Until 10-21 this said 82, so the slopes it fitted (battery.c's
+# P_RGB_*_NW) came out 81/82 of the truth (plans/BACKLOG.md).
+N = 81 * 255
 B_TODAY = 2.857e-3    # mW per unit, every channel alike (P_RGB_B_NW)
 ROW = re.compile(r"^\s*\d+ (\S+(?: \d+| off)?)\s+[\d.]+ mA .*?,\s+([\d.]+) mW, led (\d+)(?:, model ([\d.]+) mW)?", re.M)
 

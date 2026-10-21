@@ -96,8 +96,8 @@ void     rgb_matrix_reinit_effect(void) { rgb_restarts++; }
 static bool     usb_configured;
 bool     battery_usb_configured(void) { return usb_configured; }
 /* The committed frames' drive: the sim's LED buffer is uniform, `drive_sum`
- * per frame (all 246 channels), scaled as the driver would. */
-static uint32_t drive_sum = 82u * 3u * 255u;   /* full white */
+ * per frame (all 243 channels), scaled as the driver would. */
+static uint32_t drive_sum = 81u * 3u * 255u;   /* full white */
 static uint32_t drive_last_ms;
 uint64_t sn32f2xx_led_drive_take(uint32_t now, uint32_t *lit_ms, uint64_t rgb_ms[3]) {
     uint32_t dt  = now - drive_last_ms;
@@ -112,7 +112,7 @@ uint64_t sn32f2xx_led_drive_take(uint32_t now, uint32_t *lit_ms, uint64_t rgb_ms
     }
     return (uint64_t)sum * dt;
 }
-uint32_t sn32f2xx_led_load(void) { return scale ? 82u * 3u * 255u / 2u : 0u; }
+uint32_t sn32f2xx_led_load(void) { return scale ? 81u * 3u * 255u / 2u : 0u; }
 static int      scale_sets;   /* power.c's apply() sets the scale every time it runs */
 void     sn32f2xx_set_power_scale(uint8_t s) { scale = s; scale_sets++; }
 

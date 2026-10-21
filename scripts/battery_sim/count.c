@@ -1,8 +1,8 @@
 /* Phase 2's energy count (battery.c; plans/PHASE2-BUILD-PLAN.md, section 1,
  * and codex's must-fix 8), #included by sim.c after ladder.c. The sim's load
- * unless a scenario changes it: full white (82 channels of each colour at 255,
- * the per-colour model of 10-19: 8.64 + 20910 x (3.636 + 2.533 + 2.294) uW =
- * 185.6 mW), the backlight at level 10 (duty 10/48: 8.15 mW) and the base
+ * unless a scenario changes it: full white (81 channels of each colour at 255,
+ * the per-colour model of 10-19 refitted for 81 LEDs on 10-21: 8.64 + 20655 x
+ * (3.681 + 2.565 + 2.322) uW = 185.6 mW, as 82 x the old slopes gave), the backlight at level 10 (duty 10/48: 8.15 mW) and the base
  * (106.9): 300.65 mW, so 1 pm every 186.5 s and ~19.30 pm an hour. */
 
 #define SIM_MW        300.65
@@ -414,7 +414,7 @@ static void c_replay(const char *what, const char *path, const char *t0, double 
     rp_second_hook = cr_hook;
     for (int i = 0; i < rp_n; i++) {
         rp_row_t *r = &rp[i];
-        if (r->led_pm >= 0) drive_sum = (uint32_t)r->led_pm * (82u * 3u * 255u) / 1000u;
+        if (r->led_pm >= 0) drive_sum = (uint32_t)r->led_pm * (81u * 3u * 255u) / 1000u;   /* the log's per mille is of LED_LOAD_MAX */
         if (r->bkl >= 0) sim_bkl = (uint8_t)r->bkl;
         cr_row = i; cr_sec = 0;
         rp_play(i);
