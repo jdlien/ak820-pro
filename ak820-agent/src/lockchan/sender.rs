@@ -144,6 +144,9 @@ struct Slot {
     /// This process's last USB clock sync: the board refuses a clock frame
     /// for ten minutes after it (the schedule's first frame waits it out).
     usb_clock_last: Option<Instant>,
+    /// This process's last USB clock set the board acknowledged (ends the
+    /// STEPPED quarantine of a discontinuity before it).
+    usb_clock_set: Option<Instant>,
     stop: bool,
     done: bool,
     status: Status,
@@ -231,6 +234,12 @@ impl Handle {
     /// The daemon's clock synced the board over USB at `at`.
     pub fn usb_clock_synced(&self, at: Instant) {
         self.with(|s| s.usb_clock_last = Some(at));
+    }
+
+    /// The daemon's USB clock sync was acknowledged at `at`: the board's
+    /// clock is this host's, phase-correct.
+    pub fn usb_clock_set(&self, at: Instant) {
+        self.with(|s| s.usb_clock_set = Some(at));
     }
 
     pub fn stop(&self) {
@@ -569,7 +578,7 @@ impl<P: Platform> Core<P> {
         let input = self.platform.input();
         let woke = self.wake_guess(input);
         let mut handover_end = None;
-        let (granted, owner, stop, stale_at, view, clock_on, usb_clock_last, epochs) = {
+        let (granted, owner, stop, stale_at, view, clock_on, usb_clock_last, usb_clock_set, epochs) = {
             let mut s = h.0.slot.lock().unwrap_or_else(|e| e.into_inner());
             let (view, stale_at) = current_of(&s, now);
             if let Some((m, _)) = &view {
@@ -595,7 +604,7 @@ impl<P: Platform> Core<P> {
                 self.tr.not_before(nb);
                 handover_end = Some(nb);
             }
-            (s.granted, s.owner_gen, s.stop, stale_at, view, s.clock_on, s.usb_clock_last, (s.text_epoch, s.tr_epoch))
+            (s.granted, s.owner_gen, s.stop, stale_at, view, s.clock_on, s.usb_clock_last, s.usb_clock_set, (s.text_epoch, s.tr_epoch))
         };
         // A seek: the position is not where the last type 3 said it would be.
         // A change of its own, with the change's repeat (type-3 sender, 3).
@@ -639,6 +648,9 @@ impl<P: Platform> Core<P> {
         }
         if !granted || !clock_on {
             self.clock.revoked();
+        }
+        if let Some(u) = usb_clock_set {
+            self.clock.usb_set(u);
         }
         if clock_on && granted {
             // An offset change (DST, a zone) or a wall-clock step: a clock
@@ -1010,12 +1022,18 @@ impl<P: Platform> Core<P> {
             }
         }
         let platform = &self.platform;
-        let stepped = self.clock.host_stepped();
+        // STEPPED: within a discontinuity's quarantine, or one the build sees
+        // at the anchor against the scheduler's reference, which a step in
+        // the warm-up or the preamble would otherwise slip past (codex, the
+        // trim's verify, 1).
+        let stepped = self.clock.host_stepped(time.now());
+        let (wall_ref, offset_ref) = self.clock.wall_ref();
+        let step_seen = Cell::new(false);
         let ctl = ClockCtl { ctl: Ctl { h, owner }, epochs, platform, time, taken: &taken };
         let lights = self.lights.as_mut().expect("opened by the caller");
         let line = &mut self.line;
         let out = frame::run_late(lights, time, &ctl, line, || {
-            let (taken, failed, described) = (&taken, &failed, &described);
+            let (taken, failed, described, step_seen) = (&taken, &failed, &described, &step_seen);
             Some(Late {
                 kind: super::TYPE_CLOCK,
                 seq,
@@ -1036,7 +1054,12 @@ impl<P: Platform> Core<P> {
                         return None;
                     }
                     let ms = w.rem_euclid(1000) as u32;
-                    let bytes = super::clock_payload(&l, ms, stepped)?;
+                    let jumped = wall_ref.is_none_or(|(at, wr)| {
+                        let expect = wr + anchor.saturating_duration_since(at).as_millis() as i64;
+                        (w0 - expect).abs() > clk::STEP_SLACK_MS
+                    }) || offset_ref.is_none_or(|o| o != clk::utc_offset_s(&l, ws));
+                    step_seen.set(jumped);
+                    let bytes = super::clock_payload(&l, ms, stepped || jumped)?;
                     failed.set(None);
                     // The baseline is the payload's own conversion: any later
                     // one that disagrees cuts the frame (verify, 1).
@@ -1050,6 +1073,9 @@ impl<P: Platform> Core<P> {
             })
         });
         let done = time.now();
+        if step_seen.get() {
+            self.clock.saw_step(done);
+        }
         // Credited only with the owner the frame's, and the host's clock
         // continuous from the time it took to the end (implementation
         // review, 2): otherwise the board has a time the host no longer
@@ -2240,7 +2266,9 @@ mod tests {
         // Local time, the offset applied: 15:00 and some seconds.
         let b = &f[0].1;
         assert_eq!((b[0], b[1], b[2], b[4]), (26, 10, 20, 15));
-        assert_eq!((b[9], b[10], b[11]), (0, 0xFF, 0x7F), "flags 0, the bias unknown");
+        // STEPPED: a new process cannot know the host's clock was continuous
+        // before it (the trim's verify, 3); the bias unknown.
+        assert_eq!((b[9], b[10], b[11]), (crate::lockchan::CLOCK_F_STEPPED, 0xFF, 0x7F));
         // After the title, which went first.
         let w: Vec<u8> = r.kb.borrow().writes.iter().map(|x| x.1).collect();
         let e = crate::lockchan::encode(&title("A").1, title("A").0, 0, Profile::P0, 0).unwrap();
@@ -2470,6 +2498,8 @@ mod tests {
     fn a_wall_step_during_a_clock_frame_cuts_it_and_the_next_has_the_new_time() {
         let mut r = clock_rig(Some(38));
         let t0 = granted(&mut r, title("A"));
+        // Continuity known from here: a USB set after the first observation.
+        r.h.usb_clock_set(r.t.now());
         // Thirty writes in: past the anchor, mid-payload; the wall clock
         // jumps a minute.
         let fired = in_clock(&r, 30, |_, kb| {
@@ -2488,12 +2518,41 @@ mod tests {
         // left uncredited.
         assert!(clock_frames_on(&r, 38, 60_000).is_empty(), "the stale frame was finished");
         // It says the host stepped (the board's trim takes no rate from it),
-        // and the refresh after it does not.
+        // and so does the refresh after it: the first could be lost (the
+        // trim's verify, 2). A USB set after the step ends that.
         assert_eq!(f[0].1[9], crate::lockchan::CLOCK_F_STEPPED);
         run_until(&mut r, t0 + clk::EVERY + Duration::from_secs(60));
         let f = clock_frames(&r, 38);
         assert_eq!(f.len(), 2);
-        assert_eq!(f[1].1[9], 0, "a plain refresh");
+        assert_eq!(f[1].1[9], crate::lockchan::CLOCK_F_STEPPED, "still in the quarantine");
+        r.h.usb_clock_set(r.t.now());
+        run_until(&mut r, t0 + clk::EVERY * 2 + Duration::from_secs(60));
+        let f = clock_frames(&r, 38);
+        assert_eq!(f.len(), 3);
+        assert_eq!(f[2].1[9], 0, "a plain refresh");
+    }
+
+    #[test]
+    fn a_wall_step_in_a_clock_frames_warm_up_marks_it_stepped() {
+        let mut r = clock_rig(Some(38));
+        let t0 = granted(&mut r, title("A"));
+        r.h.usb_clock_set(r.t.now());
+        // The warm-up's second write: before the anchor, so the frame takes
+        // the new time whole and no continuity check sees the step.
+        in_clock(&r, 1, |_, kb| {
+            let mut k = kb.borrow_mut();
+            let (at, w) = k.wall.unwrap();
+            k.wall = Some((at, w + 1_000));
+        });
+        run_until(&mut r, t0 + Duration::from_secs(30));
+        let f = clock_frames(&r, 38);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].1[9], crate::lockchan::CLOCK_F_STEPPED, "the build saw it");
+        // And the quarantine runs on from it.
+        run_until(&mut r, t0 + clk::EVERY + Duration::from_secs(60));
+        let f = clock_frames(&r, 38);
+        assert_eq!(f.len(), 2);
+        assert_eq!(f[1].1[9], crate::lockchan::CLOCK_F_STEPPED);
     }
 
     #[test]

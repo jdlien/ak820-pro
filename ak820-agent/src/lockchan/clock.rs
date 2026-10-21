@@ -74,6 +74,15 @@ fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     era * 146097 + doe - 719468
 }
 
+/// After a discontinuity of the host's clock, every frame carries
+/// `CLOCK_F_STEPPED` for this long. The channel is one way: a marked frame
+/// can be lost, and the board would then close its trim window on the next
+/// plain one, learning the step as drift. Past the board's longest window
+/// (`RTC_FT_MAX_S`, 3600 of its seconds) with margin for its rate, any plain
+/// frame's window spanning the step is too long to trim from (codex, the
+/// trim's verify, 2).
+pub const QUARANTINE: Duration = Duration::from_secs(3900);
+
 #[derive(Debug, Default)]
 pub struct ClockSched {
     due: Option<Instant>,
@@ -84,9 +93,14 @@ pub struct ClockSched {
     last_sent: Option<Instant>,
     offset: Option<i64>,
     wall_ref: Option<(Instant, i64)>,
-    /// The host's clock stepped or its offset moved since the last frame sent
-    /// whole: the next carries `CLOCK_F_STEPPED`.
-    stepped: bool,
+    /// The last discontinuity: a step, an offset change, or the first
+    /// observation (this process cannot know what came before it; the
+    /// verify, 3). Frames carry `CLOCK_F_STEPPED` for [`QUARANTINE`] after.
+    stepped_at: Option<Instant>,
+    /// This process's last USB clock set the board acknowledged: a
+    /// phase-correct set from this host's clock, so a discontinuity before
+    /// it is behind the board's window.
+    usb_set: Option<Instant>,
 }
 
 impl ClockSched {
@@ -98,9 +112,29 @@ impl ClockSched {
         self.last_sent
     }
 
-    /// The next frame carries `CLOCK_F_STEPPED` (the board's frame trim).
-    pub fn host_stepped(&self) -> bool {
-        self.stepped
+    /// A frame at `now` carries `CLOCK_F_STEPPED` (the board's frame trim):
+    /// within the quarantine of a discontinuity no acknowledged USB set has
+    /// followed, or before any observation.
+    pub fn host_stepped(&self, now: Instant) -> bool {
+        match self.stepped_at {
+            None => true,
+            Some(s) => now < s + QUARANTINE && self.usb_set.is_none_or(|u| u < s),
+        }
+    }
+
+    /// The reference the next step check uses, and the offset it saw.
+    pub fn wall_ref(&self) -> (Option<(Instant, i64)>, Option<i64>) {
+        (self.wall_ref, self.offset)
+    }
+
+    /// A frame's build saw the host's clock off its reference at `now`.
+    pub fn saw_step(&mut self, now: Instant) {
+        self.stepped_at = Some(now);
+    }
+
+    /// The board acknowledged this process's USB clock set at `at`.
+    pub fn usb_set(&mut self, at: Instant) {
+        self.usb_set = Some(self.usb_set.map_or(at, |u| u.max(at)));
     }
 
     /// A new acquisition: the first frame after the handover (`not_before`)
@@ -110,9 +144,6 @@ impl ClockSched {
         let floor = owner_end.map_or(not_before, |e| e.max(not_before));
         self.floor = Some(floor);
         self.due = Some(floor);
-        // A step stays owed: a USB sync may not have followed it (codex,
-        // the trim's review). The board drops its trim window on leaving
-        // SOF anyway, so a frame marked needlessly costs nothing.
     }
 
     /// The channel was revoked: nothing is due until the next acquisition.
@@ -146,9 +177,11 @@ impl ClockSched {
             (wall_ms - expect).abs() > STEP_SLACK_MS
         });
         let moved = self.offset.is_some_and(|o| o != offset_s);
+        if stepped || moved || self.wall_ref.is_none() {
+            self.stepped_at = Some(now);
+        }
         self.wall_ref = Some((now, wall_ms));
         self.offset = Some(offset_s);
-        self.stepped |= stepped || moved;
         if (stepped || moved) && self.due.is_some() {
             self.due = Some(now);
             return true;
@@ -166,7 +199,6 @@ impl ClockSched {
     /// Sent whole at `done`.
     pub fn sent(&mut self, done: Instant) {
         self.last_sent = Some(done);
-        self.stepped = false;
         if self.due.is_some() {
             self.due = Some(done + EVERY);
         }
@@ -315,27 +347,52 @@ mod tests {
     }
 
     #[test]
-    fn a_step_or_an_offset_change_marks_the_next_frame_until_one_is_sent() {
+    fn a_new_process_is_quarantined_until_a_usb_set_or_the_quarantine_ends() {
+        let t0 = Instant::now();
+        let w0 = 1_792_540_799_000;
+        let mut c = ClockSched::default();
+        assert!(c.host_stepped(t0), "nothing observed: unknown");
+        c.acquired(t0, None);
+        c.observe(t0, w0, 0);
+        c.observe(t0 + s(10), w0 + 10_000, 0);
+        assert!(c.host_stepped(t0 + s(10)), "the first observation starts it");
+        assert!(c.host_stepped(t0 + QUARANTINE - s(1)));
+        assert!(!c.host_stepped(t0 + QUARANTINE));
+        // Or an acknowledged USB set after it ends it at once; one before it
+        // does not.
+        let mut d = ClockSched::default();
+        d.usb_set(t0 - s(1));
+        d.observe(t0, w0, 0);
+        assert!(d.host_stepped(t0 + s(5)));
+        d.usb_set(t0 + s(5));
+        assert!(!d.host_stepped(t0 + s(6)));
+    }
+
+    #[test]
+    fn a_step_or_an_offset_change_marks_frames_for_the_quarantine() {
         let t0 = Instant::now();
         let w0 = 1_792_540_799_000;
         let mut c = ClockSched::default();
         c.acquired(t0, None);
         c.observe(t0, w0, 0);
+        c.usb_set(t0 + s(1));
         c.observe(t0 + s(10), w0 + 10_000, 0);
-        assert!(!c.host_stepped(), "the clock ran true");
+        assert!(!c.host_stepped(t0 + s(10)), "the clock ran true");
         c.observe(t0 + s(20), w0 + 20_000 + STEP_SLACK_MS + 1, 0);
-        assert!(c.host_stepped(), "a step");
-        // Held through a failed send and a later observation that ran true.
-        c.later(t0 + s(21), RETRY);
-        c.observe(t0 + s(30), w0 + 30_000 + STEP_SLACK_MS + 1, 0);
-        assert!(c.host_stepped());
+        assert!(c.host_stepped(t0 + s(20)), "a step");
+        // Not cleared by a frame sent whole (it may be lost), nor a new
+        // acquisition; through the quarantine.
         c.sent(t0 + s(31));
-        assert!(!c.host_stepped(), "cleared by a frame sent whole");
-        c.observe(t0 + s(40), w0 + 40_000 + STEP_SLACK_MS + 1, 3600);
-        assert!(c.host_stepped(), "an offset change");
-        // Kept through a new acquisition: unknown is not safe.
         c.revoked();
         c.acquired(t0 + s(50), Some(t0 + s(45)));
-        assert!(c.host_stepped());
+        assert!(c.host_stepped(t0 + s(20) + QUARANTINE - s(1)));
+        assert!(!c.host_stepped(t0 + s(20) + QUARANTINE));
+        // An offset change, and one the build saw.
+        c.observe(t0 + s(40), w0 + 40_000 + STEP_SLACK_MS + 1, 3600);
+        assert!(c.host_stepped(t0 + s(40) + QUARANTINE - s(1)));
+        c.usb_set(t0 + s(41));
+        assert!(!c.host_stepped(t0 + s(42)), "a USB set after it");
+        c.saw_step(t0 + s(60));
+        assert!(c.host_stepped(t0 + s(60) + QUARANTINE - s(1)));
     }
 }
