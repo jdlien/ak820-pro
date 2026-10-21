@@ -537,7 +537,7 @@ function chart(kind) {
   const host = kind === "draw" ? $("chartDraw") : $("chartHours");
   const width = Math.max(320, host.clientWidth || 900);
   const narrow = width < 560;
-  const height = narrow ? 300 : 380;
+  const height = narrow ? 360 : 520;   // a chart and its legend fit a 13-inch laptop's window
   const mt = 20, mb = 40, ml = 52, mr = narrow ? 72 : 96;
   const cs = curves();
   const value = kind === "draw" ? (sr, p) => p.mw : (sr, p) => hoursOf(sr, p);
@@ -545,7 +545,10 @@ function chart(kind) {
   const sleep = M.sleepMw(ev, state.radio);
   const floorMw = M.boardMw(fw, { rgb: { on: false }, screen: { on: false, level: 0 } }) + M.radioExtraMw(ev, state.radio);
   let yMax = Math.max(...lines.flatMap((l) => l.rows.map((r) => r.y)));
-  yMax = kind === "draw" ? Math.ceil(yMax / 50) * 50 : Math.ceil(yMax / 25) * 25;
+  // A gridline every 25 mW or every 10 h; on a phone, a label on every other one.
+  const step = kind === "draw" ? 25 : 10;
+  yMax = Math.ceil(yMax / step) * step;
+  const ticks = d3.range(0, yMax + 1, narrow ? step * 2 : step);
 
   const ink = css("--text-secondary"), surface = css("--surface");
   const marks = [Plot.ruleY([0], { stroke: css("--border") })];
@@ -582,7 +585,7 @@ function chart(kind) {
     width, height, marginTop: mt, marginBottom: mb, marginLeft: ml, marginRight: mr,
     style: { background: "transparent", color: ink, fontFamily: "inherit", fontSize: "12px", overflow: "visible" },
     x: { domain: [0, 100], label: "Knob position (%) →", ticks: narrow ? 5 : 10, tickFormat: (d) => `${d}` },
-    y: { domain: [0, yMax], grid: true, nice: false, label: kind === "draw" ? "↑ Draw (mW)" : "↑ Hours of nonstop typing" },
+    y: { domain: [0, yMax], grid: true, nice: false, ticks, label: kind === "draw" ? "↑ Draw (mW)" : "↑ Hours of nonstop typing" },
     marks,
   });
   const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
