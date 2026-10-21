@@ -236,8 +236,10 @@ impl Handle {
         self.with(|s| s.usb_clock_last = Some(at));
     }
 
-    /// The daemon's USB clock sync was acknowledged at `at`: the board's
-    /// clock is this host's, phase-correct.
+    /// The daemon's USB clock sync was acknowledged; `at` is an instant
+    /// before its SET (taken ahead of the clock tick), so a discontinuity
+    /// seen after `at` stays quarantined. The board's clock is this host's,
+    /// phase-correct.
     pub fn usb_clock_set(&self, at: Instant) {
         self.with(|s| s.usb_clock_set = Some(at));
     }
