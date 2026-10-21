@@ -1,0 +1,138 @@
+From 1261ab2fa8d8bf245d63e136878e61667ad72cf4 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 15:26:28 -0600
+Subject: [PATCH 2/6] ak820pro (dev): codex's handler review -- only a command
+ that reached a setter with arguments it applies renews the lease (a short
+ report or SET_LINE past line 1 does not); the lease and its stamp dev-only;
+ the lease applies after exactly 10 s, not at; and R4-3: raw HID's media drops
+ a lock-LED frame being assembled
+
+Claude-Session: https://claude.ai/code/session_01Mm219BiSCsx6uwtXcZ7a9G
+---
+ .../a_jazz/ak820pro/bluetooth/ch582f_ajazz.c  |  7 ++++
+ .../a_jazz/ak820pro/bluetooth/ch582f_ajazz.h  |  2 +
+ keyboards/a_jazz/ak820pro/hid_protocol.c      | 41 ++++++++++++-------
+ 3 files changed, 36 insertions(+), 14 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+index feea304f7c..42675bcd51 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+@@ -448,6 +448,13 @@ static void lockchan_media_commit(const lockchan_frame_t *f) {
+     lcm_applied++;
+ }
+ 
++/* Raw HID just changed the display (hid_protocol.c): drop any lock-LED frame
++ * being assembled, so none can straddle it and commit after (R4-3). The LED
++ * baseline goes too; the next report only sets it. */
++void ch582_lockchan_rawhid(void) {
++    lockchan_link_lost(&lockchan);
++}
++
+ void ch582_lockchan_media_counts(uint32_t out[3]) {
+     out[0] = lcm_applied;
+     out[1] = lcm_rejected;
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
+index 0171ccc67d..8fdead1b80 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
+@@ -100,6 +100,8 @@ bool ch582_raw81_window(int8_t on);
+ /* op 17 sub 7: the lock-LED handler's frames applied, rejected (invalid) and
+  * refused by the lease (raw HID active), since boot. */
+ void ch582_lockchan_media_counts(uint32_t out[3]);
++/* Raw HID changed the display: drop a lock-LED frame being assembled. */
++void ch582_lockchan_rawhid(void);
+ void ch582_rxtap_arm(bool armed);
+ void ch582_rxtap_fill(uint8_t *out);
+ bool ch582_rxtap_page(uint8_t page, uint8_t *out);
+diff --git a/keyboards/a_jazz/ak820pro/hid_protocol.c b/keyboards/a_jazz/ak820pro/hid_protocol.c
+index f8cc135b94..31dda2778c 100644
+--- a/keyboards/a_jazz/ak820pro/hid_protocol.c
++++ b/keyboards/a_jazz/ak820pro/hid_protocol.c
+@@ -315,27 +315,37 @@ static inline bool is_text_cmd(const uint8_t *data, uint8_t length) {
+ }
+ 
+ /* The lock-LED channel's lease (plans/LOCK-LED-CHANNEL-PLAN.md, R3-2): when
+- * raw HID last carried an accepted media command, by USB or through the 2.4G
+- * dongle (raw81 dispatches here too). Set here at the ingress, never in the
+- * display's setters, which the lock-LED handler calls as well. */
++ * raw HID last carried a media command that changed the display's state, by
++ * USB or through the 2.4G dongle (raw81 dispatches here too). Stamped here at
++ * the ingress, never in the display's setters, which the lock-LED handler
++ * calls as well; dev builds only, with the channel. */
++#ifdef AK820_DEV_HOOKS
+ static uint32_t rawhid_media_at;
+ static bool     rawhid_media_seen;
+ 
+ bool hid_rawhid_media_within(uint32_t now, uint32_t ms) {
+-    return rawhid_media_seen && now - rawhid_media_at < ms;
++    return rawhid_media_seen && now - rawhid_media_at <= ms;
+ }
++#endif
+ 
+-static void text_command_inner(uint8_t *data, uint8_t length);
++/* True when the command reached a display setter with arguments it applies:
++ * a short report or a line past 1 renews nothing (codex, handler review, 1). */
++static bool text_command_inner(uint8_t *data, uint8_t length);
+ 
+ static void text_command(uint8_t *data, uint8_t length) {
+-    text_command_inner(data, length);
+-    if (data[0] != RTC_UNHANDLED) {
++    bool applied = text_command_inner(data, length);
++#ifdef AK820_DEV_HOOKS
++    if (applied) {
+         rawhid_media_at   = timer_read32();
+         rawhid_media_seen = true;
++        ch582_lockchan_rawhid();   /* R4-3: no assembly straddles it */
+     }
++#else
++    (void)applied;
++#endif
+ }
+ 
+-static void text_command_inner(uint8_t *data, uint8_t length) {
++static bool text_command_inner(uint8_t *data, uint8_t length) {
+     switch (data[2]) {
+         case TEXT_SET:
+             /* data[3] = icon id, data[4..] = ASCII. Length is whatever the host
+@@ -343,28 +353,31 @@ static void text_command_inner(uint8_t *data, uint8_t length) {
+             if (length >= 4) {
+                 display_set_text(data[3], (const char *)&data[4],
+                                  (uint8_t)(length - 4));
++                return true;
+             }
+-            break;
++            return false;
+         case TEXT_SET_LINE:
+             /* data[3] = line, data[4] = icon, data[5..] = ASCII. */
+-            if (length >= 5) {
++            if (length >= 5 && data[3] < 2) {
+                 display_set_text_line(data[3], data[4], (const char *)&data[5],
+                                       (uint8_t)(length - 5));
++                return true;
+             }
+-            break;
++            return false;
+         case TEXT_PLAYBACK:
+             if (length >= 8) {
+                 display_set_playback(data[3],
+                                      (uint16_t)((data[4] << 8) | data[5]),
+                                      (uint16_t)((data[6] << 8) | data[7]));
++                return true;
+             }
+-            break;
++            return false;
+         case TEXT_CLEAR:
+             display_clear_text();
+-            break;
++            return true;
+         default:
+             data[0] = RTC_UNHANDLED;
+-            break;
++            return false;
+     }
+ }
+ 
+-- 
+2.54.0
+

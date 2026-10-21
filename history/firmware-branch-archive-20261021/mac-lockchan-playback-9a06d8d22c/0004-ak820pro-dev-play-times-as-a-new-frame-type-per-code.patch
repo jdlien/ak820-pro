@@ -1,0 +1,366 @@
+From 81a1860c8c145818a74210d0f6654932dfd8c051 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 16:41:21 -0600
+Subject: [PATCH 4/6] ak820pro (dev): play times as a new frame type, per
+ codex's play-times review -- type 1 back to its frozen form (P2 1); type 3,
+ transport, exactly [icon][state][pos][dur]: the shown slot's icon
+ (display_set_text_icon, a no-op with nothing shown) and the playback readout,
+ so a play/pause or a seek needs no title and an older board rejects it whole
+ and keeps its text; the readout from a base and elapsed time, so Fn+D or an
+ animation no longer puts it behind (P2 5); a media key's optimistic freeze
+ ends after 15 s on its own, as if unpressed (P2 6) (10-20)
+
+Claude-Session: https://claude.ai/code/session_01L1gxigSPSsSyFgBh2Y6cme
+---
+ .../a_jazz/ak820pro/bluetooth/ch582f_ajazz.c  | 28 +++---
+ keyboards/a_jazz/ak820pro/graphics/display.c  | 97 ++++++++++++++-----
+ keyboards/a_jazz/ak820pro/graphics/display.h  |  2 +
+ keyboards/a_jazz/ak820pro/lockchan_media.c    | 45 ++++-----
+ keyboards/a_jazz/ak820pro/lockchan_media.h    | 35 +++----
+ 5 files changed, 132 insertions(+), 75 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+index 7a43f40df9..dbec778b41 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+@@ -422,12 +422,13 @@ bool ch582_lockchan_holds_scroll(void) { return !usb_mode && lockchan_holds_scro
+  * R3-2): validated whole first (lockchan_media.c), then refused while raw HID
+  * has carried a media command within the lease, so a late Bluetooth frame
+  * cannot overwrite what USB or the 2.4G dongle just showed. Only then the
+- * display, through the same setters as raw HID's text channel: both lines and
+- * the icon, and the playback readout when the frame carries one (its
+- * position advanced by the frame's own anchor-to-commit time), else off. Its
+- * readout lives LOCKCHAN_PLAYBACK_MS, two of the host's 60 s refreshes and a
+- * margin, since frames are lost. RAM state only; the band paints on its own
+- * schedule. */
++ * display, through the same setters as raw HID's text channel: type 1 both
++ * lines and the icon, playback off; type 2 a clear, playback off; type 3 the
++ * shown slot's icon and the playback readout, its position advanced by the
++ * frame's own anchor-to-commit time. The readout lives LOCKCHAN_PLAYBACK_MS,
++ * two of the host's 60 s refreshes and a margin, since frames are lost (not a
++ * guaranteed bound: codex, the play-times review). RAM state only; the band
++ * paints on its own schedule. */
+ #define LOCKCHAN_LEASE_MS    10000u
+ #define LOCKCHAN_PLAYBACK_MS 135000u
+ static uint32_t lcm_applied, lcm_rejected, lcm_leased;
+@@ -442,16 +443,17 @@ static void lockchan_media_commit(const lockchan_frame_t *f) {
+         lcm_leased++;
+         return;
+     }
+-    if (m.type == LOCKCHAN_TYPE_CLEAR) {
+-        display_clear_text();
+-    } else {
+-        display_set_text_line(0, m.icon, (const char *)m.l0, m.n0);
+-        display_set_text_line(1, m.icon, (const char *)m.l1, m.n1);
+-    }
+-    if (m.type == LOCKCHAN_TYPE_NOW_PLAYING && m.playback) {
++    if (m.type == LOCKCHAN_TYPE_TRANSPORT) {
++        display_set_text_icon(m.icon);
+         display_set_playback_for(m.state, lockchan_media_position(&m, f->anchor_ms, f->commit_ms), m.dur,
+                                  LOCKCHAN_PLAYBACK_MS);
+     } else {
++        if (m.type == LOCKCHAN_TYPE_CLEAR) {
++            display_clear_text();
++        } else {
++            display_set_text_line(0, m.icon, (const char *)m.l0, m.n0);
++            display_set_text_line(1, m.icon, (const char *)m.l1, m.n1);
++        }
+         display_set_playback(0, 0, 0);
+     }
+     lcm_applied++;
+diff --git a/keyboards/a_jazz/ak820pro/graphics/display.c b/keyboards/a_jazz/ak820pro/graphics/display.c
+index cd758e13ae..7b2d6075d8 100644
+--- a/keyboards/a_jazz/ak820pro/graphics/display.c
++++ b/keyboards/a_jazz/ak820pro/graphics/display.c
+@@ -410,14 +410,31 @@ static void draw_conn_row(void);      // three-transport strip, top row
+  * It expires on its own (PLAYBACK_TIMEOUT_MS). A stuck timer counting up
+  * forever after the agent dies or the machine sleeps is exactly the kind of
+  * confidently-wrong readout the text slot's expiry exists to prevent.  */
+-#define PLAYBACK_TIMEOUT_MS 20000u
+-#define PLAYBACK_MAX        24
++#define PLAYBACK_TIMEOUT_MS  20000u
++#define PLAYBACK_KEY_HOLD_MS 15000u   /* a media key's optimistic freeze, at most */
++#define PLAYBACK_MAX         24
+ 
+ static bool     pb_active = false;
+-static bool     pb_ticking = false;
+-static uint16_t pb_pos = 0, pb_dur = 0;
+-static uint32_t pb_stamp = 0;
++static bool     pb_ticking = false;  /* the host's word: advancing */
++static uint16_t pb_pos = 0, pb_dur = 0;   /* pb_pos: what the band shows */
++static uint16_t pb_base = 0;         /* the position at pb_base_ms ... */
++static uint32_t pb_base_ms = 0;      /* ... from which it advances by elapsed time */
++static uint32_t pb_stamp = 0;        /* the last setter's, for the expiry */
+ static uint32_t pb_timeout = PLAYBACK_TIMEOUT_MS;   /* the last setter's */
++static bool     pb_held = false;     /* a media key froze it at pb_held_pos */
++static uint16_t pb_held_pos = 0;
++static uint32_t pb_held_ms = 0;
++
++/* The position at `now`: the base advanced by the whole seconds since, never
++ * past a known duration or 0xFFFF. From elapsed time, not a count of serviced
++ * ticks, so a stretch without housekeeping (Fn+D, an animation) costs nothing
++ * (codex, the play-times review, P2 5). */
++static uint16_t pb_at(uint32_t now) {
++    uint32_t p = pb_base;
++    if (pb_ticking) p += (now - pb_base_ms) / 1000u;
++    if (pb_dur && p > pb_dur) p = pb_dur;
++    return p > 0xFFFFu ? 0xFFFFu : (uint16_t)p;
++}
+ 
+ void display_set_playback(uint8_t state, uint16_t pos, uint16_t dur) {
+     display_set_playback_for(state, pos, dur, PLAYBACK_TIMEOUT_MS);
+@@ -425,7 +442,8 @@ void display_set_playback(uint8_t state, uint16_t pos, uint16_t dur) {
+ 
+ /* Raw HID pushes a position every poll, so 20 s of silence means the host is
+  * gone. The lock-LED channel refreshes every 60 s and loses frames to the
+- * radio, so its readout lives longer; whichever set it last decides. */
++ * radio, so its readout lives longer; whichever set it last decides. A host
++ * word ends any media key's optimistic freeze. */
+ void display_set_playback_for(uint8_t state, uint16_t pos, uint16_t dur, uint32_t timeout_ms) {
+     pb_timeout = timeout_ms;
+     bool want = (state != 0);
+@@ -433,10 +451,13 @@ void display_set_playback_for(uint8_t state, uint16_t pos, uint16_t dur, uint32_
+         pb_active = want;
+         clock_force_repaint = true;     // band changes owner: repaint it whole
+     }
++    pb_base    = pos;
++    pb_base_ms = timer_read32();
+     pb_pos     = pos;
+     pb_dur     = dur;
+     pb_ticking = want;      // the host only reports a position while PLAYING
+-    pb_stamp   = timer_read32();
++    pb_held    = false;
++    pb_stamp   = pb_base_ms;
+ }
+ 
+ /* Freeze/unfreeze on the media key, the same optimistic trick the transport
+@@ -452,28 +473,42 @@ void display_set_playback_for(uint8_t state, uint16_t pos, uint16_t dur, uint32_
+  * cannot see, in which case the player is still going and the host will re-
+  * assert it -- a frozen timer that resumes is a much smaller lie than the clock
+  * flashing up and being replaced. */
++/* The freeze has a deadline of its own, PLAYBACK_KEY_HOLD_MS: a host that
++ * polls corrects it within a poll, but the lock lights send nothing when the
++ * player ignored the key (nothing changed), so the freeze would otherwise last
++ * the readout's whole 135 s (codex, the play-times review, P2 6). Past the
++ * deadline it is as if the key had not been pressed. */
+ void display_playback_key(void) {
+-    if (pb_active) pb_ticking = !pb_ticking;
+-}
+-
++    if (!pb_active) return;
++    uint32_t now = timer_read32();
++    if (!pb_held) {             // freeze where it is
++        pb_held_pos = pb_at(now);
++        pb_held_ms  = now;
++        pb_held     = true;
++        pb_pos      = pb_held_pos;
++    } else {                    // resume from where it froze
++        pb_base    = pb_held_pos;
++        pb_base_ms = now;
++        pb_held    = false;
++        pb_pos     = pb_at(now);
++    }
++}
++
++/* Once a second, from housekeeping: the expiry, the freeze's deadline, and
++ * the position recomputed. It does not run past the end (at a track boundary
++ * the host's next word is a poll or a frame away, and a timer beyond the
++ * duration looks broken) and saturates rather than wraps (with dur == 0, a
++ * live stream, it would otherwise roll 65535 -> 0 after 18h12m). */
+ void display_playback_tick(void) {
+     if (!pb_active) return;
+-    if (timer_elapsed32(pb_stamp) > pb_timeout) {
++    uint32_t now = timer_read32();
++    if (now - pb_stamp > pb_timeout) {
+         pb_active = false;
+         clock_force_repaint = true;
+         return;
+     }
+-    if (!pb_ticking) return;    // paused: hold the value, do not advance it
+-    /* Do not run past the end: at a track boundary the host's next push is up
+-     * to a poll away, and a timer reading beyond the duration looks broken. */
+-    /* Saturate rather than wrap. With dur == 0 (a live stream, no known length)
+-     * the position would otherwise roll 65535 -> 0 after 18h12m and the timer
+-     * would silently restart at 0:00. */
+-    if (pb_dur) {
+-        if (pb_pos < pb_dur) pb_pos++;
+-    } else if (pb_pos < 0xFFFFu) {
+-        pb_pos++;
+-    }
++    if (pb_held && now - pb_held_ms > PLAYBACK_KEY_HOLD_MS) pb_held = false;
++    pb_pos = pb_held ? pb_held_pos : pb_at(now);
+ }
+ 
+ static uint8_t fmt_hms(char *out, uint16_t sec) {
+@@ -2343,6 +2378,22 @@ void display_toggle_play_icon(void) {
+     band_gen[BAND_TEXT]++;
+ }
+ 
++/* The text slot's icon alone, keeping its lines: the lock-LED channel's
++ * transport frame (type 3), which carries a play/pause without resending the
++ * title. A no-op when no text is shown, since an icon alone brings nothing
++ * back. It is a host's word that the slot is current, so the slot's expiry
++ * restarts. */
++void display_set_text_icon(uint8_t icon) {
++    if (!text_present) return;
++    uint8_t new_icon = (icon <= DISPLAY_ICON_STOP) ? icon : DISPLAY_ICON_NONE;
++    text_stamp = timer_read32();
++    if (new_icon == text_icon) return;
++    text_icon    = new_icon;
++    text_present = text_buf[0][0] || text_buf[1][0] || (text_icon != DISPLAY_ICON_NONE);
++    text_dirty   = true;
++    band_gen[BAND_TEXT]++;
++}
++
+ void display_clear_text(void) {
+     text_buf[0][0] = '\0';
+     text_buf[1][0] = '\0';
+@@ -2374,7 +2425,7 @@ uint8_t display_get_text_line(uint8_t line, char *out, uint8_t max, uint8_t *ico
+  * advanced by the 1 Hz tick). */
+ void display_get_playback(bool *active, bool *ticking, uint16_t *pos, uint16_t *dur) {
+     if (active) *active = pb_active;
+-    if (ticking) *ticking = pb_ticking;
++    if (ticking) *ticking = pb_ticking && !pb_held;
+     if (pos) *pos = pb_pos;
+     if (dur) *dur = pb_dur;
+ }
+diff --git a/keyboards/a_jazz/ak820pro/graphics/display.h b/keyboards/a_jazz/ak820pro/graphics/display.h
+index 59abc30846..cde1551601 100644
+--- a/keyboards/a_jazz/ak820pro/graphics/display.h
++++ b/keyboards/a_jazz/ak820pro/graphics/display.h
+@@ -103,6 +103,8 @@ void display_set_text(uint8_t icon, const char *s, uint8_t len);
+  * Setting line 0 via display_set_text() clears line 1, so a single-line
+  * producer cannot strand a stale second line. */
+ void display_set_text_line(uint8_t line, uint8_t icon, const char *s, uint8_t len);
++/* The slot's icon alone, its lines kept; a no-op when no text is shown. */
++void display_set_text_icon(uint8_t icon);
+ void display_clear_text(void);
+ /* Read-only views of the text slot and the playback state (display.c), for
+  * tests: no drawing, no state change. */
+diff --git a/keyboards/a_jazz/ak820pro/lockchan_media.c b/keyboards/a_jazz/ak820pro/lockchan_media.c
+index bedad478e0..e9bdc1abc4 100644
+--- a/keyboards/a_jazz/ak820pro/lockchan_media.c
++++ b/keyboards/a_jazz/ak820pro/lockchan_media.c
+@@ -15,32 +15,33 @@ bool lockchan_media_parse(const lockchan_frame_t *f, lockchan_media_t *m) {
+         *m = (lockchan_media_t){.type = LOCKCHAN_TYPE_CLEAR};
+         return true;
+     }
++    if (f->type == LOCKCHAN_TYPE_TRANSPORT) {
++        const uint8_t *p = f->payload;
++        if (f->len != LOCKCHAN_TRANSPORT_LEN || p[0] > 3 || p[1] > 1) return false;
++        *m = (lockchan_media_t){
++            .type  = LOCKCHAN_TYPE_TRANSPORT,
++            .icon  = p[0],
++            .state = p[1],
++            .pos   = (uint16_t)((p[2] << 8) | p[3]),
++            .dur   = (uint16_t)((p[4] << 8) | p[5]),
++        };
++        return true;
++    }
+     if (f->type != LOCKCHAN_TYPE_NOW_PLAYING) return false;
+-    if (f->len < 2) return false;
++    if (f->len < 2 || f->len > 2 + LOCKCHAN_MEDIA_MAX_L0 + LOCKCHAN_MEDIA_MAX_L1) return false;
+     uint8_t icon = f->payload[0], n0 = f->payload[1];
+-    bool    pb   = (icon & LOCKCHAN_MEDIA_PLAYBACK) != 0;
+-    uint8_t tail = pb ? LOCKCHAN_MEDIA_PB_LEN : 0;
+-    icon &= (uint8_t)~LOCKCHAN_MEDIA_PLAYBACK;
+-    if (icon > 3) return false;                         /* any bit but 7 */
+-    if (f->len < 2 + tail || f->len > 2 + LOCKCHAN_MEDIA_MAX_L0 + LOCKCHAN_MEDIA_MAX_L1 + tail) return false;
+-    uint8_t text = (uint8_t)(f->len - 2 - tail);        /* both lines */
+-    if (n0 > LOCKCHAN_MEDIA_MAX_L0 || n0 > text) return false;
+-    uint8_t n1 = (uint8_t)(text - n0);
++    if (icon > 3) return false;                         /* any bit beyond 0-3 */
++    if (n0 > LOCKCHAN_MEDIA_MAX_L0 || n0 > f->len - 2) return false;
++    uint8_t n1 = (uint8_t)(f->len - 2 - n0);
+     if (n1 > LOCKCHAN_MEDIA_MAX_L1) return false;
+-    if (!printable(&f->payload[2], text)) return false;
+-    const uint8_t *t = &f->payload[2 + text];           /* the playback bytes, if any */
+-    if (pb && t[0] > 1) return false;                   /* state 0 or 1 */
++    if (!printable(&f->payload[2], (uint8_t)(n0 + n1))) return false;
+     *m = (lockchan_media_t){
+-        .type     = LOCKCHAN_TYPE_NOW_PLAYING,
+-        .icon     = icon,
+-        .n0       = n0,
+-        .n1       = n1,
+-        .l0       = &f->payload[2],
+-        .l1       = &f->payload[2 + n0],
+-        .playback = pb,
+-        .state    = pb ? t[0] : 0,
+-        .pos      = pb ? (uint16_t)((t[1] << 8) | t[2]) : 0,
+-        .dur      = pb ? (uint16_t)((t[3] << 8) | t[4]) : 0,
++        .type = LOCKCHAN_TYPE_NOW_PLAYING,
++        .icon = icon,
++        .n0   = n0,
++        .n1   = n1,
++        .l0   = &f->payload[2],
++        .l1   = &f->payload[2 + n0],
+     };
+     return true;
+ }
+diff --git a/keyboards/a_jazz/ak820pro/lockchan_media.h b/keyboards/a_jazz/ak820pro/lockchan_media.h
+index 636eae9f3c..0d05a1a375 100644
+--- a/keyboards/a_jazz/ak820pro/lockchan_media.h
++++ b/keyboards/a_jazz/ak820pro/lockchan_media.h
+@@ -7,41 +7,42 @@
+ #include "lockchan.h"
+ 
+ /* What a committed lock-LED frame means (plans/LOCK-LED-CHANNEL-PLAN.md,
+- * R2-9, version 0's types; the playback bytes added 10-20, "Play times"):
++ * R2-9, version 0's types 1 and 2, frozen; type 3 added 10-20, "Play times"):
+  *
+  *   type 1, now playing: [icon][n0][line 0: n0 bytes][line 1: the rest]
+  *     2 <= len <= 42; n0 <= 19, n0 <= len - 2, line 1 = len - 2 - n0 <= 21;
+- *     icon 0-3; every text byte printable ASCII 0x20-0x7E.
+- *     With icon's bit 7 set, 5 more bytes end the frame:
+- *       [state][pos_hi][pos_lo][dur_hi][dur_lo], state 0 or 1 (playing),
+- *     so line 1 is what lies between line 0 and them (7 <= len <= 47). The
+- *     position is the host's at the frame's start; the board adds its own
+- *     anchor-to-commit time (lockchan_media_position).
+- *     Any other icon bit rejects.
+- *   type 2, clear: exactly zero bytes.
++ *     icon exactly 0-3 (any other bit rejects); every text byte printable
++ *     ASCII 0x20-0x7E. Playback off.
++ *   type 2, clear: exactly zero bytes. Playback off.
++ *   type 3, transport: exactly [icon][state][pos_hi][pos_lo][dur_hi][dur_lo],
++ *     icon 0-3, state 0 or 1 (playing): the shown slot's icon and the
++ *     playback readout, so a play/pause or a seek needs no title. The
++ *     position is the host's at its pick, before the preamble; the board adds
++ *     its anchor-to-commit time (lockchan_media_position). A new type, not a
++ *     bit in type 1 (codex, the play-times review, P2 1): a board before it
++ *     rejects the frame whole and keeps its text.
+  *
+  * Anything else is rejected whole. Pure logic, as lockchan.c is: the board
+  * applies a parsed frame (ch582f_ajazz.c), the host tests parse it. */
+ 
+ #define LOCKCHAN_TYPE_NOW_PLAYING 1
+ #define LOCKCHAN_TYPE_CLEAR       2
++#define LOCKCHAN_TYPE_TRANSPORT   3
+ #define LOCKCHAN_MEDIA_MAX_L0     19
+ #define LOCKCHAN_MEDIA_MAX_L1     21
+-#define LOCKCHAN_MEDIA_PLAYBACK   0x80   /* icon's bit 7: the playback bytes follow */
+-#define LOCKCHAN_MEDIA_PB_LEN     5
++#define LOCKCHAN_TRANSPORT_LEN    6
+ 
+ typedef struct {
+     uint8_t        type;          /* LOCKCHAN_TYPE_* */
+-    uint8_t        icon;          /* type 1 */
++    uint8_t        icon;          /* types 1 and 3 */
+     uint8_t        n0, n1;        /* type 1: the lines' lengths, either may be 0 */
+     const uint8_t *l0, *l1;       /* into the frame's payload */
+-    bool           playback;      /* type 1 with bit 7: the next three hold */
+-    uint8_t        state;         /* 0 not playing, 1 playing */
+-    uint16_t       pos, dur;      /* seconds; dur 0 is unknown (a stream) */
++    uint8_t        state;         /* type 3: 0 not playing, 1 playing */
++    uint16_t       pos, dur;      /* type 3: seconds; dur 0 is unknown (a stream) */
+ } lockchan_media_t;
+ 
+-/* True, with *m filled, when the frame is a valid type 1 or 2. On false, *m
+- * is untouched and nothing may be applied. */
++/* True, with *m filled, when the frame is a valid type 1, 2 or 3. On false,
++ * *m is untouched and nothing may be applied. */
+ bool lockchan_media_parse(const lockchan_frame_t *f, lockchan_media_t *m);
+ 
+ /* The position to show at the commit: the frame's, plus the time from its
+-- 
+2.54.0
+

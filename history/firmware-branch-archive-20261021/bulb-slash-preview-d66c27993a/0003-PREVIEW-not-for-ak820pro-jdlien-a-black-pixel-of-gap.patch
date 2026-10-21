@@ -1,0 +1,32 @@
+From 51e17321da3df7cd59d822d25b105fd5e920db4e Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Mon, 19 Oct 2026 16:04:51 -0600
+Subject: [PATCH 3/4] PREVIEW, not for ak820pro-jdlien: a black pixel of gap
+ where the bulb shares an edge with the white slash (the outline at (3,5) and
+ (8,10))
+
+---
+ keyboards/a_jazz/ak820pro/graphics/display.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/graphics/display.c b/keyboards/a_jazz/ak820pro/graphics/display.c
+index 0b989e9d68..10ae8ee781 100644
+--- a/keyboards/a_jazz/ak820pro/graphics/display.c
++++ b/keyboards/a_jazz/ak820pro/graphics/display.c
+@@ -1639,10 +1639,10 @@ static const char bulb_art[POWER_MODE_COUNT][BULB_H][BULB_W + 1] = {
+         "..#*******#..", "...#*****#...", "....#***#....", "....=====....",
+         "....+++++....", ".....+++.....",
+     },
+-    [POWER_MODE_MINIMAL] = {   /* PREVIEW: unlit, with a white slash ('/') through it */
++    [POWER_MODE_MINIMAL] = {   /* PREVIEW: unlit, a white slash ('/') through it, the bulb cut back a pixel where it touches the slash's edge */
+         ".............", ".............", ".//..........", "..//.###.....",
+-        "...//...##...", "...#//...#...", "..#..//...#..", "..#...//..#..",
+-        "..#....//.#..", "...#....//...", "....#...#//..", "....=====.//.",
++        "...//...##...", "....//...#...", "..#..//...#..", "..#...//..#..",
++        "..#....//.#..", "...#....//...", "....#....//..", "....=====.//.",
+         "....+++++....", ".....+++.....",
+     },
+ };
+-- 
+2.54.0
+

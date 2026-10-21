@@ -1,0 +1,205 @@
+From 83371a49f241d2da47646bd9a5837aea9c116492 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 13:49:24 -0600
+Subject: [PATCH 2/2] DIAGNOSTIC, not for merge: the flash probe (WFI variants
+ 9 and 10, op 14 sub 8): from SRAM, one read of a known word, the WFI, then 16
+ reads of two other known words over ~140 us, tallied; the placement sweep
+ held everywhere, so this asks the flash itself whether it answers right
+ straight after a Deep-sleep wake. Variant 8 (the SRAM copy) dropped for the
+ RAM (10-20)
+
+Claude-Session: https://claude.ai/code/session_01L1gxigSPSsSyFgBh2Y6cme
+---
+ keyboards/a_jazz/ak820pro/hid_protocol.c | 19 +++--
+ keyboards/a_jazz/ak820pro/sleep.c        | 90 ++++++++++++++++++++++--
+ keyboards/a_jazz/ak820pro/sleep.h        |  7 ++
+ 3 files changed, 107 insertions(+), 9 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/hid_protocol.c b/keyboards/a_jazz/ak820pro/hid_protocol.c
+index 3764b8c227..69a88539b1 100644
+--- a/keyboards/a_jazz/ak820pro/hid_protocol.c
++++ b/keyboards/a_jazz/ak820pro/hid_protocol.c
+@@ -1030,10 +1030,10 @@ static void health_command(uint8_t *data, uint8_t length) {
+                         break;
+                     }
+                     uint8_t sub = data[4], arg = data[5];
+-                    if (sub > 7 || (sub == 1 && arg >= POWER_MODE_COUNT) ||
++                    if (sub > 8 || (sub == 1 && arg >= POWER_MODE_COUNT) ||
+                         (sub == 2 && arg != 0xFF && arg > POWER_STAGE_SCREEN_OFF) ||
+                         (sub == 3 && (arg & ~SLEEP_LS_ALL)) || (sub == 4 && arg > 2) || (sub == 6 && arg != 1) ||
+-                        (sub == 7 && arg > 8 && arg != 0xFE && arg != 0xFF)) {
++                        (sub == 7 && (arg == 8 || (arg > 10 && arg != 0xFE && arg != 0xFF))) || (sub == 8 && arg > 1)) {
+                         data[0] = RTC_UNHANDLED;
+                         break;
+                     }
+@@ -1087,10 +1087,21 @@ static void health_command(uint8_t *data, uint8_t length) {
+                         data[4] = 5;
+                         break;
+                     }
++                    if (sub == 8) {
++                        /* DIAGNOSTIC (10-20): the flash probe's tallies
++                         * (sleep.h); arg 1 also clears them. Reply: 8, then
++                         * the 21 bytes. */
++                        uint8_t t[21];
++                        sleep_flash_probe(t, arg == 1);
++                        memset(&data[4], 0, 28);
++                        data[4] = 8;
++                        memcpy(&data[5], t, sizeof t);
++                        break;
++                    }
+                     if (sub == 7) {
+                         /* DIAGNOSTIC (10-20): the deep sleep's WFI sequence
+-                         * (sleep.c): arg 0-8 or 0xFF sets it, 0xFE only
+-                         * reads. Reply: 7, the sequence. */
++                         * (sleep.c): arg 0-7, 9, 10 or 0xFF sets it, 0xFE
++                         * only reads. Reply: 7, the sequence. */
+                         uint8_t v = sleep_wfi_variant(arg == 0xFE ? -1 : (int16_t)arg);
+                         memset(&data[4], 0, 28);
+                         data[4] = 7;
+diff --git a/keyboards/a_jazz/ak820pro/sleep.c b/keyboards/a_jazz/ak820pro/sleep.c
+index 4dc5599521..5142c50213 100644
+--- a/keyboards/a_jazz/ak820pro/sleep.c
++++ b/keyboards/a_jazz/ak820pro/sleep.c
+@@ -311,8 +311,9 @@ static void recovery_begin(uint8_t reason);
+  *   0xFF  the C sequence as built (the default);
+  *   0-7   the sequence in asm, aligned so the WFI sits at (2k + 6) mod 16
+  *         in a 16-byte line: k 5 = 0, 6 = 2, 7 = 4, 0 = 6, 1 = 8 ... 4 = 14;
+- *   8     from SRAM (.ramtext, copied at boot with .data), with ~100 us of
+- *         settle in SRAM before the flash is fetched again. */
++ *   8     from SRAM; held 2/2 in the sweep, then dropped for the probe's
++ *         RAM (it now refuses);
++ *   9, 10 from SRAM, the flash probe below. */
+ static volatile uint8_t ds_wfi_variant = 0xFFu;
+ 
+ uint8_t sleep_wfi_variant(int16_t v) {
+@@ -320,12 +321,85 @@ uint8_t sleep_wfi_variant(int16_t v) {
+     return ds_wfi_variant;
+ }
+ 
+-__attribute__((section(".ramtext"), noinline, long_call)) static void ds_wfi_ram(volatile uint32_t *ctrl) {
++/* DIAGNOSTIC (10-20, the flash probe): does the flash answer right straight
++ * after a Deep-sleep wake? The sweep above held at every placement, so this
++ * asks the flash itself, wherever the code sits. From SRAM, with no fetch
++ * from the flash until it returns: one read of a known word (the flash's
++ * last access before the sleep), the WFI, then DS_PROBE_N reads alternating
++ * between two other known words, the first 8 back to back, the rest each
++ * after a 40-pass loop of 5 cycles (~17 us at 12 MHz), so the last lands
++ * ~140 us after the wake. Variant 9 reads a word in another line first, 10 the word in the
++ * last one's 8-byte line (p. 254) first. */
++#    define DS_PROBE_N 16u
++static const uint32_t ds_probe_words[16] __attribute__((aligned(64))) = {
++    0x6B8B4567u, 0x327B23C6u, 0x643C9869u, 0x66334873u, 0x74B0DC51u, 0x19495CFFu, 0x2AE8944Au, 0x625558ECu,
++    0x238E1F29u, 0x46E87CCDu, 0x3D1B58BAu, 0x507ED7ABu, 0x2EB141F2u, 0x41B71EFBu, 0x79E2A9E3u, 0x7545E146u,
++};
++#    define DS_PROBE_LAST 0u    /* read before the WFI */
++#    define DS_PROBE_NEAR 1u    /* its 8-byte line */
++#    define DS_PROBE_FAR  15u   /* 60 bytes on: another 8-, 16- and 32-byte line */
++static struct {
++    uint16_t wakes, bad_wakes, bad_pos, as_last, as_ones, as_zero;
++    uint32_t first_bad, first_want;
++    uint8_t  first_pos;
++} ds_probe;
++
++__attribute__((section(".ramtext"), noinline, long_call)) static void ds_wfi_probe(volatile uint32_t *ctrl, const volatile uint32_t *last, const volatile uint32_t *a,
++                                                                                    const volatile uint32_t *b, volatile uint32_t *out) {
++    (void)*last;
+     *ctrl = 2u;
+     __DSB();
+     __WFI();
+     *ctrl = 0u;
+-    for (volatile uint32_t d = 0; d < 300u; d++) {}   /* ~100 us at the IHRC's 12 MHz */
++    for (uint32_t i = 0; i < 8u; i += 2u) {
++        out[i]      = *a;
++        out[i + 1u] = *b;
++    }
++    for (uint32_t i = 8u; i < DS_PROBE_N; i++) {
++        for (uint32_t d = 40u; d; d--) __asm volatile("");
++        out[i] = (i & 1u) ? *b : *a;
++    }
++}
++
++/* noinline: the reads' buffer is on the stack for the call only (the
++ * diagnostic's RAM above .bss is the free store's; newlib's tzset and
++ * sscanf can take from it). */
++static __attribute__((noinline)) void ds_probe_run(bool far_first) {
++    volatile uint32_t v_[DS_PROBE_N];
++    uint32_t ia = far_first ? DS_PROBE_FAR : DS_PROBE_NEAR, ib = far_first ? DS_PROBE_NEAR : DS_PROBE_FAR;
++    ds_wfi_probe(&SN_PMU->CTRL, &ds_probe_words[DS_PROBE_LAST], &ds_probe_words[ia], &ds_probe_words[ib], v_);
++    bool bad = false;
++    for (uint32_t i = 0; i < DS_PROBE_N; i++) {
++        uint32_t v = v_[i], want = ds_probe_words[(i & 1u) ? ib : ia];
++        if (v == want) continue;
++        if (!bad && !ds_probe.bad_wakes) {
++            ds_probe.first_bad  = v;
++            ds_probe.first_want = want;
++            ds_probe.first_pos  = (uint8_t)i;
++        }
++        bad = true;
++        ds_probe.bad_pos |= (uint16_t)(1u << i);
++        if (v == ds_probe_words[DS_PROBE_LAST]) ds_probe.as_last++;
++        if (v == 0xFFFFFFFFu) ds_probe.as_ones++;
++        if (v == 0u) ds_probe.as_zero++;
++    }
++    ds_probe.wakes++;
++    if (bad) ds_probe.bad_wakes++;
++}
++
++void sleep_flash_probe(uint8_t *out, bool clear) {
++    chSysLock();
++    memcpy(&out[0], &ds_probe.wakes, 2);
++    memcpy(&out[2], &ds_probe.bad_wakes, 2);
++    memcpy(&out[4], &ds_probe.bad_pos, 2);
++    memcpy(&out[6], &ds_probe.as_last, 2);
++    memcpy(&out[8], &ds_probe.as_ones, 2);
++    memcpy(&out[10], &ds_probe.as_zero, 2);
++    memcpy(&out[12], &ds_probe.first_bad, 4);
++    memcpy(&out[16], &ds_probe.first_want, 4);
++    out[20] = ds_probe.first_pos;
++    if (clear) memset(&ds_probe, 0, sizeof ds_probe);
++    chSysUnlock();
+ }
+ 
+ #    define DS_WFI_ASM(k)                                                                          \
+@@ -345,7 +419,8 @@ static inline __attribute__((always_inline)) void ds_wfi(void) {
+         case 5: DS_WFI_ASM(5); break;
+         case 6: DS_WFI_ASM(6); break;
+         case 7: DS_WFI_ASM(7); break;
+-        case 8: ds_wfi_ram(&SN_PMU->CTRL); break;
++        case 9: ds_probe_run(true); break;
++        case 10: ds_probe_run(false); break;
+         default:
+             SN_PMU->CTRL = 2;
+             __DSB();
+@@ -359,6 +434,11 @@ uint8_t sleep_wfi_variant(int16_t v) {
+     (void)v;
+     return 0xFFu;
+ }
++
++void sleep_flash_probe(uint8_t *out, bool clear) {
++    (void)clear;
++    memset(out, 0, 21);
++}
+ #endif
+ 
+ #ifdef AK820_DEV_HOOKS
+diff --git a/keyboards/a_jazz/ak820pro/sleep.h b/keyboards/a_jazz/ak820pro/sleep.h
+index 95c78e61ce..4f2fdbaa9e 100644
+--- a/keyboards/a_jazz/ak820pro/sleep.h
++++ b/keyboards/a_jazz/ak820pro/sleep.h
+@@ -104,6 +104,13 @@ void sleep_deep_record(uint8_t *out);
+ /* DIAGNOSTIC (dev, 10-20): the deep sleep's WFI sequence, op 14 sub 7
+  * (sleep.c); v < 0 only reads. 0xFF on daily builds. */
+ uint8_t sleep_wfi_variant(int16_t v);
++/* DIAGNOSTIC (dev, 10-20): the flash probe's tallies (WFI variants 9 and
++ * 10, sleep.c), 21 bytes, little endian: u16 wakes probed, u16 wakes with a
++ * wrong read, u16 the read positions ever wrong (bit i), u16 wrong reads
++ * equal to the word read before the sleep, u16 equal to 0xFFFFFFFF, u16
++ * equal to 0, u32 the first wrong read, u32 what it should have been, u8 its
++ * position. Zeros on daily builds. */
++void sleep_flash_probe(uint8_t *out, bool clear);
+ /* Each teardown's wake, the last eight (HC_DEVHOOK op 24): the page keeps only
+  * the last sleep's. Slot 0..7, 28 bytes, little endian: u16 the entry's
+  * sequence number (entry n is in slot n % 8), u8 reason (SLEEP_WAKE_*), u8
+-- 
+2.54.0
+

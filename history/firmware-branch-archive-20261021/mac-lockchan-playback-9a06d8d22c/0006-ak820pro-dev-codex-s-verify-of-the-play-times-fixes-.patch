@@ -1,0 +1,100 @@
+From 9a06d8d22c5e2c0eb18f2638ea29cb7e7a4e9823 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 17:07:54 -0600
+Subject: [PATCH 6/6] ak820pro (dev): codex's verify of the play-times fixes,
+ P2 1 -- a type 3 is admitted by the title's real lease
+ (display_text_lease_left, from its stamp, not the cached text_present that
+ only draw_text_slot expires, so Fn+D or an animation could let a spent title
+ through), and its readout's expiry is capped at the lease left, so it never
+ outlives the title (10-20)
+
+---
+ .../a_jazz/ak820pro/bluetooth/ch582f_ajazz.c  | 24 +++++++++----------
+ keyboards/a_jazz/ak820pro/graphics/display.c  | 10 ++++++++
+ keyboards/a_jazz/ak820pro/graphics/display.h  |  2 ++
+ 3 files changed, 24 insertions(+), 12 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+index 25614cc9a0..c21242b11e 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+@@ -426,14 +426,15 @@ bool ch582_lockchan_holds_scroll(void) { return !usb_mode && lockchan_holds_scro
+  * lines and the icon, playback off; type 2 a clear, playback off; type 3 the
+  * shown slot's icon and the playback readout, its position advanced by the
+  * frame's own anchor-to-commit time. Type 3 belongs to the title shown, so
+- * with none shown it is counted rejected and changes nothing: a timer for a
+- * title the board does not have, after a lost or expired type 1, would be
+- * the confidently-wrong readout the expiry exists to prevent. Nor does it
+- * renew the title's expiry (display_set_text_icon; codex, the play-times
+- * verify, P2 1). The readout lives LOCKCHAN_PLAYBACK_MS,
+- * two of the host's 60 s refreshes and a margin, since frames are lost (not a
+- * guaranteed bound: codex, the play-times review). RAM state only; the band
+- * paints on its own schedule. */
++ * with none shown, or its lease spent, it is counted rejected and changes
++ * nothing: a timer for a title the board does not have, after a lost or
++ * expired type 1, would be the confidently-wrong readout the expiry exists to
++ * prevent. Nor does it renew the title's expiry (display_set_text_icon;
++ * codex, the play-times verify, P2 1), and its readout ends no later than
++ * the title does (the fixes' verify, P2 1). The readout lives
++ * LOCKCHAN_PLAYBACK_MS at most, two of the host's 60 s refreshes and a
++ * margin, since frames are lost (not a guaranteed bound: codex, the
++ * play-times review). RAM state only; the band paints on its own schedule. */
+ #define LOCKCHAN_LEASE_MS    10000u
+ #define LOCKCHAN_PLAYBACK_MS 135000u
+ static uint32_t lcm_applied, lcm_rejected, lcm_leased;
+@@ -449,15 +450,14 @@ static void lockchan_media_commit(const lockchan_frame_t *f) {
+         return;
+     }
+     if (m.type == LOCKCHAN_TYPE_TRANSPORT) {
+-        bool shown = false;
+-        display_get_text_line(0, NULL, 0, NULL, &shown);
+-        if (!shown) {
++        uint32_t left = display_text_lease_left();
++        if (!left) {
+             lcm_rejected++;
+             return;
+         }
+         display_set_text_icon(m.icon);
+         display_set_playback_for(m.state, lockchan_media_position(&m, f->anchor_ms, f->commit_ms), m.dur,
+-                                 LOCKCHAN_PLAYBACK_MS);
++                                 left < LOCKCHAN_PLAYBACK_MS ? left : LOCKCHAN_PLAYBACK_MS);
+     } else {
+         if (m.type == LOCKCHAN_TYPE_CLEAR) {
+             display_clear_text();
+diff --git a/keyboards/a_jazz/ak820pro/graphics/display.c b/keyboards/a_jazz/ak820pro/graphics/display.c
+index 28a2d3b93d..65236a7ef5 100644
+--- a/keyboards/a_jazz/ak820pro/graphics/display.c
++++ b/keyboards/a_jazz/ak820pro/graphics/display.c
+@@ -2397,6 +2397,16 @@ void display_clear_text(void) {
+     text_dirty   = true;
+ }
+ 
++/* How long the shown title has left before its expiry, from its stamp, not
++ * from text_present: only draw_text_slot() services the expiry, and Fn+D or
++ * an animation can hold that off (codex, the play-times fixes, P2 1). 0 when
++ * nothing is shown or the lease is spent. Read-only. */
++uint32_t display_text_lease_left(void) {
++    if (!text_present) return 0;
++    uint32_t age = timer_elapsed32(text_stamp);
++    return age >= DISPLAY_TEXT_TIMEOUT_MS ? 0 : DISPLAY_TEXT_TIMEOUT_MS - age;
++}
++
+ /* Read-only: what the text slot holds, for a test to compare against what it
+  * sent (raw HID over the 2.4G dongle, stage 2: plans/RAWHID-24G-PLAN.md,
+  * R3-6). Copies the line, NUL-terminated within max, and returns its length;
+diff --git a/keyboards/a_jazz/ak820pro/graphics/display.h b/keyboards/a_jazz/ak820pro/graphics/display.h
+index cde1551601..eb102b5a2f 100644
+--- a/keyboards/a_jazz/ak820pro/graphics/display.h
++++ b/keyboards/a_jazz/ak820pro/graphics/display.h
+@@ -109,6 +109,8 @@ void display_clear_text(void);
+ /* Read-only views of the text slot and the playback state (display.c), for
+  * tests: no drawing, no state change. */
+ uint8_t display_get_text_line(uint8_t line, char *out, uint8_t max, uint8_t *icon, bool *present);
++/* The shown title's lease left, in ms; 0 when none is shown or it is spent. */
++uint32_t display_text_lease_left(void);
+ void    display_get_playback(bool *active, bool *ticking, uint16_t *pos, uint16_t *dur);
+ 
+ /* Draw the bootloader notice. Called just before the MCU reset that enters the
+-- 
+2.54.0
+

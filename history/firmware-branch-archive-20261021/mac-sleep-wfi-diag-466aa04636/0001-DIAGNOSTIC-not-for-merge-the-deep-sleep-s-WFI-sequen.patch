@@ -1,0 +1,151 @@
+From 466aa04636c0c12ebdb141b6bedac8ca4ec2e141 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 09:39:41 -0600
+Subject: [PATCH] DIAGNOSTIC, not for merge: the deep sleep's WFI sequence
+ chosen at run time (op 14 sub 7): as built, eight asm copies pinned to each
+ 2-byte offset in a 16-byte line, or from SRAM with a settle; b2a07e0d37 slept
+ for one counted second only, with r7 corrupted, and the same code moved slept
+ (10-20)
+
+Claude-Session: https://claude.ai/code/session_01L1gxigSPSsSyFgBh2Y6cme
+---
+ keyboards/a_jazz/ak820pro/hid_protocol.c | 15 +++++-
+ keyboards/a_jazz/ak820pro/sleep.c        | 62 ++++++++++++++++++++++++
+ keyboards/a_jazz/ak820pro/sleep.h        |  3 ++
+ 3 files changed, 78 insertions(+), 2 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/hid_protocol.c b/keyboards/a_jazz/ak820pro/hid_protocol.c
+index f6866515cb..3764b8c227 100644
+--- a/keyboards/a_jazz/ak820pro/hid_protocol.c
++++ b/keyboards/a_jazz/ak820pro/hid_protocol.c
+@@ -1030,9 +1030,10 @@ static void health_command(uint8_t *data, uint8_t length) {
+                         break;
+                     }
+                     uint8_t sub = data[4], arg = data[5];
+-                    if (sub > 6 || (sub == 1 && arg >= POWER_MODE_COUNT) ||
++                    if (sub > 7 || (sub == 1 && arg >= POWER_MODE_COUNT) ||
+                         (sub == 2 && arg != 0xFF && arg > POWER_STAGE_SCREEN_OFF) ||
+-                        (sub == 3 && (arg & ~SLEEP_LS_ALL)) || (sub == 4 && arg > 2) || (sub == 6 && arg != 1)) {
++                        (sub == 3 && (arg & ~SLEEP_LS_ALL)) || (sub == 4 && arg > 2) || (sub == 6 && arg != 1) ||
++                        (sub == 7 && arg > 8 && arg != 0xFE && arg != 0xFF)) {
+                         data[0] = RTC_UNHANDLED;
+                         break;
+                     }
+@@ -1086,6 +1087,16 @@ static void health_command(uint8_t *data, uint8_t length) {
+                         data[4] = 5;
+                         break;
+                     }
++                    if (sub == 7) {
++                        /* DIAGNOSTIC (10-20): the deep sleep's WFI sequence
++                         * (sleep.c): arg 0-8 or 0xFF sets it, 0xFE only
++                         * reads. Reply: 7, the sequence. */
++                        uint8_t v = sleep_wfi_variant(arg == 0xFE ? -1 : (int16_t)arg);
++                        memset(&data[4], 0, 28);
++                        data[4] = 7;
++                        data[5] = v;
++                        break;
++                    }
+                     if (sub == 6) {
+                         /* The acquisition's split, tested: the next full read is
+                          * held 1 s past its bracket's edge, once; it must
+diff --git a/keyboards/a_jazz/ak820pro/sleep.c b/keyboards/a_jazz/ak820pro/sleep.c
+index 09a66fb03d..4dc5599521 100644
+--- a/keyboards/a_jazz/ak820pro/sleep.c
++++ b/keyboards/a_jazz/ak820pro/sleep.c
+@@ -303,6 +303,64 @@ static uint8_t  rc_timed_out;
+ 
+ static void recovery_begin(uint8_t reason);
+ 
++#ifdef AK820_DEV_HOOKS
++/* DIAGNOSTIC, not for merge (10-20): which WFI placement breaks the wake.
++ * On b2a07e0d37 every sleep ended after one counted second as a "charge"
++ * wake, with r7 corrupted; the same code moved by 37 lines' worth of layout
++ * slept. op 14 sub 7 picks the sequence for the next sleeps:
++ *   0xFF  the C sequence as built (the default);
++ *   0-7   the sequence in asm, aligned so the WFI sits at (2k + 6) mod 16
++ *         in a 16-byte line: k 5 = 0, 6 = 2, 7 = 4, 0 = 6, 1 = 8 ... 4 = 14;
++ *   8     from SRAM (.ramtext, copied at boot with .data), with ~100 us of
++ *         settle in SRAM before the flash is fetched again. */
++static volatile uint8_t ds_wfi_variant = 0xFFu;
++
++uint8_t sleep_wfi_variant(int16_t v) {
++    if (v >= 0) ds_wfi_variant = (uint8_t)v;
++    return ds_wfi_variant;
++}
++
++__attribute__((section(".ramtext"), noinline, long_call)) static void ds_wfi_ram(volatile uint32_t *ctrl) {
++    *ctrl = 2u;
++    __DSB();
++    __WFI();
++    *ctrl = 0u;
++    for (volatile uint32_t d = 0; d < 300u; d++) {}   /* ~100 us at the IHRC's 12 MHz */
++}
++
++#    define DS_WFI_ASM(k)                                                                          \
++        __asm volatile(".balign 16\n\t.rept " #k "\n\tnop\n\t.endr\n\t"                          \
++                       "str %[two], [%[ctrl]]\n\tdsb\n\twfi\n\tstr %[zero], [%[ctrl]]\n\t"         \
++                       :                                                                        \
++                       : [ctrl] "l"(&SN_PMU->CTRL), [two] "l"(2u), [zero] "l"(0u)               \
++                       : "memory")
++
++static inline __attribute__((always_inline)) void ds_wfi(void) {
++    switch (ds_wfi_variant) {
++        case 0: DS_WFI_ASM(0); break;
++        case 1: DS_WFI_ASM(1); break;
++        case 2: DS_WFI_ASM(2); break;
++        case 3: DS_WFI_ASM(3); break;
++        case 4: DS_WFI_ASM(4); break;
++        case 5: DS_WFI_ASM(5); break;
++        case 6: DS_WFI_ASM(6); break;
++        case 7: DS_WFI_ASM(7); break;
++        case 8: ds_wfi_ram(&SN_PMU->CTRL); break;
++        default:
++            SN_PMU->CTRL = 2;
++            __DSB();
++            __WFI();
++            SN_PMU->CTRL = 0;
++            break;
++    }
++}
++#else
++uint8_t sleep_wfi_variant(int16_t v) {
++    (void)v;
++    return 0xFFu;
++}
++#endif
++
+ #ifdef AK820_DEV_HOOKS
+ /* Each teardown's wake, the last eight (sleep.h), since the page keeps only
+  * the last sleep's reason: on 10-19 a ~3 s wake an hour in, with no key,
+@@ -447,10 +505,14 @@ static bool deep_sleep(uint32_t cap_s, bool no_feed, uint32_t preset_s) {
+         /* Asleep. PRIMASK is set: a pending wake source ends the WFI, but no
+          * handler runs; these vectors have none. */
+         for (;;) {
++#ifdef AK820_DEV_HOOKS
++            ds_wfi();           /* Deep-sleep (p. 75), the diagnostic's placement */
++#else
+             SN_PMU->CTRL = 2;   /* Deep-sleep (p. 75) */
+             __DSB();
+             __WFI();
+             SN_PMU->CTRL = 0;
++#endif
+             uint32_t r0 = SN_GPIO0->RIS & p0w, r1 = SN_GPIO1->RIS & p1w, r2 = SN_GPIO2->RIS & p2w;
+             bool second = take_second();
+             if (second) {
+diff --git a/keyboards/a_jazz/ak820pro/sleep.h b/keyboards/a_jazz/ak820pro/sleep.h
+index ab4a67ce56..95c78e61ce 100644
+--- a/keyboards/a_jazz/ak820pro/sleep.h
++++ b/keyboards/a_jazz/ak820pro/sleep.h
+@@ -101,6 +101,9 @@ void sleep_deep_cancel(void);   /* disarm, if armed and not yet asleep */
+  * 1's last byte). */
+ #define SLEEP_RECORD_SIZE 27u
+ void sleep_deep_record(uint8_t *out);
++/* DIAGNOSTIC (dev, 10-20): the deep sleep's WFI sequence, op 14 sub 7
++ * (sleep.c); v < 0 only reads. 0xFF on daily builds. */
++uint8_t sleep_wfi_variant(int16_t v);
+ /* Each teardown's wake, the last eight (HC_DEVHOOK op 24): the page keeps only
+  * the last sleep's. Slot 0..7, 28 bytes, little endian: u16 the entry's
+  * sequence number (entry n is in slot n % 8), u8 reason (SLEEP_WAKE_*), u8
+-- 
+2.54.0
+

@@ -173,7 +173,9 @@ board or in the pixel mockup:
    clearly not white, still well apart from the slate. Flashed as
    `83d8768c64` (16:16).
 
-The previews are on the firmware branch `bulb-slash-preview` only.
+The previews were on the firmware branch `bulb-slash-preview` only, deleted
+10-21; its patches are in
+[`../history/firmware-branch-archive-20261021/`](../history/firmware-branch-archive-20261021/README.md).
 
 ## Drawing it without a stall
 

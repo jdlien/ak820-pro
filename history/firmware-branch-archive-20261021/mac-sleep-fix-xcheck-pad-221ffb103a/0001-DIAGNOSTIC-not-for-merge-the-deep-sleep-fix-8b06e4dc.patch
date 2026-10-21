@@ -1,0 +1,38 @@
+From 221ffb103ae80249bdbdbf8386fe689fda0ea73e Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 15:18:35 -0600
+Subject: [PATCH] DIAGNOSTIC, not for merge: the deep-sleep fix (8b06e4dcc4)
+ with its flash side moved 4 bytes, so the return from the SRAM wake lands at
+ 2 mod 8 (codex's fix review) (10-20)
+
+Claude-Session: https://claude.ai/code/session_01L1gxigSPSsSyFgBh2Y6cme
+---
+ keyboards/a_jazz/ak820pro/sleep.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/keyboards/a_jazz/ak820pro/sleep.c b/keyboards/a_jazz/ak820pro/sleep.c
+index 0654e4d436..becc8a51e0 100644
+--- a/keyboards/a_jazz/ak820pro/sleep.c
++++ b/keyboards/a_jazz/ak820pro/sleep.c
+@@ -22,6 +22,18 @@
+ #include "drivers/led/sn32f2xx.h"
+ #include "overrun_diag.h"   /* dev: a UART overrun's context */
+ 
++/* DIAGNOSTIC, not for merge (10-20, codex's fix review): the fix's flash
++ * side moved by DS_PAD bytes (as on mac/sleep-pad), so the return from the
++ * SRAM wake lands at 2 mod 8, the placement that failed on b2a07e0d37.
++ * Never executed; "R" keeps it from --gc-sections. */
++#define DS_PAD 4
++#define DS_STR_(x) #x
++#define DS_STR(x)  DS_STR_(x)
++__asm__(".pushsection .text.ak820_ds_pad, \"axR\", %progbits\n\t"
++        ".balign 4\n\t"
++        ".space " DS_STR(DS_PAD) "\n\t"
++        ".popsection");
++
+ /* The encoder driver's decoder state, read only (drivers/encoder/
+  * encoder_quadrature.c, a local accessor): A in bit 0, B in bit 1. */
+ uint8_t encoder_quadrature_state(uint8_t index);
+-- 
+2.54.0
+

@@ -27,7 +27,9 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
   Mac sends no type 4 yet: its latency is still unmeasured (step 1 below).
 - **`ak820pro-jdlien` is fast-forwarded to it, and `deps.lock` pins it.**
   The diagnostic branches (`mac/sleep-*`) and `bulb-slash-preview` were
-  never for merge; they can be deleted.
+  never for merge. They were deleted on 10-21 with the merged `mac/*`
+  branches; the patches are in
+  [`../history/firmware-branch-archive-20261021/`](../history/firmware-branch-archive-20261021/README.md).
 - **The overnight soak on `7ae8575c1a` passed, apart from known items**
   ([`../history/mainline-soak-20261020/`](../history/mainline-soak-20261020/README.md)):
   - 139/150 sleep cycles; the 11 failures were 6 of the 25 ms wake paint

@@ -1,0 +1,78 @@
+From d66c27993a4d4c6e31b3c570acbd260a39f51517 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Mon, 19 Oct 2026 16:07:56 -0600
+Subject: [PATCH 4/4] PREVIEW, not for ak820pro-jdlien: the slash's shade on
+ the panel -- every mode draws Lights out's slashed bulb with the gap at its
+ edges and corners, the slash #DCDCDC (Always on), #CCCCCC (Balanced), #C0C0C0
+ (Power saver), white (Lights out)
+
+---
+ keyboards/a_jazz/ak820pro/graphics/display.c | 34 +++++++++++---------
+ 1 file changed, 18 insertions(+), 16 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/graphics/display.c b/keyboards/a_jazz/ak820pro/graphics/display.c
+index 10ae8ee781..b5a0b5e0f3 100644
+--- a/keyboards/a_jazz/ak820pro/graphics/display.c
++++ b/keyboards/a_jazz/ak820pro/graphics/display.c
+@@ -1620,29 +1620,31 @@ static const uint8_t bolt_runs[][4] = {
+  * the bulb sits on the battery's bottom row. */
+ #define BULB_W 13
+ #define BULB_H 14
++/* PREVIEW, the slash's shade: every mode draws Lights out's slashed bulb
++ * (the gap at its edges and corners), each with its own slash colour. */
+ static const char bulb_art[POWER_MODE_COUNT][BULB_H][BULB_W + 1] = {
+     [POWER_MODE_FULL] = {
+-        "......#......", ".#.........#.", "..#.......#..", ".....###.....",
+-        "...#######...", "##.#######.##", "..#########..", "..#########..",
+-        "..#########..", "...#######...", "....#####....", "....=====....",
++        ".............", ".............", ".//..........", "..//..##.....",
++        "...//...##...", "....//...#...", "..#..//...#..", "..#...//..#..",
++        "..#....//....", "...#....//...", "....#....//..", "....====..//.",
+         "....+++++....", ".....+++.....",
+     },
+     [POWER_MODE_NORMAL] = {
+-        ".............", ".............", ".............", ".....###.....",
+-        "...#######...", "...#######...", "..#########..", "..#########..",
+-        "..#########..", "...#######...", "....#####....", "....=====....",
++        ".............", ".............", ".//..........", "..//..##.....",
++        "...//...##...", "....//...#...", "..#..//...#..", "..#...//..#..",
++        "..#....//....", "...#....//...", "....#....//..", "....====..//.",
+         "....+++++....", ".....+++.....",
+     },
+     [POWER_MODE_SAVER] = {
+-        ".............", ".............", ".............", ".....###.....",
+-        "...##***##...", "...#*****#...", "..#*******#..", "..#*******#..",
+-        "..#*******#..", "...#*****#...", "....#***#....", "....=====....",
++        ".............", ".............", ".//..........", "..//..##.....",
++        "...//...##...", "....//...#...", "..#..//...#..", "..#...//..#..",
++        "..#....//....", "...#....//...", "....#....//..", "....====..//.",
+         "....+++++....", ".....+++.....",
+     },
+-    [POWER_MODE_MINIMAL] = {   /* PREVIEW: unlit, a white slash ('/') through it, the bulb cut back a pixel where it touches the slash's edge */
+-        ".............", ".............", ".//..........", "..//.###.....",
++    [POWER_MODE_MINIMAL] = {
++        ".............", ".............", ".//..........", "..//..##.....",
+         "...//...##...", "....//...#...", "..#..//...#..", "..#...//..#..",
+-        "..#....//.#..", "...#....//...", "....#....//..", "....=====.//.",
++        "..#....//....", "...#....//...", "....#....//..", "....====..//.",
+         "....+++++....", ".....+++.....",
+     },
+ };
+@@ -1664,10 +1666,10 @@ static const char bulb_art[POWER_MODE_COUNT][BULB_H][BULB_W + 1] = {
+ #define COL_BULB_OFF_COLLAR 0x4AAD   /* #4C566A: Lights out's collar */
+ /* Per mode: '#', '*', '+', '=', '/'. */
+ static const uint16_t bulb_cols[POWER_MODE_COUNT][5] = {
+-    [POWER_MODE_FULL]    = {COL_FG, 0, COL_BULB_BASE, COL_BULB_COLLAR},
+-    [POWER_MODE_NORMAL]  = {COL_FG, 0, COL_BULB_BASE, COL_BULB_COLLAR},
+-    [POWER_MODE_SAVER]   = {COL_FG, COL_BULB_DIM, COL_BULB_BASE, COL_BULB_COLLAR},
+-    [POWER_MODE_MINIMAL] = {COL_BULB_OFF, 0, COL_BULB_OFF_BASE, COL_BULB_OFF_COLLAR, COL_FG},
++    [POWER_MODE_FULL]    = {COL_BULB_OFF, 0, COL_BULB_OFF_BASE, COL_BULB_OFF_COLLAR, 0xDEFB},   /* #DCDCDC */
++    [POWER_MODE_NORMAL]  = {COL_BULB_OFF, 0, COL_BULB_OFF_BASE, COL_BULB_OFF_COLLAR, 0xCE79},   /* #CCCCCC */
++    [POWER_MODE_SAVER]   = {COL_BULB_OFF, 0, COL_BULB_OFF_BASE, COL_BULB_OFF_COLLAR, 0xC618},   /* #C0C0C0 */
++    [POWER_MODE_MINIMAL] = {COL_BULB_OFF, 0, COL_BULB_OFF_BASE, COL_BULB_OFF_COLLAR, COL_FG},   /* white */
+ };
+ #define SLOT_NO_BULB 0xFFu
+ 
+-- 
+2.54.0
+

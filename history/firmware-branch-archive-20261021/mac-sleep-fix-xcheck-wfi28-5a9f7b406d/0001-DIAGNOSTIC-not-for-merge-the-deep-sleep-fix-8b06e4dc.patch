@@ -1,0 +1,29 @@
+From 5a9f7b406dc7582310e59386b4b0cbc9dedb1fb6 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 15:18:36 -0600
+Subject: [PATCH] DIAGNOSTIC, not for merge: the deep-sleep fix (8b06e4dcc4)
+ with two NOPs ahead of the SRAM WFI, moving it from 6 to 2 mod 8, the
+ placement that failed in the flash (codex's fix review) (10-20)
+
+Claude-Session: https://claude.ai/code/session_01L1gxigSPSsSyFgBh2Y6cme
+---
+ keyboards/a_jazz/ak820pro/sleep.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/keyboards/a_jazz/ak820pro/sleep.c b/keyboards/a_jazz/ak820pro/sleep.c
+index 0654e4d436..21f2d7c2cc 100644
+--- a/keyboards/a_jazz/ak820pro/sleep.c
++++ b/keyboards/a_jazz/ak820pro/sleep.c
+@@ -320,6 +320,9 @@ static void recovery_begin(uint8_t reason);
+ static const uint32_t ds_flash_word = 0x5A5AA5A5u;
+ 
+ __attribute__((section(".ramtext"), noinline, long_call)) static void ds_deep_wfi(volatile uint32_t *pmu_ctrl, const volatile uint32_t *flash) {
++    /* DIAGNOSTIC, not for merge (10-20, codex's fix review): two NOPs move
++     * this WFI from 6 to 2 mod 8, the placement that failed in the flash. */
++    __asm volatile("nop\n\tnop");
+     *pmu_ctrl = 2u;   /* Deep-sleep (p. 75) */
+     __DSB();
+     __WFI();
+-- 
+2.54.0
+

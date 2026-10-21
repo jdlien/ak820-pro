@@ -1,0 +1,28 @@
+From eba26f6c6e3511007899762999319e9184d400ea Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 14:11:53 -0600
+Subject: [PATCH 2/7] DIAGNOSTIC, not for merge: b2a07e0d37 with sleep.c's code
+ and everything after it moved by 4 bytes (DS_PAD), nothing else changed, to
+ find what about b2a0's layout breaks the deep sleep's wake (10-20)
+
+Claude-Session: https://claude.ai/code/session_01L1gxigSPSsSyFgBh2Y6cme
+---
+ keyboards/a_jazz/ak820pro/sleep.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/sleep.c b/keyboards/a_jazz/ak820pro/sleep.c
+index 8104392f09..7973fdee1c 100644
+--- a/keyboards/a_jazz/ak820pro/sleep.c
++++ b/keyboards/a_jazz/ak820pro/sleep.c
+@@ -28,7 +28,7 @@
+  * multiple of 4; never executed) ahead of this file's code move all of it
+  * by exactly that much, with nothing else changed: no instruction, and no
+  * RAM. "R" (SHF_GNU_RETAIN) keeps the section from --gc-sections. */
+-#define DS_PAD 16
++#define DS_PAD 4
+ #define DS_STR_(x) #x
+ #define DS_STR(x)  DS_STR_(x)
+ __asm__(".pushsection .text.ak820_ds_pad, \"axR\", %progbits\n\t"
+-- 
+2.54.0
+

@@ -1,0 +1,40 @@
+From b2b5b57377d343b6cafe4ef1a6c143e5813071be Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 14:11:29 -0600
+Subject: [PATCH 1/7] DIAGNOSTIC, not for merge: b2a07e0d37 with sleep.c's code
+ and everything after it moved by 16 bytes (DS_PAD), nothing else changed, to
+ find what about b2a0's layout breaks the deep sleep's wake (10-20)
+
+Claude-Session: https://claude.ai/code/session_01L1gxigSPSsSyFgBh2Y6cme
+---
+ keyboards/a_jazz/ak820pro/sleep.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/keyboards/a_jazz/ak820pro/sleep.c b/keyboards/a_jazz/ak820pro/sleep.c
+index 09a66fb03d..8104392f09 100644
+--- a/keyboards/a_jazz/ak820pro/sleep.c
++++ b/keyboards/a_jazz/ak820pro/sleep.c
+@@ -22,6 +22,20 @@
+ #include "drivers/led/sn32f2xx.h"
+ #include "overrun_diag.h"   /* dev: a UART overrun's context */
+ 
++/* DIAGNOSTIC, not for merge (10-20, plans/DEEP-SLEEP-REGRESSION-2026-10-20.md):
++ * b2a07e0d37's deep sleep ends after one counted second with r7 corrupted,
++ * and the same code moved by 0xe4 sleeps. DS_PAD bytes of padding (a
++ * multiple of 4; never executed) ahead of this file's code move all of it
++ * by exactly that much, with nothing else changed: no instruction, and no
++ * RAM. "R" (SHF_GNU_RETAIN) keeps the section from --gc-sections. */
++#define DS_PAD 16
++#define DS_STR_(x) #x
++#define DS_STR(x)  DS_STR_(x)
++__asm__(".pushsection .text.ak820_ds_pad, \"axR\", %progbits\n\t"
++        ".balign 4\n\t"
++        ".space " DS_STR(DS_PAD) "\n\t"
++        ".popsection");
++
+ /* The encoder driver's decoder state, read only (drivers/encoder/
+  * encoder_quadrature.c, a local accessor): A in bit 0, B in bit 1. */
+ uint8_t encoder_quadrature_state(uint8_t index);
+-- 
+2.54.0
+

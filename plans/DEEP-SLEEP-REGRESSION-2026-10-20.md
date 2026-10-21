@@ -1,5 +1,9 @@
 # Deep sleep broken on the dev builds since the 2.4G work (found 10-20)
 
+The diagnostic branches below (`mac/sleep-*`) were deleted on 10-21; their
+commits are kept as patches in
+[`../history/firmware-branch-archive-20261021/`](../history/firmware-branch-archive-20261021/README.md).
+
 ## What happens
 
 On `b2a07e0d37` (dev, token `0x398a2e17`), over 2.4G, on the pack, every

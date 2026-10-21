@@ -1,0 +1,57 @@
+From 0d765b362ddd60c72773331fb923df3e09335503 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 08:38:16 -0600
+Subject: [PATCH] DIAGNOSTIC, not for merge: raw81's half-wrap virtual timer
+ never armed, to test whether it breaks the deep sleep (every sleep ends after
+ one counted second, a 'charge' wake, on dev builds since 145a8234bf; 10-20)
+
+Claude-Session: https://claude.ai/code/session_01L1gxigSPSsSyFgBh2Y6cme
+---
+ keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+index 86c011a0d3..ac7744a583 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+@@ -678,12 +678,18 @@ static bool       r81_inited;
+  * under-counts, and a wake ends the session and the response anyway
+  * (r81_reset). */
+ #define RAW81_SESSION_IDLE_LONG ((uint32_t)CH_CFG_ST_FREQUENCY)   /* 1 s */
+-#if CH_CFG_ST_RESOLUTION < 32
++/* DIAGNOSTIC, not for merge (10-20): the half-wrap timer never armed, to
++ * test whether it is what breaks the deep sleep on dev builds since
++ * 145a8234bf. The long clock then extends on each task pass only. */
++#define RAW81_LONG_VT_OFF
++#if CH_CFG_ST_RESOLUTION < 32 && !defined(RAW81_LONG_VT_OFF)
+ #    define RAW81_LONG_UPDATE ((sysinterval_t)1 << (CH_CFG_ST_RESOLUTION - 1))
+ #endif
+ static uint32_t         r81_long;
+ static systime_t        r81_long_last;
++#ifdef RAW81_LONG_UPDATE
+ static virtual_timer_t  r81_long_vt;
++#endif
+ 
+ /* Under the lock. */
+ static inline uint32_t r81_long_extend(void) {
+@@ -700,7 +706,7 @@ static inline uint32_t r81_long_now(void) {
+     return v;
+ }
+ 
+-#if CH_CFG_ST_RESOLUTION < 32
++#ifdef RAW81_LONG_UPDATE
+ static void r81_long_tick(virtual_timer_t *vt, void *arg) {
+     (void)arg;
+     chSysLockFromISR();
+@@ -715,7 +721,7 @@ static void r81_long_start(void) {
+     chSysLock();
+     r81_long_last = chVTGetSystemTimeX();
+     chSysUnlock();
+-#if CH_CFG_ST_RESOLUTION < 32
++#ifdef RAW81_LONG_UPDATE
+     chVTObjectInit(&r81_long_vt);
+     chVTSet(&r81_long_vt, RAW81_LONG_UPDATE, r81_long_tick, NULL);
+ #endif
+-- 
+2.54.0
+
