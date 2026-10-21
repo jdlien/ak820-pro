@@ -50,8 +50,8 @@ module's radio taking the writes.
   the host's idle time shorter than the board's. The wake guess
   (`IDLE_ARM`, 30 s) is armed by then; on the first input it sends what was
   held, `WAKE_DELAY` (4 s) later, so a media key's change has time to show.
-  The clock keeps its own gate (`clk::IDLE`, 60 s) until Gremlin's session
-  moves it to `HOLD_IDLE`. The status file's lock-light state reads `held`
+  The clock frames share the hold (`aa2a4be`, Gremlin's session; its own
+  60 s gate is gone). The status file's lock-light state reads `held`
   meanwhile. Nothing changes in the firmware: the frames already do not
   count as activity, because the ladder reads
   `last_input_activity_elapsed()` (the matrix and the knob).
