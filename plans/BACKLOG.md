@@ -25,6 +25,21 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## Power saver's typing cap at 65% instead of 50% (2026-10-21) -- parked, decide after daily use
+
+`SAVER_VAL` (128, 50%) caps the lighting while typing in Power saver. The
+idea is 166 (~65%), where white starts to look properly bright in a lit
+room. Modelled (white 100%, screen 5, BT): typing draw 153 -> 181 mW (+18%;
+the LEDs 42 -> 70 mW), Power saver's days office 10.8 -> 9.4, stop-start
+15.5 -> 13.8, light use 21.3 -> 19.2 (10-13% fewer), still ~40% ahead of
+Balanced's 6.6 on an office day. ~73% is where brightness per mW of the whole
+board peaks (QMK's CIE curve against the model), so 65% is still on the cheap
+side. **If done, split the constant:** `SAVER_VAL` is also the low-battery
+cap every mode takes at or below 150 permille, which should stay at 128.
+Then the simulator, `ladder_check`, the docs' "half brightness", codex, a
+flash. Parked because 50% or less is the setting JD uses most; other owners
+may want it brighter.
+
 ## The RGB model's 82 LEDs: the board has 81 (2026-10-21) -- FIXED on `rgb-81-leds`, codex cleared, lands with the next merged flash
 
 Found by codex reviewing [`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md),
