@@ -652,7 +652,11 @@ impl<P: Platform> Core<P> {
         if let Some(u) = usb_clock_set {
             self.clock.usb_set(u);
         }
-        if clock_on && granted {
+        // Granted or not: a daemon started on the cable observes from its
+        // first pass, so a USB set after it ends the start's quarantine (the
+        // trim's second verify, note). A gap between passes is still
+        // compared against the reference; only a granted channel schedules.
+        if clock_on {
             // An offset change (DST, a zone) or a wall-clock step: a clock
             // frame at once (review, 7).
             if let Some(w) = self.platform.wall_ms_at(now) {
@@ -2530,6 +2534,23 @@ mod tests {
         let f = clock_frames(&r, 38);
         assert_eq!(f.len(), 3);
         assert_eq!(f[2].1[9], 0, "a plain refresh");
+    }
+
+    #[test]
+    fn a_daemon_started_on_the_cable_is_trusted_after_a_usb_set() {
+        let mut r = clock_rig(Some(38));
+        // The first pass, not granted: the first observation.
+        assert_eq!(r.core.step(&r.h, &*r.t), Next::Wait);
+        let t1 = r.t.now() + Duration::from_secs(300);
+        r.t.0.set(t1);
+        r.h.usb_clock_set(t1);
+        let t2 = t1 + Duration::from_secs(60);
+        r.t.0.set(t2);
+        let t0 = granted(&mut r, title("A"));
+        run_until(&mut r, t0 + Duration::from_secs(20));
+        let f = clock_frames(&r, 38);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].1[9], 0, "a plain frame: continuity known since the set");
     }
 
     #[test]

@@ -473,6 +473,10 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
                 if !watch.holding(now) {
                     let tries = clock.status.syncs + clock.status.failures;
                     let syncs = clock.status.syncs;
+                    // Before the tick: its SET comes after this, so a host
+                    // step seen during the tick's tail still quarantines
+                    // (codex, the trim's second verify, 1).
+                    let before = Instant::now();
                     clock.tick::<P>(&log, &mut st, &mut watch);
                     // A USB sync, or an attempt at one that may have set the
                     // board anyway: the board refuses a lock-light clock frame
@@ -482,7 +486,7 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
                             lc.usb_clock_synced(Instant::now());
                             // Acknowledged: ends a STEPPED quarantine.
                             if clock.status.syncs != syncs {
-                                lc.usb_clock_set(Instant::now());
+                                lc.usb_clock_set(before);
                             }
                         }
                     }
