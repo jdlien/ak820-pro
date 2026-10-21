@@ -42,21 +42,17 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
 - **The ILRC's period moves ~0.6% with temperature** (32331 cool and dark,
   32537 warm on USB), which matters to type 4's slew limit (Gremlin's).
 
-**JD's morning, in order:**
-1. **Unlock the Mac.** The latency measurement (`ak820 lockchan anchor 40`,
-   the daemon paused, ~5 min, no hands) only runs on an unlocked screen:
-   `BleLights::user()` is None while it is locked, so every frame came back
-   `Unknown` at 01:47.
-2. **I set `clock_latency_ms` from it, build, sign, and reinstall the Mac
-   daemon** with JD there, in case macOS asks again. The number goes to
-   Gremlin first. The same reinstall carries the frame hold (`HOLD_IDLE`,
-   `plans/BACKLOG.md`, "Lock-light frames into a sleeping board").
-3. **The clock test, on both machines:** the cable out (or its data cut),
-   the slider on BT, about 15 min of normal use, then the cable back. The
-   daemon's USB sync on the replug logs a "before" offset, which is the real
-   error. Gremlin's board already runs `9e52400e` with its daemon
-   (`d557e13`, cleared by codex for a supervised first day); Gremlin reads
-   op 17 sub 8 too.
+**The morning's steps, done 09:36-10:14 (no hands):**
+1. **The Mac's latency: -14 ms** (39/40 frames, sd 2.7;
+   `history/lockchan-clock-latency-mac-20261021/`).
+2. **The Mac's daemon reinstalled at 09:38** with it, the frame hold and the
+   clock's hold. No consent prompt came up.
+3. **The clock test, a 30 min cut** (`history/lockchan-clock-mac-cut-20261021/`):
+   2/2 type-4 frames applied on schedule, none refused. But the board ran
+   ~0.25% fast off USB: 1616 ms ahead at the second frame, +1106 ms at the
+   replug. So 10 min frames leave a ~1.6 s sawtooth. The fix is Gremlin's
+   call: a trim from the frames' offsets, or a faster cadence. Gremlin runs
+   the same test by hand on Windows.
 
 **Owed:** codex's RTC failure-path tests (Gremlin); the stack watermarks
 after a long run (the type-4 flash reset them before they were read).
