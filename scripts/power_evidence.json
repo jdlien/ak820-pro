@@ -1,0 +1,61 @@
+{
+ "_about": "Hand-kept inputs to scripts/power_model.py: measured figures that exist only in the docs, the bench sweeps to parse, the page's stated assumptions and its day presets. Every value carries its source. power.json is generated from this plus the firmware at deps.lock's pin; never edit power.json by hand.",
+ "sweeps": {
+  "rgb": {
+   "dir": "history/power-bench-2026-10-15/rgb-curve-20261019",
+   "date": "2026-10-19",
+   "conditions": "screen at level 5, BT, on the pack with USB data attached (the bench), current_map.py --set rgb-curve; two passes per state, the charge register's mean"
+  },
+  "screen": {
+   "dir": "history/power-bench-2026-10-15/current-map-20261015-2210",
+   "date": "2026-10-15",
+   "conditions": "RGB off, BT, on the pack with USB data attached (the bench), current_map.py --set loads (R1); two passes per state"
+  }
+ },
+ "measured": {
+  "sleep_mw": {
+   "bt": 13.25,
+   "g24": 13.8,
+   "source": "docs/power.md, 'Deep sleep: 3.2 mA on BT (13.25 mW), 3.3 mA on 2.4G (13.8 mW)'; the BT hour, 3.17 mA, 10-18/19"
+  },
+  "usb_data_mw": {
+   "value": 7.1,
+   "source": "R2, 10-15: USB data attached costs ~1.7 mA (docs/test-bench.md); the firmware's P_USB_UW"
+  },
+  "radio_24g_awake_extra_mw": {
+   "value": 5,
+   "source": "docs/power.md, 'Everything at max adds 2.4G's ~5 mW, which is one reading of the board with its lights off'. 2.4G with the lights on is unmeasured"
+  },
+  "reserve": {
+   "minutes": 301.5,
+   "text": "5 h 01 min 29 s",
+   "source": "docs/battery.md, 'The second run' (run 2, 10-02 to 10-04): lights-off typing after the RGB cut, screen at level 5, older firmware, observed once"
+  },
+  "drains": {
+   "conditions": "full white (value 255, saturation 0), screen at level 5, BT, typing as usual, full to the RGB cut",
+   "runs": [
+    {"name": "run 1", "dates": "09-28 to 10-01", "hours": 51.55, "tethered": false, "note": "in full-white equivalent"},
+    {"name": "run 2", "dates": "10-02 to 10-04", "hours": 50.56, "tethered": false},
+    {"name": "run 3", "dates": "10-09 to 10-11", "hours": 51.13, "tethered": false},
+    {"name": "2e", "dates": "10-12 to 10-14", "hours": 50.25, "tethered": true, "note": "50.1-50.4 h"},
+    {"name": "R3", "dates": "10-15 to 10-18", "hours": 50.39, "tethered": true, "mean_mw": 309, "mean_ma": 79.6, "mwh": 15579}
+   ],
+   "source": "docs/power.md, 'Measured: full white, from full to the cut'; R3: history/battery-2026-10-15-drain-2f/a1-summary.txt"
+  }
+ },
+ "assumptions": {
+  "tail_fraction": {
+   "value": 0.15,
+   "why": "the low cap starts at 150 permille; the gauge as built does not guarantee that is 15% of the energy (plans/POWER-CHARTS-PLAN.md)"
+  },
+  "nominal_mv": {
+   "value": 3884,
+   "why": "to show mA beside mW: R3's mean pack voltage, full to the cut"
+  }
+ },
+ "scenarios": [
+  {"id": "office", "name": "Office day", "text": "8 h of nonstop typing, then away", "blocks": [["type", 480]]},
+  {"id": "stopstart", "name": "Stop-start day", "text": "4 h of typing with twenty 15-minute breaks, then away", "repeat": {"count": 20, "type": 12, "pause": 15}, "blocks": [["type", 0]]},
+  {"id": "light", "name": "Light use", "text": "about 2¾ h of typing in five sessions, two hours apart, then away", "repeat": {"count": 4, "type": 33, "pause": 120}, "blocks": [["type", 33]]}
+ ]
+}

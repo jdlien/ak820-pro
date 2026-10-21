@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AK820 Pro Power</title>
+<meta name="description" content="What the AK820 Pro's lighting and screen cost on the Jackrabbit firmware, and how long a charge lasts at your settings.">
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb;
+  --surface-2: #f3f2ee;
+  --border: #e3e2dc;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #77766f;
+  --accent: #2a78d6;
+  --series-white: #52514e;
+  --series-red: #e34948;
+  --series-green: #008300;
+  --series-blue: #2a78d6;
+  --series-screen: #eb6834;
+  --series-you: #0b0b0b;
+  --seg-base: #c9c8c1;
+  --seg-fixed: #8f8e87;
+  --seg-radio: #6250d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --border: #383835;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #96958c;
+    --accent: #3987e5;
+    --series-white: #e8e7e2;
+    --series-red: #e66767;
+    --series-green: #008300;
+    --series-blue: #3987e5;
+    --series-screen: #d95926;
+    --series-you: #f0efec;
+    --seg-base: #4a4a46;
+    --seg-fixed: #77766f;
+  --seg-radio: #9085e9;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --border: #383835;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #96958c;
+  --accent: #3987e5;
+  --series-white: #e8e7e2;
+  --series-red: #e66767;
+  --series-green: #008300;
+  --series-blue: #3987e5;
+  --series-screen: #d95926;
+  --series-you: #f0efec;
+  --seg-base: #4a4a46;
+  --seg-fixed: #77766f;
+  --seg-radio: #9085e9;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--surface); color: var(--text-primary);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; }
+h2 { font-size: 18px; margin: 40px 0 4px; }
+h3 { font-size: 15px; margin: 20px 0 4px; }
+p { margin: 0 0 10px; }
+.lede { color: var(--text-secondary); margin-bottom: 4px; }
+.muted { color: var(--text-muted); font-size: 13px; }
+a { color: var(--accent); }
+.card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 20px; margin-top: 20px; }
+.control label, .control .label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+.control output { float: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.control input[type=range] { width: 100%; accent-color: var(--accent); }
+.control select { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); font: inherit; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; border: 1px solid var(--border); }
+.results { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-top: 16px; }
+@media (max-width: 760px) { .results { grid-template-columns: 1fr; } }
+.tile .label { font-size: 13px; color: var(--text-secondary); }
+.tile .value { font-size: 28px; font-weight: 600; line-height: 1.2; margin: 4px 0; }
+.hero .value { font-size: 48px; }
+.tile .sub { font-size: 13px; color: var(--text-secondary); }
+.timeline { display: flex; gap: 2px; height: 14px; margin: 10px 0 6px; }
+.timeline span { border-radius: 4px; min-width: 4px; }
+.notice { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--surface-2); border-radius: 0 8px 8px 0; margin-top: 12px; font-size: 14px; }
+.stack { display: flex; gap: 2px; height: 18px; margin: 10px 0; }
+.stack span { min-width: 2px; }
+.stack span:first-child { border-radius: 4px 0 0 4px; }
+.stack span:last-child { border-radius: 0 4px 4px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--text-secondary); }
+.legend .key { display: inline-block; width: 16px; height: 2px; vertical-align: 4px; margin-right: 6px; }
+.legend .box { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
+.legend b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+.chart { position: relative; margin-top: 8px; outline: none; }
+.chart:focus-visible { box-shadow: 0 0 0 2px var(--accent); border-radius: 6px; }
+.chart svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+.crosshair { position: absolute; top: 0; width: 1px; background: var(--text-muted); pointer-events: none; display: none; }
+.tip { position: absolute; pointer-events: none; display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 170px; z-index: 2; }
+.tip .head { color: var(--text-secondary); margin-bottom: 4px; }
+.tip .row { display: flex; gap: 8px; align-items: center; }
+.tip .row b { font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; }
+.tip .row .key { width: 14px; height: 2px; }
+.tip .row span:last-child { color: var(--text-secondary); }
+.chart-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+button { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); cursor: pointer; }
+button:hover { background: var(--surface-2); }
+details { margin-top: 10px; }
+summary { cursor: pointer; color: var(--text-secondary); font-size: 14px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+th, td { padding: 4px 10px; text-align: right; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--text-secondary); font-weight: 600; }
+ul { padding-left: 20px; margin: 6px 0 10px; }
+li { margin-bottom: 4px; }
+code { font-size: 13px; }
+footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); }
+.error { color: var(--series-red); }
+</style>
+</head>
+<body>
+<main>
+  <h1>AK820 Pro power</h1>
+  <p class="lede">What the lighting and the screen cost on the Jackrabbit firmware, and how long a full charge lasts at your settings.</p>
+  <p class="muted" id="scope">Computed with the keyboard's own power model, the one its battery gauge counts with, and checked against a bench logger on the reference keyboard. Stock firmware is not measured.</p>
+
+  <section class="card controls" aria-label="Settings">
+    <div class="control">
+      <label class="check"><input type="checkbox" id="rgbOn"> RGB lighting on</label>
+      <label for="effect" style="margin-top:8px">Effect</label>
+      <select id="effect">
+        <option value="solid">Solid colour</option>
+        <option value="other">Another effect (not modelled)</option>
+      </select>
+    </div>
+    <div class="control">
+      <label for="v">Brightness <output id="vOut"></output></label>
+      <input type="range" id="v" min="0" max="255" step="1">
+      <label for="h">Hue <output id="hOut"></output></label>
+      <input type="range" id="h" min="0" max="255" step="1">
+    </div>
+    <div class="control">
+      <label for="s">Saturation <output id="sOut"></output></label>
+      <input type="range" id="s" min="0" max="255" step="1">
+      <div class="muted" id="colourNote"></div>
+    </div>
+    <div class="control">
+      <label class="check"><input type="checkbox" id="lcdOn"> Screen on</label>
+      <label for="lcd" style="margin-top:8px">Screen brightness <output id="lcdOut"></output></label>
+      <input type="range" id="lcd" min="0" max="23" step="1">
+    </div>
+    <div class="control">
+      <label for="mode">Power mode (<kbd>Fn</kbd>+<kbd>B</kbd>)</label>
+      <select id="mode"></select>
+      <label for="radio" style="margin-top:8px">Connection</label>
+      <select id="radio">
+        <option value="bt">Bluetooth</option>
+        <option value="g24">2.4 GHz dongle</option>
+      </select>
+    </div>
+  </section>
+
+  <div id="results"></div>
+
+  <h2>What each knob costs</h2>
+  <div class="chart-head">
+    <p class="muted">The board's draw, awake and typing, with each knob turned on its own and the other lights off. Lines are the model; dots are bench measurements of the same settings.</p>
+    <button type="button" data-export="draw">Download SVG</button>
+  </div>
+  <div class="legend" id="legendDraw"></div>
+  <div class="chart" id="chartDraw" tabindex="0" role="img" aria-label="Draw in milliwatts against knob position for white, red, green and blue lighting and the screen"></div>
+
+  <h2>Hours of nonstop typing</h2>
+  <div class="chart-head">
+    <p class="muted" id="hoursNote"></p>
+    <button type="button" data-export="hours">Download SVG</button>
+  </div>
+  <div class="legend" id="legendHours"></div>
+  <div class="chart" id="chartHours" tabindex="0" role="img" aria-label="Hours of nonstop typing on a full charge against knob position"></div>
+  <p class="muted">Equal slider positions are not equal brightness across colours: red, green and blue LEDs differ in how bright they look and in what they draw.</p>
+
+  <details>
+    <summary>Table: the curves and the measured points</summary>
+    <div class="table-wrap" id="tables"></div>
+  </details>
+
+  <h2>Where the numbers come from</h2>
+  <div id="evidence"></div>
+
+  <footer class="muted" id="footer"></footer>
+</main>
+
+<script src="../vendor/d3-7.9.0.min.js"></script>
+<script src="../vendor/plot-0.6.16.umd.min.js"></script>
+<script type="module">
+import * as M from "./model.js";
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "style") Object.assign(n.style, v);
+    else if (k === "class") n.className = v;
+    else n.setAttribute(k, v);
+  }
+  for (const k of kids) n.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return n;
+};
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+let doc;
+try {
+  doc = await (await fetch("power.json")).json();
+} catch (e) {
+  $("results").append(el("p", { class: "notice error" }, "Could not load power.json: serve this folder over HTTP (for example python3 -m http.server) rather than opening the file directly."));
+  throw e;
+}
+const fw = doc.firmware, ev = doc.evidence;
+const F = doc.assumptions.tail_fraction.value;
+const NOMINAL_V = doc.assumptions.nominal_mv.value / 1000;
+const MODE_NAME = Object.fromEntries(M.MODES);
+
+for (const [k, name] of M.MODES) $("mode").append(el("option", { value: k }, name));
+
+// Settings from the URL, so a link carries them; defaults are the drains' setup.
+const q = new URLSearchParams(location.search);
+const int = (k, d, lo, hi) => { const n = parseInt(q.get(k), 10); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+const state = {
+  rgbOn: q.get("rgb") !== "0", fx: q.get("fx") === "other" ? "other" : "solid",
+  v: int("v", 255, 0, 255), h: int("h", 0, 0, 255), s: int("s", 0, 0, 255),
+  lcdOn: q.get("lcdon") !== "0", lcd: int("lcd", 5, 0, 23),
+  mode: MODE_NAME[q.get("mode")] ? q.get("mode") : "normal",
+  radio: q.get("radio") === "g24" ? "g24" : "bt",
+  day: doc.scenarios.some((s) => s.id === q.get("day")) ? q.get("day") : doc.scenarios[0].id,
+};
+const setting = (st = state) => ({ rgb: { on: st.rgbOn, h: st.h, s: st.s, v: st.v }, screen: { on: st.lcdOn, level: st.lcd }, radio: st.radio });
+const baseline = { ...state };
+
+function bind() {
+  $("rgbOn").checked = state.rgbOn; $("effect").value = state.fx;
+  $("v").value = state.v; $("h").value = state.h; $("s").value = state.s;
+  $("lcdOn").checked = state.lcdOn; $("lcd").value = state.lcd;
+  $("mode").value = state.mode; $("radio").value = state.radio;
+  const on = (id, ev2, fn) => $(id).addEventListener(ev2, () => { fn(); update(); });
+  on("rgbOn", "change", () => (state.rgbOn = $("rgbOn").checked));
+  on("effect", "change", () => (state.fx = $("effect").value));
+  on("v", "input", () => (state.v = +$("v").value));
+  on("h", "input", () => (state.h = +$("h").value));
+  on("s", "input", () => (state.s = +$("s").value));
+  on("lcdOn", "change", () => (state.lcdOn = $("lcdOn").checked));
+  on("lcd", "input", () => (state.lcd = +$("lcd").value));
+  on("mode", "change", () => (state.mode = $("mode").value));
+  on("radio", "change", () => (state.radio = $("radio").value));
+}
+
+const fmt = {
+  mw: (x) => `${x.toFixed(x < 20 ? 1 : 0)} mW`,
+  ma: (mw) => `${(mw / NOMINAL_V).toFixed(1)} mA`,
+  hours(h) {
+    if (h < 72) return `${h < 10 ? h.toFixed(1) : Math.round(h)} h`;
+    return `${Math.round(h)} h (${(h / 24).toFixed(h / 24 < 10 ? 1 : 0)} days)`;
+  },
+  days: (d) => `${d.toFixed(d < 10 ? 1 : 0)} days`,
+  signed: (x, unit, digits = 0) => `${x > 0 ? "+" : x < 0 ? "−" : "±"}${Math.abs(x).toFixed(digits)} ${unit}`,
+};
+
+// The LED colour as it would look, for the swatch: the drive scaled up so a dim
+// setting still shows its hue.
+function swatchColour() {
+  const [r, g, b] = M.hsvToRgb(fw, state.h, state.s, 255);
+  return `rgb(${r},${g},${b})`;
+}
+const PURE = [["white", 0, 0], ["red", 0, 255], ["green", 85, 255], ["blue", 170, 255]];
+function pureColour() {
+  if (state.s === 0) return "white";
+  const p = PURE.find(([, h, s]) => s === state.s && h === state.h);
+  return p ? p[0] : null;
+}
+
+function components(st) {
+  const s = setting(st);
+  const [r, g, b] = M.rgbDrive(fw, s.rgb, M.stateAt(fw, st.mode, false, 0).vcap);
+  const lights = M.stateAt(fw, st.mode, false, 0).stage === M.STAGE.ACTIVE;
+  const n = fw.led_count;
+  const parts = [
+    ["Awake, all lights off", fw.p_base_uw / 1000, "--seg-base"],
+    ["Screen backlight", Math.floor((fw.p_bkl_full_uw * M.backlightDuty(fw, s.screen, lights ? Infinity : 0)) / fw.bkl_duty_full) / 1000, "--series-screen"],
+  ];
+  if (lights && r + g + b > 0) {
+    parts.push(["LEDs, any lit", fw.p_rgb_a_uw / 1000, "--seg-fixed"]);
+    parts.push(["Red channels", (n * r * fw.p_rgb_nw[0]) / 1e6, "--series-red"]);
+    parts.push(["Green channels", (n * g * fw.p_rgb_nw[1]) / 1e6, "--series-green"]);
+    parts.push(["Blue channels", (n * b * fw.p_rgb_nw[2]) / 1e6, "--series-blue"]);
+  }
+  const extra = M.radioExtraMw(ev, st.radio);
+  if (extra) parts.push(["2.4 GHz radio (estimate)", extra, "--seg-radio"]);
+  return parts.filter(([, mw]) => mw > 0);
+}
+
+function renderResults() {
+  const box = $("results");
+  box.replaceChildren();
+  const s = setting();
+  if (state.fx === "other") {
+    box.append(el("p", { class: "notice" }, "This page models solid colours only. Animated effects and Alphas/Mods change from frame to frame, so their draw is not a single setting. Choose Solid colour, or read the chart below for what a steady colour at a similar brightness costs."));
+    return;
+  }
+  const use = M.continuousUse(fw, ev, s, state.mode, F);
+  const stand = M.standby(fw, ev, s, state.mode, F);
+  const sc = doc.scenarios.find((x) => x.id === state.day);
+  const day = M.daysPerCharge(fw, ev, s, state.mode, M.dayPlan(sc), F);
+
+  const hero = el("div", { class: "card tile hero" },
+    el("div", { class: "label" }, "Typing nonstop from a full charge"),
+    el("div", { class: "value" }, `About ${Math.round(use.hours)} h`),
+    el("div", { class: "sub" }, use.hours >= 48 ? `${(use.hours / 24).toFixed(1)} days of typing, around the clock` : "of typing, around the clock"));
+  if (use.dims) {
+    const tl = el("div", { class: "timeline", "aria-hidden": "true" },
+      el("span", { style: { flex: use.hiHours, background: swatchColour() === "rgb(255,255,255)" ? css("--series-white") : swatchColour() } }),
+      el("span", { style: { flex: use.loHours, background: css("--seg-base") } }));
+    hero.append(tl, el("div", { class: "sub" }, `${fmt.hours(use.hiHours)} at your brightness, then ${fmt.hours(use.loHours)} dimmed to the low-battery ceiling (brightness ${fw.saver_val}).`));
+  } else if (state.mode === "minimal") {
+    hero.append(el("div", { class: "sub" }, "Lights out keeps the LEDs and the screen dark while you type."));
+  } else {
+    hero.append(el("div", { class: "sub" }, "At your brightness all the way: it is already at or under the low-battery ceiling."));
+  }
+  hero.append(el("div", { class: "sub", style: { marginTop: "6px" } },
+    use.dims
+      ? `A model estimate for the reference keyboard. It assumes the low-battery dimming starts with ${Math.round(F * 100)}% of the usable energy left. Held at your setting without the dimming: ${fmt.hours(use.fixedHours)}.`
+      : "A model estimate for the reference keyboard."));
+
+  const drawMw = use.hiMw;
+  const draw = el("div", { class: "card tile" },
+    el("div", { class: "label" }, "Draw while typing"),
+    el("div", { class: "value" }, fmt.mw(drawMw)),
+    el("div", { class: "sub" }, `${fmt.ma(drawMw)} at the pack's average ${NOMINAL_V.toFixed(2)} V`));
+  const stb = el("div", { class: "card tile" },
+    el("div", { class: "label" }, stand.asleep ? "Left alone, asleep" : "Left alone (Always on never sleeps)"),
+    el("div", { class: "value" }, stand.asleep ? fmt.days(stand.hours / 24) : fmt.hours(stand.hours)),
+    el("div", { class: "sub" }, stand.asleep ? `${M.sleepMw(ev, state.radio)} mW asleep, measured` : "lit until the low-battery ceiling, then awake and dark"));
+
+  const daySel = el("select", { id: "day", "aria-label": "Typical day" });
+  for (const x of doc.scenarios) daySel.append(el("option", { value: x.id }, x.name));
+  daySel.value = state.day;
+  daySel.addEventListener("change", () => { state.day = daySel.value; update(); });
+  const dayTile = el("div", { class: "card tile", style: { gridColumn: "1 / -1" } },
+    el("div", { class: "label" }, "A typical day"),
+    el("div", { class: "control", style: { maxWidth: "320px", margin: "4px 0" } }, daySel),
+    el("div", { class: "value" }, `About ${fmt.days(day.days)} a charge`),
+    el("div", { class: "sub" }, `${sc.text}. ${(day.hiMwh / 1000).toFixed(2)} Wh a day in ${MODE_NAME[state.mode]}; each pause walks the mode's dimming and sleep steps.`));
+
+  const grid = el("div", { class: "results" }, hero, draw, stb, dayTile);
+  box.append(grid);
+
+  // Where the draw goes.
+  const parts = components(state);
+  const total = parts.reduce((a, [, mw]) => a + mw, 0);
+  const bar = el("div", { class: "stack", role: "img", "aria-label": "The draw split by component" });
+  const legend = el("div", { class: "legend" });
+  for (const [name, mw, v] of parts) {
+    bar.append(el("span", { style: { flex: mw, background: css(v) }, title: `${name}: ${fmt.mw(mw)}` }));
+    legend.append(el("span", {}, el("span", { class: "box", style: { background: css(v) } }), `${name} `, el("b", {}, fmt.mw(mw))));
+  }
+  box.append(el("div", { class: "card", style: { marginTop: "14px" } },
+    el("div", { class: "tile" }, el("div", { class: "label" }, `Where the ${fmt.mw(total)} goes, typing`)), bar, legend));
+
+  // Against the settings the page opened with.
+  const b = M.continuousUse(fw, ev, setting(baseline), baseline.mode, F);
+  const dmw = drawMw - b.hiMw, dh = use.hours - b.hours;
+  if (Math.abs(dmw) > 0.05 || Math.abs(dh) > 0.05) {
+    const reset = el("button", { type: "button" }, "Make these the comparison");
+    reset.addEventListener("click", () => { Object.assign(baseline, state); update(); });
+    box.append(el("p", { class: "notice" },
+      `Compared with the settings you opened the page with: ${fmt.signed(dmw, "mW", 0)} while typing, ${fmt.signed(dh, "h", dh < 10 && dh > -10 ? 1 : 0)} of nonstop typing. `, reset));
+  }
+  box.append(el("p", { class: "muted", style: { marginTop: "10px" } },
+    "After 0%, the lights go out and the keyboard still types: about five more hours were observed once, with a dim screen. That is not added to the figures above."));
+}
+
+// ---- Charts ----
+const SERIES = [
+  { id: "white", name: "White", h: 0, s: 0, colour: "--series-white" },
+  { id: "red", name: "Red", h: 0, s: 255, colour: "--series-red" },
+  { id: "green", name: "Green", h: 85, s: 255, colour: "--series-green" },
+  { id: "blue", name: "Blue", h: 170, s: 255, colour: "--series-blue" },
+];
+
+function curves() {
+  const r = state.radio;
+  const out = SERIES.map((sr) => ({ ...sr, pts: M.rgbCurve(fw, ev, sr.h, sr.s, r) }));
+  out.push({ id: "screen", name: "Screen", colour: "--series-screen", pts: M.screenCurve(fw, ev, r) });
+  if (state.rgbOn && state.fx === "solid" && !pureColour())
+    out.push({ id: "you", name: "Your colour", colour: "--series-you", dash: "5,4", pts: M.rgbCurve(fw, ev, state.h, state.s, r) });
+  return out;
+}
+
+// Hours of nonstop typing for one knob alone, in the chosen mode.
+function hoursOf(series, p) {
+  const s = series.id === "screen"
+    ? { rgb: { on: false }, screen: { on: true, level: p.level }, radio: state.radio }
+    : { rgb: { on: true, h: series.h ?? state.h, s: series.s ?? state.s, v: p.v }, screen: { on: false, level: 0 }, radio: state.radio };
+  return M.continuousUse(fw, ev, s, state.mode, F).hours;
+}
+
+// End labels, pushed apart where lines converge, with a short leader back to the line.
+function endLabels(items, yMax, height, marginTop, marginBottom) {
+  const perPx = yMax / (height - marginTop - marginBottom);
+  const gap = 15 * perPx;
+  const sorted = [...items].sort((a, b) => a.y - b.y);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].ly - sorted[i - 1].ly < gap) sorted[i].ly = sorted[i - 1].ly + gap;
+  const over = sorted.length ? sorted[sorted.length - 1].ly - yMax : 0;
+  if (over > 0) for (const s of sorted) s.ly -= over;
+  for (let i = sorted.length - 2; i >= 0; i--) if (sorted[i + 1].ly - sorted[i].ly < gap) sorted[i].ly = sorted[i + 1].ly - gap;
+  return sorted;
+}
+
+const charts = {};
+function chart(kind) {
+  const host = kind === "draw" ? $("chartDraw") : $("chartHours");
+  const width = Math.max(320, host.clientWidth || 900);
+  const narrow = width < 560;
+  const height = narrow ? 300 : 380;
+  const mt = 20, mb = 40, ml = 52, mr = narrow ? 72 : 96;
+  const cs = curves();
+  const value = kind === "draw" ? (sr, p) => p.mw : (sr, p) => hoursOf(sr, p);
+  const lines = cs.map((sr) => ({ ...sr, rows: sr.pts.map((p) => ({ x: p.x, y: value(sr, p), p })) }));
+  const sleep = M.sleepMw(ev, state.radio);
+  const floorMw = M.boardMw(fw, { rgb: { on: false }, screen: { on: false, level: 0 } }) + M.radioExtraMw(ev, state.radio);
+  let yMax = Math.max(...lines.flatMap((l) => l.rows.map((r) => r.y)));
+  yMax = kind === "draw" ? Math.ceil(yMax / 50) * 50 : Math.ceil(yMax / 25) * 25;
+
+  const ink = css("--text-secondary"), surface = css("--surface");
+  const marks = [Plot.ruleY([0], { stroke: css("--border") })];
+  if (kind === "draw") {
+    marks.push(Plot.ruleY([floorMw], { stroke: css("--text-muted"), strokeWidth: 1 }),
+      Plot.text([{ x: 1, y: floorMw }], { x: "x", y: "y", text: () => `Awake, all lights off, ${floorMw.toFixed(1)} mW`, dy: 11, textAnchor: "start", fill: ink, fontSize: 11 }),
+      Plot.ruleY([sleep], { stroke: css("--text-muted"), strokeWidth: 1 }),
+      Plot.text([{ x: 1, y: sleep }], { x: "x", y: "y", text: () => `Deep sleep, ${sleep} mW`, dy: -7, textAnchor: "start", fill: ink, fontSize: 11 }));
+  }
+  for (const l of lines)
+    marks.push(Plot.line(l.rows, { x: "x", y: "y", stroke: css(l.colour), strokeWidth: 2, strokeDasharray: l.dash, strokeLinejoin: "round", strokeLinecap: "round" }));
+  if (kind === "draw") {
+    const mp = M.measuredPoints(fw, ev, state.radio);
+    const byColour = Object.fromEntries(SERIES.map((s) => [s.id, s.colour]));
+    marks.push(Plot.dot(mp.rgb, { x: "x", y: "mw", r: 4, fill: (d) => css(byColour[d.colour]), stroke: surface, strokeWidth: 2 }));
+    marks.push(Plot.dot(mp.screen, { x: "x", y: "mw", r: 4, fill: css("--series-screen"), stroke: surface, strokeWidth: 2 }));
+  }
+  // Your settings: a marker on each knob's own curve.
+  const you = [];
+  if (state.fx === "solid" && state.rgbOn) {
+    const id = pureColour() ?? "you";
+    const l = lines.find((x) => x.id === id);
+    if (l) you.push(l.rows[state.v]);
+  }
+  if (state.lcdOn) you.push(lines.find((x) => x.id === "screen").rows[state.lcd]);
+  marks.push(Plot.dot(you, { x: "x", y: "y", r: 6, fill: css("--series-you"), stroke: surface, strokeWidth: 2 }));
+  if (you.length) marks.push(Plot.text(you, { x: "x", y: "y", text: () => "You", dy: -14, fill: css("--text-primary"), fontSize: 11, fontWeight: 600 }));
+
+  const labels = endLabels(lines.map((l) => { const last = l.rows[l.rows.length - 1]; return { name: l.name, colour: l.colour, x: last.x, y: last.y, ly: last.y }; }), yMax, height, mt, mb);
+  marks.push(Plot.link(labels, { x1: "x", y1: "y", x2: "x", y2: "ly", dx: 4, stroke: css("--text-muted"), strokeWidth: 1 }),
+    Plot.text(labels, { x: "x", y: "ly", text: "name", dx: 9, textAnchor: "start", fill: css("--text-primary"), fontSize: 12 }));
+
+  const svg = Plot.plot({
+    width, height, marginTop: mt, marginBottom: mb, marginLeft: ml, marginRight: mr,
+    style: { background: "transparent", color: ink, fontFamily: "inherit", fontSize: "12px", overflow: "visible" },
+    x: { domain: [0, 100], label: "Knob position (%) →", ticks: narrow ? 5 : 10, tickFormat: (d) => `${d}` },
+    y: { domain: [0, yMax], grid: true, nice: false, label: kind === "draw" ? "↑ Draw (mW)" : "↑ Hours of nonstop typing" },
+    marks,
+  });
+  const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+  title.textContent = kind === "draw"
+    ? `AK820 Pro draw by knob position, awake, other lighting off, untethered, ${state.radio === "g24" ? "2.4 GHz" : "Bluetooth"}. Model at firmware ${fw.sha.slice(0, 10)}; dots measured 2026-10-15 and 10-19.`
+    : `AK820 Pro hours of nonstop typing from full by knob position, other lighting off, ${MODE_NAME[state.mode]}, ${state.radio === "g24" ? "2.4 GHz" : "Bluetooth"}; low-battery dimming assumed at ${Math.round(F * 100)}% of the energy. Model at firmware ${fw.sha.slice(0, 10)}.`;
+  svg.prepend(title);
+  host.replaceChildren(svg, el("div", { class: "crosshair" }), el("div", { class: "tip", role: "status", "aria-live": "polite" }));
+  charts[kind] = { svg, lines, kind, ml, mr, mt, mb, width, height };
+
+  // Legend: line keys, text in text ink.
+  const lg = $(kind === "draw" ? "legendDraw" : "legendHours");
+  lg.replaceChildren(...lines.map((l) => el("span", {}, el("span", { class: "key", style: { background: css(l.colour) } }), l.name)));
+  if (kind === "draw") lg.append(el("span", {}, el("span", { class: "box", style: { background: css("--text-muted"), borderRadius: "50%" } }), "Measured"),
+    el("span", {}, el("span", { class: "box", style: { background: css("--series-you"), borderRadius: "50%" } }), "Your settings"));
+}
+
+// One crosshair, every series: the pointer picks the knob position; each
+// curve reports its value at its nearest real setting.
+function hover(kind, pct) {
+  const c = charts[kind];
+  if (!c) return;
+  const host = c.svg.parentElement;
+  const cross = host.querySelector(".crosshair"), tip = host.querySelector(".tip");
+  if (pct === null) { cross.style.display = tip.style.display = "none"; return; }
+  const sx = c.svg.getBoundingClientRect().width / c.width;
+  const px = (c.ml + (pct / 100) * (c.width - c.ml - c.mr)) * sx;
+  cross.style.display = "block";
+  cross.style.left = `${px}px`;
+  cross.style.top = `${c.mt * sx}px`;
+  cross.style.height = `${(c.height - c.mt - c.mb) * sx}px`;
+  tip.replaceChildren(el("div", { class: "head" }, `Knob at ${Math.round(pct)}%`));
+  for (const l of c.lines) {
+    let best = l.rows[0];
+    for (const r of l.rows) if (Math.abs(r.x - pct) < Math.abs(best.x - pct)) best = r;
+    const setting = l.id === "screen" ? `level ${best.p.level}` : `brightness ${best.p.v}`;
+    const val = c.kind === "draw" ? fmt.mw(best.y) : fmt.hours(best.y);
+    tip.append(el("div", { class: "row" }, el("span", { class: "key", style: { background: css(l.colour) } }), el("b", {}, val), el("span", {}, `${l.name}, ${setting}`)));
+  }
+  tip.style.display = "block";
+  const w = tip.offsetWidth, hostW = host.clientWidth;
+  tip.style.left = `${px + 12 + w > hostW ? Math.max(0, px - 12 - w) : px + 12}px`;
+  tip.style.top = `${c.mt * sx + 4}px`;
+}
+
+function wireHover(kind) {
+  const host = kind === "draw" ? $("chartDraw") : $("chartHours");
+  let pos = 50;
+  const toPct = (e) => {
+    const c = charts[kind];
+    const r = c.svg.getBoundingClientRect(), sx = r.width / c.width;
+    const x = (e.clientX - r.left) / sx;
+    return ((x - c.ml) / (c.width - c.ml - c.mr)) * 100;
+  };
+  host.addEventListener("pointermove", (e) => {
+    const p = toPct(e);
+    if (p < -2 || p > 102) return hover(kind, null);
+    pos = Math.min(100, Math.max(0, p));
+    hover(kind, pos);
+  });
+  host.addEventListener("pointerleave", () => hover(kind, null));
+  host.addEventListener("focus", () => hover(kind, pos));
+  host.addEventListener("blur", () => hover(kind, null));
+  host.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    pos = Math.min(100, Math.max(0, pos + (e.key === "ArrowLeft" ? -1 : 1) * (e.shiftKey ? 10 : 1)));
+    hover(kind, pos);
+  });
+}
+
+function exportSvg(kind) {
+  const c = charts[kind];
+  if (!c) return;
+  const clone = c.svg.cloneNode(true);
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("style", `background:${css("--surface")};color:${css("--text-secondary")};font-family:system-ui,sans-serif;font-size:12px`);
+  const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: `ak820pro-power-${kind}-${fw.sha.slice(0, 10)}.svg` });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function renderTables() {
+  const box = $("tables");
+  box.replaceChildren();
+  const positions = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+  const cs = curves();
+  const t = el("table");
+  t.append(el("tr", {}, el("th", {}, "Knob"), ...cs.map((c) => el("th", {}, `${c.name} (mW)`)), ...cs.map((c) => el("th", {}, `${c.name} (h)`))));
+  for (const pct of positions) {
+    const row = el("tr", {}, el("td", {}, `${pct}%`));
+    const near = (c) => c.pts.reduce((b, p) => (Math.abs(p.x - pct) < Math.abs(b.x - pct) ? p : b));
+    for (const c of cs) row.append(el("td", {}, near(c).mw.toFixed(1)));
+    for (const c of cs) row.append(el("td", {}, hoursOf(c, near(c)).toFixed(1)));
+    t.append(row);
+  }
+  box.append(el("h3", {}, `The curves, other lighting off (${MODE_NAME[state.mode]}, ${state.radio === "g24" ? "2.4 GHz" : "Bluetooth"})`), t);
+  const m = el("table");
+  m.append(el("tr", {}, el("th", {}, "State"), el("th", {}, "Measured (mW)"), el("th", {}, "Model (mW)"), el("th", {}, "Difference")));
+  for (const r of M.sweepAgreement(fw, ev))
+    m.append(el("tr", {}, el("td", {}, r.name), el("td", {}, r.measured.toFixed(1)), el("td", {}, r.model.toFixed(1)), el("td", {}, `${(100 * r.err).toFixed(2)}%`)));
+  box.append(el("h3", {}, "Each bench state against the model, as measured (USB data attached; RGB states with the screen at level 5)"), m);
+}
+
+function renderEvidence() {
+  const rows = M.sweepAgreement(fw, ev);
+  const lit = rows.filter((r) => r.name.startsWith("rgb ") && !r.name.endsWith(" off"));
+  const scr = rows.filter((r) => r.name.startsWith("screen"));
+  const worst = (xs) => (100 * Math.max(...xs.map((r) => Math.abs(r.err)))).toFixed(2);
+  const r3 = ev.drains.runs.find((r) => r.name === "R3");
+  const fixed = fw.e_cap_mwh / M.boardMw(fw, { rgb: { on: true, h: 0, s: 0, v: 255 }, screen: { on: true, level: 5 } });
+  const r3Untethered = r3.hours * r3.mean_mw / (r3.mean_mw - fw.p_usb_uw / 1000);
+  const box = $("evidence");
+  box.replaceChildren(
+    el("p", {}, `The figures come from the keyboard's own power model, the arithmetic its battery gauge counts with, read from the firmware at commit ${fw.sha.slice(0, 10)}: ${fw.p_base_uw / 1000} mW awake with every light off, the screen's backlight in proportion to its duty, ${fw.p_rgb_a_uw / 1000} mW while any LED is lit, and each colour's own cost per unit of drive across the ${fw.led_count} LEDs. The page computes the LED drive as the firmware does, brightness curve included, and its arithmetic is tested against the firmware's own code.`),
+    el("h3", {}, "Checked against the bench"),
+    el("ul", {},
+      el("li", {}, `Each of ${lit.length} solid-colour states measured on 2026-10-19 is within ${worst(lit)}% of the model, and each of ${scr.length} screen levels measured on 10-15 within ${worst(scr)}% (the mean of two passes; a single pass up to ~0.9%).`),
+      el("li", {}, `Five drains from full to 0% at full white with the screen at level 5 ran 50 to 52 hours. The model gives ${fixed.toFixed(1)} h for that setting held still, about ${(100 * (fixed / r3Untethered - 1)).toFixed(0)}% longer than the logged drain (${r3.hours} h, about ${r3Untethered.toFixed(1)} h without the bench's USB cable). The page shows the model, not a correction for that gap.`),
+      el("li", {}, "Every logged drain ran on firmware before the low-battery dimming existed, so the headline's dimmed tail is modelled, not yet measured.")),
+    el("h3", {}, "Assumptions"),
+    el("ul", {},
+      el("li", {}, `The low-battery dimming starts at 150 per mille of the gauge, taken as ${Math.round(F * 100)}% of the usable energy. The gauge does not guarantee that; each percentage point moves a full-white figure by about half an hour.`),
+      el("li", {}, `Asleep: ${ev.sleep_mw.bt} mW on Bluetooth and ${ev.sleep_mw.g24} mW on 2.4 GHz, measured. Awake on 2.4 GHz: +${ev.radio_24g_awake_extra_mw.value} mW, one reading with the lights off; 2.4 GHz with the lights on is not measured.`),
+      el("li", {}, `The pack: ${fw.e_cap_mwh.toLocaleString()} mWh from full to 0%, measured once on the reference keyboard. Another pack, its age and the temperature will differ.`),
+      el("li", {}, `mA is shown at the pack's average ${NOMINAL_V.toFixed(2)} V; the model works in mW.`)),
+    el("h3", {}, "Not modelled"),
+    el("ul", {},
+      el("li", {}, "Animated effects and Alphas/Mods."),
+      el("li", {}, "The few seconds the screen lights for a message in Lights out, and the debug pages."),
+      el("li", {}, "The cost of typing itself (the radio's work per keystroke): it is inside the drains, not separated."),
+      el("li", {}, "The keyboard's own time-left estimate, which divides the gauge's remaining energy by your recent awake average. It answers a different question and can disagree with this page in either direction.")));
+  $("footer").replaceChildren(
+    el("p", {}, `Firmware ${fw.sha.slice(0, 10)}. Bench data: the 2026-10-15 load map and the 2026-10-19 colour sweep. `,
+      el("a", { href: "https://github.com/jdlien/ak820-pro" }, "Source and method"), "."));
+}
+
+function syncUrl() {
+  const p = new URLSearchParams({ v: state.v, h: state.h, s: state.s, lcd: state.lcd, mode: state.mode, radio: state.radio, day: state.day });
+  if (!state.rgbOn) p.set("rgb", "0");
+  if (!state.lcdOn) p.set("lcdon", "0");
+  if (state.fx !== "solid") p.set("fx", state.fx);
+  history.replaceState(null, "", `?${p}`);
+}
+
+function update() {
+  $("vOut").textContent = `${state.v} (${Math.round((state.v * 100) / 255)}%)`;
+  $("hOut").textContent = state.h;
+  $("sOut").textContent = state.s;
+  $("lcdOut").textContent = `level ${state.lcd}, LCD ${M.lcdPercent(fw, state.lcd)}%`;
+  const note = $("colourNote");
+  note.replaceChildren(el("span", { class: "swatch", style: { background: swatchColour() } }), pureColour() ? `${pureColour()[0].toUpperCase()}${pureColour().slice(1)}` : "A mixed colour");
+  for (const id of ["v", "h", "s", "effect"]) $(id).disabled = !state.rgbOn;
+  $("lcd").disabled = !state.lcdOn;
+  $("hoursNote").textContent = `From a full charge, typing nonstop, in ${MODE_NAME[state.mode]}, each knob on its own with the other lights off. ${state.mode === "minimal" ? "Lights out types in the dark, so every curve is flat." : state.mode === "saver" ? "Power saver caps brightness at 128 while typing, so the LED curves flatten above it." : `Below 15% the brightness is capped at ${fw.saver_val}, which is why the bright end gains.`}`;
+  renderResults();
+  chart("draw");
+  chart("hours");
+  renderTables();
+  syncUrl();
+}
+
+bind();
+renderEvidence();
+update();
+wireHover("draw");
+wireHover("hours");
+for (const b of document.querySelectorAll("[data-export]")) b.addEventListener("click", () => exportSvg(b.dataset.export));
+let rt;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { chart("draw"); chart("hours"); }, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", update);
+</script>
+</body>
+</html>

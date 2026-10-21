@@ -1,0 +1,57 @@
+# The power page (site/power/, plans/POWER-CHARTS-PLAN.md): checks that the
+# committed power.json is what the generator makes from deps.lock's firmware,
+# and that model.js matches the firmware's own C exactly (the oracle) and
+# reproduces the plan's figures.
+#
+# Checks only. Publishing site/ to GitHub Pages is a deploy job added once
+# Pages is turned on for the repo (a repo setting, JD's call); it will deploy
+# from main and publish site/ alone.
+name: power-page
+
+on:
+  pull_request:
+    paths:
+      - "site/**"
+      - "scripts/power_model.py"
+      - "scripts/power_oracle.c"
+      - "scripts/power_evidence.json"
+      - "deps.lock"
+      - "history/power-bench-*/**"
+      - ".github/workflows/power-page.yml"
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "scripts/power_model.py"
+      - "scripts/power_oracle.c"
+      - "scripts/power_evidence.json"
+      - "deps.lock"
+      - "history/power-bench-*/**"
+      - ".github/workflows/power-page.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The firmware clone is gitignored and the generator only reads a few
+      # files at the pinned commit, so fetch that one commit, no submodules,
+      # no build.
+      - name: Fetch the pinned firmware commit
+        run: |
+          read -r _ url _ sha < <(grep '^qmk_firmware-ak820pro ' deps.lock)
+          git init -q qmk_firmware-ak820pro
+          git -C qmk_firmware-ak820pro remote add origin "$url"
+          git -C qmk_firmware-ak820pro fetch -q --depth 1 --filter=blob:none origin "$sha"
+          git -C qmk_firmware-ak820pro cat-file -e "$sha^{commit}"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: power.json is current
+        run: python3 scripts/power_model.py --check
+
+      - name: model.js against the oracle and the plan
+        run: node --test site/power/model.test.js

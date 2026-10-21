@@ -1,0 +1,495 @@
+{
+ "schema": 1,
+ "generated_by": "scripts/power_model.py from deps.lock's firmware and scripts/power_evidence.json; do not edit",
+ "firmware": {
+  "sha": "36330d5ec8978875a799080ea6878e96857f0a49",
+  "led_count": 81,
+  "p_base_uw": 106900,
+  "p_usb_uw": 7100,
+  "p_bkl_full_uw": 39100,
+  "bkl_duty_full": 48,
+  "p_rgb_a_uw": 8640,
+  "p_rgb_nw": [3681, 2565, 2322],
+  "e_cap_mwh": 15579,
+  "p_sleep_uw": 13350,
+  "low_cap_pm": 150,
+  "saver_val": 128,
+  "dim_val": 64,
+  "screen_dim_level": 4,
+  "ladders": {
+   "full": {
+    "dim_ms": null,
+    "lights_off_ms": null,
+    "screen_off_ms": null,
+    "sleep_ms": null,
+    "active_val": 255
+   },
+   "normal": {
+    "dim_ms": 600000,
+    "lights_off_ms": 1200000,
+    "screen_off_ms": 1200000,
+    "sleep_ms": 1200000,
+    "active_val": 255
+   },
+   "saver": {
+    "dim_ms": 60000,
+    "lights_off_ms": 180000,
+    "screen_off_ms": 180000,
+    "sleep_ms": 180000,
+    "active_val": 128
+   },
+   "minimal": {
+    "dim_ms": 0,
+    "lights_off_ms": 0,
+    "screen_off_ms": 0,
+    "sleep_ms": 60000,
+    "active_val": 255
+   }
+  },
+  "backlight_duty": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 23, 26, 29, 33, 37, 42, 48],
+  "cie1931": [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 14, 15, 15, 15, 16, 16, 17, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 32, 32, 33, 34, 34, 35, 36, 36, 37, 38, 38, 39, 40, 41, 41, 42, 43, 44, 45, 45, 46, 47, 48, 49, 50, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 76, 77, 78, 79, 80, 81, 83, 84, 85, 86, 88, 89, 90, 91, 93, 94, 95, 97, 98, 100, 101, 102, 104, 105, 107, 108, 109, 111, 112, 114, 115, 117, 119, 120, 122, 123, 125, 126, 128, 130, 131, 133, 135, 136, 138, 140, 142, 143, 145, 147, 149, 150, 152, 154, 156, 158, 160, 162, 163, 165, 167, 169, 171, 173, 175, 177, 179, 181, 183, 186, 188, 190, 192, 194, 196, 198, 201, 203, 205, 207, 209, 212, 214, 216, 219, 221, 223, 226, 228, 231, 233, 235, 238, 240, 243, 245, 248, 250, 253, 255]
+ },
+ "evidence": {
+  "rgb_sweep": {
+   "dir": "history/power-bench-2026-10-15/rgb-curve-20261019",
+   "date": "2026-10-19",
+   "conditions": "screen at level 5, BT, on the pack with USB data attached (the bench), current_map.py --set rgb-curve; two passes per state, the charge register's mean",
+   "rows": [
+    {
+     "name": "rgb off",
+     "passes": [120.02, 117.99],
+     "mw": 119.0,
+     "ma": 28.75,
+     "led_pm": 0,
+     "off": true
+    },
+    {
+     "name": "white 255",
+     "passes": [303.1, 303.76],
+     "mw": 303.43,
+     "ma": 73.48,
+     "led_pm": 1000,
+     "h": 0,
+     "s": 0,
+     "v": 255,
+     "colour": "white"
+    },
+    {
+     "name": "white 254",
+     "passes": [302.42, 302.69],
+     "mw": 302.56,
+     "ma": 73.28,
+     "led_pm": 992,
+     "h": 0,
+     "s": 0,
+     "v": 254,
+     "colour": "white"
+    },
+    {
+     "name": "white 252",
+     "passes": [298.21, 299.03],
+     "mw": 298.62,
+     "ma": 72.35,
+     "led_pm": 972,
+     "h": 0,
+     "s": 0,
+     "v": 252,
+     "colour": "white"
+    },
+    {
+     "name": "white 248",
+     "passes": [291.68, 292.57],
+     "mw": 292.12,
+     "ma": 70.75,
+     "led_pm": 933,
+     "h": 0,
+     "s": 0,
+     "v": 248,
+     "colour": "white"
+    },
+    {
+     "name": "white 240",
+     "passes": [278.76, 278.86],
+     "mw": 278.81,
+     "ma": 67.53,
+     "led_pm": 858,
+     "h": 0,
+     "s": 0,
+     "v": 240,
+     "colour": "white"
+    },
+    {
+     "name": "white 224",
+     "passes": [253.72, 253.48],
+     "mw": 253.6,
+     "ma": 61.41,
+     "led_pm": 717,
+     "h": 0,
+     "s": 0,
+     "v": 224,
+     "colour": "white"
+    },
+    {
+     "name": "white 192",
+     "passes": [213.0, 213.72],
+     "mw": 213.36,
+     "ma": 51.63,
+     "led_pm": 490,
+     "h": 0,
+     "s": 0,
+     "v": 192,
+     "colour": "white"
+    },
+    {
+     "name": "white 160",
+     "passes": [182.33, 182.99],
+     "mw": 182.66,
+     "ma": 44.18,
+     "led_pm": 313,
+     "h": 0,
+     "s": 0,
+     "v": 160,
+     "colour": "white"
+    },
+    {
+     "name": "white 128",
+     "passes": [159.88, 160.49],
+     "mw": 160.19,
+     "ma": 38.73,
+     "led_pm": 188,
+     "h": 0,
+     "s": 0,
+     "v": 128,
+     "colour": "white"
+    },
+    {
+     "name": "white 96",
+     "passes": [145.05, 145.25],
+     "mw": 145.15,
+     "ma": 35.08,
+     "led_pm": 101,
+     "h": 0,
+     "s": 0,
+     "v": 96,
+     "colour": "white"
+    },
+    {
+     "name": "white 64",
+     "passes": [135.22, 136.31],
+     "mw": 135.76,
+     "ma": 32.81,
+     "led_pm": 47,
+     "h": 0,
+     "s": 0,
+     "v": 64,
+     "colour": "white"
+    },
+    {
+     "name": "white 48",
+     "passes": [132.49, 132.13],
+     "mw": 132.31,
+     "ma": 31.98,
+     "led_pm": 27,
+     "h": 0,
+     "s": 0,
+     "v": 48,
+     "colour": "white"
+    },
+    {
+     "name": "white 32",
+     "passes": [129.72, 130.65],
+     "mw": 130.19,
+     "ma": 31.46,
+     "led_pm": 15,
+     "h": 0,
+     "s": 0,
+     "v": 32,
+     "colour": "white"
+    },
+    {
+     "name": "white 16",
+     "passes": [128.82, 128.4],
+     "mw": 128.61,
+     "ma": 31.08,
+     "led_pm": 7,
+     "h": 0,
+     "s": 0,
+     "v": 16,
+     "colour": "white"
+    },
+    {
+     "name": "white 3",
+     "passes": [127.16, 127.59],
+     "mw": 127.38,
+     "ma": 30.79,
+     "led_pm": 3,
+     "h": 0,
+     "s": 0,
+     "v": 3,
+     "colour": "white"
+    },
+    {
+     "name": "red 255",
+     "passes": [201.85, 202.23],
+     "mw": 202.04,
+     "ma": 48.89,
+     "led_pm": 333,
+     "h": 0,
+     "s": 255,
+     "v": 255,
+     "colour": "red"
+    },
+    {
+     "name": "green 255",
+     "passes": [179.18, 178.83],
+     "mw": 179.0,
+     "ma": 43.28,
+     "led_pm": 333,
+     "h": 85,
+     "s": 255,
+     "v": 255,
+     "colour": "green"
+    },
+    {
+     "name": "blue 255",
+     "passes": [174.21, 173.87],
+     "mw": 174.04,
+     "ma": 42.09,
+     "led_pm": 333,
+     "h": 170,
+     "s": 255,
+     "v": 255,
+     "colour": "blue"
+    },
+    {
+     "name": "red 128",
+     "passes": [140.03, 140.55],
+     "mw": 140.29,
+     "ma": 33.92,
+     "led_pm": 62,
+     "h": 0,
+     "s": 255,
+     "v": 128,
+     "colour": "red"
+    },
+    {
+     "name": "green 128",
+     "passes": [135.97, 136.12],
+     "mw": 136.05,
+     "ma": 32.89,
+     "led_pm": 62,
+     "h": 85,
+     "s": 255,
+     "v": 128,
+     "colour": "green"
+    },
+    {
+     "name": "blue 128",
+     "passes": [135.1, 135.08],
+     "mw": 135.09,
+     "ma": 32.65,
+     "led_pm": 62,
+     "h": 170,
+     "s": 255,
+     "v": 128,
+     "colour": "blue"
+    },
+    {
+     "name": "red 16",
+     "passes": [126.78, 126.72],
+     "mw": 126.75,
+     "ma": 30.63,
+     "led_pm": 2,
+     "h": 0,
+     "s": 255,
+     "v": 16,
+     "colour": "red"
+    },
+    {
+     "name": "green 16",
+     "passes": [126.16, 126.84],
+     "mw": 126.5,
+     "ma": 30.57,
+     "led_pm": 2,
+     "h": 85,
+     "s": 255,
+     "v": 16,
+     "colour": "green"
+    },
+    {
+     "name": "blue 16",
+     "passes": [126.71, 126.12],
+     "mw": 126.41,
+     "ma": 30.55,
+     "led_pm": 2,
+     "h": 170,
+     "s": 255,
+     "v": 16,
+     "colour": "blue"
+    }
+   ]
+  },
+  "screen_sweep": {
+   "dir": "history/power-bench-2026-10-15/current-map-20261015-2210",
+   "date": "2026-10-15",
+   "conditions": "RGB off, BT, on the pack with USB data attached (the bench), current_map.py --set loads (R1); two passes per state",
+   "rows": [
+    {
+     "name": "rgb off",
+     "passes": [117.83, 118.27],
+     "mw": 118.05,
+     "ma": 28.29
+    },
+    {
+     "name": "lcd max",
+     "passes": [152.94, 153.17],
+     "mw": 153.06,
+     "ma": 36.7,
+     "level": 23
+    },
+    {
+     "name": "lcd 12",
+     "passes": [123.91, 124.31],
+     "mw": 124.11,
+     "ma": 29.74,
+     "level": 12
+    },
+    {
+     "name": "lcd 4",
+     "passes": [117.23, 117.33],
+     "mw": 117.28,
+     "ma": 28.1,
+     "level": 4
+    },
+    {
+     "name": "lcd 1",
+     "passes": [114.83, 114.92],
+     "mw": 114.88,
+     "ma": 27.52,
+     "level": 1
+    },
+    {
+     "name": "lcd off",
+     "passes": [114.03, 114.02],
+     "mw": 114.03,
+     "ma": 27.32,
+     "level": null
+    }
+   ]
+  },
+  "sleep_mw": {
+   "bt": 13.25,
+   "g24": 13.8,
+   "source": "docs/power.md, 'Deep sleep: 3.2 mA on BT (13.25 mW), 3.3 mA on 2.4G (13.8 mW)'; the BT hour, 3.17 mA, 10-18/19"
+  },
+  "usb_data_mw": {
+   "value": 7.1,
+   "source": "R2, 10-15: USB data attached costs ~1.7 mA (docs/test-bench.md); the firmware's P_USB_UW"
+  },
+  "radio_24g_awake_extra_mw": {
+   "value": 5,
+   "source": "docs/power.md, 'Everything at max adds 2.4G's ~5 mW, which is one reading of the board with its lights off'. 2.4G with the lights on is unmeasured"
+  },
+  "reserve": {
+   "minutes": 301.5,
+   "text": "5 h 01 min 29 s",
+   "source": "docs/battery.md, 'The second run' (run 2, 10-02 to 10-04): lights-off typing after the RGB cut, screen at level 5, older firmware, observed once"
+  },
+  "drains": {
+   "conditions": "full white (value 255, saturation 0), screen at level 5, BT, typing as usual, full to the RGB cut",
+   "runs": [
+    {
+     "name": "run 1",
+     "dates": "09-28 to 10-01",
+     "hours": 51.55,
+     "tethered": false,
+     "note": "in full-white equivalent"
+    },
+    {
+     "name": "run 2",
+     "dates": "10-02 to 10-04",
+     "hours": 50.56,
+     "tethered": false
+    },
+    {
+     "name": "run 3",
+     "dates": "10-09 to 10-11",
+     "hours": 51.13,
+     "tethered": false
+    },
+    {
+     "name": "2e",
+     "dates": "10-12 to 10-14",
+     "hours": 50.25,
+     "tethered": true,
+     "note": "50.1-50.4 h"
+    },
+    {
+     "name": "R3",
+     "dates": "10-15 to 10-18",
+     "hours": 50.39,
+     "tethered": true,
+     "mean_mw": 309,
+     "mean_ma": 79.6,
+     "mwh": 15579
+    }
+   ],
+   "source": "docs/power.md, 'Measured: full white, from full to the cut'; R3: history/battery-2026-10-15-drain-2f/a1-summary.txt"
+  }
+ },
+ "assumptions": {
+  "tail_fraction": {
+   "value": 0.15,
+   "why": "the low cap starts at 150 permille; the gauge as built does not guarantee that is 15% of the energy (plans/POWER-CHARTS-PLAN.md)"
+  },
+  "nominal_mv": {
+   "value": 3884,
+   "why": "to show mA beside mW: R3's mean pack voltage, full to the cut"
+  }
+ },
+ "scenarios": [
+  {
+   "id": "office",
+   "name": "Office day",
+   "text": "8 h of nonstop typing, then away",
+   "blocks": [
+    [
+     "type",
+     480
+    ]
+   ]
+  },
+  {
+   "id": "stopstart",
+   "name": "Stop-start day",
+   "text": "4 h of typing with twenty 15-minute breaks, then away",
+   "repeat": {
+    "count": 20,
+    "type": 12,
+    "pause": 15
+   },
+   "blocks": [
+    [
+     "type",
+     0
+    ]
+   ]
+  },
+  {
+   "id": "light",
+   "name": "Light use",
+   "text": "about 2¾ h of typing in five sessions, two hours apart, then away",
+   "repeat": {
+    "count": 4,
+    "type": 33,
+    "pause": 120
+   },
+   "blocks": [
+    [
+     "type",
+     33
+    ]
+   ]
+  }
+ ]
+}

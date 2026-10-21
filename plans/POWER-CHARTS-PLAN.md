@@ -1,4 +1,4 @@
-# Power charts and a power calculator page — plan, not started (2026-10-21)
+# Power charts and a power calculator page — first version built (2026-10-21)
 
 A public page for AK820 Pro owners: what each lighting knob costs, and **how
 long a full charge lasts at a given setting while you type nonstop** (the
@@ -15,6 +15,40 @@ It belongs to the "polish for other owners" step in [`BACKLOG.md`](BACKLOG.md)
 ([`review-codex-power-charts-2026-10-21.md`](review-codex-power-charts-2026-10-21.md);
 dispositions at the end). Its verdict on revision 1 was "revise before
 building"; the architecture stood, the arithmetic and the claims did not.
+
+## Build status (10-21)
+
+**Built, on the data that exists; not published.** Everything below runs
+without the board:
+
+- `scripts/power_model.py` writes `site/power/power.json` from the firmware at
+  `deps.lock`'s pin (`git show`, fail-closed) and `scripts/power_evidence.json`
+  (the docs-only figures, each with its source); `--check` for drift,
+  `--oracle <dir>` builds `scripts/power_oracle.c` against the pinned
+  `color.c`, `led_tables.c` and `model_nj` (copied verbatim) and writes the
+  fixtures.
+- `site/power/model.js`, the one implementation of the maths, and
+  `model.test.js` (`node --test site/power/model.test.js`, 12 tests): exact
+  against the oracle on 655,360 `hsv_to_rgb` cases and 982 `model_nj` cases;
+  the plan's figures; the ladder's edges; the model against both sweeps (lit
+  RGB within 0.56%, screen 0.27%, the 10-19 floor 0.78%).
+- `site/power/index.html`: Observable Plot 0.6.16 and d3 7.9.0 vendored in
+  `site/vendor/` (npm's integrity-checked tarballs, ISC); the headline as a
+  timeline, the draw split by component, the two charts with the sweeps' dots,
+  a crosshair reading every series (keyboard too), a table view, SVG export,
+  light and dark (palette run through the dataviz validator: red against
+  green is 7.2 in light, inside the 6-8 band, so legend plus end labels carry
+  identity; white is a neutral line on purpose), settings in the URL. Checked
+  rendered at 1100 px, light and dark, and at 375 px.
+- `.github/workflows/power-page.yml`: on PRs and `main`, a blob-less fetch of
+  the pinned firmware commit, `--check`, the tests. No deploy job yet.
+
+Preview: `cd site && python3 -m http.server`, then `/power/`.
+
+**Left:** the `knobs` sweep set in `current_map.py` with structured output;
+the overnight sweep (with the session holding the board), which replaces the
+dots and tightens the gate; GitHub Pages turned on (a repo setting) and the
+deploy job; a private artifact copy if wanted; a codex review of the build.
 
 ## Order and blockers
 
