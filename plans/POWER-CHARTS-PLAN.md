@@ -31,10 +31,11 @@ building"; the architecture stood, the arithmetic and the claims did not.
   EEPROM (`power.c:330`). It holds the ACTIVE stage instead, which ignores
   the mode, the supply and the low cap.
 - **GitHub Pages is a repo setting:** ask before turning it on.
-- **Found on the way, a firmware item of its own** (`BACKLOG.md`, "The RGB
-  model's 82 LEDs"): the board has 81 RGB LEDs, and the per-colour slopes in
-  `battery.c` were fitted as if it had 82. The page waits for that fix or
-  carries the corrected slopes beside the firmware's, said so.
+- **Found on the way and fixed:** the board has 81 RGB LEDs, and the
+  per-colour slopes in `battery.c` had been fitted as if it had 82 (~1.2% low
+  on the RGB). Refitted, codex cleared, flashed 10-21 (`36330d5ec8`, pinned in
+  `deps.lock`; `BACKLOG.md`, "The RGB model's 82 LEDs"). The figures below
+  use the corrected slopes.
 
 ## One model, the board's own
 
@@ -45,14 +46,13 @@ constants near line 575, `model_nj()`):
 `P = P_BASE + P_BKL_FULL·duty/48 + P_RGB_A·[any LED lit] + Σ B_c·S_c (+ P_USB on the bench)`
 
 - `P_BASE` 106.9 mW (every light out, no USB data), `P_BKL_FULL` 39.1 mW at
-  duty 48, `P_RGB_A` 8.64 mW while any LED is lit, `B_r/g/b` 3.636 / 2.533 /
-  2.294 µW per unit of a colour's channel sum, `P_USB` 7.1 mW.
+  duty 48, `P_RGB_A` 8.64 mW while any LED is lit, `B_r/g/b` 3.681 / 2.565 /
+  2.322 µW per unit of a colour's channel sum, `P_USB` 7.1 mW.
 - **`S_c` is summed over `RGB_MATRIX_LED_COUNT`, which is 81** (the
-  `rgb_matrix` layout in `keyboard.json`; `config.h:33`). The fit that made
-  `B_c` (`scripts/rgb_fit.py:15`) and the simulator's stub
-  (`scripts/battery_sim/stubs/quantum.h:50`) use 82, so the slopes are
-  ~1.2% low: at full white and screen level 5 the model gives 294.4 mW
-  untethered where 82 would give 296.6. The fix is the firmware item above.
+  `rgb_matrix` layout in `keyboard.json`; `config.h:33`). Until 10-21 the
+  fit (`scripts/rgb_fit.py`) and the simulator's stub counted 82, so the
+  slopes were ~1.2% low; at full white and screen level 5 the corrected model
+  gives 296.6 mW untethered, where the old one gave 294.4.
 - **The colour path, exactly as QMK runs it:** the CIE table
   (`quantum/led_tables.c`) applies to the HSV value **before** `hsv_to_rgb`
   mixes the colour (`quantum/color.c`), not to each RGB channel after.
@@ -89,7 +89,8 @@ size. `power.json` carries a schema version and keeps three things apart:
 - **Exact arithmetic.** The page's maths must equal the pinned C's. The
   oracle compiles the pinned `color.c`, `led_tables.c` and `battery.c`'s
   model against host stubs with the real LED count (`scripts/battery_sim/`,
-  pointed at the SHA instead of the working tree, its stub corrected to 81)
+  pointed at the SHA instead of the working tree; its stub says 81 since
+  10-21)
   and prints fixtures the page's tests compare against.
 - **Measurement.** The sweep's fit is reported as residuals, repeatability
   and uncertainty, for the total and for each isolated increment, against
@@ -97,10 +98,10 @@ size. `power.json` carries a schema version and keeps three things apart:
   not change a firmware constant by itself. A sweep with USB data attached
   sees `P_BASE + P_USB` together, so the two are not separated by it.
 
-What is known so far: the 10-19 fit's paired state means agree within 0.6%,
-single holds within ~0.94%; the current executable model (81 LEDs) within
-~0.8% across the RGB sweep's means, and purple, held out, 0.33% low
-(211.20 mW against 211.9). The screen is linear in duty (R1, 10-15: 27.33 mA
+What is known so far: the corrected executable model (`36330d5ec8`) agrees
+with the 10-19 sweep within 0.55% for each step's paired mean and 0.92% for
+a single hold, and purple, held out, within +0.16% (codex's review of the
+81-LED fix, finding 8). The screen is linear in duty (R1, 10-15: 27.33 mA
 off to 36.70 at duty 48, both with the bench's USB data).
 
 ## The numbers the page gives
@@ -140,14 +141,14 @@ when the low cap actually starts**, so `f` can be measured.
 predates Phase 2's low cap. What the drains do measure is the fixed-state
 case, which the page shows as its evidence:
 
-- **Fixed state, the model:** 52.9 h at full white, screen level 5,
-  untethered; everything at max on 2.4G 46.6 h (51.7 with the tail); white
-  at 128 102.1 h; screen 5 with the RGB off 140.4 h; every light off 145.7 h.
+- **Fixed state, the model:** 52.5 h at full white, screen level 5,
+  untethered; everything at max on 2.4G 46.3 h (51.5 with the tail); white
+  at 128 101.9 h; screen 5 with the RGB off 140.4 h; every light off 145.7 h.
 - **Fixed state, measured:** five drains at full white and screen level 5
   ran 50-52 h; R3, logged, 50.39 h with the bench's USB data, ~51.6 h
-  untethered. **The model runs ~2.5% long against R3**: R3's mean was
-  309 mW (79.6 mA, rising from ~73 to ~90 as the pack fell) against ~301.5
-  modelled with the USB data. Typing's own cost is not separated
+  untethered. **The model runs ~2% long against R3**: R3's mean was
+  309 mW (79.6 mA, rising from ~73 to ~90 as the pack fell) against 303.7
+  modelled with the USB data (~2.5% before the 81-LED fix). Typing's own cost is not separated
   (`docs/power.md`), so this gap is not attributed; the page shows it, not
   a correction for it.
 
@@ -187,7 +188,7 @@ ladder. So the day is a schedule:
   pause's increment above it, so every hour is counted once, the last
   absence of the day included.
 - Each pause walks the mode's ladder at the measured stage draws (Balanced
-  ~66.0 mWh above sleep for a pause long enough to reach sleep, Power saver
+  ~66.3 mWh above sleep for a pause long enough to reach sleep, Power saver
   ~6.1, at full white and screen 5). Always on never reaches sleep. The 15%
   tail as above.
 
@@ -293,7 +294,7 @@ scripts/power_model.py       pinned firmware + sweep output -> power.json (--che
   Pre-filled from URL parameters. Lights out greys out the lighting controls.
 - **Readout:** total draw (mW, and mA at a stated nominal voltage), the
   timeline, standby, the day; and **what a change saves**, in mW and hours,
-  against the settings you came in with (white 255 to 128 saves ~142 mW; a
+  against the settings you came in with (white 255 to 128 saves ~144 mW; a
   maximum screen turned off, 39.1).
 - Light and dark through CSS variables.
 
@@ -360,7 +361,7 @@ were confirmed directly.
 | 1 | Always on never deep-sleeps, below 15% too | **Done**, confirmed (`power.c:299`) |
 | 1 | `<=` 150‰, not "below"; Lights out's lit exceptions | **Done** (the table) |
 | 2 | 150‰ is not guaranteed to be 15% of `E` | **Done.** A stated assumption with its sensitivity; R5 to log the energy at the cap's start |
-| 3 | 81 LEDs, not 82; the fit and the stub used 82 | **Confirmed.** In the plan; the firmware fix is its own backlog item |
+| 3 | 81 LEDs, not 82; the fit and the stub used 82 | **Confirmed and fixed:** refitted, codex cleared, flashed 10-21 (`36330d5ec8`) |
 | 3 | CIE before mixing; committed frames; lit-time intercept; LCD on/off; 13.35 mW asleep | **Done** |
 | 3 | The 2% gate is the wrong gate | **Done.** Exact arithmetic and measurement agreement gated separately; a miss starts an investigation |
 | 4 | Values 0, 1 and more low points; dark references; held-out states; read-backs | **Done**, trimmed for the colours |
@@ -379,13 +380,12 @@ were confirmed directly.
 | 9 | `HC_POWER`: one byte is not enough, and page 0's version is consumed | **Done.** A new page instead |
 | 9 | WebHID: an allowlist, validated replies, coexistence tests; USB means no live time-left | **Done** |
 
-One more, found while checking the model against R3: the model runs ~2.5%
-long against the logged drain. Shown on the page, not corrected for.
+One more, found while checking the model against R3: the model runs ~2%
+long against the logged drain (~2.5% before the 81-LED fix). Shown on the
+page, not corrected for.
 
 ## Open
 
 - Deep sleep re-measured on 2.4G and BT in one session, or the existing
   figures kept.
 - Whether the site carries only the calculator or the owner guide too.
-- Whether the firmware's 81-LED fix lands before the page (preferred) or the
-  page carries corrected slopes beside the firmware's.
