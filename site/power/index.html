@@ -129,7 +129,7 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 32px; }
 .stat { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
 .stat > span { white-space: nowrap; }
-@media (max-width: 600px) { .stat .big { font-size: 32px; } .stat.lead .ico { height: 32px; } }
+@media (max-width: 600px) { .stat .big { font-size: 28px; } .stat.lead .ico { height: 28px; } }
 .stat .ico { height: 20px; width: auto; flex: none; align-self: center; color: var(--text-secondary); }
 .stat.lead .ico { height: 42px; }
 .stat .big { font-size: 40px; font-weight: 650; line-height: 1.1; }
@@ -355,23 +355,36 @@ function components(st) {
 }
 
 // Font Awesome Free 7 solid icons, CC BY 4.0 (https://fontawesome.com/license/free):
-// battery-three-quarters, bolt, moon. [viewBox, path]
+// battery-three-quarters, bolt, moon, clock. [viewBox, path]
 const ICONS = {
+  clock: ["0 0 512 512", "M256 0a256 256 0 1 1 0 512 256 256 0 1 1 0-512zM232 120l0 136c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2 280 120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"],
   battery: ["0 0 640 512", "M528 128c8.8 0 16 7.2 16 16l0 224c0 8.8-7.2 16-16 16l-416 0c-8.8 0-16-7.2-16-16l0-224c0-8.8 7.2-16 16-16l416 0zM112 64c-44.2 0-80 35.8-80 80l0 224c0 44.2 35.8 80 80 80l416 0c44.2 0 80-35.8 80-80l0-48c17.7 0 32-14.3 32-32l0-64c0-17.7-14.3-32-32-32l0-48c0-44.2-35.8-80-80-80L112 64zm56 112c-13.3 0-24 10.7-24 24l0 112c0 13.3 10.7 24 24 24l224 0c13.3 0 24-10.7 24-24l0-112c0-13.3-10.7-24-24-24l-224 0z"],
   bolt: ["0 0 448 512", "M338.8-9.9c11.9 8.6 16.3 24.2 10.9 37.8L271.3 224 416 224c13.5 0 25.5 8.4 30.1 21.1s.7 26.9-9.6 35.5l-288 240c-11.3 9.4-27.4 9.9-39.3 1.3s-16.3-24.2-10.9-37.8L176.7 288 32 288c-13.5 0-25.5-8.4-30.1-21.1s-.7-26.9 9.6-35.5l288-240c11.3-9.4 27.4-9.9 39.3-1.3z"],
   moon: ["0 0 512 512", "M256 0C114.6 0 0 114.6 0 256S114.6 512 256 512c68.8 0 131.3-27.2 177.3-71.4 7.3-7 9.4-17.9 5.3-27.1s-13.7-14.9-23.8-14.1c-4.9 .4-9.8 .6-14.8 .6-101.6 0-184-82.4-184-184 0-72.1 41.5-134.6 102.1-164.8 9.1-4.5 14.3-14.3 13.1-24.4S322.6 8.5 312.7 6.3C294.4 2.2 275.4 0 256 0z"],
 };
+const svgEl = (tag, attrs) => {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+};
 function icon(name, label) {
-  const NS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("viewBox", ICONS[name][0]);
-  svg.setAttribute("class", "ico");
-  svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", label);
-  const p = document.createElementNS(NS, "path");
-  p.setAttribute("fill", "currentColor");
-  p.setAttribute("d", ICONS[name][1]);
-  svg.append(p);
+  if (name === "battery-life") return batteryLife(label);
+  const svg = svgEl("svg", { viewBox: ICONS[name][0], class: "ico", role: "img", "aria-label": label });
+  svg.append(svgEl("path", { fill: "currentColor", d: ICONS[name][1] }));
+  return svg;
+}
+// Battery life: the battery with a clock badge on its lower right, a masked
+// gap around the badge so it reads on any background. The canvas grows by
+// the badge's overhang at the same 5:4 as the battery, so the width is too.
+function batteryLife(label) {
+  const svg = svgEl("svg", { viewBox: "0 0 720 576", class: "ico", role: "img", "aria-label": label });
+  const mask = svgEl("mask", { id: "battery-life-cut" });
+  mask.append(svgEl("rect", { width: 720, height: 576, fill: "white" }), svgEl("circle", { cx: 544, cy: 400, r: 208, fill: "black" }));
+  const defs = svgEl("defs", {});
+  defs.append(mask);
+  const clock = svgEl("g", { transform: "translate(368 224) scale(0.6875)" });
+  clock.append(svgEl("path", { fill: "currentColor", d: ICONS.clock[1] }));
+  svg.append(defs, svgEl("path", { fill: "currentColor", d: ICONS.battery[1], mask: "url(#battery-life-cut)" }), clock);
   return svg;
 }
 
@@ -398,7 +411,7 @@ function renderResults() {
     ...(small ? [el("span", { class: "small" }, small)] : []));
   const summary = el("div", { class: "card summary" },
     el("div", { class: "stats" },
-      stat("battery", "Battery life, typing nonstop from full", `About ${Math.round(use.hours)} h`, use.hours >= 48 ? `${(use.hours / 24).toFixed(1)} days` : null, true),
+      stat("battery-life", "Battery life, typing nonstop from full", `About ${Math.round(use.hours)} h`, use.hours >= 48 ? `${(use.hours / 24).toFixed(1)} days` : null, true),
       stat("bolt", "Draw while typing", fmt.mw(drawMw), fmt.ma(drawMw)),
       stand.asleep
         ? stat("moon", "Idle, asleep", fmt.days(stand.hours / 24), `${M.sleepMw(ev, state.radio)} mW asleep`)
