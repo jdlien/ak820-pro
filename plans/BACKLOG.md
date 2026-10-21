@@ -230,13 +230,44 @@ v0.1.1) are unsigned. None of it is started:
    - `scripts/package-macos.sh`'s `.dmg` notarized and stapled, as the
      plan's signing section lays out (after `../streamdeck-now-playing/build/`);
    - `INSTALL-macos.txt` brought up to date.
-3. **Windows:**
-   - `ak820-agent.exe` and `ak820.exe` signed with a timestamp, in CI or
-     locally;
+3. **Windows: JD already pays for Azure Trusted Signing**, and
+   `../unifi-protect-viewer/.github/workflows/release.yml` is the template:
+   - its step `azure/trusted-signing-action@v0.5.0`, with the same endpoint,
+     signing account and certificate profile, and the three secrets
+     `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` (that
+     repo's `RELEASING.md` lists them);
+   - here it goes in `.github/workflows/release.yml` between `cargo build
+     --release --locked` and the zip, over `ak820-agent/target/release`,
+     filtered to `exe`. Signing changes the exes, so the sha256 sums must be
+     taken after it, as they already are;
+   - skipped when the secrets are absent, as the viewer does, so it can land
+     before they are added. Adding them is JD's, in the repo's settings;
    - `scripts/sandbox-6b.ps1`'s clean-install check run on the signed zip.
+   - The viewer's macOS job is a pattern for CI notarization too
+     (`CSC_LINK`, `APPLE_ID`, an app-specific password), but this agent's
+     Mac release can stay local (`package-macos.sh --submit`).
 4. **Releases from tags there.** This repo's README points at them, and the
    firmware's artifacts stay released here.
-5. **Release defaults:**
+5. **The installer:** `ak820 install` already does the work on both. Windows:
+   the zip plus `ak820 install` is enough. Mac: a double-click wrapper in
+   the `.dmg`, not a `.pkg` (a `.pkg` installs as root, and the daemon is a
+   per-user LaunchAgent).
+6. **Updates: notify, then update on request.** A daily check of the
+   repo's Releases shown in `ak820 status` and the log (one a user can turn
+   off: it contacts GitHub), and an `ak820 update` the user runs. That
+   command verifies the download's signature names the same publisher
+   (the Developer ID team; the Trusted Signing certificate), checks that
+   the board's firmware speaks the new build's protocols, then reinstalls.
+   Not silent self-updating: the agent and the firmware move together (type
+   4 needed both), and an agent ahead of its firmware breaks the clock or
+   the channel quietly.
+7. **First, the firmware path for strangers:** the agent does nothing on
+   stock firmware. A prebuilt daily build, flashing steps a stranger can
+   follow, and an agent that says "this firmware is too old: flash vX".
+8. **When:** after the protocol has held still for a couple of weeks. The
+   lock-light channel, the radio and the clock changed almost daily in
+   October, from two sessions on one repo.
+9. **Release defaults:**
    - `--lockchan` only against firmware with the lock-LED handler: it is
      dev-only today, on `mac/lockchan-pm`, not in a daily build;
    - the Mac's `--radio` the same, for the 2.4G dongle's raw HID.
