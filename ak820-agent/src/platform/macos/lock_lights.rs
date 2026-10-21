@@ -241,6 +241,13 @@ impl LockLights for BleLights {
     fn data_gap(&self) -> Duration {
         DATA_GAP
     }
+    /// Negative: the completion comes after the board has the anchor. The
+    /// median of 39 frames through this writer (`ak820 lockchan anchor 40`,
+    /// 10-21, `history/lockchan-clock-latency-mac-20261021/`): -13.9 ms,
+    /// sd 2.7, p10 -15.8, p90 -11.5.
+    fn clock_latency_ms(&self) -> Option<i32> {
+        Some(-14)
+    }
     fn user(&mut self) -> Option<u8> {
         if !session_active() {
             return None;

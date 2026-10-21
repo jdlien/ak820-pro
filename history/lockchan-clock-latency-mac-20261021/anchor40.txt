@@ -1,0 +1,5 @@
+ 24: Abandoned(Deadline), not committed (frames 24 -> 24, seq 23)
+frames 40, committed 39, board ms per host s 999.441
+sync rtt ms        2.75 at the start, 3.73 at the end
+board anchor minus host completion, ms: mean -13.6, sd 2.7, min -16.8, p10 -15.8, median -13.9, p90 -11.5, max -0.6
+each               -11.8 -11.8 -11.6 -11.6 -12.6 -15.5 -14.9 -13.5 -12.4 -11.2 -11.5 -16.1 -13.6 -14.3 -15.8 -15.4 -14.4 -15.8 -15.7 -15.3 -13.6 -13.8 -16.4 -13.5 -15.4 -15.2 -15.2 -0.6 -13.2 -11.4 -11.4 -12.4 -12.6 -15.3 -16.8 -15.8 -16.3 -14.5 -13.9
