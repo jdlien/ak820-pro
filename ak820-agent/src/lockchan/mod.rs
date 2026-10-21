@@ -228,7 +228,12 @@ pub const TYPE_CLOCK: u8 = 4;
 
 /// Type 4's payload for a local time and its milliseconds, or `None` outside
 /// what the board accepts (2026-2098, the PCF's year % 100).
-pub fn clock_payload(t: &crate::clock::host::LocalTime, ms: u32) -> Option<Vec<u8>> {
+/// The type 4 flag: the host's clock stepped (or its offset moved) since its
+/// last frame, so the board takes this one's offset as no measure of its rate
+/// (the firmware's frame trim, 10-21). A board before it rejects the frame.
+pub const CLOCK_F_STEPPED: u8 = 0x01;
+
+pub fn clock_payload(t: &crate::clock::host::LocalTime, ms: u32, stepped: bool) -> Option<Vec<u8>> {
     if !(2026..=2098).contains(&t.year) {
         return None;
     }
@@ -244,7 +249,7 @@ pub fn clock_payload(t: &crate::clock::host::LocalTime, ms: u32) -> Option<Vec<u
         t.second,
         ms as u8,
         (ms >> 8) as u8,
-        0,
+        if stepped { CLOCK_F_STEPPED } else { 0 },
         bias[0],
         bias[1],
     ])
@@ -338,16 +343,17 @@ mod tests {
     fn the_clock_payload_is_raw_hids_ms_body() {
         use crate::clock::host::{utc_local, LocalTime};
         let t = utc_local(1_792_500_000); // 2026-10-19
-        let p = clock_payload(&t, 1234).unwrap();
+        let p = clock_payload(&t, 1234, false).unwrap();
         assert_eq!(p.len(), 12);
         assert_eq!(&p[..7], &[26, t.month, t.day, t.weekday, t.hour, t.minute, t.second]);
         assert_eq!(u16::from_le_bytes([p[7], p[8]]), 999, "ms clamped");
         assert_eq!(p[9], 0, "flags");
         assert_eq!(i16::from_le_bytes([p[10], p[11]]), 0x7FFF, "the bias unknown");
         let early = LocalTime { year: 2025, ..t };
-        assert!(clock_payload(&early, 0).is_none());
+        assert!(clock_payload(&early, 0, false).is_none());
         let late = LocalTime { year: 2099, ..t };
-        assert!(clock_payload(&late, 0).is_none());
+        assert!(clock_payload(&late, 0, false).is_none());
+        assert_eq!(clock_payload(&t, 0, true).unwrap()[9], CLOCK_F_STEPPED);
     }
 
     #[test]

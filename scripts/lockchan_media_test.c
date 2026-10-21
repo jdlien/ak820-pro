@@ -249,16 +249,20 @@ int main(void) {
         lockchan_frame_t f = frame(4, ok, 12);
         CHECK(lockchan_clock_parse(&f, &c));
         CHECK(c.yy == 26 && c.mo == 10 && c.dd == 20 && c.wd == 2 && c.hh == 21 && c.mi == 59 && c.ss == 59 && c.ms == 999);
+        CHECK(!c.stepped);
         /* Not a display frame: the media parser rejects it whole. */
         lockchan_media_t m;
         CHECK(!lockchan_media_parse(&f, &m));
-        /* Exact length; flags 0; bias exactly the sentinel. */
+        /* Exact length; flags 0 or STEPPED; bias exactly the sentinel. */
         lockchan_frame_t fs = frame(4, ok, 11);
         CHECK(!lockchan_clock_parse(&fs, &c));
         uint8_t bad[12];
-        memcpy(bad, ok, 12); bad[9] = 1;                           /* FORCE_STEP */
-        f = frame(4, bad, 12); CHECK(!lockchan_clock_parse(&f, &c));
+        memcpy(bad, ok, 12); bad[9] = LOCKCHAN_CLOCK_F_STEPPED;    /* the host stepped (10-21) */
+        f = frame(4, bad, 12); CHECK(lockchan_clock_parse(&f, &c) && c.stepped);
+        CHECK(lockchan_clock_advance(&c, 1, &o) && o.stepped);     /* carried to the set */
         memcpy(bad, ok, 12); bad[9] = 2;                           /* SKIP_PCF */
+        f = frame(4, bad, 12); CHECK(!lockchan_clock_parse(&f, &c));
+        memcpy(bad, ok, 12); bad[9] = 3;
         f = frame(4, bad, 12); CHECK(!lockchan_clock_parse(&f, &c));
         memcpy(bad, ok, 12); bad[10] = 0; bad[11] = 0;             /* a bias of 0 ppm */
         f = frame(4, bad, 12); CHECK(!lockchan_clock_parse(&f, &c));
@@ -416,6 +420,117 @@ int main(void) {
     CHECK(rtc_stamp_age_s(100, 0, 72, (uint32_t)-30) == 2);
     CHECK(rtc_stamp_age_s(0xFFFFFFF0u, 0xFFFFFFFFu, 20, 9) == 26);   /* both wrap */
     CHECK(rtc_stamp_age_s(100, 0, 200, (uint32_t)-30) == 130);  /* a negative credit adds */
+
+    /* The frame trim (rtc_frame_trim, 10-21). The Mac's cut test: frame 2's
+     * -1616 ms over 601 s is +2688 ppm, the board fast: the period up by
+     * half the step (87) the first time, all of it when the next agrees. */
+    {
+        int8_t sg = 0;
+        CHECK(rtc_frame_trim(32463, -1616, 601, &sg) == 32506 && sg == 1);
+        CHECK(rtc_frame_trim(32506, -800, 600, &sg) == 32549 && sg == 1);    /* +1333 ppm, agreed: 43 */
+        CHECK(rtc_frame_trim(32549, 300, 600, &sg) == 32541 && sg == -1);    /* -500 ppm, disagreed: -16 / 2 */
+        /* Under the floor (50 ppm): nothing, and the sign forgotten. */
+        sg = 1;
+        CHECK(rtc_frame_trim(32500, -29, 600, &sg) == 32500 && sg == 0);     /* 48 ppm */
+        CHECK(rtc_frame_trim(32500, -30, 600, &sg) == 32501 && sg == 1);     /* 50: 1, whose half is 0 */
+        /* Over the cap (1%): a host's step, not drift; the sign kept. */
+        sg = 1;
+        CHECK(rtc_frame_trim(32500, -6001, 600, &sg) == 32500 && sg == 1);
+        CHECK(rtc_frame_trim(32500, -6000, 600, &sg) == 32825);
+        /* The interval: 300..3600 s. */
+        sg = 0;
+        CHECK(rtc_frame_trim(32500, -1000, 299, &sg) == 32500 && sg == 0);
+        CHECK(rtc_frame_trim(32500, -1000, 3601, &sg) == 32500 && sg == 0);
+        CHECK(rtc_frame_trim(32500, -1000, 300, &sg) == 32554);              /* 3333 ppm, halved */
+        sg = 0;
+        CHECK(rtc_frame_trim(32500, -1000, 3600, &sg) == 32504);             /* 277 ppm: 9, halved */
+        /* Clamped to the sane window. */
+        sg = 1;
+        CHECK(rtc_frame_trim(39990, -6000, 600, &sg) == 40000);
+        sg = -1;
+        CHECK(rtc_frame_trim(28010, 6000, 600, &sg) == 28000);
+
+        /* A simulated board: the battery's true period 32550, starting from
+         * the SOF's 32463, a frame every 600 s with the host's anchor noise
+         * up to +-25 ms (Windows' spread; the Mac session's note). Each set
+         * lands with its frame's noise; the next offset is that frame's
+         * noise minus the last's minus the drift. From the sixth frame the
+         * rate stays within 300 ppm (0.3 ms/s). */
+        uint32_t seed = 12345, per = 32463;
+        const double truth = 32550;
+        double e_prev = 0;
+        int bad = 0;
+        sg = 0;
+        for (int k = 0; k < 400; k++) {
+            seed = seed * 1103515245u + 12345u;
+            /* Windows' capture around its +38 ms: p10..p90 about -18..+16,
+             * and a tail to +109 (max 147.4; codex, the trim's review), here
+             * every 13th frame. */
+            double noise = (double)((int)((seed >> 16) % 35) - 18);
+            if (k % 13 == 7) noise = 109;
+            double ahead = 600000.0 * (truth - (double)per) / ((double)per + 1.0);
+            per = rtc_frame_trim(per, (int32_t)(noise - e_prev - ahead), 600, &sg);
+            e_prev = noise;
+            double ppm = (truth - (double)per) / ((double)per + 1.0) * 1e6;
+            if (k >= 5 && (ppm > 300 || ppm < -300)) bad++;
+        }
+        CHECK(bad == 0);
+
+        /* Full width (must-fix 1): a jump past 32.767 s over an hour is past
+         * the cap, not the s16 reply's 9101 ppm. */
+        sg = 0;
+        CHECK(rtc_frame_trim(32500, 40000, 3600, &sg) == 32500);
+        CHECK(rtc_frame_trim(32500, -40000, 3600, &sg) == 32500);
+        CHECK(rtc_frame_trim(32500, 32767, 3600, &sg) != 32500);          /* what the clamp used to pass */
+        CHECK(rtc_frame_trim(32500, (int64_t)1 << 40, 600, &sg) == 32500);
+        CHECK(rtc_frame_trim(32500, -((int64_t)1 << 40), 600, &sg) == 32500);
+    }
+
+    /* The window's lifecycle (rtc_ft_*; codex, the trim's review, 5): what
+     * closes it, what does not, and that a proposal changes nothing until
+     * published. */
+    {
+        rtc_ft_t w = {0};
+        const rtc_ft_snap_t a = { .secs = 1000, .credit = 7, .p = 32463, .gen = 5, .sleeps = 3 };
+        rtc_ft_snap_t n = a;
+        n.secs = 1601;
+        int8_t sg = 9;
+        /* Never opened: nothing, and the window's sign handed back. */
+        CHECK(rtc_ft_propose(&w, &n, false, false, -1616, &sg) == 32463 && sg == 0);
+        rtc_ft_open(&w, &a);
+        CHECK(rtc_ft_propose(&w, &n, false, false, -1616, &sg) == 32506 && sg == 1);
+        CHECK(w.sign == 0 && w.trims == 0 && w.period == 0);              /* a rejected set leaves it so */
+        /* Not under SOF, nor while a slew runs. */
+        CHECK(rtc_ft_propose(&w, &n, true, false, -1616, &sg) == 32463);
+        CHECK(rtc_ft_propose(&w, &n, false, true, -1616, &sg) == 32463);
+        /* Anything that moved the clock or its rate since the open. */
+        rtc_ft_snap_t m;
+        m = n; m.gen++;    CHECK(rtc_ft_propose(&w, &m, false, false, -1616, &sg) == 32463);
+        m = n; m.sleeps++; CHECK(rtc_ft_propose(&w, &m, false, false, -1616, &sg) == 32463);
+        m = n; m.credit++; CHECK(rtc_ft_propose(&w, &m, false, false, -1616, &sg) == 32463);
+        m = n; m.p = 32470; CHECK(rtc_ft_propose(&w, &m, false, false, -1616, &sg) == 32470);
+        /* Wraps: the seconds count across its end. */
+        rtc_ft_t ww = {0};
+        rtc_ft_snap_t aw = a; aw.secs = 0xFFFFFF00u;
+        rtc_ft_open(&ww, &aw);
+        rtc_ft_snap_t nw = aw; nw.secs = 0xFFFFFF00u + 601u;
+        CHECK(rtc_ft_propose(&ww, &nw, false, false, -1616, &sg) == 32506);
+        /* Published: counted, the sign kept for the next. */
+        CHECK(rtc_ft_propose(&w, &n, false, false, -1616, &sg) == 32506);
+        rtc_ft_publish(&w, 32463, 32506, sg);
+        CHECK(w.trims == 1 && w.period == 32506 && w.sign == 1);
+        /* A set with nothing to trim keeps the count; its sign is kept. */
+        rtc_ft_publish(&w, 32506, 32506, 0);
+        CHECK(w.trims == 1 && w.period == 32506 && w.sign == 0);
+        /* Dropped (the legacy set, SOF's exit): nothing until reopened. */
+        rtc_ft_drop(&w);
+        CHECK(rtc_ft_propose(&w, &n, false, false, -1616, &sg) == 32463);
+        rtc_ft_snap_t b = n; b.p = 32506;
+        rtc_ft_open(&w, &b);
+        rtc_ft_snap_t c = b; c.secs += 600;
+        w.sign = 1;
+        CHECK(rtc_ft_propose(&w, &c, false, false, -800, &sg) == 32549 && sg == 1);   /* agreed: all of it */
+    }
 
     printf(fails ? "%d FAILED\n" : "lockchan_media: all passed\n", fails);
     return fails != 0;

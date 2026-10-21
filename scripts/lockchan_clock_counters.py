@@ -7,7 +7,7 @@ clock"). Opens the board by its own path, never enumerating HID.
 Prints applied, refused (owner: usb_mode, or raw HID's clock within 10 min),
 rejected, retried, dropped, the last applied's offset (target minus board, ms,
 before the correction) and status (0 stepped, 1 slewing), and whether a retry
-is pending.
+is pending; from 6a212389, the rate trims made from frames and the last period.
 """
 import os
 import sys
@@ -38,6 +38,9 @@ def main():
     off = off - 65536 if off >= 32768 else off
     print(f"applied {u16(0)}  refused {u16(2)}  rejected {u16(4)}  retried {u16(6)}  dropped {u16(8)}")
     print(f"last: offset {off:+d} ms (target - board), {STATUS.get(c[12], hex(c[12]))}; retry pending: {'yes' if c[13] else 'no'}")
+    # 6a212389 on: the rate trims from frames, and the period the last set
+    # (zeros on a build before it).
+    print(f"rate trims {u16(14)}, last period {u16(16) or 'none yet'}")
 
 
 if __name__ == "__main__":

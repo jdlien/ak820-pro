@@ -84,6 +84,9 @@ pub struct ClockSched {
     last_sent: Option<Instant>,
     offset: Option<i64>,
     wall_ref: Option<(Instant, i64)>,
+    /// The host's clock stepped or its offset moved since the last frame sent
+    /// whole: the next carries `CLOCK_F_STEPPED`.
+    stepped: bool,
 }
 
 impl ClockSched {
@@ -95,6 +98,11 @@ impl ClockSched {
         self.last_sent
     }
 
+    /// The next frame carries `CLOCK_F_STEPPED` (the board's frame trim).
+    pub fn host_stepped(&self) -> bool {
+        self.stepped
+    }
+
     /// A new acquisition: the first frame after the handover (`not_before`)
     /// and the board's refusal window after `usb_clock_last`.
     pub fn acquired(&mut self, not_before: Instant, usb_clock_last: Option<Instant>) {
@@ -102,6 +110,9 @@ impl ClockSched {
         let floor = owner_end.map_or(not_before, |e| e.max(not_before));
         self.floor = Some(floor);
         self.due = Some(floor);
+        // A step stays owed: a USB sync may not have followed it (codex,
+        // the trim's review). The board drops its trim window on leaving
+        // SOF anyway, so a frame marked needlessly costs nothing.
     }
 
     /// The channel was revoked: nothing is due until the next acquisition.
@@ -137,6 +148,7 @@ impl ClockSched {
         let moved = self.offset.is_some_and(|o| o != offset_s);
         self.wall_ref = Some((now, wall_ms));
         self.offset = Some(offset_s);
+        self.stepped |= stepped || moved;
         if (stepped || moved) && self.due.is_some() {
             self.due = Some(now);
             return true;
@@ -154,6 +166,7 @@ impl ClockSched {
     /// Sent whole at `done`.
     pub fn sent(&mut self, done: Instant) {
         self.last_sent = Some(done);
+        self.stepped = false;
         if self.due.is_some() {
             self.due = Some(done + EVERY);
         }
@@ -299,5 +312,30 @@ mod tests {
         assert_eq!(c.due(), Some(t0 + s(2)));
         c.later(t0 + s(3), RETRY);
         assert_eq!(c.due(), Some(t0 + s(33)));
+    }
+
+    #[test]
+    fn a_step_or_an_offset_change_marks_the_next_frame_until_one_is_sent() {
+        let t0 = Instant::now();
+        let w0 = 1_792_540_799_000;
+        let mut c = ClockSched::default();
+        c.acquired(t0, None);
+        c.observe(t0, w0, 0);
+        c.observe(t0 + s(10), w0 + 10_000, 0);
+        assert!(!c.host_stepped(), "the clock ran true");
+        c.observe(t0 + s(20), w0 + 20_000 + STEP_SLACK_MS + 1, 0);
+        assert!(c.host_stepped(), "a step");
+        // Held through a failed send and a later observation that ran true.
+        c.later(t0 + s(21), RETRY);
+        c.observe(t0 + s(30), w0 + 30_000 + STEP_SLACK_MS + 1, 0);
+        assert!(c.host_stepped());
+        c.sent(t0 + s(31));
+        assert!(!c.host_stepped(), "cleared by a frame sent whole");
+        c.observe(t0 + s(40), w0 + 40_000 + STEP_SLACK_MS + 1, 3600);
+        assert!(c.host_stepped(), "an offset change");
+        // Kept through a new acquisition: unknown is not safe.
+        c.revoked();
+        c.acquired(t0 + s(50), Some(t0 + s(45)));
+        assert!(c.host_stepped());
     }
 }

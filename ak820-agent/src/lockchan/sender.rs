@@ -1010,6 +1010,7 @@ impl<P: Platform> Core<P> {
             }
         }
         let platform = &self.platform;
+        let stepped = self.clock.host_stepped();
         let ctl = ClockCtl { ctl: Ctl { h, owner }, epochs, platform, time, taken: &taken };
         let lights = self.lights.as_mut().expect("opened by the caller");
         let line = &mut self.line;
@@ -1035,7 +1036,7 @@ impl<P: Platform> Core<P> {
                         return None;
                     }
                     let ms = w.rem_euclid(1000) as u32;
-                    let bytes = super::clock_payload(&l, ms)?;
+                    let bytes = super::clock_payload(&l, ms, stepped)?;
                     failed.set(None);
                     // The baseline is the payload's own conversion: any later
                     // one that disagrees cuts the frame (verify, 1).
@@ -2192,13 +2193,17 @@ mod tests {
         for (i, (at, _)) in w.iter().enumerate() {
             let wall = p.wall_ms_at(*at).unwrap() - shift_ms + latency as i64;
             let l = p.local(wall.div_euclid(1000)).unwrap();
-            let Some(b) = super::super::clock_payload(&l, wall.rem_euclid(1000) as u32) else { continue };
             let vals: Vec<u8> = w.iter().map(|x| x.1).collect();
-            for seq in 0..=255u8 {
-                let e = crate::lockchan::encode(&b, super::super::TYPE_CLOCK, seq, Profile::P0, 0).unwrap();
-                // Anchored at write i: the preamble's third write.
-                if i >= 2 && vals.len() >= i - 2 + e.len() && vals[i - 2..i - 2 + e.len()] == e[..] {
-                    found.push((i, b.clone()));
+            // Either flag: a frame after a step carries STEPPED.
+            for stepped in [false, true] {
+                let ms = wall.rem_euclid(1000) as u32;
+                let Some(b) = super::super::clock_payload(&l, ms, stepped) else { continue };
+                for seq in 0..=255u8 {
+                    let e = crate::lockchan::encode(&b, super::super::TYPE_CLOCK, seq, Profile::P0, 0).unwrap();
+                    // Anchored at write i: the preamble's third write.
+                    if i >= 2 && vals.len() >= i - 2 + e.len() && vals[i - 2..i - 2 + e.len()] == e[..] {
+                        found.push((i, b.clone()));
+                    }
                 }
             }
         }
@@ -2482,6 +2487,13 @@ mod tests {
         // And the frame with the old time never went whole: cut, not only
         // left uncredited.
         assert!(clock_frames_on(&r, 38, 60_000).is_empty(), "the stale frame was finished");
+        // It says the host stepped (the board's trim takes no rate from it),
+        // and the refresh after it does not.
+        assert_eq!(f[0].1[9], crate::lockchan::CLOCK_F_STEPPED);
+        run_until(&mut r, t0 + clk::EVERY + Duration::from_secs(60));
+        let f = clock_frames(&r, 38);
+        assert_eq!(f.len(), 2);
+        assert_eq!(f[1].1[9], 0, "a plain refresh");
     }
 
     #[test]

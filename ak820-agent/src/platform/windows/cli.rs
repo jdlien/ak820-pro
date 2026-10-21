@@ -1191,7 +1191,7 @@ fn lockchan_clock() -> Result<(), String> {
                     "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03} local at the anchor (latency {:+} ms)",
                     l.year, l.month, l.day, l.hour, l.minute, l.second, ms, latency
                 );
-                crate::lockchan::clock_payload(&l, ms)
+                crate::lockchan::clock_payload(&l, ms, false)
             }),
         })
     });
