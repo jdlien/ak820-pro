@@ -129,15 +129,16 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 32px; }
 .stat { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
 .stat > span { white-space: nowrap; }
-@media (max-width: 600px) { .stat .big { font-size: 28px; } .stat.lead .ico { height: 28px; } }
 .stat .ico { height: 20px; width: auto; flex: none; align-self: center; color: var(--text-secondary); }
 .stat.lead .ico { height: 42px; }
 .stat .big { font-size: 40px; font-weight: 650; line-height: 1.1; }
 .stat .mid { font-size: 22px; font-weight: 600; }
 .stat .small { font-size: 13px; color: var(--text-muted); }
+/* After the rules it overrides: narrow screens keep each figure on one line. */
+@media (max-width: 600px) { .stat .big { font-size: 28px; } .stat.lead .ico { height: 28px; } }
 .summary .timeline { margin: 12px 0 8px; }
 .detail { font-size: 13px; color: var(--text-secondary); margin: 0; }
-.day { margin-top: 14px; }
+.day { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 .day-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 14px; }
 .day-head .label { color: var(--text-secondary); }
 .day-head label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
@@ -152,6 +153,10 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .timeline span { border-radius: 4px; min-width: 4px; }
 .notice { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--surface-2); border-radius: 0 8px 8px 0; margin-top: 12px; font-size: 14px; }
 .stack { display: flex; gap: 2px; height: 18px; margin: 10px 0; }
+.stack-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.stack-row .stack { flex: 1; margin: 0; }
+.total { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+.total b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .stack span { min-width: 2px; }
 .stack span:first-child { border-radius: 4px 0 0 4px; }
 .stack span:last-child { border-radius: 0 4px 4px 0; }
@@ -435,26 +440,28 @@ function renderResults() {
     input.addEventListener("change", () => { state.day = x.id; update(); $(`day-${x.id}`)?.focus(); });
     return el("label", { for: `day-${x.id}` }, input, x.name);
   });
-  const dayTile = el("div", { class: "card day" },
+  const dayTile = el("div", { class: "day" },
     el("div", { class: "day-head", role: "radiogroup", "aria-label": "Usage style" },
       el("span", { class: "label" }, "Usage style"), ...radios),
     el("div", { class: "day-row" },
       el("span", { class: "day-value" }, `About ${fmt.days(day.days)} a charge`),
       el("span", { class: "detail" }, `${sc.text}, then away · ${(day.hiMwh / 1000).toFixed(2)} Wh a day`)));
 
-  box.append(summary, dayTile);
+  summary.append(dayTile);
+  box.append(summary);
 
   // Where the draw goes.
   const parts = components(state);
   const total = parts.reduce((a, [, mw]) => a + mw, 0);
-  const bar = el("div", { class: "stack", role: "img", "aria-label": "The draw split by component" });
+  const bar = el("div", { class: "stack", role: "img", "aria-label": `The ${fmt.mw(total)} drawn while typing, split by component` });
   const legend = el("div", { class: "legend" });
   for (const [name, mw, v, full] of parts) {
     bar.append(el("span", { style: { flex: mw, background: css(v) }, title: `${full}: ${fmt.mw(mw)}` }));
     legend.append(el("span", { title: full }, el("span", { class: "box", style: { background: css(v) } }), `${name} `, el("b", {}, fmt.mw(mw))));
   }
   box.append(el("div", { class: "card", style: { marginTop: "14px" } },
-    el("div", { class: "tile" }, el("div", { class: "label" }, `Where the ${fmt.mw(total)} goes, typing`)), bar, legend));
+    el("div", { class: "stack-row" }, el("span", { class: "total", title: "The draw while typing, split by component" }, "Total ", el("b", {}, fmt.mw(total))), bar),
+    legend));
 
   // Against the settings the page opened with.
   const b = M.continuousUse(fw, ev, setting(baseline), baseline.mode, F);
