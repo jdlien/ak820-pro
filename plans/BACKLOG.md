@@ -22,43 +22,51 @@ The order agreed after the sleep experiments:
    - a final pass for anything personal (the public-repo rule: no family or
      household details).
 
-## Lock-light frames into a sleeping board cost ~1.6 mA on average (2026-10-21) -- proposed, not built
+## Lock-light frames into a sleeping board cost ~1.6 mA on average (2026-10-21) -- fixed in the daemon (`HOLD_IDLE`), to install on the Mac
 
 Found in the mainline soak's hour asleep
 ([`../history/mainline-soak-20261020/`](../history/mainline-soak-20261020/README.md)).
 The hour passed at 3.01 mA, but its first 19 minutes carried 19 bursts at
 ~13 mA, each 8-11 s long, every ~63 s. The 10-19 hour, with no lock-light
-channel, had none. The bursts were the Mac daemon's now-playing frames: the
-cable's data was cut, so it took BT, a track was playing, and the last frame
-(01:00:23 by its status file) ends the last burst (01:00:15-25). After that
-the Mac's screen locked and the frames stopped. The board never woke (no
-strays): the cost is the module's radio taking the writes.
+channel, had none. The bursts were the Mac daemon's now-playing frames, the
+title's 60 s refresh (`policy.rs`, `REFRESH`): the cable's data was cut, so
+it took BT, a track was playing, and the last frame (01:00:23 by its status
+file) ends the last burst (01:00:15-25). After that the Mac's screen locked
+and the frames stopped. The board never woke (no strays): the cost is the
+module's radio taking the writes.
 - **What it costs:** about 10 mA for 10 s a minute, so ~1.6 mA on average
   on top of 3 mA asleep, about +50%, whenever the board sleeps on BT while
   the Mac plays music and is unlocked.
-- **A fix, for discussion:** hold every frame type, not only the clock
-  (`5354c63` holds type 4 after 60 s idle), while the host's input has been
-  idle past the shortest sleep time. Then send the current state on the
-  first input after, which is the waking key. A board that is awake but
-  untouched for that long would miss title changes until the next key; that
-  is the trade-off to decide.
 - **Not a regression** in anything shipped: a cost of the channel in daily
-  use, where the board sleeps at 7 min (Balanced) beside a Mac playing music.
-- **Where the fix lives: the daemon, and most of it is there already.**
-  `sender.rs` takes one input snapshot per pass (`HIDIdleTime` on the Mac),
-  gates type 4 on it (`clk::IDLE`), and its wake guess (`IDLE_ARM`) resends
-  the state `WAKE_DELAY` after the first input past idleness. The fix
-  extends that gate to the text and transport frames. Nothing changes in
-  the firmware: the frames already do not count as activity, because the
-  ladder reads `last_input_activity_elapsed()` (the matrix and the knob).
+  use, beside a Mac playing music. The board sleeps at 20 min in Balanced,
+  3 in Power saver and 60 s in Lights out (`power.c`, `ladders[]`).
+- **The fix, in the daemon** (`sender.rs`, `HOLD_IDLE`; codex's review
+  and its dispositions are in
+  [`review-codex-lockchan-hold-2026-10-21.md`](review-codex-lockchan-hold-2026-10-21.md)):
+  no text or transport frame once the host's input has been idle 45 s.
+  Lights out sleeps at 60 s and a frame lasts up to 12 s, so a frame begun
+  before the hold ends before the board can sleep, when the board's keys
+  were the last input. It is a heuristic, not a bound: the trackpad can make
+  the host's idle time shorter than the board's. The wake guess
+  (`IDLE_ARM`, 30 s) is armed by then; on the first input it sends what was
+  held, `WAKE_DELAY` (4 s) later, so a media key's change has time to show.
+  The clock keeps its own gate (`clk::IDLE`, 60 s) until Gremlin's session
+  moves it to `HOLD_IDLE`. The status file's lock-light state reads `held`
+  meanwhile. Nothing changes in the firmware: the frames already do not
+  count as activity, because the ladder reads
+  `last_input_activity_elapsed()` (the matrix and the knob).
+- **What the user sees:** the board keeps the last title until its 3 min
+  expiry, so an idle desk shows it ~3-4 min past the last touch, then the
+  clock. A track that changes during the hold shows on the next touch; until
+  then the board shows the old title or, past the expiry, the clock.
 - **A Mac that is asleep or locked sends nothing already.** Asleep, the
   daemon is suspended with everything else. Locked, the channel refuses
   because the user's locks are unknown (R4-1); that is what ended the
-  soak's bursts at 01:00:23. The gap is the time between walking away and
+  soak's bursts at 01:00:23. The gap was the time between walking away and
   the auto-lock, with music playing.
 - **The host's idleness is not the board's.** `HIDIdleTime` counts the
   trackpad and every keyboard. With only the trackpad in use, the host is
-  busy while the board sleeps, and the frames keep going. The gate is
+  busy while the board sleeps, and the frames keep going. The hold is
   conservative (it never holds a frame from a board that a key just
   touched), not complete.
 - **The same signal could keep the board awake while the user is at the
@@ -71,7 +79,7 @@ strays): the cost is the module's radio taking the writes.
   that key already reaches the Mac (median 72 ms, max 126 in the soak),
   but the board has to relight. One variant holds off only the sleep step
   and lets the lights dim on the ladder as now. It only matters off USB:
-  on the cable, the ladder does not run. Lights out (30 s) is the mode it
+  on the cable, the ladder does not run. Lights out (60 s) is the mode it
   would undercut most; leave it out there.
 
 ## A stray-wake storm in a soak beside lock-light frames (2026-10-20) -- not the frames; cause not known yet

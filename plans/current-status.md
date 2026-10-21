@@ -44,7 +44,8 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
    `Unknown` at 01:47.
 2. **I set `clock_latency_ms` from it, build, sign, and reinstall the Mac
    daemon** with JD there, in case macOS asks again. The number goes to
-   Gremlin first.
+   Gremlin first. The same reinstall carries the frame hold (`HOLD_IDLE`,
+   `plans/BACKLOG.md`, "Lock-light frames into a sleeping board").
 3. **The clock test, on both machines:** the cable out (or its data cut),
    the slider on BT, about 15 min of normal use, then the cable back. The
    daemon's USB sync on the replug logs a "before" offset, which is the real

@@ -51,7 +51,8 @@ pub struct Status {
 /// "Sent" is what the host wrote; nothing acknowledges, so never "shown".
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LockchanStatus {
-    /// `off`, `idle`, `absent`, `sending`, `locks unknown`.
+    /// `off`, `idle`, `absent`, `sending`, `locks unknown`, `held` (the
+    /// input idle, `HOLD_IDLE`).
     pub state: String,
     pub granted: bool,
     pub frames: u64,
