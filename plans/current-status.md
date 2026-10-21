@@ -59,15 +59,21 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
 `history/flash-81leds-20261021/`). `deps.lock` pins it.
 
 **The next flash (JD's go is given): Gremlin's frame trim**,
-`gremlin/lockchan-clock` (`01abfe0e` in codex's verify at 10:4x 10-21):
-each type-4 frame trims the ILRC from its offset. It waits for codex and a BT
-test on Gremlin's own board.
+`gremlin/lockchan-clock` `01abfe0ecf` (parent `9e52400e`; codex cleared it
+for an attended test after four rounds,
+`plans/review-codex-lockchan-clock-trim-*2026-10-21.md`): each type-4 frame
+trims the ILRC from its offset. It is on Gremlin's board since 11:07; the
+flash here waits for JD's attended BT test there. It merges with
+`36330d5ec8` (disjoint files) as a merge commit.
 - Merge it into `ak820pro-jdlien` and push, pin `deps.lock`, build dev, switch relay 2 on
   (JD runs on battery now), flash, put relay 2 back off. Then rerun
   `history/lockchan-clock-mac-cut-20261021/run.sh` with JD on the NuPhy.
-- ⚠️ **The Mac's daemon must not get Gremlin's STEPPED change** (main, not
-  yet pushed at 10:4x) **before the board has `01abfe0e` or later**: older
-  firmware rejects a STEPPED frame. The board first, then the daemon.
+- ⚠️ **The Mac's daemon must not get Gremlin's STEPPED change** (main from
+  `0fd06f6`; `a2dbd65` is the cleared one) **before the board has
+  `01abfe0ecf` or later**: older firmware rejects a STEPPED frame. The board
+  first, then the daemon. Every frame is STEPPED (no trim) for 3900 s after
+  a discontinuity, the daemon's start included, until an acknowledged USB
+  set: reinstall on the cable and let a USB sync land before any cut.
 
 **Owed:** codex's RTC failure-path tests (Gremlin); the stack watermarks
 after a long run (the type-4 flash reset them before they were read).
