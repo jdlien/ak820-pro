@@ -25,6 +25,30 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## The RGB model's 82 LEDs: the board has 81 (2026-10-21) -- small, not fixed
+
+Found by codex reviewing [`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md),
+confirmed against the source. The board has **81** RGB LEDs
+(`keyboard.json`'s `rgb_matrix` layout; `config.h:33`), and the drive per
+mille the bench records divides by `RGB_MATRIX_LED_COUNT * 3 * 255`
+(`battery.c:540`). But `scripts/rgb_fit.py:15` turns that per mille back
+into channel sums with `N = 82 * 255`, so the per-colour slopes it fitted,
+now `battery.c`'s `P_RGB_R/G/B_NW`, are low by 81/82 (~1.2%). The firmware
+then applies them to its real 81-LED sums.
+
+- **Effect:** the board's modelled RGB draw reads ~1.2% low, about 0.7% of
+  the total at full white and screen 5 (294.4 mW modelled where the fit
+  meant 296.6). The gauge's count runs that much slow on the plateau, so the
+  level reads slightly high (the dangerous direction, if small), and the
+  time-left slightly long.
+- **Fix:** scale the three slopes by 82/81 (exact, since `N` is the fit's
+  only error; `P_RGB_A` is unaffected), set `N = 81 * 255` in `rgb_fit.py`
+  and `RGB_MATRIX_LED_COUNT 81` in `scripts/battery_sim/stubs/quantum.h:50`,
+  and correct `battery.c`'s "(82 channels)" comment. Rerun `rgb_fit.py` to
+  confirm the refit equals the scaled slopes. A firmware change: its own
+  build, review and flash, not during the daily-use trial unless JD wants
+  it in.
+
 ## Lock-light frames into a sleeping board cost ~1.6 mA on average (2026-10-21) -- fixed in the daemon (`HOLD_IDLE`), to install on the Mac
 
 Found in the mainline soak's hour asleep
