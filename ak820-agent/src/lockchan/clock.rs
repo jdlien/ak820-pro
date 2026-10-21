@@ -10,9 +10,11 @@
 //! - Then every [`EVERY`] after the last frame sent whole.
 //! - At the wake guess, a frame after [`WAKE_DELAY`](super::sender::WAKE_DELAY),
 //!   but never sooner than [`MIN_GAP`] after the last sent.
-//! - None while the host's input has been idle [`IDLE`] or more (the
-//!   sender's gate): the board on battery is likely asleep, losing it, and
-//!   one that is awake would hold its deep sleep off through the slew a
+//! - None while the host's input has been idle
+//!   [`HOLD_IDLE`](super::sender::HOLD_IDLE) or more (the sender's hold, as
+//!   for text and transport): the board on battery is likely asleep, losing
+//!   it, one begun later could run into Lights out's sleep at 60 s, and one
+//!   that is awake would hold its deep sleep off through the slew a
 //!   correction starts (20 ms a second; the Mac session, 10-20). A frame
 //!   held so goes at the wake guess.
 //! - A change of the host's UTC offset (DST, a zone change) or a step of its
@@ -34,9 +36,6 @@ pub const EVERY: Duration = Duration::from_secs(600);
 pub const MIN_GAP: Duration = Duration::from_secs(300);
 /// After a failed write.
 pub const RETRY: Duration = Duration::from_secs(30);
-/// No clock frame past this much input idleness: longer than the wake
-/// guess's arming, so a frame held back is always sent at its fire.
-pub const IDLE: Duration = Duration::from_secs(60);
 /// The board refuses a clock frame this long after raw HID set its clock
 /// (`LOCKCHAN_CLOCK_OWNER_S`), counted from the set in its own seconds,
 /// which run slow asleep (~13-16%) and take no credit for it

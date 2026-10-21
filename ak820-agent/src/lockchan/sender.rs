@@ -723,9 +723,9 @@ impl<P: Platform> Core<P> {
         let text_due = if hold { None } else { self.text.due() };
         let tr_due = if shown && !hold { self.tr.due() } else { None };
         // A clock frame after both (review, 11).
-        // Not while the input is idle (the schedule's IDLE): it goes at the wake.
-        let input_idle = idle_for(clk::IDLE);
-        let clock_due = if clock_on && !self.clock_unmeasured && !input_idle { self.clock.due() } else { None };
+        // Held as they are (HOLD_IDLE), so one begun before it ends before
+        // Lights out's sleep: it goes at the wake (the Mac session, the hold).
+        let clock_due = if clock_on && !self.clock_unmeasured && !hold { self.clock.due() } else { None };
         let kind = match (text_due, tr_due, clock_due) {
             (Some(t), _, _) if t <= now => Kind::Text,
             (_, Some(t), _) if t <= now => Kind::Transport,
@@ -2375,6 +2375,24 @@ mod tests {
         assert_eq!(r.h.status().clock_frames, 1, "not before the wake delay");
         run_until(&mut r, t1 + crate::lockchan::sender::WAKE_DELAY + Duration::from_secs(10));
         assert_eq!(r.h.status().clock_frames, 2);
+    }
+
+    #[test]
+    fn the_clock_is_held_from_hold_idle_as_the_media_is() {
+        let mut r = clock_rig(Some(38));
+        let t0 = granted(&mut r, title("A"));
+        run_until(&mut r, t0 + Duration::from_secs(20));
+        assert_eq!(r.h.status().clock_frames, 1);
+        let first = r.h.status().clock_last.unwrap();
+        // 50 s idle across the refresh: past the hold, short of Lights out's
+        // sleep, where a frame begun could still run into it.
+        r.input.set(Some((1000, 1000 + 50_000)));
+        run_until(&mut r, first + clk::EVERY + Duration::from_secs(30));
+        assert_eq!(r.h.status().clock_frames, 1, "held at 50 s idle");
+        // Just short of the hold: the refresh goes.
+        r.input.set(Some((1000, 1000 + HOLD_IDLE.as_millis() as u32 - 5000)));
+        run_until(&mut r, first + clk::EVERY + Duration::from_secs(60));
+        assert_eq!(r.h.status().clock_frames, 2, "sent short of the hold");
     }
 
     /// A hook that fires once, `k` writes into the first clock frame (its
