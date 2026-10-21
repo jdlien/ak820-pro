@@ -130,7 +130,8 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .stat { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
 .stat > span { white-space: nowrap; }
 @media (max-width: 600px) { .stat .big { font-size: 32px; } }
-.stat .label { font-size: 14px; color: var(--text-secondary); }
+.stat .ico { height: 20px; width: auto; flex: none; align-self: center; color: var(--text-secondary); }
+.stat.lead .ico { height: 30px; }
 .stat .big { font-size: 40px; font-weight: 650; line-height: 1.1; }
 .stat .mid { font-size: 22px; font-weight: 600; }
 .stat .small { font-size: 13px; color: var(--text-muted); }
@@ -346,6 +347,27 @@ function components(st) {
   return parts.filter(([, mw]) => mw > 0);
 }
 
+// Font Awesome Free 7 solid icons, CC BY 4.0 (https://fontawesome.com/license/free):
+// battery-three-quarters, bolt, moon. [viewBox, path]
+const ICONS = {
+  battery: ["0 0 640 512", "M528 128c8.8 0 16 7.2 16 16l0 224c0 8.8-7.2 16-16 16l-416 0c-8.8 0-16-7.2-16-16l0-224c0-8.8 7.2-16 16-16l416 0zM112 64c-44.2 0-80 35.8-80 80l0 224c0 44.2 35.8 80 80 80l416 0c44.2 0 80-35.8 80-80l0-48c17.7 0 32-14.3 32-32l0-64c0-17.7-14.3-32-32-32l0-48c0-44.2-35.8-80-80-80L112 64zm56 112c-13.3 0-24 10.7-24 24l0 112c0 13.3 10.7 24 24 24l224 0c13.3 0 24-10.7 24-24l0-112c0-13.3-10.7-24-24-24l-224 0z"],
+  bolt: ["0 0 448 512", "M338.8-9.9c11.9 8.6 16.3 24.2 10.9 37.8L271.3 224 416 224c13.5 0 25.5 8.4 30.1 21.1s.7 26.9-9.6 35.5l-288 240c-11.3 9.4-27.4 9.9-39.3 1.3s-16.3-24.2-10.9-37.8L176.7 288 32 288c-13.5 0-25.5-8.4-30.1-21.1s-.7-26.9 9.6-35.5l288-240c11.3-9.4 27.4-9.9 39.3-1.3z"],
+  moon: ["0 0 512 512", "M256 0C114.6 0 0 114.6 0 256S114.6 512 256 512c68.8 0 131.3-27.2 177.3-71.4 7.3-7 9.4-17.9 5.3-27.1s-13.7-14.9-23.8-14.1c-4.9 .4-9.8 .6-14.8 .6-101.6 0-184-82.4-184-184 0-72.1 41.5-134.6 102.1-164.8 9.1-4.5 14.3-14.3 13.1-24.4S322.6 8.5 312.7 6.3C294.4 2.2 275.4 0 256 0z"],
+};
+function icon(name, label) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", ICONS[name][0]);
+  svg.setAttribute("class", "ico");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", label);
+  const p = document.createElementNS(NS, "path");
+  p.setAttribute("fill", "currentColor");
+  p.setAttribute("d", ICONS[name][1]);
+  svg.append(p);
+  return svg;
+}
+
 function renderResults() {
   const box = $("results");
   box.replaceChildren();
@@ -362,16 +384,18 @@ function renderResults() {
   // The summary, one card: the three figures on one line, the battery life's
   // timeline full width under them, one line of detail.
   const drawMw = use.hiMw;
-  const stat = (label, value, small, big = false) => el("div", { class: "stat" },
-    el("span", { class: "label" }, label), el("span", { class: big ? "big" : "mid" }, value),
+  // Each figure led by an icon in place of a label; the label is the icon's
+  // accessible name and the figure's tooltip.
+  const stat = (name, label, value, small, lead = false) => el("div", { class: lead ? "stat lead" : "stat", title: label },
+    icon(name, label), el("span", { class: lead ? "big" : "mid" }, value),
     ...(small ? [el("span", { class: "small" }, small)] : []));
   const summary = el("div", { class: "card summary" },
     el("div", { class: "stats" },
-      stat("Battery life", `About ${Math.round(use.hours)} h`, use.hours >= 48 ? `${(use.hours / 24).toFixed(1)} days` : null, true),
-      stat("Draw", fmt.mw(drawMw), fmt.ma(drawMw)),
+      stat("battery", "Battery life, typing nonstop from full", `About ${Math.round(use.hours)} h`, use.hours >= 48 ? `${(use.hours / 24).toFixed(1)} days` : null, true),
+      stat("bolt", "Draw while typing", fmt.mw(drawMw), fmt.ma(drawMw)),
       stand.asleep
-        ? stat("Idle (asleep)", fmt.days(stand.hours / 24), `${M.sleepMw(ev, state.radio)} mW`)
-        : stat("Idle (never sleeps)", fmt.hours(stand.hours))));
+        ? stat("moon", "Idle, asleep", fmt.days(stand.hours / 24), `${M.sleepMw(ev, state.radio)} mW asleep`)
+        : stat("moon", "Idle: Always on never sleeps", fmt.hours(stand.hours), "never sleeps")));
   if (use.dims)
     summary.append(el("div", { class: "timeline", "aria-hidden": "true" },
       el("span", { style: { flex: use.hiHours, background: swatchColour() === "rgb(255,255,255)" ? css("--series-white") : swatchColour() } }),
@@ -643,7 +667,7 @@ function renderEvidence() {
       el("li", {}, "The keyboard's own time-left estimate, which divides the gauge's remaining energy by your recent awake average. It answers a different question and can disagree with this page in either direction.")));
   $("footer").replaceChildren(
     el("p", {}, `Firmware ${fw.sha.slice(0, 10)}. Bench data: the 2026-10-15 load map and the 2026-10-19 colour sweep. `,
-      el("a", { href: "https://github.com/jdlien/ak820-pro" }, "Source and method"), "."));
+      el("a", { href: "https://github.com/jdlien/ak820-pro" }, "Source and method"), ". Icons: Font Awesome Free, CC BY 4.0."));
 }
 
 function syncUrl() {
