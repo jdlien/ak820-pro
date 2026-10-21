@@ -15,9 +15,10 @@ board instead of needing a replug, and an LCD that shows something worth
 looking at.
 
 **Battery:** 50-52 hours of typing with every LED at full white, about seven
-weeks asleep (modelled), and four power modes between them. What each feature
-costs, how to work out your own runtime, and how it was all measured:
-[docs/power.md](docs/power.md).
+weeks asleep (modelled), and four power modes between them. Try your own
+lighting, screen and mode in the
+**[power calculator](https://jdlien.github.io/ak820-pro/power/)**; what each
+feature costs and how it was all measured: [docs/power.md](docs/power.md).
 
 ---
 
@@ -438,6 +439,7 @@ it to take effect.
 | Path | What |
 |---|---|
 | [`docs/`](docs/) | The topic docs — wireless, display, fonts/assets, clock, LEDs, hardware, battery, the test bench. Read the one for what you are touching. [`docs/power.md`](docs/power.md) is the battery-life reference for readers. |
+| [`site/`](site/) | The [power calculator](https://jdlien.github.io/ak820-pro/power/), published to GitHub Pages from `main`; its numbers come from the firmware's own power model (`scripts/power_model.py`) |
 | [`hostagent/`](hostagent/) | Host tools — keymap and lighting backup, health counters, battery log — and the older Python/bash clock-sync and now-playing agents, kept as the fallback |
 | [`ak820-agent/`](ak820-agent/) | The host agent: one Rust daemon for clock sync and now playing, on Windows (released, v0.1.1) and macOS (running on JD's Mac, not yet released) |
 | [`assets-src/`](assets-src/) | Font atlas and splash generators |
