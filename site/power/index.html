@@ -125,8 +125,18 @@ select {
 select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .control select { width: 100%; }
 .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; border: 1px solid var(--border); }
-.results { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-top: 16px; }
-@media (max-width: 760px) { .results { grid-template-columns: 1fr; } }
+.summary { margin-top: 16px; }
+.stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 32px; }
+.stat { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
+.stat > span { white-space: nowrap; }
+@media (max-width: 600px) { .stat .big { font-size: 32px; } }
+.stat .label { font-size: 14px; color: var(--text-secondary); }
+.stat .big { font-size: 40px; font-weight: 650; line-height: 1.1; }
+.stat .mid { font-size: 22px; font-weight: 600; }
+.stat .small { font-size: 13px; color: var(--text-muted); }
+.summary .timeline { margin: 12px 0 8px; }
+.detail { font-size: 13px; color: var(--text-secondary); margin: 0; }
+.day { margin-top: 14px; }
 .tile .label { font-size: 13px; color: var(--text-secondary); }
 .tile .value { font-size: 28px; font-weight: 600; line-height: 1.2; margin: 4px 0; }
 .hero .value { font-size: 48px; }
@@ -294,7 +304,7 @@ function bind() {
 
 const fmt = {
   mw: (x) => `${x.toFixed(x < 20 ? 1 : 0)} mW`,
-  ma: (mw) => `${(mw / NOMINAL_V).toFixed(1)} mA`,
+  ma: (mw) => `${Math.round(mw / NOMINAL_V)} mA`,
   hours(h) {
     if (h < 72) return `${h < 10 ? h.toFixed(1) : Math.round(h)} h`;
     return `${Math.round(h)} h (${(h / 24).toFixed(h / 24 < 10 ? 1 : 0)} days)`;
@@ -349,47 +359,41 @@ function renderResults() {
   const sc = doc.scenarios.find((x) => x.id === state.day);
   const day = M.daysPerCharge(fw, ev, s, state.mode, M.dayPlan(sc), F);
 
-  const hero = el("div", { class: "card tile hero" },
-    el("div", { class: "label" }, "Typing nonstop from a full charge"),
-    el("div", { class: "value" }, `About ${Math.round(use.hours)} h`),
-    el("div", { class: "sub" }, use.hours >= 48 ? `${(use.hours / 24).toFixed(1)} days of typing, around the clock` : "of typing, around the clock"));
-  if (use.dims) {
-    const tl = el("div", { class: "timeline", "aria-hidden": "true" },
-      el("span", { style: { flex: use.hiHours, background: swatchColour() === "rgb(255,255,255)" ? css("--series-white") : swatchColour() } }),
-      el("span", { style: { flex: use.loHours, background: css("--seg-base") } }));
-    hero.append(tl, el("div", { class: "sub" }, `${fmt.hours(use.hiHours)} at your brightness, then ${fmt.hours(use.loHours)} dimmed to the low-battery ceiling (brightness ${fw.saver_val}).`));
-  } else if (state.mode === "minimal") {
-    hero.append(el("div", { class: "sub" }, "Lights out keeps the LEDs and the screen dark while you type."));
-  } else {
-    hero.append(el("div", { class: "sub" }, "At your brightness all the way: it is already at or under the low-battery ceiling."));
-  }
-  hero.append(el("div", { class: "sub", style: { marginTop: "6px" } },
-    use.dims
-      ? `A model estimate for the reference keyboard. It assumes the low-battery dimming starts with ${Math.round(F * 100)}% of the usable energy left. Held at your setting without the dimming: ${fmt.hours(use.fixedHours)}.`
-      : "A model estimate for the reference keyboard."));
-
+  // The summary, one card: the three figures on one line, the battery life's
+  // timeline full width under them, one line of detail.
   const drawMw = use.hiMw;
-  const draw = el("div", { class: "card tile" },
-    el("div", { class: "label" }, "Draw while typing"),
-    el("div", { class: "value" }, fmt.mw(drawMw)),
-    el("div", { class: "sub" }, `${fmt.ma(drawMw)} at the pack's average ${NOMINAL_V.toFixed(2)} V`));
-  const stb = el("div", { class: "card tile" },
-    el("div", { class: "label" }, stand.asleep ? "Left alone, asleep" : "Left alone (Always on never sleeps)"),
-    el("div", { class: "value" }, stand.asleep ? fmt.days(stand.hours / 24) : fmt.hours(stand.hours)),
-    el("div", { class: "sub" }, stand.asleep ? `${M.sleepMw(ev, state.radio)} mW asleep, measured` : "lit until the low-battery ceiling, then awake and dark"));
+  const stat = (label, value, small, big = false) => el("div", { class: "stat" },
+    el("span", { class: "label" }, label), el("span", { class: big ? "big" : "mid" }, value),
+    ...(small ? [el("span", { class: "small" }, small)] : []));
+  const summary = el("div", { class: "card summary" },
+    el("div", { class: "stats" },
+      stat("Battery life", `About ${Math.round(use.hours)} h`, use.hours >= 48 ? `${(use.hours / 24).toFixed(1)} days` : null, true),
+      stat("Draw", fmt.mw(drawMw), fmt.ma(drawMw)),
+      stand.asleep
+        ? stat("Idle (asleep)", fmt.days(stand.hours / 24), `${M.sleepMw(ev, state.radio)} mW`)
+        : stat("Idle (never sleeps)", fmt.hours(stand.hours))));
+  if (use.dims)
+    summary.append(el("div", { class: "timeline", "aria-hidden": "true" },
+      el("span", { style: { flex: use.hiHours, background: swatchColour() === "rgb(255,255,255)" ? css("--series-white") : swatchColour() } }),
+      el("span", { style: { flex: use.loHours, background: css("--seg-base") } })));
+  summary.append(el("p", { class: "detail" },
+    use.dims
+      ? `Typing nonstop from full: ${fmt.hours(use.hiHours)} at your brightness, then ${fmt.hours(use.loHours)} dimmed to brightness ${fw.saver_val} for the last ${Math.round(F * 100)}%. Without the dimming, ${fmt.hours(use.fixedHours)}.`
+      : state.mode === "minimal"
+        ? "Typing nonstop from full, with the LEDs and the screen dark (Lights out)."
+        : "Typing nonstop from full, at your brightness all the way: it is already under the low-battery ceiling."));
 
   const daySel = el("select", { id: "day", "aria-label": "Typical day" });
   for (const x of doc.scenarios) daySel.append(el("option", { value: x.id }, x.name));
   daySel.value = state.day;
   daySel.addEventListener("change", () => { state.day = daySel.value; update(); });
-  const dayTile = el("div", { class: "card tile", style: { gridColumn: "1 / -1" } },
+  const dayTile = el("div", { class: "card tile day" },
     el("div", { class: "label" }, "A typical day"),
     el("div", { class: "control", style: { maxWidth: "320px", margin: "4px 0" } }, daySel),
     el("div", { class: "value" }, `About ${fmt.days(day.days)} a charge`),
     el("div", { class: "sub" }, `${sc.text}. ${(day.hiMwh / 1000).toFixed(2)} Wh a day in ${MODE_NAME[state.mode]}; each pause walks the mode's dimming and sleep steps.`));
 
-  const grid = el("div", { class: "results" }, hero, draw, stb, dayTile);
-  box.append(grid);
+  box.append(summary, dayTile);
 
   // Where the draw goes.
   const parts = components(state);
