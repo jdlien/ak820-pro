@@ -59,7 +59,7 @@ RELAY = os.path.join(ROOT, "scripts", "usb_relay.py")
 BATT = os.path.join(ROOT, "hostagent", "ak820battery.py")
 
 GET_VALUE, SET_VALUE, RGB_CH = 0x08, 0x07, 3
-POWER_FULL, POWER_SAVER = 0, 2   # power.c's POWER_MODE_FULL, POWER_MODE_SAVER
+POWER_FULL, POWER_NORMAL, POWER_SAVER = 0, 1, 2   # power.c's POWER_MODE_FULL, _NORMAL, _SAVER
 LOW_CAP_PM = 150                 # power.c's LOW_CAP_PM: the low cap at or below it
 BRIGHTNESS, EFFECT, SPEED, COLOR = 1, 2, 3, 4
 HEALTH_CH, HC_DEVHOOK = 0x13, 0x76
@@ -105,7 +105,40 @@ STAGES = ([(f"{who} {stg}", rgb, None, k)
            for who, rgb in (("jd", None), ("purple", PURPLE), ("cycle", CYCLE))
            for k, stg in enumerate(("active", "dim", "off", "dark"))]
           + [("jd saver", None, None, 0, POWER_SAVER)])
-SETS = {"loads": STATES, "rgb-curve": RGB_CURVE, "stages": STAGES}
+# The power charts' sweep (plans/POWER-CHARTS-PLAN.md, "The sweep"): each knob
+# alone from a shared floor, the RGB families with the screen off, the screen
+# with the RGB off; dark references between families; held-out colours, a few
+# combined loads, and Cycle All. Every state holds the ACTIVE stage in KEEP,
+# JD's own mode when it is Always on or Balanced (both type uncapped), so the
+# sweep writes no power mode to the EEPROM; only Power saver or Lights out is
+# switched to Always on for the run.
+KEEP = "keep"
+
+
+def _knob(name, rgb, screen="off"):
+    return (name, rgb, screen, 0, KEEP)
+
+
+def _solid(h, s, v):
+    return {"effect": 1, "h": h, "s": s, "v": v}
+
+
+OFF = {"effect": 0}
+KNOBS = ([_knob("dark 1", OFF), _knob("value 0", _solid(0, 0, 0))]
+         + [_knob(f"white {v}", _solid(0, 0, v)) for v in (1, 16, 32, 48, 64, 128, 160, 192, 224, 240, 255)]
+         + [_knob("dark 2", OFF)]
+         + [_knob(f"{n} {v}", _solid(h, 255, v)) for n, h in (("red", 0), ("green", 85), ("blue", 170))
+            for v in (1, 16, 48, 64, 128, 192, 240, 255)]
+         + [_knob("dark 3", OFF)]
+         + [_knob(f"lcd {lv}", OFF, lv) for lv in (1, 4, 8, 12, 16, 20, 23)]
+         + [_knob("dark 4", OFF)]
+         + [_knob("purple 255", _solid(191, 255, 255)), _knob("red 255 sat 128", _solid(0, 128, 255)),
+            _knob("hue 43 255", _solid(43, 255, 255))]
+         + [_knob("white 128 lcd 12", _solid(0, 0, 128), 12), _knob("red 255 lcd 23", _solid(0, 255, 255), 23),
+            _knob("blue 64 lcd 4", _solid(170, 255, 64), 4)]
+         + [_knob("cycle 255", dict(CYCLE)), _knob("cycle 128", dict(CYCLE, v=128))]
+         + [_knob("dark 5", OFF)])
+SETS = {"loads": STATES, "rgb-curve": RGB_CURVE, "stages": STAGES, "knobs": KNOBS}
 
 
 def stamp():
@@ -333,11 +366,17 @@ def main():
     was_on = relay_on()
     steps = []
     restored = True
+    # The run's mode. The ladder would dim an idle board's lights mid-hold, so
+    # the maps hold a stage; knobs holds ACTIVE in JD's own mode where it types
+    # uncapped, so no mode reaches the EEPROM. Written only when it changes.
+    run_mode = jd_mode if (a.set == "knobs" and jd_mode in (POWER_FULL, POWER_NORMAL)) else POWER_FULL
+    cur_mode = jd_mode
     try:
-        if jd_mode is not None:
-            # The ladder would dim an idle board's lights mid-hold: Full Power
-            # for the map, JD's mode back in the finally.
-            say(f"power mode Full for the map: {with_board(power_mode, POWER_FULL)}")
+        if jd_mode is not None and run_mode != jd_mode:
+            say(f"power mode Full for the map (persisted; JD's mode back after): {with_board(power_mode, run_mode)}")
+            cur_mode = run_mode
+        elif jd_mode is not None:
+            say(f"power mode left as it is ({jd_mode}): the active stage is held instead")
         if was_on:
             run([PY, RELAY, "off", "2"])
             for _ in range(9):
@@ -379,17 +418,26 @@ def main():
             name, rgb, screen = state[:3]
             stage = state[3] if len(state) > 3 else None
             mode = state[4] if len(state) > 4 else POWER_FULL
+            if mode == KEEP:
+                mode = run_mode
             held = 0 if stage is None else stage
             h = open_board()
             try:
-                set_rgb(h, dict(jd_rgb) if rgb is None else rgb)
+                want_rgb = dict(jd_rgb) if rgb is None else rgb
+                set_rgb(h, want_rgb)
                 st = set_lcd(h, screen, jd_lcd)
+                got_rgb = read_rgb(h)   # read back: the setting the hold measures
+                off = [k for k in ("effect", "h", "s", "v") if k in want_rgb and got_rgb[k] != want_rgb[k]]
+                if off:
+                    say(f"⚠️ {name}: the lighting reads {got_rgb}, asked {want_rgb}")
                 if jd_mode is not None:
                     # Every state's stage held, in its mode: the one it names,
                     # or active, so the ladder does not move a load mid-hold.
                     # Holding the stage keeps the low cap's stages out, but not
                     # its ceiling (Saver's 128 while typing), hence eligible().
-                    power_mode(h, mode)
+                    if mode != cur_mode:
+                        power_mode(h, mode)
+                        cur_mode = mode
                     force_stage(h, held)
             finally:
                 h.close()
@@ -412,6 +460,8 @@ def main():
             time.sleep(min(3, a.hold))
             t1 = time.time()
             steps.append({"i": i + 1, "name": name, "t0": t0, "t1": t1,
+                          "rgb_effect": got_rgb["effect"], "rgb_h": got_rgb["h"], "rgb_s": got_rgb["s"],
+                          "rgb_v": got_rgb["v"],
                           "lcd_effective": st["effective"], "lcd_on": st["on"], "led_pm": drive,
                           "model_mw": model, "mode": ps["mode"] if ps else "", "stage": ps["stage"] if ps else "",
                           "val_cap": ps["val_cap"] if ps else ""})
@@ -424,8 +474,9 @@ def main():
         done = [attempt("the lighting", with_board, set_rgb, dict(jd_rgb)),
                 attempt("the screen", with_board, set_lcd, None, jd_lcd)]
         if jd_mode is not None:
-            done += [attempt("the stage", with_board, force_stage, None if jd_forced == 0xFF else jd_forced),
-                     attempt("the mode", with_board, power_mode, jd_mode)]
+            done.append(attempt("the stage", with_board, force_stage, None if jd_forced == 0xFF else jd_forced))
+            if cur_mode != jd_mode:   # never rewritten when it was never changed
+                done.append(attempt("the mode", with_board, power_mode, jd_mode))
         if was_on:
             done.append(attempt("relay 2 on", lambda: run([PY, RELAY, "on", "2"])))
         restored = all(done)
@@ -465,6 +516,13 @@ def main():
     print(text)
     with open(os.path.join(out, "summary.txt"), "w") as f:
         f.write(text + "\n")
+    # The same at full precision, for scripts/power_model.py: each hold's
+    # setting as read back, its measurement, and the run's conditions.
+    with open(os.path.join(out, "results.json"), "w") as f:
+        json.dump({"set": a.set, "hold_s": a.hold, "settle_s": a.settle, "start": {"lighting": jd_rgb, "screen": jd_lcd,
+                   "mode": jd_mode, "run_mode": run_mode}, "usb_data": True, "on_battery": True,
+                   "steps": [dict(s, measured=m) for s, m in
+                             ((s, measure(log, s["t0"] + a.settle, s["t1"])) for s in steps)]}, f, indent=1)
     if not restored:
         sys.exit("the map ran, but the board was not restored in full (above)")
 
