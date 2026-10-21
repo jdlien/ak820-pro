@@ -54,8 +54,8 @@
   }
  },
  "scenarios": [
-  {"id": "office", "name": "Office day", "text": "8 h of nonstop typing, then away", "blocks": [["type", 480]]},
-  {"id": "stopstart", "name": "Stop-start day", "text": "4 h of typing with twenty 15-minute breaks, then away", "repeat": {"count": 20, "type": 12, "pause": 15}, "blocks": [["type", 0]]},
-  {"id": "light", "name": "Light use", "text": "about 2¾ h of typing in five sessions, two hours apart, then away", "repeat": {"count": 4, "type": 33, "pause": 120}, "blocks": [["type", 33]]}
+  {"id": "office", "name": "Office day", "text": "8 h of typing", "blocks": [["type", 480]]},
+  {"id": "stopstart", "name": "Stop-start", "text": "4 h of typing with twenty 15-minute breaks", "repeat": {"count": 20, "type": 12, "pause": 15}, "blocks": [["type", 0]]},
+  {"id": "light", "name": "Light use", "text": "2¾ h of typing in five sessions", "repeat": {"count": 4, "type": 33, "pause": 120}, "blocks": [["type", 33]]}
  ]
 }
