@@ -152,6 +152,8 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .stack { display: flex; gap: 2px; height: 18px; margin: 10px 0; }
 .stack-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .stack-row .stack { flex: 1; margin: 0; }
+.stack .seg { overflow: hidden; white-space: nowrap; text-align: center; padding: 0 3px; font-size: 10.5px; line-height: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stack .seg.tight { color: transparent !important; }
 .total { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
 .total b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .stack span { min-width: 2px; }
@@ -390,6 +392,23 @@ function batteryLife(label) {
   return svg;
 }
 
+// The numbers inside the draw bar's segments: ink or white by the fill's
+// luminance, translucent; hidden, never clipped, where a segment is too narrow.
+function inkOn(hex) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return "rgba(255,255,255,0.8)";
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const n = parseInt(m[1], 16);
+  const L = 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return L > 0.4 ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.8)";
+}
+function fitBarLabels() {
+  for (const seg of document.querySelectorAll(".stack .seg")) {
+    seg.classList.remove("tight");
+    if (seg.scrollWidth > seg.clientWidth) seg.classList.add("tight");
+  }
+}
+
 function renderResults() {
   const box = $("results");
   box.replaceChildren();
@@ -454,12 +473,14 @@ function renderResults() {
   const bar = el("div", { class: "stack", role: "img", "aria-label": `The ${fmt.mw(total)} drawn while typing, split by component` });
   const legend = el("div", { class: "legend" });
   for (const [name, mw, v, full] of parts) {
-    bar.append(el("span", { style: { flex: mw, background: css(v) }, title: `${full}: ${fmt.mw(mw)}` }));
+    bar.append(el("span", { class: "seg", style: { flex: mw, background: css(v), color: inkOn(css(v)) }, title: `${full}: ${fmt.mw(mw)}` },
+      mw < 20 ? mw.toFixed(1) : String(Math.round(mw))));
     legend.append(el("span", { title: full }, el("span", { class: "box", style: { background: css(v) } }), `${name} `, el("b", {}, fmt.mw(mw))));
   }
   box.append(el("div", { class: "card", style: { marginTop: "14px" } },
     el("div", { class: "stack-row" }, el("span", { class: "total", title: "The draw while typing, split by component" }, "Total ", el("b", {}, fmt.mw(total))), bar),
     legend));
+  fitBarLabels();
 
   // Against the settings the page opened with.
   const b = M.continuousUse(fw, ev, setting(baseline), baseline.mode, F);
@@ -746,7 +767,7 @@ wireHover("draw");
 wireHover("hours");
 for (const b of document.querySelectorAll("[data-export]")) b.addEventListener("click", () => exportSvg(b.dataset.export));
 let rt;
-addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { chart("draw"); chart("hours"); }, 150); });
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { chart("draw"); chart("hours"); fitBarLabels(); }, 150); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", update);
 </script>
 </body>
