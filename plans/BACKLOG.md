@@ -109,6 +109,23 @@ module's radio taking the writes.
   on the cable, the ladder does not run. Lights out (60 s) is the mode it
   would undercut most; leave it out there.
 
+## Sleep after the LED cut in every mode (2026-10-21) -- considered, left alone
+
+The proposal: once the LED cut fires (3400 mV), sleep after 60 s idle in
+every mode, Always on included. Today Always on never sleeps, even on the
+reserve; the other modes sleep at 3 min below 15% (Lights out at 60 s).
+- **What it would buy:** Always on's reserve is ~5 h awake and dark
+  (~26 mA; the 10-02 run's 5 h 01 min). Asleep at 3 mA an idle board would
+  last days. For the other modes, 60 s instead of 3 min saves ~0.8 mAh an
+  idle stretch, maybe 10% more reserve.
+- **What it would cost:** a mode called Always on that starts sleeping.
+  What the user would see is the screen going dark when idle, and a first
+  key that has to wake the board (it is kept).
+- **Why left alone:** someone on Always on likely has a cable at hand, and a
+  board that dies is back the moment it is plugged in. Lights out already
+  sleeps at 60 s, and the "Battery low" notice comes at 10%. Revisit if a
+  dead board ever costs something real, such as a long unplugged trip.
+
 ## A stray-wake storm in a soak beside lock-light frames (2026-10-20) -- not the frames; cause not known yet
 
 Found in the power-modes flash's BT soak (`845996c39c`,
