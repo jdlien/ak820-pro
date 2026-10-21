@@ -20,7 +20,10 @@ The order agreed after the sleep experiments:
      existing tag-and-CI path, with the clean-install check;
    - the firmware commits pushed and `deps.lock` pinned to them;
    - a final pass for anything personal (the public-repo rule: no family or
-     household details).
+     household details);
+   - power charts and a calculator page on GitHub Pages
+     ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
+     step 1's full charge, not during it.
 
 ## Lock-light frames into a sleeping board cost ~1.6 mA on average (2026-10-21) -- fixed in the daemon (`HOLD_IDLE`), to install on the Mac
 
