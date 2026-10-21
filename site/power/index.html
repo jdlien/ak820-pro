@@ -155,7 +155,7 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .stack span { min-width: 2px; }
 .stack span:first-child { border-radius: 4px 0 0 4px; }
 .stack span:last-child { border-radius: 0 4px 4px 0; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--text-secondary); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: var(--text-secondary); }
 .legend .key { display: inline-block; width: 16px; height: 2px; vertical-align: 4px; margin-right: 6px; }
 .legend .box { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 6px; }
 .legend b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -338,18 +338,19 @@ function components(st) {
   const [r, g, b] = M.rgbDrive(fw, s.rgb, M.stateAt(fw, st.mode, false, 0).vcap);
   const lights = M.stateAt(fw, st.mode, false, 0).stage === M.STAGE.ACTIVE;
   const n = fw.led_count;
+  // [short label for the key, mW, colour token, the full name for its tooltip]
   const parts = [
-    ["Awake, all lights off", fw.p_base_uw / 1000, "--seg-base"],
-    ["Screen backlight", Math.floor((fw.p_bkl_full_uw * M.backlightDuty(fw, s.screen, lights ? Infinity : 0)) / fw.bkl_duty_full) / 1000, "--series-screen"],
+    ["Awake, lights off", fw.p_base_uw / 1000, "--seg-base", "The board awake with every light off"],
+    ["Screen", Math.floor((fw.p_bkl_full_uw * M.backlightDuty(fw, s.screen, lights ? Infinity : 0)) / fw.bkl_duty_full) / 1000, "--series-screen", "Screen backlight (the panel itself is in the awake base)"],
   ];
   if (lights && r + g + b > 0) {
-    parts.push(["LEDs, any lit", fw.p_rgb_a_uw / 1000, "--seg-fixed"]);
-    parts.push(["Red channels", (n * r * fw.p_rgb_nw[0]) / 1e6, "--series-red"]);
-    parts.push(["Green channels", (n * g * fw.p_rgb_nw[1]) / 1e6, "--series-green"]);
-    parts.push(["Blue channels", (n * b * fw.p_rgb_nw[2]) / 1e6, "--series-blue"]);
+    parts.push(["Any LEDs on", fw.p_rgb_a_uw / 1000, "--seg-fixed", "Fixed cost while any LED is lit, paid once, not per LED"]);
+    parts.push(["Red", (n * r * fw.p_rgb_nw[0]) / 1e6, "--series-red", `Red drive across the ${n} LEDs`]);
+    parts.push(["Green", (n * g * fw.p_rgb_nw[1]) / 1e6, "--series-green", `Green drive across the ${n} LEDs`]);
+    parts.push(["Blue", (n * b * fw.p_rgb_nw[2]) / 1e6, "--series-blue", `Blue drive across the ${n} LEDs`]);
   }
   const extra = M.radioExtraMw(ev, st.radio);
-  if (extra) parts.push(["2.4 GHz radio (estimate)", extra, "--seg-radio"]);
+  if (extra) parts.push(["2.4 GHz", extra, "--seg-radio", "2.4 GHz radio, awake: an estimate from one reading with the lights off"]);
   return parts.filter(([, mw]) => mw > 0);
 }
 
@@ -435,9 +436,9 @@ function renderResults() {
   const total = parts.reduce((a, [, mw]) => a + mw, 0);
   const bar = el("div", { class: "stack", role: "img", "aria-label": "The draw split by component" });
   const legend = el("div", { class: "legend" });
-  for (const [name, mw, v] of parts) {
-    bar.append(el("span", { style: { flex: mw, background: css(v) }, title: `${name}: ${fmt.mw(mw)}` }));
-    legend.append(el("span", {}, el("span", { class: "box", style: { background: css(v) } }), `${name} `, el("b", {}, fmt.mw(mw))));
+  for (const [name, mw, v, full] of parts) {
+    bar.append(el("span", { style: { flex: mw, background: css(v) }, title: `${full}: ${fmt.mw(mw)}` }));
+    legend.append(el("span", { title: full }, el("span", { class: "box", style: { background: css(v) } }), `${name} `, el("b", {}, fmt.mw(mw))));
   }
   box.append(el("div", { class: "card", style: { marginTop: "14px" } },
     el("div", { class: "tile" }, el("div", { class: "label" }, `Where the ${fmt.mw(total)} goes, typing`)), bar, legend));
