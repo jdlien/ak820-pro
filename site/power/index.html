@@ -24,6 +24,7 @@
   --seg-base: #c9c8c1;
   --seg-fixed: #8f8e87;
   --seg-radio: #6250d6;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2352514e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
@@ -44,6 +45,7 @@
     --seg-base: #4a4a46;
     --seg-fixed: #77766f;
   --seg-radio: #9085e9;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23c3c2b7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
 :root[data-theme="dark"] {
@@ -64,6 +66,7 @@
   --seg-base: #4a4a46;
   --seg-fixed: #77766f;
   --seg-radio: #9085e9;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23c3c2b7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -87,8 +90,14 @@ a { color: var(--accent); }
 .control label, .control .label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
 .control output { float: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .control input[type=range] { width: 100%; accent-color: var(--accent); }
-.control select { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); font: inherit; }
-.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.control select {
+  width: 100%; padding: 6px 34px 6px 10px; border-radius: 6px; border: 1px solid var(--border);
+  color: var(--text-primary); font: inherit; appearance: none; -webkit-appearance: none;
+  background: var(--surface) var(--chevron) no-repeat right 12px center / 12px 8px;
+}
+.control select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.control label.check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--text-primary); }
+.check input { margin: 0; accent-color: var(--accent); }
 .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; border: 1px solid var(--border); }
 .results { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-top: 16px; }
 @media (max-width: 760px) { .results { grid-template-columns: 1fr; } }
