@@ -21,6 +21,10 @@ the next reset instead of waiting for it.
 It is the mainline, now everything in one build: the power modes, deep
 sleep, the lock-light channel with play times and the clock-flash fix,
 Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
+- **Its first checks passed:** 30/30 deep-sleep cycles with the RTC gate
+  (01:55-02:19): no pass reached 25 ms, and there were no UART errors,
+  strays or resets. Every reconnect synced, before-offsets 30-104 ms. The
+  Mac sends no type 4 yet: its latency is still unmeasured (step 1 below).
 - **`ak820pro-jdlien` is fast-forwarded to it, and `deps.lock` pins it.**
   The diagnostic branches (`mac/sleep-*`) and `bulb-slash-preview` were
   never for merge; they can be deleted.
@@ -31,9 +35,10 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
   - 15 min awake off USB, the board within the standalone ±2 s bound;
   - an hour asleep at 3.01 mA;
   - every reconnect synced, and every PCF write settled.
-- **New, for the backlog:** lock-light frames into a sleeping board cost
-  ~1.6 mA on average while the Mac plays music (`BACKLOG.md`); a fix is
-  proposed, not built.
+- **Found in the soak, fixed since:** lock-light frames into a sleeping
+  board cost ~1.6 mA on average while the Mac played music. The daemon now
+  holds every frame type after 45 s with no input (`8ea6f2b`, the clock's
+  `aa2a4be`; `BACKLOG.md`). It reaches the Mac with step 2's reinstall.
 - **The ILRC's period moves ~0.6% with temperature** (32331 cool and dark,
   32537 warm on USB), which matters to type 4's slew limit (Gremlin's).
 
