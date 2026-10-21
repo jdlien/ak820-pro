@@ -136,8 +136,7 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .stat .small { font-size: 13px; color: var(--text-muted); }
 /* After the rules it overrides: narrow screens keep each figure on one line. */
 @media (max-width: 600px) { .stat .big { font-size: 28px; } .stat.lead .ico { height: 28px; } }
-.summary .timeline { margin: 12px 0 8px; }
-.detail { font-size: 13px; color: var(--text-secondary); margin: 0; }
+.detail { font-size: 13px; color: var(--text-secondary); margin: 8px 0 0; }
 .day { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 .day-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 14px; }
 .day-head .label { color: var(--text-secondary); }
@@ -149,8 +148,6 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .tile .value { font-size: 28px; font-weight: 600; line-height: 1.2; margin: 4px 0; }
 .hero .value { font-size: 48px; }
 .tile .sub { font-size: 13px; color: var(--text-secondary); }
-.timeline { display: flex; gap: 2px; height: 14px; margin: 10px 0 6px; }
-.timeline span { border-radius: 4px; min-width: 4px; }
 .notice { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--surface-2); border-radius: 0 8px 8px 0; margin-top: 12px; font-size: 14px; }
 .stack { display: flex; gap: 2px; height: 18px; margin: 10px 0; }
 .stack-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
@@ -406,8 +403,8 @@ function renderResults() {
   const sc = doc.scenarios.find((x) => x.id === state.day);
   const day = M.daysPerCharge(fw, ev, s, state.mode, M.dayPlan(sc), F);
 
-  // The summary, one card: the three figures on one line, the battery life's
-  // timeline full width under them, one line of detail.
+  // The summary, one card: the three figures on one line, one line of detail
+  // under them, then the usage style.
   const drawMw = use.hiMw;
   // Each figure led by an icon in place of a label; the label is the icon's
   // accessible name and the figure's tooltip.
@@ -421,16 +418,17 @@ function renderResults() {
       stand.asleep
         ? stat("moon", "Idle, asleep", fmt.days(stand.hours / 24), `${M.sleepMw(ev, state.radio)} mW asleep`)
         : stat("moon", "Idle: Always on never sleeps", fmt.hours(stand.hours), "never sleeps")));
-  if (use.dims)
-    summary.append(el("div", { class: "timeline", "aria-hidden": "true" },
-      el("span", { style: { flex: use.hiHours, background: swatchColour() === "rgb(255,255,255)" ? css("--series-white") : swatchColour() } }),
-      el("span", { style: { flex: use.loHours, background: css("--seg-base") } })));
+  // What the battery-life figure means, in plain words. Above the low-battery
+  // cap's brightness, say what the cap adds; otherwise it changes nothing.
+  const capPct = Math.round((fw.saver_val * 100) / 255);
   summary.append(el("p", { class: "detail" },
     use.dims
-      ? `Typing nonstop from full: ${fmt.hours(use.hiHours)} at your brightness, then ${fmt.hours(use.loHours)} dimmed to brightness ${fw.saver_val} for the last ${Math.round(F * 100)}%. Without the dimming, ${fmt.hours(use.fixedHours)}.`
+      ? `Typing nonstop from a full charge. Below ${Math.round(F * 100)}% battery the keyboard caps brightness at ${capPct}%, which adds about ${Math.round(use.hours - use.fixedHours)} h; without that, ${fmt.hours(use.fixedHours)}.`
       : state.mode === "minimal"
-        ? "Typing nonstop from full, with the LEDs and the screen dark (Lights out)."
-        : "Typing nonstop from full, at your brightness all the way: it is already under the low-battery ceiling."));
+        ? "Typing nonstop from a full charge, with the lights and the screen off (Lights out)."
+        : state.mode === "saver"
+          ? `Typing nonstop from a full charge. Power saver caps brightness at ${capPct}% while typing.`
+          : "Typing nonstop from a full charge."));
 
   // The usage style: one radio per day preset; the page rebuilds this card on
   // a change, so focus goes back to the chosen radio.
