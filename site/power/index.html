@@ -137,6 +137,9 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* After the rules it overrides: narrow screens keep each figure on one line. */
 @media (max-width: 600px) { .stat .big { font-size: 28px; } .stat.lead .ico { height: 28px; } }
 .detail { font-size: 13px; color: var(--text-secondary); margin: 8px 0 0; }
+.compare { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-height: 30px; margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); }
+.compare .hint { color: var(--text-muted); }
+@media (max-width: 600px) { .compare { min-height: 76px; align-content: flex-start; } }
 .day { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 .day-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 14px; }
 .day-head .label { color: var(--text-secondary); }
@@ -482,17 +485,21 @@ function renderResults() {
     legend));
   fitBarLabels();
 
-  // Against the settings the page opened with.
+  box.append(el("p", { class: "muted", style: { marginTop: "10px" } },
+    "After 0%, the lights turn off but the keyboard still types for at least five more hours, depending on how often you type. Not added to the figures above."));
+  // Against the settings the page opened with: a line that is always there,
+  // its height reserved, so changing a setting never moves the page below it.
   const b = M.continuousUse(fw, ev, setting(baseline), baseline.mode, F);
   const dmw = drawMw - b.hiMw, dh = use.hours - b.hours;
+  const cmp = el("p", { class: "compare" });
   if (Math.abs(dmw) > 0.05 || Math.abs(dh) > 0.05) {
     const reset = el("button", { type: "button" }, "Make these the comparison");
     reset.addEventListener("click", () => { Object.assign(baseline, state); update(); });
-    box.append(el("p", { class: "notice" },
-      `Compared with the settings you opened the page with: ${fmt.signed(dmw, "mW", 0)} while typing, ${fmt.signed(dh, "h", dh < 10 && dh > -10 ? 1 : 0)} of nonstop typing. `, reset));
+    cmp.append(el("span", {}, `Compared with the settings you opened the page with: ${fmt.signed(dmw, "mW", 0)} while typing, ${fmt.signed(dh, "h", dh < 10 && dh > -10 ? 1 : 0)} of nonstop typing.`), reset);
+  } else {
+    cmp.append(el("span", { class: "hint" }, "Change a setting above to see what it costs or saves against these."));
   }
-  box.append(el("p", { class: "muted", style: { marginTop: "10px" } },
-    "After 0%, the lights turn off but the keyboard still types for at least five more hours, depending on how often you type. Not added to the figures above."));
+  box.append(cmp);
 }
 
 // ---- Charts ----
