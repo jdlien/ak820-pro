@@ -2,7 +2,7 @@
  "schema": 1,
  "generated_by": "scripts/power_model.py from deps.lock's firmware and scripts/power_evidence.json; do not edit",
  "firmware": {
-  "sha": "36330d5ec8978875a799080ea6878e96857f0a49",
+  "sha": "36afff30e83026d41b4654d7b4165086e8a5b440",
   "led_count": 81,
   "p_base_uw": 106900,
   "p_usb_uw": 7100,
