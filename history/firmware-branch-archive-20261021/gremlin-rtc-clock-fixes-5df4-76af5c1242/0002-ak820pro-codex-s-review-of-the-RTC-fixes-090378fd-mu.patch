@@ -1,0 +1,320 @@
+From 06975470c29d188cd0d8c16fa33395c9e173464a Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 18:38:41 -0600
+Subject: [PATCH 2/3] ak820pro: codex's review of the RTC fixes (090378fd) --
+ must-fix 1, a request during a running PCF write supersedes it: the writer
+ re-plans from the board's clock before writing its time, or writes again
+ (STOP held) if the time is already in, and the legacy set requests one
+ whenever the writer is not idle; must-fix 2, the STOP recovery is bounded (6
+ tries, 30 s), then deferred so the board may sleep, the PCF marked stale and
+ maybe-stopped (neither its calendar nor its elapsed seconds trusted) until a
+ write lands; must-fix 3, the stale wake's gain no longer counts the awake
+ seconds since the wake twice, and a tick between its read and set is caught
+ and redone; should-fix 4, a host's SKIP_PCF set leaves the PCF's staleness
+ alone; should-fix 5, a correction voids a bracket in progress (no lead learnt
+ from it); should-fix 6, the legacy set ends an older slew and restores the
+ nominal period; pcf_pending_time removed (vestigial)
+
+Claude-Session: https://claude.ai/code/session_01Mm219BiSCsx6uwtXcZ7a9G
+---
+ keyboards/a_jazz/ak820pro/rtc/rtc.c          | 130 ++++++++++++++-----
+ keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h |   7 +
+ 2 files changed, 105 insertions(+), 32 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/rtc/rtc.c b/keyboards/a_jazz/ak820pro/rtc/rtc.c
+index e10c28e3..28499e01 100644
+--- a/keyboards/a_jazz/ak820pro/rtc/rtc.c
++++ b/keyboards/a_jazz/ak820pro/rtc/rtc.c
+@@ -197,7 +197,15 @@ static uint16_t ref_transitions = 0;
+  * review, must-fixes 4 and 5). */
+ static pcf_sync_t pcfs;
+ #define pcf_pending (pcfs.pending)
+-static rtc_time_t pcf_pending_time;
++/* A correction moved the board's phase while the writer was bracketing the
++ * PCF's increment: that measurement is void (codex, the rtc fixes' review,
++ * should-fix 5). */
++static bool       ps_brk_void = false;
++/* The STOP recovery's attempts since it began: bounded, then deferred, so a
++ * dead PCF cannot hold the board awake (codex, the rtc fixes' review,
++ * must-fix 2). */
++static uint8_t    ps_recover_tries = 0;
++#define PS_RECOVER_MAX 6   /* x 5 s */
+ static uint16_t   deferred_passes = 0;    /* passes skipped because a blit was busy */
+ static bool       pcf_backoff = false;    /* 3 consecutive failures: one attempt/min */
+ static bool       pcf_maybe_stopped = false; /* recovery pending: loud health flag (Phase 3) */
+@@ -1168,15 +1176,21 @@ bool rtc_get_time(rtc_time_t *out)
+  * window restarts (it measures against the PCF's absolute time, which this
+  * correction is about to rewrite: must-fix 1), and the PCF is stale until a
+  * write of this generation lands (must-fix 5). */
+-static void host_correction_accepted(void)
++static void host_correction_accepted(bool persist)
+ {
+     host_sync_gen++;
+ #ifdef RTC_AUTO_CALIBRATION
+     rtc_cal_valid = false;
+ #endif
+-    pcf_sync_host_accepted(&pcfs);
++    ps_brk_void = true;
++    /* A host's SKIP_PCF set (none sends one: the agents' flags are 0) takes
++     * the persistence on itself: the PCF is left as it is, stale or not
++     * (codex, the rtc fixes' review, should-fix 4). */
++    if (persist) pcf_sync_host_accepted(&pcfs);
+ }
+ 
++static bool ps_state_idle(void);
++
+ bool rtc_set_time(const rtc_time_t *t)
+ {
+     RTCDateTime dt;
+@@ -1190,13 +1204,27 @@ bool rtc_set_time(const rtc_time_t *t)
+      * 0xFF, which ak820ctl's legacy set reports as unhandled and exits 1 on,
+      * without retrying: no current tool sends two of these in one pass. */
+     if (rtc_wake_busy() || sleep_recovering() || rtc_pass_used_bus()) return false;
+-    host_correction_accepted();   /* the SN32 is set below whatever the PCF does */
++    host_correction_accepted(true);   /* the SN32 is set below whatever the PCF does */
+     clock_gen++;
+     rtc_to_chibiostime(t, &dt);
+ 
++    /* An older slew must not finish its adjustment on top of this time: end
++     * it and restore the nominal period at the next match (codex, the rtc
++     * fixes' review, should-fix 6). */
++    chSysLock();
++    if (slew_state != SLEW_IDLE) {
++        slew_state     = SLEW_IDLE;
++        reload_pending = true;
++    }
++    chSysUnlock();
++
+     bool ok = pcf_write(t);
+-    if (ok) pcf_sync_written(&pcfs);
+-    else    pcf_sync_request(&pcfs);   /* the SN32 moved but the PCF did not: the writer retries */
++    /* A phase-correct write already planned holds an older second: whatever
++     * this one did, a fresh request supersedes it, and the writer re-plans
++     * from the board's clock before it writes (codex, the rtc fixes' review,
++     * must-fix 1). Idle, a successful write is the PCF's latest. */
++    if (ok && ps_state_idle()) pcf_sync_written(&pcfs);
++    else                       pcf_sync_request(&pcfs);
+ 
+     rtcSetTime(&RTCD1, &dt);
+     rtc_valid = true;
+@@ -1260,14 +1288,13 @@ uint8_t rtc_set_time_ms(const rtc_time_t *t, uint16_t ms, uint8_t flags, int16_t
+         chSysLock();
+         slew_d = d; slew_r = r; slew_left = N; slew_state = SLEW_START;
+         chSysUnlock();
+-        if (!(flags & RTC_SETF_INTERNAL)) host_correction_accepted();
++        if (!(flags & RTC_SETF_INTERNAL)) host_correction_accepted(!(flags & RTC_SETF_SKIP_PCF));
+         slew_count++;
+         last_host_offset_ms = (int16_t)off;
+         last_sync_secs = rtc_seconds_count;
+         if (offset_before) *offset_before = (int16_t)off;
+         if (!(flags & RTC_SETF_SKIP_PCF)) {
+-            pcf_pending_time = *t;          /* whole seconds; phase-correct PCF is Phase 3 */
+-            pcf_sync_request(&pcfs);        /* written once the slew is done (should-fix 8) */
++            pcf_sync_request(&pcfs);        /* written from the board's clock once the slew is done (should-fix 8) */
+         }
+ #ifdef CONSOLE_ENABLE
+         printf("[rtc] slew %ld ms: N=%u d=%ld r=%ld\n", (long)off, N, (long)d, (long)r);
+@@ -1292,7 +1319,7 @@ uint8_t rtc_set_time_ms(const rtc_time_t *t, uint16_t ms, uint8_t flags, int16_t
+     RTCDateTime dt_s;
+     rtcConvertStructTmToDateTime(&tm_s, 0, &dt_s);
+ 
+-    if (!(flags & RTC_SETF_INTERNAL)) host_correction_accepted();
++    if (!(flags & RTC_SETF_INTERNAL)) host_correction_accepted(!(flags & RTC_SETF_SKIP_PCF));
+     chSysLock();
+     slew_state = SLEW_IDLE;             /* a step supersedes any running slew */
+     rtcSetTime(&RTCD1, &dt_s);          /* software seconds */
+@@ -1310,10 +1337,7 @@ uint8_t rtc_set_time_ms(const rtc_time_t *t, uint16_t ms, uint8_t flags, int16_t
+     if (offset_before) *offset_before = (int16_t)off;
+ 
+     if (!(flags & RTC_SETF_SKIP_PCF)) {
+-        rtc_time_t pt;
+-        chibiostime_to_rtc(&dt_s, &pt);
+-        pcf_pending_time = pt;         /* R5: the fast task performs the I2C */
+-        pcf_sync_request(&pcfs);
++        pcf_sync_request(&pcfs);       /* R5: the fast task performs the I2C, from the board's clock */
+     }
+     return RTC_SET_STEPPED;
+ }
+@@ -1369,6 +1393,8 @@ static int64_t  ps_trel_ms = 0;           /* release instant, board ms */
+ static int8_t   pcf_release_err_ms = 0;   /* achieved release - T_rel, last run */
+ static uint16_t pcf_runs_ok = 0, pcf_restarts = 0;
+ 
++static bool ps_state_idle(void) { return ps_state == PS_IDLE; }
++
+ /* Choose S (the next whole second per the board clock) and T_rel. */
+ static bool ps_plan(void)
+ {
+@@ -1430,6 +1456,12 @@ static void pcf_machine_step(void)
+         } else ps_fail();
+         return;
+     case PS_TIME_WRITE: {
++        /* A newer request since the plan (a host's correction): re-plan from
++         * the board's clock now, STOP still asserted (must-fix 1). */
++        if (pcf_sync_superseded(&pcfs)) {
++            pcf_sync_run_start(&pcfs);
++            if (!ps_plan()) return;
++        }
+         struct tm tm_s; rtc_time_t t;
+         if (localtime_r(&ps_S, &tm_s) == NULL) { ps_fail(); return; }
+         RTCDateTime dt; rtcConvertStructTmToDateTime(&tm_s, 0, &dt);
+@@ -1439,6 +1471,8 @@ static void pcf_machine_step(void)
+         return;
+     }
+     case PS_RELEASE_READ: {
++        /* Superseded after the time went in: write it again, STOP held. */
++        if (pcf_sync_superseded(&pcfs)) { ps_state = PS_STOP_WRITE; ps_attempts = 0; return; }
+         int64_t now_ms;
+         if (!board_ms_now(&now_ms)) return;
+         if (now_ms < ps_trel_ms - PCF_WRITE_MS - 3) return;          /* not yet */
+@@ -1450,6 +1484,7 @@ static void pcf_machine_step(void)
+         return;
+     }
+     case PS_RELEASE_WRITE: {
++        if (pcf_sync_superseded(&pcfs)) { ps_state = PS_STOP_WRITE; ps_attempts = 0; return; }
+         int64_t now_ms;
+         if (!board_ms_now(&now_ms)) return;
+         if (now_ms < ps_trel_ms - PCF_WRITE_MS) return;              /* wait for the exact pass */
+@@ -1470,7 +1505,7 @@ static void pcf_machine_step(void)
+             if (v & PCF_CTL_STOP) { stop_asserted = true; ps_state = PS_RECOVER; pcf_maybe_stopped = true; return; }
+             pcf_runs_ok++; pcf_maybe_stopped = false;
+             pcf_sync_run_ok(&pcfs);   /* a newer request keeps it pending: another run follows */
+-            ps_state = PS_BRACKET; ps_attempts = 0; ps_brk_prev_sec = -1;
++            ps_state = PS_BRACKET; ps_attempts = 0; ps_brk_prev_sec = -1; ps_brk_void = false;
+         } else ps_fail();
+         return;
+     }
+@@ -1495,6 +1530,10 @@ static void pcf_machine_step(void)
+         if (!pcf_reg_read_raw(PCF8563_REG_SECONDS, &v)) return;
+         int64_t t_after; if (!board_ms_now(&t_after)) return;
+         int16_t sec = (int16_t)bcd2dec(v & 0x7F);
++        if (ps_brk_void) {   /* a correction moved the board's phase: nothing to learn */
++            ps_state = PS_IDLE; ps_brk_prev_sec = -1;
++            return;
++        }
+         if (ps_brk_prev_sec >= 0 && sec != ps_brk_prev_sec) {
+             int64_t edge = (ps_brk_prev_t + t_after) / 2;
+             int64_t err  = edge - ps_boundary_ms;              /* + = PCF late */
+@@ -1521,13 +1560,25 @@ static void pcf_machine_step(void)
+          * build review 1: a recovery's passes take one transaction). */
+         if ((int32_t)(rtc_seconds_count - pcf_backoff_until) < 0) return;
+         pcf_backoff_until = rtc_seconds_count + 5;
++        if (++ps_recover_tries > PS_RECOVER_MAX) {
++            /* A PCF that will not answer: defer the recovery so the board may
++             * sleep. STOP may still be asserted, so neither its calendar nor
++             * its elapsed seconds are trusted (stale, maybe_stopped) until a
++             * write's run, which begins by asserting STOP and ends releasing
++             * it, lands a minute on (must-fix 2). */
++            ps_recover_tries = 0;
++            ps_state = PS_IDLE;
++            pcfs.stale = true;
++            pcf_sync_gave_up(&pcfs, rtc_seconds_count);
++            return;
++        }
+         if (pcf_reg_write_raw(0x00, (uint8_t)(ps_ctl & ~PCF_CTL_STOP))) ps_state = PS_RECOVER_VERIFY;
+         return;
+     }
+     case PS_RECOVER_VERIFY: {
+         uint8_t v;
+         if (pcf_reg_read_raw(0x00, &v) && !(v & PCF_CTL_STOP)) {
+-            stop_asserted = false; pcf_maybe_stopped = false;
++            stop_asserted = false; pcf_maybe_stopped = false; ps_recover_tries = 0;
+             ps_state = PS_IDLE; pcf_sync_gave_up(&pcfs, rtc_seconds_count);
+             pcf_backoff = true; pcf_backoff_until = rtc_seconds_count + 60;
+         } else {
+@@ -1671,6 +1722,7 @@ enum { WK_IDLE = 0, WK_COARSE, WK_ACQ };
+ static uint8_t  wk_state = WK_IDLE;
+ static bool     wk_allowed, wk_pre_ok, wk_from_pcf, wk_coarse_done, wk_gauge_taken;
+ static uint32_t wk_counted, wk_slept_s;
++static uint32_t wk_ticks0;   /* rtc_seconds_count at the wake: the awake seconds since are on the board already */
+ static time_t   wk_pre_epoch;
+ static uint16_t wk_gen;
+ 
+@@ -1741,6 +1793,7 @@ void rtc_wake_beginI(uint32_t counted_s)
+     wk_counted     = counted_s;
+     wk_slept_s     = counted_s;
+     wk_gen         = host_sync_gen;
++    wk_ticks0      = rtc_seconds_count;
+ }
+ 
+ void rtc_wake_allow(void)
+@@ -1829,7 +1882,8 @@ static void wake_coarse(void)
+ {
+     rtc_time_t t;
+     time_t     after = 0;
+-    bool       ok    = wk_pre_ok && pcf_read_raw(&t) && rtc_time_epoch(&t, &after);
++    /* A PCF whose STOP may be asserted was not counting: no elapsed time from it. */
++    bool       ok    = wk_pre_ok && !pcf_maybe_stopped && pcf_read_raw(&t) && rtc_time_epoch(&t, &after);
+     int64_t    slept = ok ? (int64_t)(after - wk_pre_epoch) : -1;
+     /* Checked against the counted seconds: asleep the ILRC runs ~13-16% slow,
+      * so the PCF's figure is a little more; one far off is a bad read. Never
+@@ -1848,22 +1902,34 @@ static void wake_coarse(void)
+             rtc_to_chibiostime(&t, &dt);
+             rtcSetTime(&RTCD1, &dt);
+             clock_gen++;
+-        } else if (host_sync_gen == wk_gen && diff != 0) {
++        } else if (host_sync_gen == wk_gen) {
+             /* A stale PCF (a host's time it never received): its calendar is
+-             * not the time, but its elapsed seconds are the sleep's. The board
+-             * keeps its own calendar and gains what the slow ILRC missed
+-             * (codex, the wireless clock's review, must-fix 5). */
+-            RTCDateTime dt; struct tm tm;
+-            rtcGetTime(&RTCD1, &dt);
+-            rtcConvertDateTimeToStructTm(&dt, &tm, NULL);
+-            time_t e = mktime(&tm);
+-            if (e != (time_t)-1) {
+-                e += diff;
+-                if (localtime_r(&e, &tm) != NULL) {
+-                    rtcConvertStructTmToDateTime(&tm, 0, &dt);
+-                    rtcSetTime(&RTCD1, &dt);
+-                    clock_gen++;
+-                }
++             * not the time, but its elapsed seconds are the sleep's plus the
++             * awake ones since the wake, which the board's calendar has
++             * already counted (codex, the rtc fixes' review, must-fix 3). The
++             * board keeps its own calendar and gains what the slow ILRC
++             * missed asleep. A tick between the read and the set would be
++             * lost: the second is checked and the adjust done again. */
++            /* awake: the board's seconds since the wake, before this read's
++             * own `+= diff` above. The PCF's elapsed spans the sleep and
++             * them; the board's calendar already has the counted sleep and
++             * them: the gain is what is left. */
++            int32_t awake = (int32_t)(rtc_seconds_count - (uint32_t)diff - wk_ticks0);
++            if (awake < 0) awake = 0;
++            int32_t gain = (int32_t)((int64_t)(after - wk_pre_epoch) - (int64_t)wk_counted - (int64_t)awake);
++            for (int tries = 0; gain != 0 && tries < 3; tries++) {
++                uint32_t s0 = rtc_seconds_count;
++                RTCDateTime dt; struct tm tm;
++                rtcGetTime(&RTCD1, &dt);
++                rtcConvertDateTimeToStructTm(&dt, &tm, NULL);
++                time_t e = mktime(&tm);
++                if (e == (time_t)-1) break;
++                e += gain;
++                if (localtime_r(&e, &tm) == NULL) break;
++                rtcConvertStructTmToDateTime(&tm, 0, &dt);
++                rtcSetTime(&RTCD1, &dt);
++                clock_gen++;
++                if (rtc_seconds_count == s0) break;   /* no tick in between */
+             }
+         }
+     }
+diff --git a/keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h b/keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h
+index ef40829a..d1738da3 100644
+--- a/keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h
++++ b/keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h
+@@ -43,6 +43,13 @@ static inline void pcf_sync_host_accepted(pcf_sync_t *s) {
+     s->stale = true;
+ }
+ 
++/* A newer request came since the running write was planned: it must re-plan
++ * (and, once its time is in, write again) before it may verify (codex, the
++ * rtc fixes' review, must-fix 1). */
++static inline bool pcf_sync_superseded(const pcf_sync_t *s) {
++    return s->run_gen != s->req_gen;
++}
++
+ /* The writer leaves idle: what it writes answers this generation. */
+ static inline void pcf_sync_run_start(pcf_sync_t *s) {
+     s->run_gen = s->req_gen;
+-- 
+2.50.1.windows.1
+

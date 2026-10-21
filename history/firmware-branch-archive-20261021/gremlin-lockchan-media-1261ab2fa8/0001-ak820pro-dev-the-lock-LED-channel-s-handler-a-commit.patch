@@ -1,0 +1,277 @@
+From 692f1e2be1d4a1309ac3c8d80c25e11cb20b570c Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 15:18:10 -0600
+Subject: [PATCH 1/2] ak820pro (dev): the lock-LED channel's handler -- a
+ committed frame on the panel (type 1, now playing: both lines and the icon,
+ playback off; type 2, clear), validated whole first (lockchan_media.c),
+ refused for 10 s after raw HID carried any accepted media command (the lease,
+ stamped at hid_protocol's text ingress, which raw81 shares); op 17 sub 7
+ reads applied/rejected/leased
+
+plans/LOCK-LED-CHANNEL-PLAN.md R2-9 and R3-2. Dev builds only, with the
+receiver. scripts/lockchan_media_test.c tests the validator.
+
+Claude-Session: https://claude.ai/code/session_01Mm219BiSCsx6uwtXcZ7a9G
+---
+ keyboards/a_jazz/ak820pro/ak820pro.h          |  4 ++
+ .../a_jazz/ak820pro/bluetooth/ch582f_ajazz.c  | 43 ++++++++++++++++++-
+ .../a_jazz/ak820pro/bluetooth/ch582f_ajazz.h  |  3 ++
+ keyboards/a_jazz/ak820pro/hid_protocol.c      | 33 +++++++++++++-
+ keyboards/a_jazz/ak820pro/lockchan_media.c    | 35 +++++++++++++++
+ keyboards/a_jazz/ak820pro/lockchan_media.h    | 35 +++++++++++++++
+ keyboards/a_jazz/ak820pro/rules.mk            |  1 +
+ 7 files changed, 152 insertions(+), 2 deletions(-)
+ create mode 100644 keyboards/a_jazz/ak820pro/lockchan_media.c
+ create mode 100644 keyboards/a_jazz/ak820pro/lockchan_media.h
+
+diff --git a/keyboards/a_jazz/ak820pro/ak820pro.h b/keyboards/a_jazz/ak820pro/ak820pro.h
+index 92490128..174e30f3 100644
+--- a/keyboards/a_jazz/ak820pro/ak820pro.h
++++ b/keyboards/a_jazz/ak820pro/ak820pro.h
+@@ -107,6 +107,10 @@ enum loop_site {
+     LOOP_SITE_BATT, LOOP_SITE_EECFG, LOOP_SITE_HEALTH, LOOP_SITE_RGBFLUSH,
+     LOOP_SITE_COUNT
+ };
++/* hid_protocol.c: raw HID (USB or the 2.4G dongle) carried an accepted media
++ * command less than `ms` ago (the lock-LED channel's lease, R3-2). */
++bool hid_rawhid_media_within(uint32_t now, uint32_t ms);
++
+ #ifdef LOOPGAP_INSTRUMENT
+ void loop_site_begin(uint8_t site);
+ void loop_site_end(void);
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+index 86c011a0..feea304f 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+@@ -8,6 +8,9 @@
+ #include "loop_acct.h" /* D1: this task's share of each main-loop pass */
+ #ifdef AK820_DEV_HOOKS
+ #include "lockchan.h"  /* the lock-LED channel's receiver, fed from 5A */
++#include "lockchan_media.h"   /* what a committed frame means */
++#include "ak820pro.h"         /* hid_rawhid_media_within, the channel's lease */
++#include "graphics/display.h" /* the text slot, for a committed frame */
+ #endif
+ 
+ #ifndef CH582_SERIAL_DRIVER
+@@ -414,6 +417,42 @@ void ch582_lockchan_clear(void) { lockchan_clear_stats(&lockchan); }
+ /* Only while the radio is the active host: in cable mode the LED state the
+  * band shows is USB's, which a radio frame must not hold (codex, flash 2h). */
+ bool ch582_lockchan_holds_scroll(void) { return !usb_mode && lockchan_holds_scroll(&lockchan); }
++
++/* A committed frame on the panel (plans/LOCK-LED-CHANNEL-PLAN.md, R2-9 and
++ * R3-2): validated whole first (lockchan_media.c), then refused while raw HID
++ * has carried a media command within the lease, so a late Bluetooth frame
++ * cannot overwrite what USB or the 2.4G dongle just showed. Only then the
++ * display, through the same setters as raw HID's text channel: both lines and
++ * the icon, and playback off (an absolute snapshot carries none). RAM state
++ * only; the band paints on its own schedule. */
++#define LOCKCHAN_LEASE_MS 10000u
++static uint32_t lcm_applied, lcm_rejected, lcm_leased;
++
++static void lockchan_media_commit(const lockchan_frame_t *f) {
++    lockchan_media_t m;
++    if (!lockchan_media_parse(f, &m)) {
++        lcm_rejected++;
++        return;
++    }
++    if (hid_rawhid_media_within(timer_read32(), LOCKCHAN_LEASE_MS)) {
++        lcm_leased++;
++        return;
++    }
++    if (m.type == LOCKCHAN_TYPE_CLEAR) {
++        display_clear_text();
++    } else {
++        display_set_text_line(0, m.icon, (const char *)m.l0, m.n0);
++        display_set_text_line(1, m.icon, (const char *)m.l1, m.n1);
++    }
++    display_set_playback(0, 0, 0);
++    lcm_applied++;
++}
++
++void ch582_lockchan_media_counts(uint32_t out[3]) {
++    out[0] = lcm_applied;
++    out[1] = lcm_rejected;
++    out[2] = lcm_leased;
++}
+ /* Every site where the link may move also drops stage 1's pending echo, so a
+  * reply cannot leave on a link other than its request's (r81 below; codex
+  * stage-1 review, should-fix 4). */
+@@ -1810,7 +1849,9 @@ void ch582_task(void) {
+                      *     to pass the checksum usually has high bits set. */
+ #ifdef AK820_DEV_HOOKS
+                     led5a_note(d, is_module_connected && (d & ~0x1F) == 0);
+-                    if (is_module_connected && !usb_mode) lockchan_feed(&lockchan, d, timer_read32());
++                    if (is_module_connected && !usb_mode && lockchan_feed(&lockchan, d, timer_read32())) {
++                        lockchan_media_commit(&lockchan.last);
++                    }
+ #endif
+                     if (is_module_connected && (d & ~0x1F) == 0) {
+                         host_leds = d;
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
+index 4fb43504..0171ccc6 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
+@@ -97,6 +97,9 @@ uint32_t ch582_raw81_stall(uint16_t ms);
+ bool ch582_raw81_hold(int8_t on);
+ /* Stage 2's 91 ACK window: on >= 0 sets it (non-zero on), -1 only reads. */
+ bool ch582_raw81_window(int8_t on);
++/* op 17 sub 7: the lock-LED handler's frames applied, rejected (invalid) and
++ * refused by the lease (raw HID active), since boot. */
++void ch582_lockchan_media_counts(uint32_t out[3]);
+ void ch582_rxtap_arm(bool armed);
+ void ch582_rxtap_fill(uint8_t *out);
+ bool ch582_rxtap_page(uint8_t page, uint8_t *out);
+diff --git a/keyboards/a_jazz/ak820pro/hid_protocol.c b/keyboards/a_jazz/ak820pro/hid_protocol.c
+index f6866515..f8cc135b 100644
+--- a/keyboards/a_jazz/ak820pro/hid_protocol.c
++++ b/keyboards/a_jazz/ak820pro/hid_protocol.c
+@@ -314,7 +314,28 @@ static inline bool is_text_cmd(const uint8_t *data, uint8_t length) {
+     return length >= 3 && data[0] == RTC_SET_VALUE && data[1] == TEXT_CHANNEL;
+ }
+ 
++/* The lock-LED channel's lease (plans/LOCK-LED-CHANNEL-PLAN.md, R3-2): when
++ * raw HID last carried an accepted media command, by USB or through the 2.4G
++ * dongle (raw81 dispatches here too). Set here at the ingress, never in the
++ * display's setters, which the lock-LED handler calls as well. */
++static uint32_t rawhid_media_at;
++static bool     rawhid_media_seen;
++
++bool hid_rawhid_media_within(uint32_t now, uint32_t ms) {
++    return rawhid_media_seen && now - rawhid_media_at < ms;
++}
++
++static void text_command_inner(uint8_t *data, uint8_t length);
++
+ static void text_command(uint8_t *data, uint8_t length) {
++    text_command_inner(data, length);
++    if (data[0] != RTC_UNHANDLED) {
++        rawhid_media_at   = timer_read32();
++        rawhid_media_seen = true;
++    }
++}
++
++static void text_command_inner(uint8_t *data, uint8_t length) {
+     switch (data[2]) {
+         case TEXT_SET:
+             /* data[3] = icon id, data[4..] = ASCII. Length is whatever the host
+@@ -1115,12 +1136,22 @@ static void health_command(uint8_t *data, uint8_t length) {
+                     if (length < 32 || !ch582_rxtap_page(data[4], &data[4])) data[0] = RTC_UNHANDLED;
+                     break;
+                 case 17: {
+-                    if (length < 32 || data[4] > 5 || (data[4] == 4 && (data[5] == 0 || data[5] > 50)) ||
++                    if (length < 32 || (data[4] > 5 && data[4] != 7) || (data[4] == 4 && (data[5] == 0 || data[5] > 50)) ||
+                         (data[4] == 5 && data[5] > 2)) {
+                         data[0] = RTC_UNHANDLED;
+                         break;
+                     }
+                     uint8_t sub = data[4];
++                    if (sub == 7) {
++                        /* The lock-LED handler: [5..8] applied, [9..12]
++                         * rejected, [13..16] refused by the lease (u32 LE). */
++                        uint32_t c[3];
++                        ch582_lockchan_media_counts(c);
++                        memset(&data[4], 0, 28);
++                        data[4] = 7;
++                        memcpy(&data[5], c, sizeof c);
++                        break;
++                    }
+                     if (sub == 5) {
+                         /* Responses held in the pump: [5] 1 on, 2 off, 0
+                          * reads. Reply: 5, the state. */
+diff --git a/keyboards/a_jazz/ak820pro/lockchan_media.c b/keyboards/a_jazz/ak820pro/lockchan_media.c
+new file mode 100644
+index 00000000..05a64287
+--- /dev/null
++++ b/keyboards/a_jazz/ak820pro/lockchan_media.c
+@@ -0,0 +1,35 @@
++// Copyright 2026 JD Lien
++// SPDX-License-Identifier: GPL-2.0-or-later
++#include "lockchan_media.h"
++
++static bool printable(const uint8_t *s, uint8_t n) {
++    for (uint8_t i = 0; i < n; i++) {
++        if (s[i] < 0x20 || s[i] > 0x7E) return false;
++    }
++    return true;
++}
++
++bool lockchan_media_parse(const lockchan_frame_t *f, lockchan_media_t *m) {
++    if (f->type == LOCKCHAN_TYPE_CLEAR) {
++        if (f->len != 0) return false;
++        *m = (lockchan_media_t){.type = LOCKCHAN_TYPE_CLEAR};
++        return true;
++    }
++    if (f->type != LOCKCHAN_TYPE_NOW_PLAYING) return false;
++    if (f->len < 2 || f->len > 2 + LOCKCHAN_MEDIA_MAX_L0 + LOCKCHAN_MEDIA_MAX_L1) return false;
++    uint8_t icon = f->payload[0], n0 = f->payload[1];
++    if (icon > 3) return false;                         /* bit 7 (playback) included */
++    if (n0 > LOCKCHAN_MEDIA_MAX_L0 || n0 > f->len - 2) return false;
++    uint8_t n1 = (uint8_t)(f->len - 2 - n0);
++    if (n1 > LOCKCHAN_MEDIA_MAX_L1) return false;
++    if (!printable(&f->payload[2], (uint8_t)(n0 + n1))) return false;
++    *m = (lockchan_media_t){
++        .type = LOCKCHAN_TYPE_NOW_PLAYING,
++        .icon = icon,
++        .n0   = n0,
++        .n1   = n1,
++        .l0   = &f->payload[2],
++        .l1   = &f->payload[2 + n0],
++    };
++    return true;
++}
+diff --git a/keyboards/a_jazz/ak820pro/lockchan_media.h b/keyboards/a_jazz/ak820pro/lockchan_media.h
+new file mode 100644
+index 00000000..301d0894
+--- /dev/null
++++ b/keyboards/a_jazz/ak820pro/lockchan_media.h
+@@ -0,0 +1,35 @@
++// Copyright 2026 JD Lien
++// SPDX-License-Identifier: GPL-2.0-or-later
++#pragma once
++
++#include <stdint.h>
++#include <stdbool.h>
++#include "lockchan.h"
++
++/* What a committed lock-LED frame means (plans/LOCK-LED-CHANNEL-PLAN.md,
++ * R2-9, version 0's types, frozen for the first release):
++ *
++ *   type 1, now playing: [icon][n0][line 0: n0 bytes][line 1: the rest]
++ *     2 <= len <= 42; n0 <= 19, n0 <= len - 2, line 1 = len - 2 - n0 <= 21;
++ *     icon exactly 0-3 (any other bit, the reserved playback bit 7 included,
++ *     rejects); every text byte printable ASCII 0x20-0x7E.
++ *   type 2, clear: exactly zero bytes.
++ *
++ * Anything else is rejected whole. Pure logic, as lockchan.c is: the board
++ * applies a parsed frame (ch582f_ajazz.c), the host tests parse it. */
++
++#define LOCKCHAN_TYPE_NOW_PLAYING 1
++#define LOCKCHAN_TYPE_CLEAR       2
++#define LOCKCHAN_MEDIA_MAX_L0     19
++#define LOCKCHAN_MEDIA_MAX_L1     21
++
++typedef struct {
++    uint8_t        type;          /* LOCKCHAN_TYPE_* */
++    uint8_t        icon;          /* type 1 */
++    uint8_t        n0, n1;        /* type 1: the lines' lengths, either may be 0 */
++    const uint8_t *l0, *l1;       /* into the frame's payload */
++} lockchan_media_t;
++
++/* True, with *m filled, when the frame is a valid type 1 or 2. On false, *m
++ * is untouched and nothing may be applied. */
++bool lockchan_media_parse(const lockchan_frame_t *f, lockchan_media_t *m);
+diff --git a/keyboards/a_jazz/ak820pro/rules.mk b/keyboards/a_jazz/ak820pro/rules.mk
+index 93f3fc37..ee220ff2 100644
+--- a/keyboards/a_jazz/ak820pro/rules.mk
++++ b/keyboards/a_jazz/ak820pro/rules.mk
+@@ -22,6 +22,7 @@ USE_HAL_I2C_FALLBACK = yes
+ SRC += bluetooth/ch582f_ajazz.c
+ SRC += bluetooth/raw81.c   # raw HID over the 2.4G dongle (pure logic; used by dev builds)
+ SRC += lockchan.c   # the lock-LED channel's receiver (pure logic; used by dev builds)
++SRC += lockchan_media.c   # what a committed frame means (pure logic; used by dev builds)
+ 
+ # Dashboard graphics now live in EXTERNAL FLASH, not firmware. Generate the blob
+ # with `python3 graphics/res/mkraw.py --flash` and upload it once per keyboard:
+-- 
+2.50.1.windows.1
+

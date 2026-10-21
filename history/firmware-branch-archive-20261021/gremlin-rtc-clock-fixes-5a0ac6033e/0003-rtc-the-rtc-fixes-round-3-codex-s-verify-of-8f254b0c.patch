@@ -1,0 +1,222 @@
+From 5a0ac6033ed0e3a55e93a2ba2f93e33d9fb3d1bb Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 21:16:55 -0600
+Subject: [PATCH 3/3] rtc: the rtc fixes, round 3 (codex's verify of 8f254b0c)
+
+- must-fix 1: a superseded writer takes the newer generation only once
+  ps_plan() succeeds; a failed plan leaves it superseded, so the older
+  second is never written for it.
+- must-fix 2: a legacy set's success is the PCF's latest only if STOP is
+  known clear; after a given-up recovery (pcf_maybe_stopped) it requests a
+  run, which asserts and releases STOP. The discipline also skips a
+  maybe-stopped PCF.
+- must-fix 3: the stale wake's gain is committed once: the set is made
+  under lock only if no second ticked since the read, else nothing is
+  written and it is read again.
+- should-fix 1: SKIP_PCF marks the PCF stale (no reference) without a
+  retry of its own (no_retry), and bumps the generation so a running write
+  re-plans.
+- should-fix 2: PS_VERIFY keeps the bracket's void, and voids it when a
+  newer request is still pending; the void resets where a run is planned.
+- should-fix 3: a re-plan waits for the newer correction's slew to settle,
+  as PS_IDLE does.
+
+Claude-Session: https://claude.ai/code/session_01Mm219BiSCsx6uwtXcZ7a9G
+---
+ keyboards/a_jazz/ak820pro/rtc/rtc.c          | 55 ++++++++++++++------
+ keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h | 24 +++++++--
+ 2 files changed, 60 insertions(+), 19 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/rtc/rtc.c b/keyboards/a_jazz/ak820pro/rtc/rtc.c
+index 28499e01..8de74cd4 100644
+--- a/keyboards/a_jazz/ak820pro/rtc/rtc.c
++++ b/keyboards/a_jazz/ak820pro/rtc/rtc.c
+@@ -1184,9 +1184,11 @@ static void host_correction_accepted(bool persist)
+ #endif
+     ps_brk_void = true;
+     /* A host's SKIP_PCF set (none sends one: the agents' flags are 0) takes
+-     * the persistence on itself: the PCF is left as it is, stale or not
+-     * (codex, the rtc fixes' review, should-fix 4). */
++     * the persistence on itself: the PCF is not asked for, but it is no
++     * reference for the time either, and a running write re-plans (codex, the
++     * rtc fixes' review, should-fix 4, and its verify, should-fix 1). */
+     if (persist) pcf_sync_host_accepted(&pcfs);
++    else         pcf_sync_host_skipped(&pcfs);
+ }
+ 
+ static bool ps_state_idle(void);
+@@ -1222,9 +1224,12 @@ bool rtc_set_time(const rtc_time_t *t)
+     /* A phase-correct write already planned holds an older second: whatever
+      * this one did, a fresh request supersedes it, and the writer re-plans
+      * from the board's clock before it writes (codex, the rtc fixes' review,
+-     * must-fix 1). Idle, a successful write is the PCF's latest. */
+-    if (ok && ps_state_idle()) pcf_sync_written(&pcfs);
+-    else                       pcf_sync_request(&pcfs);
++     * must-fix 1). Idle, a successful write is the PCF's latest -- unless a
++     * given-up recovery may have left STOP asserted: pcf_write() writes the
++     * calendar, not the control register, so a run (which asserts STOP and
++     * releases it) is still owed (codex, the rtc fixes' verify, must-fix 2). */
++    if (ok && ps_state_idle() && !pcf_maybe_stopped) pcf_sync_written(&pcfs);
++    else                                             pcf_sync_request(&pcfs);
+ 
+     rtcSetTime(&RTCD1, &dt);
+     rtc_valid = true;
+@@ -1443,6 +1448,7 @@ static void pcf_machine_step(void)
+          * review, should-fix 8). A slew lasts at most ~25 s. */
+         if (slew_state != SLEW_IDLE || reload_pending) return;
+         pcf_sync_run_start(&pcfs);
++        ps_brk_void = false;   /* a correction from here on voids this run's bracket */
+         ps_state = PS_STOP_READ; ps_attempts = 0;
+         /* fall through */
+     case PS_STOP_READ:
+@@ -1459,8 +1465,15 @@ static void pcf_machine_step(void)
+         /* A newer request since the plan (a host's correction): re-plan from
+          * the board's clock now, STOP still asserted (must-fix 1). */
+         if (pcf_sync_superseded(&pcfs)) {
+-            pcf_sync_run_start(&pcfs);
++            /* Not mid-slew, as at PS_IDLE (codex, the rtc fixes' verify,
++             * should-fix 3); STOP stays asserted meanwhile. And the newer
++             * generation is taken only once the plan holds it: a failed
++             * plan leaves the run superseded, so the older second is never
++             * written for it (the verify's must-fix 1). */
++            if (slew_state != SLEW_IDLE || reload_pending) return;
+             if (!ps_plan()) return;
++            pcf_sync_run_start(&pcfs);
++            ps_brk_void = false;   /* this plan is after the correction */
+         }
+         struct tm tm_s; rtc_time_t t;
+         if (localtime_r(&ps_S, &tm_s) == NULL) { ps_fail(); return; }
+@@ -1504,8 +1517,12 @@ static void pcf_machine_step(void)
+         if (pcf_reg_read_raw(0x00, &v)) {
+             if (v & PCF_CTL_STOP) { stop_asserted = true; ps_state = PS_RECOVER; pcf_maybe_stopped = true; return; }
+             pcf_runs_ok++; pcf_maybe_stopped = false;
+-            pcf_sync_run_ok(&pcfs);   /* a newer request keeps it pending: another run follows */
+-            ps_state = PS_BRACKET; ps_attempts = 0; ps_brk_prev_sec = -1; ps_brk_void = false;
++            /* A newer request keeps it pending: another run follows, and this
++             * one's bracket learns nothing. A correction since the plan has
++             * already voided it; that is kept (codex, the rtc fixes' verify,
++             * should-fix 2). */
++            if (pcf_sync_run_ok(&pcfs)) ps_brk_void = true;
++            ps_state = PS_BRACKET; ps_attempts = 0; ps_brk_prev_sec = -1;
+         } else ps_fail();
+         return;
+     }
+@@ -1568,7 +1585,7 @@ static void pcf_machine_step(void)
+              * it, lands a minute on (must-fix 2). */
+             ps_recover_tries = 0;
+             ps_state = PS_IDLE;
+-            pcfs.stale = true;
++            pcfs.stale = true; pcfs.no_retry = false;   /* STOP may be set: a run is owed */
+             pcf_sync_gave_up(&pcfs, rtc_seconds_count);
+             return;
+         }
+@@ -1909,7 +1926,10 @@ static void wake_coarse(void)
+              * already counted (codex, the rtc fixes' review, must-fix 3). The
+              * board keeps its own calendar and gains what the slow ILRC
+              * missed asleep. A tick between the read and the set would be
+-             * lost: the second is checked and the adjust done again. */
++             * lost: the set is made under lock only if no second has ticked
++             * since the read, else nothing is written and it is read again
++             * (codex, the rtc fixes' verify, must-fix 3: the old loop wrote
++             * first and could add the gain twice). */
+             /* awake: the board's seconds since the wake, before this read's
+              * own `+= diff` above. The PCF's elapsed spans the sleep and
+              * them; the board's calendar already has the counted sleep and
+@@ -1918,7 +1938,7 @@ static void wake_coarse(void)
+             if (awake < 0) awake = 0;
+             int32_t gain = (int32_t)((int64_t)(after - wk_pre_epoch) - (int64_t)wk_counted - (int64_t)awake);
+             for (int tries = 0; gain != 0 && tries < 3; tries++) {
+-                uint32_t s0 = rtc_seconds_count;
++                uint32_t s0 = rtc_seconds_count;   /* the handler moves it with the calendar */
+                 RTCDateTime dt; struct tm tm;
+                 rtcGetTime(&RTCD1, &dt);
+                 rtcConvertDateTimeToStructTm(&dt, &tm, NULL);
+@@ -1927,9 +1947,14 @@ static void wake_coarse(void)
+                 e += gain;
+                 if (localtime_r(&e, &tm) == NULL) break;
+                 rtcConvertStructTmToDateTime(&tm, 0, &dt);
+-                rtcSetTime(&RTCD1, &dt);
+-                clock_gen++;
+-                if (rtc_seconds_count == s0) break;   /* no tick in between */
++                bool done = false;
++                chSysLock();
++                if (rtc_seconds_count == s0) {      /* no tick since the read */
++                    rtcSetTime(&RTCD1, &dt);         /* nests: the LLD saves the status */
++                    done = true;
++                }
++                chSysUnlock();
++                if (done) { clock_gen++; break; }
+             }
+         }
+     }
+@@ -2185,7 +2210,7 @@ void rtc_task(void)
+      * would undo a host's correction), nor mid-slew (the trim's window
+      * restarts once the correction is done): codex, the wireless clock's
+      * review, must-fixes 1 and 5. */
+-    if (pcfs.stale || slew_state != SLEW_IDLE || reload_pending) return;
++    if (pcfs.stale || pcf_maybe_stopped || slew_state != SLEW_IDLE || reload_pending) return;
+ #ifdef AK820_DEV_HOOKS
+     if (burst_active()) return;   /* the check stays due while a bench burst runs */
+ #endif
+diff --git a/keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h b/keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h
+index d1738da3..8ab95b5a 100644
+--- a/keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h
++++ b/keyboards/a_jazz/ak820pro/rtc/rtc_pcf_sync.h
+@@ -29,6 +29,7 @@ typedef struct {
+     uint16_t run_gen;    /* the request generation the running write carries */
+     bool     pending;    /* a write is wanted */
+     bool     stale;      /* the PCF may not hold the latest accepted host time */
++    bool     no_retry;   /* stale by a host's SKIP_PCF: not to be written unasked */
+     uint32_t retry_at;   /* a stale PCF's next request, after a give-up */
+ } pcf_sync_t;
+ 
+@@ -40,7 +41,20 @@ static inline void pcf_sync_request(pcf_sync_t *s) {
+ 
+ /* A host's correction was accepted: the PCF no longer holds the time. */
+ static inline void pcf_sync_host_accepted(pcf_sync_t *s) {
++    s->stale    = true;
++    s->no_retry = false;
++}
++
++/* A host's correction asked that the PCF not be written (RTC_SETF_SKIP_PCF):
++ * the PCF is still no reference for the time (stale), but is not asked for
++ * again on its own. A running write planned before it must not certify its
++ * older second: the generation moves, so the writer re-plans from the board's
++ * clock, which now holds the correction (codex, the rtc fixes' verify,
++ * should-fix 1). */
++static inline void pcf_sync_host_skipped(pcf_sync_t *s) {
++    if (!s->stale) s->no_retry = true;   /* an outstanding retry obligation stays */
+     s->stale = true;
++    s->req_gen++;
+ }
+ 
+ /* A newer request came since the running write was planned: it must re-plan
+@@ -59,8 +73,9 @@ static inline void pcf_sync_run_start(pcf_sync_t *s) {
+  * came meanwhile; returns whether another run is still wanted. */
+ static inline bool pcf_sync_run_ok(pcf_sync_t *s) {
+     if (s->run_gen == s->req_gen) {
+-        s->pending = false;
+-        s->stale   = false;
++        s->pending  = false;
++        s->stale    = false;
++        s->no_retry = false;
+     }
+     return s->pending;
+ }
+@@ -76,10 +91,11 @@ static inline void pcf_sync_gave_up(pcf_sync_t *s, uint32_t now_s) {
+  * phase-correct run still pending writes from the board's own clock, which is
+  * that time too. */
+ static inline void pcf_sync_written(pcf_sync_t *s) {
+-    s->stale = false;
++    s->stale    = false;
++    s->no_retry = false;
+ }
+ 
+ /* Is a stale, idle PCF due a fresh request? */
+ static inline bool pcf_sync_retry_due(const pcf_sync_t *s, uint32_t now_s) {
+-    return s->stale && !s->pending && (int32_t)(now_s - s->retry_at) >= 0;
++    return s->stale && !s->no_retry && !s->pending && (int32_t)(now_s - s->retry_at) >= 0;
+ }
+-- 
+2.50.1.windows.1
+

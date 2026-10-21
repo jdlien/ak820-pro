@@ -1,0 +1,96 @@
+From 981631b925969ad611e34d227713af3127c44265 Mon Sep 17 00:00:00 2001
+From: JD Lien <jd@jdlien.com>
+Date: Tue, 20 Oct 2026 08:52:01 -0600
+Subject: [PATCH] ak820pro (dev): op 17 sub 6 stops and re-arms the raw81 long
+ clock's virtual timer at run time, for the deep-sleep A/B in one layout
+
+The Mac found every deep sleep waking after one counted second on
+b2a07e0d; the timer (145a8234) is the lead, but compiling it out moves the
+image. [5] 1 arms, 2 stops, 0 reads; reply [4]=6 [5]=armed. Dev-only.
+
+Claude-Session: https://claude.ai/code/session_01Mm219BiSCsx6uwtXcZ7a9G
+---
+ .../a_jazz/ak820pro/bluetooth/ch582f_ajazz.c  | 24 +++++++++++++++++++
+ .../a_jazz/ak820pro/bluetooth/ch582f_ajazz.h  |  2 ++
+ keyboards/a_jazz/ak820pro/hid_protocol.c      | 13 ++++++++--
+ 3 files changed, 37 insertions(+), 2 deletions(-)
+
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+index 86c011a0..3b440e5a 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c
+@@ -971,6 +971,30 @@ bool ch582_raw81_window(int8_t on) {
+     if (on >= 0) r91_window_on = on != 0;
+     return r91_window_on;
+ }
++
++/* HC_DEVHOOK op 17 sub 6: the long clock's virtual timer stopped (0) or
++ * armed (1); -1 only reads. For the deep-sleep A/B (10-20: every sleep woke
++ * after a second on b2a07e0d) in one image, so the layout does not move.
++ * Stopped, the clock is refreshed only by ch582_task's passes, and a stall
++ * past a 16-bit wrap (~0.35 s) loses time: diagnostic use only. Returns
++ * whether it is armed. */
++bool ch582_raw81_vt(int8_t on) {
++#if CH_CFG_ST_RESOLUTION < 32
++    r81_ensure();
++    if (on == 0) {
++        chVTReset(&r81_long_vt);
++    } else if (on > 0) {
++        chSysLock();
++        r81_long_extend();
++        if (!chVTIsArmedI(&r81_long_vt)) chVTSetI(&r81_long_vt, RAW81_LONG_UPDATE, r81_long_tick, NULL);
++        chSysUnlock();
++    }
++    return chVTIsArmed(&r81_long_vt);
++#else
++    (void)on;
++    return false;
++#endif
++}
+ #endif
+ 
+ #ifdef CONSOLE_ENABLE
+diff --git a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
+index 4fb43504..593c4bb8 100644
+--- a/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
++++ b/keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h
+@@ -97,6 +97,8 @@ uint32_t ch582_raw81_stall(uint16_t ms);
+ bool ch582_raw81_hold(int8_t on);
+ /* Stage 2's 91 ACK window: on >= 0 sets it (non-zero on), -1 only reads. */
+ bool ch582_raw81_window(int8_t on);
++/* op 17 sub 6: the long clock's virtual timer, 0 stops, 1 arms, -1 reads. */
++bool ch582_raw81_vt(int8_t on);
+ void ch582_rxtap_arm(bool armed);
+ void ch582_rxtap_fill(uint8_t *out);
+ bool ch582_rxtap_page(uint8_t page, uint8_t *out);
+diff --git a/keyboards/a_jazz/ak820pro/hid_protocol.c b/keyboards/a_jazz/ak820pro/hid_protocol.c
+index f6866515..384af1ec 100644
+--- a/keyboards/a_jazz/ak820pro/hid_protocol.c
++++ b/keyboards/a_jazz/ak820pro/hid_protocol.c
+@@ -1115,12 +1115,21 @@ static void health_command(uint8_t *data, uint8_t length) {
+                     if (length < 32 || !ch582_rxtap_page(data[4], &data[4])) data[0] = RTC_UNHANDLED;
+                     break;
+                 case 17: {
+-                    if (length < 32 || data[4] > 5 || (data[4] == 4 && (data[5] == 0 || data[5] > 50)) ||
+-                        (data[4] == 5 && data[5] > 2)) {
++                    if (length < 32 || data[4] > 6 || (data[4] == 4 && (data[5] == 0 || data[5] > 50)) ||
++                        ((data[4] == 5 || data[4] == 6) && data[5] > 2)) {
+                         data[0] = RTC_UNHANDLED;
+                         break;
+                     }
+                     uint8_t sub = data[4];
++                    if (sub == 6) {
++                        /* The long clock's virtual timer: [5] 1 arms, 2
++                         * stops, 0 reads. Reply: 6, armed. */
++                        bool on = ch582_raw81_vt(data[5] == 0 ? -1 : (int8_t)(data[5] == 1));
++                        memset(&data[4], 0, 28);
++                        data[4] = 6;
++                        data[5] = on ? 1 : 0;
++                        break;
++                    }
+                     if (sub == 5) {
+                         /* Responses held in the pump: [5] 1 on, 2 off, 0
+                          * reads. Reply: 5, the state. */
+-- 
+2.50.1.windows.1
+
