@@ -1,0 +1,109 @@
+{
+ "summary": {
+  "cycles": 1,
+  "passed": 1,
+  "stopped": null,
+  "path": "awake",
+  "mac_latency_ms": {
+   "median": 27.3,
+   "max": 27.3
+  },
+  "clock_before_abs_ms": {
+   "median": 1106.3,
+   "max": 1106.3
+  },
+  "rtc": {
+   "synced": 1,
+   "at_rest": 1,
+   "rtc_ok": 1,
+   "before_ms": {
+    "min": 1106.3,
+    "max": 1106.3,
+    "median_abs": 1106.3,
+    "max_abs": 1106.3
+   },
+   "period_active": {
+    "min": 32463,
+    "max": 32463
+   }
+  },
+  "timed_out": {}
+ },
+ "args": {
+  "n": 1,
+  "board_only": true,
+  "arm": false,
+  "awake": true,
+  "sleep_s": 30,
+  "tap_ms": 40,
+  "dwell": 1800.0,
+  "frames": 0,
+  "pause_daemon": false,
+  "rtc_gate": true,
+  "log": "/Users/jdlien/code/ak820-pro/scripts/../history/power-bench-2026-10-15/power.csv",
+  "out": "history/lockchan-clock-mac-cut-20261021/cut"
+ },
+ "cycles": [
+  {
+   "i": 1,
+   "dwell_s": 1800.0,
+   "stayed_awake": true,
+   "awake_seen": true,
+   "mac_latency_ms": 27.3,
+   "t_data_on": 1792599256.024004,
+   "sync": {
+    "why": "enumerated",
+    "before_ms": 1106.3,
+    "line": "2026-10-21 10:14:21 sync (enumerated): clock set (sub-second): before +1106.3 ms, after -2.4 ms, rtt 4.2 ms, U ~2.4 ms, lead now 4.21 ms, bias sent"
+   },
+   "rtc0": {
+    "period_active": 32463,
+    "period_nominal": 32463,
+    "ref_state": 2,
+    "ps": 0,
+    "stop": 0,
+    "runs_ok": 121,
+    "restarts": 1,
+    "maybe_stopped": 0,
+    "pending": 0,
+    "slews": 90,
+    "stale": 0
+   },
+   "rtc": {
+    "period_active": 32463,
+    "period_nominal": 32463,
+    "ref_state": 2,
+    "ps": 0,
+    "stop": 0,
+    "runs_ok": 124,
+    "restarts": 1,
+    "maybe_stopped": 0,
+    "pending": 0,
+    "slews": 90,
+    "stale": 0
+   },
+   "rtc_settled": true,
+   "rtc_ok": true,
+   "key_gain": 1,
+   "new_ge25": 0,
+   "no_reset": true,
+   "link": {
+    "sent": 366,
+    "timeouts": 188,
+    "giveups": 0,
+    "queue_full": 0,
+    "replaced": 0,
+    "uart_overrun": 0,
+    "uart_framing": 0,
+    "uart_parity": 0
+   },
+   "ok": true,
+   "clock": {
+    "after_s": 5,
+    "why": "enumerated",
+    "before_ms": 1106.3
+   }
+  }
+ ],
+ "at": "2026-10-21 10:14:27"
+}

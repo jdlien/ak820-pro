@@ -1,0 +1,6 @@
+2026-10-21 09:43:57 1 cycles through the awake control: stage forced to SCREEN_OFF, never asleep; relay 2 off; light sleep off; the mode was 1
+2026-10-21 10:14:25 cycle   1: stayed awake True, 1808.0 s silent, key 1, Mac 27 ms, link sent 366 timeouts 188, sync enumerated before 1106.3 ms, PCF runs +3, period 32463  ok
+2026-10-21 10:14:27 restored: relay 1 open, relay 2 on, data on, the arm cancelled, the bench sleep time cleared, the mode put back, stage released
+deep cycles: PASS {"cycles": 1, "passed": 1, "stopped": null, "path": "awake", "mac_latency_ms": {"median": 27.3, "max": 27.3}, "clock_before_abs_ms": {"median": 1106.3, "max": 1106.3}, "rtc": {"synced": 1, "at_rest": 1, "rtc_ok": 1, "before_ms": {"min": 1106.3, "max": 1106.3, "median_abs": 1106.3, "max_abs": 1106.3}, "period_active": {"min": 32463, "max": 32463}}, "timed_out": {}}
+deep_cycles exit 0
+done

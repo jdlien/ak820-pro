@@ -1,0 +1,2 @@
+applied 2  refused 0  rejected 0  retried 0  dropped 0
+last: offset -1616 ms (target - board), stepped; retry pending: no
