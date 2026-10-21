@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## The RGB model's 82 LEDs: the board has 81 (2026-10-21) -- small, not fixed
+## The RGB model's 82 LEDs: the board has 81 (2026-10-21) -- FIXED on `rgb-81-leds`, codex cleared, lands with the next merged flash
 
 Found by codex reviewing [`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md),
 confirmed against the source. The board has **81** RGB LEDs
@@ -41,13 +41,42 @@ then applies them to its real 81-LED sums.
   meant 296.6). The gauge's count runs that much slow on the plateau, so the
   level reads slightly high (the dangerous direction, if small), and the
   time-left slightly long.
-- **Fix:** scale the three slopes by 82/81 (exact, since `N` is the fit's
-  only error; `P_RGB_A` is unaffected), set `N = 81 * 255` in `rgb_fit.py`
-  and `RGB_MATRIX_LED_COUNT 81` in `scripts/battery_sim/stubs/quantum.h:50`,
-  and correct `battery.c`'s "(82 channels)" comment. Rerun `rgb_fit.py` to
-  confirm the refit equals the scaled slopes. A firmware change: its own
-  build, review and flash, not during the daily-use trial unless JD wants
-  it in.
+- **The fix, on two branches named `rgb-81-leds`:**
+  - **Firmware `36330d5ec8`** (on `ak820pro-jdlien` at `9e52400ec9`):
+    `battery.c`'s slopes 3681 / 2565 / 2322 nW, from `rgb_fit.py` rerun with
+    81 (3681.25 / 2564.53 / 2322.01; the same fit rescaled, `P_RGB_A`
+    unchanged). Dev, daily and fpb compile with no warnings.
+  - **Host `df8553b` + `7178afb`** (on `main` at `d225f6c`): `rgb_fit.py`'s
+    `N`; the simulator's stub, uniform buffer, half load and replay
+    conversion, all 81; `docs/power.md` and `docs/battery.md`'s slopes and
+    their accuracy claims.
+  - **Simulator:** against the fix, every scenario passes; against
+    `9e52400ec9` with 81-LED stubs the energy count's scenarios fail
+    (`c_rate`'s draw 298.5 mW against 300.65); the pinned baselines are
+    unchanged.
+- **Codex cleared it** ([`review-codex-rgb-81-leds-2026-10-21.md`](review-codex-rgb-81-leds-2026-10-21.md)):
+  the firmware for the next dev flash, after the current test session; the
+  host branch only **with the `deps.lock` pin in the same commit**, since
+  it fails the default simulator run against today's pin. The order: merge
+  and push `36330d5ec8` into `ak820pro-jdlien`, then merge the host branch
+  and move `deps.lock` to the merged firmware in one host commit, then run
+  `scripts/battery_sim/run.sh` with no override (it reads the firmware
+  checkout, so `./setup.sh` first). Its should-fixes, all documentation,
+  are in `7178afb`.
+- **Effect once flashed:** at full white and screen 5 the modelled draw
+  goes 294.4 -> 296.6 mW untethered (+0.74%); the count runs that much
+  faster, the low cap's 150 permille arrives ~20 min sooner on an
+  uninterrupted full-white count, and the time-left shortens to match.
+  RGB-off, sleep, the voltage thresholds and `HC_POWER`'s format are
+  unchanged.
+- **Left, separate and small:** the per mille is a rounded integer, so
+  the fit's drive is approximate (red at value 16 sums 162, `led 2` gives
+  123.9). Refitting from the recorded settings through QMK's CIE table
+  gives 3681.16 / 2565.98 / 2323.79 nW and an intercept of 7.600 mW
+  against 7.713 (codex's finding 3). Worth doing with the power-charts
+  sweep, which records the settings, not as a fix of its own. Also left:
+  `rgb_fit.py` and the simulator could read the LED count from
+  `keyboard.json` instead of carrying it.
 
 ## Lock-light frames into a sleeping board cost ~1.6 mA on average (2026-10-21) -- fixed in the daemon (`HOLD_IDLE`), to install on the Mac
 

@@ -1,0 +1,19 @@
+Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md. Do not run anything that opens the keyboard, the USB relay or the power logger (no hostagent/ or scripts/ tool that talks to hardware, no hidapi, no serial port): the board is in the middle of another session's test. Reading files, git commands, and pure computations are fine.
+
+Review a small fix before it is merged and flashed. You found the bug yourself while reviewing plans/POWER-CHARTS-PLAN.md (plans/review-codex-power-charts-2026-10-21.md, finding 3): the board has 81 RGB LEDs, but scripts/rgb_fit.py fitted the per-colour slopes in battery.c (P_RGB_R/G/B_NW) with N = 82 * 255. The write-up is plans/BACKLOG.md, "The RGB model's 82 LEDs".
+
+The fix is on two branches named rgb-81-leds, one per repo. Read them with git; the worktrees they were made in are outside the repo, so do not look for them.
+- Firmware: `git -C qmk_firmware-ak820pro show 36330d5ec8` (branch rgb-81-leds, on ak820pro-jdlien at 9e52400ec9, which deps.lock pins). battery.c only: the three slopes become 3681/2565/2322 nW a unit (the 10-19 map refitted with 81: 3681.25, 2564.53, 2322.01), P_RGB_A_UW unchanged, and the comment.
+- Host: `git show df8553b` (branch rgb-81-leds in this repo, on main at d225f6c): scripts/rgb_fit.py's N, scripts/battery_sim's stub LED count, sim.c's uniform buffer and half load, count.c's replay conversion and comment, and docs/power.md's "Working it out yourself".
+
+What was run, outside your sandbox: scripts/battery_sim/run.sh against the fixed tree with the 81-LED stubs passes every scenario; against 9e52400ec9 with the 81-LED stubs the energy-count scenarios fail (c_rate, c_hold, c_time_left, c_usb_data, s_log_within, s_log_across; c_rate's draw 298.5 mW against its 300.65); the pinned baselines (baseline_0928/1001/1004a, replay_selfcheck) are unchanged. Dev, daily and fpb compile with no warnings. You may rerun the fit (`python3 scripts/rgb_fit.py` on the host branch's version, e.g. via `git show df8553b:scripts/rgb_fit.py`) if your sandbox allows it.
+
+Check:
+1. The diagnosis: RGB_MATRIX_LED_COUNT is 81 in the build (keyboard.json, config.h), LED_LOAD_MAX and sn32f2xx_led_drive_take (drivers/led/sn32f2xx.c on ak820pro-jdlien) sum 81 LEDs, and the summary's `led` per mille is of 81 * 3 * 255. Is N the fit's only error, so that a uniform 82/81 rescale is exact, given the per mille is an integer?
+2. Anything else, firmware or host, that assumes 82 LEDs or 246 channels, or carries the old slopes or a figure derived from them: the firmware (battery.c, sleep.c, power.c, health, hid_protocol.c, the driver), hostagent/ak820battery.py, scripts/current_map.py (its model comparison), scripts/battery_sim/ (colour.c, tail_fw.c, ladder.c, sleeps.c, mutants.py, tail_grid.py, tail_fw_grid.py), scripts/ladder_check.py, docs/battery.md, docs/power.md, CLAUDE.md, plans/current-status.md. Report hits the fix misses.
+3. Effects on the gauge as built: the level count, the band's ratchet and hold, the low cap's entry, the time-left, HC_POWER's modelled draw. Is ~0.7% more counted at full white safe in every path? Any simulator thresholds or mutants tuned to the old slopes that now pass for the wrong reason?
+4. Should anything else be refitted with it (P_RGB_A_UW was "refitted against this model's own RGB-off"; P_BASE_UW)? Does the R3 replay (c_replay_r3 or similar) or the tail fit move, and is that expected?
+5. The landing: the host branch fails the default simulator run until deps.lock pins the firmware fix, so the two are meant to land together with the pin. A safer sequencing?
+6. Is the firmware change safe to include in the next dev build flashed to JD's board?
+
+Classify each finding must-fix / should-fix / note, with file:line where it applies, and end with a verdict on whether both branches are cleared to merge and flash.
