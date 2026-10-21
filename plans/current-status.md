@@ -59,6 +59,12 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
 **On the board since 10:50 10-21: `36330d5ec8`** (token `0x57c22634`):
 `9e52400ec9` plus ak820-pro-1e's 81-LED fix (battery.c's RGB slopes;
 `history/flash-81leds-20261021/`). `deps.lock` pins it.
+- **On the pack since 10:51, in Balanced at JD's daily use (relay 2 off).**
+  This is a note, not R5: it didn't start from a verified FULL, and
+  ak820-pro-1e's power-charts sweep (~3 h, ~120 mAh) runs in the middle of
+  it tonight. The INA228 logs all of it
+  (`history/power-bench-2026-10-15/power.csv`). R5 starts from a FULL after
+  the sweep.
 
 **The next flash (JD's go is given): Gremlin's frame trim**,
 `gremlin/lockchan-clock` `01abfe0ecf` (parent `9e52400e`; codex cleared it
