@@ -1,0 +1,36 @@
+firmware : ak820pro-builds/out/via-dev-36afff30e8-20261021-142121.bin
+built    : Oct 21 14:21:21 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s) -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Oct 21 14:22:33 2026  (1900 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 1, hue 169, sat 0, val 255, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Oct 21 14:22:34 2026  (83 bytes)
+
+== dumping the battery log ==
+# 14 entries (log v7, one per 900 s), newest 142 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261021-142234-preflash.csv  Oct 21 14:22:34 2026  (1849 bytes)
+
+== asking the firmware to jump to the bootloader ==
+board busy: a key moved in the last 2 s; retrying
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the RGB lighting ==
+lighting restored: effect 1, hue 169, sat 0, val 255, speed 231
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+flash exit=0

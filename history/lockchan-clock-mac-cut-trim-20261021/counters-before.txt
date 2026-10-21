@@ -1,0 +1,3 @@
+applied 0  refused 0  rejected 0  retried 0  dropped 0
+last: offset +0 ms (target - board), none yet; retry pending: no
+rate trims 0, last period none yet

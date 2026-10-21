@@ -66,29 +66,36 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
   (`history/power-bench-2026-10-15/power.csv`). R5 starts from a FULL after
   the sweep.
 
-**The next flash (JD's go is given): Gremlin's frame trim**,
-`gremlin/lockchan-clock` `01abfe0ecf` (parent `9e52400e`; codex cleared it
-for an attended test after four rounds,
-`plans/review-codex-lockchan-clock-trim-*2026-10-21.md`): each type-4 frame
-trims the ILRC from its offset. It is on Gremlin's board since 11:07; the
-flash here waits for JD's attended BT test there. It merges with
-`36330d5ec8` (disjoint files) as a merge commit.
-- Merge it into `ak820pro-jdlien` and push, pin `deps.lock` (and run
-  `python3 scripts/power_model.py` before pushing the pin: a `deps.lock`
-  change triggers the power page's deploy, whose `--check` fails unless
-  `site/power/power.json` is regenerated in the same commit; the file
-  records the pinned sha, so every pin moves it), build dev, switch relay 2 on
-  (JD runs on battery now), flash, put relay 2 back off. Then rerun
-  `history/lockchan-clock-mac-cut-20261021/run.sh` with JD on the NuPhy.
-- ⚠️ **The Mac's daemon must not get Gremlin's STEPPED change** (main from
-  `0fd06f6`; `a2dbd65` is the cleared one) **before the board has
-  `01abfe0ecf` or later**: older firmware rejects a STEPPED frame. The board
-  first, then the daemon. Every frame is STEPPED (no trim) for 3900 s after
-  a discontinuity, the daemon's start included, until an acknowledged USB
-  set: reinstall on the cable and let a USB sync land before any cut.
+**On the board since 14:22 10-21: `36afff30e8`** (dev, token `0xef38330e`):
+Gremlin's frame trim (`01abfe0ecf`, codex cleared after four rounds,
+`plans/review-codex-lockchan-clock-trim-*2026-10-21.md`) merged with
+`36330d5ec8`. `ak820pro-jdlien` and `deps.lock` point at it, and Gremlin's
+board runs it too. **The Mac's daemon is `21e8fe8`** (main, with Gremlin's
+`a2dbd65`), installed 14:23 after the flash.
+- **Gremlin's attended BT tests passed:** a 23 min idle hold with no frames
+  drifted 1.66 s (the ILRC's wander, not a phase error), and with frames
+  every 10 min the replug found -38.0 ms.
+- **The Mac's 30 min cut passed** (14:29-14:59,
+  [`../history/lockchan-clock-mac-cut-trim-20261021/`](../history/lockchan-clock-mac-cut-trim-20261021/README.md)):
+  - 4 frames applied, none refused; 2 rate trims (32284 to 32322);
+  - the last frame's offset was -3 ms, and the replug 180 s later found
+    -20.0 ms, against the morning's +1106.3 ms;
+  - `deep_cycles` said FAIL only for 7 extra presses: the wake rig's wires
+    short when the board is moved.
+- **After a flash, wait for a settled sync before any cut.** The erased
+  RTC period took ~6 min to re-converge (-460 ms, then -2885 ms, then
+  -8.8 ms).
+- **Open (Gremlin's, put to JD):** the idle hold stops clock frames, so a
+  board left awake with the host idle gets the raw ILRC drift, ~1-2 s per
+  half hour.
+- To flash a new pin: merge, push, pin `deps.lock` and run
+  `python3 scripts/power_model.py` in the same commit (a pin change deploys
+  the power page, whose `--check` fails unless `site/power/power.json`
+  carries the new sha), build dev, relay 2 on, flash, relay 2 off.
 
 **Owed:** codex's RTC failure-path tests (Gremlin); the stack watermarks
-after a long run (the type-4 flash reset them before they were read).
+after a long run (each flash resets them: read them on the morning of
+10-22, after ak820-pro-1e's power-charts sweep tonight).
 
 ## 2026-10-20 evening
 

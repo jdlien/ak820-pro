@@ -116,7 +116,12 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 **Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-21
 morning — RESUME HERE").
 
-**On the board since 10:50 10-21: `36330d5ec8`** (dev, token
+**On the board since 14:22 10-21: `36afff30e8`** (dev, token
+`0xef38330e`): Gremlin's frame trim for the wireless clock merged with
+the 81-LED model; the Mac's daemon `21e8fe8` sends type 4. The 30 min
+cut held the clock within ~20 ms
+([`history/lockchan-clock-mac-cut-trim-20261021/`](history/lockchan-clock-mac-cut-trim-20261021/README.md)).
+**From 10:50: `36330d5ec8`** (dev, token
 `0x57c22634`): `9e52400ec9` plus the RGB model over 81 LEDs, not 82
 (battery.c only). **From 01:50: `9e52400ec9`** (dev, token
 `0x3c899a32`), the mainline with everything in one build: `ak820pro-jdlien`

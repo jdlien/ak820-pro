@@ -1,0 +1,3 @@
+applied 4  refused 0  rejected 0  retried 0  dropped 0
+last: offset -3 ms (target - board), slewing; retry pending: no
+rate trims 2, last period 32322
