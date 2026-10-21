@@ -237,7 +237,8 @@ milliwatt-hours, not milliamps.
 
 The firmware carries this model to count the battery down. Against the logger
 it was within 2% at all 24 steps of the ladder's stages, and within 0.6% at
-every step of the LED brightness and colour sweep:
+every step of the LED brightness and colour sweep (each step's mean over its
+two passes; a single hold within 0.92%):
 
 - **base: 106.9 mW**, awake (deep sleep: 13.35 mW in all);
 - **plus the backlight: 39.1 mW × duty / 48** (the duty for each level is in

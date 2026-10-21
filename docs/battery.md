@@ -846,7 +846,8 @@ R3's energy from FULL to the RGB cut, `E_CAP_MWH`). The model (`battery.c`,
 - USB data, while USB is configured on battery (the bench only): +7.1;
 - the backlight: 39.1 x its duty / 48 (linear, R1);
 - the RGB: 9.5 while any LED is lit, plus 2.857 uW per unit of the channel
-  sum, from **the committed frames, time-weighted** (the LED driver sums each
+  sum (Phase 2's single slope, superseded by the per-colour model below,
+  "The RGB model is per colour"), from **the committed frames, time-weighted** (the LED driver sums each
   frame it hands the row ISR and keeps sum x ms and lit ms:
   `sn32f2xx_led_drive_take`). Linear in drive; QMK's CIE curve makes it look
   otherwise in values (value 64 and 128 are drives of 12 and 48).
@@ -948,9 +949,12 @@ its age would date the old entries hours too recently, so
 **The RGB model is per colour** (riding along; the curve:
 `history/power-bench-2026-10-15/rgb-curve-20261019/`). The driver keeps three
 channel sums of the committed frames instead of one, and the model weighs
-them: **8.64 mW while any LED is lit, plus 3,636 / 2,533 / 2,294 nW per unit
-of the red / green / blue sum**, replacing Phase 2's single 2.857 µW per unit.
-Against the map every step is within 0.6%, purple within 0.2%. The log's
+them: **8.64 mW while any LED is lit, plus 3,681 / 2,565 / 2,322 nW per unit
+of the red / green / blue sum over the 81 LEDs**, replacing Phase 2's single
+2.857 µW per unit. (Until 10-21 the slopes were 3,636 / 2,533 / 2,294: the
+fit counted 82 LEDs, so the RGB read ~1.2% low; `plans/BACKLOG.md`, "The RGB
+model's 82 LEDs".) Against the map every step's paired mean is within 0.6%
+(a single hold within 0.92%), purple within 0.2%. The log's
 single `led_pm` cannot recover the split, but its energy field carries the
 model's total.
 
