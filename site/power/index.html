@@ -86,18 +86,39 @@ p { margin: 0 0 10px; }
 .muted { color: var(--text-muted); font-size: 13px; }
 a { color: var(--accent); }
 .card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 20px; margin-top: 20px; }
+.controls { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+.knobs { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
+.knob { display: flex; align-items: center; gap: 8px; flex: 1 1 150px; min-width: 0; font-size: 14px; }
+.knob.lights { flex: 0 0 auto; }
+.knob .name { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); white-space: nowrap; }
+.knob input[type=checkbox] { margin: 0; accent-color: var(--accent); }
+.knob input[type=range] { flex: 1 1 auto; min-width: 60px; margin: 0; accent-color: var(--accent); }
+.knob output { min-width: 2.6em; text-align: right; font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.knob output .swatch { width: 14px; height: 14px; border-radius: 4px; margin: 0; vertical-align: -2px; }
+.knob:has(input[type=range]:disabled) :is(.name, output) { opacity: 0.45; }
+.selects { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding-top: 14px; border-top: 1px solid var(--border); }
+.selects label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary); }
+.selects select { min-width: 150px; }
+/* Narrow: each row's labels, controls and readouts in shared columns, so the
+   wrapped rows line up instead of starting wherever their label ends. */
+@media (max-width: 600px) {
+  .knobs { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px 10px; }
+  .knob { display: contents; }
+  .knob.lights { display: flex; grid-column: 1 / -1; }
+  .selects { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 12px; }
+  .selects label { display: contents; }
+  .selects select { min-width: 0; width: 100%; }
+}
 .control label, .control .label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
 .control output { float: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .control input[type=range] { width: 100%; accent-color: var(--accent); }
-.control select {
-  width: 100%; padding: 6px 34px 6px 10px; border-radius: 6px; border: 1px solid var(--border);
+select {
+  padding: 6px 34px 6px 10px; border-radius: 6px; border: 1px solid var(--border);
   color: var(--text-primary); font: inherit; appearance: none; -webkit-appearance: none;
   background: var(--surface) var(--chevron) no-repeat right 12px center / 12px 8px;
 }
-.control select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.control label.check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--text-primary); }
-.check input { margin: 0; accent-color: var(--accent); }
+select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.control select { width: 100%; }
 .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; border: 1px solid var(--border); }
 .results { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-top: 16px; }
 @media (max-width: 760px) { .results { grid-template-columns: 1fr; } }
@@ -147,41 +168,29 @@ footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border
 <main>
   <h1>AK820 Pro power</h1>
   <p class="lede">What the lighting and the screen cost on the Jackrabbit firmware, and how long a full charge lasts at your settings.</p>
-  <p class="muted" id="scope">Computed with the keyboard's own power model, the one its battery gauge counts with, and checked against a bench logger on the reference keyboard. Stock firmware is not measured.</p>
 
   <section class="card controls" aria-label="Settings">
-    <div class="control">
-      <label class="check"><input type="checkbox" id="rgbOn"> RGB lighting on</label>
-      <label for="effect" style="margin-top:8px">Effect</label>
-      <select id="effect">
-        <option value="solid">Solid colour</option>
-        <option value="other">Another effect (not modelled)</option>
-      </select>
+    <div class="knobs">
+      <label class="knob lights"><input type="checkbox" id="rgbOn"> Lights</label>
+      <div class="knob" id="vKnob"><label class="name" for="v">Bright</label><input type="range" id="v" min="0" max="255" step="1" aria-label="RGB brightness"><output id="vOut" for="v"></output></div>
+      <div class="knob" id="sKnob"><label class="name" for="s">Sat.</label><input type="range" id="s" min="0" max="255" step="1" aria-label="RGB saturation"><output id="sOut" for="s"></output></div>
+      <div class="knob" id="hKnob"><label class="name" for="h">Hue</label><input type="range" id="h" min="0" max="255" step="1" aria-label="RGB hue"><output id="hOut" for="h"></output></div>
+      <div class="knob" id="lcdKnob"><label class="name"><input type="checkbox" id="lcdOn"> Screen</label><input type="range" id="lcd" min="0" max="23" step="1" aria-label="Screen brightness"><output id="lcdOut" for="lcd"></output></div>
     </div>
-    <div class="control">
-      <label for="v">Brightness <output id="vOut"></output></label>
-      <input type="range" id="v" min="0" max="255" step="1">
-      <label for="h">Hue <output id="hOut"></output></label>
-      <input type="range" id="h" min="0" max="255" step="1">
-    </div>
-    <div class="control">
-      <label for="s">Saturation <output id="sOut"></output></label>
-      <input type="range" id="s" min="0" max="255" step="1">
-      <div class="muted" id="colourNote"></div>
-    </div>
-    <div class="control">
-      <label class="check"><input type="checkbox" id="lcdOn"> Screen on</label>
-      <label for="lcd" style="margin-top:8px">Screen brightness <output id="lcdOut"></output></label>
-      <input type="range" id="lcd" min="0" max="23" step="1">
-    </div>
-    <div class="control">
-      <label for="mode">Power mode (<kbd>Fn</kbd>+<kbd>B</kbd>)</label>
-      <select id="mode"></select>
-      <label for="radio" style="margin-top:8px">Connection</label>
-      <select id="radio">
-        <option value="bt">Bluetooth</option>
-        <option value="g24">2.4 GHz dongle</option>
-      </select>
+    <div class="selects">
+      <label><span class="lab">Effect</span>
+        <select id="effect">
+          <option value="solid">Solid colour</option>
+          <option value="other">Other (not modelled)</option>
+        </select>
+      </label>
+      <label><span class="lab">Power mode <span class="muted">Fn+B</span></span> <select id="mode"></select></label>
+      <label><span class="lab">Connection</span>
+        <select id="radio">
+          <option value="bt">Bluetooth</option>
+          <option value="g24">2.4 GHz dongle</option>
+        </select>
+      </label>
     </div>
   </section>
 
@@ -637,12 +646,23 @@ function syncUrl() {
 }
 
 function update() {
-  $("vOut").textContent = `${state.v} (${Math.round((state.v * 100) / 255)}%)`;
-  $("hOut").textContent = state.h;
-  $("sOut").textContent = state.s;
-  $("lcdOut").textContent = `level ${state.lcd}, LCD ${M.lcdPercent(fw, state.lcd)}%`;
-  const note = $("colourNote");
-  note.replaceChildren(el("span", { class: "swatch", style: { background: swatchColour() } }), pureColour() ? `${pureColour()[0].toUpperCase()}${pureColour().slice(1)}` : "A mixed colour");
+  // Compact readouts beside the sliders; the exact values in each knob's
+  // tooltip and the sliders' accessible text.
+  const pct = (x) => `${Math.round((x * 100) / 255)}%`;
+  const colour = pureColour();
+  const lcdPct = M.lcdPercent(fw, state.lcd);
+  $("vOut").textContent = pct(state.v);
+  $("sOut").textContent = pct(state.s);
+  $("hOut").replaceChildren(el("span", { class: "swatch", style: { background: swatchColour() } }));
+  $("lcdOut").textContent = `${lcdPct}%`;
+  const exact = {
+    v: `Brightness ${state.v} of 255`, s: `Saturation ${state.s} of 255`,
+    h: `Hue ${state.h} of 255${colour ? `, ${colour}` : ""}`, lcd: `Screen level ${state.lcd} of 23, LCD ${lcdPct}%`,
+  };
+  for (const [id, text] of Object.entries(exact)) {
+    $(id).setAttribute("aria-valuetext", text);
+    $(`${id}Knob`).title = text;
+  }
   for (const id of ["v", "h", "s", "effect"]) $(id).disabled = !state.rgbOn;
   $("lcd").disabled = !state.lcdOn;
   $("hoursNote").textContent = `From a full charge, typing nonstop, in ${MODE_NAME[state.mode]}, each knob on its own with the other lights off. ${state.mode === "minimal" ? "Lights out types in the dark, so every curve is flat." : state.mode === "saver" ? "Power saver caps brightness at 128 while typing, so the LED curves flatten above it." : `Below 15% the brightness is capped at ${fw.saver_val}, which is why the bright end gains.`}`;
