@@ -44,6 +44,35 @@ strays): the cost is the module's radio taking the writes.
   is the trade-off to decide.
 - **Not a regression** in anything shipped: a cost of the channel in daily
   use, where the board sleeps at 7 min (Balanced) beside a Mac playing music.
+- **Where the fix lives: the daemon, and most of it is there already.**
+  `sender.rs` takes one input snapshot per pass (`HIDIdleTime` on the Mac),
+  gates type 4 on it (`clk::IDLE`), and its wake guess (`IDLE_ARM`) resends
+  the state `WAKE_DELAY` after the first input past idleness. The fix
+  extends that gate to the text and transport frames. Nothing changes in
+  the firmware: the frames already do not count as activity, because the
+  ladder reads `last_input_activity_elapsed()` (the matrix and the knob).
+- **A Mac that is asleep or locked sends nothing already.** Asleep, the
+  daemon is suspended with everything else. Locked, the channel refuses
+  because the user's locks are unknown (R4-1); that is what ended the
+  soak's bursts at 01:00:23. The gap is the time between walking away and
+  the auto-lock, with music playing.
+- **The host's idleness is not the board's.** `HIDIdleTime` counts the
+  trackpad and every keyboard. With only the trackpad in use, the host is
+  busy while the board sleeps, and the frames keep going. The gate is
+  conservative (it never holds a frame from a board that a key just
+  touched), not complete.
+- **The same signal could keep the board awake while the user is at the
+  Mac (an idea, not decided).** The daemon would send a "present" frame,
+  a new type the board counts as activity, while the host's input is
+  recent. That closes the trackpad gap above: the board would not sleep
+  while the user is there. What it costs: awake and dark is ~25.8 mA
+  against 3.0 asleep, so ~23 mA (~0.6% of the 4011.6 mAh pack an hour)
+  while the user mouses without typing. It would buy the first key's wake:
+  that key already reaches the Mac (median 72 ms, max 126 in the soak),
+  but the board has to relight. One variant holds off only the sleep step
+  and lets the lights dim on the ladder as now. It only matters off USB:
+  on the cable, the ladder does not run. Lights out (30 s) is the mode it
+  would undercut most; leave it out there.
 
 ## A stray-wake storm in a soak beside lock-light frames (2026-10-20) -- not the frames; cause not known yet
 
