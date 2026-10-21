@@ -23,7 +23,7 @@ STATUS = {0: "stepped", 1: "slewing", 0xFE: "retry", 0xFF: "none yet"}
 def main():
     h = open_device()
     try:
-        h.write(bytes([0, SET_VALUE, CH, HC, OP, SUB]) + bytes(26))
+        h.write(bytes([0, SET_VALUE, CH, HC, OP, SUB]) + bytes(27))  # report id + 32 bytes: macOS drops a short one
         for _ in range(5):
             r = h.read(32, 1000)
             if r and len(r) == 32 and r[1] == CH and r[2] == HC and r[3] == OP and r[4] == SUB:
