@@ -116,7 +116,9 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 **Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-21
 morning — RESUME HERE").
 
-**On the board since 01:50 10-21: `9e52400ec9`** (dev, token
+**On the board since 10:50 10-21: `36330d5ec8`** (dev, token
+`0x57c22634`): `9e52400ec9` plus the RGB model over 81 LEDs, not 82
+(battery.c only). **From 01:50: `9e52400ec9`** (dev, token
 `0x3c899a32`), the mainline with everything in one build: `ak820pro-jdlien`
 and `deps.lock` point at it. It is `7ae8575c1a` plus Gremlin's wireless
 clock (type 4), which the Mac does not send yet: its latency needs an
