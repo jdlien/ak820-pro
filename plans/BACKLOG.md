@@ -230,7 +230,8 @@ v0.1.1) are unsigned. None of it is started:
    - `scripts/package-macos.sh`'s `.dmg` notarized and stapled, as the
      plan's signing section lays out (after `../streamdeck-now-playing/build/`);
    - `INSTALL-macos.txt` brought up to date.
-3. **Windows: JD already pays for Azure Trusted Signing**, and
+3. **Windows: JD already pays for Azure Artifact Signing** (formerly
+   Trusted Signing), and
    `../unifi-protect-viewer/.github/workflows/release.yml` is the template:
    - its step `azure/trusted-signing-action@v0.5.0`, with the same endpoint,
      signing account and certificate profile, and the three secrets
@@ -256,7 +257,7 @@ v0.1.1) are unsigned. None of it is started:
    repo's Releases shown in `ak820 status` and the log (one a user can turn
    off: it contacts GitHub), and an `ak820 update` the user runs. That
    command verifies the download's signature names the same publisher
-   (the Developer ID team; the Trusted Signing certificate), checks that
+   (the Developer ID team; the Artifact Signing certificate), checks that
    the board's firmware speaks the new build's protocols, then reinstalls.
    Not silent self-updating: the agent and the firmware move together (type
    4 needed both), and an agent ahead of its firmware breaks the clock or
