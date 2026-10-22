@@ -67,11 +67,17 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
   the sweep.
 - **The sweep ran 17:38-20:28,** and relay 2 has been on since 20:52, charging at
   ~343 mA from vcell ~4.02 V.
-- **Next, a working day on the pack (10-22):** JD's settings (white v255,
-  screen 5), Balanced, development and agent use, slider on BT, USB data
-  left on (~1.7 mA, R2). It starts when JD sits down: check FULL, relay 2
-  off, note the logger's `charge_mah`. At the end of his day: the board's
-  level, the mAh used, and the RAM battery log dumped.
+- **A working day on the pack, started 23:18:26 10-21:** JD's settings
+  (white v255, screen 5), Balanced, development and agent use on 10-22,
+  slider on BT, USB data left on (~1.7 mA, R2).
+  - **The charge before it:** 423 mAh in 2 h, terminated at 22:53:31. The
+    board then read FULL, 100.0%, with CHRG and STDBY high.
+  - **The logger at the start:** relay 2 went off at 23:18:26, with
+    `charge_mah` -3249.13 at 23:18:41.
+  - **The night counts too:** asleep from ~23:40, which JD's first key ends.
+    The logger separates the night from the day.
+  - **At the end of his day:** the board's level, the mAh used (the night's
+    and the day's), and the RAM battery log dumped.
   - It is not R5, whose load is RGB off and the screen dim.
   - It answers "how far down after a day", and it gives A8 a day of idle
     gaps at real use.
