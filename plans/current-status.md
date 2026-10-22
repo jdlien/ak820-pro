@@ -65,6 +65,16 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
   it tonight. The INA228 logs all of it
   (`history/power-bench-2026-10-15/power.csv`). R5 starts from a FULL after
   the sweep.
+- **The sweep ran 17:38-20:28,** and relay 2 has been on since 20:52, charging at
+  ~343 mA from vcell ~4.02 V.
+- **Next, a working day on the pack (10-22):** JD's settings (white v255,
+  screen 5), Balanced, development and agent use, slider on BT, USB data
+  left on (~1.7 mA, R2). It starts when JD sits down: check FULL, relay 2
+  off, note the logger's `charge_mah`. At the end of his day: the board's
+  level, the mAh used, and the RAM battery log dumped.
+  - It is not R5, whose load is RGB off and the screen dim.
+  - It answers "how far down after a day", and it gives A8 a day of idle
+    gaps at real use.
 
 **On the board since 14:22 10-21: `36afff30e8`** (dev, token `0xef38330e`):
 Gremlin's frame trim (`01abfe0ecf`, codex cleared after four rounds,
