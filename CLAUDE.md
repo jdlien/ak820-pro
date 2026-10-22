@@ -111,10 +111,14 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-10-21)
+## Current state (2026-10-22)
 
-**Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-21
-morning — RESUME HERE").
+**Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-22
+— RESUME HERE"). **Feature-complete for JD's board.** What's left:
+- an untethered drain at real use, running to the RGB cut;
+- one firmware cleanup: a slow pass every second, the clock's seconds tick
+  landing at 10 ms;
+- stripping the bench, the soak, and the release for other owners.
 
 **On the board since 14:22 10-21: `36afff30e8`** (dev, token
 `0xef38330e`): Gremlin's frame trim for the wireless clock merged with

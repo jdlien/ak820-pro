@@ -1,0 +1,21 @@
+blit_timeouts            0
+tx_sent                  88688
+tx_timeouts              8720
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          29
+scan_rate                189
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+isr_per_s                3775.2
+isr_mean_us              194.1
+isr_min_us               10.7
+isr_max_us               314.7
+isr_cpu_pct              73.3
+row_samples_per_row_per_s 209.8
+timebase_vs_wall         0.9994
+
+  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;
+  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop

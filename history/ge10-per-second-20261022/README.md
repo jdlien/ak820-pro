@@ -43,6 +43,32 @@ With a pass sitting right at 10 ms, a fraction of a millisecond decides how many
 
 The fix is in `plans/BACKLOG.md`: keep the pump off the second edge's pass.
 
+**Why the rate rose: the same pass, a slower loop.** The comparison is
+against `../uart-latency-20261020/stalls-0742-before-bt.json`
+(`b2a07e0d37`, 6.4 h overnight, 2.4G, on USB):
+- **The pass is old.** The clock has shown seconds since the first firmware
+  (`DISPLAY_CLOCK_SHOW_SECONDS`). On 10-20 the same pass was already in the
+  ring: `second_edge 2, blit_pump 2, unaccounted 3-5`, at 10-11 ms.
+- **The loop is slower:** 189.5 passes a second against 210.0, or 5.28 ms a
+  pass on average against 4.76.
+
+| Scope | 10-20 | Now |
+|---|---|---|
+| `ch582` | 980 us a pass | 1213 us a pass |
+| unaccounted | 3349 us a pass | 3593 us a pass |
+| `battery` | 43 us a pass | 63 us a pass |
+| `display_hk` | 31 us a pass | 45 us a pass |
+
+- **The rest held within a few us a pass.**
+- **The row ISR is unchanged** (`isr-on-battery.txt`, 15:06 10-22): 3775 a
+  second, 194 us mean, 73.3% of the CPU, against 3876, 188 us and 72.8% on
+  09-03.
+- **Not pinned:** the conditions differ (BT against 2.4G, the pack against
+  USB, the build), so the extra ~0.5 ms a pass isn't pinned on any one of
+  them.
+- **Not the power-mode bulb:** `draw_bolt_slot` repaints only when the mode,
+  the charger or the pack's presence changes.
+
 **The stacks** (`health-crash.txt`, paint watermarks):
 - **interrupt:** 568 of 1024 bytes free, 456 used (464 on 09-23);
 - **main:** 968 of 2048 bytes free, 1080 used (680 on 09-23).

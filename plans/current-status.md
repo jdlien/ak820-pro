@@ -1,21 +1,184 @@
 # Current status
 
-Updated 2026-10-20 (the newest block is first below; the crash hunt's notes follow it). The crash hunt's section was last updated 2026-09-24, 12:45; its plan is
-[`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md). **Phase 1b is closed (10-14). The
-INA228 power logger is on the pack and recording (10-15)**; next is using it,
-below.
+Updated 2026-10-22, 15:00. The block below is where things stand, written to
+be read cold. The dated blocks under it are the record as it was written
+each day, newest first, and they end with the September crash hunt.
 
-## Why
+## 2026-10-22 — RESUME HERE
 
-One spontaneous, unexplained watchdog reset on 2026-09-22 at ~13:13
-([incident](../history/incident-2026-09-22-wdt/README.md)). The retained
-operation breadcrumbs added that afternoon
-([WATCHDOG-BREADCRUMBS.md](WATCHDOG-BREADCRUMBS.md)) will name where the main
-loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
-versus a hang, the PC, stack depth, why blits time out) and tries to provoke
-the next reset instead of waiting for it.
+### Where the project is
 
-## 2026-10-21 morning — RESUME HERE
+**Feature-complete for JD's board.** Everything planned is built, merged
+and on the board:
+- the power modes, the ladder and deep sleep;
+- the gauge with its time-left estimate;
+- the lock-light channel: the title, play times, and the clock (type 4)
+  with Gremlin's frame trim;
+- Gremlin's PCF writer fixes;
+- the RGB model over 81 LEDs.
+
+What is left is real use and a soak, one firmware cleanup (the
+once-a-second slow pass, below), and the polish and release for other
+owners.
+
+### What is running
+
+- **Firmware: `36afff30e8`** (dev, token `0xef38330e`), on the board since
+  14:22 10-21. `ak820pro-jdlien` and `deps.lock` point at it, and Gremlin's
+  board runs it too. It is Gremlin's frame trim (`01abfe0ecf`, codex cleared
+  after four rounds) merged with `36330d5ec8` (the 81-LED model).
+- **The Mac's daemon: `21e8fe8`** (`--clock --radio --lockchan`), since
+  14:23 10-21. With the data cut it runs the clock and now-playing over the
+  lock-light channel.
+- **The bench:**
+  - relay 2 off: the board on its pack;
+  - uhubctl hub `0-1.4` port 2 off: no USB data;
+  - relay 1 off;
+  - the INA228 logging to `history/power-bench-2026-10-15/power.csv`;
+  - JD's settings (white v255, screen 5), in Balanced, the slider on BT.
+- **The clock's 30 min cut passed** on this build: the replug found -20.0 ms,
+  against +1106.3 ms the morning before without the trim
+  ([`../history/lockchan-clock-mac-cut-trim-20261021/`](../history/lockchan-clock-mac-cut-trim-20261021/README.md)).
+
+### In progress: an untethered drain at real use
+
+The first drain with the ladder and deep sleep at JD's real use. It runs to
+the RGB cut, likely a few days.
+
+- **Started 23:18:26 10-21 from a verified FULL:** 423 mAh in, terminated
+  at 22:53:31, and the board read FULL, 100.0%. The logger's `charge_mah`
+  read -3249.13 at 23:18:41.
+- ⚠️ **The first night never slept.** Relay 2 was off but the USB data was
+  left on, and a host's frames block deep sleep (`DSB_USB`, `sleep.c`).
+  - The board dimmed at 00:02 (32.9 mA) and went dark at 00:12 (27.7 mA).
+    It then stayed awake and dark at ~28 mA until 08:10.
+  - That cost 285.5 mAh, 7.1% of 4011 mAh, and the board read 93%, so the
+    gauge was right. Asleep, the night would have cost ~26 mAh.
+  - The informal on-pack stretch from 10:51 10-21 had the data on too, so
+    it never slept either.
+- **The data was cut at 08:16:01 10-22** (`charge_mah` -2962.51). Since then
+  the setup matches a real owner's.
+  - 08:16-14:58 used 368.2 mAh, mostly typing at full white (~73 mA).
+  - 11:40-13:10 was asleep at 3.1 mA.
+- **The night of 10-22/23** is the asleep night to set against 10-21/22's
+  awake one.
+- **Reads go over the data alone:** port 2 on, relay 2 still off. Cut the
+  data again after, or the board cannot sleep. The reads so far, on 10-22:
+  14:56:38-14:58:02 and 15:06:26-15:06:31.
+- **At the cut:** the logger sees a ~45 mA step at ~3.40 V. Then data on,
+  dump the RAM battery log (`ak820battery.py log`), relay 2 on. Nothing
+  watches for the cut yet: set a watcher on the logger once the level
+  nears 20%.
+- **Proposed, JD's call:** let this drain stand in for R5 as the gauge's and
+  the runtime model's held-out check. Then the RGB-off drain
+  (`POWER-CAMPAIGN-PLAN.md`, R5) is dropped and nothing else needs the
+  logger.
+
+### The next firmware change: one slow pass every second
+
+**The finding** (14:56 10-22, after 23 h up;
+[`../history/ge10-per-second-20261022/`](../history/ge10-per-second-20261022/README.md)):
+- `count_ge_10ms` stood at 80,024, about one a second. HC_ACCT's ring shows
+  the same pass every second: `second_edge 3, blit_pump 2, unaccounted 4,
+  ch582 1`, 10-13 ms.
+- In `housekeeping_task_kb()` (`ak820pro.c`) the order is `rtc_fast_task`,
+  then `display_second_edge_task`, then `display_blit_pump`. On the tick,
+  the edge runs the 1 Hz `draw_clock` and `draw_battery`, the pump then
+  moves the first queued glyph in the same pass, and QMK's core adds its
+  ~4 ms.
+- **It is not new, just closer to the line.** The clock has shown seconds
+  since the first firmware (`DISPLAY_CLOCK_SHOW_SECONDS`), so one or two
+  glyphs queue every second. On 10-20 (`b2a07e0d37`, overnight, 2.4G, on
+  USB) the same pass was in the ring (`second_edge 2, blit_pump 2,
+  unaccounted 3-5`) and crossed 10 ms 0.18 times a second.
+  - Now every pass is ~0.5 ms slower on average: 5.28 ms against 4.76.
+  - `ch582` rose 0.98 to 1.21 ms a pass (BT now, the dongle then).
+  - The core outside the scopes rose 3.35 to 3.59 ms.
+  - No scope's cost jumped. The row ISR is unchanged: 73.3% of the CPU
+    and 194 us mean, against 72.8% and 188 on 09-03.
+  - So the edge's pass now crosses nearly every second. The conditions
+    differ (BT against 2.4G, the pack against USB, the build), so the
+    0.5 ms isn't pinned on any one of them.
+  - Not the power-mode bulb: it repaints only when the mode changes.
+- A second pattern comes at irregular times: `battery 1-3, display_hk 1,
+  ch582 1-3, unaccounted 4-6`. The battery scope's 1-3 ms looks like the
+  64-bit time math (`BACKLOG.md`, "64-bit time math on every main-loop
+  pass").
+
+**Why fix what costs no keys:** the matrix is sampled in the row ISR, and 25
+ms is the line for loss, so nothing is lost. But a press landing in that
+pass goes out up to a few ms late, and a counter that ticks at the clock's
+cadence can no longer show a regression. That counter is how every stall
+in this project's history was found.
+
+**The fix:** skip `display_blit_pump()` on the pass that ran the second
+edge, as `pass_deferred` already does for a pass that used the PCF. The
+glyph moves on the next pass, ~3-5 ms later, which nobody can see. That
+should bring the edge's pass to ~8 ms. If the battery pattern still
+crosses, take its 64-bit math out next.
+
+**How to know it worked:**
+- HC_ACCT's ring before and after: the edge's pass without `blit_pump`,
+  under 10 ms;
+- `count_ge_10ms` per hour from the daemon's status file, on the same
+  load.
+
+**When:** after the drain's cut, since a flash erases the RAM battery log.
+With a codex review saved to `plans/` and every finding dispositioned, as
+for every flash.
+
+### After the drain
+
+1. Dump the RAM battery log, then charge to FULL.
+2. Flash the slow-pass fix. Proposed, JD's call: build it as `daily`, the
+   build releases ship, so the soak runs what owners get. A daily build has
+   no bootloader jump, so later flashes need `Fn`+`Esc`.
+3. Strip the bench (the relay wires, the logger), and JD puts the foam and
+   silicone back.
+4. The soak is JD's daily use. Read the counters over a cable now and then.
+5. Polish and release for other owners: a tag, and the Mac build (not
+   published; Phase 6 stops before Apple).
+
+### Open, none of them blocking
+
+- **Six passes of 25 ms or more since the flash** (worst 29 ms, `blit`). The
+  same six at 23:14 10-21 and at 14:56 10-22, so none overnight or today.
+  The 30 min cut added none (14:29-14:59), so they came in 14:22-14:29 or
+  14:59-23:14 (the power-charts sweep was in there). They are not the wake
+  paint: the board had not slept once.
+- **A stray wake in about one sleep in 50,** unexplained. The diagnostic
+  (op 24 slot 8) names the next one.
+- **UART overruns at 1-2 an hour,** the link's long-standing rate.
+- **Uptime runs ~6% behind the wall clock:** 82,987 s against ~88,500 s
+  since the flash, with no reset (flags 0x01, and the board never left
+  USB). Not chased.
+- **The clock's idle hold** (Gremlin's question): an awake board with the
+  host idle gets no clock frames, so it drifts ~1-2 s a half hour.
+  Recommended leaving it: the clock shows minutes, the wake guess corrects
+  it ~4 s after input resumes, and Balanced is asleep by 20 min. JD hasn't
+  ruled.
+- **Owed:** codex's RTC failure-path tests (Gremlin).
+- **The wake rig's wires short** when the board is moved, which makes stray
+  presses of its key.
+
+### Bench rules learned this stretch
+
+- **Data alone never deep-sleeps** (`docs/test-bench.md`). A battery run
+  meant to match real use cuts both relay 2 and port 2.
+- **After a flash, wait for a settled sync** (|before| <= 25 ms) before any
+  cut. The erased RTC period took ~6 min to re-converge (-460 ms, then
+  -2885 ms, then -8.8 ms).
+- **The stack watermarks after 23 h:** interrupt 568 of 1024 bytes free,
+  main 968 of 2048.
+- **To flash a new pin:**
+  1. Merge and push.
+  2. Pin `deps.lock`, and run `python3 scripts/power_model.py` in the same
+     commit. A pin change deploys the power page, whose `--check` fails
+     unless `site/power/power.json` carries the new sha.
+  3. Build dev.
+  4. Relay 2 on, flash, relay 2 off.
+
+## 2026-10-21
 
 **On the board since 01:50 10-21: `9e52400ec9`** (dev, token `0x3c899a32`).
 It is the mainline, now everything in one build: the power modes, deep
@@ -65,40 +228,8 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
   it tonight. The INA228 logs all of it
   (`history/power-bench-2026-10-15/power.csv`). R5 starts from a FULL after
   the sweep.
-- **The sweep ran 17:38-20:28,** and relay 2 has been on since 20:52, charging at
-  ~343 mA from vcell ~4.02 V.
-- **A working day on the pack, started 23:18:26 10-21:** JD's settings
-  (white v255, screen 5), Balanced, development and agent use on 10-22,
-  slider on BT, USB data left on (~1.7 mA, R2).
-  - **The charge before it:** 423 mAh in 2 h, terminated at 22:53:31. The
-    board then read FULL, 100.0%, with CHRG and STDBY high.
-  - **The logger at the start:** relay 2 went off at 23:18:26, with
-    `charge_mah` -3249.13 at 23:18:41.
-  - **The night counts too:** asleep from ~23:40, which JD's first key ends.
-    The logger separates the night from the day.
-  - **At the end of his day:** the board's level, the mAh used (the night's
-    and the day's), and the RAM battery log dumped.
-  - ⚠️ **The night never slept: the USB data was left on, and a host's
-    frames block deep sleep** (`DSB_USB`, sleep.c). In the morning the
-    board read "deep sleep none since boot" with blocker usb. It dimmed at
-    00:02 (32.9 mA) and went dark at 00:12 (27.7 mA), then stayed awake
-    and dark to the morning at ~28 mA. That cost 285.5 mAh from 23:18 to
-    08:10, 7.1% of 4011, and the board read 93%, so the gauge was right.
-    Asleep, the same night would have cost ~26 mAh. The informal stretch
-    from 10:51 10-21 had the data on too, so it never slept either.
-  - **The data was cut at 08:16:01 10-22** (uhubctl port 2 off, relay 2 off),
-    with `charge_mah` -2962.51 at 08:16:04. The day runs from there,
-    untethered as a real owner's would be, the daemon on the lock-light
-    channel.
-  - **It runs on to the RGB cut,** untethered at JD's settings in Balanced:
-    the first drain with the ladder and deep sleep at real use, likely a few
-    days. 10-22 itself is a short working day. The night of 10-22/23 is the
-    asleep night to set against 10-21/22's awake one.
-  - **Reads go over data alone:** port 2 on and relay 2 still off, so the
-    run is not broken. The board's RAM log is dumped before any flash.
-  - It is not R5, whose load is RGB off and the screen dim.
-  - It answers "how far down after a day", and it gives A8 a day of idle
-    gaps at real use.
+- **The power-charts sweep ran 17:38-20:28,** then a charge from 20:52.
+  The untethered drain that followed is in the 10-22 block above.
 
 **On the board since 14:22 10-21: `36afff30e8`** (dev, token `0xef38330e`):
 Gremlin's frame trim (`01abfe0ecf`, codex cleared after four rounds,
@@ -126,16 +257,6 @@ board runs it too. **The Mac's daemon is `21e8fe8`** (main, with Gremlin's
   `python3 scripts/power_model.py` in the same commit (a pin change deploys
   the power page, whose `--check` fails unless `site/power/power.json`
   carries the new sha), build dev, relay 2 on, flash, relay 2 off.
-
-**Owed:** codex's RTC failure-path tests (Gremlin).
-
-**Read at 14:57 10-22, after 23 h up** (over the data alone,
-[`../history/ge10-per-second-20261022/`](../history/ge10-per-second-20261022/README.md)):
-- **The stacks:** interrupt 568 of 1024 bytes free, main 968 of 2048.
-- **`count_ge_25ms` was still 6.**
-- **`count_ge_10ms` ticks once a second,** from the clock's second edge
-  stacking with the pump and QMK's core. That is latency, not loss. The
-  fix is in `BACKLOG.md`, for the next flash.
 
 ## 2026-10-20 evening
 
@@ -1236,6 +1357,18 @@ warning that actually fires.** The MAX17048 is what buys a real percentage.
   scales linearly with field rate and needs ~4 kHz, past this M0. Colour choice
   is a free 2×, and a single saturated channel has none at all
   (`docs/leds.md`).
+
+## Why the crash hunt (2026-09-22)
+
+One spontaneous, unexplained watchdog reset on 2026-09-22 at ~13:13
+([incident](../history/incident-2026-09-22-wdt/README.md)). The retained
+operation breadcrumbs added that afternoon
+([WATCHDOG-BREADCRUMBS.md](WATCHDOG-BREADCRUMBS.md)) will name where the main
+loop stopped next time. The crash hunt adds what they cannot say (a CPU fault
+versus a hang, the PC, stack depth, why blits time out) and tries to provoke
+the next reset instead of waiting for it. The plan is
+[`CRASH-HUNT-PLAN.md`](CRASH-HUNT-PLAN.md); these sections were last updated
+2026-09-24, 12:45.
 
 ## ✅ The overnight hunt on 44e7314e65 passed (2026-09-24 04:57)
 
