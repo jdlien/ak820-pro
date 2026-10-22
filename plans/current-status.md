@@ -78,6 +78,18 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
     The logger separates the night from the day.
   - **At the end of his day:** the board's level, the mAh used (the night's
     and the day's), and the RAM battery log dumped.
+  - ⚠️ **The night never slept: the USB data was left on, and a host's
+    frames block deep sleep** (`DSB_USB`, sleep.c). In the morning the
+    board read "deep sleep none since boot" with blocker usb. It dimmed at
+    00:02 (32.9 mA) and went dark at 00:12 (27.7 mA), then stayed awake
+    and dark to the morning at ~28 mA. That cost 285.5 mAh from 23:18 to
+    08:10, 7.1% of 4011, and the board read 93%, so the gauge was right.
+    Asleep, the same night would have cost ~26 mAh. The informal stretch
+    from 10:51 10-21 had the data on too, so it never slept either.
+  - **The data was cut at 08:16:01 10-22** (uhubctl port 2 off, relay 2 off),
+    with `charge_mah` -2962.51 at 08:16:04. The day runs from there,
+    untethered as a real owner's would be, the daemon on the lock-light
+    channel.
   - It is not R5, whose load is RGB off and the screen dim.
   - It answers "how far down after a day", and it gives A8 a day of idle
     gaps at real use.

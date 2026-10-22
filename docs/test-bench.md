@@ -175,6 +175,10 @@ uhubctl -l 0-1.4 -p 2 -a on  -e
   relies on the data cut.
 - **In software, the keyboard can now be:** unplugged (both off), data-only
   (relay off, port on), or charging and readable (both on).
+  - ⚠️ **Data-only never deep-sleeps:** a host's frames on the bus block it
+    (`DSB_USB` in sleep.c). On the night of 10-21/22 it sat awake and dark
+    at ~28 mA for 8 h instead of ~3 mA. A battery run meant to match real
+    use cuts both.
 - ⚠️ **A killed run leaves the keyboard unplugged.** The sleep scripts
   (`deep_cycles.py`, `deep_sleep.py`, `idle_latency.py`,
   `sleep_baseline.py`) restore the bench in a `finally`, and their deadline
