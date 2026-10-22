@@ -76,3 +76,10 @@ against `../uart-latency-20261020/stalls-0742-before-bt.json`
 **Not chased: uptime runs behind the wall clock.** The uptime read 82,987 s, against ~88,500 s of wall time since the 14:22 flash. The reset flags were 0x01, and the daemon's log shows no reset, since the board never left USB. So the ms count runs ~6% behind the wall.
 
 **The same day, the data cut works:** 11:40-13:10 asleep at 3.1 mA (the logger).
+
+**The fix, `ce229f87c6` (on the mainline since 17:40 10-22):** the 1 Hz
+latch sets `clock_ticked_this_pass`, and the pump skips the rest of that
+pass (`../../plans/review-codex-edge-pump-2026-10-22.md`). On gremlin's
+board (USB, the same load before and after) `count_ge_10ms` fell from 0.175
+a second to 0.016, and no slow pass carries the edge with the pump
+([`gremlin/`](gremlin/README.md)). JD's board takes it after the drain.

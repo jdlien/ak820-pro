@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## `count_ge_10ms` ticks once a second: the clock's second edge (2026-10-22) -- found, not fixed
+## `count_ge_10ms` ticks once a second: the clock's second edge (2026-10-22) -- fixed in `ce229f87c6`, on gremlin; JD's board after the drain
 
 On `36afff30e8`, every second produces one pass of 10-13 ms
 (`history/ge10-per-second-20261022/`). HC_ACCT's ring makes it:
@@ -39,13 +39,29 @@ lost: it is latency, at worst a few ms on a press landing in that pass, and
 `count_ge_25ms` stayed at 6 overnight and all day. But a counter that ticks
 at the clock's cadence can no longer show a regression.
 
-**The fix to try:** skip `display_blit_pump()` on the pass that ran the
-second edge, as `pass_deferred` already does for a pass that used the PCF.
-That moves ~2 ms to the next pass and should bring the edge's pass under
-10. Check it with HC_ACCT's ring before and after.
+**The fix, `ce229f87c6`** (`26b36e3ea0` plus comments, codex cleared,
+`plans/review-codex-edge-pump-2026-10-22.md`): the 1 Hz latch sets
+`clock_ticked_this_pass`, and the pump returns on it as it does on
+`pass_deferred`. `ak820pro-jdlien` and `deps.lock` point at it.
 
-**When:** with the next flash, after the drain's RGB cut (a flash erases
-the RAM battery log), with a codex review as usual.
+**On gremlin's board** (USB, a paused track, no typing; 640 s windows,
+`history/ge10-per-second-20261022/gremlin/`): `count_ge_10ms` fell from
+0.175 a second to 0.016, `count_ge_25ms` 0 throughout. No slow pass in the
+ring has `second_edge` with `blit_pump` any more, and none has the pump
+stacked with the 10 Hz scopes. JD's board takes it after the drain's cut,
+where the rate was ~1.0 a second.
+
+**What is left, and the next cut if it matters.** Of the 16 slow passes after
+the fix, all exactly 10 ms:
+- **11 are the 10 Hz block** (`battery 1-2`, `display_hk 3`): the 1 Hz latch
+  run from the 10 Hz call, because the edge's own attempt was gated on a queue
+  still painting and `edge_seen` had already moved. Idea, not built: latch the
+  second only from the edge site and retry it the next pass, so the clock's
+  diff never lands in the 10 Hz block.
+- **3 are the 10 Hz block landing on the edge's pass** (`second_edge 3` with
+  `battery 1-2`).
+- The `battery` scope in both is the 64-bit time math (below, "64-bit time
+  math on every main-loop pass").
 
 ## Power saver's typing cap at 65% instead of 50% (2026-10-21) -- parked, decide after daily use
 

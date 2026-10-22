@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-22, 15:00. The block below is where things stand, written to
+Updated 2026-10-22, 17:40. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -17,16 +17,19 @@ and on the board:
 - Gremlin's PCF writer fixes;
 - the RGB model over 81 LEDs.
 
-What is left is real use and a soak, one firmware cleanup (the
-once-a-second slow pass, below), and the polish and release for other
-owners.
+What is left is real use and a soak, flashing the once-a-second slow
+pass's fix (below; on the mainline and on gremlin's board, JD's after the
+drain), and the polish and release for other owners.
 
 ### What is running
 
-- **Firmware: `36afff30e8`** (dev, token `0xef38330e`), on the board since
-  14:22 10-21. `ak820pro-jdlien` and `deps.lock` point at it, and Gremlin's
-  board runs it too. It is Gremlin's frame trim (`01abfe0ecf`, codex cleared
-  after four rounds) merged with `36330d5ec8` (the 81-LED model).
+- **Firmware on JD's board: `36afff30e8`** (dev, token `0xef38330e`), since
+  14:22 10-21. It is Gremlin's frame trim (`01abfe0ecf`, codex cleared after
+  four rounds) merged with `36330d5ec8` (the 81-LED model).
+- **The mainline is one fix ahead: `ce229f87c6`.** `ak820pro-jdlien` and
+  `deps.lock` point at it. It is `36afff30e8` plus the once-a-second slow
+  pass's fix (below). Gremlin's board runs it since 17:03 10-22 (token
+  `0x32d3502c`). JD's board takes it after the drain.
 - **The Mac's daemon: `21e8fe8`** (`--clock --radio --lockchan`), since
   14:23 10-21. With the data cut it runs the clock and now-playing over the
   lock-light channel.
@@ -74,7 +77,7 @@ the RGB cut, likely a few days.
   (`POWER-CAMPAIGN-PLAN.md`, R5) is dropped and nothing else needs the
   logger.
 
-### The next firmware change: one slow pass every second
+### The once-a-second slow pass: fixed in `ce229f87c6`, on gremlin
 
 **The finding** (14:56 10-22, after 23 h up;
 [`../history/ge10-per-second-20261022/`](../history/ge10-per-second-20261022/README.md)):
@@ -87,51 +90,49 @@ the RGB cut, likely a few days.
   moves the first queued glyph in the same pass, and QMK's core adds its
   ~4 ms.
 - **It is not new, just closer to the line.** The clock has shown seconds
-  since the first firmware (`DISPLAY_CLOCK_SHOW_SECONDS`), so one or two
-  glyphs queue every second. On 10-20 (`b2a07e0d37`, overnight, 2.4G, on
-  USB) the same pass was in the ring (`second_edge 2, blit_pump 2,
-  unaccounted 3-5`) and crossed 10 ms 0.18 times a second.
-  - Now every pass is ~0.5 ms slower on average: 5.28 ms against 4.76.
-  - `ch582` rose 0.98 to 1.21 ms a pass (BT now, the dongle then).
-  - The core outside the scopes rose 3.35 to 3.59 ms.
-  - No scope's cost jumped. The row ISR is unchanged: 73.3% of the CPU
-    and 194 us mean, against 72.8% and 188 on 09-03.
-  - So the edge's pass now crosses nearly every second. The conditions
-    differ (BT against 2.4G, the pack against USB, the build), so the
-    0.5 ms isn't pinned on any one of them.
+  since the first firmware (`DISPLAY_CLOCK_SHOW_SECONDS`). On 10-20
+  (`b2a07e0d37`, overnight, 2.4G, on USB) the same pass crossed 10 ms 0.18
+  times a second, and on gremlin's board on `36afff30e8` (USB) 0.17-0.22.
+  - JD's board runs ~0.6 ms a pass slower than gremlin's: 5.28 ms against
+    4.66. `ch582` is the same on both (1.21 against 1.23 ms), so it is not
+    BT. The whole difference is outside the scopes (3.59 against 2.98 ms):
+    the pack against USB, or the lock-light frames JD's board receives.
+    Not chased.
+  - The row ISR is unchanged: 73.3% of the CPU and 194 us mean, against
+    72.8% and 188 on 09-03.
   - Not the power-mode bulb: it repaints only when the mode changes.
-- A second pattern comes at irregular times: `battery 1-3, display_hk 1,
-  ch582 1-3, unaccounted 4-6`. The battery scope's 1-3 ms looks like the
-  64-bit time math (`BACKLOG.md`, "64-bit time math on every main-loop
-  pass").
 
 **Why fix what costs no keys:** the matrix is sampled in the row ISR, and 25
 ms is the line for loss, so nothing is lost. But a press landing in that
 pass goes out up to a few ms late, and a counter that ticks at the clock's
 cadence can no longer show a regression. That counter is how every stall
-in this project's history was found.
+in this project's history was found. Raising its line to 12 ms was
+considered and dropped: the passes are 10-13 ms, and every earlier
+measurement is at 10.
 
-**The fix:** skip `display_blit_pump()` on the pass that ran the second
-edge, as `pass_deferred` already does for a pass that used the PCF. The
-glyph moves on the next pass, ~3-5 ms later, which nobody can see. That
-should bring the edge's pass to ~8 ms. If the battery pattern still
-crosses, take its 64-bit math out next.
+**The fix, `ce229f87c6`** (`26b36e3ea0` plus comments; codex found no
+must-fix or should-fix,
+[`review-codex-edge-pump-2026-10-22.md`](review-codex-edge-pump-2026-10-22.md)):
+the 1 Hz latch sets `clock_ticked_this_pass`, the pump returns on it as it
+does on `pass_deferred`, and `display_pass_end()` clears it. The glyph goes
+out on the next pass, ~5 ms later.
 
-**How to know it worked:**
-- HC_ACCT's ring before and after: the edge's pass without `blit_pump`,
-  under 10 ms;
-- `count_ge_10ms` per hour from the daemon's status file, on the same
-  load.
+**On gremlin's board** (USB, a paused track, no typing;
+[`../history/ge10-per-second-20261022/gremlin/`](../history/ge10-per-second-20261022/gremlin/)):
+`count_ge_10ms` fell from 0.175 a second to 0.016 over matched 640 s
+windows, with `count_ge_25ms` 0 throughout. No slow pass in the ring has the
+edge with the pump any more, and none has the pump stacked with the 10 Hz
+block. What is left is the 10 Hz block (`BACKLOG.md` has the next cut, not
+built).
 
-**When:** after the drain's cut, since a flash erases the RAM battery log.
-With a codex review saved to `plans/` and every finding dispositioned, as
-for every flash.
+**On JD's board, after the drain:** read `count_ge_10ms` per hour from the
+daemon's status file and the ring, against ~1.0 a second before.
 
 ### After the drain
 
 1. Dump the RAM battery log, then charge to FULL.
-2. Flash the slow-pass fix. Proposed, JD's call: build it as `daily`, the
-   build releases ship, so the soak runs what owners get. A daily build has
+2. Flash `ce229f87c6`, the slow-pass fix. Proposed, JD's call: build it as
+   `daily`, the build releases ship, so the soak runs what owners get. A daily build has
    no bootloader jump, so later flashes need `Fn`+`Esc`.
 3. Strip the bench (the relay wires, the logger), and JD puts the foam and
    silicone back.

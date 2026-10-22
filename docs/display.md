@@ -85,6 +85,15 @@ CPU-bound loop, plus 5.9 KB of SRAM.
   2026-09-01.
 - `[lcd] blit timeout` on the console is THE health signal: zero under load
   means the pump is not fighting the bus.
+- **The pump skips the pass that ran the clock's second** (`clock_ticked_this_pass`,
+  since `ce229f87c6`, as `pass_deferred` does after a PCF transaction). On
+  `36afff30e8` that pass ran the second edge's diff, the pump's first glyph and
+  QMK's core together, at 10-13 ms, once every second, so `count_ge_10ms` ticked
+  at the clock's cadence
+  ([`history/ge10-per-second-20261022/`](../history/ge10-per-second-20261022/README.md)).
+  The glyph goes out on the next pass instead, ~5 ms later. On gremlin's board
+  the count fell from 0.175 a second to 0.016. Only a pump call after the latch
+  skips: the 10 Hz call's latch comes after the pump.
 
 ### Blit timeouts: what they were, and how they are read now (2026-09-23)
 
