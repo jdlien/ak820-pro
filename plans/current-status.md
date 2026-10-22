@@ -90,6 +90,12 @@ Gremlin's PCF writer fixes, and Gremlin's wireless clock (type 4).
     with `charge_mah` -2962.51 at 08:16:04. The day runs from there,
     untethered as a real owner's would be, the daemon on the lock-light
     channel.
+  - **It runs on to the RGB cut,** untethered at JD's settings in Balanced:
+    the first drain with the ladder and deep sleep at real use, likely a few
+    days. 10-22 itself is a short working day. The night of 10-22/23 is the
+    asleep night to set against 10-21/22's awake one.
+  - **Reads go over data alone:** port 2 on and relay 2 still off, so the
+    run is not broken. The board's RAM log is dumped before any flash.
   - It is not R5, whose load is RGB off and the screen dim.
   - It answers "how far down after a day", and it gives A8 a day of idle
     gaps at real use.
