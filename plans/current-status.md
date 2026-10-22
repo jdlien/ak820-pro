@@ -127,9 +127,15 @@ board runs it too. **The Mac's daemon is `21e8fe8`** (main, with Gremlin's
   the power page, whose `--check` fails unless `site/power/power.json`
   carries the new sha), build dev, relay 2 on, flash, relay 2 off.
 
-**Owed:** codex's RTC failure-path tests (Gremlin); the stack watermarks
-after a long run (each flash resets them: read them on the morning of
-10-22, after ak820-pro-1e's power-charts sweep tonight).
+**Owed:** codex's RTC failure-path tests (Gremlin).
+
+**Read at 14:57 10-22, after 23 h up** (over the data alone,
+[`../history/ge10-per-second-20261022/`](../history/ge10-per-second-20261022/README.md)):
+- **The stacks:** interrupt 568 of 1024 bytes free, main 968 of 2048.
+- **`count_ge_25ms` was still 6.**
+- **`count_ge_10ms` ticks once a second,** from the clock's second edge
+  stacking with the pump and QMK's core. That is latency, not loss. The
+  fix is in `BACKLOG.md`, for the next flash.
 
 ## 2026-10-20 evening
 

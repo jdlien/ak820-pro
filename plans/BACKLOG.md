@@ -25,6 +25,28 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## `count_ge_10ms` ticks once a second: the clock's second edge (2026-10-22) -- found, not fixed
+
+On `36afff30e8`, every second produces one pass of 10-13 ms
+(`history/ge10-per-second-20261022/`). HC_ACCT's ring makes it:
+- `second_edge 3`: the 1 Hz `draw_clock` and `draw_battery`;
+- `blit_pump 2`: the pump moving a glyph in the same pass;
+- `unaccounted 4`: QMK's core;
+- `ch582 1`.
+
+That is ~86,000 a day, against 0.18 a second on `b2a07e0d37`. Nothing is
+lost: it is latency, at worst a few ms on a press landing in that pass, and
+`count_ge_25ms` stayed at 6 overnight and all day. But a counter that ticks
+at the clock's cadence can no longer show a regression.
+
+**The fix to try:** skip `display_blit_pump()` on the pass that ran the
+second edge, as `pass_deferred` already does for a pass that used the PCF.
+That moves ~2 ms to the next pass and should bring the edge's pass under
+10. Check it with HC_ACCT's ring before and after.
+
+**When:** with the next flash, after the drain's RGB cut (a flash erases
+the RAM battery log), with a codex review as usual.
+
 ## Power saver's typing cap at 65% instead of 50% (2026-10-21) -- parked, decide after daily use
 
 `SAVER_VAL` (128, 50%) caps the lighting while typing in Power saver. The

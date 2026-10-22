@@ -1,0 +1,1 @@
+{"blit_timeouts": 0, "tx_sent": 86450, "tx_timeouts": 8681, "tx_drops": 0, "rx_malformed": 0, "loop_gap_max_ms": 29, "scan_rate": 189, "wdt_consecutive_resets": 0, "flags": 0, "version": 8, "wdt_fired_last_boot": false, "wdt_degraded": false}
