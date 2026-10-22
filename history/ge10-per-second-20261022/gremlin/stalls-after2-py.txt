@@ -1,0 +1,79 @@
+blit_timeouts            0
+tx_sent                  272
+tx_timeouts              202
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          20
+scan_rate                223
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+passes                   301495
+count_ge_10ms            32
+count_ge_25ms            0
+count_ge_25ms_nonflash   0
+loop_gap_max_mark        blit
+flash_writes             825
+flash_gap_max_ms         8
+blit_gap_max_ms          20
+i2c_gap_max_ms           0
+key_presses              0
+
+  no stall >= 25 ms since reset (shorter stalls delay a press, they cannot drop it)
+
+transport (every way the CH582F link can lose a frame):
+  sent 272  timeouts 202  queue_full 0  giveups 0  replaced 0  | uart overrun 0 framing 0 parity 0
+  slow ch582 calls (>= 4.0 ms): 12; their time, ms: control 6.54  rx 20.42  c5_hook 14.23  ack_writes 2.98  tx_pump 6.77
+  5C reports 475: hook 168.83 ms in all, mean 0.36, longest 0.56
+         415.8 s   4.06 ms: control 0.5 rx 1.38 c5_hook 1.33 ack_writes 0.28 tx_pump 0.56 | 12 bytes, 3 5C
+         565.8 s   4.08 ms: control 0.52 rx 1.4 c5_hook 1.56 ack_writes 0.06 tx_pump 0.54 | 12 bytes, 3 5C
+         855.9 s   4.06 ms: control 0.51 rx 1.35 c5_hook 1.35 ack_writes 0.29 tx_pump 0.56 | 9 bytes, 3 5C
+         915.9 s   4.07 ms: control 0.51 rx 1.63 c5_hook 1.37 ack_writes 0.04 tx_pump 0.53 | 9 bytes, 3 5C
+         920.9 s   4.06 ms: control 0.54 rx 1.35 c5_hook 1.38 ack_writes 0.26 tx_pump 0.54 | 9 bytes, 3 5C
+        1041.0 s   4.06 ms: control 0.54 rx 1.34 c5_hook 1.34 ack_writes 0.29 tx_pump 0.55 | 9 bytes, 3 5C
+        1086.0 s   4.07 ms: control 0.54 rx 1.18 c5_hook 1.24 ack_writes 0.57 tx_pump 0.54 | 12 bytes, 3 5C
+        1251.1 s   4.08 ms: control 0.54 rx 1.58 c5_hook 1.11 ack_writes 0.32 tx_pump 0.53 | 9 bytes, 3 5C
+
+internal-flash writes by writer (sessions / programs / erases):
+  other        7      134      2
+  kb           3        6      0
+  rgb          2        4      0
+  via        813     1587      6
+  kb sessions by field: bt 0  rtc_period 1  lcd_brightness 0  clock_mode 0  batt_level 1  power_mode 1  mixed 0  unknown 0
+  rtc period: last proposed 33454 (sof), last stored 33467 (sof); proposals sof 39 pcf 0, stores sof 1 pcf 0
+  (an erase is a whole-store erase: all 2048 bytes, 2 x 1 KB pages)
+  last erase at uptime 0.1 s
+
+per-task accounting (ON): 301509 passes, 32 slow (>= 10 ms), of which 0 >= 340 ms (counted, not attributed: the 16-bit tick may have wrapped)
+  scope          slow ms  share largest     all ms
+  ch582             66.5  19.5%       7     343496
+  battery           29.4   8.6%       0      11861
+  display_hk        62.4  18.3%       2      10643
+  blit_pump          7.4   2.2%       0      70182
+  rtc_task           7.7   2.3%       0       3412
+  rtc_fast           5.1   1.5%       0      21334
+  leds               1.0   0.3%       0        339
+  health             0.0   0.0%       0         41
+  eeconfig           0.5   0.2%       0        105
+  second_edge       33.5   9.8%       1       7419
+  anim               0.5   0.1%       0         37
+  hk_other           3.5   1.0%       0       1200
+  unaccounted      123.4  36.2%      22     862106
+  last 16 slow passes (uptime s, pass ms: scopes > 0 ms):
+         499.6   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+         529.5   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+         541.5   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+         565.8   10 ms: ch582 4, battery 1, display_hk 1, unaccounted 3
+         601.1   10 ms: ch582 1, battery 1, display_hk 1, unaccounted 7
+         662.5   10 ms: ch582 1, battery 2, display_hk 3, unaccounted 4
+         796.8   10 ms: ch582 1, battery 1, display_hk 1, unaccounted 6
+         824.5   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+         831.5   10 ms: ch582 1, battery 2, second_edge 3, unaccounted 3
+         964.5   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+        1048.5   10 ms: ch582 1, battery 1, second_edge 3, unaccounted 4
+        1066.5   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+        1086.0   10 ms: ch582 4, battery 1, display_hk 1, unaccounted 3
+        1098.5   10 ms: ch582 1, battery 1, display_hk 3, rtc_fast 1, unaccounted 3
+        1174.4   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+        1234.4   10 ms: ch582 1, battery 1, second_edge 3, unaccounted 5

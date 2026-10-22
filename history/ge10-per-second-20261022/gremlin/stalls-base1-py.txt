@@ -1,0 +1,79 @@
+blit_timeouts            0
+tx_sent                  19031
+tx_timeouts              13744
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          20
+scan_rate                219
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+passes                   20406626
+count_ge_10ms            21344
+count_ge_25ms            0
+count_ge_25ms_nonflash   0
+loop_gap_max_mark        blit
+flash_writes             829
+flash_gap_max_ms         8
+blit_gap_max_ms          20
+i2c_gap_max_ms           0
+key_presses              0
+
+  no stall >= 25 ms since reset (shorter stalls delay a press, they cannot drop it)
+
+transport (every way the CH582F link can lose a frame):
+  sent 19031  timeouts 13744  queue_full 0  giveups 0  replaced 0  | uart overrun 0 framing 1 parity 0
+  slow ch582 calls (>= 4.0 ms): 675; their time, ms: control 352.01  rx 1114.44  c5_hook 691.09  ack_writes 255.89  tx_pump 361.25
+  5C reports 34539: hook 11165.21 ms in all, mean 0.32, longest 0.93
+       93394.4 s   4.07 ms: control 0.51 rx 1.42 c5_hook 1.05 ack_writes 0.56 tx_pump 0.53 | 12 bytes, 3 5C
+       93789.6 s   4.05 ms: control 0.47 rx 1.42 c5_hook 1.32 ack_writes 0.29 tx_pump 0.54 | 12 bytes, 3 5C
+       94094.7 s   4.05 ms: control 0.51 rx 1.59 c5_hook 0.89 ack_writes 0.52 tx_pump 0.55 | 12 bytes, 3 5C
+       94184.8 s   4.05 ms: control 0.51 rx 1.58 c5_hook 0.9 ack_writes 0.52 tx_pump 0.54 | 12 bytes, 3 5C
+       94249.8 s   4.07 ms: control 0.54 rx 1.65 c5_hook 1.06 ack_writes 0.27 tx_pump 0.54 | 12 bytes, 3 5C
+       94810.1 s   4.06 ms: control 0.53 rx 1.64 c5_hook 0.81 ack_writes 0.51 tx_pump 0.57 | 12 bytes, 3 5C
+       95110.2 s   4.03 ms: control 0.53 rx 1.57 c5_hook 0.87 ack_writes 0.51 tx_pump 0.54 | 12 bytes, 3 5C
+       95125.2 s   4.05 ms: control 0.52 rx 1.39 c5_hook 0.83 ack_writes 0.76 tx_pump 0.55 | 12 bytes, 3 5C
+
+internal-flash writes by writer (sessions / programs / erases):
+  other        7      134      2
+  kb           7       14      0
+  rgb          2        4      0
+  via        813     1587      6
+  kb sessions by field: bt 0  rtc_period 5  lcd_brightness 0  clock_mode 0  batt_level 1  power_mode 1  mixed 0  unknown 0
+  rtc period: last proposed 33461 (sof), last stored 33452 (sof); proposals sof 2853 pcf 0, stores sof 5 pcf 0
+  (an erase is a whole-store erase: all 2048 bytes, 2 x 1 KB pages)
+  last erase at uptime 0.1 s
+
+per-task accounting (ON): 20406640 passes, 21344 slow (>= 10 ms), of which 0 >= 340 ms (counted, not attributed: the 16-bit tick may have wrapped)
+  scope          slow ms  share largest     all ms
+  ch582          28994.7  12.8%     724   25157603
+  battery        10399.6   4.6%       0     890388
+  display_hk     11085.7   4.9%      13     817737
+  blit_pump      33639.4  14.8%       0    5041136
+  rtc_task        3104.4   1.4%       0     260323
+  rtc_fast        2647.4   1.2%      39    1651270
+  leds             298.2   0.1%       0      28060
+  health            21.8   0.0%       0       1705
+  eeconfig          47.1   0.0%       0       4061
+  second_edge    54437.6  23.9%    1041     510195
+  anim              90.5   0.0%       0       7400
+  hk_other         750.3   0.3%       0      69258
+  unaccounted    81814.6  36.0%   19527   60729633
+  last 16 slow passes (uptime s, pass ms: scopes > 0 ms):
+       95120.2   13 ms: ch582 2, battery 1, display_hk 1, blit_pump 2, second_edge 3, unaccounted 4
+       95125.2   13 ms: ch582 4, blit_pump 2, second_edge 3, unaccounted 4
+       95127.2   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+       95128.2   10 ms: ch582 1, blit_pump 2, second_edge 3, unaccounted 4
+       95130.2   10 ms: ch582 2, blit_pump 2, second_edge 3, unaccounted 3
+       95139.2   10 ms: ch582 1, battery 1, display_hk 3, unaccounted 4
+       95143.2   10 ms: ch582 1, blit_pump 2, second_edge 3, unaccounted 4
+       95153.2   12 ms: ch582 1, battery 1, display_hk 1, blit_pump 2, second_edge 3, unaccounted 4
+       95158.2   10 ms: ch582 1, blit_pump 2, second_edge 3, unaccounted 4
+       95159.2   12 ms: ch582 1, battery 1, display_hk 1, blit_pump 2, second_edge 3, unaccounted 4
+       95162.2   10 ms: ch582 1, blit_pump 2, second_edge 3, unaccounted 4
+       95163.2   10 ms: ch582 1, battery 1, display_hk 3, rtc_fast 1, unaccounted 4
+       95167.1   11 ms: ch582 1, battery 1, display_hk 1, blit_pump 2, second_edge 3, unaccounted 3
+       95172.1   10 ms: ch582 1, battery 1, display_hk 1, blit_pump 2, unaccounted 5
+       95176.1   10 ms: ch582 1, blit_pump 2, second_edge 3, unaccounted 4
+       95178.1   11 ms: ch582 1, battery 1, display_hk 1, blit_pump 2, second_edge 3, unaccounted 3
