@@ -236,9 +236,12 @@ milliwatt-hours, not milliamps.
 ## Working it out yourself
 
 The firmware carries this model to count the battery down. Against the logger
-it was within 2% at all 24 steps of the ladder's stages, and within 0.6% at
-every step of the LED brightness and colour sweep (each step's mean over its
-two passes; a single hold within 0.92%):
+it was within 2% at all 24 steps of the ladder's stages, within 0.6% at every
+step of the 10-19 LED brightness and colour sweep, and within 1% at every lit
+state of the 10-21 sweep of every knob (each step's mean over its two passes).
+With nothing lit it reads ~1.5 mW (1.4%) under the board: its base is a
+little light and its lit step a little heavy, and the two cancel once an LED
+is on:
 
 - **base: 106.9 mW**, awake (deep sleep: 13.35 mW in all);
 - **plus the backlight: 39.1 mW × duty / 48** (the duty for each level is in
@@ -509,7 +512,12 @@ one way only, so charging work stays on the INA228.
     three;
     [`rgb-curve-20261019/`](../history/power-bench-2026-10-15/rgb-curve-20261019/README.md);
   - **the ladder's stages, 10-19:** 24 steps;
-    [`stages-20261019/`](../history/power-bench-2026-10-15/stages-20261019/README.md).
+    [`stages-20261019/`](../history/power-bench-2026-10-15/stages-20261019/README.md);
+  - **every knob from one floor, 10-21:** 56 states, the RGB with the screen
+    off and the screen with the RGB off (white, red, green and blue at 8-11
+    values, 7 screen levels, held-out colours, both on, Cycle All); what the
+    power page's dots are;
+    [`current-map-20261021-1738/`](../history/power-bench-2026-10-15/current-map-20261021-1738/README.md).
 
 ### Drains and charges
 
@@ -532,6 +540,10 @@ one way only, so charging work stays on the INA228.
 ### The firmware's model, checked
 
 - **Stages:** within 2% at all 24 steps; LEDs per colour within 0.6%.
+- **Every knob, 10-21:** every lit state within 1%; with nothing lit, 1.4%
+  under the board (115.6 mW against 114.0, USB data included); each screen
+  level's own cost within 0.31 mW; Cycle All within 0.2% of the model
+  averaged over every hue.
 - **The gauge:** `scripts/battery_sim` replays the gauge's own firmware on
   the host, at one-second steps, through both logged drains (148 cases).
 - **Sleep:**

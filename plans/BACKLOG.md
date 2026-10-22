@@ -40,6 +40,31 @@ Then the simulator, `ladder_check`, the docs' "half brightness", codex, a
 flash. Parked because 50% or less is the setting JD uses most; other owners
 may want it brighter.
 
+## The model's base reads ~1.5 mW light with nothing lit (2026-10-21) -- noted, no change
+
+The 10-21 sweep of every knob
+([`current-map-20261021-1738/`](../history/power-bench-2026-10-15/current-map-20261021-1738/README.md))
+has every lit state within 1% of `model_nj`, but the dark floor at 115.6 mW
+against 114.0. Measured from that floor, the first lit drive costs ~7 mW
+against `P_RGB_A`'s 8.64, so the two errors cancel once an LED is on, which
+is where JD's settings live. Moving ~1.5 mW from `P_RGB_A` to `P_BASE` would
+fix the dark and screen-only states without moving the lit ones.
+- **Why it waits:** the offset has drifted between maps (within 0.03% on
+  10-15, +0.9 mW on 10-19, +1.6 today), so a refit should follow a second
+  dark-floor measurement on the same firmware, not one run.
+- **What it affects:** lights-out and screen-only time-left, by ~1.4%.
+- **If done:** battery.c, the simulator's expectations, the docs' figures,
+  the page's test gates (dark 1.8%, screen 1.4%), codex, a flash.
+
+## The power page could model Cycle All (2026-10-21) -- offered, not built
+
+On 10-21, Cycle All at 255 and 128 drew 211.0 and 139.5 mW. The model
+averaged over every hue at saturation 255 gives 211.1 and 139.2, within
+0.2%. So the page's Effect menu could offer Cycle All (and any effect that
+moves one hue across every LED) as that average, instead of "not modelled".
+Effects that light keys differently (reactive, Alphas/Mods) would still be
+out.
+
 ## The RGB model's 82 LEDs: the board has 81 (2026-10-21) -- FIXED on `rgb-81-leds`, codex cleared, lands with the next merged flash
 
 Found by codex reviewing [`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md),

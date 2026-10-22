@@ -48,9 +48,15 @@ without the board:
 
 Preview: `cd site && python3 -m http.server`, then `/power/`.
 
-**Left:** the `knobs` sweep set in `current_map.py` with structured output;
-the overnight sweep (with the session holding the board), which replaces the
-dots and tightens the gate; a codex review of the build.
+**The sweep ran 17:38-20:28 10-21**
+([`current-map-20261021-1738/`](../history/power-bench-2026-10-15/current-map-20261021-1738/README.md)):
+its `results.json` replaces both earlier sweeps as the page's dots and
+evidence. The gate did not tighten. Every lit state is within 1%, but the
+dark floor reads 1.4% above the model and the screen alone up to 1.4%, so
+the tests gate dark 1.8%, screen 1.4%, the rest 1.0%. The increments over
+the floor: the screen within 0.5 mW, the LEDs within 3 mW
+(`plans/BACKLOG.md`, "The model's base reads ~1.5 mW light").
+**Left:** a codex review of the build.
 Also: measure the reserve after 0% on current firmware. The one observation
 (~5 h, run 2) predates deep sleep, which may stretch it a lot, so the page
 says "at least five more hours, depending on how often you type" until there

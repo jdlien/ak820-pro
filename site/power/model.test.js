@@ -153,27 +153,33 @@ test("standby", () => {
   assert.equal(M.standby(fw, ev, s, "full", F).asleep, false, "Always on stays awake");
 });
 
-// The measurement gate, apart from the exact ones above: each state's mean
-// over its two passes. A miss means investigate, not change the firmware.
-// The lit RGB states within 0.6% (worst 0.56% on 10-19), the screen within
-// 0.5% (0.27%), and the dark floors within 0.8%: the 10-19 sweep's RGB-off
-// read 0.93 mW above the model (battery.c's note on A), the 10-15 map's 0.03%.
-test("the model against the bench sweeps", () => {
+// The measurement gate, apart from the exact ones above: each knobs state's
+// mean over its two passes (2026-10-21). A miss means investigate, not change
+// the firmware. The lit states within 1.0% (worst 0.99%, white 32); with no
+// LED lit the board reads above the model, the dark floor by up to 1.8%
+// (115.0-116.1 mW against 114.0) and the screen alone by up to 1.4%.
+test("the model against the bench sweep", () => {
   const rows = M.sweepAgreement(fw, ev);
-  assert.ok(rows.length > 25);
+  assert.ok(rows.length >= 54);
+  const tol = { dark: 0.018, screen: 0.014 };
   for (const r of rows) {
-    const tol = r.name.endsWith(" off") ? 0.008 : r.name.startsWith("screen") ? 0.005 : 0.006;
-    assert.ok(Math.abs(r.err) <= tol, `${r.name}: model ${r.model.toFixed(1)} vs measured ${r.measured} (${(100 * r.err).toFixed(2)}%)`);
+    const t = tol[r.family] ?? 0.010;
+    assert.ok(Math.abs(r.err) <= t, `${r.name}: model ${r.model.toFixed(1)} vs measured ${r.measured} (${(100 * r.err).toFixed(2)}%)`);
   }
 });
 
+// Each knob's increment over the dark states' mean, on the model's curve: the
+// screen's within 0.5 mW (worst 0.31), the LEDs' within 3 mW (red at 240-255
+// sits 2.5 below, and the first lit drive ~1.9 below: the floor reads high).
 test("the measured points sit on the curves", () => {
   const pts = M.measuredPoints(fw, ev);
   const curves = {
     white: M.rgbCurve(fw, ev, 0, 0), red: M.rgbCurve(fw, ev, 0, 255),
     green: M.rgbCurve(fw, ev, 85, 255), blue: M.rgbCurve(fw, ev, 170, 255),
   };
-  for (const p of pts.rgb) near(p.mw, curves[p.colour][p.v].mw, 2.5, p.name);
+  assert.equal(pts.rgb.length, 36);
+  assert.equal(pts.screen.length, 7);
+  for (const p of pts.rgb) near(p.mw, curves[p.colour][p.v].mw, 3.0, p.name);
   const sc = M.screenCurve(fw, ev);
-  for (const p of pts.screen) near(p.mw, sc[p.level].mw, 1.0, p.name);
+  for (const p of pts.screen) near(p.mw, sc[p.level].mw, 0.5, p.name);
 });

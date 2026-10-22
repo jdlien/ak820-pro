@@ -597,7 +597,7 @@ function chart(kind) {
   });
   const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
   title.textContent = kind === "draw"
-    ? `AK820 Pro draw by knob position, awake, other lighting off, untethered, ${state.radio === "g24" ? "2.4 GHz" : "Bluetooth"}. Model at firmware ${fw.sha.slice(0, 10)}; dots measured 2026-10-15 and 10-19.`
+    ? `AK820 Pro draw by knob position, awake, other lighting off, untethered, ${state.radio === "g24" ? "2.4 GHz" : "Bluetooth"}. Model at firmware ${fw.sha.slice(0, 10)}; dots measured ${ev.knobs_sweep.date}.`
     : `AK820 Pro hours of nonstop typing from full by knob position, other lighting off, ${MODE_NAME[state.mode]}, ${state.radio === "g24" ? "2.4 GHz" : "Bluetooth"}; low-battery dimming assumed at ${Math.round(F * 100)}% of the energy. Model at firmware ${fw.sha.slice(0, 10)}.`;
   svg.prepend(title);
   host.replaceChildren(svg, el("div", { class: "crosshair" }), el("div", { class: "tip", role: "status", "aria-live": "polite" }));
@@ -695,13 +695,19 @@ function renderTables() {
   m.append(el("tr", {}, el("th", {}, "State"), el("th", {}, "Measured (mW)"), el("th", {}, "Model (mW)"), el("th", {}, "Difference")));
   for (const r of M.sweepAgreement(fw, ev))
     m.append(el("tr", {}, el("td", {}, r.name), el("td", {}, r.measured.toFixed(1)), el("td", {}, r.model.toFixed(1)), el("td", {}, `${(100 * r.err).toFixed(2)}%`)));
-  box.append(el("h3", {}, "Each bench state against the model, as measured (USB data attached; RGB states with the screen at level 5)"), m);
+  box.append(el("h3", {}, "Each bench state against the model, as measured (on the pack, USB data attached; the screen off unless named)"), m);
 }
 
 function renderEvidence() {
   const rows = M.sweepAgreement(fw, ev);
-  const lit = rows.filter((r) => r.name.startsWith("rgb ") && !r.name.endsWith(" off"));
-  const scr = rows.filter((r) => r.name.startsWith("screen"));
+  const lit = rows.filter((r) => r.lighting.effect === 1 && r.lighting.v > 0);
+  const both = rows.filter((r) => r.family === "combined");
+  const dark = rows.filter((r) => r.family === "dark");
+  const unlit = rows.filter((r) => !lit.includes(r));
+  const scr = M.measuredPoints(fw, ev).screen;
+  const sc = M.screenCurve(fw, ev);
+  const scrOff = Math.max(...scr.map((p) => Math.abs(p.mw - sc[p.level].mw)));
+  const dMw = dark.map((r) => r.measured);
   const worst = (xs) => (100 * Math.max(...xs.map((r) => Math.abs(r.err)))).toFixed(2);
   const r3 = ev.drains.runs.find((r) => r.name === "R3");
   const fixed = fw.e_cap_mwh / M.boardMw(fw, { rgb: { on: true, h: 0, s: 0, v: 255 }, screen: { on: true, level: 5 } });
@@ -711,7 +717,8 @@ function renderEvidence() {
     el("p", {}, `The figures come from the keyboard's own power model, the arithmetic its battery gauge counts with, read from the firmware at commit ${fw.sha.slice(0, 10)}: ${fw.p_base_uw / 1000} mW awake with every light off, the screen's backlight in proportion to its duty, ${fw.p_rgb_a_uw / 1000} mW while any LED is lit, and each colour's own cost per unit of drive across the ${fw.led_count} LEDs. The page computes the LED drive as the firmware does, brightness curve included, and its arithmetic is tested against the firmware's own code.`),
     el("h3", {}, "Checked against the bench"),
     el("ul", {},
-      el("li", {}, `Each of ${lit.length} solid-colour states measured on 2026-10-19 is within ${worst(lit)}% of the model, and each of ${scr.length} screen levels measured on 10-15 within ${worst(scr)}% (the mean of two passes; a single pass up to ~0.9%).`),
+      el("li", {}, `Measured on ${ev.knobs_sweep.date}, each of ${lit.length} solid-colour states, ${both.length} of them with the screen on as well, is within ${worst(lit)}% of the model (the mean of two passes).`),
+      el("li", {}, `With every light off the keyboard drew ${Math.min(...dMw).toFixed(1)} to ${Math.max(...dMw).toFixed(1)} mW against the model's ${dark[0].model.toFixed(1)} (both with the bench's USB data), so the states with no LED lit, the screen alone included, read up to ${worst(unlit)}% above it. Measured from that floor, each of ${scr.length} screen levels costs within ${scrOff.toFixed(1)} mW of the model's figure.`),
       el("li", {}, `Five drains from full to 0% at full white with the screen at level 5 ran 50 to 52 hours. The model gives ${fixed.toFixed(1)} h for that setting held still, about ${(100 * (fixed / r3Untethered - 1)).toFixed(0)}% longer than the logged drain (${r3.hours} h, about ${r3Untethered.toFixed(1)} h without the bench's USB cable). The page shows the model, not a correction for that gap.`),
       el("li", {}, "Every logged drain ran on firmware before the low-battery dimming existed, so the headline's dimmed tail is modelled, not yet measured.")),
     el("h3", {}, "Assumptions"),
@@ -727,7 +734,7 @@ function renderEvidence() {
       el("li", {}, "The cost of typing itself (the radio's work per keystroke): it is inside the drains, not separated."),
       el("li", {}, "The keyboard's own time-left estimate, which divides the gauge's remaining energy by your recent awake average. It answers a different question and can disagree with this page in either direction.")));
   $("footer").replaceChildren(
-    el("p", {}, `Firmware ${fw.sha.slice(0, 10)}. Bench data: the 2026-10-15 load map and the 2026-10-19 colour sweep. `,
+    el("p", {}, `Firmware ${fw.sha.slice(0, 10)}. Bench data: the ${ev.knobs_sweep.date} sweep of every knob. `,
       el("a", { href: "https://github.com/jdlien/ak820-pro" }, "Source and method"), ". Icons: Font Awesome Free, CC BY 4.0."));
 }
 

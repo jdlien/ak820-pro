@@ -14,9 +14,10 @@ CIE table (quantum/led_tables.c) and the screen readout's rounding
 (param_overlay.c). A missing or ambiguous definition, or a table of the wrong
 size, is fatal: the page must never show a number the board does not use.
 
-The measured side is the two bench sweeps' summaries, parsed per step (mA and
-the pack's VCELL, so mW = mA x VCELL), and scripts/power_evidence.json for the
-figures that live only in the docs. Standard library only.
+The measured side is the knobs sweep's results.json (current_map.py --set
+knobs: each hold's setting as read back, its charge-register mA and the pack's
+VCELL, so mW = mA x VCELL), and scripts/power_evidence.json for the figures
+that live only in the docs. Standard library only.
 """
 import argparse
 import json
@@ -140,65 +141,58 @@ def firmware(sha):
     }
 
 
-STEP = re.compile(r"^\s*\d+ (\S+(?: \d+| off| max)?)\s+([\d.]+) mA \(samples.*?\) vcell (\d+)", re.M)
 HUE = {"white": (0, 0), "red": (0, 255), "green": (85, 255), "blue": (170, 255)}
-
-
-def sweep_steps(rel):
-    """Each state's passes from a current_map.py summary: mA, VCELL, mW = mA x VCELL."""
-    text = open(os.path.join(ROOT, rel, "summary.txt")).read()
-    by = {}
-    for name, ma, mv in STEP.findall(text):
-        by.setdefault(name, []).append({"ma": float(ma), "vcell_mv": int(mv), "mw": round(float(ma) * int(mv) / 1000, 2)})
-    if not by:
-        die(f"{rel}/summary.txt: no steps parsed")
-    return by
 
 
 def mean(xs):
     return round(sum(xs) / len(xs), 2)
 
 
-def rgb_sweep(ev):
-    rel = ev["dir"]
-    by = sweep_steps(rel)
-    pm = {}
-    with open(os.path.join(ROOT, rel, "steps.csv")) as f:
-        head = f.readline().strip().split(",")
-        for line in f:
-            row = dict(zip(head, line.strip().split(",")))
-            pm.setdefault(row["name"], int(row["led_pm"]))
-    rows = []
-    for name, passes in by.items():
-        if name == "jd":
-            continue
-        row = {"name": name, "passes": [p["mw"] for p in passes], "mw": mean([p["mw"] for p in passes]),
-               "ma": mean([p["ma"] for p in passes]), "led_pm": pm.get(name)}
-        if name == "rgb off":
-            row["off"] = True
-        else:
-            colour, v = name.split()
-            if colour not in HUE:
-                die(f"{rel}: unexpected state {name!r}")
-            row["h"], row["s"] = HUE[colour]
-            row["v"] = int(v)
-            row["colour"] = colour
-        rows.append(row)
-    return {**ev, "rows": rows}
+def family(effect, h, s, level):
+    """A knobs state's family, from its setting as read back, never its name."""
+    if effect == 0:
+        return "dark" if level is None else "screen"
+    if effect != 1:
+        return "animated"
+    if level is not None:
+        return "combined"
+    for colour, (hh, ss) in HUE.items():
+        if s == ss and (s == 0 or h == hh):
+            return colour
+    return "held out"
 
 
-def screen_sweep(ev):
+def knobs_sweep(ev):
+    """Each state's passes from a `--set knobs` run's results.json, at full
+    precision: the setting each hold read back, the pack power (mA x VCELL),
+    the LED drive and the board's own modelled draw."""
     rel = ev["dir"]
+    res = json.load(open(os.path.join(ROOT, rel, "results.json")))
+    if res.get("set") != "knobs":
+        die(f"{rel}/results.json: set {res.get('set')!r}, not knobs")
+    by = {}
+    for s in res["steps"]:
+        m = s.get("measured")
+        if not m or not m.get("vcell_mv"):
+            die(f"{rel}: hold {s['i']} ({s['name']}) has no measurement")
+        by.setdefault(s["name"], []).append(s)
     rows = []
-    for name, passes in sweep_steps(rel).items():
-        m = re.fullmatch(r"lcd (\d+|max|off)", name)
-        if name == "rgb off" or m:
-            row = {"name": name, "passes": [p["mw"] for p in passes], "mw": mean([p["mw"] for p in passes]),
-                   "ma": mean([p["ma"] for p in passes])}
-            if m:
-                row["level"] = None if m.group(1) == "off" else (23 if m.group(1) == "max" else int(m.group(1)))
-            rows.append(row)
-    return {**ev, "rows": rows}
+    for name, ss in by.items():
+        # With the RGB off, VIA still reads back the colour the last state left,
+        # which differs between the passes; it lights nothing, so it is dropped.
+        got = {(s["rgb_effect"], *((0, 0, 0) if s["rgb_effect"] == 0 else (s["rgb_h"], s["rgb_s"], s["rgb_v"])),
+                s["lcd_effective"] if s["lcd_on"] else None) for s in ss}
+        if len(got) != 1:
+            die(f"{rel}: {name}'s passes read back different settings: {sorted(got, key=str)}")
+        effect, h, sat, v, level = got.pop()
+        mw = [s["measured"]["q_ma"] * s["measured"]["vcell_mv"] / 1000 for s in ss]
+        rows.append({"name": name, "family": family(effect, h, sat, level),
+                     "lighting": {"effect": effect, "h": h, "s": sat, "v": v}, "screen_level": level,
+                     "passes": [round(x, 2) for x in mw], "mw": mean(mw),
+                     "ma": mean([s["measured"]["q_ma"] for s in ss]),
+                     "led_pm": [int(s["led_pm"]) for s in ss],
+                     "board_model_mw": [s["model_mw"] for s in ss]})
+    return {**ev, "hold_s": res["hold_s"], "settle_s": res["settle_s"], "rows": rows}
 
 
 def collapse_numbers(text):
@@ -215,8 +209,7 @@ def build():
         "generated_by": "scripts/power_model.py from deps.lock's firmware and scripts/power_evidence.json; do not edit",
         "firmware": firmware(sha),
         "evidence": {
-            "rgb_sweep": rgb_sweep(ev["sweeps"]["rgb"]),
-            "screen_sweep": screen_sweep(ev["sweeps"]["screen"]),
+            "knobs_sweep": knobs_sweep(ev["sweeps"]["knobs"]),
             **ev["measured"],
         },
         "assumptions": ev["assumptions"],

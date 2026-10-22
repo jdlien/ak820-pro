@@ -209,35 +209,35 @@ export function screenCurve(fw, ev, radio = "bt") {
   });
 }
 
-// The sweeps' measured points, as each knob's increment over its own sweep's
-// floor, drawn on the model's floor: the bench's USB data and the other load
-// cancel in the difference.
+// The knobs sweep's measured points, as each knob's increment over the dark
+// states' mean (RGB off, screen off), drawn on the model's floor: the bench's
+// USB data and the reversal's drift cancel in the difference.
 export function measuredPoints(fw, ev, radio = "bt") {
   const floor = boardMw(fw, { rgb: { on: false }, screen: { on: false, level: 0 } }) + radioExtraMw(ev, radio);
-  const rs = ev.rgb_sweep.rows;
-  const rgbOff = rs.find((r) => r.off).mw;
-  const rgb = rs.filter((r) => !r.off).map((r) => ({
-    colour: r.colour, v: r.v, x: (r.v * 100) / 255, mw: floor + r.mw - rgbOff, name: r.name,
+  const rows = ev.knobs_sweep.rows;
+  const darks = rows.filter((r) => r.family === "dark");
+  const dark = darks.reduce((a, r) => a + r.mw, 0) / darks.length;
+  const rgb = rows.filter((r) => ["white", "red", "green", "blue"].includes(r.family)).map((r) => ({
+    colour: r.family, v: r.lighting.v, x: (r.lighting.v * 100) / 255, mw: floor + r.mw - dark, name: r.name,
   }));
-  const ss = ev.screen_sweep.rows;
-  const lcdOff = ss.find((r) => r.name === "lcd off").mw;
-  const screen = ss.filter((r) => r.level !== undefined && r.level !== null)
-    .map((r) => ({ level: r.level, x: lcdPercent(fw, r.level), mw: floor + r.mw - lcdOff, name: r.name }));
+  const screen = rows.filter((r) => r.family === "screen").map((r) => ({
+    level: r.screen_level, x: lcdPercent(fw, r.screen_level), mw: floor + r.mw - dark, name: r.name,
+  }));
   return { rgb, screen, floor };
 }
 
-// The model against each sweep state as it was measured (the screen at level
-// 5 or the RGB off, USB data attached): the fractional error per state.
+// The model against each knobs state as it was measured (on the pack, USB
+// data attached), from the setting the hold read back: the fractional error
+// per state. Animated effects are not modelled, so they are left out.
 export function sweepAgreement(fw, ev) {
-  const out = [];
-  for (const r of ev.rgb_sweep.rows) {
-    const setting = { rgb: r.off ? { on: false } : { on: true, h: r.h, s: r.s, v: r.v }, screen: { on: true, level: 5 } };
-    out.push({ name: `rgb ${r.name}`, measured: r.mw, model: boardMw(fw, setting, { usb: true }) });
-  }
-  for (const r of ev.screen_sweep.rows) {
-    if (r.name === "rgb off") continue;
-    const setting = { rgb: { on: false }, screen: r.level === null ? { on: false, level: 0 } : { on: true, level: r.level } };
-    out.push({ name: `screen ${r.name}`, measured: r.mw, model: boardMw(fw, setting, { usb: true }) });
-  }
-  return out.map((o) => ({ ...o, err: o.model / o.measured - 1 }));
+  return ev.knobs_sweep.rows.filter((r) => r.family !== "animated").map((r) => {
+    const l = r.lighting;
+    const setting = {
+      rgb: l.effect === 0 ? { on: false } : { on: true, h: l.h, s: l.s, v: l.v },
+      screen: r.screen_level === null ? { on: false, level: 0 } : { on: true, level: r.screen_level },
+    };
+    const model = boardMw(fw, setting, { usb: true });
+    const passErr = Math.max(...r.passes.map((x) => Math.abs(model / x - 1)));
+    return { name: r.name, family: r.family, lighting: l, measured: r.mw, model, err: model / r.mw - 1, passErr };
+  });
 }

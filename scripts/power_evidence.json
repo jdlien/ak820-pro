@@ -1,15 +1,11 @@
 {
  "_about": "Hand-kept inputs to scripts/power_model.py: measured figures that exist only in the docs, the bench sweeps to parse, the page's stated assumptions and its day presets. Every value carries its source. power.json is generated from this plus the firmware at deps.lock's pin; never edit power.json by hand.",
  "sweeps": {
-  "rgb": {
-   "dir": "history/power-bench-2026-10-15/rgb-curve-20261019",
-   "date": "2026-10-19",
-   "conditions": "screen at level 5, BT, on the pack with USB data attached (the bench), current_map.py --set rgb-curve; two passes per state, the charge register's mean"
-  },
-  "screen": {
-   "dir": "history/power-bench-2026-10-15/current-map-20261015-2210",
-   "date": "2026-10-15",
-   "conditions": "RGB off, BT, on the pack with USB data attached (the bench), current_map.py --set loads (R1); two passes per state"
+  "knobs": {
+   "dir": "history/power-bench-2026-10-15/current-map-20261021-1738",
+   "date": "2026-10-21",
+   "firmware": "36afff30e8",
+   "conditions": "BT, on the pack (VCELL 4.04-4.02 V) with USB data attached (the bench), current_map.py --set knobs at --hold 90 --settle 15: each knob alone from a shared dark floor (the RGB states with the screen off, the screen states with the RGB off), forward then backward; each state the mean of its two passes, from the INA228's charge register"
   }
  },
  "measured": {

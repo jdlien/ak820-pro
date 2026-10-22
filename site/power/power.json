@@ -50,330 +50,909 @@
   "cie1931": [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 14, 15, 15, 15, 16, 16, 17, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 32, 32, 33, 34, 34, 35, 36, 36, 37, 38, 38, 39, 40, 41, 41, 42, 43, 44, 45, 45, 46, 47, 48, 49, 50, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 76, 77, 78, 79, 80, 81, 83, 84, 85, 86, 88, 89, 90, 91, 93, 94, 95, 97, 98, 100, 101, 102, 104, 105, 107, 108, 109, 111, 112, 114, 115, 117, 119, 120, 122, 123, 125, 126, 128, 130, 131, 133, 135, 136, 138, 140, 142, 143, 145, 147, 149, 150, 152, 154, 156, 158, 160, 162, 163, 165, 167, 169, 171, 173, 175, 177, 179, 181, 183, 186, 188, 190, 192, 194, 196, 198, 201, 203, 205, 207, 209, 212, 214, 216, 219, 221, 223, 226, 228, 231, 233, 235, 238, 240, 243, 245, 248, 250, 253, 255]
  },
  "evidence": {
-  "rgb_sweep": {
-   "dir": "history/power-bench-2026-10-15/rgb-curve-20261019",
-   "date": "2026-10-19",
-   "conditions": "screen at level 5, BT, on the pack with USB data attached (the bench), current_map.py --set rgb-curve; two passes per state, the charge register's mean",
+  "knobs_sweep": {
+   "dir": "history/power-bench-2026-10-15/current-map-20261021-1738",
+   "date": "2026-10-21",
+   "firmware": "36afff30e8",
+   "conditions": "BT, on the pack (VCELL 4.04-4.02 V) with USB data attached (the bench), current_map.py --set knobs at --hold 90 --settle 15: each knob alone from a shared dark floor (the RGB states with the screen off, the screen states with the RGB off), forward then backward; each state the mean of its two passes, from the INA228's charge register",
+   "hold_s": 90,
+   "settle_s": 15,
    "rows": [
     {
-     "name": "rgb off",
-     "passes": [120.02, 117.99],
-     "mw": 119.0,
-     "ma": 28.75,
-     "led_pm": 0,
-     "off": true
+     "name": "dark 1",
+     "family": "dark",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "passes": [117.49, 114.63],
+     "mw": 116.06,
+     "ma": 28.79,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
     },
     {
-     "name": "white 255",
-     "passes": [303.1, 303.76],
-     "mw": 303.43,
-     "ma": 73.48,
-     "led_pm": 1000,
-     "h": 0,
-     "s": 0,
-     "v": 255,
-     "colour": "white"
+     "name": "value 0",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "passes": [115.27, 114.93],
+     "mw": 115.1,
+     "ma": 28.56,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
     },
     {
-     "name": "white 254",
-     "passes": [302.42, 302.69],
-     "mw": 302.56,
-     "ma": 73.28,
-     "led_pm": 992,
-     "h": 0,
-     "s": 0,
-     "v": 254,
-     "colour": "white"
-    },
-    {
-     "name": "white 252",
-     "passes": [298.21, 299.03],
-     "mw": 298.62,
-     "ma": 72.35,
-     "led_pm": 972,
-     "h": 0,
-     "s": 0,
-     "v": 252,
-     "colour": "white"
-    },
-    {
-     "name": "white 248",
-     "passes": [291.68, 292.57],
-     "mw": 292.12,
-     "ma": 70.75,
-     "led_pm": 933,
-     "h": 0,
-     "s": 0,
-     "v": 248,
-     "colour": "white"
-    },
-    {
-     "name": "white 240",
-     "passes": [278.76, 278.86],
-     "mw": 278.81,
-     "ma": 67.53,
-     "led_pm": 858,
-     "h": 0,
-     "s": 0,
-     "v": 240,
-     "colour": "white"
-    },
-    {
-     "name": "white 224",
-     "passes": [253.72, 253.48],
-     "mw": 253.6,
-     "ma": 61.41,
-     "led_pm": 717,
-     "h": 0,
-     "s": 0,
-     "v": 224,
-     "colour": "white"
-    },
-    {
-     "name": "white 192",
-     "passes": [213.0, 213.72],
-     "mw": 213.36,
-     "ma": 51.63,
-     "led_pm": 490,
-     "h": 0,
-     "s": 0,
-     "v": 192,
-     "colour": "white"
-    },
-    {
-     "name": "white 160",
-     "passes": [182.33, 182.99],
-     "mw": 182.66,
-     "ma": 44.18,
-     "led_pm": 313,
-     "h": 0,
-     "s": 0,
-     "v": 160,
-     "colour": "white"
-    },
-    {
-     "name": "white 128",
-     "passes": [159.88, 160.49],
-     "mw": 160.19,
-     "ma": 38.73,
-     "led_pm": 188,
-     "h": 0,
-     "s": 0,
-     "v": 128,
-     "colour": "white"
-    },
-    {
-     "name": "white 96",
-     "passes": [145.05, 145.25],
-     "mw": 145.15,
-     "ma": 35.08,
-     "led_pm": 101,
-     "h": 0,
-     "s": 0,
-     "v": 96,
-     "colour": "white"
-    },
-    {
-     "name": "white 64",
-     "passes": [135.22, 136.31],
-     "mw": 135.76,
-     "ma": 32.81,
-     "led_pm": 47,
-     "h": 0,
-     "s": 0,
-     "v": 64,
-     "colour": "white"
-    },
-    {
-     "name": "white 48",
-     "passes": [132.49, 132.13],
-     "mw": 132.31,
-     "ma": 31.98,
-     "led_pm": 27,
-     "h": 0,
-     "s": 0,
-     "v": 48,
-     "colour": "white"
-    },
-    {
-     "name": "white 32",
-     "passes": [129.72, 130.65],
-     "mw": 130.19,
-     "ma": 31.46,
-     "led_pm": 15,
-     "h": 0,
-     "s": 0,
-     "v": 32,
-     "colour": "white"
+     "name": "white 1",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 1
+     },
+     "screen_level": null,
+     "passes": [123.92, 123.9],
+     "mw": 123.91,
+     "ma": 30.75,
+     "led_pm": [3, 3],
+     "board_model_mw": [123.334, 123.334]
     },
     {
      "name": "white 16",
-     "passes": [128.82, 128.4],
-     "mw": 128.61,
-     "ma": 31.08,
-     "led_pm": 7,
-     "h": 0,
-     "s": 0,
-     "v": 16,
-     "colour": "white"
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 16
+     },
+     "screen_level": null,
+     "passes": [125.0, 125.02],
+     "mw": 125.01,
+     "ma": 31.02,
+     "led_pm": [7, 7],
+     "board_model_mw": [124.028, 124.028]
     },
     {
-     "name": "white 3",
-     "passes": [127.16, 127.59],
-     "mw": 127.38,
-     "ma": 30.79,
-     "led_pm": 3,
-     "h": 0,
-     "s": 0,
-     "v": 3,
-     "colour": "white"
+     "name": "white 32",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 32
+     },
+     "screen_level": null,
+     "passes": [126.85, 126.5],
+     "mw": 126.67,
+     "ma": 31.44,
+     "led_pm": [15, 15],
+     "board_model_mw": [125.416, 125.416]
     },
     {
-     "name": "red 255",
-     "passes": [201.85, 202.23],
-     "mw": 202.04,
-     "ma": 48.89,
-     "led_pm": 333,
-     "h": 0,
-     "s": 255,
-     "v": 255,
-     "colour": "red"
+     "name": "white 48",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 48
+     },
+     "screen_level": null,
+     "passes": [128.72, 128.75],
+     "mw": 128.73,
+     "ma": 31.94,
+     "led_pm": [27, 27],
+     "board_model_mw": [127.498, 127.498]
     },
     {
-     "name": "green 255",
-     "passes": [179.18, 178.83],
-     "mw": 179.0,
-     "ma": 43.28,
-     "led_pm": 333,
-     "h": 85,
-     "s": 255,
-     "v": 255,
-     "colour": "green"
+     "name": "white 64",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 64
+     },
+     "screen_level": null,
+     "passes": [132.2, 132.12],
+     "mw": 132.16,
+     "ma": 32.8,
+     "led_pm": [47, 47],
+     "board_model_mw": [130.968, 130.968]
     },
     {
-     "name": "blue 255",
-     "passes": [174.21, 173.87],
-     "mw": 174.04,
-     "ma": 42.09,
-     "led_pm": 333,
-     "h": 170,
-     "s": 255,
-     "v": 255,
-     "colour": "blue"
+     "name": "white 128",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 128
+     },
+     "screen_level": null,
+     "passes": [157.17, 157.1],
+     "mw": 157.14,
+     "ma": 39.01,
+     "led_pm": [188, 188],
+     "board_model_mw": [155.952, 155.952]
     },
     {
-     "name": "red 128",
-     "passes": [140.03, 140.55],
-     "mw": 140.29,
-     "ma": 33.92,
-     "led_pm": 62,
-     "h": 0,
-     "s": 255,
-     "v": 128,
-     "colour": "red"
+     "name": "white 160",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 160
+     },
+     "screen_level": null,
+     "passes": [179.34, 178.7],
+     "mw": 179.02,
+     "ma": 44.46,
+     "led_pm": [313, 313],
+     "board_model_mw": [178.16, 178.16]
     },
     {
-     "name": "green 128",
-     "passes": [135.97, 136.12],
-     "mw": 136.05,
-     "ma": 32.89,
-     "led_pm": 62,
-     "h": 85,
-     "s": 255,
-     "v": 128,
-     "colour": "green"
+     "name": "white 192",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 192
+     },
+     "screen_level": null,
+     "passes": [209.99, 209.82],
+     "mw": 209.91,
+     "ma": 52.16,
+     "led_pm": [490, 490],
+     "board_model_mw": [209.391, 209.391]
     },
     {
-     "name": "blue 128",
-     "passes": [135.1, 135.08],
-     "mw": 135.09,
-     "ma": 32.65,
-     "led_pm": 62,
-     "h": 170,
-     "s": 255,
-     "v": 128,
-     "colour": "blue"
+     "name": "white 224",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 224
+     },
+     "screen_level": null,
+     "passes": [250.39, 249.93],
+     "mw": 250.16,
+     "ma": 62.2,
+     "led_pm": [717, 717],
+     "board_model_mw": [249.643, 249.643]
+    },
+    {
+     "name": "white 240",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 240
+     },
+     "screen_level": null,
+     "passes": [275.33, 274.87],
+     "mw": 275.1,
+     "ma": 68.42,
+     "led_pm": [858, 858],
+     "board_model_mw": [274.627, 274.627]
+    },
+    {
+     "name": "white 255",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 255
+     },
+     "screen_level": null,
+     "passes": [300.2, 300.1],
+     "mw": 300.15,
+     "ma": 74.68,
+     "led_pm": [1000, 1000],
+     "board_model_mw": [299.612, 299.612]
+    },
+    {
+     "name": "dark 2",
+     "family": "dark",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "passes": [115.44, 114.62],
+     "mw": 115.03,
+     "ma": 28.54,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
+    },
+    {
+     "name": "red 1",
+     "family": "red",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 1
+     },
+     "screen_level": null,
+     "passes": [122.8, 123.2],
+     "mw": 123.0,
+     "ma": 30.52,
+     "led_pm": [1, 1],
+     "board_model_mw": [122.938, 122.938]
     },
     {
      "name": "red 16",
-     "passes": [126.78, 126.72],
-     "mw": 126.75,
+     "family": "red",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 16
+     },
+     "screen_level": null,
+     "passes": [123.64, 123.21],
+     "mw": 123.42,
      "ma": 30.63,
-     "led_pm": 2,
-     "h": 0,
-     "s": 255,
-     "v": 16,
-     "colour": "red"
+     "led_pm": [2, 2],
+     "board_model_mw": [123.236, 123.236]
+    },
+    {
+     "name": "red 48",
+     "family": "red",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 48
+     },
+     "screen_level": null,
+     "passes": [124.87, 124.66],
+     "mw": 124.76,
+     "ma": 30.96,
+     "led_pm": [9, 9],
+     "board_model_mw": [124.727, 124.727]
+    },
+    {
+     "name": "red 64",
+     "family": "red",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 64
+     },
+     "screen_level": null,
+     "passes": [126.26, 126.21],
+     "mw": 126.23,
+     "ma": 31.33,
+     "led_pm": [15, 15],
+     "board_model_mw": [126.217, 126.217]
+    },
+    {
+     "name": "red 128",
+     "family": "red",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 128
+     },
+     "screen_level": null,
+     "passes": [136.78, 136.7],
+     "mw": 136.74,
+     "ma": 33.94,
+     "led_pm": [62, 62],
+     "board_model_mw": [136.951, 136.951]
+    },
+    {
+     "name": "red 192",
+     "family": "red",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 192
+     },
+     "screen_level": null,
+     "passes": [159.74, 159.66],
+     "mw": 159.7,
+     "ma": 39.65,
+     "led_pm": [163, 163],
+     "board_model_mw": [159.91, 159.91]
+    },
+    {
+     "name": "red 240",
+     "family": "red",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 240
+     },
+     "screen_level": null,
+     "passes": [186.69, 187.21],
+     "mw": 186.95,
+     "ma": 46.44,
+     "led_pm": [286, 286],
+     "board_model_mw": [187.937, 187.937]
+    },
+    {
+     "name": "red 255",
+     "family": "red",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 255
+     },
+     "screen_level": null,
+     "passes": [197.31, 198.13],
+     "mw": 197.72,
+     "ma": 49.11,
+     "led_pm": [333, 333],
+     "board_model_mw": [198.671, 198.671]
+    },
+    {
+     "name": "green 1",
+     "family": "green",
+     "lighting": {
+      "effect": 1,
+      "h": 85,
+      "s": 255,
+      "v": 1
+     },
+     "screen_level": null,
+     "passes": [122.61, 122.44],
+     "mw": 122.53,
+     "ma": 30.4,
+     "led_pm": [1, 1],
+     "board_model_mw": [122.847, 122.847]
     },
     {
      "name": "green 16",
-     "passes": [126.16, 126.84],
-     "mw": 126.5,
-     "ma": 30.57,
-     "led_pm": 2,
-     "h": 85,
-     "s": 255,
-     "v": 16,
-     "colour": "green"
+     "family": "green",
+     "lighting": {
+      "effect": 1,
+      "h": 85,
+      "s": 255,
+      "v": 16
+     },
+     "screen_level": null,
+     "passes": [122.88, 122.78],
+     "mw": 122.83,
+     "ma": 30.48,
+     "led_pm": [2, 2],
+     "board_model_mw": [123.055, 123.055]
+    },
+    {
+     "name": "green 48",
+     "family": "green",
+     "lighting": {
+      "effect": 1,
+      "h": 85,
+      "s": 255,
+      "v": 48
+     },
+     "screen_level": null,
+     "passes": [124.25, 123.89],
+     "mw": 124.07,
+     "ma": 30.79,
+     "led_pm": [9, 9],
+     "board_model_mw": [124.094, 124.094]
+    },
+    {
+     "name": "green 64",
+     "family": "green",
+     "lighting": {
+      "effect": 1,
+      "h": 85,
+      "s": 255,
+      "v": 64
+     },
+     "screen_level": null,
+     "passes": [124.94, 125.35],
+     "mw": 125.14,
+     "ma": 31.06,
+     "led_pm": [15, 15],
+     "board_model_mw": [125.133, 125.133]
+    },
+    {
+     "name": "green 128",
+     "family": "green",
+     "lighting": {
+      "effect": 1,
+      "h": 85,
+      "s": 255,
+      "v": 128
+     },
+     "screen_level": null,
+     "passes": [132.39, 132.28],
+     "mw": 132.33,
+     "ma": 32.85,
+     "led_pm": [62, 62],
+     "board_model_mw": [132.612, 132.612]
+    },
+    {
+     "name": "green 192",
+     "family": "green",
+     "lighting": {
+      "effect": 1,
+      "h": 85,
+      "s": 255,
+      "v": 192
+     },
+     "screen_level": null,
+     "passes": [148.36, 148.2],
+     "mw": 148.28,
+     "ma": 36.81,
+     "led_pm": [163, 163],
+     "board_model_mw": [148.61, 148.61]
+    },
+    {
+     "name": "green 240",
+     "family": "green",
+     "lighting": {
+      "effect": 1,
+      "h": 85,
+      "s": 255,
+      "v": 240
+     },
+     "screen_level": null,
+     "passes": [168.05, 167.68],
+     "mw": 167.86,
+     "ma": 41.69,
+     "led_pm": [286, 286],
+     "board_model_mw": [168.14, 168.14]
+    },
+    {
+     "name": "green 255",
+     "family": "green",
+     "lighting": {
+      "effect": 1,
+      "h": 85,
+      "s": 255,
+      "v": 255
+     },
+     "screen_level": null,
+     "passes": [175.01, 175.46],
+     "mw": 175.24,
+     "ma": 43.52,
+     "led_pm": [333, 333],
+     "board_model_mw": [175.62, 175.62]
+    },
+    {
+     "name": "blue 1",
+     "family": "blue",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 1
+     },
+     "screen_level": null,
+     "passes": [122.46, 122.42],
+     "mw": 122.44,
+     "ma": 30.39,
+     "led_pm": [1, 1],
+     "board_model_mw": [122.828, 122.828]
     },
     {
      "name": "blue 16",
-     "passes": [126.71, 126.12],
-     "mw": 126.41,
-     "ma": 30.55,
-     "led_pm": 2,
-     "h": 170,
-     "s": 255,
-     "v": 16,
-     "colour": "blue"
-    }
-   ]
-  },
-  "screen_sweep": {
-   "dir": "history/power-bench-2026-10-15/current-map-20261015-2210",
-   "date": "2026-10-15",
-   "conditions": "RGB off, BT, on the pack with USB data attached (the bench), current_map.py --set loads (R1); two passes per state",
-   "rows": [
-    {
-     "name": "rgb off",
-     "passes": [117.83, 118.27],
-     "mw": 118.05,
-     "ma": 28.29
+     "family": "blue",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 16
+     },
+     "screen_level": null,
+     "passes": [122.81, 122.71],
+     "mw": 122.76,
+     "ma": 30.46,
+     "led_pm": [2, 2],
+     "board_model_mw": [123.016, 123.016]
     },
     {
-     "name": "lcd max",
-     "passes": [152.94, 153.17],
-     "mw": 153.06,
-     "ma": 36.7,
-     "level": 23
+     "name": "blue 48",
+     "family": "blue",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 48
+     },
+     "screen_level": null,
+     "passes": [124.03, 123.72],
+     "mw": 123.87,
+     "ma": 30.74,
+     "led_pm": [9, 9],
+     "board_model_mw": [123.956, 123.956]
     },
     {
-     "name": "lcd 12",
-     "passes": [123.91, 124.31],
-     "mw": 124.11,
-     "ma": 29.74,
-     "level": 12
+     "name": "blue 64",
+     "family": "blue",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 64
+     },
+     "screen_level": null,
+     "passes": [124.67, 125.0],
+     "mw": 124.83,
+     "ma": 30.98,
+     "led_pm": [15, 15],
+     "board_model_mw": [124.896, 124.896]
     },
     {
-     "name": "lcd 4",
-     "passes": [117.23, 117.33],
-     "mw": 117.28,
-     "ma": 28.1,
-     "level": 4
+     "name": "blue 128",
+     "family": "blue",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 128
+     },
+     "screen_level": null,
+     "passes": [131.34, 131.34],
+     "mw": 131.34,
+     "ma": 32.6,
+     "led_pm": [62, 62],
+     "board_model_mw": [131.667, 131.667]
+    },
+    {
+     "name": "blue 192",
+     "family": "blue",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 192
+     },
+     "screen_level": null,
+     "passes": [146.04, 145.96],
+     "mw": 146.0,
+     "ma": 36.24,
+     "led_pm": [163, 163],
+     "board_model_mw": [146.15, 146.15]
+    },
+    {
+     "name": "blue 240",
+     "family": "blue",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 240
+     },
+     "screen_level": null,
+     "passes": [163.95, 163.87],
+     "mw": 163.91,
+     "ma": 40.7,
+     "led_pm": [286, 286],
+     "board_model_mw": [163.829, 163.829]
+    },
+    {
+     "name": "blue 255",
+     "family": "blue",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 255
+     },
+     "screen_level": null,
+     "passes": [170.85, 170.93],
+     "mw": 170.89,
+     "ma": 42.43,
+     "led_pm": [333, 333],
+     "board_model_mw": [170.6, 170.6]
+    },
+    {
+     "name": "dark 3",
+     "family": "dark",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "passes": [115.61, 116.39],
+     "mw": 116.0,
+     "ma": 28.78,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
     },
     {
      "name": "lcd 1",
-     "passes": [114.83, 114.92],
-     "mw": 114.88,
-     "ma": 27.52,
-     "level": 1
+     "family": "screen",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": 1,
+     "passes": [115.29, 116.81],
+     "mw": 116.05,
+     "ma": 28.8,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.814, 114.814]
     },
     {
-     "name": "lcd off",
-     "passes": [114.03, 114.02],
-     "mw": 114.03,
-     "ma": 27.32,
-     "level": null
+     "name": "lcd 4",
+     "family": "screen",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": 4,
+     "passes": [117.72, 119.26],
+     "mw": 118.49,
+     "ma": 29.4,
+     "led_pm": [0, 0],
+     "board_model_mw": [117.258, 117.258]
+    },
+    {
+     "name": "lcd 8",
+     "family": "screen",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": 8,
+     "passes": [120.89, 123.17],
+     "mw": 122.03,
+     "ma": 30.28,
+     "led_pm": [0, 0],
+     "board_model_mw": [120.516, 120.516]
+    },
+    {
+     "name": "lcd 12",
+     "family": "screen",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": 12,
+     "passes": [124.37, 126.35],
+     "mw": 125.36,
+     "ma": 31.11,
+     "led_pm": [0, 0],
+     "board_model_mw": [123.775, 123.775]
+    },
+    {
+     "name": "lcd 16",
+     "family": "screen",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": 16,
+     "passes": [131.17, 133.06],
+     "mw": 132.12,
+     "ma": 32.79,
+     "led_pm": [0, 0],
+     "board_model_mw": [130.291, 130.291]
+    },
+    {
+     "name": "lcd 20",
+     "family": "screen",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": 20,
+     "passes": [141.39, 142.93],
+     "mw": 142.16,
+     "ma": 35.29,
+     "led_pm": [0, 0],
+     "board_model_mw": [140.881, 140.881]
+    },
+    {
+     "name": "lcd 23",
+     "family": "screen",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": 23,
+     "passes": [154.08, 154.95],
+     "mw": 154.52,
+     "ma": 38.37,
+     "led_pm": [0, 0],
+     "board_model_mw": [153.1, 153.1]
+    },
+    {
+     "name": "dark 4",
+     "family": "dark",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "passes": [114.41, 116.91],
+     "mw": 115.66,
+     "ma": 28.7,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
+    },
+    {
+     "name": "purple 255",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 191,
+      "s": 255,
+      "v": 255
+     },
+     "screen_level": null,
+     "passes": [208.31, 208.46],
+     "mw": 208.39,
+     "ma": 51.78,
+     "led_pm": [498, 498],
+     "board_model_mw": [208.169, 208.169]
+    },
+    {
+     "name": "red 255 sat 128",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 128,
+      "v": 255
+     },
+     "screen_level": null,
+     "passes": [248.86, 249.29],
+     "mw": 249.07,
+     "ma": 61.92,
+     "led_pm": [664, 664],
+     "board_model_mw": [248.755, 248.755]
+    },
+    {
+     "name": "hue 43 255",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 43,
+      "s": 255,
+      "v": 255
+     },
+     "screen_level": null,
+     "passes": [250.0, 250.01],
+     "mw": 250.0,
+     "ma": 62.17,
+     "led_pm": [662, 662],
+     "board_model_mw": [250.756, 250.756]
+    },
+    {
+     "name": "white 128 lcd 12",
+     "family": "combined",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 128
+     },
+     "screen_level": 12,
+     "passes": [165.8, 165.87],
+     "mw": 165.84,
+     "ma": 41.19,
+     "led_pm": [188, 188],
+     "board_model_mw": [165.727, 165.727]
+    },
+    {
+     "name": "red 255 lcd 23",
+     "family": "combined",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 255,
+      "v": 255
+     },
+     "screen_level": 23,
+     "passes": [236.5, 236.53],
+     "mw": 236.51,
+     "ma": 58.79,
+     "led_pm": [333, 333],
+     "board_model_mw": [237.771, 237.771]
+    },
+    {
+     "name": "blue 64 lcd 4",
+     "family": "combined",
+     "lighting": {
+      "effect": 1,
+      "h": 170,
+      "s": 255,
+      "v": 64
+     },
+     "screen_level": 4,
+     "passes": [127.79, 127.92],
+     "mw": 127.86,
+     "ma": 31.73,
+     "led_pm": [15, 15],
+     "board_model_mw": [128.154, 128.154]
+    },
+    {
+     "name": "cycle 255",
+     "family": "animated",
+     "lighting": {
+      "effect": 3,
+      "h": 0,
+      "s": 255,
+      "v": 255
+     },
+     "screen_level": null,
+     "passes": [210.98, 211.06],
+     "mw": 211.02,
+     "ma": 52.44,
+     "led_pm": [500, 510],
+     "board_model_mw": [209.55, 213.347]
+    },
+    {
+     "name": "cycle 128",
+     "family": "animated",
+     "lighting": {
+      "effect": 3,
+      "h": 0,
+      "s": 255,
+      "v": 128
+     },
+     "screen_level": null,
+     "passes": [139.64, 139.33],
+     "mw": 139.49,
+     "ma": 34.62,
+     "led_pm": [91, 94],
+     "board_model_mw": [139.592, 139.556]
+    },
+    {
+     "name": "dark 5",
+     "family": "dark",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "passes": [115.28, 114.66],
+     "mw": 114.97,
+     "ma": 28.53,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
     }
    ]
   },
