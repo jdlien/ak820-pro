@@ -381,17 +381,21 @@ function icon(name, label) {
   return svg;
 }
 // Battery life: the battery with a clock badge on its lower right, a masked
-// gap around the badge so it reads on any background. The canvas grows by
-// the badge's overhang at the same 5:4 as the battery, so the width is too.
+// gap around the badge so it reads on any background. The battery is
+// mirrored so its cap sits on the left, clear of the badge; the mirror
+// about x = 320 keeps the body where it was. The canvas grows by the
+// badge's overhang at the same 5:4 as the battery, so the width is too.
 function batteryLife(label) {
   const svg = svgEl("svg", { viewBox: "0 0 720 576", class: "ico", role: "img", "aria-label": label });
   const mask = svgEl("mask", { id: "battery-life-cut" });
   mask.append(svgEl("rect", { width: 720, height: 576, fill: "white" }), svgEl("circle", { cx: 544, cy: 400, r: 208, fill: "black" }));
   const defs = svgEl("defs", {});
   defs.append(mask);
+  const battery = svgEl("g", { mask: "url(#battery-life-cut)" });
+  battery.append(svgEl("path", { fill: "currentColor", d: ICONS.battery[1], transform: "matrix(-1 0 0 1 640 0)" }));
   const clock = svgEl("g", { transform: "translate(368 224) scale(0.6875)" });
   clock.append(svgEl("path", { fill: "currentColor", d: ICONS.clock[1] }));
-  svg.append(defs, svgEl("path", { fill: "currentColor", d: ICONS.battery[1], mask: "url(#battery-life-cut)" }), clock);
+  svg.append(defs, battery, clock);
   return svg;
 }
 
