@@ -2,8 +2,33 @@
 
 Status: **an idea for later, written up to discuss. Nothing is built.** JD's
 design, with Claude's additions marked as such and the decisions still open at
-the end. Prior art: quill4gen7's fork had "a settings menu on Fn plus the knob"
-(`BACKLOG.md`, "Community", quill4gen7, item 5). Credit it if we build one.
+the end. Prior art: quill4gen7's menu (below). Credit it if we build one.
+
+## Prior art: quill4gen7's menu (read 10-23)
+
+It lives in `keyboards/a_jazz/ak820pro/menu.c` on the `quill-personal` branch
+of github.com/quill4gen7/qmk_firmware ("menu impostazioni con Fn + rotella",
+09-28, 138 lines).
+- **Opened by `Fn` plus a turn of the knob,** not a key.
+- **Two items:** "Domande Si/No" (show Claude Code's questions on the board,
+  or turn them into notices answered at the terminal) and "Esci" (exit). A
+  frame for settings more than a settings menu.
+- **Turn or the arrows move.** A knob press, Enter or Space changes the item.
+  Esc closes it, and it closes itself after 20 s idle.
+- **Every other key is swallowed while it's open,** except releases and
+  layer keys. A key held from before the menu must not stick.
+- **The bottom row always says "Gira e premi"** ("turn and press").
+- **The page:** 12 columns by 5 rows in the big face, drawn as one of its
+  notification pages.
+
+**Worth taking:**
+- **The opener.** Our encoder map gives the Fn layers the same volume as the
+  base layers (`keymaps/default/keymap.c`), so `Fn` plus a turn is free and
+  costs no key. It would leave `Fn`+`C` as the clock's quick toggle, or free
+  it.
+- **Releases and layer keys always pass,** whatever else the menu does with
+  keys.
+- **A standing hint row,** against JD's flash after a few seconds.
 
 ## Why
 
@@ -138,3 +163,5 @@ Configuration
 3. **A timeout mid-edit:** revert (proposed), or keep.
 4. **The face:** 13 px (more items) or 20 px (easier to read).
 5. **`Fn`+`D`:** keep it as a shortcut beside the menu, or free the key.
+6. **The opener:** `Fn`+`C` (JD's), or `Fn` plus a turn of the knob
+   (quill4gen7's, no key used), or both.
