@@ -145,7 +145,9 @@ on the pack and ~1.1 awake and dark with the data on.
 ### After the drain
 
 1. Dump the RAM battery log, then charge to FULL.
-2. Flash `ce229f87c6`, the slow-pass fix. Proposed, JD's call: build it as
+2. Flash `ce229f87c6`, the slow-pass fix, plus the hours left in the
+   "Battery low" alert if the drain shows the estimate right near the
+   bottom (`BACKLOG.md`). Proposed, JD's call: build it as
    `daily`, the build releases ship, so the soak runs what owners get. A daily build has
    no bootloader jump, so later flashes need `Fn`+`Esc`.
 3. Strip the bench (the relay wires, the logger), and JD puts the foam and

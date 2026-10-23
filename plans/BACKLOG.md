@@ -64,6 +64,28 @@ the fix, all exactly 10 ms:
 - The `battery` scope in both is the 64-bit time math (below, "64-bit time
   math on every main-loop pass").
 
+## "Battery low" with the hours left (2026-10-22) -- planned, with the flash after the drain
+
+The time-left estimate is already shown in three places:
+- on the battery row once under 10 h (`18% 6h`);
+- once on a wake after 2 h or more asleep (`6h use left`);
+- at any length on `Fn`+`D`'s camera page.
+
+The low-battery alert itself still says only `Battery low` (`battery.c`, at
+3550 mV, ~4.5% and ~2.3 h before the cut at JD's settings). The idea: put
+the number in the alert, the moment someone is actually looking for it.
+- **The text:** the alert slot holds 12 characters (`CONN_STATUS_MAX`), so
+  `Batt low: 2h` or `Batt low <1h`.
+- **The fallback:** plain `Battery low` when there is no time left to show:
+  the average under an hour old, the level unknown, or the cut latched
+  (the same conditions as power.c's `6h use left`).
+- **Check first:** the drain in progress is the first to reach the warning
+  with the estimate on the board. Read its time left over data near the
+  bottom, and set it against when the cut actually comes, before putting
+  the number in an alert.
+- **When:** build it with `ce229f87c6`'s flash after the drain, through
+  codex like any flash.
+
 ## Power saver's typing cap at 65% instead of 50% (2026-10-21) -- parked, decide after daily use
 
 `SAVER_VAL` (128, 50%) caps the lighting while typing in Power saver. The
