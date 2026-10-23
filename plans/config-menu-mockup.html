@@ -91,7 +91,10 @@ header p { margin: 0; color: var(--muted); max-width: 64ch; }
 .cap { width: 24px; height: 24px; border-radius: 5px; background: var(--keycap); border: 1px solid var(--keycap-edge);
   font: 500 9px/22px var(--font-mono); text-align: center; color: rgba(255,255,255,.55); overflow: hidden; }
 .cap.wide { grid-column: span 2; width: auto; }
-.status { font-family: var(--font-mono); font-size: 12px; color: #9aa3ad; min-height: 1.5em; text-align: center; }
+/* The status never sizes the board's column (that made the page jump as its text changed):
+   it takes the column's width and keeps room for two lines. */
+.status { font-family: var(--font-mono); font-size: 12px; color: #9aa3ad; min-height: 3em; text-align: center;
+  justify-self: stretch; contain: inline-size; }
 
 /* The notes */
 .notes { display: grid; gap: 18px; min-width: 0; }
@@ -656,7 +659,6 @@ function status() {
   else if (mode === "edit") s = "Editing: no timeout. Click saves, hold cancels.";
   else if (!started) s = "Closes after 12 s idle (counting starts at your first input).";
   else s = "Closes in " + Math.max(0, Math.ceil((12000 - (now() - lastInput)) / 1000)) + " s if left alone.";
-  if (pending.size && opt.spd === "board") s = "Painting: " + pending.size + " glyphs to go (" + Math.round(pending.size * PASS_MS) + " ms)";
   if (el.textContent !== s) el.textContent = s;
 }
 
