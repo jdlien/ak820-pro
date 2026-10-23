@@ -36,8 +36,9 @@ def xfer(h, sub, args=b""):
     """One op 27 report; the reply matched by channel, command, op and sub,
     since Windows delivers every input report to every open handle."""
     h.write(bytes([0, SET_VALUE, CH, HC, OP, sub]) + args + bytes(27 - len(args)))
-    for _ in range(8):
-        r = h.read(32, 1000)
+    end = time.monotonic() + 3.0   # a deadline, not a count: other handles' replies land here too
+    while time.monotonic() < end:
+        r = h.read(32, 250)
         if r and len(r) == 32 and r[1] == CH and r[2] == HC and r[3] == OP and r[4] == sub:
             if r[0] != SET_VALUE:
                 raise RuntimeError(f"op 27 sub {sub}: unhandled (byte 0 = {r[0]:#x})")

@@ -1,0 +1,123 @@
+[
+ {
+  "pass": true,
+  "owner": "dash",
+  "n": 1,
+  "timeouts": 1,
+  "retry_ok": 1,
+  "losses": 0,
+  "irq_lost": [
+   1,
+   2
+  ],
+  "page": "dash"
+ },
+ {
+  "pass": true,
+  "owner": "dash",
+  "n": 2,
+  "timeouts": 2,
+  "retry_ok": 0,
+  "losses": 1,
+  "irq_lost": [
+   2,
+   4
+  ],
+  "repaired": true,
+  "gen": [
+   1,
+   2
+  ],
+  "invariant_fail": 0,
+  "page": "dash"
+ },
+ {
+  "pass": true,
+  "owner": "menu",
+  "n": 1,
+  "timeouts": 1,
+  "retry_ok": 1,
+  "losses": 0,
+  "irq_lost": [
+   4,
+   5
+  ],
+  "page": "menu"
+ },
+ {
+  "pass": true,
+  "owner": "menu",
+  "n": 2,
+  "timeouts": 2,
+  "retry_ok": 0,
+  "losses": 1,
+  "irq_lost": [
+   5,
+   7
+  ],
+  "repainted": true,
+  "invariant_fail": 0,
+  "page": "menu"
+ },
+ {
+  "pass": true,
+  "owner": "debug",
+  "n": 1,
+  "timeouts": 1,
+  "retry_ok": 1,
+  "losses": 0,
+  "irq_lost": [
+   7,
+   8
+  ],
+  "page": "health"
+ },
+ {
+  "pass": true,
+  "owner": "debug",
+  "n": 2,
+  "timeouts": 2,
+  "retry_ok": 0,
+  "losses": 1,
+  "irq_lost": [
+   8,
+   10
+  ],
+  "still_debug": true,
+  "invariant_fail": 0,
+  "page": "health"
+ },
+ {
+  "pass": true,
+  "owner": "debug",
+  "n": 1,
+  "timeouts": 1,
+  "retry_ok": 1,
+  "losses": 0,
+  "irq_lost": [
+   10,
+   11
+  ],
+  "page": "camera"
+ },
+ {
+  "pass": true,
+  "owner": "debug",
+  "n": 2,
+  "timeouts": 2,
+  "retry_ok": 0,
+  "losses": 1,
+  "irq_lost": [
+   11,
+   13
+  ],
+  "still_debug": true,
+  "invariant_fail": 0,
+  "page": "camera"
+ },
+ {
+  "pass": null,
+  "owner": "anim",
+  "note": "not run: no host op starts the animation"
+ }
+]

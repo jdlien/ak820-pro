@@ -1,0 +1,83 @@
+{
+ "a1": {
+  "verdict": "PASS",
+  "evidence": {
+   "unknown_sub_byte0": 255,
+   "sub5_byte0": 7,
+   "sub5_status": 0,
+   "short_report": "source inspection: raw_hid_task() always passes 32 bytes"
+  }
+ },
+ "a3": {
+  "verdict": "PASS",
+  "evidence": {
+   "gq_lq_before": [
+    3,
+    1
+   ],
+   "gq_lq_after": [
+    0,
+    0
+   ],
+   "owner_after_probe": "debug",
+   "restored": true,
+   "gen": [
+    1,
+    2
+   ],
+   "invariant_fail": 0
+  }
+ },
+ "a5": {
+  "verdict": "PASS",
+  "evidence": {
+   "open": {
+    "record": {
+     "version": 2,
+     "state": 1,
+     "reason": 0,
+     "blocked": 16386
+    },
+    "session": "open"
+   },
+   "closed": {
+    "record": {
+     "version": 2,
+     "state": 1,
+     "reason": 0,
+     "blocked": 2
+    }
+   },
+   "dsb_menu": [
+    true,
+    false
+   ]
+  }
+ },
+ "a6": {
+  "verdict": "PASS",
+  "evidence": {
+   "trials": [
+    "superseded"
+   ],
+   "owner": "debug",
+   "invariant_fail": 0
+  }
+ },
+ "a8": {
+  "verdict": "PASS",
+  "evidence": {
+   "saw_clear": true,
+   "under_debug": [
+    "debug",
+    "waiting"
+   ],
+   "gen": [
+    4,
+    6
+   ],
+   "restored": true,
+   "invariant_fail": 0
+  }
+ }
+}

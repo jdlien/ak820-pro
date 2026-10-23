@@ -314,3 +314,38 @@ contract (`LOCK-LED-CHANNEL-PLAN.md`, R2-2):
   Not yet: Num from a real keyboard (the AK820 has no Num key),
   another keyboard, and the daemon's own context (a Task Scheduler process in
   the session, not a console): the soak checks those.
+
+## 10. The configuration menu's S0 on gremlin's board (10-23)
+
+Firmware `gremlin/config-menu` `4b899118`, after codex's code review and three
+verifications ([`review-codex-config-menu-s0-code-2026-10-23.md`](review-codex-config-menu-s0-code-2026-10-23.md)):
+the dev build (token `0x45c1f7b6`), and the `devfault` build (token `0xdb007df3`)
+for A7. The cases are [`CONFIG-MENU-S0-BOARD-TESTS.md`](CONFIG-MENU-S0-BOARD-TESTS.md);
+the raw results are in `history/config-menu-s0-20261023/`.
+
+**Passed, no hands** (`scripts/menu_s0_accept.py`, `scripts/menu_s0_fault.py`):
+
+| Case | Result |
+|---|---|
+| A1 | unknown sub 10: byte 0 `0xFF`; sub 5: `0x07`, status 0. The short-report guard by reading the source |
+| A3 | the probe: gq 3, lq 1 before the handoff, 0 and 0 after; the restore to DONE, gen 1 to 2 |
+| A5 | the arm's live record with the fixture open: blockers `0x4002` (USB, menu); closed: `0x0002` |
+| A6 | `superseded` on the first try: the loss dropped at the boundary |
+| A8 | the startup restore interrupted in its CLEAR: WAITING under Fn+D, then a fresh restore (gen 4 to 6) to DONE |
+| A7 | the real lost completion (HC_BLITFAULT), under the dashboard, the fixture, Health and Camera. N=1: one timeout, the retry succeeded, no loss. N=2: two timeouts and a loss; the dashboard repaired to the next generation, the fixture repainted, the debug pages kept. `invariant_fail` 0 throughout. **The animation's case not run:** no host op starts it |
+
+**The workload, as a smoke run only** (two repeats, 10 s of the dashboard, no
+track): 100 steps in 7 s, no failures (92 done, 8 holds cancelled by their
+own Back), ge25 0, `invariant_fail` 0, the dashboard restored at the end. ge10
+rose by 161 in ~20 s while the fixture repainted without pause: S1's paint
+budget is where that's measured and bounded.
+
+**Still to run:**
+- **A11 in full:** ten repeats and 300 s with a track playing on gremlin.
+- **The photographs:** A2's Camera page and A13's four fixture frames, against
+  the frames the host test rendered (`fixture-*.ppm` here).
+- **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
+  (the physical knob cases).
+- **A12:** the stack watermarks after A11. At the dev build's start the
+  watermarks read 648 B free on the interrupt stack and 1,216 on the main.
+  The heap gap is dev 360 B, daily 2,472 and devfault 264.
