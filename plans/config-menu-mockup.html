@@ -443,7 +443,7 @@ function header(title) {
   const idle = now() - lastInput;
   let t = title;
   if (flash && now() < flash.until) t = flash.text;
-  else if (mode === "list" && idle > 3000 && Math.floor(idle / 1500) % 2 === 1) t = "Turn the knob";
+  else if (mode === "list" && idle % 5000 >= 4000) t = "Turn + Click Knob";   // 4 s of title, then 1 s of hint
   text("f13", t.padEnd(20).slice(0, 20), 4, TITLE_Y);
   fill(4, SEP_Y, 120, 1, GREY);
 }

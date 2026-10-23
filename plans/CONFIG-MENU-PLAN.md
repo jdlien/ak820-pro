@@ -163,6 +163,9 @@ Configuration
   under `Fn` costs nothing.
 - **Exit is the last item,** and turning past either end wraps around.
 - **A long press is Back.**
+- **The hint:** the heading reads "Configuration" (or the submenu's name).
+  After ~4 s idle it shows "Turn + Click Knob" for 1 s, then the title again,
+  until the idle timeout. That's 17 of the title row's 20 columns.
 - **A "BT Connection" section:** Bluetooth 1 / 2 / 3, 2.4G, pairing.
 - **The debug and camera pages and the counter reset move into the menu**
   (Diagnostics).
