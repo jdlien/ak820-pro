@@ -901,6 +901,7 @@ saved Off (`level + 1`).
   | 6 | [5] 0 or 1 | disarm or arm the physical test mode (C2) |
   | 7 | | request a dashboard restore, as the startup callback does |
   | 8 | | mark a blit lost, as an exhausted recovery does |
+  | 9 | | the handoff probe (the board's A3, `CONFIG-MENU-S0-BOARD-TESTS.md`): under a DONE dashboard, queue three glyphs and a lock label, then hand the panel to the Fn+D page in the same call. Bytes 7-10 of the reply: gq and lq before, then after. Refused (state 5) unless the dashboard is DONE |
 
 - **Sub 5's reply,** from byte 5 (byte 5 is the status, 0):
 

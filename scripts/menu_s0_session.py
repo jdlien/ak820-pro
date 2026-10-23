@@ -176,17 +176,78 @@ def send(h, kind, arg):
     raise ValueError(kind)
 
 
-def media_text():
-    """The daemon's now-playing line (its status file), to record whether a
-    track was playing through the dashboard interval."""
-    path = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ak820pro", "ak820-agent.status")
+STATUS_PATH = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ak820pro", "ak820-agent.status")
+STATUS_FRESH_S = 15      # the daemon rewrites its status every few seconds
+PUSH_FRESH_S = 60        # and pushes the board's now-playing while a track plays
+
+
+def parse_status(text):
+    """The daemon's status file: one `key=value` a line (ak820-agent's
+    status.rs). Split at the first `=` only: values hold spaces and `=`."""
+    out = {}
+    for line in text.splitlines():
+        k, sep, v = line.partition("=")
+        if sep:
+            out[k.strip()] = v
+    return out
+
+
+def _age_s(stamp, now):
     try:
-        for line in open(path, encoding="utf-8", errors="replace"):
-            if line.startswith("media_last_text"):
-                return line.split(None, 1)[1].strip() if len(line.split(None, 1)) > 1 else ""
+        return now - time.mktime(time.strptime(stamp.strip(), "%Y-%m-%d %H:%M:%S"))
+    except (ValueError, AttributeError):
+        return None
+
+
+def playing(status, now):
+    """(ok, why): a track playing, from a fresh status and a fresh push. The
+    playback state is the text's first word exactly ("play" or "pause")."""
+    if not status:
+        return False, "no status file"
+    text = status.get("media_last_text")
+    if text is None:
+        return False, "no media_last_text"
+    if text.split(" ", 1)[0] != "play":
+        return False, f"not playing: {text!r}"
+    age = _age_s(status.get("updated", ""), now)
+    if age is None or age > STATUS_FRESH_S:
+        return False, f"the status is stale ({age} s)"
+    push = _age_s(status.get("media_last_push", ""), now)
+    if push is None or push > PUSH_FRESH_S:
+        return False, f"no fresh push to the board ({push} s)"
+    if status.get("smtc_stale_s", "0").strip() not in ("0", ""):
+        return False, f"SMTC stale {status.get('smtc_stale_s')} s"
+    return True, text
+
+
+def read_status():
+    try:
+        return parse_status(open(STATUS_PATH, encoding="utf-8", errors="replace").read())
     except OSError:
         return None
-    return None
+
+
+def media_text():
+    s = read_status()
+    return s.get("media_last_text") if s else None
+
+
+def _selftest():
+    now = time.mktime(time.strptime("2026-10-23 16:00:30", "%Y-%m-%d %H:%M:%S"))
+    base = "updated=2026-10-23 16:00:25\nmedia_last_push=2026-10-23 16:00:10\nsmtc_stale_s=0\n"
+    ok = lambda text: playing(parse_status(base + "media_last_text=" + text), now)[0]
+    assert ok("play  Artist - Title")
+    assert not ok("pause play something")
+    assert not ok("pause Cosmic Cadet = Europa")
+    assert not playing(parse_status(base), now)[0]                       # missing
+    assert not playing(None, now)[0]
+    stale = parse_status("updated=2026-10-23 15:59:00\nmedia_last_push=2026-10-23 16:00:10\n"
+                         "media_last_text=play x\n")
+    assert not playing(stale, now)[0]                                    # a departed daemon
+    nopush = parse_status("updated=2026-10-23 16:00:25\nmedia_last_push=2026-10-23 15:58:00\n"
+                          "media_last_text=play x\n")
+    assert not playing(nopush, now)[0]
+    print("media check: self-test passed")
 
 
 def health_json():
@@ -204,7 +265,11 @@ def main():
     ap.add_argument("--smoke", action="store_true",
                     help="a shortened or trackless run: reported, never S0's proof")
     ap.add_argument("--out", default="menu_s0_session.json")
+    ap.add_argument("--selftest", action="store_true", help="test the media check, then exit")
     a = ap.parse_args()
+    if a.selftest:
+        _selftest()
+        return 0
 
     failures = []
     before = health_json()
@@ -261,10 +326,10 @@ def main():
         media_samples = []
         end = time.monotonic() + a.dashboard_s
         while True:
-            m = media_text()
-            media_samples.append(m)
-            if not a.smoke and not (m or "").startswith("play"):
-                failures.append(f"no track playing in the dashboard interval: {m!r}")
+            ok_play, why = playing(read_status(), time.time())
+            media_samples.append([time.strftime("%H:%M:%S"), ok_play, why])
+            if not a.smoke and not ok_play:
+                failures.append(f"no track playing in the dashboard interval: {why}")
                 break
             left = end - time.monotonic()
             if left <= 0:

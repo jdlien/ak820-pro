@@ -12,6 +12,7 @@
  *
  * (On Windows, mingw64's gcc first on PATH: CLAUDE.md.) */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "menu_backend.h"
@@ -591,6 +592,7 @@ bool    env_wake_held(void) { return fk_wake_held; }
 bool    env_batt_dirty(void) { return false; }
 bool    env_logo_stale(void) { return false; }
 uint8_t env_queue_depths(void) { return 0; }
+bool    env_probe_handoff(uint8_t *out4) { (void)out4; return false; }   /* display.c's: the board's A3 */
 
 /* One main-loop pass as housekeeping_task_kb runs it: the task, then the pump
  * (its loss taken at the top, then the owner's operation). */
@@ -646,7 +648,8 @@ static void test_ops(void) {
     /* Framing and validation: an unknown sub is unhandled; the states a sub
      * can't take answer 2 and leave nothing outstanding. */
     fw_reset();
-    CHECK(op27(9, 0, 0) == 0xFF);
+    CHECK(op27(10, 0, 0) == 0xFF);
+    CHECK(op27(9, 0, 0) == MI_OK && mi_last_state() == MI_ST_REFUSED);   /* the probe is display.c's: the board's A3 */
     CHECK(op27(1, 1, 0) == MI_BAD && mi_outstanding() == MI_KIND_NONE);   /* no session */
     CHECK(op27(0, 0, 0) == MI_BAD);
     CHECK(op27(6, 2, 0) == MI_BAD);
@@ -797,7 +800,57 @@ static void test_ops(void) {
     CHECK(po_invariant_fail() == 0);
 }
 
-int main(void) {
+/* The expected frames for the board's photographs (CONFIG-MENU-S0-BOARD-TESTS
+ * A13): the fixture's A, B stopped after n operations, and F2, as PPM images
+ * drawn by the production slots and fixture on the fake panel. A glyph's cell
+ * is drawn light grey: the photo has the real glyph there. */
+static void write_ppm(const char *dir, const char *name) {
+    char path[512];
+    snprintf(path, sizeof path, "%s/%s", dir, name);
+    FILE *f = fopen(path, "wb");
+    if (!f) { printf("can't write %s\n", path); fails++; return; }
+    fprintf(f, "P6\n%d %d\n255\n", MB_W, MB_H);
+    for (int y = 0; y < MB_H; y++)
+        for (int x = 0; x < MB_W; x++) {
+            uint16_t c = fb[y][x];
+            unsigned char px[3];
+            if ((c & 0xFF00u) == 0x8000u) { px[0] = px[1] = px[2] = 220; }   /* a glyph's cell */
+            else {
+                px[0] = (unsigned char)(((c >> 11) & 31) * 255 / 31);
+                px[1] = (unsigned char)(((c >> 5) & 63) * 255 / 63);
+                px[2] = (unsigned char)((c & 31) * 255 / 31);
+            }
+            fwrite(px, 1, 3, f);
+        }
+    fclose(f);
+    printf("wrote %s\n", path);
+}
+
+static int frames(const char *dir, int n) {
+    fake_reset();
+    ms_init();
+    fx_open();
+    run_until_settled(300);
+    write_ppm(dir, "fixture-A.ppm");
+    fx_set_pattern(1);
+    ms_stop_after((uint8_t)n);
+    for (int i = 0; i < 300 && !ms_stopped(); i++) pass();
+    char name[32];
+    snprintf(name, sizeof name, "fixture-B-stop%d.ppm", n);
+    write_ppm(dir, name);
+    ms_stop_release();
+    fx_set_pattern(0);
+    run_until_settled(300);
+    write_ppm(dir, "fixture-A-again.ppm");
+    fx_other_layout();
+    run_until_settled(300);
+    write_ppm(dir, "fixture-F2.ppm");
+    return fails ? 1 : 0;
+}
+
+int main(int argc, char **argv) {
+    if (argc >= 3 && strcmp(argv[1], "frames") == 0)
+        return frames(argv[2], argc >= 4 ? atoi(argv[3]) : 13);
     test_transitions();
     test_restore_residual_and_loss();
     test_input();
