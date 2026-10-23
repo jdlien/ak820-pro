@@ -357,3 +357,71 @@ The remaining **pre-flash work is the playback validator and the acceptance-proc
 | 4, A7 (should-fix) | **Agreed.** Each fault is triggered by a known DMA (the next clock second, or sub 0 toggling the fixture), with health page 6's timeout and retry counters and op 27's losses as evidence, within 3 s. An empty animation slot is recorded as not run. |
 | 4, A2 (should-fix) | **Agreed.** The clock line's colons are the required oracle; `V`, `%`, `5C` and `@` only when they're legitimately there. |
 | 5 | **Fixed.** The status file is parsed at `=`; the playback word must be exactly `play`; the status must be fresh (15 s), the last push to the board fresh (60 s) and SMTC not stale. `--selftest` covers playing, paused (with "play" later in the title), missing, a departed daemon and no fresh push. |
+
+---
+
+## Codex's third verification (round 4), verbatim
+
+Firmware `4b899118` and ak820-pro's `warren/config-menu` after round 3, with the prompt in
+[`review-prompt-config-menu-s0-code-verify3.txt`](review-prompt-config-menu-s0-code-verify3.txt).
+
+**S0 is not quite ready under the existing pre-flash review gate.** I found **no firmware blocker in `4b899118`**, but two proof corrections remain must-fix. These are host/procedure fixes; running board acceptance remains work **after flashing gremlin’s test board**.
+
+1. **Must-fix — A13’s generated reference frames miscolour a real fixture colour.**  
+   [menu_s0_test.c:817](C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_test.c:817)
+
+   The glyph-placeholder test, `(c & 0xFF00u) == 0x8000u`, also matches the fixture’s legitimate **`0x8010`** colour. Consequently, all four references render some purple pixels as grey: for example, A’s fourth row’s right half and F2’s tile 7. The correct RGB is approximately **(131, 0, 131)**; the exporter writes **(220, 220, 220)**.
+
+   A correct board therefore cannot match the stated colour oracle. **Fix:** distinguish glyph cells without colliding with fixture colours, regenerate the references, and verify that exported `0x8010` remains purple.
+
+2. **Must-fix — A5’s described give-up occurs after the session has closed.**  
+   [CONFIG-MENU-S0-BOARD-TESTS.md:27](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-S0-BOARD-TESTS.md:27)
+
+   The dev arm gives up **60 seconds after its delay** ([sleep.c:854](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:854)). The fixture closes after **24 seconds idle**. Waiting for the blocked give-up described in A5 therefore produces a record without `DSB_MENU`, even on correct firmware: `arm_task()` keeps refreshing `ds_blocked` after the fixture closes.
+
+   **Fix:** explicitly read the live record while **ARMED**, after sampling has begun and before the idle deadline. Confirm `session=OPEN` alongside the first sample, then cancel the arm. Close, re-arm, obtain a fresh sample with `DSB_MENU` absent, and cancel again. No firmware change is needed.
+
+3. **Should-fix — playback freshness rejects healthy SMTC observations.**  
+   [menu_s0_session.py:218](C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_session.py:218)
+
+   Parsing at `=` and checking the exact `play` token are now correct. The status and push timestamps also close the departed-daemon loophole.
+
+   However, `smtc_stale_s` is **elapsed seconds since the last successful observation**, not a stale/not-stale flag. The worker polls every three seconds; a healthy sample aged one or two seconds fails this check and aborts the workload.
+
+   **Fix:** parse the age numerically and apply a documented freshness limit compatible with that polling interval. Extend `--selftest` with healthy nonzero ages and genuinely stale SMTC data. This is a false rejection, not evidence of false certification.
+
+4. **Should-fix — A7 names an unavailable counter/readout combination.**  
+   [CONFIG-MENU-S0-BOARD-TESTS.md:29](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-S0-BOARD-TESTS.md:29)
+
+   Total `blit_timeouts` is on **page 1**; retry successes and fault classifications are on **page 6**. The prescribed `ak820health.py --stalls --json` does not retrieve page 6, so it cannot supply the required retry-success evidence.
+
+   **Fix:** specify `ak820 health --json`, using `blit_timeouts` and `vitals.blit_retry_successes`; page 6’s `blit_irq_lost` provides additional fault evidence.
+
+The dispositions otherwise hold:
+
+| Case | Assessment |
+|---|---|
+| A1 | Sufficient: unknown sub 10 and normal framing on-board; short-length guard by source inspection. |
+| A2 | Sufficient: fixed colons are a valid oracle; conditional markers are corrected. |
+| A3 | Sufficient: the probe establishes both queues nonempty at the actual handoff. |
+| A5 | Correct readout selected; timing correction above remains. |
+| A6 | Sufficient pass criterion: require `superseded`; twenty inconclusive trials remain unpassed. |
+| A7 | DMA triggers, counter deltas and outstanding ANIM coverage are appropriate; correct the readout instructions. |
+| A13 | The sequence and stop at 13 are appropriate; fix the exported colours. |
+
+The **probe itself looks correct and safe**. Its refusal checks precede queue mutation. The admitted DASH/NONE/DONE state guarantees the debug transition is allowed. It uses the existing bounded quiesce, queue discard, shadow invalidation and staged debug entry; the synthetic sequence terminates synchronously. I found no path that newly strands queues, corrupts ownership or leaves the panel unrecoverable. The dispatcher, adapter and implementation are dev-guarded; the host-test exception does not enable it in daily builds.
+
+I verified all **25 S0-changed firmware files** against `4b899118`, including its six-file delta from `f583c15b`. All reads stayed inside the repository. Process creation was denied, so this was static verification; I did not rerun builds/tests, change files or flash anything.
+---
+
+## Dispositions (Warren, gremlin, 10-23)
+
+No firmware blocker: the firmware flashed is `4b899118`, as reviewed. The four
+fixes are to the host tests and the procedure:
+
+| # | Disposition |
+|---|---|
+| 1 | **Fixed.** The fake panel keeps which pixels are a glyph's in its own array, so a fixture colour equal to a glyph code (0x8010) renders purple. The frames are regenerated, and a check confirms F2's tile 7 is 0x8010 and no glyph. |
+| 2 | **Fixed.** A5 reads the arm's live record while it's still ARMED and the session still OPEN, within the fixture's 24 s idle, then cancels. The give-up's record isn't used. |
+| 3 | **Fixed.** `smtc_stale_s` is parsed as an age and must be at most 10 s (the worker polls every 3 s). The self-test adds a healthy 2 s read and a stale 45 s one. |
+| 4 | **Fixed.** A7 reads `ak820 health --json`: `blit_timeouts`, `vitals.blit_retry_successes`, and page 6's `blit_irq_lost`. |

@@ -29,8 +29,11 @@ static int fails;
 /* --- the fake panel ----------------------------------------------------------
  * A glyph is a DMA: it arms (busy) and lands at the next pass's start, or is
  * lost if a fault was injected. A glyph's cell is painted as one colour, the
- * character's code, which is all the frames need to tell glyphs apart. */
+ * character's code, which is all the frames need to tell glyphs apart; which
+ * pixels are a glyph's is kept apart in `is_glyph`, since a code can equal a
+ * fixture colour (0x8010 is both). */
 static uint16_t fb[MB_H][MB_W];
+static bool     is_glyph[MB_H][MB_W];
 static bool     dma_busy;
 static uint16_t dma_x, dma_y, dma_col;
 static bool     lost_latched;
@@ -39,9 +42,15 @@ static int      fault_next_band;    /* the next N clear bands fail */
 static bool     bus_busy_once;      /* the next glyph finds the bus busy */
 static int      glyph_ops, fill_ops, bands_ok;
 
-static void fill_fb(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c) {
+static void paint_fb(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c, bool glyph) {
     for (uint16_t y = y0; y <= y1 && y < MB_H; y++)
-        for (uint16_t x = x0; x <= x1 && x < MB_W; x++) fb[y][x] = c;
+        for (uint16_t x = x0; x <= x1 && x < MB_W; x++) {
+            fb[y][x]       = c;
+            is_glyph[y][x] = glyph;
+        }
+}
+static void fill_fb(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c) {
+    paint_fb(x0, y0, x1, y1, c, false);
 }
 static uint16_t glyph_color(char c) { return (uint16_t)(0x8000u | (uint8_t)c); }
 
@@ -54,7 +63,7 @@ static void dma_settle(void) {
         lost_latched = true;
         return;
     }
-    fill_fb(dma_x, dma_y, (uint16_t)(dma_x + MB_GLYPH_W - 1), (uint16_t)(dma_y + MB_GLYPH_H - 1), dma_col);
+    paint_fb(dma_x, dma_y, (uint16_t)(dma_x + MB_GLYPH_W - 1), (uint16_t)(dma_y + MB_GLYPH_H - 1), dma_col, true);
 }
 
 bool mb_clear_band(uint8_t band) {
@@ -87,6 +96,7 @@ static bool take_lost(void) { bool l = lost_latched; lost_latched = false; retur
 
 static void fake_reset(void) {
     memset(fb, 0x55, sizeof fb);   /* not black: a pixel the clear missed shows */
+    memset(is_glyph, 0, sizeof is_glyph);
     dma_busy = lost_latched = bus_busy_once = false;
     fault_next_dma = fault_next_band = 0;
     glyph_ops = fill_ops = bands_ok = 0;
@@ -814,7 +824,7 @@ static void write_ppm(const char *dir, const char *name) {
         for (int x = 0; x < MB_W; x++) {
             uint16_t c = fb[y][x];
             unsigned char px[3];
-            if ((c & 0xFF00u) == 0x8000u) { px[0] = px[1] = px[2] = 220; }   /* a glyph's cell */
+            if (is_glyph[y][x]) { px[0] = px[1] = px[2] = 220; }   /* a glyph's cell */
             else {
                 px[0] = (unsigned char)(((c >> 11) & 31) * 255 / 31);
                 px[1] = (unsigned char)(((c >> 5) & 63) * 255 / 63);
@@ -845,6 +855,9 @@ static int frames(const char *dir, int n) {
     fx_other_layout();
     run_until_settled(300);
     write_ppm(dir, "fixture-F2.ppm");
+    /* 0x8010, a fixture colour that equals a glyph code, stays purple: F2's
+     * tile 7 and A's fourth row (codex's third verification). */
+    CHECK(!is_glyph[7 / 4 * 32 + 16][7 % 4 * 32 + 16] && fb[7 / 4 * 32 + 16][7 % 4 * 32 + 16] == 0x8010);
     return fails ? 1 : 0;
 }
 

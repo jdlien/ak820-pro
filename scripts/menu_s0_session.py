@@ -179,6 +179,7 @@ def send(h, kind, arg):
 STATUS_PATH = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ak820pro", "ak820-agent.status")
 STATUS_FRESH_S = 15      # the daemon rewrites its status every few seconds
 PUSH_FRESH_S = 60        # and pushes the board's now-playing while a track plays
+SMTC_FRESH_S = 10        # smtc_stale_s is the age of its last good SMTC read (it polls every 3 s)
 
 
 def parse_status(text):
@@ -215,8 +216,12 @@ def playing(status, now):
     push = _age_s(status.get("media_last_push", ""), now)
     if push is None or push > PUSH_FRESH_S:
         return False, f"no fresh push to the board ({push} s)"
-    if status.get("smtc_stale_s", "0").strip() not in ("0", ""):
-        return False, f"SMTC stale {status.get('smtc_stale_s')} s"
+    try:
+        smtc = int(status.get("smtc_stale_s", "").strip())
+    except ValueError:
+        return False, f"no SMTC age: {status.get('smtc_stale_s')!r}"
+    if smtc > SMTC_FRESH_S:
+        return False, f"SMTC stale {smtc} s"
     return True, text
 
 
@@ -247,6 +252,10 @@ def _selftest():
     nopush = parse_status("updated=2026-10-23 16:00:25\nmedia_last_push=2026-10-23 15:58:00\n"
                           "media_last_text=play x\n")
     assert not playing(nopush, now)[0]
+    aged = lambda s: parse_status("updated=2026-10-23 16:00:25\nmedia_last_push=2026-10-23 16:00:10\n"
+                                  f"smtc_stale_s={s}\nmedia_last_text=play x\n")
+    assert playing(aged(2), now)[0]                                       # a healthy read 2 s old
+    assert not playing(aged(45), now)[0]                                  # SMTC genuinely stale
     print("media check: self-test passed")
 
 
