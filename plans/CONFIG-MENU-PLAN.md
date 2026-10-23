@@ -154,14 +154,44 @@ Configuration
    sleep's wake").
 3. **Connection, Knob modes.**
 
-## Open, JD's calls
+## Decided (JD, 10-23)
 
-1. **Typing while it's open:** close and type (proposed), or ignore it.
-2. **The screen:** brightness with 0 as off (proposed, one item), a
-   separate on/off, or inside Lighting. Proposed: its own item, since the
-   screen isn't lighting.
-3. **A timeout mid-edit:** revert (proposed), or keep.
-4. **The face:** 13 px (more items) or 20 px (easier to read).
-5. **`Fn`+`D`:** keep it as a shortcut beside the menu, or free the key.
-6. **The opener:** `Fn`+`C` (JD's), or `Fn` plus a turn of the knob
-   (quill4gen7's, no key used), or both.
+- **Opening and closing:** `Fn` plus a knob click opens it, and the same
+  closes it from anywhere. Not `Fn` plus a turn ("a bit obscure"), and not
+  `Fn`+`C`, which stays the clock's quick toggle. All the menu's actions stay
+  on the knob. JD rarely uses the knob otherwise, so its press losing mute
+  under `Fn` costs nothing.
+- **Exit is the last item,** and turning past either end wraps around.
+- **A long press is Back.**
+- **A "BT Connection" section:** Bluetooth 1 / 2 / 3, 2.4G, pairing.
+- **The debug and camera pages and the counter reset move into the menu**
+  (Diagnostics).
+- **A Help section,** short pages that read comfortably on the panel:
+  - using the menu;
+  - customizing with VIA;
+  - a few pro tips;
+  - "More information", with the GitHub link (a QR code would fit there; see
+    `BACKLOG.md`).
+- **Typing works normally while it's open.** Only the knob is captured.
+- **No timeout while a value is being adjusted.** The idle timeout applies to
+  the lists only.
+- **The small face** (Cozette 6x14), probably. Judge it on the mockup, then
+  the panel.
+- **English only.** Localization is out of scope.
+
+**What the panel allows** (`docs/display.md`): a glyph blit paints its whole
+cell from the flash atlas, white on black, so text can't be coloured or
+inverted. Colour exists only in fills and RAM tiles: the cursor triangle, a
+value's bar, a hue strip, a swatch. The mockup keeps to that.
+
+## Still open
+
+1. **A walk-away during an edit:** with no timeout, an abandoned edit keeps
+   the menu open and the board awake. Proposed: a long backstop (~2 min)
+   that reverts the value.
+2. **The screen:** its own item with brightness 0 as off (proposed), or
+   inside Lighting.
+3. **`Fn`+`D`:** keep it as a shortcut beside Diagnostics, or free the key.
+4. **The knob section** (volume, scroll, screen brightness): in the first
+   build, or later.
+
