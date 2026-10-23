@@ -182,7 +182,41 @@ Configuration
 **What the panel allows** (`docs/display.md`): a glyph blit paints its whole
 cell from the flash atlas, white on black, so text can't be coloured or
 inverted. Colour exists only in fills and RAM tiles: the cursor triangle, a
-value's bar, a hue strip, a swatch. The mockup keeps to that.
+value's bar, a hue strip, a swatch.
+
+## The mockup (10-23)
+
+[`config-menu-mockup.html`](config-menu-mockup.html), published as an artifact
+(https://claude.ai/artifact/GYnQqp7oammUs5q7SVtF6N).
+- **The screen:** a 128x128 canvas drawn from the shipped atlases
+  (`assets-src/current/`), so every glyph is the board's own.
+- **It paints like the board:** it diffs glyph cells and paints one glyph a
+  main-loop pass, ~215 a second, and drawn shapes at once.
+- **Toggles compare** the cursor style, scrolling by line or by page, and
+  board speed against instant.
+
+**What it showed about the cursor** (JD asked about coloured or inverted text
+instead of the triangle):
+- **Space.** The small face gives 20 columns from x 4 to 124. The triangle
+  takes one of them (19 left).
+  - An indent saves nothing: the selected row still needs the column.
+  - An underline (a 1 px fill in the cell's blank bottom rows) takes none.
+- **Possible:** coloured or inverted text needs a new font path, not a new
+  atlas.
+  - A 1-bit copy of Cozette in the MCU's own flash, ~1 KB (95 glyphs x 84
+    bits), expanded into a 168-byte RAM tile per glyph in any two colours
+    and blitted through the pump.
+  - A second atlas in the SPI flash would mean re-provisioning every board
+    (asset ids by sorted filename) and ~16 KB.
+- **Cost, which decides it:**
+  - The triangle and the underline move by redrawing two small shapes, so
+    the cursor keeps up with a fast spin.
+  - Inverted, yellow or indented rows repaint both rows on every detent, up
+    to 40 glyphs: ~0.2 s at board speed, visibly trailing.
+  - Scrolling by line repaints all 8 rows, ~0.7 s a step; by page, once a
+    page.
+  - Opening the menu paints ~150 glyphs, ~0.7 s, unless the pump learns to
+    move more than one glyph a pass for RAM tiles.
 
 ## Still open
 

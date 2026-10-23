@@ -1,0 +1,757 @@
+<title>AK820 Config Menu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the board on the left (bezel, the 128x128 panel at an integer scale, the knob,
+   a strip of keycaps showing the lighting), the controls and notes on the right; one
+   column on a phone. The panel itself is always black: it is a device, not page chrome. */
+:root {
+  --bg: #e9ecef;
+  --surface: #f8f9fa;
+  --fg: #15181c;
+  --muted: #59626d;
+  --line: #ccd2d9;
+  --accent: #8a6a00;
+  --accent-soft: #f3e6b3;
+  --device: #17191c;
+  --device-edge: #2c3036;
+  --device-fg: #d9dde2;
+  --keycap: #23262a;
+  --keycap-edge: #33373d;
+  --panel: #000000;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1113; --surface: #171a1d; --fg: #e6e9ec; --muted: #98a2ad; --line: #2a2f35;
+    --accent: #ffd84a; --accent-soft: #3a3214; --device: #0b0c0e; --device-edge: #2f343a;
+    --device-fg: #d9dde2; --keycap: #1f2226; --keycap-edge: #30343a; --panel: #000000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1113; --surface: #171a1d; --fg: #e6e9ec; --muted: #98a2ad; --line: #2a2f35;
+  --accent: #ffd84a; --accent-soft: #3a3214; --device: #0b0c0e; --device-edge: #2f343a;
+  --device-fg: #d9dde2; --keycap: #1f2226; --keycap-edge: #30343a; --panel: #000000;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 28px; }
+header h1 {
+  font-family: var(--font-display); font-stretch: 112%; font-weight: 750; font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.1; margin: 0 0 8px; letter-spacing: -0.01em; text-wrap: balance;
+}
+header p { margin: 0; color: var(--muted); max-width: 64ch; }
+.main { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 32px; align-items: start; }
+@media (max-width: 820px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+/* The board */
+.board {
+  background: var(--device); border: 1px solid var(--device-edge); border-radius: 18px;
+  padding: 22px 22px 20px; display: grid; gap: 18px; justify-items: center; color: var(--device-fg);
+  max-width: 100%;
+}
+.screen-frame {
+  background: #050505; border-radius: 6px; padding: 10px; border: 1px solid var(--device-edge);
+  box-shadow: inset 0 0 0 2px #000;
+  max-width: 100%;
+}
+#panel { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: var(--panel); }
+.controls-row { display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.knob {
+  width: 92px; height: 92px; border-radius: 50%; position: relative; cursor: grab; touch-action: none;
+  background:
+    radial-gradient(circle at 50% 50%, #3a3f45 0 54%, transparent 55%),
+    repeating-conic-gradient(#2a2e33 0deg 6deg, #4a5057 6deg 12deg);
+  border: 1px solid #555b62; box-shadow: 0 4px 10px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+  transition: transform .08s ease-out;
+}
+.knob:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.knob .mark { position: absolute; left: 50%; top: 9px; width: 3px; height: 16px; margin-left: -1.5px; border-radius: 2px; background: #e8ebee; }
+.knob.pressed { transform: scale(.96); }
+.btn {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--device-fg);
+  background: #24282d; border: 1px solid #3a3f46; border-radius: 8px; padding: 9px 12px; cursor: pointer; min-width: 44px;
+}
+.btn:hover { background: #2c3137; }
+.btn:active { background: #343a41; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.fn { border-color: #6b5a1d; }
+.keys { display: grid; grid-template-columns: repeat(10, 24px); gap: 5px; justify-content: center; }
+.cap { width: 24px; height: 24px; border-radius: 5px; background: var(--keycap); border: 1px solid var(--keycap-edge);
+  font: 500 9px/22px var(--font-mono); text-align: center; color: rgba(255,255,255,.55); overflow: hidden; }
+.cap.wide { grid-column: span 2; width: auto; }
+.status { font-family: var(--font-mono); font-size: 12px; color: #9aa3ad; min-height: 1.5em; text-align: center; }
+
+/* The notes */
+.notes { display: grid; gap: 18px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.card h2 { font-family: var(--font-display); font-stretch: 108%; font-size: 15px; font-weight: 700; margin: 0 0 10px;
+  letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.card p { margin: 0 0 8px; }
+.card p:last-child { margin-bottom: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+td { padding: 5px 0; vertical-align: top; border-top: 1px solid var(--line); }
+tr:first-child td { border-top: 0; }
+td:first-child { width: 42%; padding-right: 12px; }
+kbd { font-family: var(--font-mono); font-size: 12px; background: var(--accent-soft); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.saved { font-family: var(--font-mono); font-size: 13px; display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; }
+.saved dt { color: var(--muted); }
+.saved dd { margin: 0; font-variant-numeric: tabular-nums; }
+.saved dd.changed { color: var(--accent); font-weight: 600; }
+ul { margin: 0; padding-left: 18px; }
+li { margin: 3px 0; }
+.opts { display: grid; gap: 12px; }
+fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+legend { font-size: 13px; color: var(--muted); width: 100%; margin-bottom: 4px; padding: 0; }
+fieldset label { position: relative; font-size: 13px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; cursor: pointer; user-select: none; }
+fieldset input { position: absolute; opacity: 0; pointer-events: none; }
+fieldset label:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); color: var(--fg); font-weight: 600; }
+fieldset label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fine { margin-top: 10px !important; color: var(--muted); font-size: 13px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .knob { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>AK820 Config Menu</h1>
+    <p>The knob menu as it would look on the board's 128 × 128 screen, drawn pixel for pixel from the fonts the board actually stores. Press <kbd>Fn</kbd> + click to close it and see the dashboard; press it again to reopen.</p>
+  </header>
+
+  <div class="main">
+    <section class="board" aria-label="The keyboard">
+      <div class="screen-frame"><canvas id="panel" width="128" height="128" role="img" aria-label="The keyboard's screen"></canvas></div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="controls-row">
+        <button class="btn" id="b-ccw" aria-label="Turn the knob left">&#8634; Turn</button>
+        <div class="knob" id="knob" tabindex="0" role="button" aria-label="The knob: click it, hold it, drag it round, or scroll over it"><div class="mark" id="mark"></div></div>
+        <button class="btn" id="b-cw" aria-label="Turn the knob right">Turn &#8635;</button>
+      </div>
+      <div class="controls-row">
+        <button class="btn" id="b-click">Click</button>
+        <button class="btn" id="b-hold">Hold</button>
+        <button class="btn fn" id="b-fn">Fn + click</button>
+      </div>
+      <div class="keys" id="keys" aria-label="The lighting, previewed on a few keys"></div>
+    </section>
+
+    <div class="notes">
+      <div class="card">
+        <h2>Try the options</h2>
+        <div class="opts">
+          <fieldset><legend>Cursor</legend>
+            <label><input type="radio" name="cur" id="cur-tri" value="tri" checked> Triangle</label>
+            <label><input type="radio" name="cur" id="cur-inv" value="inv"> Inverted</label>
+            <label><input type="radio" name="cur" id="cur-yel" value="yel"> Yellow text</label>
+            <label><input type="radio" name="cur" id="cur-ind" value="ind"> Indent</label>
+            <label><input type="radio" name="cur" id="cur-und" value="und"> Underline</label>
+          </fieldset>
+          <fieldset><legend>Scrolling</legend>
+            <label><input type="radio" name="scr" id="scr-line" value="line" checked> By line</label>
+            <label><input type="radio" name="scr" id="scr-page" value="page"> By page</label>
+          </fieldset>
+          <fieldset><legend>Painting</legend>
+            <label><input type="radio" name="spd" id="spd-board" value="board" checked> Board speed</label>
+            <label><input type="radio" name="spd" id="spd-inst" value="inst"> Instant</label>
+          </fieldset>
+        </div>
+        <p class="fine">Board speed paints one glyph per main-loop pass, about 215 a second, the way the board's pump does. Drawn shapes (the triangle, the underline, the bars) go out at once. Inverted and yellow text need a font path the board doesn't have yet.</p>
+      </div>
+      <div class="card">
+        <h2>Driving it</h2>
+        <table>
+          <tr><td>Turn the knob</td><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>&uarr;</kbd> <kbd>&darr;</kbd>, scroll over the screen, or drag the knob round</td></tr>
+          <tr><td>Click</td><td><kbd>Enter</kbd> or <kbd>Space</kbd>, or tap the knob</td></tr>
+          <tr><td>Hold (back, cancel)</td><td><kbd>Backspace</kbd>, or press and hold the knob</td></tr>
+          <tr><td><kbd>Fn</kbd> + click (open, close)</td><td><kbd>Esc</kbd> or <kbd>F</kbd></td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2>Saved on the board</h2>
+        <dl class="saved" id="saved"></dl>
+        <p style="margin-top:10px;color:var(--muted);font-size:13px">Turning previews a value straight away. Only a click saves it, which is one flash write. Holding, or closing the menu mid-edit, puts the old value back.</p>
+      </div>
+      <div class="card">
+        <h2>What the panel allows</h2>
+        <ul>
+          <li>Today each glyph is copied straight from the font in flash, white on black, so text can't be coloured or inverted.</li>
+          <li>A 1-bit copy of the small font in the chip's own flash (about 1 KB) would change that: the firmware could draw any glyph in any two colours from RAM, which makes inverted and yellow text possible.</li>
+          <li>What a cursor costs is repainting. The triangle and the underline move by redrawing two tiny shapes. Inverted, yellow and indented rows repaint two whole rows, up to 40 glyphs, on every detent: about 0.2 s at board speed. Scrolling by line repaints all 8 rows, about 0.7 s.</li>
+          <li>The small face (Cozette, 6 × 14) gives a title and 8 rows of 20 characters; the triangle takes one of them. The big face (10 × 23) fits 12 across, for values.</li>
+          <li>While the menu is open the screen keeps at least level 1, so turning its brightness to 0 can't hide the menu. It turns off when the menu closes.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Still open</h2>
+        <ul>
+          <li>An edit has no timeout. If you walk away mid-edit, should a long backstop (~2 min) put the old value back?</li>
+          <li>Should <kbd>Fn</kbd>+<kbd>D</kbd> stay as a shortcut beside Diagnostics?</li>
+          <li>Knob modes: in the first build, or later?</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+(() => {
+"use strict";
+const W = 128, H = 128;
+const FACES = {
+  f13: { src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjoAAAAOCAIAAACpXiEFAAADVklEQVR42u2cy5LjMAhF9f8/7VlMTZc7tuFwQYqSgUVXR6VYEgIuL2cc4xi/qUd6pEd6pGrkOI7mRo+UjFD6K3NnyTOmPX18GnSnuevOoLcs2tS0Jx3/yNbZ8xxoN6JWJam5103mtd7gRkuOwZOX/3V23QKPLYi3Au0+BwLY+os/H+TKyuvH6008XcAPE850e223c0JrzTZbZMQ4JjnUzzjhxq0yPN3g+cmuhXWFP392OAcqY2bkls9QH+270ACmCq5kaLRd6lrw+1b/e6Kdj8LV+eP1FgmGbQVXxPxFDdnLd2HoKZibKjnWTHZyxDABMoS4Z4Srn6351bGYyh/yf+1aLgOX2egd4KoQ5BqupsPVk4v9YnyJCS5xcCDszYArO7/BTWroqtz92IBqxNqyY1tlIuHlygDG4YpY55e/C+CKn47LBomBBJ+ySg2NqJrE9Fqk665l5LWgS3HlfDLyJvx5mrM4On8nXJFkoBBbhNRgXgRGAAYCs20viGg+yX0o/jNUznBBeBrETVK5lQ/4LfIcforb/YfgypWQqHpzbeJQBKMoV3OjKbJa7SuJGl1+htwdNyi3LcmCXAW80BnuTkkWzU236nBln4Sv7cIVrGpAQ1YFVzDd5JrCaArIxrmS5EBUCUNVlpLoylirMBkIoYtDta0vmiQIcCX7gjvAFXF31sCVJjPzwMn2wKrkJxRZQvmxeVWQDDSOR2zBPtFV1J/lSTMDL/MCkc/yayE8jK4WJANLqj4CXNlgmdlzHq4G7tYrTP3tA1clEQaEK5K9WAlXQmRZCFdyTzh/miJV8GDEiyyvXZFog2Qvk7DBYyktfQHdmfLaVQZC3ttqUW4QNbiK1iM1aRQqVSE5mQdX5T2Q/0MyMAlXQ22yI/v5gNrV8OqN83RAgCsSVmsN1tApg8GNWwrmcDXiNfOnjvBMbQY2spPbEfhMUklyIztMdxCH3X19ogquSJlQyDRENbe21WJ4xc7BenptJDBeSiHxitZqYR+KmLKM/MDSzHYd4DOaHTJPrn3B8NOpX1rsG5mx1VBiXKuz7nYX8GcTZu/qs3i45/u19Sdfg1VtGZuaXKRJzvkaBVn2Vv7XwNWY96sWTU1NTQ3Dm8crO+z8o92UpqampqamYvoDFLoXyl85VlkAAAAASUVORK5CYII=", cw: 6, ch: 14 },
+  f20: { src: "data:image/png;base64,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", cw: 10, ch: 23 },
+  f30: { src: "data:image/png;base64,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", cw: 15, ch: 22 },
+};
+const WHITE = [255, 255, 255], BLACK = [0, 0, 0], GREY = [100, 100, 100], MID = [70, 70, 70];
+const YELLOW = [255, 252, 0], GREEN = [0, 252, 0], AMPM = [204, 204, 204];
+const PASS_MS = 1000 / 215;   // one glyph a main-loop pass, at the loop's measured rate
+
+const canvas = document.getElementById("panel");
+const ctx = canvas.getContext("2d");
+const img = ctx.createImageData(W, H);
+const tgt = new Uint8ClampedArray(W * H * 4);     // the frame the state asks for
+const shown = new Uint8ClampedArray(W * H * 4);   // what the panel shows now
+for (let i = 3; i < shown.length; i += 4) shown[i] = 255;
+
+/* ---- Options ---- */
+const opt = { cur: "tri", scr: "line", spd: "board" };
+document.querySelectorAll("fieldset input").forEach(r => r.addEventListener("change", () => { opt[r.name] = r.value; dirty = true; }));
+
+/* ---- Drawing into the target frame ---- */
+let scene = new Map();   // the glyph cells this frame draws, by position
+function fill(x, y, w, h, c) {
+  for (let j = Math.max(0, y); j < Math.min(H, y + h); j++)
+    for (let i = Math.max(0, x); i < Math.min(W, x + w); i++) {
+      const p = (j * W + i) * 4; tgt[p] = c[0]; tgt[p + 1] = c[1]; tgt[p + 2] = c[2]; tgt[p + 3] = 255;
+    }
+}
+function dot(x, y, c) { fill(x, y, 1, 1, c); }
+
+async function loadFace(f) {
+  const im = new Image(); im.src = f.src; await im.decode();
+  const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+  const x = c.getContext("2d"); x.drawImage(im, 0, 0);
+  const d = x.getImageData(0, 0, im.width, im.height).data;
+  f.n = Math.floor(im.width / f.cw); f.ink = [];
+  for (let g = 0; g < f.n; g++) {
+    const a = new Uint8Array(f.cw * f.ch);
+    for (let y = 0; y < f.ch; y++) for (let i = 0; i < f.cw; i++) {
+      const p = (y * im.width + g * f.cw + i) * 4;
+      a[y * f.cw + i] = (d[p] > 200 && d[p + 1] > 200 && d[p + 2] > 200) ? 1 : 0;   // white is ink; the magenta markers are not
+    }
+    f.ink.push(a);
+  }
+}
+/* A glyph paints its whole cell, background included, as the board's blit does. */
+function text(face, s, x, y, fg = WHITE, bg = BLACK) {
+  const f = FACES[face];
+  for (let k = 0; k < s.length; k++) {
+    let code = s.charCodeAt(k); if (code < 32 || code > 126) code = 63;
+    const a = f.ink[code - 32], cx = x + k * f.cw;
+    for (let j = 0; j < f.ch; j++) for (let i = 0; i < f.cw; i++) fill(cx + i, y + j, 1, 1, a[j * f.cw + i] ? fg : bg);
+    const sig = face + ":" + code + ":" + (code === 32 ? "" : fg.join(",")) + ":" + bg.join(",");   // a space looks the same in any ink
+    scene.set(cx + "," + y, { sig, x: cx, y, w: f.cw, h: f.ch });
+  }
+}
+function textRight(face, s, right, y, fg, bg) { text(face, s, right - s.length * FACES[face].cw, y, fg, bg); }
+function textCentre(face, s, y) { text(face, s, Math.floor((W - s.length * FACES[face].cw) / 2), y); }
+function tri(x, y) {   // the cursor: 4 x 7, yellow, pointing right
+  const w = [1, 2, 3, 4, 3, 2, 1];
+  for (let j = 0; j < 7; j++) fill(x, y + j, w[j], 1, YELLOW);
+}
+function radio(x, y, c = WHITE) {   // the saved choice: a 5 x 5 dot
+  [[1, 3], [0, 5], [0, 5], [0, 5], [1, 3]].forEach(([o, w], j) => fill(x + o, y + j, w, 1, c));
+}
+function hsv(h, s, v) {   // QMK's 0-255 ranges
+  h = ((h % 256) + 256) % 256; const hh = h / 256 * 6, i = Math.floor(hh), f = hh - i;
+  const S = s / 255, V = v / 255, p = V * (1 - S), q = V * (1 - S * f), t = V * (1 - S * (1 - f));
+  const m = [[V, t, p], [q, V, p], [p, V, t], [p, q, V], [t, p, V], [V, p, q]][i % 6];
+  return m.map(n => Math.round(n * 255));
+}
+
+/* ---- Settings: what is saved, and what is showing ---- */
+const EFFECTS = ["Solid", "Two-tone", "Cycle all", "Cycle L-R", "Cycle U-D", "Raindrops", "Heatmap"];
+const saved = {
+  lights: 1, effect: 1, val: 115, hue: 185, sat: 227, speed: 231,
+  screen: 5, power: 1, conn: 0, locks: 1, charging: 0, clock: 0, batt: 0, knob: 0,
+};
+const live = { ...saved };
+const POWER = ["Always on", "Balanced", "Power saver", "Lights out"];
+const POWER_SHORT = ["Always on", "Balanced", "Saver", "Lights out"];
+const CONN = ["BT 1", "BT 2", "BT 3", "2.4G"];
+const CLOCK = ["24h", "12h", "Date", "Off"];
+const BATT = ["Percent", "Hours"];
+const KNOB = ["Volume", "Scroll", "Screen"];
+function pct(v) { return Math.round(v / 255 * 100) + "%"; }
+function lvl(v) { return v ? String(v) : "Off"; }
+const LABELS = {
+  lights: ["Lights", v => v ? "On" : "Off"], effect: ["Effect", v => EFFECTS[v]],
+  val: ["Brightness", v => pct(v)], hue: ["Colour", v => "hue " + v], sat: ["Saturation", v => pct(v)],
+  speed: ["Second colour", v => "hue " + v], screen: ["Screen", v => v ? "level " + v : "off"],
+  power: ["Power", v => POWER[v]], conn: ["Connection", v => CONN[v]], locks: ["Lock lights", lvl],
+  charging: ["Charging light", lvl], clock: ["Clock", v => CLOCK[v]], batt: ["Battery", v => BATT[v]], knob: ["Knob", v => KNOB[v]],
+};
+
+/* ---- The menu ---- */
+const BACK = { label: "< Back", kind: "back" };
+function lightingItems() {
+  const two = live.effect === 1;
+  return [BACK,
+    { label: "Effect", kind: "choice", key: "effect", options: EFFECTS, value: () => EFFECTS[live.effect] },
+    { label: "Brightness", kind: "range", key: "val", min: 0, max: 255, step: 5, fmt: pct },
+    { label: "Colour", kind: "hue", key: "hue" },
+    { label: "Saturation", kind: "range", key: "sat", min: 0, max: 255, step: 5, fmt: pct },
+    two ? { label: "Second colour", kind: "hue", key: "speed" }
+        : { label: "Speed", kind: "range", key: "speed", min: 0, max: 255, step: 5, fmt: pct },
+    { label: "Lights", kind: "choice", key: "lights", options: ["Off", "On"], value: () => live.lights ? "On" : "Off" },
+  ];
+}
+const SLOTS = ["Bluetooth 1", "Bluetooth 2", "Bluetooth 3", "2.4G dongle"];
+const MENUS = {
+  top: { title: "Configuration", items: () => [
+    { label: "Lighting", kind: "menu", id: "lighting" },
+    { label: "Screen", kind: "range", key: "screen", min: 0, max: 23, step: 1, fmt: v => v ? String(v) : "Off", wide: v => v ? "Level " + v : "Off" },
+    { label: "Power", kind: "choice", key: "power", options: POWER, value: () => POWER_SHORT[live.power] },
+    { label: "Connection", kind: "menu", id: "conn", value: () => CONN[live.conn] },
+    { label: "Indicators", kind: "menu", id: "ind" },
+    { label: "Clock", kind: "choice", key: "clock", options: ["24 hour", "12 hour", "Date", "Off"], value: () => CLOCK[live.clock] },
+    { label: "Battery", kind: "choice", key: "batt", options: ["Percent", "Hours of use"], value: () => BATT[live.batt] },
+    { label: "Knob", kind: "choice", key: "knob", options: ["Volume", "Scroll", "Screen bright."], value: () => KNOB[live.knob] },
+    { label: "Diagnostics", kind: "menu", id: "diag" },
+    { label: "Help", kind: "menu", id: "help" },
+    { label: "About", kind: "page", id: "about" },
+    { label: "Exit", kind: "exit" },
+  ] },
+  lighting: { title: "Lighting", items: lightingItems },
+  conn: { title: "Connection", items: () => [BACK,
+    ...SLOTS.map((l, i) => ({ label: l, kind: "conn", slot: i })),
+    { label: "Pair a device", kind: "menu", id: "pair" },
+  ] },
+  pair: { title: "Pair a device", items: () => [BACK, ...SLOTS.map((l, i) => ({ label: l, kind: "pair", slot: i }))] },
+  ind: { title: "Indicators", items: () => [BACK,
+    { label: "Lock lights", kind: "range", key: "locks", min: 0, max: 9, step: 1, fmt: lvl },
+    { label: "Charging", kind: "range", key: "charging", min: 0, max: 9, step: 1, fmt: lvl, title: "Charging light" },
+  ] },
+  diag: { title: "Diagnostics", items: () => [BACK,
+    { label: "Health page", kind: "page", id: "health" },
+    { label: "Camera page", kind: "page", id: "camera" },
+    { label: "Reset counters", kind: "page", id: "reset" },
+  ] },
+  help: { title: "Help", items: () => [BACK,
+    { label: "Using the menu", kind: "page", id: "h-menu" },
+    { label: "Customizing", kind: "page", id: "h-via" },
+    { label: "Shortcuts", kind: "page", id: "h-keys" },
+    { label: "Pro tips", kind: "page", id: "h-tips" },
+    { label: "More info", kind: "page", id: "h-more" },
+  ] },
+};
+const PAGES = {
+  "about": { title: "About", lines: () => ["Firmware 36afff30e8", "dev, 0xef38330e", "Up 1d 20h 14m", "", "Battery 76.7%", "Pack 4017 mV", "Left 64h of use", "Mode " + POWER[live.power], "Link " + CONN[live.conn] + " connected", "", "github.com/jdlien", "  /ak820-pro"] },
+  "health": { title: "Health page", lines: () => ["rowgap 4 ms", "stall>25 7", "stall>10 84316", "gapmax 29 blit", "keys 45852", "tx 89413, 9010 retry", "drops 0", "", "(illustrative: the", "real page is Fn+D's)"] },
+  "h-menu": { title: "Using the menu", lines: () => ["Turn: move", "Click: choose, save", "Hold: back, cancel", "Fn+click: close", "", "It closes by itself", "after 12 s idle, but", "never mid-edit.", "", "Typing still works", "while it's open."] },
+  "h-via": { title: "Customizing", lines: () => ["Remap keys and the", "knob at usevia.app,", "with the cable in.", "", "Load via.json from", "the repo: Settings,", "Show Design tab,", "Load Draft", "Definition.", "", "Lighting changes", "show up here too."] },
+  "h-keys": { title: "Shortcuts", lines: () => ["Fn+Q/W/E  BT slot", "  hold 2 s: pair", "Fn+R      2.4G", "Fn+Lt/Rt  hue", "Fn+Up/Dn  brightness", "Fn+6/7    saturation", "Fn+X      lights", "Fn+\\      effect", "Fn+B      power mode", "Fn+C      clock", "Fn+PgUp/Dn screen", "Fn+Esc    bootloader"] },
+  "h-tips": { title: "Pro tips", lines: () => ["Balanced sleeps", "after 20 min idle.", "A key wakes it, and", "the key still types.", "", "The lights are the", "battery's big cost.", "Asleep, a night is", "about 1%.", "", "2.4G answers faster;", "Bluetooth has three", "slots."] },
+};
+
+let open = true, stack = [{ id: "top", cursor: 0, top: 0 }], mode = "list", edit = null, page = null;
+let lastInput = performance.now(), started = false, flash = null, detent = 0, lastTurn = 0, pairing = null, dirty = true;
+
+function menu() { return stack[stack.length - 1]; }
+function items() { return MENUS[menu().id].items(); }
+function now() { return performance.now(); }
+
+function enter(item) {
+  if (item.kind === "menu") { stack.push({ id: item.id, cursor: 0, top: 0 }); return; }
+  if (item.kind === "back") { pop(); return; }
+  if (item.kind === "exit") { close(); return; }
+  if (item.kind === "conn") { live.conn = saved.conn = item.slot; say("Now on " + CONN[item.slot]); renderSaved(); return; }
+  if (item.kind === "pair") { mode = "pairing"; pairing = { slot: item.slot, at: now() }; return; }
+  if (item.kind === "page") { mode = "page"; page = { id: item.id, scroll: 0, confirm: item.id === "reset" }; return; }
+  edit = { item, before: live[item.key], top: 0 };   // range, hue or choice
+  if (item.kind === "choice") edit.cursor = live[item.key];
+  mode = "edit";
+}
+function pop() { if (stack.length > 1) stack.pop(); else close(); }
+function close() {
+  if (mode === "edit" && edit) live[edit.item.key] = edit.before;   // closing mid-edit puts the old value back
+  open = false; mode = "list"; edit = null; page = null; pairing = null; stack = [{ id: "top", cursor: 0, top: 0 }];
+  renderSaved();
+}
+function openMenu() { open = true; mode = "list"; stack = [{ id: "top", cursor: 0, top: 0 }]; }
+function say(s, ms = 1300) { flash = { text: s, until: now() + ms }; }
+function input() { lastInput = now(); started = true; dirty = true; }
+
+function turn(dir) {
+  const t = now(), fast = t - lastTurn < 90; lastTurn = t;
+  detent += dir; document.getElementById("knob").style.rotate = (detent * 15) + "deg";
+  input();
+  if (!open) return;   // closed: the knob is the volume again
+  if (mode === "list") {
+    const n = items().length, m = menu();
+    m.cursor = (m.cursor + dir + n) % n;   // wraps round
+  } else if (mode === "edit") {
+    const it = edit.item;
+    if (it.kind === "range") {
+      const step = it.step * (fast && it.max > 30 ? 4 : 1);
+      live[it.key] = Math.max(it.min, Math.min(it.max, live[it.key] + dir * step));
+    } else if (it.kind === "hue") {
+      live[it.key] = (live[it.key] + dir * (fast ? 12 : 3) + 256) % 256;
+    } else if (it.kind === "choice") {
+      const n = it.options.length; edit.cursor = (edit.cursor + dir + n) % n;
+      live[it.key] = edit.cursor;   // previewed at once
+    }
+  } else if (mode === "page" && PAGES[page.id]) {
+    const n = PAGES[page.id].lines().length;
+    page.scroll = Math.max(0, Math.min(Math.max(0, n - 8), page.scroll + dir));
+  }
+  renderSaved();
+}
+function click() {
+  input();
+  if (!open) return;   // closed: play/pause
+  if (mode === "list") enter(items()[menu().cursor]);
+  else if (mode === "edit") { saved[edit.item.key] = live[edit.item.key]; mode = "list"; edit = null; say("Saved"); renderSaved(); }
+  else if (mode === "page") { if (page.confirm) page = { id: "reset-done", scroll: 0 }; else { mode = "list"; page = null; } }
+  else if (mode === "pairing") { mode = "list"; pairing = null; say("Pairing stopped"); }
+}
+function hold() {
+  input();
+  if (!open) return;
+  if (mode === "edit") { live[edit.item.key] = edit.before; mode = "list"; edit = null; say("Cancelled"); }
+  else if (mode === "page" || mode === "pairing") { mode = "list"; page = null; pairing = null; }
+  else pop();
+  renderSaved();
+}
+function fnClick() { input(); if (open) close(); else openMenu(); renderSaved(); }
+
+/* ---- Drawing the screens ---- */
+const TITLE_Y = 0, SEP_Y = 14, ROW0 = 15, ROW_H = 14, ROWS = 8, RIGHT = 124;
+function header(title) {
+  const idle = now() - lastInput;
+  let t = title;
+  if (flash && now() < flash.until) t = flash.text;
+  else if (mode === "list" && idle > 3000 && Math.floor(idle / 1500) % 2 === 1) t = "Turn the knob";
+  text("f13", t.padEnd(20).slice(0, 20), 4, TITLE_Y);
+  fill(4, SEP_Y, 120, 1, GREY);
+}
+function scrollbar(total, top) {
+  if (total <= ROWS) return;
+  const h = ROWS * ROW_H, th = Math.max(6, Math.round(h * ROWS / total)), ty = ROW0 + Math.round((h - th) * top / (total - ROWS));
+  fill(125, ROW0, 1, h, MID); fill(125, ty, 1, th, WHITE);
+}
+function keepVisible(st, n) {
+  if (opt.scr === "page") st.top = Math.floor(st.cursor / ROWS) * ROWS;
+  else {
+    if (st.cursor < st.top) st.top = st.cursor;
+    if (st.cursor >= st.top + ROWS) st.top = st.cursor - ROWS + 1;
+  }
+  st.top = Math.max(0, Math.min(st.top, Math.max(0, n - (opt.scr === "page" ? 1 : ROWS))));
+}
+/* One row, in the chosen cursor style. extra: a shape at the right (a swatch, a dot) instead of text. */
+function row(y, label, value, selected, extra) {
+  const tri_ = opt.cur === "tri";
+  const x0 = tri_ ? 10 : 4, cols = tri_ ? 19 : 20;
+  const indent = opt.cur === "ind" && selected ? 1 : 0;
+  const v = value || "";
+  const s = (" ".repeat(indent) + label).padEnd(cols - v.length).slice(0, cols - v.length) + v;
+  const inv = opt.cur === "inv" && selected, yel = opt.cur === "yel" && selected;
+  text("f13", s, x0, y, inv ? BLACK : yel ? YELLOW : WHITE, inv ? WHITE : BLACK);
+  if (tri_ && selected) tri(4, y + 3);
+  if (opt.cur === "und" && selected) fill(4, y + 12, 120, 1, YELLOW);
+  if (extra) extra(inv);
+}
+function drawRows(list, cursor, top, fn) {
+  for (let r = 0; r < ROWS; r++) {
+    const i = top + r; if (i >= list.length) break;
+    fn(list[i], ROW0 + r * ROW_H, i, i === cursor);
+  }
+  scrollbar(list.length, top);
+}
+function valueOf(it) {
+  if (it.value) return it.value();
+  if (it.kind === "range") return it.fmt(live[it.key]);
+  if (it.kind === "menu" || it.kind === "page") return ">";
+  return null;
+}
+function drawList() {
+  const m = menu(), list = items(); keepVisible(m, list.length);
+  header(MENUS[m.id].title);
+  drawRows(list, m.cursor, m.top, (it, y, i, sel) => {
+    if (it.kind === "hue") row(y, it.label, "  ", sel, () => fill(110, y + 3, 12, 8, hsv(live[it.key], live.sat, 255)));
+    else if (it.kind === "conn") row(y, it.label, "", sel, inv => { if (live.conn === it.slot) radio(117, y + 4, inv ? BLACK : WHITE); });
+    else row(y, it.label, valueOf(it), sel);
+  });
+}
+function hints(y) { text("f13", "Turn: change", 4, y); text("f13", "Click: save", 4, y + 14); text("f13", "Hold: cancel", 4, y + 28); }
+function drawEdit() {
+  const it = edit.item;
+  header(it.title || it.label);
+  if (it.kind === "range") {
+    const v = live[it.key];
+    const vs = (it.wide || it.fmt)(v);
+    textCentre("f20", (" ".repeat(Math.floor((10 - vs.length) / 2)) + vs).padEnd(10), 22);
+    const x0 = 14, w = 100, f = Math.round(w * (v - it.min) / (it.max - it.min));
+    fill(x0 - 1, 51, w + 2, 10, GREY); fill(x0, 52, w, 8, BLACK); fill(x0, 52, f, 8, WHITE);
+    hints(72);
+  } else if (it.kind === "hue") {
+    for (let i = 0; i < 120; i++) fill(4 + i, 22, 1, 14, hsv(Math.round(i / 120 * 256), 255, 255));
+    const mx = 4 + Math.round(live[it.key] / 256 * 120);
+    fill(mx, 20, 1, 18, WHITE);
+    [[0, 5], [1, 3], [2, 1]].forEach(([o, w], j) => fill(mx - 2 + o, 38 + j, w, 1, YELLOW));
+    fill(44, 46, 40, 20, hsv(live[it.key], live.sat, 255));
+    hints(72);
+  } else if (it.kind === "choice") {
+    const st = { cursor: edit.cursor, top: edit.top }; keepVisible(st, it.options.length); edit.top = st.top;
+    drawRows(it.options, edit.cursor, st.top, (o, y, i, sel) => row(y, o, "", sel, inv => { if (saved[it.key] === i) radio(117, y + 4, inv ? BLACK : WHITE); }));
+  }
+}
+function drawPage() {
+  if (page.id === "camera") { drawCamera(); return; }
+  if (page.id === "h-more") { drawMore(); return; }
+  if (page.id === "reset" || page.id === "reset-done") {
+    header("Reset counters");
+    if (page.id === "reset") { text("f13", "Clear the health", 4, 22); text("f13", "counters?", 4, 36); text("f13", "Click: reset", 4, 72); text("f13", "Hold: cancel", 4, 86); }
+    else { text("f13", "Counters reset.", 4, 22); text("f13", "Click: back", 4, 72); }
+    return;
+  }
+  const p = PAGES[page.id], lines = p.lines();
+  header(p.title);
+  for (let r = 0; r < ROWS; r++) { const l = lines[page.scroll + r]; if (l != null) text("f13", l.padEnd(20).slice(0, 20), 4, ROW0 + r * ROW_H); }
+  scrollbar(lines.length, page.scroll);
+}
+function drawCamera() {   // Fn+D's second page: big digits a camera can read across a room
+  textRight("f20", "4.017V", 124, 4);
+  textRight("f20", "77% 64h", 124, 31);
+  textRight("f20", clockText(0), 124, 58);
+  textRight("f20", "5C 98@1", 124, 85);
+}
+let qrCache = null;
+function drawMore() {
+  header("More info");
+  const url = "https://github.com/jdlien/ak820-pro";
+  if (typeof qrcode === "function") {
+    if (!qrCache) { const q = qrcode(0, "M"); q.addData(url); q.make(); qrCache = q; }
+    const q = qrCache, n = q.getModuleCount(), m = 3, quiet = 2, size = (n + quiet * 2) * m;
+    const x0 = Math.floor((W - size) / 2), y0 = 16 + Math.max(0, Math.floor((112 - size) / 2));
+    fill(x0, y0, size, size, WHITE);
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) fill(x0 + (c + quiet) * m, y0 + (r + quiet) * m, m, m, BLACK);
+  } else {
+    text("f13", "github.com/jdlien", 4, 30); text("f13", "  /ak820-pro", 4, 44);
+  }
+}
+function drawPairing() {
+  header("Pairing");
+  text("f13", SLOTS[pairing.slot], 4, 18);
+  const n = Math.floor((now() - pairing.at) / 400) % 4;
+  for (let i = 0; i < 4; i++) fill(4 + i * 10, 36, 6, 4, i < n ? YELLOW : BLACK);
+  if (pairing.slot < 3) { text("f13", "On the computer, add", 4, 46); text("f13", "AK820 in Bluetooth", 4, 60); text("f13", "settings.", 4, 74); }
+  else { text("f13", "Plug the dongle in", 4, 46); text("f13", "and keep it close.", 4, 60); }
+  text("f13", "Click or hold: stop", 4, 100);
+}
+
+function clockText(fmt) {
+  const d = new Date(), z = n => String(n).padStart(2, "0");
+  if (fmt === 1) return String(d.getHours() % 12 || 12).padStart(2, " ") + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds());
+  return z(d.getHours()) + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds());
+}
+const MINI = { A: ["010", "101", "111", "101", "101"], P: ["110", "101", "110", "100", "100"], M: ["101", "111", "111", "101", "101"] };
+function mini(s, x, y, c) { for (let k = 0; k < s.length; k++) MINI[s[k]].forEach((r, j) => [...r].forEach((b, i) => { if (b === "1") dot(x + k * 4 + i, y + j, c); })); }
+function drawDashboard() {   // the dashboard behind the menu, approximate
+  if (live.conn < 3) {
+    const pts = [[4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6], [4, 7], [4, 8], [4, 9], [4, 10], [4, 11], [4, 12], [5, 1], [6, 2], [7, 3], [6, 4], [5, 5], [3, 7], [2, 8], [1, 9], [5, 7], [6, 8], [7, 9], [6, 10], [5, 11], [3, 5], [2, 4], [1, 3]];
+    pts.forEach(([x, y]) => dot(5 + x, 6 + y, [90, 150, 255]));
+    text("f20", String(live.conn + 1), 18, 1);
+  } else text("f20", "2.4G", 5, 1);
+  [7, 5, 3, 1].forEach((h, j) => fill(3 + j, 31 + (7 - h) / 2, 1, h, GREEN));
+  text("f13", "Kerala", 14, 27); text("f13", "Bonobo - Migration", 14, 41);
+  if (live.clock === 0) text("f30", clockText(0), 4, 56);
+  else if (live.clock === 1) { text("f30", clockText(1), 0, 56); mini(new Date().getHours() < 12 ? "AM" : "PM", 121, 70, AMPM); }
+  else if (live.clock === 2) { const d = new Date(); textCentre("f20", (d.toLocaleString("en-US", { month: "short" }) + " " + d.getDate() + ", " + d.getFullYear()).slice(0, 12), 55); }
+  fill(5, 110, 24, 12, WHITE); fill(6, 111, 22, 10, BLACK); fill(29, 114, 2, 4, WHITE);
+  fill(7, 112, Math.round(20 * 0.77), 8, GREEN);
+  drawBulb(35, 108);
+  textRight("f20", live.batt === 0 ? "77%" : "64h", 124, 105);
+}
+function drawBulb(x, y) {   // 13 x 15: glass, collar, screw base (approximate)
+  const glass = live.power === 3 ? [70, 80, 100] : live.power === 2 ? [128, 128, 128] : [255, 230, 90];
+  const rows = [[4, 5], [2, 9], [1, 11], [1, 11], [1, 11], [1, 11], [2, 9], [3, 7], [4, 5]];
+  rows.forEach(([o, w], j) => fill(x + o, y + j, w, 1, glass));
+  if (live.power === 3) { rows.forEach(([o, w], j) => fill(x + o + 1, y + j, Math.max(0, w - 2), 1, BLACK)); for (let i = 0; i < 11; i++) dot(x + 1 + i, y + 9 - Math.round(i * 0.8), [220, 220, 220]); }
+  if (live.power === 0) { dot(x, y, [255, 230, 90]); dot(x + 12, y, [255, 230, 90]); }
+  fill(x + 4, y + 9, 5, 1, [100, 100, 100]);
+  for (let j = 10; j < 14; j++) fill(x + 4, y + j, 5, 1, j % 2 ? [180, 180, 180] : [130, 130, 130]);
+}
+
+/* ---- The board's paint: the target frame, then a glyph a pass ---- */
+let shownGlyphs = new Map(), pending = new Map(), budget = 0;
+function build() {
+  tgt.fill(0); for (let i = 3; i < tgt.length; i += 4) tgt[i] = 255;
+  scene = new Map();
+  if (!open) drawDashboard();
+  else if (mode === "list") drawList();
+  else if (mode === "edit") drawEdit();
+  else if (mode === "page") drawPage();
+  else if (mode === "pairing") drawPairing();
+  // the cell diff: a glyph that changed, appeared or went away is queued
+  for (const [k, g] of scene) {
+    const old = shownGlyphs.get(k);
+    if (old && old.sig === g.sig) pending.delete(k); else pending.set(k, g);
+  }
+  for (const [k, g] of shownGlyphs) if (!scene.has(k)) pending.set(k, { ...g, clear: true });
+}
+function pump(dt) {
+  if (opt.spd === "inst") budget = Infinity; else budget += dt / PASS_MS;
+  for (const [k, g] of pending) {
+    if (budget < 1) break;
+    if (g.clear) shownGlyphs.delete(k); else shownGlyphs.set(k, g);
+    pending.delete(k); budget -= 1;
+  }
+  if (!pending.size) budget = 0;
+}
+function compose() {
+  const out = new Uint8ClampedArray(tgt);
+  for (const [, g] of pending)   // not painted yet: the panel still shows what was there
+    for (let j = g.y; j < g.y + g.h && j < H; j++) {
+      const a = (j * W + g.x) * 4; out.set(shown.subarray(a, a + g.w * 4), a);
+    }
+  shown.set(out); img.data.set(out); ctx.putImageData(img, 0, 0);
+  const duty = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 23, 26, 29, 33, 37, 42, 48];
+  const level = open ? Math.max(1, live.screen) : live.screen;   // never dark while the menu is open
+  canvas.style.filter = level ? "brightness(" + (0.45 + 0.55 * Math.sqrt(duty[level] / 48)).toFixed(3) + ")" : "brightness(0)";
+}
+function status() {
+  const el = document.getElementById("status");
+  let s;
+  if (!open) s = "Menu closed. Fn + click opens it.";
+  else if (mode === "edit") s = "Editing: no timeout. Click saves, hold cancels.";
+  else if (!started) s = "Closes after 12 s idle (counting starts at your first input).";
+  else s = "Closes in " + Math.max(0, Math.ceil((12000 - (now() - lastInput)) / 1000)) + " s if left alone.";
+  if (pending.size && opt.spd === "board") s = "Painting: " + pending.size + " glyphs to go (" + Math.round(pending.size * PASS_MS) + " ms)";
+  if (el.textContent !== s) el.textContent = s;
+}
+
+/* ---- The keys: the lighting, live ---- */
+const KEYS = [["Tab", 1], ["Q", 0], ["W", 0], ["E", 0], ["R", 0], ["T", 0], ["Y", 0], ["U", 0], ["I", 0], ["O", 0],
+              ["Shift", 1, 2], ["A", 0], ["S", 0], ["D", 0], ["F", 0], ["G", 0], ["H", 0], ["Ctrl", 1, 2]];
+const keysEl = document.getElementById("keys");
+const caps = KEYS.map(([l, mod, span]) => { const d = document.createElement("div"); d.className = "cap" + (span ? " wide" : ""); d.textContent = l; d.dataset.mod = mod; keysEl.appendChild(d); return d; });
+const rain = caps.map(() => Math.random() * 256);
+function lightKeys(t) {
+  const base = [35, 38, 42];
+  caps.forEach((c, i) => {
+    let col = null;
+    if (live.lights) {
+      const mod = c.dataset.mod === "1", cx = i < 10 ? i : (i - 10) * 1.3, rw = i < 10 ? 0 : 1;
+      let h = live.hue;
+      switch (live.effect) {
+        case 1: h = mod ? live.hue + live.speed : live.hue; break;
+        case 2: h = live.hue + t / 40; break;
+        case 3: h = live.hue + cx * 22 + t / 40; break;
+        case 4: h = live.hue + rw * 60 + t / 40; break;
+        case 5: h = rain[i]; break;
+        case 6: h = 170; break;
+      }
+      const v = live.effect === 6 ? live.val * 0.15 : live.val;
+      const led = hsv(Math.round(h), live.sat, 255), a = Math.min(1, (v / 255) * 1.5);
+      col = base.map((b, k) => Math.round(b * (1 - a) + led[k] * a));
+    }
+    const bg = col ? "rgb(" + col.join(",") + ")" : "";
+    if (c.style.background !== bg) c.style.background = bg;
+  });
+}
+
+/* ---- What is saved ---- */
+function renderSaved() {
+  const dl = document.getElementById("saved"); dl.textContent = "";
+  const show = (k, src) => (k === "speed" && src.effect !== 1) ? pct(src.speed) : LABELS[k][1](src[k]);
+  ["effect", "val", "hue", "sat", "speed", "lights", "screen", "power", "conn", "clock", "batt", "locks", "charging", "knob"].forEach(k => {
+    const dt = document.createElement("dt"); dt.textContent = (k === "speed" && saved.effect !== 1) ? "Speed" : LABELS[k][0];
+    const dd = document.createElement("dd"); dd.textContent = show(k, saved);
+    if (live[k] !== saved[k]) { dd.textContent += "  (showing " + show(k, live) + ")"; dd.className = "changed"; }
+    dl.append(dt, dd);
+  });
+}
+
+/* ---- Input ---- */
+document.getElementById("b-ccw").onclick = () => turn(-1);
+document.getElementById("b-cw").onclick = () => turn(1);
+document.getElementById("b-click").onclick = () => click();
+document.getElementById("b-hold").onclick = () => hold();
+document.getElementById("b-fn").onclick = () => fnClick();
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.tagName === "INPUT") return;
+  const k = e.key;
+  if (k === "ArrowLeft" || k === "ArrowUp") turn(-1);
+  else if (k === "ArrowRight" || k === "ArrowDown") turn(1);
+  else if (k === "Enter" || k === " ") { if (e.target.tagName === "BUTTON") return; click(); }
+  else if (k === "Backspace") hold();
+  else if (k === "Escape" || k === "f" || k === "F") fnClick();
+  else return;
+  e.preventDefault();
+  if (mode === "edit" || mode === "list") renderSaved();
+});
+let wheelAcc = 0;
+function onWheel(e) { e.preventDefault(); wheelAcc += e.deltaY; while (Math.abs(wheelAcc) >= 40) { const d = Math.sign(wheelAcc); turn(d); wheelAcc -= d * 40; } renderSaved(); }
+canvas.addEventListener("wheel", onWheel, { passive: false });
+const knob = document.getElementById("knob");
+knob.addEventListener("wheel", onWheel, { passive: false });
+let pd = null;
+knob.addEventListener("pointerdown", e => {
+  knob.setPointerCapture(e.pointerId); knob.classList.add("pressed");
+  const r = knob.getBoundingClientRect();
+  pd = { cx: r.left + r.width / 2, cy: r.top + r.height / 2, acc: 0, moved: false, held: false,
+         timer: setTimeout(() => { if (pd && !pd.moved) { pd.held = true; hold(); } }, 600) };
+  pd.a = Math.atan2(e.clientY - pd.cy, e.clientX - pd.cx);
+});
+knob.addEventListener("pointermove", e => {
+  if (!pd) return;
+  const a = Math.atan2(e.clientY - pd.cy, e.clientX - pd.cx);
+  let d = a - pd.a; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+  pd.a = a; pd.acc += d;
+  const step = Math.PI / 9;
+  while (Math.abs(pd.acc) >= step) { pd.moved = true; clearTimeout(pd.timer); const s = Math.sign(pd.acc); turn(s); pd.acc -= s * step; }
+});
+function endPress() {
+  if (!pd) return; clearTimeout(pd.timer); knob.classList.remove("pressed");
+  if (!pd.moved && !pd.held) click();
+  pd = null; renderSaved();
+}
+knob.addEventListener("pointerup", endPress);
+knob.addEventListener("pointercancel", () => { if (pd) { clearTimeout(pd.timer); knob.classList.remove("pressed"); pd = null; } });
+knob.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); click(); renderSaved(); } });
+
+/* ---- Size: an integer scale that fits ---- */
+function fit() {
+  const avail = Math.min(document.querySelector(".board").clientWidth - 66, 520);
+  const s = Math.max(1, Math.min(4, Math.floor(avail / W)));
+  canvas.style.width = (W * s) + "px"; canvas.style.height = (H * s) + "px";
+}
+window.addEventListener("resize", fit);
+
+/* ---- The loop ---- */
+let last = now(), t0 = now(), tick = 0;
+function frame() {
+  const t = now(), dt = Math.min(100, t - last); last = t;
+  if (open && started && mode !== "edit" && t - lastInput > 12000) { close(); dirty = true; }
+  if (t - tick > 100) { tick = t; dirty = true; if (Math.random() < 0.3) rain[Math.floor(Math.random() * rain.length)] = Math.random() * 256; lightKeys(t - t0); }
+  if (dirty) { build(); dirty = false; }
+  pump(dt); compose(); status();
+  requestAnimationFrame(frame);
+}
+Promise.all(Object.values(FACES).map(loadFace)).then(() => { fit(); renderSaved(); lightKeys(0); requestAnimationFrame(frame); });
+})();
+</script>
