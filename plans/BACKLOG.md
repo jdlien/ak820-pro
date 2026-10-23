@@ -86,24 +86,36 @@ the number in the alert, the moment someone is actually looking for it.
 - **When:** build it with `ce229f87c6`'s flash after the drain, through
   codex like any flash.
 
-## Time left on a long sleep's wake up to 99 h, and a QR code to the power page (2026-10-22) -- the first planned, the second parked
+## Time left on a long sleep's wake, as the battery row, and a QR code to the power page (2026-10-22) -- the first planned, the second parked
 
-**The wake notice at any level.** Today a wake after 2 h or more asleep
-(`RC_LONG_SLEEP_S`, sleep.c) shows `6h use left` only under 10 h
-(`power.c`, `left < 600u`), for `PARAM_OVERLAY_HOLD_MS` (2 s).
-- **The idea:** raise the condition from 10 h to 99 h, and hold it ~5 s.
-  Keep it to the long-sleep wake, which is the morning and after lunch.
-  Every wake in Balanced is several an hour on a stop-start day, so a
-  notice on each one would become wallpaper over the now-playing title.
-- **The format:** hours only, `67h use left` (12 cells). From 100 h it says
-  nothing, and the percentage is enough. No days: "days" reads as calendar
-  days to the next charge at your real pattern of use, which the board
-  can't know. These are hours of use. ⚠️ The camera page's `4d` from 100 h
-  has the same problem.
-- **Why it might be worth it:** hours of use at your settings is what the
-  percentage doesn't tell an owner.
-- **Cost:** a condition, a format and a hold. It could ride the flash after
-  the drain, with the "Battery low" hours (above).
+**The wake notice, at any level.** Today a wake after 2 h or more asleep
+(`RC_LONG_SLEEP_S`, sleep.c) shows `6h use left` in the status band, for
+`PARAM_OVERLAY_HOLD_MS` (2 s), and only under 10 h (`power.c`, `left < 600u`).
+- **No threshold.** Any cap misreads across settings. At full white the most
+  there ever is is ~55-60 h, so a cap at 99 h would show every time. With the
+  lights off it would show only from ~2/3 down, which looks broken.
+- **The battery row itself, not the status band.** For ~5 s the whole row
+  gives way to the time left, as an alternative gauge, then comes back. The
+  row's big digits are 10x23 cells. From `BATT_X0` to `PANEL_WIDTH - 4` that
+  is 11 cells, so `143h of use` fits (the most is ~150 h, awake and dark),
+  and so does `<1h of use`. Hours only: "days" would read as calendar days
+  to the next charge at your real use, which the board can't know.
+  - ⚠️ The camera page's `4d` from 100 h has the same problem: hours there
+    too.
+- **The same conditions as today, less the cap:** on battery, the level
+  known and not cut, the average an hour old or more. On USB, nothing.
+- **Details for the plan:**
+  - The wake holds the backlight dark until the row is repainted from the
+    corrected level (`display_wake_repainted`). The time view comes after
+    that release, from the debited level, or it is that repaint.
+  - The big digits are synchronous, ~2.5 ms a glyph (`BATT_TXT_CHUNK`), so
+    the view paints and restores a few glyphs a pass, as the row already
+    does. Keep each pass under 10 ms.
+  - Keep it to the long-sleep wake, the morning and after lunch. Balanced
+    wakes several times an hour on a stop-start day, and a view on each
+    would become wallpaper.
+- **Cost:** a timed view of the row and its restore. It could ride the
+  flash after the drain, with the "Battery low" hours (above).
 
 **A QR code to the power page with the board's own settings.**
 - The page already takes its settings in the URL
