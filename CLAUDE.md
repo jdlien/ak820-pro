@@ -492,7 +492,8 @@ firmware.
 
 ## Stock Fn shortcuts (quick reference)
 
-`Fn`+`Q/W/E` BT slots (tap = select, hold 2 s = pair) · `Fn`+`R` 2.4G ·
+`Fn`+`Q/W/E` BT slots (tap = select, hold 2 s = pair) · the slider picks BT /
+2.4G / cable (`Fn`+`R` only re-selects the dongle with the slider on 2.4G) ·
 `Fn`+`←/→` hue · `Fn`+`↑/↓` brightness · `Fn`+`6/7` saturation · `Fn`+`X`
 RGB on/off · `Fn`+`\` next effect · `Fn`+`-/=` speed (or 2nd colour on
 Alphas/Mods) · `Fn`+`PgUp/PgDn` LCD brightness · `Fn`+`Home` LCD toggle ·

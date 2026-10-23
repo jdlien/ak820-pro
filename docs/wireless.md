@@ -34,7 +34,10 @@ keystrokes, not "channel connect"; `5C` is battery percent, not brightness).
 
 ## Slot selection, pairing UX
 
-`Fn`+`Q/W/E` = BT slots 1-3, `Fn`+`R` = dongle. Tap = select the slot
+`Fn`+`Q/W/E` = BT slots 1-3, with the slider on BT. **2.4G is the slider's
+position**, not a key. `Fn`+`R` does something only with the slider already
+on 2.4G, where it re-selects the dongle (`bt_ui_24g_key`), and the dongle
+can't be paired from the board (`BT_PAIR`'s note in `ak820pro.h`). Tap = select the slot
 (`A6 <slot>`, reconnects the bond); hold past `BT_PAIR_HOLD_MS` (**2 s**,
 `bt_ui.c`) = enter pairing on that slot. A `Pair: ======` progress bar fills
 during the hold; pairing fires **under the finger** from `bt_pair_hold_task()`

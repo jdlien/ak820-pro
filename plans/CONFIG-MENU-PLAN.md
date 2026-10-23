@@ -68,12 +68,18 @@ Configuration
 - **Lighting -> the effect's second value, named by the effect.** In JD's
   dual-colour effect, `speed` is the second hue (`231` today), so the menu
   says "Second colour" there and "Speed" in effects where it is a speed.
-  Show hues as a colour swatch, not a number.
-- **Connection -> Bluetooth 1 / 2 / 3, 2.4G, Pair this slot.** Pairing today
-  is a 2 s hold of `Fn`+`Q`/`W`/`E`, the least discoverable thing on the
-  board.
-- **Knob -> Volume / Scroll / Screen brightness.** This is the "knob modes"
-  idea, and the menu is where it belongs. The press keeps play/pause.
+  **Show a hue as its number (0-255), not a swatch (JD):** the panel's
+  colours look nothing like the keys'. The editor keeps a hue strip as the
+  affordance, with a marker at the value.
+- **Connection -> Bluetooth 1 / 2 / 3, and pairing.** Pairing today is a 2 s
+  hold of `Fn`+`Q`/`W`/`E`, the least discoverable thing on the board.
+  - **No 2.4G item:** 2.4G is the slider's position (`bt_ui_mode_slider()`
+    picks BT, 2.4G or cable), and `Fn`+`R` only re-selects the dongle while
+    the slider is already there (`bt_ui_24g_key`).
+  - **The dongle can't be paired from the board** (`BT_PAIR`'s note in
+    `ak820pro.h`).
+  - **With the slider on 2.4G or the cable,** the section says so and offers
+    nothing to pick.
 - **Diagnostics -> Health page / Camera page / Reset counters,** replacing
   `Fn`+`D`'s tap cycle and its hold.
 - **About:** the firmware (sha and token), the build kind, uptime, the
@@ -152,7 +158,7 @@ Configuration
 2. **Indicators, Battery left, Diagnostics (freeing `Fn`+`D`), About.** Battery
    left waits on the time-left row view (`BACKLOG.md`, "Time left on a long
    sleep's wake").
-3. **Connection, Knob modes.**
+3. **Connection.**
 
 ## Decided (JD, 10-23)
 
@@ -166,7 +172,10 @@ Configuration
 - **The hint:** the heading reads "Configuration" (or the submenu's name).
   After ~4 s idle it shows "Turn + Click Knob" for 1 s, then the title again,
   until the idle timeout. That's 17 of the title row's 20 columns.
-- **A "BT Connection" section:** Bluetooth 1 / 2 / 3, 2.4G, pairing.
+- **A "BT Connection" section:** Bluetooth 1 / 2 / 3 and pairing. 2.4G stays
+  on the slider.
+- **No knob section.** What the knob does is a keymap question, and VIA
+  already handles that.
 - **The debug and camera pages and the counter reset move into the menu**
   (Diagnostics).
 - **A Help section,** short pages that read comfortably on the panel:
@@ -229,6 +238,4 @@ instead of the triangle):
 2. **The screen:** its own item with brightness 0 as off (proposed), or
    inside Lighting.
 3. **`Fn`+`D`:** keep it as a shortcut beside Diagnostics, or free the key.
-4. **The knob section** (volume, scroll, screen brightness): in the first
-   build, or later.
 

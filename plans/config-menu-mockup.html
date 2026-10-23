@@ -197,7 +197,6 @@ fieldset label:has(input:focus-visible) { outline: 2px solid var(--accent); outl
         <ul>
           <li>An edit has no timeout. If you walk away mid-edit, should a long backstop (~2 min) put the old value back?</li>
           <li>Should <kbd>Fn</kbd>+<kbd>D</kbd> stay as a shortcut beside Diagnostics?</li>
-          <li>Knob modes: in the first build, or later?</li>
         </ul>
       </div>
     </div>
@@ -290,7 +289,7 @@ const saved = {
 const live = { ...saved };
 const POWER = ["Always on", "Balanced", "Power saver", "Lights out"];
 const POWER_SHORT = ["Always on", "Balanced", "Saver", "Lights out"];
-const CONN = ["BT 1", "BT 2", "BT 3", "2.4G"];
+const CONN = ["BT 1", "BT 2", "BT 3"];   // 2.4G is the slider's, and the dongle can't be paired from the board
 const CLOCK = ["24h", "12h", "Date", "Off"];
 const BATT = ["Percent", "Hours"];
 const KNOB = ["Volume", "Scroll", "Screen"];
@@ -318,7 +317,7 @@ function lightingItems() {
     { label: "Lights", kind: "choice", key: "lights", options: ["Off", "On"], value: () => live.lights ? "On" : "Off" },
   ];
 }
-const SLOTS = ["Bluetooth 1", "Bluetooth 2", "Bluetooth 3", "2.4G dongle"];
+const SLOTS = ["Bluetooth 1", "Bluetooth 2", "Bluetooth 3"];
 const MENUS = {
   top: { title: "Configuration", items: () => [
     { label: "Lighting", kind: "menu", id: "lighting" },
@@ -328,7 +327,6 @@ const MENUS = {
     { label: "Indicators", kind: "menu", id: "ind" },
     { label: "Clock", kind: "choice", key: "clock", options: ["24 hour", "12 hour", "Date", "Off"], value: () => CLOCK[live.clock] },
     { label: "Battery", kind: "choice", key: "batt", options: ["Percent", "Hours of use"], value: () => BATT[live.batt] },
-    { label: "Knob", kind: "choice", key: "knob", options: ["Volume", "Scroll", "Screen bright."], value: () => KNOB[live.knob] },
     { label: "Diagnostics", kind: "menu", id: "diag" },
     { label: "Help", kind: "menu", id: "help" },
     { label: "About", kind: "page", id: "about" },
@@ -362,7 +360,7 @@ const PAGES = {
   "health": { title: "Health page", lines: () => ["rowgap 4 ms", "stall>25 7", "stall>10 84316", "gapmax 29 blit", "keys 45852", "tx 89413, 9010 retry", "drops 0", "", "(illustrative: the", "real page is Fn+D's)"] },
   "h-menu": { title: "Using the menu", lines: () => ["Turn: move", "Click: choose, save", "Hold: back, cancel", "Fn+click: close", "", "It closes by itself", "after 12 s idle, but", "never mid-edit.", "", "Typing still works", "while it's open."] },
   "h-via": { title: "Customizing", lines: () => ["Remap keys and the", "knob at usevia.app,", "with the cable in.", "", "Load via.json from", "the repo: Settings,", "Show Design tab,", "Load Draft", "Definition.", "", "Lighting changes", "show up here too."] },
-  "h-keys": { title: "Shortcuts", lines: () => ["Fn+Q/W/E  BT slot", "  hold 2 s: pair", "Fn+R      2.4G", "Fn+Lt/Rt  hue", "Fn+Up/Dn  brightness", "Fn+6/7    saturation", "Fn+X      lights", "Fn+\\      effect", "Fn+B      power mode", "Fn+C      clock", "Fn+PgUp/Dn screen", "Fn+Esc    bootloader"] },
+  "h-keys": { title: "Shortcuts", lines: () => ["Fn+Q/W/E  BT slot", "  hold 2 s: pair", "Slider: BT 2.4G USB","Fn+Lt/Rt  hue", "Fn+Up/Dn  brightness", "Fn+6/7    saturation", "Fn+X      lights", "Fn+\\      effect", "Fn+B      power mode", "Fn+C      clock", "Fn+PgUp/Dn screen", "Fn+Esc    bootloader"] },
   "h-tips": { title: "Pro tips", lines: () => ["Balanced sleeps", "after 20 min idle.", "A key wakes it, and", "the key still types.", "", "The lights are the", "battery's big cost.", "Asleep, a night is", "about 1%.", "", "2.4G answers faster;", "Bluetooth has three", "slots."] },
 };
 
@@ -490,7 +488,7 @@ function drawList() {
   const m = menu(), list = items(); keepVisible(m, list.length);
   header(MENUS[m.id].title);
   drawRows(list, m.cursor, m.top, (it, y, i, sel) => {
-    if (it.kind === "hue") row(y, it.label, "  ", sel, () => fill(110, y + 3, 12, 8, hsv(live[it.key], live.sat, 255)));
+    if (it.kind === "hue") row(y, it.label, String(live[it.key]), sel);   // the number: the panel's colours look nothing like the keys'
     else if (it.kind === "conn") row(y, it.label, "", sel, inv => { if (live.conn === it.slot) radio(117, y + 4, inv ? BLACK : WHITE); });
     else row(y, it.label, valueOf(it), sel);
   });
@@ -511,7 +509,8 @@ function drawEdit() {
     const mx = 4 + Math.round(live[it.key] / 256 * 120);
     fill(mx, 20, 1, 18, WHITE);
     [[0, 5], [1, 3], [2, 1]].forEach(([o, w], j) => fill(mx - 2 + o, 38 + j, w, 1, YELLOW));
-    fill(44, 46, 40, 20, hsv(live[it.key], live.sat, 255));
+    const hs = String(live[it.key]);
+    textCentre("f20", (" ".repeat(Math.floor((10 - hs.length) / 2)) + hs).padEnd(10), 44);
     hints(72);
   } else if (it.kind === "choice") {
     const st = { cursor: edit.cursor, top: edit.top }; keepVisible(st, it.options.length); edit.top = st.top;
@@ -677,7 +676,7 @@ function lightKeys(t) {
 function renderSaved() {
   const dl = document.getElementById("saved"); dl.textContent = "";
   const show = (k, src) => (k === "speed" && src.effect !== 1) ? pct(src.speed) : LABELS[k][1](src[k]);
-  ["effect", "val", "hue", "sat", "speed", "lights", "screen", "power", "conn", "clock", "batt", "locks", "charging", "knob"].forEach(k => {
+  ["effect", "val", "hue", "sat", "speed", "lights", "screen", "power", "conn", "clock", "batt", "locks", "charging"].forEach(k => {
     const dt = document.createElement("dt"); dt.textContent = (k === "speed" && saved.effect !== 1) ? "Speed" : LABELS[k][0];
     const dd = document.createElement("dd"); dd.textContent = show(k, saved);
     if (live[k] !== saved[k]) { dd.textContent += "  (showing " + show(k, live) + ")"; dd.className = "changed"; }
