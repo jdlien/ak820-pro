@@ -1,6 +1,6 @@
 # The configuration menu: how to build it (revision 6, 2026-10-23)
 
-Status: **a plan, nothing built.** Owned by Warren (gremlin's session) from
+Status: **cleared for S0 (codex, round 6); nothing built yet.** Owned by Warren (gremlin's session) from
 10-23.
 - **Revision 2** folded in codex's first review
   ([`review-codex-config-menu-build-plan-2026-10-23.md`](review-codex-config-menu-build-plan-2026-10-23.md)).
@@ -9,7 +9,13 @@ Status: **a plan, nothing built.** Owned by Warren (gremlin's session) from
   It added **"The implementation contract"**, the decisions S0 is built from,
   so the implementer doesn't have to discover them while coding.
 - **Revision 6** folds in the verification of revision 5
-  ([`review-codex-config-menu-build-plan-verify4-2026-10-23.md`](review-codex-config-menu-build-plan-verify4-2026-10-23.md)):
+  ([`review-codex-config-menu-build-plan-verify4-2026-10-23.md`](review-codex-config-menu-build-plan-verify4-2026-10-23.md)).
+  **Codex's verification of revision 6 found no must-fix: S0 is ready to
+  build**
+  ([`review-codex-config-menu-build-plan-verify5-2026-10-23.md`](review-codex-config-menu-build-plan-verify5-2026-10-23.md));
+  its three clarifications are folded in here (the workload's click count,
+  `pixels_done` against the current target, the unused pattern argument).
+  Revision 6 changed:
   - the Camera page's loss recovery invalidates only the page showing, and
     the debug pump's dispatch is exclusive;
   - a loss after `DONE` is remembered at once, and only the repair waits
@@ -596,7 +602,7 @@ the code is raised before working around it.
   | region slots (24 x 4) | 96 |
   | chunk cursor, clear cursor, stream bookkeeping | 12 |
   | coalesced input (`turns`, `latch`, `dropped`) | 3 |
-  | op 27 state (`last_seq`, `last_state`, armed, the restore it waits on) | 8 |
+  | op 27 state (`last_seq`, `last_state`, armed, the synthetic hold's release time) | 8 |
   | instrumentation (`invariant_fail`, losses seen, the wake-while-open count) | 4 |
   | the fixture (screen, cursor, pattern, the stop's `n`) | 4 |
   | P2: `flash_stats` (3 counters, wider masks) | 12 |
@@ -875,15 +881,18 @@ saved Off (`level + 1`).
     state unchanged. At boot, `last_seq` is 0 and `last_state` none.
 
   - **"Applied" isn't "painted":** `pixels_done` means **the MENU fixture's
-    pixels are settled**: the owner is MENU, no slot is outside
-    `COMMITTED`, no clear is running, and no transfer is in flight. It's
+    pixels are settled**: the owner is MENU, every active slot is
+    `COMMITTED` **with the signature of its current target**, no clear is
+    running, and no transfer is in flight. A slot left `COMMITTED` with an
+    old signature counts as not settled. Byte 21 and pattern 2's "A settled
+    first" use the same test. It's
     false under every other owner. DASH's completion is read from
     `restore_phase` and `restore_gen`; the debug pages have none in S0.
 - **The subs:**
 
   | Sub | Args | Effect |
   |---|---|---|
-  | 0 | [5] pattern, [6] n | the fixture's paint (S0's fixture, below). Pattern 0 is A, 1 is B, 2 is B stopped after `n` operations (1 to B's count less 1; the stop comes after operation `n`'s transfer has completed or failed, and holds until the next sub 0), 3 is the other layout. Only while the fixture is open; otherwise status 2. S1 adds its mono patterns from 16 up |
+  | 0 | [5] pattern, [6] n | the fixture's paint (S0's fixture, below). Pattern 0 is A, 1 is B, 2 is B stopped after `n` operations (1 to B's count less 1; the stop comes after operation `n`'s transfer has completed or failed, and holds until the next sub 0), 3 is the other layout. Patterns 0, 1 and 3 need `n` = 0, else status 2. Only while the fixture is open; otherwise status 2. S1 adds its mono patterns from 16 up |
   | 1 | [5] int8 count, within ±16, not 0 | turns |
   | 2 | | a click |
   | 3 | [5..6] u16 LE hold ms, 0 meaning 650, within 50-5000 | a hold: a synthetic press now and a release `menu_task()` schedules, never `wait_ms` |
@@ -906,7 +915,7 @@ saved Off (`level + 1`).
   | 17 | queues: `gq` entries (low nibble, saturating at 15), `lq` entries (high nibble, saturating) |
   | 18, 19 | `turns` (int8), the latch: 0 none, 1 click, 2 Back, 3 close |
   | 20 | `dropped` |
-  | 21 | slots not `COMMITTED` |
+  | 21 | slots not settled (not `COMMITTED`, or with an old signature) |
   | 22 | losses seen (u8, saturating) |
   | 23 | the capture bits: bit 0 the press, 1 clockwise, 2 counter-clockwise |
   | 24, 25 | `invariant_fail`, u16 LE: bit 0 an early `COMMITTED`, 1 an early `DONE`, 2 a wake while OPEN, the rest reserved |
@@ -979,11 +988,13 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
      S0: a fixed 50-step array, run ten times, 500 op 27 mutations.
      - **It starts** from the dashboard with the session NONE, and opens
        the fixture with sub 4.
-     - **Per 50 steps:** 30 turns of ±1 to ±4, 8 clicks on named rows (two
-       A/B toggles, two trips to F2 and back, two Diagnostics handoffs and
-       returns), 4 holds of 650 ms, 4 `Fn` plus a click, 2 restores (sub 7)
-       and 2 losses (sub 8). Each step names the screen and owner it
-       expects after it.
+     - **Per 50 steps:** 28 turns of ±1 to ±4, 10 clicks on named rows
+       (two A/B toggles, two trips to F2 and back, two Diagnostics
+       handoffs and returns), 4 holds of 650 ms, 4 `Fn` plus a click, 2
+       restores (sub 7) and 2 losses (sub 8). Each step names the screen
+       and owner it expects after it. Each 50 ends where it began, the
+       fixture open on F1 at row 0, and the last returns to the dashboard
+       (session NONE).
      - **Its pacing:** each mutation is sent when the last is terminal,
        polling sub 5 every 20 ms.
      - **It records** every outcome and every transition seen, not just
