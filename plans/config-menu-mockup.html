@@ -222,6 +222,7 @@ FACES.f13.extra = Object.fromEntries(Object.entries(EXTRA13).map(([k, v]) => [k,
 const WHITE = [255, 255, 255], BLACK = [0, 0, 0], GREY = [100, 100, 100], MID = [70, 70, 70];
 const YELLOW = [255, 252, 0], GREEN = [0, 252, 0], AMPM = [204, 204, 204];
 const DIM = [200, 200, 200], LIT = [255, 242, 160];   // lit text: the rows a little dimmer than white, the selected one pale yellow
+const IDLE_MS = 24000;   // the lists close after this long idle; an edit never times out
 const PASS_MS = 1000 / 215;   // one glyph a main-loop pass, at the loop's measured rate
 
 const canvas = document.getElementById("panel");
@@ -383,7 +384,7 @@ const PAGES = {
   "about": { title: "About", lines: () => ["Firmware 36afff30e8", "dev, 0xef38330e", "Up 1d 20h 14m", "Battery 76.7%", "Pack 4017 mV", "Left 64h of use", "Mode " + POWER[live.power], "Link " + CONN[live.conn] + " connected",
     "@1Jackrabbit", "@2by JD Lien", "@3QMK port: fpb", "", "github.com/jdlien", "  /ak820-pro", "", ""] },
   "health": { title: "Health page", lines: () => ["rowgap 4 ms", "stall>25 7", "stall>10 84316", "gapmax 29 blit", "keys 45852", "tx 89413, 9010 retry", "drops 0", "", "(illustrative: the", "real page is Fn+D's)"] },
-  "h-menu": { title: "Using the menu", lines: () => ["Turn: move", "Click: choose, save", "Hold: back, cancel", "Fn+click: close", "", "It closes by itself", "after 12 s idle, but", "never mid-edit.", "", "Typing still works", "while it's open."] },
+  "h-menu": { title: "Using the menu", lines: () => ["Turn: move", "Click: choose, save", "Hold: back, cancel", "Fn+click: close", "", "It closes by itself", "after 24 s idle, but", "never mid-edit.", "", "Typing still works", "while it's open."] },
   "h-via": { title: "Customizing", lines: () => ["Remap keys and the", "knob at usevia.app,", "with the cable in.", "", "Load via.json from", "the repo: Settings,", "Show Design tab,", "Load Draft", "Definition.", "", "Lighting changes", "show up here too."] },
   "h-keys": { title: "Shortcuts", lines: () => ["Fn+Q/W/E  BT slot", "  hold 2 s: pair", "Slider: BT 2.4G USB","Fn+Lt/Rt  hue", "Fn+Up/Dn  brightness", "Fn+6/7    saturation", "Fn+X      lights", "Fn+\\      effect", "Fn+B      power mode", "Fn+C      clock", "Fn+PgUp/Dn screen", "Fn+Esc    bootloader"] },
   "h-tips": { title: "Pro tips", lines: () => ["Balanced sleeps", "after 20 min idle.", "A key wakes it, and", "the key still types.", "", "The lights are the", "battery's big cost.", "Asleep, a night is", "about 1%.", "", "2.4G answers faster;", "Bluetooth has three", "slots."] },
@@ -673,8 +674,8 @@ function status() {
   let s;
   if (!open) s = "Menu closed. Fn + click opens it.";
   else if (mode === "edit") s = "Editing: no timeout. Click saves, hold cancels.";
-  else if (!started) s = "Closes after 12 s idle (counting starts at your first input).";
-  else s = "Closes in " + Math.max(0, Math.ceil((12000 - (now() - lastInput)) / 1000)) + " s if left alone.";
+  else if (!started) s = "Closes after 24 s idle (counting starts at your first input).";
+  else s = "Closes in " + Math.max(0, Math.ceil((IDLE_MS - (now() - lastInput)) / 1000)) + " s if left alone.";
   if (el.textContent !== s) el.textContent = s;
 }
 
@@ -781,7 +782,7 @@ window.addEventListener("resize", fit);
 let last = now(), t0 = now(), tick = 0;
 function frame() {
   const t = now(), dt = Math.min(100, t - last); last = t;
-  if (open && started && mode !== "edit" && t - lastInput > 12000) { close(); dirty = true; }
+  if (open && started && mode !== "edit" && t - lastInput > IDLE_MS) { close(); dirty = true; }
   if (t - tick > 100) { tick = t; dirty = true; if (Math.random() < 0.3) rain[Math.floor(Math.random() * rain.length)] = Math.random() * 256; lightKeys(t - t0); }
   if (dirty) { build(); dirty = false; }
   pump(dt); compose(); status();
