@@ -230,6 +230,22 @@ instead of the triangle):
   - Opening the menu paints ~150 glyphs, ~0.7 s, unless the pump learns to
     move more than one glyph a pass for RAM tiles.
 
+**JD's verdicts on the mockup (10-23):**
+- **Triangle:** it looks the best, but it costs a column, and few items fit.
+- **Inverted:** it looks good with a pixel of bar left of the first letter,
+  so the letter doesn't sit on the edge. The font's blank last column pads
+  the right. The mockup now does this.
+- **Lit text:** JD's refinement of yellow text. The rows are a little dimmer
+  than white (~#C8C8C8 in the mockup) and the selected row is a bright pale
+  yellow (~#FFF2A0), so it looks illuminated. Judge both colours on the
+  panel, whose greys read darker than a monitor's.
+- **Indent:** no, it moves things around too much.
+- **Underline:** no, it's unclear which row it belongs to.
+- **Scrolling is by page** (decided), given the repaint cost.
+
+So the choice is between inverted and lit text. Both need the 1-bit font
+path, and both repaint two rows a detent.
+
 ## Still open
 
 1. **A walk-away during an edit:** with no timeout, an abandoned edit keeps

@@ -151,22 +151,20 @@ fieldset label:has(input:focus-visible) { outline: 2px solid var(--accent); outl
         <h2>Try the options</h2>
         <div class="opts">
           <fieldset><legend>Cursor</legend>
-            <label><input type="radio" name="cur" id="cur-tri" value="tri" checked> Triangle</label>
+            <label><input type="radio" name="cur" id="cur-lit" value="lit" checked> Lit text</label>
             <label><input type="radio" name="cur" id="cur-inv" value="inv"> Inverted</label>
-            <label><input type="radio" name="cur" id="cur-yel" value="yel"> Yellow text</label>
-            <label><input type="radio" name="cur" id="cur-ind" value="ind"> Indent</label>
-            <label><input type="radio" name="cur" id="cur-und" value="und"> Underline</label>
+            <label><input type="radio" name="cur" id="cur-tri" value="tri"> Triangle</label>
           </fieldset>
           <fieldset><legend>Scrolling</legend>
-            <label><input type="radio" name="scr" id="scr-line" value="line" checked> By line</label>
-            <label><input type="radio" name="scr" id="scr-page" value="page"> By page</label>
+            <label><input type="radio" name="scr" id="scr-page" value="page" checked> By page</label>
+            <label><input type="radio" name="scr" id="scr-line" value="line"> By line</label>
           </fieldset>
           <fieldset><legend>Painting</legend>
             <label><input type="radio" name="spd" id="spd-board" value="board" checked> Board speed</label>
             <label><input type="radio" name="spd" id="spd-inst" value="inst"> Instant</label>
           </fieldset>
         </div>
-        <p class="fine">Board speed paints one glyph per main-loop pass, about 215 a second, the way the board's pump does. Drawn shapes (the triangle, the underline, the bars) go out at once. Inverted and yellow text need a font path the board doesn't have yet.</p>
+        <p class="fine">Board speed paints one glyph per main-loop pass, about 215 a second, the way the board's pump does. Drawn shapes (the triangle, the bars) go out at once. Lit and inverted text need a font path the board doesn't have yet: a 1-bit copy of the small font in the chip's own flash. Judge the grey and the yellow on the panel itself, since its greys read darker than a monitor's.</p>
       </div>
       <div class="card">
         <h2>Driving it</h2>
@@ -187,7 +185,7 @@ fieldset label:has(input:focus-visible) { outline: 2px solid var(--accent); outl
         <ul>
           <li>Today each glyph is copied straight from the font in flash, white on black, so text can't be coloured or inverted.</li>
           <li>A 1-bit copy of the small font in the chip's own flash (about 1 KB) would change that: the firmware could draw any glyph in any two colours from RAM, which makes inverted and yellow text possible.</li>
-          <li>What a cursor costs is repainting. The triangle and the underline move by redrawing two tiny shapes. Inverted, yellow and indented rows repaint two whole rows, up to 40 glyphs, on every detent: about 0.2 s at board speed. Scrolling by line repaints all 8 rows, about 0.7 s.</li>
+          <li>What a cursor costs is repainting. The triangle moves by redrawing two tiny shapes. Lit and inverted rows repaint two whole rows, up to 40 glyphs, on every detent: about 0.2 s at board speed. Scrolling by line repaints all 8 rows, about 0.7 s.</li>
           <li>The small face (Cozette, 6 × 14) gives a title and 8 rows of 20 characters; the triangle takes one of them. The big face (10 × 23) fits 12 across, for values.</li>
           <li>While the menu is open the screen keeps at least level 1, so turning its brightness to 0 can't hide the menu. It turns off when the menu closes.</li>
         </ul>
@@ -215,6 +213,7 @@ const FACES = {
 };
 const WHITE = [255, 255, 255], BLACK = [0, 0, 0], GREY = [100, 100, 100], MID = [70, 70, 70];
 const YELLOW = [255, 252, 0], GREEN = [0, 252, 0], AMPM = [204, 204, 204];
+const DIM = [200, 200, 200], LIT = [255, 242, 160];   // lit text: the rows a little dimmer than white, the selected one pale yellow
 const PASS_MS = 1000 / 215;   // one glyph a main-loop pass, at the loop's measured rate
 
 const canvas = document.getElementById("panel");
@@ -225,7 +224,7 @@ const shown = new Uint8ClampedArray(W * H * 4);   // what the panel shows now
 for (let i = 3; i < shown.length; i += 4) shown[i] = 255;
 
 /* ---- Options ---- */
-const opt = { cur: "tri", scr: "line", spd: "board" };
+const opt = { cur: "lit", scr: "page", spd: "board" };
 document.querySelectorAll("fieldset input").forEach(r => r.addEventListener("change", () => { opt[r.name] = r.value; dirty = true; }));
 
 /* ---- Drawing into the target frame ---- */
@@ -462,14 +461,14 @@ function keepVisible(st, n) {
 function row(y, label, value, selected, extra) {
   const tri_ = opt.cur === "tri";
   const x0 = tri_ ? 10 : 4, cols = tri_ ? 19 : 20;
-  const indent = opt.cur === "ind" && selected ? 1 : 0;
   const v = value || "";
-  const s = (" ".repeat(indent) + label).padEnd(cols - v.length).slice(0, cols - v.length) + v;
-  const inv = opt.cur === "inv" && selected, yel = opt.cur === "yel" && selected;
-  text("f13", s, x0, y, inv ? BLACK : yel ? YELLOW : WHITE, inv ? WHITE : BLACK);
+  const s = label.padEnd(cols - v.length).slice(0, cols - v.length) + v;
+  const inv = opt.cur === "inv" && selected, lit = opt.cur === "lit";
+  const fg = inv ? BLACK : lit ? (selected ? LIT : DIM) : WHITE;
+  text("f13", s, x0, y, fg, inv ? WHITE : BLACK);
+  if (inv) fill(3, y, 1, ROW_H, WHITE);   // a pixel of bar left of the first letter; the font's blank last column pads the right
   if (tri_ && selected) tri(4, y + 3);
-  if (opt.cur === "und" && selected) fill(4, y + 12, 120, 1, YELLOW);
-  if (extra) extra(inv);
+  if (extra) extra(fg);
 }
 function drawRows(list, cursor, top, fn) {
   for (let r = 0; r < ROWS; r++) {
@@ -489,7 +488,7 @@ function drawList() {
   header(MENUS[m.id].title);
   drawRows(list, m.cursor, m.top, (it, y, i, sel) => {
     if (it.kind === "hue") row(y, it.label, String(live[it.key]), sel);   // the number: the panel's colours look nothing like the keys'
-    else if (it.kind === "conn") row(y, it.label, "", sel, inv => { if (live.conn === it.slot) radio(117, y + 4, inv ? BLACK : WHITE); });
+    else if (it.kind === "conn") row(y, it.label, "", sel, c => { if (live.conn === it.slot) radio(117, y + 4, c); });
     else row(y, it.label, valueOf(it), sel);
   });
 }
@@ -514,7 +513,7 @@ function drawEdit() {
     hints(72);
   } else if (it.kind === "choice") {
     const st = { cursor: edit.cursor, top: edit.top }; keepVisible(st, it.options.length); edit.top = st.top;
-    drawRows(it.options, edit.cursor, st.top, (o, y, i, sel) => row(y, o, "", sel, inv => { if (saved[it.key] === i) radio(117, y + 4, inv ? BLACK : WHITE); }));
+    drawRows(it.options, edit.cursor, st.top, (o, y, i, sel) => row(y, o, "", sel, c => { if (saved[it.key] === i) radio(117, y + 4, c); }));
   }
 }
 function drawPage() {
