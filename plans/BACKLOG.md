@@ -96,9 +96,13 @@ the number in the alert, the moment someone is actually looking for it.
   lights off it would show only from ~2/3 down, which looks broken.
 - **The battery row itself, not the status band.** For ~5 s the whole row
   gives way to the time left, as an alternative gauge, then comes back. The
-  row's big digits are 10x23 cells. From `BATT_X0` to `PANEL_WIDTH - 4` that
-  is 11 cells, so `143h of use` fits (the most is ~150 h, awake and dark),
-  and so does `<1h of use`. Hours only: "days" would read as calendar days
+  width is the same in both places: the big face is 10 px a glyph, so the
+  full width holds 12 (x 4 to 124, inside the bezel), as the status band
+  does (`CONN_STATUS_X`, `CONN_STATUS_MAX`). The row's usual 7 cells are only
+  because the icon and the bulb share its line. `143h of use` fits (the most
+  is ~150 h, awake and dark), and so does `<1h of use`; `143h use left` (13)
+  does not, in either place. The row is the better place because it is the
+  gauge, and the status band carries the now-playing title. Hours only: "days" would read as calendar days
   to the next charge at your real use, which the board can't know.
   - ⚠️ The camera page's `4d` from 100 h has the same problem: hours there
     too.
