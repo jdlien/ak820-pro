@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-23, 10:20. The block below is where things stand, written to
+Updated 2026-10-23, 10:40. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -83,10 +83,23 @@ the RGB cut, likely a few days.
     past it, and HC_ACCT's `long_passes` counts only passes long enough to
     wrap its scopes, so nothing names it. Maybe the known 26-28 ms wake
     blit. Unexplained.
-  - ⚠️ **The lighting reads low:** `led drive 6.8%` with the stage active.
-    The 84 min at ~32 mA from 20:10 10-22 came with typing (9,616 key presses
-    since 18:20), so the brightness probably came down around 20:10. Ask JD:
-    it changes what "JD's settings" means for this drain from there on.
+  - **JD's daily setting since ~20:10 10-22** (read 10:31:57-10:32:05 10-23,
+    `ak820lighting.py show`): effect 2 (the dual-colour mode), hue 185, sat
+    227 (89%), val 115 (45%), speed 231; light purple and blue. Full white
+    was never what JD would use day to day.
+    - Awake at ~32.5-32.9 mA, against ~28 dark, so the lights cost ~4.5 mA
+      (LED drive 7.3%). At this setting the awake board's floor is ~86% of
+      its draw.
+    - The board's model agrees within ~1%: 138.7 mW against the logger's
+      140.1, both with the USB data on. The model counts the data's 7.1 mW,
+      so set a read's draw against logger rows taken with the data on.
+    - So the drain is two settings: full white until ~20:10 10-22, JD's
+      daily setting after. That fits R5's purpose (a drain at JD's real
+      use) better than full white did. R3 already holds full white's
+      figure (4011.6 mAh, ~55 h of use).
+    - At this pace (~320 mAh a day like 10-22, and ~123 h of use a charge),
+      the cut is ~9-10 days from 10:16 10-23, not ~5. The bench stays on
+      until then, unless JD stops the drain early.
   - `count_ge_10ms` ran 0.32 an awake second at 215 passes a second (still
     `36afff30e8`).
 - **The night of 10-22/23** is the asleep night to set against 10-21/22's
@@ -94,7 +107,7 @@ the RGB cut, likely a few days.
 - **Reads go over the data alone:** port 2 on, relay 2 still off. Cut the
   data again after, or the board cannot sleep. The reads so far, on 10-22:
   14:56:38-14:58:02, 15:06:26-15:06:31, 18:19:48-18:19:58, and on 10-23
-  10:16:54-10:16:59. The board
+  10:16:54-10:16:59 and 10:31:57-10:32:05. The board
   was asleep for the last, and the data can't wake it: relay 1 tapped the
   rig's F19 first (18:19:41, the Mac locked, so nothing typed), which
   costs ~17 mAh of ladder before it sleeps again.
