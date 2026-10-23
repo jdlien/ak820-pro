@@ -154,6 +154,40 @@ for mod in qmk hid; do
   if [ "$have" = yes ]; then ok "$mod already installed"
   else echo "  installing $mod"; $PIP -q install "$mod" || die "pip install $mod"; fi
 done
+# ⚠️ macOS on Apple Silicon: the `hid` package finds hidapi by the bare name
+# `libhidapi.dylib`, which dyld looks up in /usr/local/lib and /usr/lib only --
+# Intel Homebrew's prefix, not Apple Silicon's /opt/homebrew. `pip install hid`
+# succeeds, `import hid` then fails, and flash.sh refuses at its keymap backup.
+# DYLD_FALLBACK_LIBRARY_PATH is no fix: /bin/bash is SIP-protected, so it never
+# reaches the venv's python through flash.sh. As on Windows (2b), a .pth fixes
+# it at interpreter start for every script: a bare-name load of hidapi that
+# fails retries at the Homebrew path found here.
+if [ "$PLATFORM" = macos ] && ! "$VENV/bin/python" -c "import hid" >/dev/null 2>&1; then
+  HIDLIB="$(brew --prefix hidapi 2>/dev/null)/lib/libhidapi.dylib"
+  [ -f "$HIDLIB" ] || die "hidapi's dylib not found at $HIDLIB"
+  SITE="$("$VENV/bin/python" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+  cat > "$SITE/ak820_hidapi_dylib.py" <<EOF
+# Written by setup.sh: let \`hid\` find Homebrew's hidapi on Apple Silicon.
+import ctypes
+
+_load = ctypes.cdll.LoadLibrary
+
+
+def _load_hidapi(name, _load=_load, _path="$HIDLIB"):
+    try:
+        return _load(name)
+    except OSError:
+        if name == "libhidapi.dylib":
+            return _load(_path)
+        raise
+
+
+ctypes.cdll.LoadLibrary = _load_hidapi
+EOF
+  printf 'import ak820_hidapi_dylib\n' > "$SITE/ak820_hidapi_dylib.pth"
+  "$VENV/bin/python" -c "import hid" >/dev/null 2>&1 || die "import hid still fails (see $SITE/ak820_hidapi_dylib.py)"
+  ok "hid: Homebrew's hidapi via $SITE/ak820_hidapi_dylib.pth"
+fi
 export PATH="$VENV/bin:$PATH"
 ok "qmk $("$VENV/bin/qmk" --version 2>/dev/null || echo '?')"
 
