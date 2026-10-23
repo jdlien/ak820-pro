@@ -207,6 +207,11 @@ Not planned yet: write the plan first, after reading quill4gen7's
 `docs/notify.md` and hook. quill4gen7 is now credited in the README,
 `docs/wireless.md` and `lockchan.c`.
 
+**A configuration menu on the knob** ([`CONFIG-MENU-PLAN.md`](CONFIG-MENU-PLAN.md),
+a draft). `Fn`+`C` opens a list of every board setting, the knob moves and
+clicks, and the debug pages move into it. JD's design with Claude's
+additions, and five open decisions.
+
 ### Open, none of them blocking
 
 - **Six passes of 25 ms or more since the flash** (worst 29 ms, `blit`). The
