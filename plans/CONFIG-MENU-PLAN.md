@@ -320,5 +320,6 @@ path, and both repaint two rows a detent.
    old value back and closes.
 2. **The screen:** its own item with brightness 0 as off (proposed), or
    inside Lighting.
-3. **`Fn`+`D`:** keep it as a shortcut beside Diagnostics, or free the key.
+3. ~~`Fn`+`D`~~ **decided:** unassigned in the default keymap. The health and
+   camera pages live under Diagnostics, and `DBG_PAGE` stays assignable in VIA.
 

@@ -371,7 +371,20 @@ below.
 - **Health and Camera pages:** a handoff to `PANEL_DEBUG`, opened on the
   chosen page (`display_debug_open(page)`); a knob click hands back.
 - **Reset counters:** a confirm screen, then `health_reset()` and
-  `display_debug_refresh()`.
+  `display_debug_refresh()`. This replaces `Fn`+`D`'s hold.
+- **`Fn`+`D` becomes unassigned in the default keymap (decided).** It was a
+  tool for finding where keystrokes were lost, not a feature for owners.
+  - The default keymap, `keymaps/via/keymap.c`, is generated from JD's VIA
+    layout by `scripts/keymap_to_c.py`, never edited by hand. So:
+    1. clear the key on both `Fn` layers of the board's stored keymap,
+       over VIA's dynamic-keymap commands (as the wake rig's F19 was
+       written);
+    2. dump it (`ak820keymap.py dump`);
+    3. regenerate.
+  - `DBG_PAGE` stays in the keycode enum and in `via.json`'s
+    `customKeycodes`, which only grow, so it can still be assigned in VIA,
+    and its handler stays.
+  - HC_DEVHOOK op 1 calls the page directly, so the bench keeps it.
 - **About:**
   - page one: the firmware (`QMK_GIT_HASH`, `AK820_BUILD_TOKEN`, dev or
     daily), uptime from `rtc_seconds_since_boot()`, the battery's level,
@@ -436,9 +449,12 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
      flash atlas on the panel.
    - **The cursor style** (Open, 1) is settled on the real panel, with both
      colour sets.
-3. **P1, the menu:** `menu.c` with host tests, then Lighting, Screen, Power,
-   Clock, Help, About and Exit, the visibility override, `DSB_MENU`, the
-   timeouts and the hint.
+3. **P1, the menu:**
+   - `menu.c` with host tests;
+   - Lighting, Screen, Power, Clock, Diagnostics (the handoff from S0),
+     Help, About and Exit;
+   - the visibility override, `DSB_MENU`, the timeouts and the hint;
+   - `Fn`+`D` unassigned in the default keymap.
 4. **P2, Indicators:** with the `kb_eeconfig` and `flash_stats` changes and
    the decoders.
 5. **P3, Bluetooth:** selection with the report handoff, then pairing as an
@@ -447,7 +463,9 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
 7. **Docs:**
    - `docs/display.md`: the owner, the mono path, the damage model;
    - `README.md` and the Help pages: the menu in place of the chords;
-   - `CLAUDE.md`'s shortcut list.
+   - `CLAUDE.md`'s shortcut list, and its "read `Fn`+`D` first" advice for
+     lost keystrokes, which becomes Diagnostics > Health page; the same in
+     `docs/hardware.md` and `docs/display.md`.
 
 ## Testing
 
@@ -510,6 +528,4 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
 
 1. **The cursor: lit text or inverted.** Settled on the panel in S1. Both
    use the mono path and cost the same.
-2. **`Fn`+`D`:** keep it as a shortcut beside Diagnostics, or free the key
-   (JD's call).
-3. **Half rows or full rows:** S1 decides.
+2. **Half rows or full rows:** S1 decides.
