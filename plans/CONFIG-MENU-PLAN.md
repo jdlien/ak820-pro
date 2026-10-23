@@ -38,7 +38,7 @@ you have to know: `Fn`+arrows, `Fn`+`6`/`7`, `Fn`+`-`/`=`, `Fn`+`PgUp`/`PgDn`,
 them discoverable for other owners, shows the value you are changing, and
 frees chords.
 
-## JD's design
+## The design as first sketched
 
 - **`Fn`+`C` opens it.** "Configuration" shows with a small triangle at the
   selected item. While it is open the knob is the control.
@@ -62,13 +62,13 @@ Configuration
   Battery left -> Percent / Runtime
 ```
 
-## Additions (Claude)
+## Additions to the sketch
 
 **More items:**
 - **Lighting -> the effect's second value, named by the effect.** In JD's
   dual-colour effect, `speed` is the second hue (`231` today), so the menu
   says "Second color" there and "Speed" in effects where it is a speed.
-  **Show a hue as its number (0-255), not a swatch (JD):** the panel's
+  **Show a hue as its number (0-255), not a swatch:** the panel's
   colours look nothing like the keys'. The editor keeps a hue strip as the
   affordance, with a marker at the value.
 - **Connection -> Bluetooth 1 / 2 / 3, and pairing.** Pairing today is a 2 s
@@ -160,7 +160,7 @@ Configuration
    sleep's wake").
 3. **Connection.**
 
-## Decided (JD, 10-23)
+## Decided (10-23)
 
 - **Opening and closing:** `Fn` plus a knob click opens it, and the same
   closes it from anywhere. Not `Fn` plus a turn ("a bit obscure"), and not
@@ -199,19 +199,19 @@ Configuration
   - The screen as a percentage of its level range, as `LCD 22%` does, with
     0 as Off. The indicator levels the same way.
   Hue stays absolute, in degrees.
-- **The Jackrabbit bunny in front of "Configuration"** (JD's idea; in the
-  mockup since version 13):
-  - The splash's bunny as an 11 x 14 RAM tile at x 4 on the top level's
-    title row, then the title from x 17 in 17 columns. "Turn + Click Knob"
-    still fits, ending at x 119.
-  - It's the logo's filled silhouette (its face closed in), grey at the
-    edges, with one dark pixel for the eye and a dark stripe for the inner
-    ear. The outline version didn't read at 14 px: the logo's thin strokes
-    and large face turn into a hollow shape.
-  - 308 bytes as RGB565 in firmware, from `assets-src/bunny-source.png`
-    (public in this repo).
-  - Submenus keep their plain titles.
-  - On the panel: check whether the bezel clips the ears' top row.
+- **The Jackrabbit bunny lives on the About page,** with the credits:
+  - **Placement:** page two of About shows the splash's bunny at 27 x 42
+    (three text rows tall), with "Jackrabbit", "by JD Lien" and "QMK port:
+    fpb" beside him in 14 columns, then the GitHub link.
+  - **How it's made:** the way the splash is, an area average of
+    `assets-src/bunny-source.png` with the ink white. At this size the ears,
+    face, eye and snout all read.
+  - **It's drawn in three 14-row slices,** each with the text row beside it,
+    so it paints a row at a time like everything else.
+  - **Flash:** 2,268 B as RGB565.
+  - **Not in the title row:** an 11 x 14 version was tried there and doesn't
+    read as a bunny. The title row stays plain.
+- **Text pages scroll by page too,** as the lists do.
 - **"‹ Back" is the first row of every list below the top,** choice lists
   included, so menus are easy to explore and leave.
   - A submenu opens on its first real item, and a choice list on the current
@@ -268,7 +268,7 @@ value's bar, a hue strip, a swatch.
 - **Toggles compare** the cursor style, scrolling by line or by page, and
   board speed against instant.
 
-**What it showed about the cursor** (JD asked about coloured or inverted text
+**What it showed about the cursor** (coloured or inverted text
 instead of the triangle):
 - **Space.** The small face gives 20 columns from x 4 to 124. The triangle
   takes one of them (19 left).
@@ -291,12 +291,12 @@ instead of the triangle):
   - Opening the menu paints ~150 glyphs, ~0.7 s, unless the pump learns to
     move more than one glyph a pass for RAM tiles.
 
-**JD's verdicts on the mockup (10-23):**
+**The verdicts on the mockup (10-23):**
 - **Triangle:** it looks the best, but it costs a column, and few items fit.
 - **Inverted:** it looks good with a pixel of bar left of the first letter,
   so the letter doesn't sit on the edge. The font's blank last column pads
   the right. The mockup now does this.
-- **Lit text:** JD's refinement of yellow text. The rows are a little dimmer
+- **Lit text:** a refinement of yellow text. The rows are a little dimmer
   than white (~#C8C8C8 in the mockup) and the selected row is a bright pale
   yellow (~#FFF2A0), so it looks illuminated. Judge both colours on the
   panel, whose greys read darker than a monitor's.

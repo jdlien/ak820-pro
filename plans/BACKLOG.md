@@ -64,7 +64,7 @@ the fix, all exactly 10 ms:
 - The `battery` scope in both is the 64-bit time math (below, "64-bit time
   math on every main-loop pass").
 
-## The keyboard as an agent pager: an attention key (2026-10-22) -- idea, the one JD found most worth doing
+## The keyboard as an agent pager: an attention key (2026-10-22) -- idea, the most worth doing of the bigger ideas
 
 **The idea.** JD runs several Claude sessions a day, and they wait for him
 unnoticed. Claude Code's hooks (a session needs input, or has finished) call

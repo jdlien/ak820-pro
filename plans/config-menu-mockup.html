@@ -282,13 +282,13 @@ function tri(x, y) {   // the cursor: 4 x 7, yellow, pointing right
 function radio(x, y, c = WHITE) {   // the saved choice: a 5 x 5 dot
   [[1, 3], [0, 5], [0, 5], [0, 5], [1, 3]].forEach(([o, w], j) => fill(x + o, y + j, w, 1, c));
 }
-/* Jackrabbit: the splash's bunny as an 11 x 14 RAM tile for the title row. Its filled
-   silhouette (the logo's face closed in), grey at the edges, one dark pixel for the eye
-   and a dark stripe for the inner ear. From assets-src/bunny-source.png. */
-const BUNNY = "87ccedb0210000000000009128ffffe31400000000005eff28ffff93000000000012f728ffffee0200000000009328ffffff1e000000000011f0ffffff3d0000000000007fffffffad1200000000008bffffffffe33c0000001ffafffffffffff02200008effffffffffffffc9021ef4ffffffffffff00ff82d3ffffffffffffffffffeabfffffffffffffffffff9b0d7fdeffffffffffe04102";
-function drawBunny(x, y) {
-  for (let j = 0; j < 14; j++) for (let i = 0; i < 11; i++) {
-    const v = parseInt(BUNNY.substr((j * 11 + i) * 2, 2), 16); fill(x + i, y + j, 1, 1, [v, v, v]);
+/* Jackrabbit: the splash's bunny, 27 x 42, for the About page's credits. Made as the splash
+   is (an area average of assets-src/bunny-source.png, ink white). It's drawn in three
+   14-row slices, each with the text row beside it, so it paints a row at a time too. */
+const BUNNY_W = 27, BUNNY = "009db38a41bdf7c6700e000000000000000000000000000000000007ffffffffdbb3f0ffe84e0000000000000000000000000000000003fdffffffffffb6e0fffd6800000000000000000000000000000000e3fff1afecffffb4e9fffc43000000000000000000000000000000b8ffb000098fffffa4ffffdd07000000000000000000000000000082ffbc0000008cffdacbffff7100000000000000000000000000003fffed03000006d9ffaaffffe4040000000000000000000000000004ebff3f00000068ffbef0ffff48000000000000000000000000000091ffa100000019fff9baffff92000000000000000000000000000029fef91e000000e4ffbaffffca000000000000000000000000000000b8ffa4000000bfffc3fffff000000000000000000000000000000043ffff490000a3ffd0ffffff0d000000000000000000000000000000c5ffe30f008fffe0ffffff2900000000000000000000000000000044ffff9d0083fff5ffffff4900000000000000000000000000000000bcffff4a7dffffffffff73000000000000000000000000000000002af9ffe292ffffffffffc3010000000000000000000000000000000080fffff9ffffffffffffad1a0000000000000000000000000000002fffffffffffffffffffffef6000000000000000000000000000008afffffffff9dcddf7ffffffffa60a00000000000000000000003dfdffffde58090000043689e9ffffc81000000000000000000002d0ffffd313000000000000000a76f1ffb401000000000000000055fffff7200000000000000000000017cbff6b0000000000000000beffff9a0000000000000007736d330010cff11e00000000000021feffff440000000000000000bafffe800119e2b500000000000083ffffff0f000000000000000028ed920d6c0033f762000000000ae9ffffff0600000000000000000010240976060064f32700000085ffffffff2f000000000000000000000000000000009cd507004ffdffffffff910000000000000000000000000000000007c57034f4fffffffffffa3a000000000000000000000000000000141fd0d4ffffffffffffffef3b00000000000000000000000000008666e9d0fffffffffffffffff9850d0000000000000000000000000aacca75ffffffffffffffffffffe9690400000000000000000000007b3e06b6ffffffffffffffffffffffd747000000000000001754ac8400000478f0ffffffffffffffffffffffa310055fc2d2e9c87b1d00000000000e69cbffffffffffffffffffffe033004df76800000000000000000000002a88e0fffffffffffffffff44300519a00000000000000000000000000013b96ebfffffffffffff42e006d000000000000000000000000000000000550b3fdffffffffcc022f00000000000000000000000000000000000000259cfaffffff530600000000000000000000000000000000000000000025b0ffffb600000000000000000000000000000000000000000000000044d8f402000000000000000000000000000000000000000000000000088c190000000000";
+function drawBunnySlice(k, x, y) {
+  for (let j = 0; j < 14; j++) for (let i = 0; i < BUNNY_W; i++) {
+    const v = parseInt(BUNNY.substr(((k * 14 + j) * BUNNY_W + i) * 2, 2), 16); fill(x + i, y + j, 1, 1, [v, v, v]);
   }
 }
 function hsv(h, s, v) {   // QMK's 0-255 ranges
@@ -379,7 +379,9 @@ const MENUS = {
   ] },
 };
 const PAGES = {
-  "about": { title: "About", lines: () => ["Firmware 36afff30e8", "dev, 0xef38330e", "Up 1d 20h 14m", "", "Battery 76.7%", "Pack 4017 mV", "Left 64h of use", "Mode " + POWER[live.power], "Link " + CONN[live.conn] + " connected", "", "github.com/jdlien", "  /ak820-pro"] },
+  // "@1".."@3": a row with a slice of the bunny at the left and up to 14 columns beside it
+  "about": { title: "About", lines: () => ["Firmware 36afff30e8", "dev, 0xef38330e", "Up 1d 20h 14m", "Battery 76.7%", "Pack 4017 mV", "Left 64h of use", "Mode " + POWER[live.power], "Link " + CONN[live.conn] + " connected",
+    "@1Jackrabbit", "@2by JD Lien", "@3QMK port: fpb", "", "github.com/jdlien", "  /ak820-pro", "", ""] },
   "health": { title: "Health page", lines: () => ["rowgap 4 ms", "stall>25 7", "stall>10 84316", "gapmax 29 blit", "keys 45852", "tx 89413, 9010 retry", "drops 0", "", "(illustrative: the", "real page is Fn+D's)"] },
   "h-menu": { title: "Using the menu", lines: () => ["Turn: move", "Click: choose, save", "Hold: back, cancel", "Fn+click: close", "", "It closes by itself", "after 12 s idle, but", "never mid-edit.", "", "Typing still works", "while it's open."] },
   "h-via": { title: "Customizing", lines: () => ["Remap keys and the", "knob at usevia.app,", "with the cable in.", "", "Load via.json from", "the repo: Settings,", "Show Design tab,", "Load Draft", "Definition.", "", "Lighting changes", "show up here too."] },
@@ -436,7 +438,8 @@ function turn(dir) {
     }
   } else if (mode === "page" && PAGES[page.id]) {
     const n = PAGES[page.id].lines().length;
-    page.scroll = Math.max(0, Math.min(Math.max(0, n - 8), page.scroll + dir));
+    const step = opt.scr === "page" ? ROWS : 1;   // text pages scroll as the lists do
+    page.scroll = Math.max(0, Math.min(Math.max(0, n - ROWS), page.scroll + dir * step));
   }
   renderSaved();
 }
@@ -464,13 +467,12 @@ function fnClick() { input(); if (open) close(); else openMenu(); renderSaved();
 
 /* ---- Drawing the screens ---- */
 const TITLE_Y = 0, SEP_Y = 14, ROW0 = 15, ROW_H = 14, ROWS = 8, RIGHT = 124;
-function header(title, bunny = false) {
+function header(title) {
   const idle = now() - lastInput;
   let t = title;
   if (flash && now() < flash.until) t = flash.text;
   else if (mode === "list" && idle % 5000 >= 4000) t = "Turn + Click Knob";   // 4 s of title, then 1 s of hint
-  if (bunny) { drawBunny(4, TITLE_Y); text("f13", t.padEnd(17).slice(0, 17), 17, TITLE_Y); }   // the tile, 2 px, then 17 columns
-  else text("f13", t.padEnd(20).slice(0, 20), 4, TITLE_Y);
+  text("f13", t.padEnd(20).slice(0, 20), 4, TITLE_Y);
   fill(4, SEP_Y, 120, 1, GREY);
 }
 function scrollbar(total, top) {
@@ -514,7 +516,7 @@ function valueOf(it) {
 }
 function drawList() {
   const m = menu(), list = items(); keepVisible(m, list.length);
-  header(MENUS[m.id].title, m.id === "top");
+  header(MENUS[m.id].title);
   drawRows(list, m.cursor, m.top, (it, y, i, sel) => {
     if (it.kind === "hue") row(y, it.label, hueText(it.key), sel);   // the number: the panel's colours look nothing like the keys'
     else if (it.kind === "conn") row(y, " " + it.label, "", sel, (c, x0) => { if (live.conn === it.slot) radio(x0, y + 4, c); });   // the saved one's dot in front
@@ -559,7 +561,11 @@ function drawPage() {
   }
   const p = PAGES[page.id], lines = p.lines();
   header(p.title);
-  for (let r = 0; r < ROWS; r++) { const l = lines[page.scroll + r]; if (l != null) text("f13", l.padEnd(20).slice(0, 20), 4, ROW0 + r * ROW_H); }
+  for (let r = 0; r < ROWS; r++) {
+    const l = lines[page.scroll + r], y = ROW0 + r * ROW_H; if (l == null) continue;
+    if (l[0] === "@") { drawBunnySlice(+l[1] - 1, 4, y); text("f13", l.slice(2).padEnd(14).slice(0, 14), 36, y); }
+    else text("f13", l.padEnd(20).slice(0, 20), 4, y);
+  }
   scrollbar(lines.length, page.scroll);
 }
 function drawCamera() {   // Fn+D's second page: big digits a camera can read across a room

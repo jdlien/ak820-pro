@@ -190,7 +190,7 @@ on the pack and ~1.1 awake and dark with the data on.
 3. Strip the bench (the relay wires, the logger), and JD puts the foam and
    silicone back.
 4. The soak is JD's daily use. Read the counters over a cable now and then.
-5. Polish and release for other owners (JD, 10-22):
+5. Polish and release for other owners:
    - minor polish, and cleaning up the repo;
    - a tag and its firmware;
    - the Mac and Windows agents released separately, each with a proper
@@ -202,15 +202,15 @@ on the pack and ~1.1 awake and dark with the data on.
 **The keyboard as an agent pager** (`BACKLOG.md`, "The keyboard as an agent
 pager"). Claude Code's hooks light one key amber and name the waiting
 sessions on the screen, and the key takes you to them. It is quill4gen7's
-`notify` idea on our transports. JD found it more useful than now-playing.
+`notify` idea on our transports, and more useful day to day than now-playing.
 Not planned yet: write the plan first, after reading quill4gen7's
 `docs/notify.md` and hook. quill4gen7 is now credited in the README,
 `docs/wireless.md` and `lockchan.c`.
 
 **A configuration menu on the knob** ([`CONFIG-MENU-PLAN.md`](CONFIG-MENU-PLAN.md),
-a draft). `Fn`+`C` opens a list of every board setting, the knob moves and
-clicks, and the debug pages move into it. JD's design with Claude's
-additions, and five open decisions.
+a draft; the build plan is [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)).
+`Fn` plus a knob click opens a list of every board setting, the knob moves
+and clicks, and the debug pages move into it. The design, its decisions, and what is still open.
 
 ### Open, none of them blocking
 
