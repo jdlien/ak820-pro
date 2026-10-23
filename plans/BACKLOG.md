@@ -86,17 +86,20 @@ the number in the alert, the moment someone is actually looking for it.
 - **When:** build it with `ce229f87c6`'s flash after the drain, through
   codex like any flash.
 
-## Time left on a long sleep's wake at any level, and a QR code to the power page (2026-10-22) -- ideas, not built
+## Time left on a long sleep's wake up to 99 h, and a QR code to the power page (2026-10-22) -- the first planned, the second parked
 
 **The wake notice at any level.** Today a wake after 2 h or more asleep
 (`RC_LONG_SLEEP_S`, sleep.c) shows `6h use left` only under 10 h
 (`power.c`, `left < 600u`), for `PARAM_OVERLAY_HOLD_MS` (2 s).
-- **The idea:** drop the 10 h condition and hold it ~5 s. Keep it to the
-  long-sleep wake, which is the morning and after lunch. Every wake in
-  Balanced is several an hour on a stop-start day, so a notice on each one
-  would become wallpaper over the now-playing title.
-- **The format:** 12 cells. `67h use left` fits, `100h use left` doesn't,
-  so from 100 h use days as the camera page does (`4d use left`).
+- **The idea:** raise the condition from 10 h to 99 h, and hold it ~5 s.
+  Keep it to the long-sleep wake, which is the morning and after lunch.
+  Every wake in Balanced is several an hour on a stop-start day, so a
+  notice on each one would become wallpaper over the now-playing title.
+- **The format:** hours only, `67h use left` (12 cells). From 100 h it says
+  nothing, and the percentage is enough. No days: "days" reads as calendar
+  days to the next charge at your real pattern of use, which the board
+  can't know. These are hours of use. ⚠️ The camera page's `4d` from 100 h
+  has the same problem.
 - **Why it might be worth it:** hours of use at your settings is what the
   percentage doesn't tell an owner.
 - **Cost:** a condition, a format and a hold. It could ride the flash after
@@ -117,7 +120,8 @@ the number in the alert, the moment someone is actually looking for it.
     typing.
 - **Why:** an owner scans it and sees what their settings cost, then moves
   the sliders.
-- **When:** a polish item for the release, JD's call.
+- **Parked:** fun, but not planned. A key that types the same URL with
+  QMK's `SEND_STRING` would be even simpler, and is no more planned.
 
 ## Power saver's typing cap at 65% instead of 50% (2026-10-21) -- parked, decide after daily use
 
