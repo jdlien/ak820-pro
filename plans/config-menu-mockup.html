@@ -183,8 +183,8 @@ fieldset label:has(input:focus-visible) { outline: 2px solid var(--accent); outl
       <div class="card">
         <h2>What the panel allows</h2>
         <ul>
-          <li>Today each glyph is copied straight from the font in flash, white on black, so text can't be coloured or inverted.</li>
-          <li>A 1-bit copy of the small font in the chip's own flash (about 1 KB) would change that: the firmware could draw any glyph in any two colours from RAM, which makes inverted and yellow text possible.</li>
+          <li>Today each glyph is copied straight from the font in flash, white on black, so text can't be colored or inverted.</li>
+          <li>A 1-bit copy of the small font in the chip's own flash (about 1 KB) would change that: the firmware could draw any glyph in any two colors from RAM, which makes inverted and yellow text possible.</li>
           <li>What a cursor costs is repainting. The triangle moves by redrawing two tiny shapes. Lit and inverted rows repaint two whole rows, up to 40 glyphs, on every detent: about 0.2 s at board speed. Scrolling by line repaints all 8 rows, about 0.7 s.</li>
           <li>The small face (Cozette, 6 × 14) gives a title and 8 rows of 20 characters; the triangle takes one of them. The big face (10 × 23) fits 12 across, for values.</li>
           <li>While the menu is open the screen keeps at least level 1, so turning its brightness to 0 can't hide the menu. It turns off when the menu closes.</li>
@@ -296,8 +296,8 @@ function pct(v) { return Math.round(v / 255 * 100) + "%"; }
 function lvl(v) { return v ? String(v) : "Off"; }
 const LABELS = {
   lights: ["Lights", v => v ? "On" : "Off"], effect: ["Effect", v => EFFECTS[v]],
-  val: ["Brightness", v => pct(v)], hue: ["Colour", v => "hue " + v], sat: ["Saturation", v => pct(v)],
-  speed: ["Second colour", v => "hue " + v], screen: ["Screen", v => v ? "level " + v : "off"],
+  val: ["Brightness", v => pct(v)], hue: ["Hue", v => String(v)], sat: ["Saturation", v => pct(v)],
+  speed: ["Second color", v => String(v)], screen: ["Screen", v => v ? "level " + v : "off"],
   power: ["Power", v => POWER[v]], conn: ["Connection", v => CONN[v]], locks: ["Lock lights", lvl],
   charging: ["Charging light", lvl], clock: ["Clock", v => CLOCK[v]], batt: ["Battery", v => BATT[v]], knob: ["Knob", v => KNOB[v]],
 };
@@ -309,9 +309,9 @@ function lightingItems() {
   return [BACK,
     { label: "Effect", kind: "choice", key: "effect", options: EFFECTS, value: () => EFFECTS[live.effect] },
     { label: "Brightness", kind: "range", key: "val", min: 0, max: 255, step: 5, fmt: pct },
-    { label: "Colour", kind: "hue", key: "hue" },
+    { label: "Hue", kind: "hue", key: "hue" },
     { label: "Saturation", kind: "range", key: "sat", min: 0, max: 255, step: 5, fmt: pct },
-    two ? { label: "Second colour", kind: "hue", key: "speed" }
+    two ? { label: "Second color", kind: "hue", key: "speed" }
         : { label: "Speed", kind: "range", key: "speed", min: 0, max: 255, step: 5, fmt: pct },
     { label: "Lights", kind: "choice", key: "lights", options: ["Off", "On"], value: () => live.lights ? "On" : "Off" },
   ];

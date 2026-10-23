@@ -67,7 +67,7 @@ Configuration
 **More items:**
 - **Lighting -> the effect's second value, named by the effect.** In JD's
   dual-colour effect, `speed` is the second hue (`231` today), so the menu
-  says "Second colour" there and "Speed" in effects where it is a speed.
+  says "Second color" there and "Speed" in effects where it is a speed.
   **Show a hue as its number (0-255), not a swatch (JD):** the panel's
   colours look nothing like the keys'. The editor keeps a hue strip as the
   affordance, with a marker at the value.
@@ -176,6 +176,9 @@ Configuration
   on the slider.
 - **No knob section.** What the knob does is a keymap question, and VIA
   already handles that.
+- **The board's words are in American spelling:** "Hue" for the hue,
+  "Second color" in two-tone. "Color" saves a character and is the usual
+  computer spelling.
 - **The debug and camera pages and the counter reset move into the menu**
   (Diagnostics).
 - **A Help section,** short pages that read comfortably on the panel:
