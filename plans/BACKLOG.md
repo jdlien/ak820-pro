@@ -86,6 +86,39 @@ the number in the alert, the moment someone is actually looking for it.
 - **When:** build it with `ce229f87c6`'s flash after the drain, through
   codex like any flash.
 
+## Time left on a long sleep's wake at any level, and a QR code to the power page (2026-10-22) -- ideas, not built
+
+**The wake notice at any level.** Today a wake after 2 h or more asleep
+(`RC_LONG_SLEEP_S`, sleep.c) shows `6h use left` only under 10 h
+(`power.c`, `left < 600u`), for `PARAM_OVERLAY_HOLD_MS` (2 s).
+- **The idea:** drop the 10 h condition and hold it ~5 s. Keep it to the
+  long-sleep wake, which is the morning and after lunch. Every wake in
+  Balanced is several an hour on a stop-start day, so a notice on each one
+  would become wallpaper over the now-playing title.
+- **The format:** 12 cells. `67h use left` fits, `100h use left` doesn't,
+  so from 100 h use days as the camera page does (`4d use left`).
+- **Why it might be worth it:** hours of use at your settings is what the
+  percentage doesn't tell an owner.
+- **Cost:** a condition, a format and a hold. It could ride the flash after
+  the drain, with the "Battery low" hours (above).
+
+**A QR code to the power page with the board's own settings.**
+- The page already takes its settings in the URL
+  (`site/power/index.html`, `syncUrl`): `v`, `h`, `s`, `lcd`, `mode`,
+  `radio`, `rgb=0`, `lcdon=0`, `fx=other`. The board knows every one of them.
+- **Size:** leaving out the page's defaults, the URL is ~45-85 bytes, a QR
+  version 4 or 5 (33 or 37 modules). At 3 px a module that's ~100-110 px,
+  so it fits the 128 px panel.
+- **What it needs:**
+  - an encoder in firmware: Nayuki's `qrcodegen` (MIT), a few KB of flash
+    and a few hundred bytes of stack;
+  - a page to show it, for example a third tap of `Fn`+`D` after the
+    camera page, painted in bands as the debug page is, so it never stalls
+    typing.
+- **Why:** an owner scans it and sees what their settings cost, then moves
+  the sliders.
+- **When:** a polish item for the release, JD's call.
+
 ## Power saver's typing cap at 65% instead of 50% (2026-10-21) -- parked, decide after daily use
 
 `SAVER_VAL` (128, 50%) caps the lighting while typing in Power saver. The
