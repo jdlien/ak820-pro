@@ -131,3 +131,126 @@ tests now cover the findings that live in pure code.
 | 9 | **Fixed.** The separator, the scrollbar's track and its thumb differ between A and B. The scrollbar is C8's x 125, y 15-126. The expected frames follow. |
 | 10 | **Fixed.** Dev builds flag a second acquire, a release without one, a nested stream, an overlong write and a short end, as sticky `PO_FAIL_SCRATCH` and `PO_FAIL_STREAM`. |
 | 11 | **Fixed.** `anim_toggle()` asks `display_anim_admissible()` before reading the header. |
+
+---
+
+## Codex's verification of the fixes (round 2), verbatim
+
+The fixes as firmware `321360c6` and ak820-pro `452f06c`, with the prompt in
+[`review-prompt-config-menu-s0-code-verify.txt`](review-prompt-config-menu-s0-code-verify.txt).
+
+**S0 is not ready to flash on gremlin’s test board yet.** Eight findings are fixed. Findings **2, 4 and 5 remain partly fixed**, with the remaining issues affecting the partial-paint contract or the validity of S0’s proof.
+
+I verified that all 25 firmware files changed since `b9555ff3e6` match `321360c6`, and both reviewed host scripts match `452f06c`. All file reads stayed inside the workspace. Process creation was denied, so this is a static verification; I could not independently rerun the reported passing tests or build. Nothing was changed or flashed.
+
+1. **Fixed — original must-fix closed: synthetic completion bookkeeping.**  
+   [menu_input.c:61](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_input.c:61), [menu_input.c:171](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_input.c:171).
+
+   Synthetic `+1` followed by physical `−1` now produces an owed, empty batch, which retires normally. Replacing a synthetic click with Back/close, or discarding synthetic turns with close, records `syn_lost` and ends superseded. Input clearing and `mi_finish()` reset the associated bookkeeping. The new production-task tests exercise the two reported failures.
+
+   **Further fix:** none for the reported defect.
+
+2. **Partly fixed — must-fix: a layout change still releases a reached stop.**  
+   [menu_slots.c:59](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:59), [menu_slots.c:101](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:101), [menu_fixture.c:140](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_fixture.c:140).
+
+   Pending-stop cancellation is correct: retargeting sets `stop_cancelled`, and polling retires the sequence as superseded. A reached stop also survives ordinary turns and pattern-toggle clicks.
+
+   **Remaining scenario:** settle A at row 6, request partial B, wait for stopped/done, then physically click into F2. `ms_set_layout()` clears `stopped`, and painting resumes without another sub 0. This exception is stated in the disposition, but contradicts revision 6’s explicit “holds until the next sub 0.” The new test covers turns, not this layout-changing click.
+
+   **Fix:** preserve a reached stop through ordinary, same-owner layout navigation. Prevent the pending clear from running while held—merely removing the assignment to `stopped` is insufficient because clearing precedes the stop check. Test layout clicks as well as turns, and distinguish navigation from fixture teardown/reopening.
+
+3. **Fixed — original must-fix closed: abandoned dashboard queues.**  
+   [display.c:3621](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/display.c:3621), [display.c:3450](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/display.c:3450).
+
+   The reported DASH-wake→DEBUG handoff now quiesces DMA, consumes any loss, and discards both dashboard queues and their shadows. `po_event()` has already changed the owner, so the non-DASH condition is appropriate. Other non-DASH handoffs redundantly discard empty queues harmlessly.
+
+   Non-DASH wake completion now depends only on actual DMA activity. This fits [sleep.c:813](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:813): release still waits for gauge accounting, then accepts this predicate instead of waiting on abandoned dashboard work.
+
+   **Further fix:** none found in the implementation; the specific board regression test remains necessary under finding 4.
+
+4. **Partly fixed — must-fix for proof: the extraction is useful, but the named board substitutes are insufficient.**  
+   [menu_s0_test.c:577](C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_test.c:577), [menu_s0_test.c:597](C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_test.c:597), [menu_s0_test.c:646](C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_test.c:646).
+
+   **The reasoning for leaving `display.c` outside the host build holds.** The tests now execute production `menu_ops_task()`, `menu_ops_op27()` and `menu_ops_apply()`. This closes the most consequential previous gap, including the hold being cancelled by the real task’s Back at 600 ms.
+
+   However, the fake environment still implements quiescing/loss disposal itself. Its queue depths are always zero; battery and logo work are always absent. DEBUG and ANIM loss actions are not executed by its pump. “Framing” tests call the inner handler directly and do not test short-report rejection or the HID dispatcher.
+
+   A Camera photograph after an injected loss and observations of restore phases do **not** establish the omitted wake and dispatch properties. Required substitutes should explicitly include:
+
+   - Camera fully settled, values/time frozen, then continued pumping long enough to expose Health-grid fall-through; compare before/after pixels.
+   - A DASH wake with demonstrably nonempty `gq`/`lq`, followed by handoff: verify queue disposal and wake release without the 500 ms fallback or display timeout bit.
+   - The real wake-while-OPEN entry and release path.
+   - An injected loss disposed of during a real ownership boundary, plus the contract’s real DMA retry/give-up tests.
+
+   **Fix:** specify these as executable board acceptance cases and add focused host coverage for the remaining wire wrapper where practical. The dispositions’ “board-proved” wording describes future work: nothing has been flashed.
+
+5. **Partly fixed — must-fix: the session script can still certify an incomplete workload.**  
+   [menu_s0_session.py:248](C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_session.py:248), [menu_s0_session.py:257](C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_session.py:257), [menu_s0_session.py:281](C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_session.py:281).
+
+   The important repairs are present: polling observations are retained for mutations; unexpected terminal outcomes and timeouts fail; final close/restoration are checked; the default dashboard interval is five minutes; positive ge25 deltas fail.
+
+   **Remaining scenario:** run with no track playing—or stop playback before the dashboard interval. Missing media only prints a note, and the script can return zero. Its two media observations bracket the entire run, so even two “play” observations do not establish playback through the dashboard interval.
+
+   Also, a decreasing ge25 counter is accepted, although a reset makes that measurement invalid. Restore observations inside `wait_restored()` are still discarded.
+
+   **Fix:** require and periodically verify playback during the dashboard interval, fail an invalid measurement span, and retain restore-poll transitions. Clearly identify shortened runs as smoke tests rather than full S0 proof.
+
+6. **Fixed — original should-fix closed: wake while OPEN is connected.**  
+   [display.c:3408](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/display.c:3408).
+
+   `sleep.c` reaches this function through `recovery_begin()`. It sets the wake hold before posting `PO_EV_WAKE_WHILE_OPEN`; the owner records the sticky failure and deferred close. The release notice reaches the production task and closes the session.
+
+   **Further fix:** none found in the wiring. The host test still invokes the owner event directly; it does not execute this display entry point.
+
+7. **Fixed — original should-fix closed: navigation restarts the clear.**  
+   [menu_slots.c:59](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:59), [menu_fixture.c:93](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_fixture.c:93).
+
+   `fresh=false` preserves an existing clear cursor; opening and returning from Diagnostics use `fresh=true`. Thus F1→F2→F1 after two bands finishes the remaining six. The new test asserts eight successful bands total, catching the former restart.
+
+   **Further fix:** none for this defect; stop gating is the separate issue in finding 2.
+
+8. **Fixed — original should-fix closed: completed-operation counting.**  
+   [menu_slots.c:38](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:38), [menu_slots.c:87](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:87).
+
+   An armed glyph records `ops_inflight`; settlement increments once when the bus becomes idle. Synchronous fills count on return. Retargeting resets accounting for the new target. The test actually reads the count before and after fake DMA completion.
+
+   **Further fix:** none found for the reported early-count defect.
+
+9. **Fixed — original should-fix closed: invisible A/B differences.**  
+   [menu_fixture.c:23](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_fixture.c:23), [menu_fixture.c:75](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_fixture.c:75).
+
+   Separator, scrollbar track and thumb now have different A/B colours. The scrollbar occupies x125, y15–126, matching C8. Expected-frame calculations follow that geometry.
+
+   **Further fix:** none.
+
+10. **Fixed — original should-fix closed: missing scratch/stream diagnostics.**  
+    [lcd_bus.c:151](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/lcd_bus.c:151), [lcd_bus.c:244](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/lcd_bus.c:244).
+
+    Double acquisition, unmatched release, nested streams, excess writes and short endings now produce sticky dev failures. These are diagnostic checks that continue execution, rather than aborting assertions; they make such misuse invalidate the board proof. I found no newly introduced imbalance in the current callers.
+
+    **Further fix:** none required for S0’s diagnostic purpose. These paths are not exercised by the host suite.
+
+11. **Fixed — original should-fix closed: refused animation reads/waits.**  
+    [lcd_bus.c:1199](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/lcd_bus.c:1199).
+
+    Inactive, inadmissible starts return before `anim_read_header()` and its flash transaction/quiesce. Header validation still precedes ownership acquisition; the active-stop branch remains unrestricted. `lcd_flash_init()` still precedes admission, but it does not perform the problematic header read or DMA wait.
+
+    **Further fix:** none for the reported failure.
+
+The extraction leaves **physical event classification and Fn-layer detection** in [menu_glue.c:51](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_glue.c:51). Thus “everything with a decision” is literally overstated, but the remaining decisions are the QMK adapter; I found no menu-policy regression there. The op-27 request/reply implementation is guarded by `AK820_DEV_HOOKS || MENU_HOST_TEST`; the firmware wrapper and HID dispatch are dev-only. Common input/completion machinery remains shared.
+
+The changed `po_apply()` order is sound: quiesce/drop/discard precede display setup, `menu_ops_apply()` retires dropped loss work before clearing input/opening the fixture, and visibility is published last.
+
+**The host tests do run production code—five production modules—but establish a narrower result than “every completion and disposal path” or full integration proof.** They meaningfully test the new pure-code fixes. They do not establish real display, sleep, bus, HID-wrapper or Camera behaviour.
+
+The remaining pre-flash work is to close finding 2, make finding 5’s success criterion enforce the workload, and make finding 4’s substituted board procedure explicit and sufficient. The reported passing build and 360 B heap gap do not resolve those issues.
+---
+
+## Dispositions (Warren, gremlin, 10-23), fixed in firmware `f583c15b`
+
+| # | Disposition |
+|---|---|
+| 1, 3, 6-11 | Fixed, as codex found. |
+| 2 | **Fixed.** A reached stop now holds through a layout change too. `ms_step()` checks the stop before the clear, so no clear runs while held. Only the next op 27 sub 0 (`ms_stop_release`) or a fresh screen (opening, or coming back from another owner) lets it go. The test now clicks into F2 while stopped (no band runs, the stop held), then sub 0 releases it and the clear finishes. Writing that test also exposed a firmware hazard: the idle timeout compared unsigned, so an input stamped a moment after `now` read as a wrapped 49 days. It now compares signed. |
+| 4 | **Agreed.** The board's cases are now written down as executable acceptance cases, [`CONFIG-MENU-S0-BOARD-TESTS.md`](CONFIG-MENU-S0-BOARD-TESTS.md), A1-A12. They include each one codex named: Camera's dispatch photographed after 30 s of pumping, with its static cells checked (A2); the queues dropped at a real handoff (A3); a real dashboard wake handed to Fn+D, with the sleep page's display timeout bit (A4); an injected loss at a real ownership boundary (A6); and the devfault retry and give-up under each owner (A7). Two of them can't be run as codex described. **The Camera's values can't be frozen** on the board, since the clock moves, so A2 checks the static cells instead. **The wake-while-open path is unreachable by design** (DSB_MENU), so A5 checks the blocker, and its handling stays the host test's. The wording "board-proved" in round 1's dispositions meant these future cases; nothing has been flashed. |
+| 5 | **Fixed.** A track must be playing through the dashboard interval, checked every 30 s from the daemon's now-playing line, unless `--smoke` (reported as not S0's proof; a shortened run also needs `--smoke`). A counter that went backwards, or a missing one, makes the span invalid and fails it. The restore's polls are recorded. |

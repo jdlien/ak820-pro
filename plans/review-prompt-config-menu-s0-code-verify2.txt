@@ -1,0 +1,10 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+This is the second verification round of a code review before a flash. plans/review-codex-config-menu-s0-code-2026-10-23.md holds your review of the configuration menu's S0 code (11 findings), your first verification (findings 2, 4 and 5 partly fixed), and after each its dispositions. The latest fixes are firmware commit f583c15b on qmk_firmware-ak820pro's gremlin/config-menu (the whole of S0 is `git -C qmk_firmware-ak820pro diff b9555ff3e6 f583c15b`) and, on ak820-pro's warren/config-menu, scripts/menu_s0_test.c, scripts/menu_s0_session.py and the new plans/CONFIG-MENU-S0-BOARD-TESTS.md (the board's acceptance cases). The contract is plans/CONFIG-MENU-BUILD-PLAN.md, revision 6. The dev build links (heap gap 360 B) and the host tests pass. Nothing has been flashed.
+
+Please:
+1. For findings 2, 4 and 5 (still open after your first verification), check against the code and the documents that the latest fixes are right and complete. Say fixed, partly fixed or not fixed, and why. For 4, judge whether CONFIG-MENU-S0-BOARD-TESTS.md's cases are executable and sufficient, including the two the disposition says can't run as you described (A2's static cells for the Camera, A5's blocker for the wake while open).
+2. Check that the latest changes (menu_slots.c's stop before the clear and ms_set_layout's fresh release, menu_ops.c's signed idle compare, the session script's playback checks and span validation, the host test's new stop case) introduce no new problem.
+3. Say whether anything else stands between S0 and its flash on the test board.
+
+Keep the bar where it has been: a must-fix is something that would make S0 wrong on the board or its proof unsound. For each finding give a severity (must-fix, should-fix, nit), the file and line, the concrete failure scenario, and a suggested fix. Say plainly whether S0 is ready to flash on the test board (gremlin's, not JD's daily board).

@@ -96,11 +96,17 @@ def wait(h, seq, timeout=5.0, poll=0.02, seen=None):
         time.sleep(poll)
 
 
-def wait_restored(h, timeout=10.0, poll=0.02):
-    """Until the dashboard's restore is DONE under the dashboard, no session."""
+def wait_restored(h, timeout=10.0, poll=0.02, seen=None):
+    """Until the dashboard's restore is DONE under the dashboard, no session.
+    Every change of the watched fields is appended to `seen`."""
     end = time.monotonic() + timeout
+    last = None
     while True:
         s = read_state(h)
+        snap = tuple(s[k] for k in WATCHED)
+        if seen is not None and snap != last:
+            seen.append(dict(zip(WATCHED, snap)))
+            last = snap
         if s["owner"] == "dash" and s["session"] == "none" and s["phase"] == "done":
             return True, s
         if time.monotonic() > end:
@@ -195,6 +201,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repeats", type=int, default=10)
     ap.add_argument("--dashboard-s", type=int, default=300, help="the dashboard interval after the steps")
+    ap.add_argument("--smoke", action="store_true",
+                    help="a shortened or trackless run: reported, never S0's proof")
     ap.add_argument("--out", default="menu_s0_session.json")
     a = ap.parse_args()
 
@@ -209,7 +217,8 @@ def main():
         if s["session"] != "none":
             st, seq = mutate(h, 4)   # close whatever is open
             wait(h, seq)
-        ok, s = wait_restored(h)
+        restore_seen = []
+        ok, s = wait_restored(h, seen=restore_seen)
         if not ok:
             sys.exit(f"the dashboard isn't restored to start from: {s}")
         st, seq = mutate(h, 4)       # open the fixture
@@ -241,13 +250,26 @@ def main():
         state, s = wait(h, seq)
         if st != OK or state != "done":
             failures.append(f"the final close: status {st}, outcome {state}")
-        ok, final = wait_restored(h)
+        ok, final = wait_restored(h, seen=restore_seen)
         if not ok:
             failures.append(f"the dashboard wasn't restored after the close: {final}")
         steps_s = time.monotonic() - t0
         # The dashboard interval, inside the measured span: no counter reset.
+        # A track must be playing through it, checked every 30 s from the
+        # daemon's now-playing line.
         print(f"steps done in {steps_s:.0f} s; the dashboard for {a.dashboard_s} s ...", flush=True)
-        time.sleep(a.dashboard_s)
+        media_samples = []
+        end = time.monotonic() + a.dashboard_s
+        while True:
+            m = media_text()
+            media_samples.append(m)
+            if not a.smoke and not (m or "").startswith("play"):
+                failures.append(f"no track playing in the dashboard interval: {m!r}")
+                break
+            left = end - time.monotonic()
+            if left <= 0:
+                break
+            time.sleep(min(30.0, left))
         final = read_state(h)
     finally:
         h.close()
@@ -255,8 +277,13 @@ def main():
     after = health_json()
     media_after = media_text()
     ge25 = [before.get("count_ge_25ms"), after.get("count_ge_25ms")]
-    if None in ge25 or ge25[1] - ge25[0] > 0:
+    ge10 = [before.get("count_ge_10ms"), after.get("count_ge_10ms")]
+    if None in ge25 or None in ge10 or ge25[1] < ge25[0] or ge10[1] < ge10[0]:
+        failures.append(f"the measured span is invalid (a counter reset or missing): ge25 {ge25}, ge10 {ge10}")
+    elif ge25[1] - ge25[0] > 0:
         failures.append(f"passes of 25 ms or more: {ge25}")
+    if not a.smoke and (a.repeats != 10 or a.dashboard_s < 300):
+        failures.append("a shortened run is a smoke test: pass --smoke")
     if final["invariant_fail"]:
         failures.append(f"invariant_fail {final['invariant_fail']:#x}")
     if (final["owner"], final["session"], final["phase"]) != ("dash", "none", "done"):
@@ -264,8 +291,10 @@ def main():
     result = {
         "repeats": a.repeats, "dashboard_s": a.dashboard_s, "elapsed_s": round(elapsed, 1),
         "failures": failures, "outcomes": outcomes, "final": final,
-        "media": [media_before, media_after],
-        "count_ge_10ms": [before.get("count_ge_10ms"), after.get("count_ge_10ms")],
+        "smoke": a.smoke,
+        "media": [media_before, media_after], "media_samples": media_samples,
+        "restore_seen": restore_seen,
+        "count_ge_10ms": ge10,
         "count_ge_25ms": ge25,
         "loop_gap_max_ms": after.get("loop_gap_max_ms"),
         "acct_after": after.get("acct"),
@@ -278,8 +307,8 @@ def main():
     print(f"ge10 {result['count_ge_10ms']}, ge25 {ge25}, invariant_fail {final['invariant_fail']:#x}, "
           f"final {final['owner']}/{final['session']}/{final['phase']}")
     print(f"media: {media_before!r} -> {media_after!r}")
-    if not (media_before or "").startswith("play"):
-        print("note: no track was playing at the start; S0's workload wants one")
+    if a.smoke:
+        print("SMOKE TEST: not S0's proof (shortened, or no track required)")
     for f in failures[:20]:
         print("FAIL", f)
     return 1 if failures else 0

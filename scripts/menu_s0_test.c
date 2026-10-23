@@ -708,14 +708,32 @@ static void test_ops(void) {
     menu_physical(MI_CW, true, false, fk_now);
     menu_physical(MI_CW, false, false, fk_now);
     for (int i = 0; i < 10; i++) fw_pass(5);
-    CHECK(ms_stopped());                       /* held */
+    CHECK(ms_stopped());                       /* held through turns */
+    /* ... and through a layout-changing click: no clear runs while held. */
+    for (int g = 0; g < 16 && fx_cursor() != FX_ROW_F2; g++) {
+        menu_physical(MI_CW, true, false, fk_now);
+        menu_physical(MI_CW, false, false, fk_now);
+        fw_pass(5);
+    }
+    if (fx_cursor() != FX_ROW_F2) printf("cursor %u session %u owner %u\n", fx_cursor(), po_session(), po_owner());
+    CHECK(fx_cursor() == FX_ROW_F2);
+    int b0 = bands_ok;
+    menu_physical(MI_KNOB, true, false, fk_now);
+    fk_now += 50;
+    menu_physical(MI_KNOB, false, false, fk_now);
+    for (int i = 0; i < 20; i++) fw_pass(5);
+    CHECK(fx_screen() == FX_SCREEN_F2 && ms_stopped() && bands_ok == b0 && ms_clearing());
+    CHECK(op27(0, 3, 0) == MI_OK && !ms_stopped());   /* sub 0 lets go: back to F1, the clear finishes */
+    for (int i = 0; i < 300 && !ms_settled(); i++) fw_pass(5);
+    CHECK(ms_settled() && fx_screen() == FX_SCREEN_F1);
     CHECK(op27(0, 0, 0) == MI_OK && !ms_stopped());
     CHECK(op27(5, 0, 0) == MI_OK && rpt[30] == 0);
 
     /* Finding 8: an armed glyph isn't a completed operation until it ends. */
     for (int i = 0; i < 300 && !ms_settled(); i++) fw_pass(5);
     fx_set_pattern(1);
-    while (!mb_busy()) { CHECK(ms_step() != MS_STEP_IDLE); }   /* the title's first glyph arms */
+    for (int g = 0; g < 50 && !mb_busy(); g++) CHECK(ms_step() != MS_STEP_IDLE);   /* the title's first glyph arms */
+    CHECK(mb_busy());
     CHECK(ms_ops() == 0);
     dma_settle();
     CHECK(ms_ops() == 1);
