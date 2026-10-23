@@ -179,6 +179,19 @@ Configuration
 - **The board's words are in American spelling:** "Hue" for the hue,
   "Second color" in two-tone. "Color" saves a character and is the usual
   computer spelling.
+- **In a list where one option is saved** (Power, Clock, Battery, Effect,
+  Lights, the Bluetooth slots), the saved one's dot goes in front: the
+  options start one column in, and the dot fills that column.
+- **Fit (counted over all 65 strings, 10-23):**
+  - The widest menu row is 16 of 20 columns: "Power" with "Lights out",
+    "Second color" 255, "Effect" Raindrops, "Using the menu" >, "Reset
+    counters" >.
+  - The longest title is "Turn + Click Knob" at 17.
+  - The triangle's 19 columns would fit all of these too.
+  - What's at the limit is prose: several Help lines are exactly 20 as
+    wrapped, which a rewrap fixes. The clock band's date in the big face
+    (`Sep 30, 2026`) is 12 of 12, but that's the dashboard's, not the
+    menu's.
 - **The debug and camera pages and the counter reset move into the menu**
   (Diagnostics).
 - **A Help section,** short pages that read comfortably on the panel:

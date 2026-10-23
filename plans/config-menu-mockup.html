@@ -468,7 +468,7 @@ function row(y, label, value, selected, extra) {
   text("f13", s, x0, y, fg, inv ? WHITE : BLACK);
   if (inv) fill(3, y, 1, ROW_H, WHITE);   // a pixel of bar left of the first letter; the font's blank last column pads the right
   if (tri_ && selected) tri(4, y + 3);
-  if (extra) extra(fg);
+  if (extra) extra(fg, x0);
 }
 function drawRows(list, cursor, top, fn) {
   for (let r = 0; r < ROWS; r++) {
@@ -488,7 +488,7 @@ function drawList() {
   header(MENUS[m.id].title);
   drawRows(list, m.cursor, m.top, (it, y, i, sel) => {
     if (it.kind === "hue") row(y, it.label, String(live[it.key]), sel);   // the number: the panel's colours look nothing like the keys'
-    else if (it.kind === "conn") row(y, it.label, "", sel, c => { if (live.conn === it.slot) radio(117, y + 4, c); });
+    else if (it.kind === "conn") row(y, " " + it.label, "", sel, (c, x0) => { if (live.conn === it.slot) radio(x0, y + 4, c); });   // the saved one's dot in front
     else row(y, it.label, valueOf(it), sel);
   });
 }
@@ -513,7 +513,7 @@ function drawEdit() {
     hints(72);
   } else if (it.kind === "choice") {
     const st = { cursor: edit.cursor, top: edit.top }; keepVisible(st, it.options.length); edit.top = st.top;
-    drawRows(it.options, edit.cursor, st.top, (o, y, i, sel) => row(y, o, "", sel, c => { if (saved[it.key] === i) radio(117, y + 4, c); }));
+    drawRows(it.options, edit.cursor, st.top, (o, y, i, sel) => row(y, " " + o, "", sel, (c, x0) => { if (saved[it.key] === i) radio(x0, y + 4, c); }));
   }
 }
 function drawPage() {
