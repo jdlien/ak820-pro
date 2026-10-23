@@ -333,8 +333,8 @@ const MENUS = {
   top: { title: "Configuration", items: () => [
     { label: "Lighting", kind: "menu", id: "lighting" },
     { label: "Screen", kind: "range", key: "screen", min: 0, max: 23, step: 1, fmt: scr },
-    { label: "Power", kind: "choice", key: "power", options: POWER, value: () => POWER_SHORT[live.power] },
     { label: "Connection", kind: "menu", id: "conn", value: () => CONN[live.conn] },
+    { label: "Power", kind: "choice", key: "power", options: POWER, value: () => POWER_SHORT[live.power] },
     { label: "Indicators", kind: "menu", id: "ind" },
     { label: "Clock", kind: "choice", key: "clock", options: ["24 hour", "12 hour", "Date", "Off"], value: () => CLOCK[live.clock] },
     { label: "Battery", kind: "choice", key: "batt", options: ["Percent", "Hours of use"], value: () => BATT[live.batt] },

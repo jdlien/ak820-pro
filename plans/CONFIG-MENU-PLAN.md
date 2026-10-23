@@ -168,6 +168,13 @@ Configuration
   on the knob. JD rarely uses the knob otherwise, so its press losing mute
   under `Fn` costs nothing.
 - **Exit is the last item,** and turning past either end wraps around.
+- **The top level, in order:**
+  - page one: Lighting, Screen, Connection, Power, Indicators, Clock,
+    Battery, Diagnostics;
+  - page two: Help, About, Exit.
+
+  Connection comes before Power, since power isn't relevant until the
+  connection is settled.
 - **A long press is Back.**
 - **The hint:** the heading reads "Configuration" (or the submenu's name).
   After ~4 s idle it shows "Turn + Click Knob" for 1 s, then the title again,
@@ -191,8 +198,7 @@ Configuration
     where the colour actually lands, at hue plus offset.
   - The screen as a percentage of its level range, as `LCD 22%` does, with
     0 as Off. The indicator levels the same way.
-  JD asked for percentages throughout, "what we do today"; hue is the one
-  that isn't a percentage today. Switch it too if JD prefers.
+  Hue stays absolute, in degrees.
 - **"‹ Back" is the first row of every list below the top,** choice lists
   included, so menus are easy to explore and leave.
   - A submenu opens on its first real item, and a choice list on the current
