@@ -1,4 +1,4 @@
-# The configuration menu: how to build it (revision 5, 2026-10-23)
+# The configuration menu: how to build it (revision 6, 2026-10-23)
 
 Status: **a plan, nothing built.** Owned by Warren (gremlin's session) from
 10-23.
@@ -8,7 +8,17 @@ Status: **a plan, nothing built.** Owned by Warren (gremlin's session) from
   ([`review-codex-config-menu-build-plan-verify-2026-10-23.md`](review-codex-config-menu-build-plan-verify-2026-10-23.md)).
   It added **"The implementation contract"**, the decisions S0 is built from,
   so the implementer doesn't have to discover them while coding.
-- **Revision 5** folds in the verification of revision 4
+- **Revision 6** folds in the verification of revision 5
+  ([`review-codex-config-menu-build-plan-verify4-2026-10-23.md`](review-codex-config-menu-build-plan-verify4-2026-10-23.md)):
+  - the Camera page's loss recovery invalidates only the page showing, and
+    the debug pump's dispatch is exclusive;
+  - a loss after `DONE` is remembered at once, and only the repair waits
+    out the cooldown;
+  - every accepted op 27 mutation has a terminal outcome, deferred and
+    discarded ones included;
+  - the fixture's partial stop is observable, and the S0 script is a fixed
+    sequence.
+- **Revision 5** folded in the verification of revision 4
   ([`review-codex-config-menu-build-plan-verify3-2026-10-23.md`](review-codex-config-menu-build-plan-verify3-2026-10-23.md)):
   - the restore's `RESIDUAL` gets its own scheduler and a full `DONE`
     invariant, and leaving DASH invalidates the dashboard;
@@ -170,7 +180,7 @@ the code is raised before working around it.
   | Phase | Meaning |
   |---|---|
   | `SPLASH` | boot, until the startup callback fires |
-  | `WAITING` | the dashboard is known invalid, but another owner or a session holds the panel; nothing runs |
+  | `WAITING` | the dashboard is known invalid, and an owner other than DASH holds the panel; nothing runs |
   | `CLEAR` | the banded clear (today's stages 1 to `DBG_CLEAR_BANDS`) |
   | `STAGES` | the components (today's stages after the bands, the lock band one component a pass) |
   | `RESIDUAL` | everything the stages left: the queues, the battery's dirty parts and the stale logos, run by the restore's own scheduler (below) |
@@ -235,12 +245,17 @@ the code is raised before working around it.
 
     | Owner | On a loss |
     |---|---|
-    | DASH, restore `DONE` | the self-heal requests a restore, as today, at most once in 5 s |
+    | DASH, restore `DONE` | **the damage is recorded at once:** the phase goes back to `RESIDUAL` with `restore_damaged`, so `display_restored()` is false from that pass. The scheduler starts the new generation's `CLEAR` when the 5 s cooldown allows. Only the repair is rate-limited, never the remembering. (Today the cooldown check comes before `lcd_blit_lost_take()`, `display.c:2963`, which is how the loss stays latched; taking it every pass needs this instead) |
     | DASH, restoring | `restore_damaged`; the scheduler starts a new generation at `RESIDUAL`'s end |
     | MENU | every slot `INVALID` (C3); a clear in progress retries its band (C3) |
-    | DEBUG | the page's own shadows reset: `dbg_shown` and `cam_shown` filled so no cell matches, `dbg_dirty` and `cam_dirty` all set, and the clear band restarted. The debug renderers keep their own shadows; they don't move into C3's slots. Their shown cells advance when a DMA starts, which is why a loss has to reset them |
+    | DEBUG | **only the page showing is invalidated:** on Health, `dbg_shown` filled so no cell matches and `dbg_dirty` all set; on Camera, `cam_shown` and `cam_dirty` the same, with Health's grid left blank and clean. Then the clear band restarts. The debug renderers keep their own shadows; they don't move into C3's slots. Their shown cells advance when a DMA starts, which is why a loss has to reset them |
     | ANIM | the animation stops (quiesce, DASH, a restore from band 1) |
 
+  - **The debug pump's dispatch becomes exclusive:** `if (debug_big)
+    return cam_pump_glyph();` in place of today's fall-through to the
+    Health grid when Camera has nothing to paint (`display.c:840`).
+    Otherwise Health's spaces would be painted over Camera. A migration
+    item.
   - **The animation's busy recovery.** `anim_task()` returns while
     `!blit_done` (`lcd_bus.c:1116`), and the pump skips it, so a lost
     completion is never given up today. Under ANIM the pump runs the same
@@ -272,7 +287,7 @@ the code is raised before working around it.
   | MENU, DEBUG, a session, or a restore not `DONE` | an animation start | refused |
   | ANIM | an animation stop | always allowed: quiesce, DASH, and a restore started from band 1, which subsumes any `WAITING` request |
   | ANIM | the opener | refused, but captured with its release |
-  | not DASH, or a session | the startup callback | `WAITING` |
+  | an owner other than DASH | the startup callback | `WAITING`. Under DASH (the session NONE or PENDING) it starts |
   | any | a blit lost | as "Loss" above |
 
 - **The actions:**
@@ -312,6 +327,7 @@ the code is raised before working around it.
 - **Migration checklist.** Each existing use is converted and ticked off in
   S0's code review:
   - `display.c:136-148`: the flags and `display_set_paused()`;
+  - `display.c:840`: the debug pump's dispatch, made exclusive (Loss);
   - `display.c:1170-1220`: the debug query and the toggle;
   - `display.c:1395,1433`: the restore cursor's read, advance and end;
   - `display.c:1447`: the deferred redraw (the startup callback);
@@ -389,7 +405,9 @@ the code is raised before working around it.
     has acted, are dropped and counted.
   - **Precedence:** close replaces Back or click; Back replaces click. A
     lower one arriving after a higher one is dropped.
-  - **`menu_task()`** applies `turns`, then the latch, then clears both.
+  - **`menu_task()`** checks close first, and then discards the turns.
+    Otherwise it applies the frozen turns, then Back or the click, then
+    clears both.
   - **Close discards all other input.** At close and at every handoff
     (PENDING to OPEN, MENU to DEBUG and back), `turns` and `latch` are
     cleared. Nothing carries into a new screen or session.
@@ -454,9 +472,10 @@ the code is raised before working around it.
   - **A clear is never superseded:** navigation during it changes only the
     target, and the clear finishes its bands.
   - **A clear completes only when every band succeeded.** Today's
-    `lcd_clear_rect()` discards `lcd_blit_wait()`'s result
-    (`lcd_bus.c:207-211`), so a band whose quiesce gave up would be skipped.
-    Clears go through a new `lcd_clear_rect_ok()` that returns false then.
+    `lcd_clear_rect()` discards the result of waiting for its own DMA
+    (`lcd_bus.c:207-211`), so a band whose transfer was given up would be
+    skipped. Clears go through a new `lcd_clear_rect_ok()` that returns
+    that result. An idle bus after an exhausted recovery isn't a clear.
     A failed band is retried on the next pass, with the cursor not
     advanced. This rule covers the menu's layout clear, the restore's
     `CLEAR` and the debug page's clear band alike.
@@ -686,6 +705,15 @@ that's S1.
   - **the scrollbar slot,** its track and a thumb at the top.
   - **A full paint is 27 operations** (9 + 1 + 16 + 1), so pattern 2's `n`
     runs from 1 to 26. Patterns A and B differ in every slot.
+  - **What's counted:** completed logical paint operations (a glyph, a
+    half-row fill, the separator, the scrollbar), not clear bands or
+    passes spent waiting on a transfer.
+  - **Pattern 2 needs A settled first** (`pixels_done` with pattern A);
+    otherwise it answers status 2. So every partial B is a fresh 27-op
+    paint over A.
+  - The colours and the scrollbar's construction are fixed in `const`
+    tables in S0's first commit, and the host's expected frames come from
+    them.
 - **Layout F2** (screen id 2): a 4 x 4 grid of 32 x 32 fills, one operation
   each, after the layout's banded clear.
 - **The colours:** `const` RGB565 tables in the fixture's file, A, B and
@@ -832,13 +860,25 @@ saved Off (`level + 1`).
     |---|---|
     | turns, click, `Fn` plus a click | `menu_task()` has applied it |
     | a hold | its scheduled release has been processed, or the hold was cancelled (`last_state` cancelled) |
-    | a fixture paint | the model has its new target; the pixels are reported separately (`pixels_done`) |
-    | a restore request | the restore it started reaches `DONE`, or is superseded (`last_state` superseded) |
-    | a loss | the owner's handler has consumed it |
+    | a fixture paint, patterns 0, 1 and 3 | the model has its new target; the pixels are reported separately (`pixels_done`) |
+    | a fixture paint, pattern 2 | the fixture has stopped after operation `n` (the stopped flag) |
+    | a restore request (sub 7) | the request is **installed**: a restore started, or `WAITING` under another owner. The restoration itself is watched through `restore_phase` and `restore_gen` |
+    | a loss (sub 8) | the owner's handler has consumed it |
+    | arm or disarm (sub 6) | applied, with any session it closed |
 
-  - **"Applied" isn't "painted":** `pixels_done` is true when the current
-    owner has no slot outside `COMMITTED`, no clear running, and no transfer
-    in flight.
+  - **Discarded work still ends.** When a boundary throws away an
+    outstanding synthetic action (an ownership change dropping an injected
+    loss, a handoff clearing the coalesced input, a close), its sequence
+    ends as superseded or cancelled. Nothing accepted can block the single
+    flight forever.
+  - **A busy or bad-argument reply** leaves the outstanding sequence and its
+    state unchanged. At boot, `last_seq` is 0 and `last_state` none.
+
+  - **"Applied" isn't "painted":** `pixels_done` means **the MENU fixture's
+    pixels are settled**: the owner is MENU, no slot is outside
+    `COMMITTED`, no clear is running, and no transfer is in flight. It's
+    false under every other owner. DASH's completion is read from
+    `restore_phase` and `restore_gen`; the debug pages have none in S0.
 - **The subs:**
 
   | Sub | Args | Effect |
@@ -872,7 +912,9 @@ saved Off (`level + 1`).
   | 24, 25 | `invariant_fail`, u16 LE: bit 0 an early `COMMITTED`, 1 an early `DONE`, 2 a wake while OPEN, the rest reserved |
   | 26, 27 | the last paint operation's time, u16 LE in µs, saturating at 65535; 0 until S1 |
   | 28 | the pairing phase; 0 until P3 |
-  | 29-31 | zero, reserved |
+  | 29 | the fixture's completed paint operations since its last target (saturating) |
+  | 30 | bit 0: the fixture is stopped (pattern 2) |
+  | 31 | zero, reserved |
 
 - **The daily and fpb builds** don't compile HC_DEVHOOK at all. `build.sh`
   already enforces that.
@@ -912,11 +954,18 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
      loss's handling (sub 8), a stale logo repaired, and `invariant_fail`
      still 0 at the end, which catches an early `DONE` or `COMMITTED` that
      a snapshot would miss;
-   - **a real DMA timeout,** on a `devfault` build (dev plus
-     `-DWDT_TEST_HOOKS`, a new `build.sh` flavour, gremlin only), whose
-     HC_BLITFAULT drops a real completion: the bounded recovery, the give-up
-     and each owner's handler, the animation's included. Sub 8 only tests
-     the handlers;
+   - **a real DMA timeout,** on a `devfault` build, whose HC_BLITFAULT
+     drops a real completion (`lcd_bus.c:651-659,786-789`). `devfault` is
+     the whole dev configuration plus `-DWDT_TEST_HOOKS`, a new `build.sh`
+     flavour with dev's structural checks and the heap floor, gremlin only.
+     N=1 proves a retry that succeeds; N=2 proves the give-up and each
+     owner's handler, the animation's included. Sub 8 only tests the
+     handlers;
+   - **host tests for the new outcomes:** two losses under five seconds
+     apart, the first restore already `DONE` before the second; Camera
+     pumped on after its cells finish, with the time and values frozen, so
+     an overwrite by Health's grid can't escape; sub 7 under MENU, DEBUG and
+     ANIM; an injected loss dropped at an ownership change;
    - **the fixture's pixels** after A, partial B and A, F2, and a loss,
      checked by photo against the host's expected frames;
    - **the physical cases, armed (JD's hands):** the knob's presses and
@@ -926,11 +975,19 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
    - the linked RAM of the dev and daily builds, by the new check;
    - `Fn`+`D` and the animation behaving as before;
    - **timing as a measurement under a named workload,** not a universal
-     bound. The workload is `scripts/menu_s0_session.py`: 500 op 27
-     mutations, each sent when the last is done, in a fixed cycle. Per 50:
-     30 turns of ±1 to ±4, 8 clicks across the fixture's rows (so A/B
-     toggles, layout changes and Diagnostics handoffs), 4 holds of 650 ms,
-     4 `Fn` plus a click, 2 restores (sub 7) and 2 losses (sub 8). Then five
+     bound. The workload is `scripts/menu_s0_session.py`, committed with
+     S0: a fixed 50-step array, run ten times, 500 op 27 mutations.
+     - **It starts** from the dashboard with the session NONE, and opens
+       the fixture with sub 4.
+     - **Per 50 steps:** 30 turns of ±1 to ±4, 8 clicks on named rows (two
+       A/B toggles, two trips to F2 and back, two Diagnostics handoffs and
+       returns), 4 holds of 650 ms, 4 `Fn` plus a click, 2 restores (sub 7)
+       and 2 losses (sub 8). Each step names the screen and owner it
+       expects after it.
+     - **Its pacing:** each mutation is sent when the last is terminal,
+       polling sub 5 every 20 ms.
+     - **It records** every outcome and every transition seen, not just
+       what was sent. Then five
      minutes of the dashboard with a track playing. The ge10 and ge25 counts
      and HC_ACCT's ring are recorded, with no counter reset inside the
      measured span. ge25 is expected to stay 0. Real spins and the encoder
