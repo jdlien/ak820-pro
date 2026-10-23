@@ -1,0 +1,10 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+This is a verification round of a code review before a flash. Your review of the configuration menu's S0 code is plans/review-codex-config-menu-s0-code-2026-10-23.md: 11 findings (5 must-fix), and its "Dispositions" section at the end says how each was taken. The fixes are firmware commit 321360c6 on qmk_firmware-ak820pro's gremlin/config-menu (`git -C qmk_firmware-ak820pro show 321360c6`; the whole of S0 is `git -C qmk_firmware-ak820pro diff b9555ff3e6 321360c6`) and ak820-pro's warren/config-menu at 452f06c (scripts/menu_s0_test.c, scripts/menu_s0_session.py). The contract is plans/CONFIG-MENU-BUILD-PLAN.md, revision 6. The dev build links (heap gap 360 B) and the host tests pass. Nothing has been flashed.
+
+Please:
+1. For each of the 11 findings, check against the code that the fix is right and complete. Say fixed, partly fixed or not fixed, and why. Finding 4's disposition is partial on purpose: say whether its reasoning holds and whether the board tests it names are enough.
+2. Check that the fixes introduce no new problem, in particular: menu_input.c's syn_latch and syn_lost bookkeeping and mi_take's owed batch; menu_slots.c's stop lifetime, ms_set_layout's fresh argument and settle_ops; menu_ops.c's extraction (is anything left in menu_glue.c with a decision in it, and is op 27 compiled only in dev builds and the host tests); po_apply's new queue discard on leaving the dashboard and its order with menu_ops_apply; display_wake_repainted's new rule against sleep.c's release; display_sleep_wake's new event; lcd_bus.c's dev checks and the animation's early refusal.
+3. Do the new host tests run the production code and test what they claim?
+
+Keep the bar where it has been: a must-fix is something that would make S0 wrong on the board or its proof unsound. For each finding give a severity (must-fix, should-fix, nit), the file and line, the concrete failure scenario, and a suggested fix. Say plainly whether S0 is ready to flash on the test board (gremlin's, not JD's daily board).
