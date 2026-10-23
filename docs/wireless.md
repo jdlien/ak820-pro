@@ -169,6 +169,12 @@ never sync; capitalisation is global, indicators are per-device.
 
 Over the air, the only host-to-board path is the keyboard's LED output
 report (report 2, one byte), which the module forwards as `5A <byte> <sum>`.
+(Over 2.4G the dongle also relays raw HID, found later; Bluetooth has only
+this.) The idea of using it for data, toggling the lock lights as bits, is
+[quill4gen7](https://github.com/quill4gen7)'s, proved from Linux over the
+2.4G dongle in the
+[`notify` branch](https://github.com/quill4gen7/ak820-pro/tree/notify) of a
+fork of this repo. The channel here is a separate implementation.
 Measured from JD's Mac over BT (flashes 2g-2i, `scripts/ledchannel_test.py`;
 the channel built on it is
 [`plans/LOCK-LED-CHANNEL-PLAN.md`](../plans/LOCK-LED-CHANNEL-PLAN.md)):

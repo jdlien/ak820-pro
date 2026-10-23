@@ -462,5 +462,14 @@ hardening, LCD work, clock sync, and host tooling on top of that.
 [`ak820pro-builds/UPSTREAM-CONTRIBUTIONS.md`](ak820pro-builds/UPSTREAM-CONTRIBUTIONS.md)
 sorts what belongs upstream from what is personal preference.
 
+[quill4gen7](https://github.com/quill4gen7) proved the idea behind the
+wireless data channel in the
+[`notify` branch](https://github.com/quill4gen7/ak820-pro/tree/notify) of a
+fork of this repo: toggling the lock lights as data bits to get data from the
+computer to the board over the air, from Linux over the 2.4G dongle. Our lock-light channel, which carries
+now-playing and the clock over Bluetooth from macOS and Windows, is a separate
+implementation, but we would not have tried it without that proof. The dev
+build's raw-HID jump to the bootloader came from the same fork.
+
 QMK is GPLv2. No warranty: this is one person's keyboard firmware, published
 in case it is useful to someone with the same keyboard.

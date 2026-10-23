@@ -26,9 +26,10 @@ drain), and the polish and release for other owners.
 - **Firmware on JD's board: `36afff30e8`** (dev, token `0xef38330e`), since
   14:22 10-21. It is Gremlin's frame trim (`01abfe0ecf`, codex cleared after
   four rounds) merged with `36330d5ec8` (the 81-LED model).
-- **The mainline is one fix ahead: `ce229f87c6`.** `ak820pro-jdlien` and
+- **The mainline is one fix ahead: `b9555ff3e6`.** `ak820pro-jdlien` and
   `deps.lock` point at it. It is `36afff30e8` plus the once-a-second slow
-  pass's fix (below). Gremlin's board runs it since 17:03 10-22 (token
+  pass's fix (`ce229f87c6`, below) and a comment crediting quill4gen7 in
+  `lockchan.c` (the same code). Gremlin's board runs it since 17:03 10-22 (token
   `0x32d3502c`). JD's board takes it after the drain.
 - **The Mac's daemon: `21e8fe8`** (`--clock --radio --lockchan`), since
   14:23 10-21. With the data cut it runs the clock and now-playing over the
@@ -145,7 +146,7 @@ on the pack and ~1.1 awake and dark with the data on.
 ### After the drain
 
 1. Dump the RAM battery log, then charge to FULL.
-2. Flash `ce229f87c6`, the slow-pass fix, plus the hours left in the
+2. Flash the mainline (`b9555ff3e6`: the slow-pass fix, `ce229f87c6`), plus the hours left in the
    "Battery low" alert if the drain shows the estimate right near the
    bottom (`BACKLOG.md`). Proposed, JD's call: build it as
    `daily`, the build releases ship, so the soak runs what owners get. A daily build has

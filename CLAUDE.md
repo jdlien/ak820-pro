@@ -116,8 +116,9 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 **Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-22
 — RESUME HERE"). **Feature-complete for JD's board.** What's left:
 - an untethered drain at real use, running to the RGB cut;
-- flashing `ce229f87c6` after the drain: the mainline (`ak820pro-jdlien`,
-  `deps.lock`), one fix ahead of the board's `36afff30e8`. It moves the glyph
+- flashing the mainline after the drain (`b9555ff3e6`, which
+  `ak820pro-jdlien` and `deps.lock` point at): one fix ahead of the board's
+  `36afff30e8`, `ce229f87c6`, plus a credit comment. It moves the glyph
   pump off the clock's seconds tick, the pass that hit 10 ms every second.
   On gremlin's board since 17:03 10-22, `count_ge_10ms` fell from 0.175 a
   second to 0.016;
