@@ -45,7 +45,8 @@ frees chords.
 - **Turn** to move through the list, **click** to select a setting, then turn
   to change it and **click again** to save and go back to the list.
 - Submenus may need a **"‹ Back"** first item.
-- **It closes** after 10-12 s idle, or on the next `Fn`+`C`.
+- **It closes** after 10-12 s idle, or on the next `Fn`+`C`. (Since
+  decided: 24 s, and `Fn` plus a knob click; see "Decided".)
 - After a few seconds, flash **"Turn the knob"** over the title so it's clear
   how to drive it.
 - **The debug pages move here,** so `Fn`+`D` no longer needs a Fn-layer key.
@@ -184,7 +185,7 @@ Configuration
 - **No knob section.** What the knob does is a keymap question, and VIA
   already handles that.
 - **The board's words are in American spelling:** "Hue" for the hue,
-  "Second color" in two-tone. "Color" saves a character and is the usual
+  "Second color" in Alphas/Mods. "Color" saves a character and is the usual
   computer spelling.
 - **In a list where one option is saved** (Power, Clock, Battery, Effect,
   Lights, the Bluetooth slots), the saved one's dot goes in front: the
@@ -193,7 +194,7 @@ Configuration
   menu and the keys agree:
   - brightness, saturation and speed as percentages;
   - hue in degrees (`Hue 261`), because it's circular;
-  - two-tone's second colour as its offset from the first (`+325`; in
+  - Alphas/Mods' second colour as its offset from the first (`+325`; in
     `ALPHAS_MODS` the speed byte is that offset). Its editor's strip marks
     where the colour actually lands, at hue plus offset.
   - The screen as a percentage of its level range, as `LCD 22%` does, with
@@ -229,7 +230,7 @@ Configuration
     board's flash. The triangle option keeps `<` for that reason.
 - **Fit (counted over all 65 strings, 10-23):**
   - The widest menu row is 16 of 20 columns: "Power" with "Lights out",
-    "Second color" 255, "Effect" Raindrops, "Using the menu" >, "Reset
+    "Second color" 255, "Effect" Alphas/Mods (18 of 20), "Using the menu" >, "Reset
     counters" >.
   - The longest title is "Turn + Click Knob" at 17.
   - The triangle's 19 columns would fit all of these too.
@@ -246,8 +247,14 @@ Configuration
   - "More information", with the GitHub link (a QR code would fit there; see
     `BACKLOG.md`).
 - **Typing works normally while it's open.** Only the knob is captured.
-- **No timeout while a value is being adjusted.** The idle timeout applies to
-  the lists only.
+- **The idle timeout is 24 s,** for lists and text pages. 12 s was too short
+  to read the About page.
+- **No idle timeout while a value is being adjusted.** A 2-minute backstop
+  (proposed in the build plan) cancels an abandoned edit, so it can't keep
+  the board awake.
+- **The effects are the firmware's nine,** named as the `Fn` readout names
+  them: Solid, Alphas/Mods, Cycle All, Cycle L-R, Cycle U-D, Jellybean,
+  Heatmap, Rainfall, Drift.
 - **The small face** (Cozette 6x14), probably. Judge it on the mockup, then
   the panel.
 - **English only.** Localization is out of scope.
