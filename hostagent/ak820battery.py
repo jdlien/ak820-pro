@@ -104,7 +104,7 @@ SLEEP_WAKES = ["none", "key", "backstop", "strays", "blocked", "knob", "charge"]
 SLEEP_V = ["pcf", "acq_done", "usb_sof", "reattach", "usb_20s", "pll_ceiling", "slept", "bound"]   # SLEEP_V_*
 SLEEP_RC = ["input", "clock", "gauge", "radio", "supply", "usb", "display"]   # SLEEP_RC_*
 SLEEP_DSB = ["key", "usb", "tx", "display", "flash", "rtc", "pins", "wdt", "lit", "rgb", "pairing",
-             "recovery", "knob", "charge"]   # DSB_* in sleep.c
+             "recovery", "knob", "charge", "menu"]   # DSB_* in sleep.c
 
 
 def sleep_page(h):
