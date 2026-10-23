@@ -181,7 +181,7 @@ fieldset label:has(input:focus-visible) { outline: 2px solid var(--accent); outl
       <div class="card">
         <h2>Saved on the board</h2>
         <dl class="saved" id="saved"></dl>
-        <p style="margin-top:10px;color:var(--muted);font-size:13px">Turning previews a value straight away. Only a click saves it, which is one flash write. Holding, or closing the menu mid-edit, puts the old value back.</p>
+        <p style="margin-top:10px;color:var(--muted);font-size:13px">Lighting and the screen preview as you turn. Only a click saves, which is one flash write, and holding or closing mid-edit puts the old value back. Power, Clock and Battery don't show while the menu owns the screen, so they apply on the click.</p>
       </div>
       <div class="card">
         <h2>What the panel allows</h2>
@@ -348,10 +348,10 @@ const MENUS = {
     { label: "Lighting", kind: "menu", id: "lighting" },
     { label: "Screen", kind: "range", key: "screen", min: 0, max: 23, step: 1, fmt: scr },
     { label: "Connection", kind: "menu", id: "conn", value: () => CONN[live.conn] },
-    { label: "Power", kind: "choice", key: "power", options: POWER, value: () => POWER_SHORT[live.power] },
+    { label: "Power", kind: "choice", key: "power", options: POWER, preview: false, value: () => POWER_SHORT[live.power] },
     { label: "Indicators", kind: "menu", id: "ind" },
-    { label: "Clock", kind: "choice", key: "clock", options: ["24 hour", "12 hour", "Date", "Off"], value: () => CLOCK[live.clock] },
-    { label: "Battery", kind: "choice", key: "batt", options: ["Percent", "Hours of use"], value: () => BATT[live.batt] },
+    { label: "Clock", kind: "choice", key: "clock", options: ["24 hour", "12 hour", "Date", "Off"], preview: false, value: () => CLOCK[live.clock] },
+    { label: "Battery", kind: "choice", key: "batt", options: ["Percent", "Hours of use"], preview: false, value: () => BATT[live.batt] },
     { label: "Diagnostics", kind: "menu", id: "diag" },
     { label: "Help", kind: "menu", id: "help" },
     { label: "About", kind: "page", id: "about" },
@@ -436,7 +436,8 @@ function turn(dir) {
       live[it.key] = (live[it.key] + dir * (fast ? 12 : 3) + 256) % 256;
     } else if (it.kind === "choice") {
       const n = it.options.length + 1; edit.cursor = (edit.cursor + dir + n) % n;
-      live[it.key] = edit.cursor ? edit.cursor - 1 : edit.before;   // previewed at once; on Back, the old value
+      if (it.preview !== false) live[it.key] = edit.cursor ? edit.cursor - 1 : edit.before;   // previewed at once; on Back, the old value
+      // Power, Clock and Battery don't show while the menu owns the panel: they apply on the click
     }
   } else if (mode === "page" && PAGES[page.id]) {
     const n = PAGES[page.id].lines().length;
@@ -451,7 +452,7 @@ function click() {
   if (mode === "list") enter(items()[menu().cursor]);
   else if (mode === "edit") {
     if (edit.item.kind === "choice" && edit.cursor === 0) { live[edit.item.key] = edit.before; say("Cancelled"); }   // Back
-    else { saved[edit.item.key] = live[edit.item.key]; say("Saved"); }
+    else { if (edit.item.preview === false) live[edit.item.key] = edit.cursor - 1; saved[edit.item.key] = live[edit.item.key]; say("Saved"); }
     mode = "list"; edit = null; renderSaved();
   }
   else if (mode === "page") { if (page.confirm) page = { id: "reset-done", scroll: 0 }; else { mode = "list"; page = null; } }
@@ -674,7 +675,8 @@ function status() {
   const el = document.getElementById("status");
   let s;
   if (!open) s = "Menu closed. Fn + click opens it.";
-  else if (mode === "edit") s = "Editing: no idle timeout, a 3-minute backstop. Click saves, hold cancels.";
+  else if (mode === "edit" && edit.item.preview !== false) s = "Editing: no idle timeout, a 3-minute backstop. Click saves, hold cancels.";
+  else if (mode === "edit") s = "Choosing: it applies on the click. Closes in " + Math.max(0, Math.ceil((IDLE_MS - (now() - lastInput)) / 1000)) + " s if left alone.";
   else if (!started) s = "Closes after 24 s idle (counting starts at your first input).";
   else s = "Closes in " + Math.max(0, Math.ceil((IDLE_MS - (now() - lastInput)) / 1000)) + " s if left alone.";
   if (el.textContent !== s) el.textContent = s;
@@ -785,8 +787,9 @@ window.addEventListener("resize", fit);
 let last = now(), t0 = now(), tick = 0;
 function frame() {
   const t = now(), dt = Math.min(100, t - last); last = t;
-  if (open && started && mode !== "edit" && t - lastInput > IDLE_MS) { close(); dirty = true; }
-  if (open && mode === "edit" && t - lastInput > BACKSTOP_MS) { close(); dirty = true; }   // close() puts the old value back
+  const previewing = mode === "edit" && edit && edit.item.preview !== false;   // committing choices time out like lists
+  if (open && started && !previewing && t - lastInput > IDLE_MS) { close(); dirty = true; }
+  if (open && previewing && t - lastInput > BACKSTOP_MS) { close(); dirty = true; }   // close() puts the old value back
   if (t - tick > 100) { tick = t; dirty = true; if (Math.random() < 0.3) rain[Math.floor(Math.random() * rain.length)] = Math.random() * 256; lightKeys(t - t0); }
   if (dirty) { build(); dirty = false; }
   pump(dt); compose(); status();

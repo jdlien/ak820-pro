@@ -1,0 +1,11 @@
+Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+This is a verification round. plans/CONFIG-MENU-BUILD-PLAN.md is now revision 2 of an implementation plan for an on-screen configuration menu on the AK820 Pro keyboard (QMK on ChibiOS, SN32F299, 32 KB SRAM). Revision 1 was reviewed by you: your findings and the dispositions are in plans/review-codex-config-menu-build-plan-2026-10-23.md (15 findings, all agreed). The design is plans/CONFIG-MENU-PLAN.md and the visual spec plans/config-menu-mockup.html. The firmware is qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/, QMK's core qmk_firmware-ak820pro/quantum/. The plan is about to be handed to another agent to implement, starting with stage S0, so it must be specific enough to build from without guessing.
+
+Please:
+1. For each of the 15 findings, check that revision 2 actually fixes it, against the code. Say fixed, partly fixed or not fixed, and why.
+2. Find new problems the fixes introduce. In particular: capturing the knob in pre_process_record_kb (what get_record_keycode returns there, layer state, combos, encoder events, and whether returning false there has side effects); the edit transaction's hook points (how the board can see VIA's lighting set and save, and the Fn RGB keys handled in QMK's process_rgb_matrix, without editing quantum/ core files, or which core file must change); the panel-owner enum replacing debug_active and display_paused and its migration of every existing use; display_restored(); the visibility override in the PWM path; DSB_MENU; the damage model's RAM; the half-row budget; the shared 512-byte scratch buffer (who else uses each buffer, and reentrancy, for example from ISR context); the flash_stats reply page and the host decoders; kb_eeconfig growing to 10 bytes; the Fn+D unassignment procedure; the Bluetooth select and pairing operation.
+3. Ambiguities: anything an implementer would have to guess, especially for stage S0. List them with the decision you'd recommend.
+4. The stage order and each stage's proof: are they right?
+
+For each finding give a severity (must-fix, should-fix, nit), the file and line in the plan or the code, the concrete failure scenario, and a suggested fix. Say plainly whether the plan is ready to implement S0 as written.
