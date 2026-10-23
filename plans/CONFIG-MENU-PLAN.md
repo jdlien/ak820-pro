@@ -199,6 +199,19 @@ Configuration
   - The screen as a percentage of its level range, as `LCD 22%` does, with
     0 as Off. The indicator levels the same way.
   Hue stays absolute, in degrees.
+- **The Jackrabbit bunny in front of "Configuration"** (JD's idea; in the
+  mockup since version 13):
+  - The splash's bunny as an 11 x 14 RAM tile at x 4 on the top level's
+    title row, then the title from x 17 in 17 columns. "Turn + Click Knob"
+    still fits, ending at x 119.
+  - It's the logo's filled silhouette (its face closed in), grey at the
+    edges, with one dark pixel for the eye and a dark stripe for the inner
+    ear. The outline version didn't read at 14 px: the logo's thin strokes
+    and large face turn into a hollow shape.
+  - 308 bytes as RGB565 in firmware, from `assets-src/bunny-source.png`
+    (public in this repo).
+  - Submenus keep their plain titles.
+  - On the panel: check whether the bezel clips the ears' top row.
 - **"‹ Back" is the first row of every list below the top,** choice lists
   included, so menus are easy to explore and leave.
   - A submenu opens on its first real item, and a choice list on the current

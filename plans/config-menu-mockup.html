@@ -282,6 +282,15 @@ function tri(x, y) {   // the cursor: 4 x 7, yellow, pointing right
 function radio(x, y, c = WHITE) {   // the saved choice: a 5 x 5 dot
   [[1, 3], [0, 5], [0, 5], [0, 5], [1, 3]].forEach(([o, w], j) => fill(x + o, y + j, w, 1, c));
 }
+/* Jackrabbit: the splash's bunny as an 11 x 14 RAM tile for the title row. Its filled
+   silhouette (the logo's face closed in), grey at the edges, one dark pixel for the eye
+   and a dark stripe for the inner ear. From assets-src/bunny-source.png. */
+const BUNNY = "87ccedb0210000000000009128ffffe31400000000005eff28ffff93000000000012f728ffffee0200000000009328ffffff1e000000000011f0ffffff3d0000000000007fffffffad1200000000008bffffffffe33c0000001ffafffffffffff02200008effffffffffffffc9021ef4ffffffffffff00ff82d3ffffffffffffffffffeabfffffffffffffffffff9b0d7fdeffffffffffe04102";
+function drawBunny(x, y) {
+  for (let j = 0; j < 14; j++) for (let i = 0; i < 11; i++) {
+    const v = parseInt(BUNNY.substr((j * 11 + i) * 2, 2), 16); fill(x + i, y + j, 1, 1, [v, v, v]);
+  }
+}
 function hsv(h, s, v) {   // QMK's 0-255 ranges
   h = ((h % 256) + 256) % 256; const hh = h / 256 * 6, i = Math.floor(hh), f = hh - i;
   const S = s / 255, V = v / 255, p = V * (1 - S), q = V * (1 - S * f), t = V * (1 - S * (1 - f));
@@ -455,12 +464,13 @@ function fnClick() { input(); if (open) close(); else openMenu(); renderSaved();
 
 /* ---- Drawing the screens ---- */
 const TITLE_Y = 0, SEP_Y = 14, ROW0 = 15, ROW_H = 14, ROWS = 8, RIGHT = 124;
-function header(title) {
+function header(title, bunny = false) {
   const idle = now() - lastInput;
   let t = title;
   if (flash && now() < flash.until) t = flash.text;
   else if (mode === "list" && idle % 5000 >= 4000) t = "Turn + Click Knob";   // 4 s of title, then 1 s of hint
-  text("f13", t.padEnd(20).slice(0, 20), 4, TITLE_Y);
+  if (bunny) { drawBunny(4, TITLE_Y); text("f13", t.padEnd(17).slice(0, 17), 17, TITLE_Y); }   // the tile, 2 px, then 17 columns
+  else text("f13", t.padEnd(20).slice(0, 20), 4, TITLE_Y);
   fill(4, SEP_Y, 120, 1, GREY);
 }
 function scrollbar(total, top) {
@@ -504,7 +514,7 @@ function valueOf(it) {
 }
 function drawList() {
   const m = menu(), list = items(); keepVisible(m, list.length);
-  header(MENUS[m.id].title);
+  header(MENUS[m.id].title, m.id === "top");
   drawRows(list, m.cursor, m.top, (it, y, i, sel) => {
     if (it.kind === "hue") row(y, it.label, hueText(it.key), sel);   // the number: the panel's colours look nothing like the keys'
     else if (it.kind === "conn") row(y, " " + it.label, "", sel, (c, x0) => { if (live.conn === it.slot) radio(x0, y + 4, c); });   // the saved one's dot in front
