@@ -1,13 +1,14 @@
 /* Host test of the configuration menu's S0 foundations: the owner, session and
  * restore (menu/panel_owner.c), the knob's capture and op 27's single flight
- * (menu/menu_input.c), the damage model (menu/menu_slots.c) and the fixture
- * (menu/menu_fixture.c), against a fake framebuffer. These are the firmware's
+ * (menu/menu_input.c), the damage model (menu/menu_slots.c), the fixture
+ * (menu/menu_fixture.c), and the task, op 27 and the menu's side of an owner
+ * event (menu/menu_ops.c), against a fake framebuffer and environment. These are the firmware's
  * own files: plans/CONFIG-MENU-BUILD-PLAN.md, "S0". Build and run:
  *
  *   D=qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro
- *   gcc -std=c11 -Wall -Wextra -I $D/menu scripts/menu_s0_test.c \
+ *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/menu_s0_test.c \
  *       $D/menu/panel_owner.c $D/menu/menu_input.c $D/menu/menu_slots.c \
- *       $D/menu/menu_fixture.c -o ms0 && ./ms0
+ *       $D/menu/menu_fixture.c $D/menu/menu_ops.c -o ms0 && ./ms0
  *
  * (On Windows, mingw64's gcc first on PATH: CLAUDE.md.) */
 #include <stdio.h>
@@ -18,6 +19,8 @@
 #include "menu_input.h"
 #include "menu_slots.h"
 #include "panel_owner.h"
+#include "menu_env.h"
+#include "menu_ops.h"
 
 static int fails;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d %s\n", __FILE__, __LINE__, #c); fails++; } } while (0)
@@ -109,8 +112,11 @@ static uint16_t expect_f1(uint16_t x, uint16_t y, uint8_t pat, uint8_t row) {
         if (x >= 4 && x < 4 + 9 * MB_GLYPH_W) return glyph_color(fx_title(pat)[(x - 4) / MB_GLYPH_W]);
         return 0;
     }
-    if (y == 14) return (x >= 4 && x <= 123) ? FX_SEP_COLOR : 0;
-    if (x >= 125) return (x <= 126 && y < 15 + FX_THUMB_H) ? FX_THUMB_COLOR : 0;
+    if (y == 14) return (x >= 4 && x <= 123) ? fx_sep_colors[pat] : 0;
+    if (x >= 125) {   /* C8's scrollbar: x 125, y 15-126 */
+        if (x != 125 || y > 126) return 0;
+        return y < 15 + FX_THUMB_H ? fx_thumb_colors[pat] : fx_track_colors[pat];
+    }
     if (x < 3 || y >= 15 + 8 * 14) return 0;
     uint8_t r = (uint8_t)((y - 15) / 14), half = x <= 63 ? 0 : 1;
     if (r == row) half = (uint8_t)(1 - half);
@@ -500,6 +506,7 @@ static void test_fixture_paint(void) {
         while (!ms_stopped() && guard++ < 200) pass();
         CHECK(ms_stopped() && ms_ops() == n);
         CHECK(!ms_settled());
+        ms_stop_release();   /* as op 27's next sub 0 does */
         fx_set_pattern(0);
         CHECK(run_until_settled(200) > 0);
         CHECK(f1_mismatches(0, 0) == 0);
@@ -559,12 +566,226 @@ static void test_fixture_paint(void) {
     CHECK(!fx_set_pattern(1));
 }
 
+/* --- menu_ops.c through a fake environment -------------------------------------
+ * The production task, op 27 and menu-side actions, with menu_env.h faked:
+ * env_po_event runs po_event and then applies its actions as display.c's
+ * po_apply does -- the display's own (buffers, overlays) are no-ops here, the
+ * menu's side is the production menu_ops_apply(). */
+static uint32_t fk_now;
+static bool     fk_wake_notice, fk_wake_held;
+
+uint16_t env_po_event(po_event_t ev) {
+    uint16_t a = po_event(ev, fk_wake_held, fk_now);
+    if (a & PO_ACT_REFUSED) return a;
+    bool dropped = false;
+    if (a & PO_ACT_QUIESCE_DROP) {
+        dma_settle();
+        dropped = take_lost();
+    }
+    menu_ops_apply(a, dropped, fk_now);
+    return a;
+}
+void    env_lost_inject(void) { lost_latched = true; }
+bool    env_wake_notice_take(void) { bool n = fk_wake_notice; fk_wake_notice = false; return n; }
+bool    env_wake_held(void) { return fk_wake_held; }
+bool    env_batt_dirty(void) { return false; }
+bool    env_logo_stale(void) { return false; }
+uint8_t env_queue_depths(void) { return 0; }
+
+/* One main-loop pass as housekeeping_task_kb runs it: the task, then the pump
+ * (its loss taken at the top, then the owner's operation). */
+static void fw_pass(uint32_t dt) {
+    fk_now += dt;
+    menu_ops_task(fk_now);
+    dma_settle();
+    if (take_lost()) {
+        uint16_t a = po_loss(fk_now);
+        menu_note_loss();
+        if (a & PO_ACT_RESET_BUFFERS) menu_screen_invalidate();
+    }
+    if (po_owner() == PANEL_MENU) menu_pump();
+}
+
+static uint8_t rpt[32];
+static uint8_t op27(uint8_t sub, int a0, int a1) {
+    memset(rpt, 0, sizeof rpt);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = sub;
+    rpt[5] = (uint8_t)a0; rpt[6] = (uint8_t)a1;
+    if (!menu_ops_op27(rpt, fk_now)) return 0xFF;
+    return rpt[5];   /* the status; rpt[6] the seq */
+}
+static mi_state_t wait_terminal(uint8_t seq, int max_passes) {
+    for (int i = 0; i < max_passes; i++) {
+        if (mi_last_seq() == seq && mi_last_state() != MI_ST_PENDING) return mi_last_state();
+        fw_pass(5);
+    }
+    return MI_ST_PENDING;
+}
+static void fw_reset(void) {
+    fake_reset();
+    po_init();
+    mi_init();
+    ms_init();
+    fk_now = 1000;
+    fk_wake_notice = fk_wake_held = false;
+    po_event(PO_EV_STARTUP, false, 0);
+    while (po_phase() != RESTORE_RESIDUAL) po_restore_advance();
+    po_residual_in_t in = {0};
+    po_residual_next(&in, 0);
+}
+static void open_fixture(void) {
+    CHECK(op27(4, 0, 0) == MI_OK && mi_last_state() == MI_ST_DONE);
+    CHECK(po_owner() == PANEL_MENU && fx_screen() == FX_SCREEN_F1);
+    for (int i = 0; i < 300 && !(ms_settled() && !mb_busy()); i++) fw_pass(5);
+    CHECK(ms_settled());
+}
+
+static void test_ops(void) {
+    uint8_t seq;
+
+    /* Framing and validation: an unknown sub is unhandled; the states a sub
+     * can't take answer 2 and leave nothing outstanding. */
+    fw_reset();
+    CHECK(op27(9, 0, 0) == 0xFF);
+    CHECK(op27(1, 1, 0) == MI_BAD && mi_outstanding() == MI_KIND_NONE);   /* no session */
+    CHECK(op27(0, 0, 0) == MI_BAD);
+    CHECK(op27(6, 2, 0) == MI_BAD);
+    CHECK(op27(5, 0, 0) == MI_OK && rpt[8] == PANEL_DASH && rpt[9] == SESSION_NONE && rpt[12] == RESTORE_DONE);
+    open_fixture();
+    CHECK(op27(1, 0, 0) == MI_BAD && op27(1, 17, 0) == MI_BAD && op27(1, (uint8_t)-17, 0) == MI_BAD);
+    CHECK(op27(3, 10, 0) == MI_BAD && op27(3, 0x89, 0x13) == MI_BAD);   /* 49 ms, 5001 ms */
+    CHECK(op27(0, 0, 3) == MI_BAD && op27(0, 4, 0) == MI_BAD && op27(0, 2, 0) == MI_BAD && op27(0, 2, 27) == MI_BAD);
+
+    /* Single flight: a second mutation is busy and leaves the first alone. */
+    CHECK(op27(2, 0, 0) == MI_OK);
+    seq = rpt[6];
+    CHECK(op27(1, 1, 0) == MI_BUSY && rpt[6] == 0 && mi_last_seq() == seq);
+    CHECK(wait_terminal(seq, 5) == MI_ST_DONE);
+    CHECK(fx_pattern() == 1);   /* row 0's click toggled */
+
+    /* Finding 1: synthetic +1 cancelled to a net zero by a physical -1 still ends. */
+    CHECK(op27(1, 1, 0) == MI_OK);
+    seq = rpt[6];
+    CHECK(menu_physical(MI_CCW, true, false, fk_now) == false);
+    CHECK(menu_physical(MI_CCW, false, false, fk_now) == false);
+    CHECK(wait_terminal(seq, 3) == MI_ST_DONE && fx_cursor() == 0);
+    /* ... and a synthetic click discarded by a physical close is superseded. */
+    CHECK(op27(2, 0, 0) == MI_OK);
+    seq = rpt[6];
+    menu_physical(MI_KNOB, true, true, fk_now);    /* Fn plus a click: close */
+    CHECK(wait_terminal(seq, 3) == MI_ST_SUPERSEDED);
+    CHECK(po_session() == SESSION_NONE);
+    menu_physical(MI_KNOB, false, false, fk_now);
+    CHECK(mi_capture_bits() == 0);
+
+    /* The hold, through the production task: Back at 600 ms closes the
+     * fixture, and the close cancels the hold before its 650 ms release. */
+    open_fixture();
+    CHECK(op27(3, 0, 0) == MI_OK);
+    seq = rpt[6];
+    CHECK(wait_terminal(seq, 200) == MI_ST_CANCELLED && po_session() == SESSION_NONE);
+    /* A 300 ms hold is a click, done after its release. */
+    open_fixture();
+    CHECK(op27(3, 0x2C, 0x01) == MI_OK);
+    seq = rpt[6];
+    CHECK(wait_terminal(seq, 200) == MI_ST_DONE && po_session() == SESSION_OPEN && fx_pattern() == 1);
+
+    /* Finding 2: a pending stop disposed of by physical navigation ends
+     * superseded; a reached stop holds through navigation until the next sub 0. */
+    CHECK(op27(0, 0, 0) == MI_OK);
+    for (int i = 0; i < 300 && !ms_settled(); i++) fw_pass(5);
+    CHECK(op27(0, 2, 20) == MI_OK);
+    seq = rpt[6];
+    fw_pass(5);
+    menu_physical(MI_CW, true, false, fk_now);
+    menu_physical(MI_CW, false, false, fk_now);
+    CHECK(wait_terminal(seq, 10) == MI_ST_SUPERSEDED && !ms_stopped());
+    CHECK(op27(0, 0, 0) == MI_OK);
+    for (int i = 0; i < 300 && !ms_settled(); i++) fw_pass(5);
+    CHECK(op27(0, 2, 5) == MI_OK);
+    seq = rpt[6];
+    CHECK(wait_terminal(seq, 100) == MI_ST_DONE && ms_stopped() && ms_ops() == 5);
+    menu_physical(MI_CW, true, false, fk_now);
+    menu_physical(MI_CW, false, false, fk_now);
+    for (int i = 0; i < 10; i++) fw_pass(5);
+    CHECK(ms_stopped());                       /* held */
+    CHECK(op27(0, 0, 0) == MI_OK && !ms_stopped());
+    CHECK(op27(5, 0, 0) == MI_OK && rpt[30] == 0);
+
+    /* Finding 8: an armed glyph isn't a completed operation until it ends. */
+    for (int i = 0; i < 300 && !ms_settled(); i++) fw_pass(5);
+    fx_set_pattern(1);
+    while (!mb_busy()) { CHECK(ms_step() != MS_STEP_IDLE); }   /* the title's first glyph arms */
+    CHECK(ms_ops() == 0);
+    dma_settle();
+    CHECK(ms_ops() == 1);
+
+    /* Finding 7: navigation during a layout's clear doesn't restart it. */
+    for (int i = 0; i < 300 && !ms_settled(); i++) fw_pass(5);
+    bands_ok = 0;
+    fx_other_layout();          /* F1 to F2 */
+    pass(); pass();
+    CHECK(bands_ok == 2 && ms_clearing());
+    fx_other_layout();          /* back to F1 mid-clear */
+    for (int i = 0; i < 300 && ms_clearing(); i++) pass();
+    CHECK(bands_ok == MB_BANDS);   /* 8 bands in all, not 2 + 8 */
+
+    /* Sub 7 under MENU: installed as WAITING, done at once. */
+    CHECK(op27(7, 0, 0) == MI_OK && mi_last_state() == MI_ST_DONE && po_phase() == RESTORE_WAITING);
+    /* Sub 8, taken by the MENU handler: done, counted, everything repainted. */
+    for (int i = 0; i < 300 && !ms_settled(); i++) fw_pass(5);
+    CHECK(op27(8, 0, 0) == MI_OK);
+    seq = rpt[6];
+    CHECK(wait_terminal(seq, 3) == MI_ST_DONE && ms_unsettled() > 0);
+    CHECK(op27(5, 0, 0) == MI_OK && rpt[22] == 1);
+    /* Sub 8 dropped at an ownership change: superseded. */
+    CHECK(op27(8, 0, 0) == MI_OK);
+    seq = rpt[6];
+    env_po_event(PO_EV_DIAG_HEALTH);   /* the click to Diagnostics, before the pump took it */
+    CHECK(mi_last_seq() == seq && mi_last_state() == MI_ST_SUPERSEDED && !mb_lost_pending());
+    CHECK(po_owner() == PANEL_DEBUG);
+    fw_pass(5);
+    /* A click under DEBUG returns to the fixture at Diagnostics' row. */
+    CHECK(op27(2, 0, 0) == MI_OK);
+    seq = rpt[6];
+    CHECK(wait_terminal(seq, 3) == MI_ST_DONE && po_owner() == PANEL_MENU && fx_cursor() == FX_ROW_DIAG);
+
+    /* Disarming closes a session; arming lets the physical opener in. */
+    CHECK(op27(6, 1, 0) == MI_OK && menu_enabled());
+    CHECK(op27(6, 0, 0) == MI_OK && po_session() == SESSION_NONE && !menu_enabled());
+    CHECK(menu_physical(MI_KNOB, true, true, fk_now) == true);    /* not armed: forwarded */
+    CHECK(menu_physical(MI_KNOB, false, true, fk_now) == true);
+    op27(6, 1, 0);
+    CHECK(menu_physical(MI_KNOB, true, true, fk_now) == false && po_session() == SESSION_OPEN);
+    op27(6, 0, 0);   /* disarm while open: closed, the release still owed */
+    CHECK(po_session() == SESSION_NONE && mi_capture_bits() == 1u);
+    CHECK(menu_physical(MI_KNOB, false, false, fk_now) == false && mi_capture_bits() == 0);
+
+    /* The pending opening: under the wake hold, then opened by the notice. */
+    op27(6, 1, 0);
+    fk_wake_held = true;
+    CHECK(menu_physical(MI_KNOB, true, true, fk_now) == false && po_session() == SESSION_PENDING);
+    menu_physical(MI_KNOB, false, false, fk_now);
+    fk_wake_held = false;
+    fk_wake_notice = true;
+    fw_pass(5);
+    CHECK(po_session() == SESSION_OPEN && po_owner() == PANEL_MENU);
+
+    /* The 24 s idle timeout, from the last knob input. */
+    fw_pass(MI_IDLE_MS - 10);
+    CHECK(po_session() == SESSION_OPEN);
+    fw_pass(20);
+    CHECK(po_session() == SESSION_NONE);
+    CHECK(po_invariant_fail() == 0);
+}
+
 int main(void) {
     test_transitions();
     test_restore_residual_and_loss();
     test_input();
     test_op27_flight();
     test_fixture_paint();
+    test_ops();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

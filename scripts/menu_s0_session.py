@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """The configuration menu's S0 workload (plans/CONFIG-MENU-BUILD-PLAN.md, S0's
 proof): a fixed 50-step array of op 27 mutations, run ten times, each sent when
-the last is terminal, polling sub 5 every 20 ms. It records every outcome and
-every transition seen, and the stall counters before and after, with no reset
-inside the measured span. Dev builds only (HC_DEVHOOK).
+the last is terminal, polling sub 5 every 20 ms; then the dashboard for five
+minutes, which should have a track playing. It records every outcome and every
+transition seen while polling, and the stall counters before and after, with no
+reset inside the measured span. It fails on a step's unexpected outcome or
+state, a timeout, an invariant failure, a final state other than the dashboard
+restored, or any pass of 25 ms or more. Dev builds only (HC_DEVHOOK).
 
-    venv-win/Scripts/python.exe scripts/menu_s0_session.py [--repeats N] [--out results.json] < /dev/null
+    venv-win/Scripts/python.exe scripts/menu_s0_session.py [--repeats N] [--dashboard-s S] [--out F] < /dev/null
 
 Also the op 27 codec the S0 tests use: `read_state`, `mutate`, `wait`.
 Never enumerates HID on Windows (ak820health.open_device)."""
@@ -71,16 +74,37 @@ def mutate(h, sub, args=b""):
     return r[5], r[6]
 
 
-def wait(h, seq, timeout=5.0, poll=0.02):
+WATCHED = ("owner", "session", "screen", "cursor", "phase", "restore_gen")
+
+
+def wait(h, seq, timeout=5.0, poll=0.02, seen=None):
     """Until the outstanding mutation `seq` is terminal; its state, and the
-    board's state as last read."""
+    board's state as last read. Every change of the watched fields seen while
+    polling is appended to `seen`."""
     end = time.monotonic() + timeout
+    last = None
     while True:
         s = read_state(h)
+        snap = tuple(s[k] for k in WATCHED)
+        if seen is not None and snap != last:
+            seen.append(dict(zip(WATCHED, snap)))
+            last = snap
         if s["last_seq"] == seq and STATES.index(s["last_state"]) in TERMINAL:
             return s["last_state"], s
         if time.monotonic() > end:
             return "timeout", s
+        time.sleep(poll)
+
+
+def wait_restored(h, timeout=10.0, poll=0.02):
+    """Until the dashboard's restore is DONE under the dashboard, no session."""
+    end = time.monotonic() + timeout
+    while True:
+        s = read_state(h)
+        if s["owner"] == "dash" and s["session"] == "none" and s["phase"] == "done":
+            return True, s
+        if time.monotonic() > end:
+            return False, s
         time.sleep(poll)
 
 
@@ -121,6 +145,10 @@ STEPS = [
     ("turns", 3, ("menu", F1, 3)), ("turns", -3, ("menu", F1, 0)),
 ]
 assert len(STEPS) == 50
+# The outcomes a step may end with. A 650 ms hold latches Back at 600 ms, which
+# closes the fixture, and the close cancels the hold before its release: a
+# legitimate terminal outcome (codex's S0 code review).
+ALLOWED = {"hold": {"done", "cancelled"}}
 _mix = [k for k, _, _ in STEPS]
 assert (_mix.count("turns"), _mix.count("click"), _mix.count("hold"), _mix.count("fn"),
         _mix.count("restore"), _mix.count("loss")) == (28, 10, 4, 4, 2, 2)
@@ -142,6 +170,19 @@ def send(h, kind, arg):
     raise ValueError(kind)
 
 
+def media_text():
+    """The daemon's now-playing line (its status file), to record whether a
+    track was playing through the dashboard interval."""
+    path = os.path.join(os.environ.get("LOCALAPPDATA", ""), "ak820pro", "ak820-agent.status")
+    try:
+        for line in open(path, encoding="utf-8", errors="replace"):
+            if line.startswith("media_last_text"):
+                return line.split(None, 1)[1].strip() if len(line.split(None, 1)) > 1 else ""
+    except OSError:
+        return None
+    return None
+
+
 def health_json():
     py = sys.executable
     tool = os.path.join(os.path.dirname(__file__), "..", "hostagent", "ak820health.py")
@@ -153,62 +194,95 @@ def health_json():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repeats", type=int, default=10)
+    ap.add_argument("--dashboard-s", type=int, default=300, help="the dashboard interval after the steps")
     ap.add_argument("--out", default="menu_s0_session.json")
     a = ap.parse_args()
 
+    failures = []
     before = health_json()
+    media_before = media_text()
     h = open_device()
-    log, mismatches, outcomes = [], 0, {}
+    log, outcomes = [], {}
     t0 = time.monotonic()
     try:
         s = read_state(h)
         if s["session"] != "none":
             st, seq = mutate(h, 4)   # close whatever is open
             wait(h, seq)
+        ok, s = wait_restored(h)
+        if not ok:
+            sys.exit(f"the dashboard isn't restored to start from: {s}")
         st, seq = mutate(h, 4)       # open the fixture
         state, s = wait(h, seq)
-        if (s["owner"], s["screen"], s["cursor"]) != ("menu", F1, 0):
-            sys.exit(f"the fixture didn't open: {s}")
+        if st != OK or state != "done" or (s["owner"], s["screen"], s["cursor"]) != ("menu", F1, 0):
+            sys.exit(f"the fixture didn't open ({st}, {state}): {s}")
         for rep in range(a.repeats):
             for i, (kind, arg, want) in enumerate(STEPS):
                 st, seq = send(h, kind, arg)
                 if st != OK:
+                    failures.append(f"rep {rep} step {i} {kind}: status {st}")
                     log.append({"rep": rep, "step": i, "kind": kind, "status": st})
-                    mismatches += 1
                     continue
-                state, s = wait(h, seq)
+                seen = []
+                state, s = wait(h, seq, seen=seen)
                 outcomes[state] = outcomes.get(state, 0) + 1
-                seen = (s["owner"], s["screen"], s["cursor"])
-                ok = all(w is None or w == g for w, g in zip(want, seen))
-                if not ok:
-                    mismatches += 1
+                got = (s["owner"], s["screen"], s["cursor"])
+                ok_state = all(w is None or w == g for w, g in zip(want, got))
+                ok_outcome = state in ALLOWED.get(kind, {"done"})
+                if not ok_state:
+                    failures.append(f"rep {rep} step {i} {kind}: {got}, want {want}")
+                if not ok_outcome:
+                    failures.append(f"rep {rep} step {i} {kind}: outcome {state}")
                 log.append({"rep": rep, "step": i, "kind": kind, "arg": arg, "state": state,
-                            "seen": seen, "want": want, "ok": ok, "phase": s["phase"],
-                            "gen": s["restore_gen"], "invariant_fail": s["invariant_fail"],
+                            "got": got, "want": want, "ok": ok_state and ok_outcome,
+                            "seen": seen, "invariant_fail": s["invariant_fail"],
                             "dropped": s["dropped"], "losses": s["losses"]})
         st, seq = mutate(h, 4)       # the last returns to the dashboard
-        wait(h, seq)
+        state, s = wait(h, seq)
+        if st != OK or state != "done":
+            failures.append(f"the final close: status {st}, outcome {state}")
+        ok, final = wait_restored(h)
+        if not ok:
+            failures.append(f"the dashboard wasn't restored after the close: {final}")
+        steps_s = time.monotonic() - t0
+        # The dashboard interval, inside the measured span: no counter reset.
+        print(f"steps done in {steps_s:.0f} s; the dashboard for {a.dashboard_s} s ...", flush=True)
+        time.sleep(a.dashboard_s)
         final = read_state(h)
     finally:
         h.close()
     elapsed = time.monotonic() - t0
     after = health_json()
+    media_after = media_text()
+    ge25 = [before.get("count_ge_25ms"), after.get("count_ge_25ms")]
+    if None in ge25 or ge25[1] - ge25[0] > 0:
+        failures.append(f"passes of 25 ms or more: {ge25}")
+    if final["invariant_fail"]:
+        failures.append(f"invariant_fail {final['invariant_fail']:#x}")
+    if (final["owner"], final["session"], final["phase"]) != ("dash", "none", "done"):
+        failures.append(f"the final state: {final['owner']}/{final['session']}/{final['phase']}")
     result = {
-        "repeats": a.repeats, "elapsed_s": round(elapsed, 1), "mismatches": mismatches,
-        "outcomes": outcomes, "final": final,
+        "repeats": a.repeats, "dashboard_s": a.dashboard_s, "elapsed_s": round(elapsed, 1),
+        "failures": failures, "outcomes": outcomes, "final": final,
+        "media": [media_before, media_after],
         "count_ge_10ms": [before.get("count_ge_10ms"), after.get("count_ge_10ms")],
-        "count_ge_25ms": [before.get("count_ge_25ms"), after.get("count_ge_25ms")],
+        "count_ge_25ms": ge25,
         "loop_gap_max_ms": after.get("loop_gap_max_ms"),
         "acct_after": after.get("acct"),
         "log": log,
     }
     with open(a.out, "w") as f:
         json.dump(result, f, indent=1)
-    print(f"{a.repeats} x 50 steps in {elapsed:.0f} s: {mismatches} mismatches, outcomes {outcomes}")
-    print(f"ge10 {before.get('count_ge_10ms')} -> {after.get('count_ge_10ms')}, "
-          f"ge25 {before.get('count_ge_25ms')} -> {after.get('count_ge_25ms')}, "
-          f"invariant_fail {final['invariant_fail']:#x}, final {final['owner']}/{final['session']}/{final['phase']}")
-    return 1 if mismatches or final["invariant_fail"] else 0
+    print(f"{a.repeats} x 50 steps, then {a.dashboard_s} s of the dashboard: {len(failures)} failures, "
+          f"outcomes {outcomes}")
+    print(f"ge10 {result['count_ge_10ms']}, ge25 {ge25}, invariant_fail {final['invariant_fail']:#x}, "
+          f"final {final['owner']}/{final['session']}/{final['phase']}")
+    print(f"media: {media_before!r} -> {media_after!r}")
+    if not (media_before or "").startswith("play"):
+        print("note: no track was playing at the start; S0's workload wants one")
+    for f in failures[:20]:
+        print("FAIL", f)
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
