@@ -182,6 +182,21 @@ Configuration
 - **In a list where one option is saved** (Power, Clock, Battery, Effect,
   Lights, the Bluetooth slots), the saved one's dot goes in front: the
   options start one column in, and the dot fills that column.
+- **"‹ Back" is the first row of every list below the top,** choice lists
+  included, so menus are easy to explore and leave.
+  - A submenu opens on its first real item, and a choice list on the current
+    value, so Back is one detent up and is never clicked by accident.
+  - In a choice list, Back puts the old value back, as a long press does.
+- **Symbols:**
+  - The dot is Cozette's own bullet (U+2022), the same 5 x 5 pixels as the
+    drawn shape. Today it's drawn, as the triangle is, because the atlas in
+    flash holds only the 95 ASCII glyphs.
+  - `‹` (U+2039), `›`, `▸` and `✓` exist in `assets-src/cozette.bdf` too.
+  - With the 1-bit font path, adding them is trivial: the table is
+    generated into the firmware from the BDF, as `mkbdfatlas.py` places the
+    ASCII.
+  - Without it, a new glyph means a new atlas and re-provisioning every
+    board's flash. The triangle option keeps `<` for that reason.
 - **Fit (counted over all 65 strings, 10-23):**
   - The widest menu row is 16 of 20 columns: "Power" with "Lights out",
     "Second color" 255, "Effect" Raindrops, "Using the menu" >, "Reset
