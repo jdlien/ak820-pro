@@ -64,6 +64,62 @@ the fix, all exactly 10 ms:
 - The `battery` scope in both is the 64-bit time math (below, "64-bit time
   math on every main-loop pass").
 
+## The keyboard as an agent pager: an attention key (2026-10-22) -- idea, the one JD found most worth doing
+
+**The idea.** JD runs several Claude sessions a day, and they wait for him
+unnoticed. Claude Code's hooks (a session needs input, or has finished) call
+`ak820 notify`. The daemon sends it to the board, where one key turns amber
+over the lighting and the text slot says `2 waiting: ak820-pro, webapps`.
+Pressing that key brings up the waiting session. On an all-white board one
+amber key is hard to miss. A notice that lands while the board sleeps shows
+on the next wake.
+
+**Prior art: quill4gen7's `notify` branch** (credited in the README). It has
+notifications on the LCD, a Claude Code hook, and answers from the keyboard.
+- **The answers:** allow, deny, cancel and options 1-4, sent as unbound
+  "application launch" consumer usages, each after a marker naming the
+  question.
+- **The transports:** Linux only, over the dongle and the cable. The lock
+  lights carry data in, and the consumer usages carry answers out, both
+  plain HID, so it is portable in principle. Bluetooth is untested.
+- **What we have that it lacked:** macOS and Windows hosts for the lock
+  lights over BLE, the dongle's raw-HID relay, and the daemon on both.
+- Its details are in "Community", quill4gen7, items 1-2 below.
+
+**The paths, by connection:**
+
+| Connection | Host to board | Board to host |
+|---|---|---|
+| USB | raw HID | raw HID |
+| 2.4G | raw HID over the dongle, ~26 ms | the same |
+| Bluetooth | the lock-light channel (P3 on the Mac, P0 on Windows) | a key the daemon watches for, as the F19 listener does (Input Monitoring) |
+
+**What it takes, a few days:**
+- **Firmware:** a lock-light frame type for notices, and an overlay that
+  lights one key over any effect.
+- **Daemon:** a `notify` command, and a local way for hooks to reach it.
+  macOS raw HID is exclusive, so it goes through the daemon, never the
+  Python tools.
+- **The hooks.**
+- **To check first:** raising the right terminal tab depends on the
+  terminal app.
+- **Power:** one lit key is small against JD's lighting.
+
+**Open questions:**
+- Approve from the keyboard? The screen shows ~30 characters, so a prompt is
+  approved from one line (`Bash: git push`). Treat "take me there" as the
+  main action, and allow-from-the-keyboard as JD's call, for low-stakes
+  prompts at most.
+- The same overlay makes cheap follow-ons:
+  - a CI light from `gh`;
+  - the next meeting on the clock band (needs calendar consent on the Mac);
+  - knob modes labelled on the screen.
+
+**Linux:** a fourth daemon backend: hidraw found through sysfs (no
+enumeration), the lock lights through sysfs, the clock as elsewhere,
+now-playing through MPRIS (a D-Bus dependency, or `playerctl`). quill4gen7
+already wrote that Linux side. Asking them is JD's call.
+
 ## "Battery low" with the hours left (2026-10-22) -- planned, with the flash after the drain
 
 The time-left estimate is already shown in three places:

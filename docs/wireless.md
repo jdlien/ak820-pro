@@ -191,6 +191,19 @@ the channel built on it is
   write (`0xe00002e2`).
 - UART overruns rose by a few during long bursts: harmless with three copies.
 
+**What each host sends** (`plans/LOCK-LED-CHANNEL-PLAN.md`, "Profiles"). A write
+flips any non-empty subset of a profile's data bits, and the board reads the
+subset as one digit, so n bits give base 2^n - 1 (quill4gen7's design sent
+1 bit a write):
+
+| Host | Profile | Data bits | Bits a write | Why |
+|---|---|---|---|---|
+| macOS | P3 | 3-7 (Compose, Kana and the three padding bits) | ~4.8, ~155 bit/s at 32 writes/s | `IOHIDDeviceSetReport` sends the whole byte, and the module passes the padding. No visible light moves |
+| Windows | P0 | Num, Scroll | ~1.6, ~51 bit/s over BLE | `IOCTL_KEYBOARD_SET_INDICATORS` has no padding bits, and Kana is refused (`HIDP_STATUS_USAGE_NOT_FOUND`). Over the dongle it takes ~125 changes/s, ~200 bit/s |
+
+The channel is for Bluetooth. Over 2.4G the daemon uses the dongle's raw-HID
+relay (`plans/RAWHID-24G-PLAN.md`), two-way at a median 26 ms.
+
 ## The GATT services over BLE (read 2026-10-19)
 
 Is there a vendor channel over BLE, as the dongle's `81`/`91` frames are over

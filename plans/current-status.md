@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-22, 18:30. The block below is where things stand, written to
+Updated 2026-10-23, 10:20. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -71,11 +71,30 @@ the RGB cut, likely a few days.
   - **At 18:19, 711 mAh since FULL** (17.7% of 4011). The board read
     81.6%, from 2888.7 mWh counted since FULL, and 5 deep sleeps since
     boot, every one woken by a key, 0 strays. `count_ge_25ms` still 6.
+- **The night of 10-22/23 slept:** 21:34:47 to 10:07:27, 12.5 h at 3.09 mA,
+  38.8 mAh, against 285.5 mAh for the awake night before.
+- **Read at 10:16 10-23** (data on 10:16:54-10:16:59, the board awake, no
+  key needed):
+  - 890 mAh since FULL (22.2%). The board read 76.9% from 3618.5 mWh counted
+    since FULL. That's 9 deep sleeps since boot, the last woken by a key,
+    and 0 strays.
+  - ⚠️ **`count_ge_25ms` 7, one more since 18:20 10-22** (non-flash, worst
+    still 29 ms `blit`), across 4 deep sleeps. The ring had already cycled
+    past it, and HC_ACCT's `long_passes` counts only passes long enough to
+    wrap its scopes, so nothing names it. Maybe the known 26-28 ms wake
+    blit. Unexplained.
+  - ⚠️ **The lighting reads low:** `led drive 6.8%` with the stage active.
+    The 84 min at ~32 mA from 20:10 10-22 came with typing (9,616 key presses
+    since 18:20), so the brightness probably came down around 20:10. Ask JD:
+    it changes what "JD's settings" means for this drain from there on.
+  - `count_ge_10ms` ran 0.32 an awake second at 215 passes a second (still
+    `36afff30e8`).
 - **The night of 10-22/23** is the asleep night to set against 10-21/22's
   awake one.
 - **Reads go over the data alone:** port 2 on, relay 2 still off. Cut the
   data again after, or the board cannot sleep. The reads so far, on 10-22:
-  14:56:38-14:58:02, 15:06:26-15:06:31 and 18:19:48-18:19:58. The board
+  14:56:38-14:58:02, 15:06:26-15:06:31, 18:19:48-18:19:58, and on 10-23
+  10:16:54-10:16:59. The board
   was asleep for the last, and the data can't wake it: relay 1 tapped the
   rig's F19 first (18:19:41, the Mac locked, so nothing typed), which
   costs ~17 mAh of ladder before it sleeps again.
@@ -146,16 +165,34 @@ on the pack and ~1.1 awake and dark with the data on.
 ### After the drain
 
 1. Dump the RAM battery log, then charge to FULL.
-2. Flash the mainline (`b9555ff3e6`: the slow-pass fix, `ce229f87c6`), plus the hours left in the
-   "Battery low" alert if the drain shows the estimate right near the
-   bottom (`BACKLOG.md`). Proposed, JD's call: build it as
+2. Flash the mainline (`b9555ff3e6`: the slow-pass fix, `ce229f87c6`).
+   Candidates for the same flash, each through codex (`BACKLOG.md`):
+   - the hours left in the "Battery low" alert, if the drain shows the
+     estimate right near the bottom;
+   - the long-sleep wake's time left as ~5 s of the whole battery row, at
+     any level, in hours (`143h of use`); the camera page's `4d` to hours
+     too. Proposed, JD's call: build it as
    `daily`, the build releases ship, so the soak runs what owners get. A daily build has
    no bootloader jump, so later flashes need `Fn`+`Esc`.
 3. Strip the bench (the relay wires, the logger), and JD puts the foam and
    silicone back.
 4. The soak is JD's daily use. Read the counters over a cable now and then.
-5. Polish and release for other owners: a tag, and the Mac build (not
-   published; Phase 6 stops before Apple).
+5. Polish and release for other owners (JD, 10-22):
+   - minor polish, and cleaning up the repo;
+   - a tag and its firmware;
+   - the Mac and Windows agents released separately, each with a proper
+     installer. The Mac build is not published yet: Phase 6 stops before
+     Apple's notarization.
+
+### Bigger ideas (10-22), after or beside the release
+
+**The keyboard as an agent pager** (`BACKLOG.md`, "The keyboard as an agent
+pager"). Claude Code's hooks light one key amber and name the waiting
+sessions on the screen, and the key takes you to them. It is quill4gen7's
+`notify` idea on our transports. JD found it more useful than now-playing.
+Not planned yet: write the plan first, after reading quill4gen7's
+`docs/notify.md` and hook. quill4gen7 is now credited in the README,
+`docs/wireless.md` and `lockchan.c`.
 
 ### Open, none of them blocking
 

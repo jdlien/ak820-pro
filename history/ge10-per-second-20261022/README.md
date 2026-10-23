@@ -89,3 +89,11 @@ a second to 0.016, and no slow pass carries the edge with the pump
 - The loop ran 215 passes a second (4.65 ms a pass), the same as gremlin's on USB (214), against 189.5 averaged before.
 - `count_ge_25ms` still 6; `loop_gap_max` 29 ms.
 - So the slow loop and ~1 a second belong to the earlier stretch, most of it the night awake and dark with the data on (`../../docs/test-bench.md`, "Data-only never deep-sleeps"). 14:56-18:19 was mostly lit typing on the pack. Which condition made the loop slower is not pinned: the RGB off, or the live USB with the daemon's traffic. The fix still takes the pump off the edge's pass, whatever the condition.
+
+**10:16 10-23** (`health-1023-1016-stalls.json`, over data alone, the board awake):
+- `count_ge_10ms` reached 84,316, +3,475 in 10,893 s awake: 0.32 a second, at
+  215 passes a second.
+- `count_ge_25ms` reached 7, all non-flash, one more since 18:20 10-22. The
+  worst is still 29 ms (`blit`), across 4 deep sleeps; the ring (the last 16,
+  all 10-13 ms) no longer holds it.
+- 9,616 key presses since 18:20.
