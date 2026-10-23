@@ -73,7 +73,7 @@ against `../uart-latency-20261020/stalls-0742-before-bt.json`
 - **interrupt:** 568 of 1024 bytes free, 456 used (464 on 09-23);
 - **main:** 968 of 2048 bytes free, 1080 used (680 on 09-23).
 
-**Not chased: uptime runs behind the wall clock.** The uptime read 82,987 s, against ~88,500 s of wall time since the 14:22 flash. The reset flags were 0x01, and the daemon's log shows no reset, since the board never left USB. So the ms count runs ~6% behind the wall.
+**Uptime behind the wall clock: explained.** The uptime read 82,987 s, against ~88,500 s of wall time since the 14:22 flash, with reset flags 0x01. QMK's timer stands still in deep sleep (`docs/hardware.md`, "Asleep"), and the board slept 11:42-13:13 (5,448 s, the logger). That is the whole difference, within the read's timing.
 
 **The same day, the data cut works:** 11:40-13:10 asleep at 3.1 mA (the logger).
 
@@ -83,3 +83,9 @@ pass (`../../plans/review-codex-edge-pump-2026-10-22.md`). On gremlin's
 board (USB, the same load before and after) `count_ge_10ms` fell from 0.175
 a second to 0.016, and no slow pass carries the edge with the pump
 ([`gremlin/`](gremlin/README.md)). JD's board takes it after the drain.
+
+**18:20 10-22, the rate since 14:56 is far lower** (`health-1820-stalls.json`, `health-1820-plain.txt`, read over data alone):
+- `count_ge_10ms` rose 80,024 to 80,841, so +817 in 3,111 s of uptime. Uptime doesn't count deep sleep, and the board slept ~150 of the 203 min. That is **0.26 a second awake**, against ~1.1 (23:14 10-21 to 14:56, 55,822 in ~51,100 s awake).
+- The loop ran 215 passes a second (4.65 ms a pass), the same as gremlin's on USB (214), against 189.5 averaged before.
+- `count_ge_25ms` still 6; `loop_gap_max` 29 ms.
+- So the slow loop and ~1 a second belong to the earlier stretch, most of it the night awake and dark with the data on (`../../docs/test-bench.md`, "Data-only never deep-sleeps"). 14:56-18:19 was mostly lit typing on the pack. Which condition made the loop slower is not pinned: the RGB off, or the live USB with the daemon's traffic. The fix still takes the pump off the edge's pass, whatever the condition.

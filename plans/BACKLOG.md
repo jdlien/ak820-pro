@@ -48,8 +48,9 @@ at the clock's cadence can no longer show a regression.
 `history/ge10-per-second-20261022/gremlin/`): `count_ge_10ms` fell from
 0.175 a second to 0.016, `count_ge_25ms` 0 throughout. No slow pass in the
 ring has `second_edge` with `blit_pump` any more, and none has the pump
-stacked with the 10 Hz scopes. JD's board takes it after the drain's cut,
-where the rate was ~1.0 a second.
+stacked with the 10 Hz scopes. JD's board takes it after the drain's cut.
+There the rate was ~1.1 an awake second through the night (awake and dark,
+the data on), and 0.26 from 14:56 to 18:19 (lit typing on the pack).
 
 **What is left, and the next cut if it matters.** Of the 16 slow passes after
 the fix, all exactly 10 ms:

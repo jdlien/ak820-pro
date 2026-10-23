@@ -1,0 +1,10 @@
+blit_timeouts            0
+tx_sent                  89413
+tx_timeouts              9010
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          29
+scan_rate                163
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False

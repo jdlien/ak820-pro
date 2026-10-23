@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-22, 17:40. The block below is where things stand, written to
+Updated 2026-10-22, 18:30. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -63,11 +63,21 @@ the RGB cut, likely a few days.
   the setup matches a real owner's.
   - 08:16-14:58 used 368.2 mAh, mostly typing at full white (~73 mA).
   - 11:40-13:10 was asleep at 3.1 mA.
+  - **08:16-18:18, 10.0 h, used 424.2 mAh** (the logger): 5.29 h lit at
+    73.3 mA (388.2 mAh, 91%), 0.73 h dimmed at 31.9 mA (23.3), 4.02 h
+    asleep at 3.2 mA (12.7). Each idle went 10 min lit, 10 min dimmed,
+    then asleep, as Balanced should.
+  - **At 18:19, 711 mAh since FULL** (17.7% of 4011). The board read
+    81.6%, from 2888.7 mWh counted since FULL, and 5 deep sleeps since
+    boot, every one woken by a key, 0 strays. `count_ge_25ms` still 6.
 - **The night of 10-22/23** is the asleep night to set against 10-21/22's
   awake one.
 - **Reads go over the data alone:** port 2 on, relay 2 still off. Cut the
   data again after, or the board cannot sleep. The reads so far, on 10-22:
-  14:56:38-14:58:02 and 15:06:26-15:06:31.
+  14:56:38-14:58:02, 15:06:26-15:06:31 and 18:19:48-18:19:58. The board
+  was asleep for the last, and the data can't wake it: relay 1 tapped the
+  rig's F19 first (18:19:41, the Mac locked, so nothing typed), which
+  costs ~17 mAh of ladder before it sleeps again.
 - **At the cut:** the logger sees a ~45 mA step at ~3.40 V. Then data on,
   dump the RAM battery log (`ak820battery.py log`), relay 2 on. Nothing
   watches for the cut yet: set a watcher on the logger once the level
@@ -93,11 +103,14 @@ the RGB cut, likely a few days.
   since the first firmware (`DISPLAY_CLOCK_SHOW_SECONDS`). On 10-20
   (`b2a07e0d37`, overnight, 2.4G, on USB) the same pass crossed 10 ms 0.18
   times a second, and on gremlin's board on `36afff30e8` (USB) 0.17-0.22.
-  - JD's board runs ~0.6 ms a pass slower than gremlin's: 5.28 ms against
+  - Up to 14:56 JD's board averaged 5.28 ms a pass, against gremlin's
     4.66. `ch582` is the same on both (1.21 against 1.23 ms), so it is not
-    BT. The whole difference is outside the scopes (3.59 against 2.98 ms):
-    the pack against USB, or the lock-light frames JD's board receives.
-    Not chased.
+    BT; the difference was all outside the scopes (3.59 against 2.98 ms).
+  - **From 14:56 to 18:19 it ran 4.65 ms a pass, like gremlin's, and
+    crossed 10 ms 0.26 times an awake second, against ~1.1 before.** The
+    earlier stretch was mostly the night awake and dark with the data on;
+    this one mostly lit typing on the pack. Which condition slowed the loop
+    (the RGB off, or the live USB) is not pinned.
   - The row ISR is unchanged: 73.3% of the CPU and 194 us mean, against
     72.8% and 188 on 09-03.
   - Not the power-mode bulb: it repaints only when the mode changes.
@@ -125,8 +138,9 @@ edge with the pump any more, and none has the pump stacked with the 10 Hz
 block. What is left is the 10 Hz block (`BACKLOG.md` has the next cut, not
 built).
 
-**On JD's board, after the drain:** read `count_ge_10ms` per hour from the
-daemon's status file and the ring, against ~1.0 a second before.
+**On JD's board, after the drain:** read `count_ge_10ms` against uptime
+(which stops in deep sleep) and the ring, against 0.26 an awake second lit
+on the pack and ~1.1 awake and dark with the data on.
 
 ### After the drain
 
@@ -150,9 +164,6 @@ daemon's status file and the ring, against ~1.0 a second before.
 - **A stray wake in about one sleep in 50,** unexplained. The diagnostic
   (op 24 slot 8) names the next one.
 - **UART overruns at 1-2 an hour,** the link's long-standing rate.
-- **Uptime runs ~6% behind the wall clock:** 82,987 s against ~88,500 s
-  since the flash, with no reset (flags 0x01, and the board never left
-  USB). Not chased.
 - **The clock's idle hold** (Gremlin's question): an awake board with the
   host idle gets no clock frames, so it drifts ~1-2 s a half hour.
   Recommended leaving it: the clock shows minutes, the wake guess corrects
