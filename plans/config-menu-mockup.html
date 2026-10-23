@@ -300,11 +300,16 @@ const CLOCK = ["24h", "12h", "Date", "Off"];
 const BATT = ["Percent", "Hours"];
 const KNOB = ["Volume", "Scroll", "Screen"];
 function pct(v) { return Math.round(v / 255 * 100) + "%"; }
-function lvl(v) { return v ? String(v) : "Off"; }
+/* As today's Fn-key readouts (param_overlay.c): percentages, hue in degrees, two-tone's
+   second colour as its offset in degrees, a level as a percentage of its range. */
+function lvl(v) { return v ? Math.round(v * 100 / 9) + "%" : "Off"; }
+function scr(v) { return v ? Math.round(v * 100 / 23) + "%" : "Off"; }
+function deg(v) { return String(Math.floor(v * 360 / 256)); }
+function hueText(key) { return key === "speed" ? "+" + deg(live.speed) : deg(live.hue); }
 const LABELS = {
   lights: ["Lights", v => v ? "On" : "Off"], effect: ["Effect", v => EFFECTS[v]],
-  val: ["Brightness", v => pct(v)], hue: ["Hue", v => String(v)], sat: ["Saturation", v => pct(v)],
-  speed: ["Second color", v => String(v)], screen: ["Screen", v => v ? "level " + v : "off"],
+  val: ["Brightness", v => pct(v)], hue: ["Hue", v => deg(v)], sat: ["Saturation", v => pct(v)],
+  speed: ["Second color", v => "+" + deg(v)], screen: ["Screen", scr],
   power: ["Power", v => POWER[v]], conn: ["Connection", v => CONN[v]], locks: ["Lock lights", lvl],
   charging: ["Charging light", lvl], clock: ["Clock", v => CLOCK[v]], batt: ["Battery", v => BATT[v]], knob: ["Knob", v => KNOB[v]],
 };
@@ -327,7 +332,7 @@ const SLOTS = ["Bluetooth 1", "Bluetooth 2", "Bluetooth 3"];
 const MENUS = {
   top: { title: "Configuration", items: () => [
     { label: "Lighting", kind: "menu", id: "lighting" },
-    { label: "Screen", kind: "range", key: "screen", min: 0, max: 23, step: 1, fmt: v => v ? String(v) : "Off", wide: v => v ? "Level " + v : "Off" },
+    { label: "Screen", kind: "range", key: "screen", min: 0, max: 23, step: 1, fmt: scr },
     { label: "Power", kind: "choice", key: "power", options: POWER, value: () => POWER_SHORT[live.power] },
     { label: "Connection", kind: "menu", id: "conn", value: () => CONN[live.conn] },
     { label: "Indicators", kind: "menu", id: "ind" },
@@ -498,7 +503,7 @@ function drawList() {
   const m = menu(), list = items(); keepVisible(m, list.length);
   header(MENUS[m.id].title);
   drawRows(list, m.cursor, m.top, (it, y, i, sel) => {
-    if (it.kind === "hue") row(y, it.label, String(live[it.key]), sel);   // the number: the panel's colours look nothing like the keys'
+    if (it.kind === "hue") row(y, it.label, hueText(it.key), sel);   // the number: the panel's colours look nothing like the keys'
     else if (it.kind === "conn") row(y, " " + it.label, "", sel, (c, x0) => { if (live.conn === it.slot) radio(x0, y + 4, c); });   // the saved one's dot in front
     else row(y, it.label, valueOf(it), sel);
   });
@@ -516,10 +521,11 @@ function drawEdit() {
     hints(72);
   } else if (it.kind === "hue") {
     for (let i = 0; i < 120; i++) fill(4 + i, 22, 1, 14, hsv(Math.round(i / 120 * 256), 255, 255));
-    const mx = 4 + Math.round(live[it.key] / 256 * 120);
+    const abs = it.key === "speed" ? (live.hue + live.speed) % 256 : live.hue;   // the strip shows where the colour lands
+    const mx = 4 + Math.round(abs / 256 * 120);
     fill(mx, 20, 1, 18, WHITE);
     [[0, 5], [1, 3], [2, 1]].forEach(([o, w], j) => fill(mx - 2 + o, 38 + j, w, 1, YELLOW));
-    const hs = String(live[it.key]);
+    const hs = hueText(it.key);
     textCentre("f20", (" ".repeat(Math.floor((10 - hs.length) / 2)) + hs).padEnd(10), 44);
     hints(72);
   } else if (it.kind === "choice") {

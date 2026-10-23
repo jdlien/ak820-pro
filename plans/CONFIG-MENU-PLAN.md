@@ -182,6 +182,17 @@ Configuration
 - **In a list where one option is saved** (Power, Clock, Battery, Effect,
   Lights, the Bluetooth slots), the saved one's dot goes in front: the
   options start one column in, and the dot fills that column.
+- **Values read as today's `Fn`-key readouts do** (`param_overlay.c`), so the
+  menu and the keys agree:
+  - brightness, saturation and speed as percentages;
+  - hue in degrees (`Hue 261`), because it's circular;
+  - two-tone's second colour as its offset from the first (`+325`; in
+    `ALPHAS_MODS` the speed byte is that offset). Its editor's strip marks
+    where the colour actually lands, at hue plus offset.
+  - The screen as a percentage of its level range, as `LCD 22%` does, with
+    0 as Off. The indicator levels the same way.
+  JD asked for percentages throughout, "what we do today"; hue is the one
+  that isn't a percentage today. Switch it too if JD prefers.
 - **"‹ Back" is the first row of every list below the top,** choice lists
   included, so menus are easy to explore and leave.
   - A submenu opens on its first real item, and a choice list on the current
