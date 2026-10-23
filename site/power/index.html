@@ -380,20 +380,20 @@ function icon(name, label) {
   svg.append(svgEl("path", { fill: "currentColor", d: ICONS[name][1] }));
   return svg;
 }
-// Battery life: the battery with a clock badge on its lower right, a masked
-// gap around the badge so it reads on any background. The battery is
-// mirrored so its cap sits on the left, clear of the badge; the mirror
-// about x = 320 keeps the body where it was. The canvas grows by the
-// badge's overhang at the same 5:4 as the battery, so the width is too.
+// Battery life: the battery stood upright on the left, its cap at the top,
+// and a clock badge to its right overlapping its lower corner by 64, with
+// a masked gap around the badge so it reads on any background. The battery
+// is rotated into x 0..384, y 0..608; the badge is 384 across, its bottom
+// on the battery's.
 function batteryLife(label) {
-  const svg = svgEl("svg", { viewBox: "0 0 720 576", class: "ico", role: "img", "aria-label": label });
+  const svg = svgEl("svg", { viewBox: "0 0 704 608", class: "ico", role: "img", "aria-label": label });
   const mask = svgEl("mask", { id: "battery-life-cut" });
-  mask.append(svgEl("rect", { width: 720, height: 576, fill: "white" }), svgEl("circle", { cx: 544, cy: 400, r: 208, fill: "black" }));
+  mask.append(svgEl("rect", { width: 704, height: 608, fill: "white" }), svgEl("circle", { cx: 512, cy: 416, r: 224, fill: "black" }));
   const defs = svgEl("defs", {});
   defs.append(mask);
   const battery = svgEl("g", { mask: "url(#battery-life-cut)" });
-  battery.append(svgEl("path", { fill: "currentColor", d: ICONS.battery[1], transform: "matrix(-1 0 0 1 640 0)" }));
-  const clock = svgEl("g", { transform: "translate(368 224) scale(0.6875)" });
+  battery.append(svgEl("path", { fill: "currentColor", d: ICONS.battery[1], transform: "matrix(0 -1 1 0 -64 640)" }));
+  const clock = svgEl("g", { transform: "translate(320 224) scale(0.75)" });
   clock.append(svgEl("path", { fill: "currentColor", d: ICONS.clock[1] }));
   svg.append(defs, battery, clock);
   return svg;
