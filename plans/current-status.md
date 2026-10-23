@@ -111,6 +111,25 @@ the RGB cut, likely a few days.
   was asleep for the last, and the data can't wake it: relay 1 tapped the
   rig's F19 first (18:19:41, the Mac locked, so nothing typed), which
   costs ~17 mAh of ladder before it sleeps again.
+- ⚠️ **The Mac shut down at ~14:25 10-23, mid-drain.** The last logger row
+  is 14:22:56: 33.16 mA (awake, JD's daily lighting), `charge_mah` -2249.79,
+  so 999.3 mAh (24.9%) since FULL. The board runs on its pack throughout
+  (relay 2 off). After the Mac is back:
+  1. Check the relays: `scripts/relay status` should say both off.
+  2. **Cut the keyboard's USB data again:**
+     `perl -e 'alarm 40; exec @ARGV' uhubctl -l 0-1.4 -p 2 -a off -e`. A
+     host restart can bring port 2 back on, and data alone never deep-sleeps
+     (`DSB_USB`).
+  3. Restart the logger, which appends:
+     `venv/bin/python scripts/power_log.py --out history/power-bench-2026-10-15/power.csv --detach`.
+  4. **Check `charge_mah`'s continuity:**
+     - If the QT Py kept power through the shutdown (a dock that powers its
+       ports with the Mac off), the register kept integrating, and its
+       first new row includes the gap's charge. Nothing is lost.
+     - If it reads near 0, the QT Py lost power and the register cleared.
+       Record the offset, and bridge the gap from the board's own count
+       ("energy since FULL", `ak820battery.py`, over the data alone) or as
+       asleep at ~3.1 mA for the hours it was off.
 - **At the cut:** the logger sees a ~45 mA step at ~3.40 V. Then data on,
   dump the RAM battery log (`ak820battery.py log`), relay 2 on. Nothing
   watches for the cut yet: set a watcher on the logger once the level
