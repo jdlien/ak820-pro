@@ -249,8 +249,8 @@ Configuration
 - **Typing works normally while it's open.** Only the knob is captured.
 - **The idle timeout is 24 s,** for lists and text pages. 12 s was too short
   to read the About page.
-- **No idle timeout while a value is being adjusted.** A 2-minute backstop
-  (proposed in the build plan) cancels an abandoned edit, so it can't keep
+- **No idle timeout while a value is being adjusted.** A 3-minute backstop
+  (decided) cancels an abandoned edit, so it can't keep
   the board awake.
 - **The effects are the firmware's nine,** named as the `Fn` readout names
   them: Solid, Alphas/Mods, Cycle All, Cycle L-R, Cycle U-D, Jellybean,
@@ -316,9 +316,8 @@ path, and both repaint two rows a detent.
 
 ## Still open
 
-1. **A walk-away during an edit:** with no timeout, an abandoned edit keeps
-   the menu open and the board awake. Proposed: a long backstop (~2 min)
-   that reverts the value.
+1. ~~A walk-away during an edit~~ **decided:** a 3-minute backstop puts the
+   old value back and closes.
 2. **The screen:** its own item with brightness 0 as off (proposed), or
    inside Lighting.
 3. **`Fn`+`D`:** keep it as a shortcut beside Diagnostics, or free the key.

@@ -222,7 +222,8 @@ FACES.f13.extra = Object.fromEntries(Object.entries(EXTRA13).map(([k, v]) => [k,
 const WHITE = [255, 255, 255], BLACK = [0, 0, 0], GREY = [100, 100, 100], MID = [70, 70, 70];
 const YELLOW = [255, 252, 0], GREEN = [0, 252, 0], AMPM = [204, 204, 204];
 const DIM = [200, 200, 200], LIT = [255, 242, 160];   // lit text: the rows a little dimmer than white, the selected one pale yellow
-const IDLE_MS = 24000;   // the lists close after this long idle; an edit never times out
+const IDLE_MS = 24000;     // the lists and pages close after this long idle
+const BACKSTOP_MS = 180000;   // an edit left alone this long is cancelled and the menu closed
 const PASS_MS = 1000 / 215;   // one glyph a main-loop pass, at the loop's measured rate
 
 const canvas = document.getElementById("panel");
@@ -673,7 +674,7 @@ function status() {
   const el = document.getElementById("status");
   let s;
   if (!open) s = "Menu closed. Fn + click opens it.";
-  else if (mode === "edit") s = "Editing: no timeout. Click saves, hold cancels.";
+  else if (mode === "edit") s = "Editing: no idle timeout, a 3-minute backstop. Click saves, hold cancels.";
   else if (!started) s = "Closes after 24 s idle (counting starts at your first input).";
   else s = "Closes in " + Math.max(0, Math.ceil((IDLE_MS - (now() - lastInput)) / 1000)) + " s if left alone.";
   if (el.textContent !== s) el.textContent = s;
@@ -785,6 +786,7 @@ let last = now(), t0 = now(), tick = 0;
 function frame() {
   const t = now(), dt = Math.min(100, t - last); last = t;
   if (open && started && mode !== "edit" && t - lastInput > IDLE_MS) { close(); dirty = true; }
+  if (open && mode === "edit" && t - lastInput > BACKSTOP_MS) { close(); dirty = true; }   // close() puts the old value back
   if (t - tick > 100) { tick = t; dirty = true; if (Math.random() < 0.3) rain[Math.floor(Math.random() * rain.length)] = Math.random() * 256; lightKeys(t - t0); }
   if (dirty) { build(); dirty = false; }
   pump(dt); compose(); status();

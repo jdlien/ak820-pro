@@ -26,7 +26,7 @@ given otherwise. Line numbers are at `b9555ff3e6`.
 - **Settings:** lighting and the screen preview as you turn, and a click
   saves them. Other choices apply on the click.
 - **Timeouts:** lists and pages close after 24 s with no knob input. An edit
-  has no idle timeout, only a 2-minute backstop.
+  has no idle timeout, only a 3-minute backstop (decided).
 - **The hint:** "Configuration" gives way to "Turn + Click Knob" for 1 s
   after 4 s idle.
 - **About, page two:** the Jackrabbit bunny (27x42) with the credits.
@@ -353,9 +353,9 @@ below.
 - **Timeouts, per screen kind:**
   - **Lists, text pages, About, Help, confirm screens:** 24 s with no knob
     input.
-  - **Edits:** no idle timeout. The backstop, at 2 minutes, cancels (the
+  - **Edits:** no idle timeout. The backstop, at 3 minutes, cancels (the
     old value comes back) and closes.
-  - **Pairing:** until it ends or fails, under the same 2-minute backstop.
+  - **Pairing:** until it ends or fails, under the same 3-minute backstop.
   - **Diagnostics pages shown from the menu:** the backstop, so an open
     page can't hold a board awake forever. (`Fn`+`D`'s page opened directly
     keeps today's behaviour.)
@@ -508,9 +508,6 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
 
 ## Open
 
-0. **The 2-minute backstop** for an abandoned edit or a Diagnostics page.
-   Proposed, and codex agreed it's reasonable (JD's call). Without one, an
-   open menu keeps a board on battery awake.
 1. **The cursor: lit text or inverted.** Settled on the panel in S1. Both
    use the mono path and cost the same.
 2. **`Fn`+`D`:** keep it as a shortcut beside Diagnostics, or free the key
