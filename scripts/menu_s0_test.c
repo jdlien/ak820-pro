@@ -43,7 +43,8 @@ static bool     bus_busy_once;      /* the next glyph finds the bus busy */
 static int      fault_next_fill;    /* the next N fills give up, as a polled send does: a loss */
 static bool     fault_fill_prefix;  /* ...after painting their first half of rows (HC_POLLFAULT's mode 0) */
 static int      glyph_ops, fill_ops, bands_ok;
-static uint32_t pass_bytes, max_pass_bytes;   /* CPU-fed pixels in the current pass, and the most in any (C4) */
+static uint32_t pass_bytes, max_pass_bytes;
+static uint32_t fake_ticks;   /* C10's clock: a pass is 1,000 ticks (5.3 ms), a fill 300 more */   /* CPU-fed pixels in the current pass, and the most in any (C4) */
 
 static void paint_fb(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c, bool glyph) {
     for (uint16_t y = y0; y <= y1 && y < MB_H; y++)
@@ -91,6 +92,7 @@ bool mb_fill(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c) {
     }
     fill_fb(x0, y0, x1, y1, c);
     fill_ops++;
+    fake_ticks += 300;
     return true;
 }
 bool mb_glyph(char c, uint16_t x, uint16_t y) {
@@ -103,6 +105,7 @@ bool mb_glyph(char c, uint16_t x, uint16_t y) {
 }
 bool mb_busy(void) { return dma_busy; }
 bool mb_lost_pending(void) { return lost_latched; }
+uint32_t mb_now_ticks(void) { return fake_ticks; }
 static bool take_lost(void) { bool l = lost_latched; lost_latched = false; return l; }
 
 static void fake_reset(void) {
@@ -118,6 +121,7 @@ static void fake_reset(void) {
 /* One pass of the menu's painter, as the pump runs it: the DMA's completion
  * first, the loss taken at the top, then one bounded operation. */
 static ms_step_t pass(void) {
+    fake_ticks += 1000;
     dma_settle();
     if (take_lost()) fx_invalidate();
     pass_bytes = 0;
@@ -806,6 +810,49 @@ static void test_op_end(void) {
     CHECK(run_until_settled(800) > 0 && f1_mismatches(1, 0) == 0);
 }
 
+/* --- C10: the scheduler's measures ------------------------------------------------ */
+
+static void test_meas(void) {
+    settled_a();
+    uint8_t g0 = ms_tgen(), s0 = ms_settled_count(), x0 = ms_superseded_count();
+    /* A target that settles: settled +1, nothing superseded. */
+    fx_set_pattern(1);
+    CHECK(run_until_settled(400) > 0);
+    CHECK((uint8_t)(ms_tgen() - g0) == 1 && (uint8_t)(ms_settled_count() - s0) == 1);
+    CHECK(ms_superseded_count() == x0);
+    /* A loss's repaint of the same target doesn't settle it again. */
+    fault_next_dma = 1;
+    fx_set_pattern(0);
+    CHECK(run_until_settled(800) > 0);
+    CHECK((uint8_t)(ms_settled_count() - s0) == 2);
+    /* Targets replaced before they settle are superseded, and the books
+     * balance: created = settled + superseded + at most the one outstanding. */
+    g0 = ms_tgen(); s0 = ms_settled_count(); x0 = ms_superseded_count();
+    for (int i = 0; i < 10; i++) {
+        fx_input(1, MI_LATCH_NONE);
+        pass(); pass();
+    }
+    uint8_t created = (uint8_t)(ms_tgen() - g0);
+    uint8_t books   = (uint8_t)((ms_settled_count() - s0) + (ms_superseded_count() - x0));
+    CHECK(created == 10 && (created == books || created == books + 1));
+    CHECK(run_until_settled(400) > 0);
+    CHECK((uint8_t)((ms_settled_count() - s0) + (ms_superseded_count() - x0)) == 10);
+    /* Op latency, piece cost, repaint latency: measured and ordered. A fill
+     * op's four pieces take four passes (4,000 + 4 x 300 ticks of the fake). */
+    ms_meas_reset();
+    fx_set_pattern(1);
+    CHECK(run_until_settled(400) > 0);
+    CHECK(ms_piece_max_ticks() >= 300 && ms_op_max_ticks() >= ms_piece_max_ticks());
+    CHECK(ms_repaint_max_ticks() >= ms_op_max_ticks() && ms_last_op_ticks() > 0);
+    /* An op abandoned by a retarget isn't timed: the last ended op's latency
+     * stays what it was. */
+    uint32_t last = ms_last_op_ticks();
+    fx_set_pattern(0);
+    pass();                       /* row 0's first piece starts an op */
+    fx_input(1, MI_LATCH_NONE);   /* ...abandoned */
+    CHECK(ms_last_op_ticks() == last);
+}
+
 /* --- menu_ops.c through a fake environment -------------------------------------
  * The production task, op 27 and menu-side actions, with menu_env.h faked:
  * env_po_event runs po_event and then applies its actions as display.c's
@@ -832,11 +879,26 @@ bool    env_batt_dirty(void) { return false; }
 bool    env_logo_stale(void) { return false; }
 uint8_t env_queue_depths(void) { return 0; }
 bool    env_probe_handoff(uint8_t *out4) { (void)out4; return false; }   /* display.c's: the board's A3 */
+static uint16_t fk_token;
+static uint8_t  fk_health_gen;
+void env_meas(env_meas_t *m) {
+    memset(m, 0, sizeof *m);
+    m->token      = fk_token;
+    m->health_gen = fk_health_gen;
+    m->dbg_sec    = 0xFFu;
+    m->rtc_sec    = 0xFFu;
+}
+uint16_t env_meas_arm(void) {
+    if (++fk_token == 0) fk_token = 1;
+    return fk_token;
+}
+bool env_debug_done(void) { return false; }
 
 /* One main-loop pass as housekeeping_task_kb runs it: the task, then the pump
  * (its loss taken at the top, then the owner's operation). */
 static void fw_pass(uint32_t dt) {
     fk_now += dt;
+    fake_ticks += dt * (MB_TICK_HZ / 1000u);
     menu_ops_task(fk_now);
     dma_settle();
     if (take_lost()) {
@@ -887,7 +949,13 @@ static void test_ops(void) {
     /* Framing and validation: an unknown sub is unhandled; the states a sub
      * can't take answer 2 and leave nothing outstanding. */
     fw_reset();
-    CHECK(op27(10, 0, 0) == 0xFF);
+    CHECK(op27(31, 0, 0) == 0xFF);   /* C10 moved A1's unknown sub from 10 to 31 */
+    /* Sub 10 (C10): read at once, arm 1 issues a new token, a bad arm 2. */
+    CHECK(op27(10, 2, 0) == MI_BAD);
+    CHECK(op27(10, 0, 0) == MI_OK && (rpt[26] | rpt[27] << 8) == 0);   /* no session yet */
+    CHECK(op27(10, 1, 0) == MI_OK);
+    CHECK(op27(10, 0, 0) == MI_OK && (rpt[26] | rpt[27] << 8) == 1);
+    CHECK(rpt[30] == 0xFF && rpt[29] == 0xFF);   /* the fake has no RTC and no debug page */
     CHECK(op27(9, 0, 0) == MI_OK && mi_last_state() == MI_ST_REFUSED);   /* the probe is display.c's: the board's A3 */
     CHECK(op27(1, 1, 0) == MI_BAD && mi_outstanding() == MI_KIND_NONE);   /* no session */
     CHECK(op27(0, 0, 0) == MI_BAD);
@@ -1100,6 +1168,7 @@ int main(int argc, char **argv) {
     test_fixture_paint();
     test_pieces();
     test_op_end();
+    test_meas();
     test_ops();
     if (fails) {
         printf("%d check(s) failed\n", fails);
