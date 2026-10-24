@@ -340,12 +340,49 @@ own Back), ge25 0, `invariant_fail` 0, the dashboard restored at the end. ge10
 rose by 161 in ~20 s while the fixture repainted without pause: S1's paint
 budget is where that's measured and bounded.
 
+**A11 in full** (23:48 and 23:54, Apple Music playing, run twice): ten repeats
+of the 50 steps in 34 s, then 300 s of the dashboard. **Every board criterion
+met, both runs:** 460 done and 40 cancelled (the holds' own Back), ge25 0,
+`invariant_fail` 0, the dashboard DONE at the end (gen 42 to 83), the loop's
+worst pass 20 ms. **The script still exits 1, on its media gate:** its last
+sample found SMTC 12 s and then 18 s stale, against a 10 s bar. That was
+Windows' media service, not the board: Apple Music's session answered one
+poll in ~25 s, where the daemon's poll is every 3 s (`smtc_polls` +1 between
+status writes 25 s apart, `smtc_failures` 0). The now-playing pushes kept
+arriving every 30 s, the track never changed, and JD had it playing. **Taken
+as a pass, with the gate's miss recorded** (Warren's call as the plan's owner);
+a stricter rerun wants a player whose SMTC session answers promptly. Raw:
+`a11-session.json`, `a11-session-run1-smtc-stale.json`.
+
+**A12:** after A11, 632 B free on the interrupt stack (648 at the build's
+start) and 1,216 on the main. The heap gap is dev 360 B, daily 2,472 and
+devfault 264. Passes.
+
+**⚠️ The fixture's painting dims the RGB by ~19%.** JD saw the keyboard's
+lights dim while A11 flashed the patterns. `scripts/menu_s0_ledrate.py`
+reads health page 4 (the row ISR) in 5 s windows (`ledrate.json`):
+
+| Window | Row ISR/s | ISR share of the CPU | ge10 in 5 s | Main-loop passes/s |
+|---|---|---|---|---|
+| Dashboard | 3,726 | 73.7% | 0 | 215 |
+| The fixture open, still | 3,726 | 73.7% | 0 | 209 |
+| The fixture toggling A and B | **3,033** | 60.7% | **+243** | 110 |
+
+The ISR's own time is unchanged (198 to 200 us), so it isn't slower: its start
+is held off, ~62 us a row. The fixture's colour fills are `lcd_fill_rect`,
+a `spiSend` through SPI0's **FIFO interrupt** (`spi_fifo_pump.diff`), which
+sits at priority 3 beside the row ISR. Since the row ISR re-arms its counter
+at its end, every delay to its start is a longer dark gap for every row. The
+dashboard's glyphs go by flash-to-LCD DMA and cost the ISR nothing. Every
+ge10 in A11 came from the fixture's repaints: the dashboard's 300 s added
+none. **For S1:** the real menu fills rows too (the cursor, half or full
+rows), so its paint path needs a budget measured in row ISR/s as well as
+in milliseconds. Options to weigh: fills by DMA, fills spread across passes,
+smaller fill areas. The banded clears of the restore and the Fn+D page use
+the same path and will dim briefly too, unmeasured.
+
 **Still to run:**
-- **A11 in full:** ten repeats and 300 s with a track playing on gremlin.
 - **The photographs:** A2's Camera page and A13's four fixture frames, against
   the frames the host test rendered (`fixture-*.ppm` here).
 - **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
   (the physical knob cases).
-- **A12:** the stack watermarks after A11. At the dev build's start the
-  watermarks read 648 B free on the interrupt stack and 1,216 on the main.
-  The heap gap is dev 360 B, daily 2,472 and devfault 264.
