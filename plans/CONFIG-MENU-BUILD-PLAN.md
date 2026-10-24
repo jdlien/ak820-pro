@@ -10,12 +10,14 @@ SMTC. **Revision 12 was cleared for S1** (codex, 10-24: "ready for S1 to be
 built from"); revisions 13 to 15 amend rules from S1's gate runs. Owned by Warren
 (gremlin's session) from 10-23.
 - **Revision 15** (10-24, from the gate's fourth run, `GREMLIN-RESULTS.md`
-  §15: Fn+D entry passed 1,000 ms once, at ~135 glyphs a pass each): **the
-  DMA arm's window is polled too.** `lcd_blit_flash()` sends it with
-  `lcd_window_polled()` after `spiSN32FlashDmaPrepare()`, which rewrites
-  SPI0's CTRL0 and toggles SPIEN so nothing may go out between it and the
-  pixels with CS low, and before `blit_done` falls, so the entry check
-  passes. A window that gives up hands SPID1's vector back
+  §15: Fn+D entry passed 1,000 ms once, at ~135 glyphs, one per pass):
+  **the DMA arm's window is polled too.** `spiSN32FlashDmaPrepare()` runs
+  with the panel's CS high (it rewrites SPI0's CTRL0 and toggles SPIEN).
+  `lcd_blit_flash()` then asserts CS and sends the window with
+  `lcd_window_polled()`, and the pixels follow with no further
+  reconfiguration. The window goes before `blit_done` falls, so the entry
+  check passes; the arm's counters and saved parameters advance only after
+  it succeeds. A window that gives up hands SPID1's vector back
   (`dma_unprepare`, as Abort would after Fire) and `lcd_blit_flash()`
   returns false; the clear and the retry use that.
 - **Revision 14** (10-24, from S1's second gate run, `GREMLIN-RESULTS.md`

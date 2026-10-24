@@ -715,7 +715,7 @@ per pass, and each glyph's DMA arm still sends its window a byte at a time
 through `spiSend()` (~1.8 ms of the ~3.4 ms per glyph). The composition
 deferral added a little on top; codex warned the margin was 76 ms.
 
-**Next: the build plan's revision 15.** `lcd_blit_flash()` will send its
-window polled, *before* it clears `blit_done` and calls
-`spiSN32FlashDmaPrepare()`, while SPI0 is still in plain 8-bit FIFO mode. That
-halves every DMA arm (glyphs, clears, images) across the whole display.
+**Next: the build plan's revision 15.** `lcd_blit_flash()` sends its window
+polled, *after* `spiSN32FlashDmaPrepare()` (which runs with the panel's CS
+high) and *before* it clears `blit_done`. That should roughly halve every DMA
+arm (glyphs, clears, images) across the whole display; the gate measures it.
