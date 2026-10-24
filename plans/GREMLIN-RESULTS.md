@@ -652,3 +652,37 @@ the top. HC_ACCT puts the tail on the menu's painting passes (a 512 B piece
 polling) and the close's restore (15 ms). **The piece's cost is mostly its
 window**: 11 bytes each through a whole `spiSend()`. Fixed in the build
 plan's revision 14: the polled sends' windows are polled too.
+
+## 14. The gate's third run: the polled window (10-24)
+
+Firmware `gremlin/s1` `b245bd84` (dev, token `0x0897c9b3`): the build plan's
+revision 14, the polled sends' window polled; HC_POLLFAULT with a skip count.
+Codex: safe to flash, its notes done first
+([`review-codex-s1-step4-2026-10-24.md`](review-codex-s1-step4-2026-10-24.md)).
+`history/config-menu-s1-20261024/gate-b245bd84.json`.
+- **A piece costs 4,378 us** (5,370 before): the window saved ~1 ms, less
+  than the 1.8 estimated, so the payload loop is the larger part.
+- **The LEDs:**
+  - the sustained windows 1.001, 1.001;
+  - every transition kind's mean 0.998-1.001, its minimum 0.994-0.999.
+- **Completions inside 1,000 ms:**
+
+  | Kind | Completion |
+  |---|---|
+  | Fn+D in | 744-924 ms |
+  | open | 743-877 ms |
+  | layout | 706-894 ms |
+  | Camera, Fn+D out, close | 234-360 ms |
+- **Continuous:** exactly 5 slots committed in each of the 20 buckets, and
+  the final target in 245 ms.
+- **The timing still fails: two passes over 15 ms, the longest 17,525 us**
+  (four and 17,050 before). The display probe's worst stage is 6.1 ms, so
+  it's a pairing, not a stage. HC_ACCT's worst Fn+D and Camera passes put
+  the page's composition (5-9 ms) and a glyph's DMA arm (~3 ms) in one
+  pass. The pump now yields in a pass where the page composed, as it
+  already does after the clock's second.
+
+**JD, typing on the keyboard on gremlin while the gate runs (10-24): "the
+keyboard still seems to type just fine when you're running through these
+sequences of pages."** An informal look at the typing test that S1's gate
+keeps, because no counter proves a keypress wasn't lost.
