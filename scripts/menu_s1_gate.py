@@ -29,6 +29,8 @@ from menu_s0_accept import dash_done, op1, to_dash  # noqa: E402
 from ak820health import read_isr, read_stalls  # noqa: E402
 
 BRACKET_S = 0.025          # a read's bracket over 25 ms is retried
+# time.perf_counter() throughout: on Windows time.monotonic() ticks at ~15.6 ms,
+# which failed 500 ms windows' timebase check by that much (the first run).
 RETRIES = 3
 POLL_S = 0.1               # the poller's period, every window alike
 SUSTAINED_RATIO = 0.98
@@ -67,9 +69,9 @@ def ensure(ok, what):
 def bracketed(fn):
     """(value, midpoint, half bracket): retried past 25 ms, failing on the fourth."""
     for _ in range(RETRIES + 1):
-        t0 = time.monotonic()
+        t0 = time.perf_counter()
         v = fn()
-        t1 = time.monotonic()
+        t1 = time.perf_counter()
         if t1 - t0 <= BRACKET_S:
             return v, (t0 + t1) / 2, (t1 - t0) / 2
     raise GateFail(f"a read's bracket stayed over {BRACKET_S * 1000:.0f} ms")
@@ -120,7 +122,7 @@ class Board:
 
     def poll(self, force=False):
         """The scheduled read: sub 5 and sub 10, every POLL_S."""
-        now = time.monotonic()
+        now = time.perf_counter()
         if force or now >= self.next_poll:
             self.st = self.state()
             self.m = self.meas()
@@ -168,8 +170,8 @@ def run_window(bd, secs, step=None):
     """A window of `secs`: the poller on schedule, and `step()` (the
     activity, driven by the poller's reads) after each poll."""
     a = bd.sample()
-    end = time.monotonic() + secs
-    while time.monotonic() < end:
+    end = time.perf_counter() + secs
+    while time.perf_counter() < end:
         if bd.poll() and step:
             step()
         time.sleep(0.005)
@@ -182,7 +184,7 @@ def wait_poll(bd, pred, deadline, what):
         bd.poll()
         if pred(bd.st, bd.m):
             return bd.st["t"]
-        if time.monotonic() > deadline:
+        if time.perf_counter() > deadline:
             raise GateFail(what)
         time.sleep(0.005)
 
@@ -235,7 +237,7 @@ def run(a):
         pace = {"pat": 0, "cause": None, "tgen": None}
 
         def toggle_step():
-            now = time.monotonic()
+            now = time.perf_counter()
             if pace["cause"] is not None:
                 if bd.st["pixels_done"] and bd.m["tgen"] == pace["tgen"] and bd.m["tgen"] is not None:
                     pace["cause"] = None
@@ -267,9 +269,9 @@ def run(a):
             cause = cause_fn()
             completed, extra = None, False
             while True:
-                end = time.monotonic() + WINDOW_S
+                end = time.perf_counter() + WINDOW_S
                 was = completed is not None
-                while time.monotonic() < end:
+                while time.perf_counter() < end:
                     if bd.poll() and completed is None and done(bd.st, bd.m):
                         completed = bd.st["t"]
                     time.sleep(0.005)
@@ -278,7 +280,7 @@ def run(a):
                 prev = b
                 if was:
                     break
-                if completed is None and time.monotonic() > cause + SETTLE_S:
+                if completed is None and time.perf_counter() > cause + SETTLE_S:
                     raise GateFail(f"{kind}: no completion within {SETTLE_S * 1000:.0f} ms")
             ms = round((completed - cause) * 1000)
             rec["ms"].append(ms)
@@ -322,7 +324,7 @@ def run(a):
         to_dash_checked(bd)
         bd.op1()
         bd.op1()
-        wait_poll(bd, lambda st, m: m["page"] == 2 and st["debug_done"], time.monotonic() + 3 * SETTLE_S,
+        wait_poll(bd, lambda st, m: m["page"] == 2 and st["debug_done"], time.perf_counter() + 3 * SETTLE_S,
                   "Camera didn't settle")
         for _ in range(5):
             discards = 0
@@ -330,7 +332,7 @@ def run(a):
                 bd.poll(force=True)
                 g0 = bd.m["dbg_gen"]
                 S = (bd.m["rtc_sec"] + 1) % 60
-                arrived = wait_poll(bd, lambda st, m: m["rtc_sec"] == S, time.monotonic() + 1.5,
+                arrived = wait_poll(bd, lambda st, m: m["rtc_sec"] == S, time.perf_counter() + 1.5,
                                     "the expected second never came")
                 wait_poll(bd, lambda st, m: m["dbg_gen"] != g0 and m["dbg_sec"] == S,
                           arrived + SETTLE_S, "no composition tagged with the second")
@@ -344,16 +346,16 @@ def run(a):
                 out["camera_second"].append(round((done_at - arrived) * 1000))
                 break
         bd.op1()   # Camera to the dashboard
-        wait_poll(bd, lambda st, m: dash_done(st), time.monotonic() + 5 * SETTLE_S, "Camera's exit didn't restore")
+        wait_poll(bd, lambda st, m: dash_done(st), time.perf_counter() + 5 * SETTLE_S, "Camera's exit didn't restore")
 
         # Continuous: a detent every 50 ms for 10 s, on absolute deadlines.
         open_menu(bd)
         m0, row0 = bd.m, bd.st["cursor"]
-        t0 = time.monotonic()
+        t0 = time.perf_counter()
         sent, late, buckets = 0, 0, []
         last_c, next_bucket, t_last = m0["committed"], t0 + BUCKET_S, t0
         while True:
-            now = time.monotonic()
+            now = time.perf_counter()
             if now - t0 >= BURST_S:
                 break
             due = t0 + sent * DETENT_S

@@ -1,11 +1,23 @@
-# The configuration menu: how to build it (revision 12, 2026-10-24)
+# The configuration menu: how to build it (revision 13, 2026-10-24)
 
 Status: **S0 built and accepted on the keyboard on gremlin**: A1-A13 pass,
 with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
 wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
 animation slot is empty. A11's first runs missed the media gate on a slow
-SMTC. **Revision 12 is cleared for S1** (codex, 10-24: "ready for S1 to be built from"). Owned by Warren
+SMTC. **Revision 12 was cleared for S1** (codex, 10-24: "ready for S1 to be
+built from"); revision 13 amends one rule from S1's first gate run, awaiting
+codex. Owned by Warren
 (gremlin's session) from 10-23.
+- **Revision 13** (10-24, from S1's first gate run on the keyboard on
+  gremlin, `GREMLIN-RESULTS.md` §12): **a `PARTIAL` slot resumes while its
+  own signature is unchanged,** whatever the generation did (C3 rule 2, C4).
+  Under revision 8's "same generation and signature", every detent of a spin
+  restarted every partial slot. With ops of several pieces (a half row is 4,
+  ~40 ms), nothing committed during a 10 s burst of a detent every 50 ms:
+  C10's progress rule failed. The signature is the slot's whole target, so
+  the pieces sent stay right; a layout change and a loss still invalidate
+  every slot. Host test: a detent every 4 passes commits 8 slots in 100
+  passes, against 0 under the old rule.
 - **Revision 12** folds in codex's verification of revision 11
   ([`review-codex-config-menu-build-plan-rev11-2026-10-24.md`](review-codex-config-menu-build-plan-rev11-2026-10-24.md)),
   its one remaining must-fix: a debug composition is tagged with the
@@ -571,9 +583,9 @@ the code is raised before working around it.
 - **The rules:**
   1. Before a slot's first write, it becomes `PARTIAL` with the target's
      generation.
-  2. A `PARTIAL` slot whose target is unchanged (same generation and
-     signature) resumes from its chunk cursor. A changed target restarts
-     it from chunk 0.
+  2. A `PARTIAL` slot whose own signature is unchanged resumes from its
+     chunk cursor, even across a retarget that moved other slots (revision
+     13). A changed signature restarts it from chunk 0.
   3. It becomes `COMMITTED`, with the new signature, only after its last
      chunk, with `!lcd_blit_busy()` and no loss. A slot that isn't
      `COMMITTED` is repainted even if the new target's signature equals its
@@ -675,10 +687,13 @@ the code is raised before working around it.
       and then yields to the main loop;
     - **the slot stays `PARTIAL`** through all its pieces, with its
       signature describing the whole target, style included;
-    - **a resume** happens only for the same target generation and
-      signature. A retarget, an invalidation or an abandoned cursor
-      discards the piece progress, and the slot restarts from its first
-      piece;
+    - **a resume** happens while the slot's own signature is unchanged
+      (revision 13; revision 8 also required the same generation, which
+      starved a spin). A changed signature, an invalidation (a layout change,
+      a loss) or an abandoned cursor discards the piece progress, and the
+      slot restarts from its first piece. An op cut by a retarget and
+      resumed is counted when it ends, but not timed (its latency's start
+      was abandoned);
     - **an op counts once,** when it ends: its last piece returns, or its
       last DMA completes or is given up, or it fails. Pieces, busy retries
       and waiting passes don't count;

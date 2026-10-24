@@ -876,6 +876,20 @@ static void test_meas(void) {
     fx_set_pattern(0);            /* A again: already on the panel */
     fx_set_pattern(1);            /* B before any pass */
     CHECK((uint8_t)(ms_settled_count() - s1) == 1 && ms_superseded_count() == x1);
+
+    /* A knob spin: a detent every 4 passes, half a row's 8 pieces. Slots the
+     * cursor has left keep their signature, so they resume and commit; under
+     * the old generation rule every detent restarted them and nothing did. */
+    settled_a();
+    int commits_in_burst = 0;
+    for (int b = 0; b < 25; b++) {
+        uint8_t c0 = ms_committed_count();
+        fx_input(1, MI_LATCH_NONE);
+        for (int i = 0; i < 4; i++) pass();
+        commits_in_burst += (uint8_t)(ms_committed_count() - c0);
+    }
+    CHECK(commits_in_burst >= 4);   /* C10 asks one a 500 ms, ~50 passes: twice that, at least */
+    CHECK(run_until_settled(400) > 0 && f1_mismatches(0, (uint8_t)(25 % FX_ROWS)) == 0);
 }
 
 /* --- menu_ops.c through a fake environment -------------------------------------

@@ -566,3 +566,51 @@ only the CPU the row ISR leaves (~26%), plus the window's command bytes.
 - **Boot alone** leaves a 23 ms pass (`loop_gap_max` read 20 s after the
   flash). The prototype's "worst pass 24 ms" was read since boot, so it
   mixed boot and restore with the fills.
+
+## 12. S1's second increment and the gate's first run (10-24)
+
+Firmware `gremlin/s1` `0aaefca2` (dev, token `0xad2f32d7`, heap gap 264 B):
+C10's instrumentation (op 27 sub 10, `debug_done`, the session token,
+DMA ends timed at CS release) and the restore's blank shadows. Codex: safe
+to flash; its should-fixes were done first
+([`review-codex-s1-step2-2026-10-24.md`](review-codex-s1-step2-2026-10-24.md)).
+A1 passes on sub 31.
+
+**The blank shadows work** (`scripts/devhook.py read` after the gate):
+"restore: text slot" fell from 16.12 ms to 0.55 ms.
+
+**`scripts/menu_s1_gate.py`'s first run**
+(`history/config-menu-s1-20261024/gate-0aaefca2.json`) failed, as a
+measurement should when it finds something:
+- **The LEDs: far inside C10.** The sustained windows ran 0.997. Every
+  transition window was at least 0.994 (the bar is 0.95), and each kind's
+  mean at least 0.998 (the bar is 0.98).
+- **Completions inside 1,000 ms, two of them close:**
+
+  | Kind | Completion |
+  |---|---|
+  | Fn+D in | 781-883 ms |
+  | Camera | 258-344 ms |
+  | Fn+D out | 250-313 ms |
+  | open | 821-922 ms |
+  | layout | 797-914 ms |
+  | close | 219-281 ms |
+
+  The Camera second completed within one poll each time.
+- **The timebase check failed in four 500 ms windows,** by 13-18 ms. That was
+  the script: `time.monotonic()` on Windows ticks at ~15.6 ms. Fixed to
+  `perf_counter()`.
+- **Continuous input committed nothing during the burst:** the buckets were
+  `[0 x 19, 1]`. The books balanced (200 created, 200 settled or superseded),
+  and the final target settled in 157 ms. The cause: every detent's new
+  generation restarted every partial slot, and a half row is now four pieces.
+  Fixed by the build plan's revision 13 (resume on the slot's own signature).
+- **26 passes over 15 ms, the longest 18.8 ms.** HC_ACCT
+  (`menu_s1_acct_transitions.py`):
+  - **the debug page's composition**, ~9 ms of `second_edge` or
+    `display_hk`. Camera composed all nine Health rows behind it, then
+    blanked them. Fixed: it composes only its own lines.
+  - **the restore's battery outline** (9.6 ms, five fills each with its
+    window sent a byte at a time) and **the connection row with the forced
+    clock** (8.7 ms). Fixed: one edge a pass, and the row and the clock in two
+    passes, each stage holding until done.
