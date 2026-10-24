@@ -614,3 +614,41 @@ measurement should when it finds something:
     window sent a byte at a time) and **the connection row with the forced
     clock** (8.7 ms). Fixed: one edge a pass, and the row and the clock in two
     passes, each stage holding until done.
+
+## 13. The gate's second run (10-24)
+
+Firmware `gremlin/s1` `b3dcaeca` (dev, token `0xa885e369`, heap gap 264 B):
+- revision 13's resume on the slot's own signature, with the untimed resumed
+  op and the kept in-flight glyph;
+- the debug page composing only the page showing;
+- the restore's split stages;
+- Health's ISR window rebased.
+
+Codex's review and dispositions:
+[`review-codex-s1-step3-2026-10-24.md`](review-codex-s1-step3-2026-10-24.md).
+The gate now sends mutations once and times completions by their
+evidence (`history/config-menu-s1-20261024/gate-b3dcaeca.json`).
+
+**Everything but the timing passes:**
+
+| Check | Result |
+|---|---|
+| Sustained ratio | 0.999, 0.999 |
+| Fn+D in | mean 0.998, min 0.994, completed in 741-925 ms |
+| Camera | mean 0.998, min 0.995, 247-395 ms |
+| Fn+D out | mean 0.999, min 0.997, 246-346 ms |
+| open | mean 1.000, min 0.997, 813-894 ms |
+| layout (to F2) | mean 1.000, min 0.998, 809-896 ms |
+| close | mean 0.999, min 0.997, 245-348 ms |
+| Camera's second | 0 ms each (within the poll) |
+| Continuous | 200 detents, none late; 4-5 slots committed in every 500 ms bucket; 200 created against 200 settled or superseded; the final target in 236 ms |
+| The timebase | inside 2% plus the brackets in every window |
+
+**The timing fails: the longest pass 17,050 us, four over 15,000.** The
+display probe's worst stage is now 6.15 ms (the debug compose, down from
+9.12), the connection row 5.71 (from 8.69); the battery outline is gone from
+the top. HC_ACCT puts the tail on the menu's painting passes (a 512 B piece
+~5 ms in `blit_pump`, plus 4-6 ms of QMK's own pass, wider under the gate's
+polling) and the close's restore (15 ms). **The piece's cost is mostly its
+window**: 11 bytes each through a whole `spiSend()`. Fixed in the build
+plan's revision 14: the polled sends' windows are polled too.

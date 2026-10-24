@@ -1,13 +1,20 @@
-# The configuration menu: how to build it (revision 13, 2026-10-24)
+# The configuration menu: how to build it (revision 14, 2026-10-24)
 
 Status: **S0 built and accepted on the keyboard on gremlin**: A1-A13 pass,
 with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
 wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
 animation slot is empty. A11's first runs missed the media gate on a slow
 SMTC. **Revision 12 was cleared for S1** (codex, 10-24: "ready for S1 to be
-built from"); revision 13 amends one rule from S1's first gate run, awaiting
-codex. Owned by Warren
+built from"); revisions 13 and 14 amend two rules from S1's gate runs,
+awaiting codex. Owned by Warren
 (gremlin's session) from 10-23.
+- **Revision 14** (10-24, from S1's second gate run, `GREMLIN-RESULTS.md`
+  §13): **a polled bulk send's window is polled too** (C4). Through `tx8()`
+  each of its 11 bytes was a whole `spiSend()`, ~0.2 ms of wall time at
+  this ISR load, ~1.8 ms a window: most of a 512 B piece's 5.4 ms. With the
+  menu's passes at 10-14 ms and the gate's longest 17 ms (four over 15),
+  that margin is what's left. The DMA arm keeps its `spiSend()` window: it
+  follows `spiSN32FlashDmaPrepare()`, which sets SPI0's IE for the DMA.
 - **Revision 13** (10-24, from S1's first gate run on the keyboard on
   gremlin, `GREMLIN-RESULTS.md` §12): **a `PARTIAL` slot resumes while its
   own signature is unchanged,** whatever the generation did (C3 rule 2, C4).
@@ -654,8 +661,12 @@ the code is raised before working around it.
     `PO_FAIL_SPI0_POLL` (0x20) on dev builds, `blit_lost` set so the owner
     repaints, and the operation stopped.
 
-  `lcd_fill_rect`, `tx_pixels` and the stream use it. Commands, the window
-  and single bytes stay on `spiSend()`. Callers have quiesced the bus, so no
+  `lcd_fill_rect`, `tx_pixels` and the stream use it, and since revision 14
+  their window too (`lcd_window_polled`: each command byte and its
+  parameters a polled send, DC changed only after one returns). The DMA
+  arm's window, the panel's init and MADCTL, and other single bytes stay on
+  `spiSend()`: the DMA arm's comes after `spiSN32FlashDmaPrepare()` has set
+  SPI0's IE, which a polled send would overwrite. Callers have quiesced the bus, so no
   DMA is in flight and none can start
   ([`review-codex-spi0-poll-2026-10-24.md`](review-codex-spi0-poll-2026-10-24.md)).
   Prototyped as `gremlin/fill-poll` `f2b107be`: the repaint cost fell from
