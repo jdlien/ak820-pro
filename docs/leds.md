@@ -11,7 +11,9 @@ bugs. Set in `mcuconf.h`; on Cortex-M0 a LOWER number is HIGHER priority.
 
 | Prio | Source | Why |
 |---|---|---|
-| **1** | `SN32_SERIAL_UART2` | CH582F link — the only peripheral where being late LOSES DATA. |
+| **0** | `SN32_SERIAL_UART2` | CH582F link — the only peripheral where being late LOSES DATA. Its receiver holds about one byte, so it must be served within ~87 µs. 1 until 10-19 (`11cea91370`, `plans/UART-LATENCY-PLAN.md`). |
+| 0 | `SN32_ST` (system timer) | Stated in `mcuconf.h`: the stock 8 truncated to 0 in the 2-bit field. It and UART2 cannot pre-empt each other. |
+| 1 | `SN32_USB` (driver default) | Up to ~0.085 ms a handler. It shared UART2's level until 10-19, which is why UART2 went to 0. |
 | **2** | `SN32_GPT_CT16B3` | Backlight/indicator PWM tick — must be regular or the display flickers. |
 | **3** | `SN32_PWM_CT16B0/1/2` | RGB row scan — long and frequent, but µs of LED jitter is invisible. |
 | 3 | `SN32_SPI_SPI0` (driver default) | LCD SPI and its flash→LCD DMA completions — shares the row scan's level. |
@@ -24,6 +26,21 @@ after the arm. That window is what exposed a race in the SPI0 handler to
 660-byte clock-digit transfers only, until it was fixed (ChibiOS
 `c57623d0d2`; `plans/FIRMWARE-FINDINGS-2026-09-23.md`). If SPI0's priority
 or the row ISR's length ever changes, the exposed transfer sizes move too.
+
+⚠️ **The same shared level dims the LEDs during CPU-fed SPI0 writes**
+(measured on gremlin, 10-23/24). `lcd_fill_rect`, `tx_pixels`
+(`lcd_blit_ram`) and the stream go through `spiSend`, which takes SPI0's
+RX-FIFO interrupt every ~3 µs at priority 3. A row ISR raised meanwhile
+starts late, and because it re-arms at its end, every late start lengthens
+the row period. The config menu's fixture repaints cost 18% of the row
+refreshes, enough to see the keyboard flicker. The DMA'd glyphs and the
+black clears from flash cost nothing (~0.3% for the `Fn`+`D` page and the
+restore). The mainline's colour fills are small (the battery outline and
+fill, the padlock, the bolt, the AM/PM tiles), so its exposure is brief. A
+fix that feeds SPI0's FIFO from the main thread with the interrupt masked
+(`gremlin/fill-poll` `f2b107be`, codex cleared it,
+`plans/review-codex-spi0-poll-2026-10-24.md` on `warren/config-menu`) cut
+that to 1.3%. It is not on the mainline.
 
 What each wrong ordering did (all measured): UART at the bottom → mangled
 frames both directions (ACK timeouts, dropped keystrokes, dropped `5B 32` =
