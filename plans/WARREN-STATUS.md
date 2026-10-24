@@ -30,8 +30,16 @@ file is the thread; read it first after a context loss. Updated 2026-10-24
     codex's clearance from its review of `4773c826`, plus that review's two
     fixes. **Not yet flashed.**
   - **On the keyboard on gremlin now:** `b245bd84` (dev).
-- **Next step:**
-  1. flash `9902ff5b` (`./flash.sh` in MSYS2);
+- **Now on the keyboard on gremlin: `9902ff5b`.** Its gate run (§15) passed
+  every timing check it reached, but aborted when Fn+D entry took over
+  1,000 ms (755-940 ms in the seven repeats before). **Next: revision 15.**
+  `lcd_blit_flash()` sends its window with `lcd_window_polled()` BEFORE
+  `blit_done = false` and `spiSN32FlashDmaPrepare()` (SPI0 still plain 8-bit
+  FIFO then), so every DMA arm sheds ~1.8 ms of byte-at-a-time `spiSend`.
+  Then: codex (the DMA arm has a crash history: `docs/hardware.md`, the
+  2026-09-22/23 campaign), host tests, build, flash, rerun the gate.
+- **The gate procedure (each run):**
+  1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
   3. `venv-win/Scripts/python.exe scripts/menu_s1_gate.py --out
      history/config-menu-s1-20261024/gate-9902ff5b.json < /dev/null`;

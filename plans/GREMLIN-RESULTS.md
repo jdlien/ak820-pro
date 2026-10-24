@@ -686,3 +686,36 @@ Codex: safe to flash, its notes done first
 keyboard still seems to type just fine when you're running through these
 sequences of pages."** An informal look at the typing test that S1's gate
 keeps, because no counter proves a keypress wasn't lost.
+
+## 15. The gate's fourth run (10-24)
+
+Firmware `gremlin/s1` `9902ff5b` (dev, token `0x2a2e20e9`): the debug page's
+pump yield, the 10 Hz composition deferred in a pass the pump painted, and
+C10's pass timing at the pass's start. Codex:
+[`review-codex-s1-step5-2026-10-24.md`](review-codex-s1-step5-2026-10-24.md).
+`history/config-menu-s1-20261024/gate-9902ff5b.json`.
+
+**It aborted at the eighth Fn+D entry: "completed after 1000 ms".** Up to
+there no other check failed.
+
+| Kind | Completion (repeats run) |
+|---|---|
+| Fn+D in | 755-940 ms (seven repeats) |
+| Camera | 308-412 ms |
+| Fn+D out | 273-334 ms |
+| open | 739-827 ms |
+| layout | 738-803 ms |
+| close | 255-318 ms |
+
+Every LED window was 0.993-1.003. The timing totals weren't read: the run
+stopped first.
+
+**The cause is the Fn+D page's own painting.** It's about 135 glyphs, one
+per pass, and each glyph's DMA arm still sends its window a byte at a time
+through `spiSend()` (~1.8 ms of the ~3.4 ms per glyph). The composition
+deferral added a little on top; codex warned the margin was 76 ms.
+
+**Next: the build plan's revision 15.** `lcd_blit_flash()` will send its
+window polled, *before* it clears `blit_done` and calls
+`spiSN32FlashDmaPrepare()`, while SPI0 is still in plain 8-bit FIFO mode. That
+halves every DMA arm (glyphs, clears, images) across the whole display.
