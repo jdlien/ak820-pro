@@ -111,20 +111,25 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-10-22)
+## Current state (2026-10-23)
 
 **Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-22
 — RESUME HERE"). **Feature-complete for JD's board.** What's left:
-- an untethered drain at real use, running to the RGB cut;
-- flashing the mainline after the drain (`b9555ff3e6`, which
-  `ak820pro-jdlien` and `deps.lock` point at): one fix ahead of the board's
-  `36afff30e8`, `ce229f87c6`, plus a credit comment. It moves the glyph
-  pump off the clock's seconds tick, the pass that hit 10 ms every second.
-  On gremlin's board since 17:03 10-22, `count_ge_10ms` fell from 0.175 a
-  second to 0.016;
+- an untethered drain at real use, running to the RGB cut. It restarted
+  from FULL at 04:44 10-24 (`charge_mah` -1116.956 at the start): the move
+  to Buzz, the new Mac, on 10-23 spoiled the first;
 - stripping the bench, the soak, and the release for other owners.
 
-**On the board since 14:22 10-21: `36afff30e8`** (dev, token
+**On the board since 23:48 10-23: the mainline, `b9555ff3e6`** (dev, token
+`0x3c117332`), flashed from Buzz. `ak820pro-jdlien` and `deps.lock` point
+at it. It is `36afff30e8` plus `ce229f87c6` and a credit comment, and it
+moves the glyph pump off the clock's seconds tick, the pass that hit 10 ms
+every second. On gremlin's board since 17:03 10-22, `count_ge_10ms` fell
+from 0.175 a second to 0.016. ⚠️ **The bench moved to Buzz on 10-23**: the
+keyboard's data cut is `uhubctl -l 3-1.3.4 -p 2`, not `0-1.4`, and the wake
+rig is broken ([docs/test-bench.md](docs/test-bench.md)).
+
+**Before it, from 14:22 10-21: `36afff30e8`** (dev, token
 `0xef38330e`): Gremlin's frame trim for the wireless clock merged with
 the 81-LED model; the Mac's daemon `21e8fe8` sends type 4. The 30 min
 cut held the clock within ~20 ms

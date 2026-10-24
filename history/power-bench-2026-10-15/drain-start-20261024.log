@@ -1,0 +1,19 @@
+2026-10-23 23:52:44 watching the logger for the charge to terminate
+2026-10-24 04:17:24 charge terminated: ~0 mA since 2026-10-24 04:16:19 (charge_mah -1116.976)
+2026-10-24 04:18:54 board read 1: rc 0 | supply       external (USB)  (full) | level        100.0 % | flags        rgb_on linked external
+2026-10-24 04:23:54 board read 2: rc 0 | supply       external (USB)  (full) | level        100.0 % | flags        rgb_on linked external
+2026-10-24 04:28:54 board read 3: rc 0 | supply       external (USB)  (full) | level        100.0 % | flags        rgb_on linked external
+2026-10-24 04:33:54 board read 4: rc 0 | supply       external (USB)  (full) | level        100.0 % | flags        rgb_on linked external
+2026-10-24 04:38:54 board read 5: rc 0 | supply       external (USB)  (full) | level        100.0 % | flags        rgb_on linked external
+2026-10-24 04:43:55 board read 6: rc 0 | supply       external (USB)  (full) | level        100.0 % | flags        rgb_on linked external
+2026-10-24 04:43:55 ABORT: the board never read FULL; left charging, nothing switched
+supply       external (USB)  (full)
+level        100.0 %
+pack         >=4036 mV  (estimate 5C 100)
+module 5C    last 100%, 3 s ago
+vdd          4444 mV  (raw 1849, since boot 4331..4452 mV)  -- the rail, not the pack
+charger pins CHRG high, STDBY high
+led drive    7.3 % of maximum
+flags        rgb_on linked external
+power mode   Balanced, stage active
+draw         - (on USB: the count and time left are for the pack)

@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-23, 10:40. The block below is where things stand, written to
+Updated 2026-10-24, 04:50. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -17,37 +17,78 @@ and on the board:
 - Gremlin's PCF writer fixes;
 - the RGB model over 81 LEDs.
 
-What is left is real use and a soak, flashing the once-a-second slow
-pass's fix (below; on the mainline and on gremlin's board, JD's after the
-drain), and the polish and release for other owners.
+What is left is real use and a soak, the config menu's S0 after the drain
+("After the drain", below), and the polish and release for other owners.
+The once-a-second slow pass's fix is on JD's board since 23:48 10-23.
 
 ### What is running
 
-- **Firmware on JD's board: `36afff30e8`** (dev, token `0xef38330e`), since
+- **Firmware on JD's board: `b9555ff3e6`** (dev, token `0x3c117332`), since
+  23:48:26 10-23, built and flashed from Buzz, the new Mac. `flash.sh`
+  restored and verified the keymap and the lighting, and synced the clock
+  to -4.3 ms.
+- **Before it: `36afff30e8`** (dev, token `0xef38330e`), from
   14:22 10-21. It is Gremlin's frame trim (`01abfe0ecf`, codex cleared after
   four rounds) merged with `36330d5ec8` (the 81-LED model).
-- **The mainline is one fix ahead: `b9555ff3e6`.** `ak820pro-jdlien` and
+- **The mainline: `b9555ff3e6`, now on JD's board too.** `ak820pro-jdlien` and
   `deps.lock` point at it. It is `36afff30e8` plus the once-a-second slow
   pass's fix (`ce229f87c6`, below) and a comment crediting quill4gen7 in
   `lockchan.c` (the same code). Gremlin's board runs it since 17:03 10-22 (token
-  `0x32d3502c`). JD's board takes it after the drain.
-- **The Mac's daemon: `21e8fe8`** (`--clock --radio --lockchan`), since
-  14:23 10-21. With the data cut it runs the clock and now-playing over the
-  lock-light channel.
+  `0x32d3502c`), and JD's since 23:48 10-23.
+- **The Mac's daemon, on Buzz: `v0.1.1-839-g17e77d5`** (`--clock --radio
+  --lockchan`, signed with the Developer ID), installed 23:49:13 10-23. Its
+  first syncs after the flash, 3 min apart, found the board -1649.5, then
+  -704.8, then -8.8 ms off: the RTC period the flash erased, re-learning. By
+  23:55 it had converged and was slewing, with the interval back to 300 s.
+  With the data cut it runs the clock and now-playing over the lock-light
+  channel.
+  - Elysium's `21e8fe8` (from 14:23 10-21) still runs, but without the
+    board. Elysium will be wiped once everything has moved over.
 - **The bench:**
   - relay 2 off: the board on its pack;
-  - uhubctl hub `0-1.4` port 2 off: no USB data;
+  - uhubctl hub `3-1.3.4` port 2 off: no USB data (the new Mac, from
+    10-23; `0-1.4` port 2 on the old one);
   - relay 1 off;
   - the INA228 logging to `history/power-bench-2026-10-15/power.csv`;
-  - JD's settings (white v255, screen 5), in Balanced, the slider on BT.
+  - JD's daily setting (effect 2, hue 185, sat 227, val 115, speed 231;
+    screen 5), in Balanced, the slider on BT. The drain from FULL runs
+    since 04:44:26 10-24.
 - **The clock's 30 min cut passed** on this build: the replug found -20.0 ms,
   against +1106.3 ms the morning before without the trim
   ([`../history/lockchan-clock-mac-cut-trim-20261021/`](../history/lockchan-clock-mac-cut-trim-20261021/README.md)).
 
-### In progress: an untethered drain at real use
+### Running since 04:44:26 10-24: the untethered drain at real use, from FULL
 
-The first drain with the ladder and deep sleep at JD's real use. It runs to
-the RGB cut, likely a few days.
+The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
+--lockchan`) and the slider on BT. It runs to the RGB cut.
+
+- **The charge:** relay 2 on at 23:46:52 10-23, with `charge_mah` at 50.83.
+  It tapered to ~-79 mA and terminated at 04:16:03 10-24 (`charge_mah`
+  -1116.977): 1167.8 mAh in over 4 h 29 min.
+- **FULL, verified:** six reads from 04:18:54 to 04:43:55, every one
+  `external (USB) (full)`, 100.0%, the charger pins CHRG high and STDBY high.
+- **The start:**
+  - relay 2 off at 04:44:26;
+  - hub `3-1.3.4` port 2 off at 04:44:29, and the keyboard left USB.
+  - **`charge_mah` at the start: -1116.956** (04:44:25). Since FULL =
+    `charge_mah` + 1116.956.
+- **The draw:** 27-33 mA for the 3 s with the data still on (dark, idle since
+  ~23:45), then ~3.0 mA asleep from 04:44:31.
+- **The daemon at the start:** board absent, radio silent (the slider is on
+  BT), lockchan held. Its last health read before the cut (04:44:24) showed
+  `stall_ge_25ms` 0 and a worst loop gap of 24 ms (`blit`).
+
+### Stopped 23:46:52 10-23: the untethered drain at real use, restarted from FULL
+
+⚠️ **This drain stopped, and the one above replaced it.** Moving to the
+new Mac spoiled its two checks. Two slider moves rebooted the board (~19:44,
+~23:44), which restarted its count since FULL. The logger missed 6.5 h,
+and the pack took 32 mAh mid-run. Its results up to 14:53 10-23 stand (the
+nights, the day profile, JD's daily setting). Relay 2 went on at 23:46:52,
+and the board was flashed to `b9555ff3e6` at 23:48.
+
+The record of the stopped drain follows. It was the first drain with the
+ladder and deep sleep at JD's real use.
 
 - **Started 23:18:26 10-21 from a verified FULL:** 423 mAh in, terminated
   at 22:53:31, and the board read FULL, 100.0%. The logger's `charge_mah`
@@ -107,29 +148,65 @@ the RGB cut, likely a few days.
 - **Reads go over the data alone:** port 2 on, relay 2 still off. Cut the
   data again after, or the board cannot sleep. The reads so far, on 10-22:
   14:56:38-14:58:02, 15:06:26-15:06:31, 18:19:48-18:19:58, and on 10-23
-  10:16:54-10:16:59 and 10:31:57-10:32:05. The board
+  10:16:54-10:16:59, 10:31:57-10:32:05 and ~23:30-23:34:24 (the new Mac,
+  JD plugging the cable in). The board
   was asleep for the last, and the data can't wake it: relay 1 tapped the
   rig's F19 first (18:19:41, the Mac locked, so nothing typed), which
   costs ~17 mAh of ladder before it sleeps again.
-- ⚠️ **The Mac shut down at ~14:25 10-23, mid-drain.** The last logger row
-  is 14:22:56: 33.16 mA (awake, JD's daily lighting), `charge_mah` -2249.79,
-  so 999.3 mAh (24.9%) since FULL. The board runs on its pack throughout
-  (relay 2 off). After the Mac is back:
-  1. Check the relays: `scripts/relay status` should say both off.
-  2. **Cut the keyboard's USB data again:**
-     `perl -e 'alarm 40; exec @ARGV' uhubctl -l 0-1.4 -p 2 -a off -e`. A
-     host restart can bring port 2 back on, and data alone never deep-sleeps
-     (`DSB_USB`).
-  3. Restart the logger, which appends:
-     `venv/bin/python scripts/power_log.py --out history/power-bench-2026-10-15/power.csv --detach`.
-  4. **Check `charge_mah`'s continuity:**
-     - If the QT Py kept power through the shutdown (a dock that powers its
-       ports with the Mac off), the register kept integrating, and its
-       first new row includes the gap's charge. Nothing is lost.
-     - If it reads near 0, the QT Py lost power and the register cleared.
-       Record the offset, and bridge the gap from the board's own count
-       ("energy since FULL", `ak820battery.py`, over the data alone) or as
-       asleep at ~3.1 mA for the hours it was off.
+- ⚠️ **The old Mac went down mid-drain, and the bench moved to a new Mac
+  (10-23).** The board ran on its pack throughout: relay 2 stayed off, and
+  a relay board that loses power opens its contacts.
+  - **The old logger's last row: 14:53:09 10-23**, `charge_mah` -2233.06, so
+    1016.1 mAh since FULL. (An earlier look saw 14:22:56 as the last row;
+    the CSV carried over to the new Mac runs to 14:53:09.)
+  - **~19:44: the board rebooted,** when JD moved the slider from BT to
+    2.4G (the new Mac had no Bluetooth pairing). A slider move is a
+    power-source switch. The time comes from the board's 229-minute average
+    at 23:33, and `wdt_fired_last_boot` reads False. The reboot lost:
+    - the RAM battery log from before it;
+    - the board's count since FULL. At 23:33:17 it read 538.5 mWh, 76.6%,
+      band 56.6..90.7%.
+  - **The slider went back to BT at ~23:44,** after the new Mac was paired.
+    That move likely rebooted the board again. From 23:45 the drain is on
+    BT, as it was before 19:44.
+  - **The QT Py lost power when it moved hubs, and its charge register
+    cleared.** From its uptime, it booted at ~21:25:22. The new register read
+    78.7 mAh at 23:33:37: 36.8 mA on average from 21:25, so the board was
+    awake that whole stretch.
+  - **14:53:09-21:25:22, 6.5 h, went unmeasured:** ~20 mAh if the board
+    slept throughout (3.1 mA), ~216 if it was awake at JD's daily setting
+    (33 mA). So since FULL = 1016.1 + the gap + the new `charge_mah`: 1115
+    to 1311 mAh at 23:34. The board's own count cannot bridge it, because
+    the reboot restarted that count.
+  - **The new Mac, 23:30-23:35:**
+    - `setup.sh` rebuilt the venv on Homebrew's Python 3.15; the old one
+      pointed at a pyenv 3.13.9 this Mac lacks. It is kept as
+      `venv.old-pyenv-3.13.9`.
+    - `uhubctl` and `libusb` came from Homebrew.
+    - JD plugged the relay cable in (data only).
+    - `relay status`: both off. The board read `supply battery`.
+    - **Logger restarted 23:33:35** (pid in `power.pid`).
+    - **Data cut at 23:34:24, hub `3-1.3.4` port 2,** and the keyboard left
+      USB. The draw fell from ~37.5 to ~35.5 mA.
+    - **23:39:49-23:45:11: relay 2 on, the pack charging** at ~366-390 mA.
+      The register fell from 82.09 to 49.92: 32.2 mAh back into the pack,
+      which the register nets out. The `on` was a plug-in to the gauge,
+      and the `off` an unplug.
+    - Data on 23:42:27-23:45:11 for VIA: (0,13) is play/pause again on
+      layers 0 and 2 (read back). The keymap backup is at
+      `~/Documents/ak820pro-keymap.json`, taken 23:44:52.
+    - **Relay 2 off and the data cut at 23:45:11.** The keyboard left USB,
+      and the logger read +33.2 mA.
+  - **Not on the new Mac yet:**
+    - the daemon (no Rust toolchain), so no clock sync, no now-playing and
+      no lock-light frames to the board;
+    - the old Mac's `~/Documents/ak820pro-*`: the lighting and keymap
+      backups, and the battery logs;
+    - the Home Assistant token in the Keychain (`bench_power.py`);
+    - `gh`, and `~/bin/relay`.
+  - **The wake rig is gone** (a lead tore off its switch on 10-23). A read
+    of a sleeping board needs a key pressed by hand
+    ([docs/test-bench.md](../docs/test-bench.md), "The wake rig").
 - **At the cut:** the logger sees a ~45 mA step at ~3.40 V. Then data on,
   dump the RAM battery log (`ak820battery.py log`), relay 2 on. Nothing
   watches for the cut yet: set a watcher on the logger once the level
@@ -197,7 +274,20 @@ on the pack and ~1.1 awake and dark with the data on.
 ### After the drain
 
 1. Dump the RAM battery log, then charge to FULL.
-2. Flash the mainline (`b9555ff3e6`: the slow-pass fix, `ce229f87c6`).
+2. Flash the config menu's S0, agreed with Warren on 10-24. `b9555ff3e6`
+   is on the board already. Until then, nobody moves `ak820pro-jdlien`,
+   `deps.lock` or main for it.
+   1. **On gremlin first:** a daily build of S0 (`gremlin/config-menu`
+      `4b899118`, four commits fast-forward on `b9555ff3e6`). It is likely
+      the combined S0 + `gremlin/fill-poll` daily, so one flash covers both.
+      Warren runs it while JD is at gremlin, because the flash back to dev
+      needs `Fn`+`Esc`.
+   2. **Then JD's board, in one flash with a soak:** S0, plus the LED fix
+      (`gremlin/fill-poll` `f2b107be`, `docs/leds.md`) if codex's
+      revision-8 verification clears it.
+   3. **Then the merges:** `gremlin/config-menu` into `ak820pro-jdlien`,
+      `deps.lock` moved, and `warren/config-menu` into main.
+
    Candidates for the same flash, each through codex (`BACKLOG.md`):
    - the hours left in the "Battery low" alert, if the drain shows the
      estimate right near the bottom;
@@ -254,6 +344,10 @@ and clicks, and the debug pages move into it. The design, its decisions, and wha
 
 - **Data alone never deep-sleeps** (`docs/test-bench.md`). A battery run
   meant to match real use cuts both relay 2 and port 2.
+- **FULL is `(full)` with 100.0%, never the `done` flag.** The charger's
+  DONE pin has never read low on USB (`docs/battery.md`, "The charger").
+  A watcher that also waited for `done` let the board sit at FULL from
+  04:18 to 04:44 10-24 before the drain started by hand.
 - **After a flash, wait for a settled sync** (|before| <= 25 ms) before any
   cut. The erased RTC period took ~6 min to re-converge (-460 ms, then
   -2885 ms, then -8.8 ms).
