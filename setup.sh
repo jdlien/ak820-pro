@@ -94,8 +94,9 @@ else
     die "Homebrew not found. Install from https://brew.sh then re-run."
   fi
   # hidapi is linked by BOTH ak820ctl and the python `hid` package; pkg-config is
-  # how ak820ctl's Makefile finds it.
-  for pkg in hidapi pkg-config; do
+  # how ak820ctl's Makefile finds it. libusb is sonixflasher's (USE_LIBUSB=1,
+  # step 5): without it a binary carried over from another Mac fails to load.
+  for pkg in hidapi pkg-config libusb; do
     brew list "$pkg" >/dev/null 2>&1 || { echo "  installing $pkg"; brew install "$pkg" || die "brew install $pkg"; }
   done
 fi
@@ -352,8 +353,13 @@ if [ "$PLATFORM" = windows ]; then SF_FLAGS=""; else SF_FLAGS="USE_LIBUSB=1"; fi
 # /dev/null turned every compile error into the same four content-free words.
 BUILDLOG="$(mktemp "${TMPDIR:-/tmp}/ak820setup.XXXXXX")"
 # shellcheck disable=SC2086
-if make -C "$ROOT/SonixFlasherC" $SF_FLAGS sonixflasher >"$BUILDLOG" 2>&1; then
-  ok "sonixflasher: $("$ROOT/SonixFlasherC/sonixflasher" --version 2>&1 | head -1)"
+# Judge it by its banner, not its exit status: `--version` exits 1 even when it
+# works, and an up-to-date binary that cannot load its libraries (copied from
+# another Mac, say) passes make and prints only a dyld error.
+if make -C "$ROOT/SonixFlasherC" $SF_FLAGS sonixflasher >"$BUILDLOG" 2>&1 \
+   && SF_VER=$("$ROOT/SonixFlasherC/sonixflasher" --version 2>&1 | head -1) \
+   && case "$SF_VER" in sonixflasher*) true ;; *) echo "$SF_VER" >>"$BUILDLOG"; false ;; esac; then
+  ok "sonixflasher: $SF_VER"
 else
   warn "sonixflasher build FAILED -- flash.sh will not work"
   sed 's/^/      /' "$BUILDLOG" | tail -12
