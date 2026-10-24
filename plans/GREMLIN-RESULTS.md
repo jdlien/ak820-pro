@@ -413,6 +413,19 @@ the same path and will dim briefly too, unmeasured.
   the crop that would have stripped it hung gremlin, which needed a hard
   power-off.
 
+**A9 passes** (10-24, 08:20-08:27, JD's hands). Gremlin's keymap has no
+animation key: its Fn+Delete is `SCR_TOG` (JD's first press turned the
+backlight off), so `ANIM_TOG` (`0x7E11`) went temporarily onto Fn+F12 (layer 1,
+r0 c12, was transparent; read back). Fn+F12 under the Fn+D page: nothing
+changed; the owner stayed DEBUG, no restore, `invariant_fail` 0. Fn+F12 with
+the fixture open (held by keep-alive): nothing changed; MENU and OPEN
+throughout, `invariant_fail` 0. **The limit:** gremlin's animation slot is
+empty, so a refusal and an empty slot's no-op look alike from outside. The
+order in `anim_toggle()` (`display_anim_admissible()` before
+`anim_read_header()`) is what makes it a refusal, and the host tests cover
+the predicate. **Fn+F12 stays bound** until S0's hands-on cases are done;
+gremlin's keymap from before is saved.
+
 **Still to run:**
 - **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
-  (the physical knob cases).
+  (the physical knob cases). A9 is done.

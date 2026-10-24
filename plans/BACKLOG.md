@@ -25,6 +25,20 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## A ghost of the dashboard's "100%" on gremlin's LCD (2026-10-24) -- noted, low priority
+
+S0's photos (`plans/GREMLIN-RESULTS.md` §10) showed a faint "100%" in the
+bottom-right dark grey fills: the dashboard's battery percentage, which
+gremlin's screen shows day and night on USB, since it never sleeps there.
+Most likely LCD image retention, which usually fades, not OLED-style
+burn-in; not yet proved. JD (10-24): don't worry much, keep a note. If it
+ever matters:
+- **The test:** hold a grey fill over it for 10 min, photographed at the
+  start and the end.
+- **The remedies:** a pixel or two of shift for static text now and then;
+  the screen off after a long idle, even on USB; the panel's inversion
+  setting. JD's board sleeps on battery, so it's less exposed.
+
 ## `count_ge_10ms` ticks once a second: the clock's second edge (2026-10-22) -- fixed in `ce229f87c6`, on gremlin; JD's board after the drain
 
 On `36afff30e8`, every second produces one pass of 10-13 ms
