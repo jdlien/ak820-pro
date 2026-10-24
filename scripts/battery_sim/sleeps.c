@@ -316,6 +316,29 @@ static void s_log_long(void) {
     CHECK(bad == 0, "every entry slept whole: %u not", bad);
 }
 
+/* The log wrapped, in order: every period sleeps a different number of
+ * seconds, so its entry is distinguishable; after SIM_LOG_LEN + 40 periods the
+ * retained entries are the last SIM_LOG_LEN, oldest first (codex, P1's design
+ * review: s_log_long's identical entries can't see an order). Each period is
+ * a sleep of v seconds, then 900 - v awake, from just after a boundary. */
+static unsigned wrap_slept(unsigned k) { return 1u + (k * 37u) % 700u; }
+static void s_log_wrap_order(void) {
+    c_start(96);
+    CHECK(run_until_entries(1, 1000), "the first period closed: %u", log_count());
+    const unsigned n = SIM_LOG_LEN + 40u;
+    for (unsigned k = 0; k < n; k++) {
+        sleep_for(wrap_slept(k) * 1000u, 0);
+        run_s(900u - wrap_slept(k));
+    }
+    CHECK(log_count() == SIM_LOG_LEN, "the log full: %u", log_count());
+    unsigned bad = 0, first_bad = 0;
+    for (unsigned j = 0; j < SIM_LOG_LEN; j++) {
+        unsigned want = wrap_slept(n - SIM_LOG_LEN + j);
+        if (log_entry(j).slept != want && !bad++) first_bad = j;
+    }
+    CHECK(bad == 0, "every entry in order, oldest first: %u wrong, the first at %u", bad, first_bad);
+}
+
 /* Between the wake and the accounting: HC_BATTLOG pending, no period closes
  * even past its end, and the reports arriving go to the live period. */
 static void s_log_pending(void) {

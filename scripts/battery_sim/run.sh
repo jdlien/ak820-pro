@@ -26,7 +26,7 @@ phase2="l_normal l_modes l_usb l_low_cap l_val_cap l_lights_cut l_announce l_per
         c_stale c_excursion c_bias c_clamp_cross c_reboot
         c_band_top c_band_top_edge c_floor_boot c_cut_reseat c_hold_stale c_handover_stays c_floor_entry c_clamp_marker"
 # Deep sleep (sleeps.c): only against a battery.c with the hand-over.
-grep -q "BATTERY_P_SLEEP_UW" "$build/battery.h" && phase2="$phase2 s_energy s_time_left s_floor_cut s_unknown s_band_hold s_remainder s_relax s_log_within s_log_across s_log_long s_log_pending s_log_recovery_boundary s_usb s_no_wake s_replay_v7 s_log_floor s_replay_mixed s_log_late_cut s_usb_relax_banked"
+grep -q "BATTERY_P_SLEEP_UW" "$build/battery.h" && phase2="$phase2 s_energy s_time_left s_floor_cut s_unknown s_band_hold s_remainder s_relax s_log_within s_log_across s_log_long s_log_wrap_order s_log_pending s_log_recovery_boundary s_usb s_no_wake s_replay_v7 s_log_floor s_replay_mixed s_log_late_cut s_usb_relax_banked"
 r3="$hist/battery-2026-10-15-drain-2f/log-20261018-0205-rgbcut.csv"
 e2="$hist/battery-2026-10-12-drain-2e/log-20261014-0950-preswap.csv"
 for s in boot_battery boot_battery_clamp boot_usb_full discharge charge_log transitions \
@@ -112,7 +112,7 @@ if grep -q '^#define POWER_HAS_MODES' "$build/power.h"; then
     if grep -q 'AK820_DEVFAULT' "$build/battery.c"; then
         cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -DAK820_DEV_HOOKS -DWDT_TEST_HOOKS -DAK820_DEVFAULT \
            -DSIM_LOG_LEN=712u -I"$build" -o "$build/sim_fault" "$here/sim.c" "$build/battery.c" "$build/power.c" -lm
-        for s in s_log_within s_log_across s_log_long s_log_pending s_log_recovery_boundary s_log_floor s_log_late_cut; do
+        for s in s_log_within s_log_across s_log_long s_log_wrap_order s_log_pending s_log_recovery_boundary s_log_floor s_log_late_cut; do
             "$build/sim_fault" "$s" || fail=1
         done
         for s in log_cadence ring_restart; do "$build/sim_fault" "$s" "$log" || fail=1; done

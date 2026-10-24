@@ -1453,6 +1453,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "s_log_within")) s_log_within();
     else if (!strcmp(s, "s_log_across")) s_log_across();
     else if (!strcmp(s, "s_log_long")) s_log_long();
+    else if (!strcmp(s, "s_log_wrap_order")) s_log_wrap_order();
     else if (!strcmp(s, "s_log_pending")) s_log_pending();
     else if (!strcmp(s, "s_log_recovery_boundary")) s_log_recovery_boundary();
     else if (!strcmp(s, "s_usb")) s_usb();

@@ -1,4 +1,4 @@
-# The configuration menu's P1: the design (draft 3, 2026-10-24)
+# The configuration menu's P1: the design (draft 3.1, 2026-10-24)
 
 Warren's design for stage P1 of [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 ("Stages", 3). The plan's contract (C1-C10, "The settings", "Diagnostics,
@@ -97,7 +97,8 @@ Clock:       ‹ Back, • 24 hour, 12 hour, Date, Off
   u16, `left_min` u16, mode u8, link u8 packed as transport 2 bits, slot 2,
   state 3: 12 B, 4-aligned), formatted per piece from the frozen copy, so
   every piece of a page shows one sample. Unknowns are sentinels (0xFFFF),
-  kept through the minutes-to-hours conversion.
+  kept through the minutes-to-hours conversion; `battery_pack_mv()`'s
+  unknown, 0, is normalized to the sentinel at capture.
 - **Diagnostics:** Health page and Camera page hand off by C1's table
   (MENU to DEBUG, the session OPEN). The return (a click or a hold on the
   page) rebuilds the stack as top (cursor on Diagnostics) -> Diagnostics,
@@ -207,11 +208,20 @@ target is unique across the whole tree, not only within one list.
 |---|---|
 | the title | the title id, enumerated: 1-11 the screens' titles (Configuration, Power, Clock, Diagnostics, Help, About, the four topics, Reset counters), 16-18 the flashes (Saved, Cancelled, Counters reset), 19 the hint |
 | the separator | constant |
-| a row (one slot, two chunks) | bits 15-14 the kind (0 blank, 1 item, 2 text line, 3 About line). Item: bits 13-8 the node (6 bits), bits 7-4 the value index (15 none), bit 1 the saved bullet, **bit 0 lit**. Text line: bits 13-11 the topic, bits 10-5 the line. About line: bits 13-12 a 2-bit snapshot generation, bits 11-8 the line |
+| a row (one slot, two chunks) | bits 15-14 the kind (0 blank, 1 item, 2 text line, 3 About line). Item: bits 13-8 the row's own node (6 bits), bits 7-4 the value index (15 none), bit 1 the saved bullet, **bit 0 lit**. **Every option is a node of its own** (Power's four, Clock's four), distinct from its parent's setting row: the top level's `Clock 24h` and the choice's `24 hour` never share a signature. Text line: bits 13-11 the topic, bits 10-5 the line. About line: bits 11-8 the line |
 | the scrollbar | `0xFFFF` blank (the count fits); else the count in bits 13-8 and the top in bits 5-0 (both at most 63, asserted) |
 | the confirm geometry's text | its line ids, constant |
 
-Blank rows past a list's end are kind 0: one signature, the background.
+Blank rows past a list's end are kind 0: one signature, the background. An
+absent scrollbar paints its track black.
+
+**About's snapshot (draft 3.1, codex's third round):** taking a new snapshot
+marks About's row slots INVALID (`ms_invalidate_rows()`, a new call: no
+panel clear, `maybe_lit` and the abandonment bookkeeping kept), then
+retargets once. A retarget alone would leave a committed row from an earlier
+snapshot with an equal signature (a 2-bit generation wraps; any width only
+delays it). The host tests reopen About repeatedly before its later rows are
+painted.
 
 ### One lit row at most (BACKLOG: "at most one row ever lit")
 
@@ -259,8 +269,8 @@ Measured: dev `ffa80947` gap 232 B (104 over the floor), devfault
 | the flash's start (u16 ms) | 2 |
 | the latched model (power, clock) | 2 |
 | `maybe_lit` | 1 |
-| About's snapshot (12 B, 4-aligned) and its generation | 13 |
-| P1a total | **31**, + padding: `sizeof` asserts and the linked delta |
+| About's snapshot (12 B, 4-aligned) | 12 |
+| P1a total | **30**, + padding: `sizeof` asserts and the linked delta |
 | P1b's edit transaction (C5) | 16 |
 | P1c's owed releases (90 keys) | 12 |
 | P1 total | **~60** |

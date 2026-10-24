@@ -310,3 +310,38 @@ The simplest gate arrangement is to exercise Reset before the measured interval.
 **What can wait:** P1b’s preview transactions and possible half-row slots; P1c’s keycode implementation with its RAM reserved; P1d’s art adapters, geometry and hardware timing; P2–P4. Actual linked sizes, stack watermarks and board timing belong to P1a implementation/acceptance. The spin script also needs an explicit unarmed-menu mode during that work—it currently always arms the fixture opener. [Current spin setup](C:/Users/jdlien/code/ak820-pro/scripts/menu_s1_spin.py:47)
 
 This was a read-only review confined to the repository. No files changed, and no builds or hardware tests ran.
+## The third round (draft 3), verbatim
+
+Prompt: [`review-prompt-p1-design-3.txt`](review-prompt-p1-design-3.txt). Answered by draft 3.1: options are nodes of their own; a new About snapshot invalidates its rows (`ms_invalidate_rows`), the generation bits dropped; `battery_pack_mv()`'s 0 normalized; the simulator's `s_log_wrap_order` (distinguishable entries, oldest first, at 720 and 712; a planted off-by-one fails it).
+
+**P1a still has a target-identity blocker.** The cleanup and protocol revisions are substantially resolved.
+
+1. **About’s two-bit generation can alias a surviving row.** Entering and leaving About only retargets; it does not invalidate untouched committed slots. [Transition and signature rules](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-P1-DESIGN.md:195)
+
+   Concrete sequence:
+
+   - Settle About at generation 0. Its zero-based Mode line, row 6, has signature `0xC600`.
+   - Change power with Fn+B. The displayed snapshot correctly stays frozen.
+   - Leave and reopen About four times, navigating before painting reaches row 6. Title painting alone provides opportunities for these interruptions.
+   - The snapshot generation returns to 0. Row 6 now requires different Mode text but still has signature `0xC600`.
+
+   The scheduler skips that old COMMITTED row and can report settled with stale pixels. Retargeting does not age out committed signatures. [Equality checks](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:148)
+
+   **Fix:** invalidate the affected row slots whenever replacing the snapshot, then retarget once. This needs no panel clear and preserves C3. Preserve `maybe_lit` and the existing abandonment bookkeeping. Increasing the generation width alone does not establish a safe lifetime. Test repeated re-entry before later rows are touched.
+
+2. **The item namespace needs an explicit parent-row/option-row distinction.** The draft names “node” and “value index” but does not define whether choice options receive distinct rendering IDs. [Item encoding](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-P1-DESIGN.md:210)
+
+   If both use Clock’s node, the top-level Clock row showing `24h` and the choice’s `24 hour` option can share kind, node, value index, bullet and lit bits **in row slot 1**. For example: enter Clock while 24h is saved, then externally change to 12h before row 1 repaints; the selected 24-hour option loses its bullet while the old selected parent row can remain committed.
+
+   **Fix:** give parent setting rows and option rows distinct rendering IDs, or use a spare bit for their rendering context. If distinct option IDs were already intended, state that explicitly; this particular ambiguity disappears.
+
+The other reviewed points do not require another design change:
+
+- **Cleanup:** no inherent self-deadlock in the stated order. An active lit row excludes its own mask bit from the wait. A masked row beyond the new list’s end remains one of the eight row slots, with an unlit blank target, so step 2 cleans it. That requires painting its full footprint, as C3 already mandates. Reached stops intentionally freeze progress; they must remain ahead of scheduling.
+- **Title/separator/scrollbar:** their signatures suffice across retargets. An absent scrollbar must actually paint its track black.
+- **Latched model, transitions, sub 11, sub 0 and sub 5:** the second-round decisions are adequately specified.
+- **RAM:** the dedicated devfault flag, 144-byte saving and explicit 420-byte amendment resolve the design-level objections. Linked sizes and stack watermarks remain acceptance work.
+
+Two implementation checks remain worth calling out. The new simulator variant exists, but [`s_log_long`](C:/Users/jdlien/code/ak820-pro/scripts/battery_sim/sleeps.c:310) checks only capacity and identical `slept == 900` values; it cannot detect reordered entries. Add distinguishable records across wrap and verify oldest/newest ordering for both capacities. About’s formats fit, but snapshot capture must normalize [`battery_pack_mv()`’s unknown value of **0**](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.h:112) to the chosen sentinel.
+
+Read-only review; no files changed, builds or hardware tests run.
