@@ -1,7 +1,21 @@
-# The configuration menu: how to build it (revision 6, 2026-10-23)
+# The configuration menu: how to build it (revision 7, 2026-10-24)
 
-Status: **cleared for S0 (codex, round 6); nothing built yet.** Owned by Warren (gremlin's session) from
-10-23.
+Status: **S0 built and accepted on the keyboard on gremlin, all but A4**
+(`GREMLIN-RESULTS.md` §10); revision 7 is for S1, awaiting codex. Owned by
+Warren (gremlin's session) from 10-23.
+- **Revision 7** folds in what S0's board cases found (10-23/24), for S1:
+  - **Colour paints held off the RGB row ISR** (-18% of its refreshes, a
+    visible flicker per knob turn). The fix, bulk SPI0 sends polled with the
+    FIFO interrupt masked, is prototyped (`gremlin/fill-poll` `f2b107be`,
+    -1.3%, JD: "no flicker"). It becomes C4's send rule and S1's first step.
+  - **A per-pass byte bound** on every paint, since a polled send runs
+    longer in wall time (the worst pass went from 20 to 23 ms).
+  - **A row-ISR gate** beside the stall counters.
+  - **The cursor's cost is its area, not its style:** the mono blit paints
+    every pixel of a cell either way.
+  - **C2's Fn judged by `layer_state`** misses inside an undecided tap-hold's
+    tapping term; S1 decides.
+  - **A menu keycode,** which JD wants, goes to P1.
 - **Revision 2** folded in codex's first review
   ([`review-codex-config-menu-build-plan-2026-10-23.md`](review-codex-config-menu-build-plan-2026-10-23.md)).
 - **Revision 3** folded in its verification of revision 2
@@ -543,12 +557,40 @@ the code is raised before working around it.
   nothing.
 - **Its rules:**
   - acquired, filled and released only on the main thread, never
-    reentrantly, and never from a callback or an ISR. SPI's FIFO ISR does
-    **read** it during `spiSend()` (`hal_spi_v2_lld.c:96-125`), so the
-    caller holds it until `spiSend()` completes;
-  - interrupts stay enabled;
+    reentrantly, and never from a callback or an ISR. The bulk send reads
+    it, so the caller holds it until the send returns;
+  - interrupts stay enabled; only SPI0's own FIFO interrupt is masked
+    during a bulk send (below);
   - no pointer to it is kept.
   A debug build asserts acquire and release.
+- **Bulk sends are polled (revision 7).** `spiSend()` takes SPI0's RX-FIFO
+  interrupt every ~3 us (8 bytes at 24 MHz) at priority 3, beside the RGB
+  row ISR, which re-arms at its end: every late start is a longer dark gap
+  for every row. S0's fixture repaints cost the LEDs 18% of their row
+  refreshes, and JD saw each knob turn flicker the keyboard (A10, A11).
+  `spi0_poll_send()` feeds the FIFO from the main thread instead:
+  - `SN_SPI0->IE` cleared for the send, at most 8 bytes outstanding;
+  - RX drained and RXFIFOTHIC cleared (a literal write) before IE is set
+    back, or the idle driver's handler would run its completion code;
+  - a bounded spin counted in polling work, so time in the row ISR costs
+    none of it;
+  - one failure path for a stuck shift or BUSY: the FIFOs reset, a count,
+    `PO_FAIL_SPI0_POLL` (0x20) on dev builds, `blit_lost` set so the owner
+    repaints, and the operation stopped.
+
+  `lcd_fill_rect`, `tx_pixels` and the stream use it. Commands, the window
+  and single bytes stay on `spiSend()`. Callers have quiesced the bus, so no
+  DMA is in flight and none can start
+  ([`review-codex-spi0-poll-2026-10-24.md`](review-codex-spi0-poll-2026-10-24.md)).
+  Prototyped as `gremlin/fill-poll` `f2b107be`: the repaint cost fell from
+  -18% to -1.3%.
+- **A per-pass byte bound (revision 7).** Polled, a send runs longer in
+  wall time, because the row ISR now preempts it: the worst pass went from
+  20 to 23 ms under the fixture, whose ops send up to 2,048 bytes (an F2
+  tile) in one pass. Every paint op is split so one pass sends at most
+  `MENU_PASS_BYTES`, each piece with its own window and stream, never a
+  stream open across passes. S1 sets the number from HC_ACCT's per-op
+  ticks, with the worst pass held at 15 ms or less.
 - **The panel-order stream:** `lcd_stream_begin(x, y, w, h)`,
   `lcd_stream_bytes(const uint8_t *panel_order, n)` and `lcd_stream_end()`.
   - **`begin`** validates the rectangle, quiesces the bus, acquires the
@@ -1006,6 +1048,18 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
      drain's backlog are S1's. The general test list below ("The stall
      counters") is P1's gate, not S0's.
 2. **S1, the mono paint, measured:**
+   - **First, the polled bulk sends** (C4, revision 7) merged from
+     `gremlin/fill-poll`, with codex's two hardening items:
+     - an entry check that SPI0 is idle (READY, no DMA, RX empty), failing
+       safe as a give-up;
+     - a decision on making the driver's FIFO dispatch respect IE, which
+       would be a chibios-contrib patch (`PATCHES.md`).
+
+     **And `MENU_PASS_BYTES`**, applied to the fixture's ops before the
+     mono paint builds on them.
+   - **C2's Fn, decided** ("Open" 5): by the physical Fn key, by a pending
+     Fn press in QMK's tapping buffer, or documented as a known miss. Host
+     tests, and the A10 tap-hold case run again by hand.
    - `lcd_blit_mono` and the generated font, with op 27 sub 0's mono
      patterns (16 up) painting on the fixture, under its panel ownership,
      never a second painter over the live dashboard.
@@ -1020,8 +1074,14 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
      (a change to `quantum/encoder.c`) is weighed then.
    - **Settled on the panel:** the cursor style (Open, 1), and the generated
      glyphs against the flash atlas.
+   - **The LEDs:** `scripts/menu_s0_ledrate.py`, extended to the mono
+     patterns, holds the row ISR during menu activity within 2% of the
+     dashboard's, with every repaint completed. A failed check fails the
+     run.
 3. **P1, the menu:** `menu.c` with host tests; Lighting, Screen, Power,
-   Clock, Diagnostics, Help, About and Exit; C6 to C8.
+   Clock, Diagnostics, Help, About and Exit; C6 to C8. **The menu keycode**
+   ("Open" 3), if C2's amendment for it passes codex: appended to the enum
+   and `via.json`, with its release captured like the knob's.
    **Exit gates:**
    - real VIA Set and Save packets mid-edit;
    - real `RM_*` keys: the wake rig's key remapped to `RM_VALU` for the
@@ -1075,6 +1135,9 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
   - **Fit:** every label, value and Help line within 20 columns.
 - **On the board, on gremlin's first, driven by op 27 plus the hands-on
   session:**
+  - **The LEDs (revision 7):** the row ISR rate during menu activity within
+    2% of the dashboard's (`scripts/menu_s0_ledrate.py`), and JD's eye on
+    a knob spin.
   - **The stall counters:** no pass of 25 ms or more over a scripted
     500-input session, including the strip, the QR code, a restore with a
     track playing, a wake and real spins. Counter resets are kept out of
@@ -1101,8 +1164,14 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
 
 ## Open
 
-1. **The cursor: lit text or inverted.** Settled on the panel in S1.
-2. **Half rows or full rows:** S1's measurements decide.
+1. **The cursor: lit text or inverted.** Settled on the panel in S1. Its
+   cost doesn't depend on the style: the mono blit paints every pixel of a
+   cell, foreground and background, either way. (Revision 7 corrects a
+   10-24 remark that a lit-text cursor would avoid fills. That holds for
+   the flash atlas's DMA, which the menu's generated font doesn't use.)
+2. **Half rows or full rows:** S1's measurements decide. It's the cursor's
+   real cost: a move repaints two rows' area, against `MENU_PASS_BYTES` and
+   the LED gate.
 3. **A menu keycode (JD, 10-24): wanted.** An opener JD can place anywhere in
    VIA, beside Fn+knob, which stays. JD first thought of Fn+C (the clock
    format today), then kept everything on the knob; JD wants the keycode as
@@ -1130,7 +1199,9 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
    - **Last:** a different priority (docs/leds.md's priority table is
      load-bearing).
 
-   Measured with the script before and after.
+   Measured with the script before and after. **Done as a prototype**
+   (`gremlin/fill-poll` `f2b107be`, -18% to -1.3%, JD: "no flicker"); C4
+   carries the rule and S1 merges it.
 5. **Fn is judged by `layer_state`, which lags a buffered Fn press** (A10,
    10-24). Within the tapping term of an undecided tap-hold on another key,
    QMK's tapping buffer still holds Fn's press, while C2's capture in

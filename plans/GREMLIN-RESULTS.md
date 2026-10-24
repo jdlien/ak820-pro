@@ -486,6 +486,16 @@ tile (up to 2,048 bytes) in one pass, so S1 splits big fills across passes
 
 **JD by eye on the keyboard on gremlin (09:37): "looks way better now... No flicker", and the knob "decently responsive". 88 menu state changes, `invariant_fail` 0.**
 
+**A11's workload on `f2b107be`** (09:45, no track playing, so the media gate
+failed by design; `soak-f2b107be-*.json`):
+- 10×50 steps (460 done, 40 cancelled), then 300 s of the dashboard;
+- ge25 0, `invariant_fail` 0, the dashboard DONE at the end;
+- stacks 648 and 1,216 B free.
+
+**⚠️ But the worst pass since the flash is now 24 ms,** one under the line.
+The per-pass byte bound (the build plan's revision 7, C4's
+`MENU_PASS_BYTES`) is S1's first job, not an option.
+
 **Still to run:**
 - **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
   (the physical knob cases). A9 is done.
