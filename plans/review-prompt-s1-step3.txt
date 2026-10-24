@@ -1,0 +1,16 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+This is a review before a flash to the test board (the keyboard on gremlin), of a plan amendment and three code changes, all from S1's first gate run. plans/GREMLIN-RESULTS.md section 12 has the run; plans/review-codex-s1-step2-2026-10-24.md your last review and its dispositions (all fixed in 0aaefca2, which the run measured).
+
+1. plans/CONFIG-MENU-BUILD-PLAN.md revision 13 (`git diff 4c78ebb HEAD -- plans/CONFIG-MENU-BUILD-PLAN.md`): a PARTIAL slot resumes while its own signature is unchanged, whatever the target generation did (C3 rule 2, C4's piece rules). Revision 8's rule, the same generation and signature, came from your review of revision 7; under it every detent restarted every partial slot, and with multi-piece ops nothing committed during a spin. Code: menu/menu_slots.c's resume test (`git -C qmk_firmware-ak820pro diff 0aaefca2 f1c2dcf7 -- keyboards/a_jazz/ak820pro/menu/menu_slots.c`). Host test: scripts/menu_s0_test.c, the spin case at the end of test_meas() (8 commits in 100 passes against 0 under the old rule).
+2. graphics/display.c, dbg_compose(): on Camera, only Camera's lines are composed (the Health rows blanked and no longer composed behind it).
+3. graphics/display.c, the restore: stage 2 paints the connection row and the clock in two passes (restore_sub), and stage 4 paints the battery outline one edge a pass (outline_edge in draw_battery, the stage holding while battery_outline_pending()).
+`git -C qmk_firmware-ak820pro diff 0aaefca2 f1c2dcf7` shows all three. The gate script also changed (scripts/menu_s1_gate.py: time.perf_counter throughout).
+
+Please review, adversarially:
+1. Is resuming on the slot's own signature correct? Can a PARTIAL slot's already-sent pieces be wrong for its unchanged signature: a retarget that changes pattern or layout but not that slot's signature; the clear continuing across navigation; a loss; a reached stop; a fresh opening; the cursor (one PARTIAL slot at a time, C3's "one chunk cursor") moving away and back? What does it do to the op count and the stop (an op cut by a retarget and resumed: counted when it ends, untimed), and to C10's books (settled, superseded)? Does the plan text now say exactly what the code does?
+2. dbg_compose's early return on Camera: anything the Health composition did that Camera still needs (side effects, the debug_done/dbg_gen bookkeeping, dbg_dirty, a switch from Camera back to Health or to the dashboard)?
+3. The restore splits: restore_sub's reset paths (a restore restarted at band 1, WAITING, a loss, DONE, a second restore while one is running), batt_dirty and outline_edge across a forced repaint and the housekeeping path (draw_battery(false) now paints the outline over five ticks when it's dirty outside a restore), batt_painted_this_pass, and the stage holding: can any of them hang the restore or skip a part?
+4. Anything else that makes flashing this unsafe or the next gate run misleading.
+
+For each finding: severity (blocker / should-fix / note), file and line, the failure scenario, and the fix. Say plainly whether it's safe to flash to the test board and whether revision 13 is sound.
