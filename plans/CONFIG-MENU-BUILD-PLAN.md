@@ -11,10 +11,13 @@ awaiting codex. Owned by Warren
 - **Revision 14** (10-24, from S1's second gate run, `GREMLIN-RESULTS.md`
   §13): **a polled bulk send's window is polled too** (C4). Through `tx8()`
   each of its 11 bytes was a whole `spiSend()`, ~0.2 ms of wall time at
-  this ISR load, ~1.8 ms a window: most of a 512 B piece's 5.4 ms. With the
-  menu's passes at 10-14 ms and the gate's longest 17 ms (four over 15),
-  that margin is what's left. The DMA arm keeps its `spiSend()` window: it
-  follows `spiSN32FlashDmaPrepare()`, which sets SPI0's IE for the DMA.
+  this ISR load, ~1.8 ms a window: a third of a 512 B piece's 5.4 ms, and
+  most of the battery outline's 9.6 ms. The menu's passes run 10-14 ms and
+  the gate's longest was 17 ms (four over 15); whether this is enough is
+  for the next C10 run to show. The DMA arm keeps its `spiSend()` window:
+  `lcd_blit_flash()` has cleared `blit_done` for its own transfer by then,
+  so a polled send's entry check would refuse (codex corrected the first
+  reason given here).
 - **Revision 13** (10-24, from S1's first gate run on the keyboard on
   gremlin, `GREMLIN-RESULTS.md` §12): **a `PARTIAL` slot resumes while its
   own signature is unchanged,** whatever the generation did (C3 rule 2, C4).
@@ -665,8 +668,10 @@ the code is raised before working around it.
   their window too (`lcd_window_polled`: each command byte and its
   parameters a polled send, DC changed only after one returns). The DMA
   arm's window, the panel's init and MADCTL, and other single bytes stay on
-  `spiSend()`: the DMA arm's comes after `spiSN32FlashDmaPrepare()` has set
-  SPI0's IE, which a polled send would overwrite. Callers have quiesced the bus, so no
+  `spiSend()`: the DMA arm sends its window after clearing `blit_done` for
+  its own transfer, and a polled send's entry check would refuse it. A test
+  build's HC_POLLFAULT takes a skip count, so a fault can land on each of a
+  fill's five window sends or on its payload. Callers have quiesced the bus, so no
   DMA is in flight and none can start
   ([`review-codex-spi0-poll-2026-10-24.md`](review-codex-spi0-poll-2026-10-24.md)).
   Prototyped as `gremlin/fill-poll` `f2b107be`: the repaint cost fell from
