@@ -1,186 +1,276 @@
-# The configuration menu's P1: the design (draft 1, 2026-10-24)
+# The configuration menu's P1: the design (draft 2, 2026-10-24)
 
 Warren's design for stage P1 of [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
-("Stages", 3). The plan's contract (C1-C10), "The settings", "Diagnostics,
-About, Help" and "Generated files" stay authoritative; this says how P1 is
-built on S0 and S1 and splits it into three flashes. The words, the tree and
-the behaviour are the mockup's ([`config-menu-mockup.html`](config-menu-mockup.html)).
-Codex reviews this before any P1 code.
+("Stages", 3). The plan's contract (C1-C10, "The settings", "Diagnostics,
+About, Help", "Generated files") stays authoritative; this says how P1 is
+built on S0 and S1, in four flashes. The words and behaviour are the
+mockup's ([`config-menu-mockup.html`](config-menu-mockup.html)) unless a
+line here amends them. **Draft 2 answers codex's review of draft 1**
+([`review-codex-p1-design-2026-10-24.md`](review-codex-p1-design-2026-10-24.md)).
 
 ## What S0 and S1 left
 
-- **The owner and session** (C1, `panel_owner.c`), the coalesced input
-  and capture (C2, `menu_input.c`), the slot scheduler with pieces
-  (C3/C4, `menu_slots.c`), C10's measures, the restore, Diagnostics'
-  handoff (MENU to DEBUG and back).
-- **The text:** the 1-bit Cozette face (`font_small_mono.h`),
-  `menu_text.c`, `lcd_blit_mono` through the stream. A 61 px half-row piece
-  costs ~5.1 ms; every pass stays under 15 ms (GREMLIN-RESULTS §19b).
-- **Settled with JD (10-24):** lit text (#C8C8C8 rows, #FFF2A0 selected),
-  half rows, the 6x14 face for now.
-- **The fixture** (C9, F1-F3) is the MENU owner's only screen; op 27 drives
-  it, and the gate, the failure paths and the style measures depend on it.
-- **RAM:** the dev build's heap gap is 232 B against the 128 B floor: P1
-  has ~100 B of static RAM to spend, all three steps together.
+- C1's owner, session and restore; C2's capture and coalesced input; C3/C4's
+  slot scheduler with pieces; C7's visibility override (`bkl_effective()`,
+  published by `po_apply()`): already built and active for any MENU
+  session; C10's measures.
+- The text: the 1-bit Cozette face, `menu_text.c`, `lcd_blit_mono`. A 61 px
+  half-row piece ~5.1 ms; every pass under 15 ms (GREMLIN-RESULTS §19b-d,
+  the gate's longest 14.8 ms: thin).
+- Settled with JD: lit text (#C8C8C8 rows, #FFF2A0 selected), half rows,
+  the 6x14 face.
+- The fixture (C9, F1-F3), which the gate, the failure paths and the style
+  measures drive through op 27.
 
 ## The steps
 
-| Step | What | Flash after |
+| Step | What | Gate before the next |
 |---|---|---|
-| **P1a, the tree** | `menu.c`: the tree, lists, choices that commit (Power, Clock), text pages (Help), About (both pages), More info (the QR code), Reset counters' confirm, Diagnostics (Health, Camera) by C1's table, Exit, the title's flash and hint, the 24 s timeout; `MENU_ENABLE` on | codex on the code; host tests; the gate, the failure paths and the LED rate extended to the menu's screens |
-| **P1b, the previews** | C6's edit transaction: Lighting (Effect, Brightness, Hue, Saturation, Second color or Speed, Lights) and Screen; the range and hue editors; the 3-minute backstop; C7's visibility for Screen | codex; the plan's P1 exit gates (VIA Set and Save mid-edit, `RM_*` keys, Save with RGB off, Screen from Off and level 0, persistence across a reboot) |
-| **P1c, the keycode** | "Open" 3's C2 amendment, appended to the enum and `via.json`; then `Fn`+`D` unassigned on JD's board | codex on the amendment before code, then on the code; the plan's keycode tests |
+| **P1a, the tree** | the session identity; `menu.c` with lists, committing choices (Power, Clock), text pages (Help's four topics), About page 1, Reset counters, Diagnostics (Health, Camera), Exit; the hint and the flash; un-highlight first; `MENU_ENABLE` on; `power_set_mode()` promoted | codex on the code; host tests; the gate, the failure paths and the LED rate on the menu's screens; JD's session |
+| **P1b, the previews** | C6: Lighting and Screen, the range and hue editors, the backstop; their rows join the top level | codex (a detailed section first); the plan's P1 exit gates |
+| **P1c, the keycode** | "Open" 3's amendment (its RAM reserved now) | codex on the amendment, then the code; then `Fn`+`D` unassigned on JD's board |
+| **P1d, the art** | About page 2 (the bunny, the credits, the link) and Help's More info (the QR code) | codex; the gate on both pages |
 
-Connection (P3), Indicators and Battery (P2, P4) stay out of the tree until
-their stages: P1's top level is Lighting, Screen, Power, Clock, Diagnostics,
-Help, About, Exit (8 items, one page).
-
-## The code
-
-- **`menu/menu.c` (new, pure, host-tested):** the tree as `const` tables,
-  the navigation stack, each screen kind as an `ms_layout_t` (C3), the
-  input (turns, click, Back) and the timers. No ChibiOS, no QMK: settings
-  and facts come through `menu_env.h`, the panel through `menu_backend.h`.
-- **`menu_ops.c`:** the task hands `mi_take`'s batch to the current
-  screen: `menu_input()` for a menu session, `fx_input()` for the fixture
-  (op 27 sub 4, unchanged, so every S0/S1 script keeps working). A new op
-  27 sub 11 opens the menu for the scripts. The physical opener opens the
-  menu.
-- **`menu_glue.c`:** the env and backend on the firmware.
-- **`MENU_ENABLE`** is defined for every flavour at P1a, so `Fn`+knob
-  opens the menu without op 27's arming (the armed mode stays for the
-  fixture's scripts).
+## P1a
 
 ### The tree
 
 ```
-Configuration                      (top: 8 items)
-  Lighting            >            P1b: a list
-  Screen           75%             P1b: the range editor (0-23, Off)
-  Power       Balanced             a choice, committing
-  Clock            24h             a choice, committing
-  Diagnostics         >            a list
-  Help                >            a list
-  About               >            a text page, two pages
-  Exit                             closes
-Diagnostics: ‹ Back, Health page, Camera page, Reset counters
-Help: ‹ Back, Using the menu, Customizing, Shortcuts, Pro tips, More info
+Configuration                       (opens on row 0)
+  Power           Balanced          a choice, committing ("Saver" for Power saver)
+  Clock                24h          a choice, committing
+  Diagnostics            >
+  Help                   >
+  About                  >          a page
+  Exit                              closes
+Diagnostics: ‹ Back, Health page >, Camera page >, Reset counters >
+Help:        ‹ Back, Using the menu >, Customizing >, Shortcuts >, Pro tips >
+Power:       ‹ Back, • Always on, Balanced, Power saver, Lights out
+Clock:       ‹ Back, • 24 hour, 12 hour, Date, Off
 ```
 
-- A node is `{label, kind, payload}`; kinds: `MENU` (a child list),
-  `CHOICE` (a committing or previewing list of options), `RANGE`, `HUE`,
-  `PAGE` (const lines), `ABOUT`, `QR`, `CONFIRM`, `DIAG_HEALTH`,
-  `DIAG_CAMERA`, `EXIT`, `BACK`.
-- **The stack:** at most three levels (top, a list, a screen under it):
-  each entry a node index, a cursor and a page top: 3 x 3 B.
-- **Opening a list** puts the cursor on its first real item (row 1; row 0
-  is `‹ Back`). **A choice** opens on the saved option. **The top level**
-  opens on row 0.
-- **Lists scroll by page** (decided, 10-23). P1's lists fit one page; the
-  pages are written so that Help can grow.
+- **Values:** the parent shows the short form (Power: Always on, Balanced,
+  Saver, Lights out; Clock: 24h, 12h, Date, Off), the choice the full one
+  (Power saver; 24 hour, 12 hour). Clock's rows map to the enum explicitly:
+  24 hour = 24H, 12 hour = 12H, Date = DATE, Off = OFF.
+- **Markers:** `>` on every row that opens something (lists and pages);
+  in a choice, the saved option has the bullet (0x82) in cell 0 and the
+  others a space, so the marker is never the selection.
+- **Opening and Back:** the top level opens on row 0; a child list on its
+  first real item (row 1); a choice on its saved option (its index + 1,
+  past `‹ Back`). Back (the row, or a hold) returns to the parent with the
+  parent's cursor and page restored. Back at the top level, and Exit,
+  close the session through C1.
+- **Paging:** lists by page, the top a multiple of 8. Text pages (Help's
+  topics) step by 8 lines and clamp at `lines - 8`: an 11-line page ends at
+  offset 3 (the mockup's rule, kept).
+- **Committing a choice:** a click on an option applies it
+  (`power_set_mode()`; `display_set_clock_mode()` +
+  `kb_eeconfig_set_clock_mode()`), flashes `Saved`, and returns. A click on
+  `‹ Back`, or a hold: no write, `Cancelled`, and returns. No preview.
+- **Reset counters:** two pages, the mockup's: `Clear the health` /
+  `counters?` / `Click: reset` / `Hold: cancel`; a click calls
+  `health_reset()` and `display_debug_refresh()` and shows `Counters
+  reset.` / `Click: back`; a click there or a hold returns to Diagnostics
+  with the cursor on Reset counters. A hold on the first page cancels
+  (`Cancelled`). ⚠️ It changes the health-reset generation, which ends a C10
+  interval: the scripts keep it out of measured intervals.
+- **About page 1:** the mockup's eight lines, from a snapshot taken when the
+  page opens and frozen while it shows:
 
-### The screens and their slots (C8's geometry, lit text, half rows)
+  | Line | Format | Unknown |
+  |---|---|---|
+  | Firmware | `Firmware <10-char hash>` (`AK820_BUILD_HASH`, a new `-D` from `build.sh`; `-dirty` shown as a trailing `+`) | |
+  | Flavour, token | `<flavour>, 0x<token>`: flavour dev, daily, fpb, instr, fault (`instrumented` doesn't fit: 24 cells) | |
+  | Uptime | `Up 1d 20h 14m` | |
+  | Battery | `Battery 76.7%` | `Battery -` |
+  | Pack | `Pack 4017 mV` | `Pack -` |
+  | Time left | `Left 64h of use` | `Left -` |
+  | Mode | `Mode <power mode, full name>` | |
+  | Link | `Link BT 1 connected`, `Link 2.4G`, `Link USB` | |
 
-| Kind | Slots | Notes |
-|---|---|---|
-| list, choice | the title (20 cells), the separator, 8 rows of 2 halves, the scrollbar | `label ... value` in 20 cells, the value right-aligned; `>` for a child list; a choice's saved option has the bullet (U+2022, 0x82) in cell 0, the others a space (the mockup's dot, as a glyph) |
-| text page | the title, the separator, 8 lines (one chunk each: plain text isn't highlighted), the scrollbar | scrolls by page; a click or Back returns |
-| About, page 2 | the title, 3 bunny slices (27x42 at x 4, 14 rows each) with their text, then lines | the bunny is 8-bit grey (1,134 B of flash), expanded to RGB565 grey through the stream, a slice per op, 2 rows a piece (108 B) |
-| More info | the title, the QR code (29 modules x 3 px + a 2-module border: 99 x 99 at x 14, y 22) | 1-bit, through `lcd_blit_mono`, each module 3x3 px: a piece is 2 pixel rows of 99 px (396 B), so 50 pieces (a module row, 3 px, would be 594 B, over the budget) |
-| confirm | the title, the separator, 3 text lines, two rows (`‹ Back`, `Reset`) | |
+  The snapshot is compact facts (`uptime_s` u32, `batt_pm` u16, `pack_mv`
+  u16, `left_h` u16, mode u8, link u8: 12 B), formatted per piece from the
+  frozen copy, so every piece of a page shows one sample.
+- **Diagnostics:** Health page and Camera page hand off by C1's table
+  (MENU to DEBUG, the session OPEN). The return (a click or a hold on the
+  page) rebuilds the stack as top (cursor on Diagnostics) -> Diagnostics,
+  the cursor on the page's row, including a session that began on the
+  Fn+D page (C1's DEBUG/NONE opener).
+- **Help:** `scripts/gen_menu_text.py` -> `graphics/res/menu_text_pages.h`:
+  the four topics, wrapped to 20 columns, checked to fit, blank lines and
+  the shortcuts' spelling kept. One amendment for JD's word: "Using the
+  menu" says "It closes by itself / after 24 s idle, or / 3 min mid-edit."
+  (the mockup's "never mid-edit" contradicts the 3-minute backstop).
+- **The title:** the screen's title, or a **flash** (`Saved`, `Cancelled`,
+  `Counters reset`) for 1.3 s, or the **hint** `Turn + Click Knob` for 1 s
+  in every 5 s of knob idleness (from 4 s) on **lists only** (not choices
+  or pages). A flash wins over the hint. The menu task latches the title
+  state and retargets when it changes, so `sig()` and `paint()` read one
+  latched state.
+- **Timers:** 32-bit elapsed times; 24 s with no knob input closes every P1a
+  screen, DEBUG/OPEN and the confirm included (C2/C7: only knob input
+  restarts it). The flash and hint use the 16-bit millisecond timer (1.3 s
+  and 5 s, far under its 65 s wrap).
 
-- **The hint:** after 4 s idle the title shows `Turn + Click Knob` for 1 s,
-  every 5 s, on lists only (the mockup). A title slot retarget: two title
-  repaints in 5 s.
-- **The flash:** `Saved`, `Cancelled`, `Counters reset` replace the title
-  for 1.3 s.
-- **Signatures:** a slot's signature hashes what it shows (text, style,
-  selection), 16 bits, as C3 requires distinct targets to differ; a
-  collision paints a stale slot until the next change, so the hash is
-  checked for collisions over every target the tree can produce, by the
-  host tests.
+### The session identity and the openers
 
-### Choices that commit (P1a)
+A byte, `menu_kind`: FIXTURE or MENU, chosen when a new request is
+accepted, kept through PENDING and DEBUG/OPEN, cleared at close. The owner,
+restore, scheduler, pump, loss consumer, visibility and sleep blocker stay
+shared; the opening, Diagnostics' return, the input, the invalidation and
+op 27's report dispatch on it.
 
-- **Power:** Always on, Balanced, Power saver, Lights out. A click calls
-  `power_set_mode()`, promoted from dev-only (the plan: its declaration and
-  body, and `build.sh`'s forbidden-symbol list loses it).
-- **Clock:** 24 hour, 12 hour, Date, Off, mapped to the enum's 24H / 12H /
-  DATE / OFF. A click calls `display_set_clock_mode()` and
-  `kb_eeconfig_set_clock_mode()`.
-- Both: `Saved` in the title, back to the parent list with the value
-  updated. `‹ Back` or a hold: no change.
+| Route | New session's kind |
+|---|---|
+| the physical opener (`Fn`+knob), the opener not armed | MENU |
+| the physical opener, dev builds, armed (op 27 sub 6) | FIXTURE (the S0/S1 scripts: `menu_s1_spin.py`) |
+| op 27 sub 4 | FIXTURE |
+| op 27 sub 11 (new) | MENU |
 
-### Diagnostics and About (P1a)
+Every route keeps C1's states: PENDING cancels, OPEN closes the current
+session (whatever its kind), ANIM refuses. A different opener never
+replaces an open screen. Disarming (sub 6 0) still closes or cancels a
+session and keeps owed releases; afterwards the production opener stays on.
 
-- **Health page, Camera page:** C1's handoff (MENU to DEBUG with the
-  session OPEN; a click or Back returns to Diagnostics). Unchanged from S0.
-- **Reset counters:** the confirm screen; `Reset` calls `health_reset()`
-  and `display_debug_refresh()`, then `Counters reset`.
-- **About, page 1:** the firmware (the build's short hash), the flavour and
-  token, uptime, the battery (`-` when unknown), the power mode, the link.
-  Read from the env when the page opens; not live.
+**Op 27:**
+- **sub 0:** the fixture's only: refused (2) unless the session is OPEN
+  with kind FIXTURE.
+- **subs 1-3:** feed the session's input, whatever its kind; DEBUG keeps
+  its click/Back return.
+- **sub 4:** as now (FIXTURE). **sub 11:** sub 4's exact framing,
+  single-flight, completion (DONE when the session is OPEN and settled, or
+  PENDING's resolution), refusal and toggling, with kind MENU.
+- **sub 5:** byte 14 keeps the fixture's ids 1-3; the menu reports its
+  screen id from 16 (16 list, 17 choice, 18 text page, 19 About, 20
+  confirm, 21 done page); byte 15 the active cursor.
+- **sub 10:** unchanged: the shared scheduler's targets and timing; every
+  menu navigation and title change is a retarget, so it shows.
 
-### Help (P1a)
+### `MENU_ENABLE` and the production build
 
-- `scripts/gen_menu_text.py` -> `graphics/res/menu_text_pages.h`: the
-  mockup's five pages, wrapped to 20 columns, checked to fit, `const`.
-- More info: the QR code (`gen_menu_art.py` -> `menu_art.h`, the plan's
-  "Generated files"), pointing at the repo's README.
+- Defined for every flavour at P1a (C2's "S0's scope" ends). Op 27, HC
+  hooks, forced stages and the bench's sleep controls stay dev-only.
+- **`power_set_mode()`:** its declaration and body move out of
+  `AK820_DEV_HOOKS`; `build.sh`'s daily/fpb forbidden-symbol list loses
+  that one symbol.
+- **Verified on a daily build** (the flavour rule: gremlin runs dev, so
+  a daily build is flashed for this check, needing JD's `Fn`+`Esc` back
+  to dev): open, navigate, commit, close; the forbidden-symbol check.
 
-### The edit transaction (P1b)
+### Slots and signatures (exact, bounded)
 
-C6 as written: the RGB config snapshot on entry, previews with
-`_noeeprom`, one save on the click, a restore on Back, a hold, a close, an
-external write (VIA, `RM_*`, `UG_*`, the board's wrappers) or the
-3-minute backstop. The range editor (C8: the big value in the 20 px face
-from the flash atlas by DMA, the bar as fills, the hints as mono text) and
-the hue editor (the strip as generated pixels through the stream; the
-envelope slot). P1b gets its own detailed section before its code.
+Every slot's signature is built from bit fields of bounded values, never a
+hash, so two targets of a slot are equal exactly when they paint the same
+pixels. A layout change (a new screen kind or a new list) is a C3 layout
+change, so a signature only has to be unique within one layout's life.
 
-### The keycode (P1c)
+| Slot | Signature fields |
+|---|---|
+| the title | the title id (the screen's node, or a flash id, or the hint): 7 bits |
+| the separator | constant |
+| a list row (two chunks, one slot) | the item's node index (6 bits; 63 = blank past the end), the value index (4 bits; 15 = none), lit (bit 0) |
+| a text page or About line | the line index (6 bits); the text is const, About's from the frozen snapshot |
+| the scrollbar | the page top and the count (blank when the count fits) |
 
-"Open" 3's amendment, unchanged, reviewed before code.
+**A row is one slot of two chunks** (eleven slots, not nineteen): a value
+change repaints the row (two chunks). P1a's values change only from their
+own choice, after which the parent is a new layout anyway. P1b's previews
+change values while a list shows: it may split rows into two slots then,
+measured.
 
-## Costs and limits
+### Un-highlight first (BACKLOG, "Fast spins leave old menu rows highlighted")
 
-- **Every piece at most `MB_PASS_BYTES`** (512): text half rows 488 B,
-  bunny pieces 108 B, QR pieces 396 B, fills as before.
-- **Opening the menu:** the layout clear (8 bands) and 1 + 1 + 16 + 1 slot
-  ops, ~4 pieces a row: ~75 pieces, ~0.8 s at a piece a pass (the fixture's
-  open measured 711-793 ms).
-- **A cursor move:** two rows, ~8 pieces, ~165 ms.
-- **RAM (static, estimate):** the stack 9 B, the screen state (kind, page,
-  flash and hint timers, the confirm's choice) ~12 B, About's few values
-  read at open ~0 (composed per piece from the env), P1b's edit
-  transaction 16 B (C5's table): ~40 B of the ~100 left.
-- **Flash:** the help text ~1.2 KB, the bunny 1.1 KB, the QR 106 B, the
-  tables ~1 KB, the code ~6 KB.
+- **Convention:** bit 0 of a row slot's signature is "lit".
+- **The scheduler's pick** (`menu_slots.c`), for layouts that declare it:
+  first, any slot whose shown signature (COMMITTED, or PARTIAL's) is lit and
+  whose target isn't, lowest first; then the active PARTIAL slot (rev 13's
+  resume rule, unchanged); then ascending order.
+- A PARTIAL new highlight whose target changes to unlit (a reversal) is,
+  by that rule, shown-lit/target-unlit: it repaints first. At most one row
+  stays lit once the queue drains, and a fast spin never shows more than
+  the old and the new highlight together.
+- **Tests:** rapid reversals and wraps at every piece boundary; C10's
+  progress (5 commits a bucket in continuous input) kept.
 
-## Tests
+### The completion predicate
 
-- **Host (`menu_s0_test.c`, a P1 section):** every node's open, move,
-  click and Back; the stack's limits; the choices' commit and no-commit
-  paths through a fake env; the confirm; Diagnostics' handoff and return;
-  the timeouts; the hint and the flash; the signature collision check;
-  the expected frame of every screen against the face (as `expect_f3`);
-  every piece at most 512 B; a retarget and a loss at every piece boundary
-  of an open and of a move.
-- **Board:** the gate (`menu_s1_gate.py`) gains the menu's open, a move and
-  Diagnostics' round trip by op 27 sub 11; the failure paths gain a menu
-  case; the LED rate covers the menu; a real spin with
-  `menu_s1_spin.py`; JD's hands-on session (one action a message).
+`ms_settled()` also requires no loss pending (`mb_lost_pending()`): today it
+can report settled before the loss consumer invalidates the slots (codex).
+Fixed in P1a, with a host test.
 
-## Questions for the review
+### RAM: the budget, per flavour
 
-1. Is the split into P1a/b/c sound, and is anything in P1a's scope that
-   depends on C6 (the edit transaction)?
-2. The fixture kept for op 27 (sub 4) beside the menu (sub 11): does
-   anything in C1's table or the restore assume one MENU screen?
-3. `MENU_ENABLE` on at P1a, for the daily build too: anything in C2's
-   "S0's scope" or C7 that must change with it?
-4. The signature hash and its collision check: enough, or should slots
-   keep their text (RAM) instead?
-5. The QR's 50 pieces and the bunny's slices: any piece-rule or C4 stream
-   issue?
-6. RAM: is ~40 B for P1a+b realistic against C5's budget table?
+Measured: dev `ffa80947` gap 232 B (104 over the floor), devfault
+`cbb51ac1` **144 B (16 over)**, daily 2,352. C5's 400 B ceiling has ~88 B
+left; its later reservations (P2's `flash_stats` 12, P3's Bluetooth 24)
+take 36.
+
+| Item | Bytes |
+|---|---|
+| `menu_kind` | 1 |
+| the stack (3 x node, cursor, top) | 9 |
+| the screen kind, the title state, the confirm's page | 3 |
+| the flash's start (u16 ms) | 2 |
+| About's snapshot | 12 |
+| P1a total | **27** (+ padding, checked by `sizeof` asserts and the linked delta) |
+| P1b's edit transaction (C5) | 16 |
+| P1c's owed releases (90 keys: 12 B) | 12 |
+| P1 total | **~55** |
+
+- **dev:** 104 - 55 leaves ~49 over the floor.
+- **devfault:** 16 - 55 is below the floor. **Devfault only**
+  (`WDT_TEST_HOOKS`): `log_buf` loses 8 entries (144 B, two hours of a
+  bench-only build's 180 h log), the plan's C5 fallback, recorded in
+  `PATCHES`-style notes beside it. Production flavours keep 720 entries.
+- **C5's 400 B ceiling:** 312 + 55 + 36 = 403: over by 3. The ceiling was
+  a planning figure; the floor is the hard limit. Amend C5 to 410 B with
+  this table, or take P3's 24 B from its own stage's budget then.
+- **Stacks:** watermarks after a worst-case P1a session (every screen,
+  About formatting), as C5 requires.
+
+### Costs (corrected)
+
+- A half row is 4 pieces; a row 8; **a cursor move 16 pieces** (~165 ms
+  measured on F3).
+- **Opening** a list: 8 clear bands, the title (8 pieces), the separator
+  (1), 8 rows (64), the scrollbar (1): ~74 painting passes plus the bands
+  and commits, ~0.8 s (F1's open measured 711-793 ms).
+- A text page: as a list without a highlight.
+
+### Tests (P1a)
+
+- **Host** (`menu_s0_test.c`, a P1 section, the env faked): every node's
+  open, move, click and Back; the stack's limits and restored cursors;
+  paging (lists by 8, pages clamped); the commits and the cancels (no
+  write); Reset counters' two pages; Diagnostics' handoff and the rebuilt
+  return (also from a DEBUG/NONE opener); the session identity's table and
+  op 27 subs 0-5 and 11 per kind; the 24 s timeout on every screen; the
+  hint (lists only) and the flash (wins); the title latch; un-highlight
+  first at every piece boundary with reversals and wraps; the completion
+  predicate; the expected frame of every screen against the face; every
+  piece at most 512 B; a retarget, a loss and a close-reopen at every piece
+  boundary of an open, a move and a page; `sizeof` asserts.
+- **Board:** the gate gains the menu (sub 11): its open, moves both ways and
+  wrapping, a choice's commit and cancel, Help's paging, About, Reset
+  counters' pages (outside the measured interval), Diagnostics' round
+  trip, the hint and the flash; the failure paths gain menu cases; the LED
+  rate covers the menu; a real spin (`menu_s1_spin.py`, unarmed: the
+  menu); visibility from requested power Off and level 0, Lights out
+  chosen, Diagnostics, close; persistence of Power and Clock across a
+  reboot after a settled save, and no write on a cancel (the flash write
+  counters); a daily build's check; JD's session.
+
+## P1b, P1c, P1d
+
+Each gets its own detailed section and codex round before its code. P1b's
+must cover the rows' values changing under a preview (slots per half),
+C6's writers, the editors' slots and pieces, and the Screen item's C7
+interplay (the requested level previewed while the override keeps it
+visible). P1d's: the bunny as 8-bit grey (1,134 B, amending "Generated
+files"' 2,268 B RGB565), expanded by a new `lcd_bus.c` primitive beside
+`lcd_blit_mono` with its failure cleanup; image pieces and the credits'
+text pieces as separate ops; the QR code's module image (106 B) unpacked and
+scaled 3x into a 26 B stack bitmap per 2-row piece, 50 pieces split into
+several logical ops (so op latency stays measurable), and the URL frozen
+as `https://github.com/jdlien/ak820-pro`.
