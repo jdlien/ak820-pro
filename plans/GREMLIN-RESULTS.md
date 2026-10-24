@@ -496,6 +496,23 @@ failed by design; `soak-f2b107be-*.json`):
 The per-pass byte bound (the build plan's revision 7, C4's
 `MENU_PASS_BYTES`) is S1's first job, not an option.
 
-**Still to run:**
-- **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
-  (the physical knob cases). A9 is done.
+**A4 passes** (10-24, ~10:00, JD's hands, on `f2b107be`). The setup: the
+cable out, the slider on BT, Lights out (Fn+B), and a deep sleep. Then Fn+D
+woke it straight onto the Fn+D page, and the cable went back in.
+- **The sleep page** (`a4-sleep.json`): 1 sleep, 339 s by the PCF, woke on a
+  key; the recovery done, with `pcf acq_done reattach usb_20s slept` valid
+  and **nothing timed out**, so the display's wake hold was released, not
+  timed out at `RC_HOLD_MAX_MS`.
+- **The owner:** DEBUG afterwards, `invariant_fail` 0; the dashboard restored
+  by op 1 (gen 2).
+- The keyboard on gremlin is still in Lights out; JD will cycle it back.
+
+**S0's board cases are complete:** A1-A13 pass. The limits are recorded with
+their cases:
+- A7's animation case wasn't run, and A9 can't tell a refusal from an empty
+  slot: gremlin's animation slot is empty.
+- A11's media gate missed on Apple Music's slow SMTC.
+- A10 found the tapping-term miss.
+
+What's left is the merge into `ak820pro-jdlien`, `deps.lock`, and
+`warren/config-menu` into main.
