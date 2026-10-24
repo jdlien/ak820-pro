@@ -484,6 +484,8 @@ before). That's under 25 ms but closer. The fixture paints a whole row or
 tile (up to 2,048 bytes) in one pass, so S1 splits big fills across passes
 (codex's point 4).
 
+**JD by eye on the keyboard on gremlin (09:37): "looks way better now... No flicker", and the knob "decently responsive". 88 menu state changes, `invariant_fail` 0.**
+
 **Still to run:**
 - **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
   (the physical knob cases). A9 is done.
