@@ -58,10 +58,13 @@ static void fill_fb(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t
 }
 static uint16_t glyph_color(char c) { return (uint16_t)(0x8000u | (uint8_t)c); }
 
-/* The pass boundary: an armed DMA completes, or is given up. */
+/* The pass boundary: an armed DMA completes, or is given up, its end timed
+ * as the ISR times it. */
+static uint32_t fake_dma_end;
 static void dma_settle(void) {
     if (!dma_busy) return;
-    dma_busy = false;
+    dma_busy     = false;
+    fake_dma_end = fake_ticks;
     if (fault_next_dma > 0) {
         fault_next_dma--;
         lost_latched = true;
@@ -106,6 +109,7 @@ bool mb_glyph(char c, uint16_t x, uint16_t y) {
 bool mb_busy(void) { return dma_busy; }
 bool mb_lost_pending(void) { return lost_latched; }
 uint32_t mb_now_ticks(void) { return fake_ticks; }
+uint32_t mb_dma_end_ticks(void) { return fake_dma_end; }
 static bool take_lost(void) { bool l = lost_latched; lost_latched = false; return l; }
 
 static void fake_reset(void) {
@@ -851,6 +855,27 @@ static void test_meas(void) {
     pass();                       /* row 0's first piece starts an op */
     fx_input(1, MI_LATCH_NONE);   /* ...abandoned */
     CHECK(ms_last_op_ticks() == last);
+
+    /* A glyph op's latency ends at its DMA's end, however late it's noticed. */
+    settled_a();
+    fx_set_pattern(1);
+    int g = 0;
+    while (g++ < 50 && !mb_busy()) pass();   /* the title's first glyph armed */
+    CHECK(mb_busy());
+    uint32_t t_arm = fake_ticks;
+    fake_ticks += 100;
+    dma_settle();                 /* it ends 100 ticks after its arm */
+    fake_ticks += 50000;          /* ...and nothing looks for 50,000 */
+    (void)ms_ops();
+    CHECK(ms_last_op_ticks() <= 100 + (fake_ticks - 50000 - t_arm) && ms_last_op_ticks() < 50000);
+
+    /* A retarget to the target already painted settles at once: the same
+     * pattern again, then another, with no pass or read between. */
+    settled_a();
+    uint8_t s1 = ms_settled_count(), x1 = ms_superseded_count();
+    fx_set_pattern(0);            /* A again: already on the panel */
+    fx_set_pattern(1);            /* B before any pass */
+    CHECK((uint8_t)(ms_settled_count() - s1) == 1 && ms_superseded_count() == x1);
 }
 
 /* --- menu_ops.c through a fake environment -------------------------------------
