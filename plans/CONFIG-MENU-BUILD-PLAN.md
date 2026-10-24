@@ -6,6 +6,21 @@ wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
 animation slot is empty. A11's first runs missed the media gate on a slow
 SMTC. Revision 8 is for S1, awaiting codex's verification. Owned by Warren
 (gremlin's session) from 10-23.
+
+**The S0 merge waits for the drain (agreed with Buzz's session, 10-24).**
+The keyboard on Buzz stays on `b9555ff3e6`, with no flash, until its RGB cut
+(about 10-31 to 11-02). Then:
+1. a daily build of S0 runs on the keyboard on gremlin before `deps.lock`
+   moves. Probably S0 plus the LED fix, if revision 8 has cleared it, so
+   one hands-on flash covers both: a daily build has no HC_BOOTLOADER, so
+   the flash after it needs JD's Fn+Esc;
+2. the keyboard on Buzz takes S0 and the LED fix in one flash, with a soak;
+3. then `gremlin/config-menu` (a fast-forward from `b9555ff3e6`) merges into
+   `ak820pro-jdlien`, `deps.lock` moves, and `warren/config-menu` merges
+   into main.
+
+Until then, S1 is built on branches off `gremlin/config-menu` and runs on
+the keyboard on gremlin only.
 - **Revision 8** folds in codex's review of revision 7
   ([`review-codex-config-menu-build-plan-rev7-2026-10-24.md`](review-codex-config-menu-build-plan-rev7-2026-10-24.md)):
   - `MENU_PASS_BYTES` splits a logical paint op into resumable pieces under
