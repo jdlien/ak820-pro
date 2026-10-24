@@ -1,11 +1,20 @@
-# The configuration menu: how to build it (revision 8, 2026-10-24)
+# The configuration menu: how to build it (revision 9, 2026-10-24)
 
 Status: **S0 built and accepted on the keyboard on gremlin**: A1-A13 pass,
 with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
 wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
 animation slot is empty. A11's first runs missed the media gate on a slow
-SMTC. Revision 8 is for S1, awaiting codex's verification. Owned by Warren
+SMTC. Revision 9 is for S1, awaiting codex's verification. Owned by Warren
 (gremlin's session) from 10-23.
+- **Revision 9** folds in codex's verification of revision 8
+  ([`review-codex-config-menu-build-plan-rev8-2026-10-24.md`](review-codex-config-menu-build-plan-rev8-2026-10-24.md)):
+  - the op and stop lifecycle: an op is counted and a reached stop latched
+    the moment the op ends, before navigation can discard either. That
+    closes a real ordering hole in S0's scheduler;
+  - "op" and "piece" kept apart throughout;
+  - the timing fields and their retained maxima (sub 10);
+  - a completion flag for the debug pages, and target counters for spins;
+  - every deadline and window of the LED gate given a number (C10).
 
 **The S0 merge waits for the drain (agreed with Buzz's session, 10-24).**
 The keyboard on Buzz stays on `b9555ff3e6`, with no flash, until its RGB cut
@@ -648,11 +657,25 @@ the code is raised before working around it.
       signature. A retarget, an invalidation or an abandoned cursor
       discards the piece progress, and the slot restarts from its first
       piece;
-    - **an op counts once,** when its last piece completes or it ends in a
-      failure. Pieces, busy retries and waiting passes don't count;
-    - **`ms_stop_after(n)`** stops after op `n` ends, with no transfer
-      outstanding, and a reached stop survives navigation until its release,
-      as now;
+    - **an op counts once,** when it ends: its last piece returns, or its
+      last DMA completes or is given up, or it fails. Pieces, busy retries
+      and waiting passes don't count;
+    - **the end's bookkeeping comes first** (revision 9). One helper counts
+      the op and, in the same step, latches `stopped` if `stop_n` is reached
+      with no transfer outstanding. It runs at the op's end, and again at
+      the top of `new_target()` and of any loss invalidation, before either
+      resets the op state. In S0 a synchronous op bumped `ops` but `stopped`
+      latched only on the next `ms_step()`, and navigation in between ran
+      `new_target()`, which cancelled the stop that had just been reached
+      (`menu_slots.c:48-56,88-93,110-115`);
+    - **a stop not yet reached** is superseded by a retarget (its sequence
+      ends, `ms_stop_cancelled_take`). **A reached stop** survives
+      navigation and losses, and holds a newly requested clear paused. It
+      is released by the next sub 0 (`ms_stop_release`), and separately by
+      a fresh opening or a return from another owner (`fresh`), which is a
+      new screen;
+    - **slot progress and clear progress are kept apart:** navigation resets
+      the slot's op and piece cursors, never a clear sweep in progress;
     - **a failed piece** stops the op and leaves the loss to the owner's
       handler (C1). No slot commits over a pending loss.
   - **Not by returning halfway.** No existing synchronous draw function
@@ -662,6 +685,9 @@ the code is raised before working around it.
   - **Host cases at every piece boundary:** partial B to A, a changed
     selection, a loss, a layout change, a close and reopen, and a stop's
     completion. The existing tests interrupt only between logical ops.
+    **And at the final piece's end, just before and just after it:** with
+    a failure, with navigation in the same pass, and with a stopped clear.
+    C9's 27 ops, its reference frames and its stop positions don't change.
   - **The target, measured, not implied.** N is chosen from measured piece
     costs, so that whole main-loop passes stay at or under 15 ms through
     the named normal-operation workload, including its encoder backlog and
@@ -679,12 +705,15 @@ the code is raised before working around it.
   - **`bytes`:** `n` is in bytes, sent synchronously; the stream knows the
     total it expects (`w * h * 2`).
   - **`end`** completes the sends, deasserts CS and releases the scratch.
-  - **Every chunk opens and ends its stream within one pass.** No stream
-    stays open across passes, so no other painter can move the window
-    under it.
-  - Generated pixels (the mono glyphs, the strip, the QR code, a clear)
-    are written into the scratch already in panel byte order, through
-    `lcd_bus.c`'s own primitives, and sent through the stream.
+  - **Every piece opens and ends its stream within one pass** (revision 9's
+    words: a logical **op**, a slot's chunk, may span passes; a **piece**
+    never does). No stream stays open across passes, so no other painter
+    can move the window under it.
+  - Generated pixels (the mono glyphs, the strip, the QR code) are written
+    into the scratch already in panel byte order, through `lcd_bus.c`'s own
+    primitives, and sent through the stream. Clears aren't generated: the
+    layout's, the restore's and the debug page's clear bands, and the flash
+    glyphs, stay on flash DMA (the budget's exemption, above).
   - They're never passed back through `tx_pixels()`, which byte-swaps into
     the same scratch.
 - **`lcd_blit_mono(bits, cols, x, y, fg, bg)`:**
@@ -857,6 +886,67 @@ that's S1.
 - **The expected frames** come from the same tables: the host tests compute
   each slot's pixels, and the board's photos are compared with them.
 
+### C10. S1's measurement contract (revision 9)
+
+What S1's scripts read, and the numbers they pass or fail on. **Every value
+is fixed here, before the measurement**; a value changes only in a plan
+revision, never during a run.
+
+- **Op 27 sub 10, timing and targets (dev builds).** Request `[.., 27, 10,
+  reset]`; it replies at once (no sequence; byte 5 status):
+  | Bytes | Field |
+  |---|---|
+  | 6, 7 | the largest single piece's cost: wall time in µs within its pass, from window to CS release |
+  | 8, 9 | the largest logical op latency (bytes 26-27's measure) |
+  | 10, 11 | the longest whole main-loop pass, in µs, while the owner isn't DASH or a session exists |
+  | 12, 13 | the passes of 15 ms or more in that scope |
+  | 14, 15 | the longest repaint latency: a target's creation (`tgen` moved) to `pixels_done` with that target, in ms |
+  | 16 | `tgen`, the target generation (u8, wrapping) |
+  | 17 | targets settled (u8, wrapping): each time `pixels_done` becomes true for a new `tgen` |
+  | 18 | targets superseded (u8, wrapping): a `tgen` that moved on before it settled |
+  | 19 | the restore's and the debug page's clear bands: the largest band's wall time, in ms |
+
+  `reset` 1 zeroes bytes 6-15 and 19 after the reply, 0 only reads. The
+  reset touches nothing else: health's counters, ge10, ge25 and HC_ACCT are
+  never reset inside a measured span. **A1 moves its "unknown sub" check
+  from 10 to 31.**
+- **`debug_done`** (sub 5, byte 31 bit 0): the owner is DEBUG, the page's
+  clear has finished, every cell of the page showing has been painted with
+  its composed value (no dirty cell), no transfer is in flight, and no
+  loss is waiting. An update to a cell clears it until that cell is
+  repainted. MENU's `pixels_done` keeps its current-target meaning.
+- **Counters across a window:** deltas are taken mod 2^32 (mod 2^8 for the
+  u8 counters), so a wrap is fine. A sample is unusable, and the run fails,
+  if `uptime_ms` went backwards (a reset), if a delta is more than twice
+  the host's elapsed time, or if the row ISR's entries didn't move.
+- **The timebase:** the board's `uptime_ms` delta agrees with the host's
+  monotonic delta within 2% plus 25 ms. The 25 ms covers HID's sampling at
+  either end.
+- **The LED ratio:** each activity window's row ISR/s is at least 0.98 of
+  the matched baseline. The baseline is three 5 s dashboard windows taken
+  just before, with the same lighting, transport load and instrumentation.
+  A ratio above 1.01 fails as a configuration error.
+- **Transitions:** Fn+D in, Camera, Fn+D out (through the restore's DONE),
+  the menu's open and close, and a layout change. Each one is measured
+  **ten times** in a **500 ms window** starting at the transition. **Every
+  window** is at least 0.95 of a matched 500 ms baseline, and **their mean**
+  at least 0.98.
+- **Paced repaints:** every requested target settles within **1,000 ms**
+  (`pixels_done` with its `tgen`, `debug_done`, or the restore's DONE),
+  else the run fails.
+- **Continuous input** (op 27 sub 1 bursts of one detent every 50 ms for
+  10 s, and the encoder's own backlog measured separately in S1):
+  - **progress:** the settled count (byte 17) rises at least once in
+    every 500 ms of the burst;
+  - **the end:** the final cursor is the sum of the detents sent, and the
+    final target settles within **500 ms** of the last one;
+  - **the books balance:** targets created = settled + superseded + the
+    one outstanding.
+- **Timing:** over the supported workload, sub 10's longest pass is
+  **15 ms or less** and its count of 15 ms passes is 0. ge25 doesn't move.
+- **Every timeout fails the run,** logged or not. A run that fails any
+  check isn't a measurement and isn't reported as one.
+
 ## The settings
 
 | Item | Firmware value | Preview | Save | Cancel |
@@ -1008,7 +1098,8 @@ saved Off (`level + 1`).
     old signature counts as not settled. Byte 21 and pattern 2's "A settled
     first" use the same test. It's
     false under every other owner. DASH's completion is read from
-    `restore_phase` and `restore_gen`; the debug pages have none in S0.
+    `restore_phase` and `restore_gen`. The debug pages had none in S0; S1
+    adds `debug_done` (byte 31, C10).
 - **The subs:**
 
   | Sub | Args | Effect |
@@ -1023,6 +1114,7 @@ saved Off (`level + 1`).
   | 7 | | request a dashboard restore, as the startup callback does |
   | 8 | | mark a blit lost, as an exhausted recovery does |
   | 9 | | the handoff probe (the board's A3, `CONFIG-MENU-S0-BOARD-TESTS.md`): under a DONE dashboard, queue three glyphs and a lock label, then hand the panel to the Fn+D page in the same call. Bytes 7-10 of the reply: gq and lq before, then after. Refused (state 5) unless the dashboard is DONE |
+  | 10 | [5] 0 or 1: reset | S1: timing and targets, read at once with no sequence (C10). Bytes 6-19; `reset` 1 zeroes the maxima after the reply |
 
 - **Sub 5's reply,** from byte 5 (byte 5 is the status, 0):
 
@@ -1041,11 +1133,11 @@ saved Off (`level + 1`).
   | 22 | losses seen (u8, saturating) |
   | 23 | the capture bits: bit 0 the press, 1 clockwise, 2 counter-clockwise |
   | 24, 25 | `invariant_fail`, u16 LE: bit 0 an early `COMMITTED`, 1 an early `DONE`, 2 a wake while OPEN, the rest reserved |
-  | 26, 27 | the last paint operation's time, u16 LE in µs, saturating at 65535; 0 until S1 |
+  | 26, 27 | the last **ended** logical op's latency (revision 9): wall time in µs from its first piece's start to its end (the last piece's return, or its last DMA's completion or give-up), passes between included; u16 LE, saturating at 65535. A failed op updates it; an op abandoned by a retarget doesn't. 0 until S1 |
   | 28 | the pairing phase; 0 until P3 |
   | 29 | the fixture's completed paint operations since its last target (saturating) |
   | 30 | bit 0: the fixture is stopped (pattern 2) |
-  | 31 | zero, reserved |
+  | 31 | bit 0 (revision 9): `debug_done`, the debug page's completion (C10); the rest zero, reserved |
 
 - **The daily and fpb builds** don't compile HC_DEVHOOK at all. `build.sh`
   already enforces that.
@@ -1183,12 +1275,10 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
        or as row-start gaps: a 50 ms stall spread over 5 s is only 1%, so
        the ratio alone can't rule out a flicker. The ISR's duration maximum
        doesn't measure a late start. JD's spin check by eye stays.
-     - **The script fails a run** on:
-       - a ratio under 0.98;
-       - any ge25;
-       - a silent settling timeout;
-       - a Fn+D transition that doesn't complete;
-       - discontinuous counters, or board time and host time disagreeing.
+     - **The script fails a run** on any of C10's checks: the ratio, the
+       transition windows, a settlement or progress miss, ge25, sub 10's
+       15 ms count, unusable counters, or a timebase mismatch. Every
+       number is C10's.
      - **Completion, two rules:**
        - **for paced repaints,** every requested target settles within its
          deadline;
