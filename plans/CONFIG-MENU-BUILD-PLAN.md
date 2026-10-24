@@ -1,11 +1,20 @@
-# The configuration menu: how to build it (revision 9, 2026-10-24)
+# The configuration menu: how to build it (revision 10, 2026-10-24)
 
 Status: **S0 built and accepted on the keyboard on gremlin**: A1-A13 pass,
 with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
 wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
 animation slot is empty. A11's first runs missed the media gate on a slow
-SMTC. Revision 9 is for S1, awaiting codex's verification. Owned by Warren
+SMTC. Revision 10 is for S1, awaiting codex's verification. Owned by Warren
 (gremlin's session) from 10-23.
+- **Revision 10** folds in codex's verification of revision 9
+  ([`review-codex-config-menu-build-plan-rev9-2026-10-24.md`](review-codex-config-menu-build-plan-rev9-2026-10-24.md)),
+  rewriting C10:
+  - the timing is measured over an armed interval, under every owner;
+  - the debug page's completion is bound to a composition generation;
+  - the counters are validated per field, with sampling brackets and a
+    boot id;
+  - transitions have their own rule, measured until they complete;
+  - a spin's progress counts committed slots, not settled targets.
 - **Revision 9** folds in codex's verification of revision 8
   ([`review-codex-config-menu-build-plan-rev8-2026-10-24.md`](review-codex-config-menu-build-plan-rev8-2026-10-24.md)):
   - the op and stop lifecycle: an op is counted and a reached stop latched
@@ -886,64 +895,100 @@ that's S1.
 - **The expected frames** come from the same tables: the host tests compute
   each slot's pixels, and the board's photos are compared with them.
 
-### C10. S1's measurement contract (revision 9)
+### C10. S1's measurement contract (revisions 9 and 10)
 
 What S1's scripts read, and the numbers they pass or fail on. **Every value
 is fixed here, before the measurement**; a value changes only in a plan
 revision, never during a run.
 
 - **Op 27 sub 10, timing and targets (dev builds).** Request `[.., 27, 10,
-  reset]`; it replies at once (no sequence; byte 5 status):
+  arm]`; it replies at once (no sequence; byte 5 status). **`arm` 1 starts a
+  measurement interval:** it zeroes bytes 6-15, 19 and 26-27 after the
+  reply. Every main-loop pass from then on counts, under **any** owner: the
+  dashboard's own work, the restore through DONE after a close or a Fn+D
+  exit, the transitions, and everything else. `arm` 0 only reads. Nothing
+  else is reset: health's counters, ge10, ge25 and HC_ACCT are never reset
+  inside a measured span, and the scripts never call `health_reset()`.
   | Bytes | Field |
   |---|---|
   | 6, 7 | the largest single piece's cost: wall time in µs within its pass, from window to CS release |
   | 8, 9 | the largest logical op latency (bytes 26-27's measure) |
-  | 10, 11 | the longest whole main-loop pass, in µs, while the owner isn't DASH or a session exists |
-  | 12, 13 | the passes of 15 ms or more in that scope |
-  | 14, 15 | the longest repaint latency: a target's creation (`tgen` moved) to `pixels_done` with that target, in ms |
-  | 16 | `tgen`, the target generation (u8, wrapping) |
-  | 17 | targets settled (u8, wrapping): each time `pixels_done` becomes true for a new `tgen` |
-  | 18 | targets superseded (u8, wrapping): a `tgen` that moved on before it settled |
-  | 19 | the restore's and the debug page's clear bands: the largest band's wall time, in ms |
+  | 10, 11 | the longest whole main-loop pass in the interval, in µs, any owner |
+  | 12, 13 | passes in the interval **over 15,000 µs** |
+  | 14, 15 | the longest repaint latency, in ms: a MENU target's creation (`tgen` moved) to `pixels_done` with that target |
+  | 16 | `tgen`, the MENU target generation (u8, wrapping) |
+  | 17 | MENU targets settled (u8, wrapping): `pixels_done` becoming true for a new `tgen` |
+  | 18 | MENU targets superseded (u8, wrapping): a `tgen` that moved on before it settled |
+  | 19 | the largest clear band's wall time, in ms: the layout's, the restore's and the debug page's bands |
+  | 20 | the debug page showing: 0 none, 1 Health, 2 Camera |
+  | 21 | `dbg_gen` (u8, wrapping): it moves each time the page's composition produces a target that differs from the last one composed, the first composition after a page reset included |
+  | 22 | `dbg_done_gen` (u8): the last `dbg_gen` whose every cell has been painted, with its final transfer complete and no loss pending |
+  | 23 | MENU slots committed (u8, wrapping) |
+  | 24, 25 | the passes in the interval (u16, saturating) |
+  | 26, 27 | `boot_id` (u16): a value drawn once at boot from the RTC's sub-seconds and `uptime`, so the scripts can tell a reboot from a wrap |
 
-  `reset` 1 zeroes bytes 6-15 and 19 after the reply, 0 only reads. The
-  reset touches nothing else: health's counters, ge10, ge25 and HC_ACCT are
-  never reset inside a measured span. **A1 moves its "unknown sub" check
-  from 10 to 31.**
-- **`debug_done`** (sub 5, byte 31 bit 0): the owner is DEBUG, the page's
-  clear has finished, every cell of the page showing has been painted with
-  its composed value (no dirty cell), no transfer is in flight, and no
-  loss is waiting. An update to a cell clears it until that cell is
-  repainted. MENU's `pixels_done` keeps its current-target meaning.
-- **Counters across a window:** deltas are taken mod 2^32 (mod 2^8 for the
-  u8 counters), so a wrap is fine. A sample is unusable, and the run fails,
-  if `uptime_ms` went backwards (a reset), if a delta is more than twice
-  the host's elapsed time, or if the row ISR's entries didn't move.
-- **The timebase:** the board's `uptime_ms` delta agrees with the host's
-  monotonic delta within 2% plus 25 ms. The 25 ms covers HID's sampling at
-  either end.
-- **The LED ratio:** each activity window's row ISR/s is at least 0.98 of
-  the matched baseline. The baseline is three 5 s dashboard windows taken
-  just before, with the same lighting, transport load and instrumentation.
-  A ratio above 1.01 fails as a configuration error.
-- **Transitions:** Fn+D in, Camera, Fn+D out (through the restore's DONE),
-  the menu's open and close, and a layout change. Each one is measured
-  **ten times** in a **500 ms window** starting at the transition. **Every
-  window** is at least 0.95 of a matched 500 ms baseline, and **their mean**
-  at least 0.98.
-- **Paced repaints:** every requested target settles within **1,000 ms**
-  (`pixels_done` with its `tgen`, `debug_done`, or the restore's DONE),
+  **A1's "unknown sub" check moves from 10 to 31.**
+- **The debug page's completion** (`debug_done`, sub 5's byte 31, bit 0)
+  holds when the owner is DEBUG, a composition has happened since the page
+  was entered (`dbg_gen` moved at least once), `dbg_done_gen == dbg_gen`, no
+  transfer is in flight, and no loss is waiting. A page reset (blank cells,
+  `dbg_force_recompose`, `display.c:837-845`) isn't complete until its first
+  composition is painted. A script ties a tested update to its completion
+  through the generations: it reads `dbg_gen` after the update's cause
+  (the clock second, or an op 1), and waits for `dbg_done_gen` to reach that
+  value. A boolean read alone proves nothing. MENU's `pixels_done` keeps
+  its current-target meaning.
+- **Sampling.** Every read is bracketed by host timestamps, request sent to
+  reply matched. A bracket over **25 ms** is discarded and the read retried,
+  at most three times; a fourth fails the run. A sample's time is the
+  bracket's midpoint, and its uncertainty half the bracket. u8 counters are
+  read at least every **100 ms** during activity, which no counter can wrap
+  in (the fastest, `tgen`, moves at most once a pass, ~220 a second, so
+  fewer than 25 a read).
+- **Counters, per field** (the delta across a window is modular: mod 2^32
+  for u32, mod 2^16 for u16, mod 2^8 for u8):
+  - **`uptime_ms`** (u32, ms): its delta agrees with the host's
+    midpoint-to-midpoint time within **2% plus the two samples' half
+    brackets**. Otherwise the timebase has failed, and so has the run;
+  - **the row ISR's entries** (u32, a count): the rate, entries over the
+    board's elapsed seconds, lies between **1,000 and 10,000 a second**;
+  - **ge10, ge25 and passes:** a ge delta is no more than the passes'
+    delta, and the passes' delta no more than **500 a second** of the
+    board's elapsed time;
+  - **a reboot** shows as a changed `boot_id`. A health reset shows as a
+    counter's modular delta beyond its bound: ge10 more than the passes, or
+    passes more than 500 a second. Either one fails the run.
+- **Sustained activity** (5 s windows while an activity runs on, the
+  menu's open-and-close excluded): each window's row ISR rate is at least
+  **0.98** of the matched baseline. The baseline is three 5 s dashboard
+  windows just before, with the same lighting, transport load and
+  instrumentation. A ratio over 1.01 fails as a configuration error.
+- **Transitions** are exempt from the sustained rule and have their own:
+  Fn+D in, Camera, Fn+D out, the menu's open and close, and a layout
+  change.
+  - **Ten repeats** of each kind.
+  - **Each repeat** is measured in successive **500 ms windows** from the
+    transition until its observed completion: the restore's DONE with a
+    new generation, `debug_done` for the new `dbg_gen`, or `pixels_done`
+    for the new `tgen`. Then **one window more**.
+  - **The thresholds:** every window is at least **0.95** of a matched
+    500 ms baseline, and the mean of all the windows of one kind, across
+    its ten repeats, at least **0.98**.
+  - **Completion** comes within **1,000 ms** of the transition, else the
+    run fails.
+- **Paced repaints:** every requested target settles within **1,000 ms**,
   else the run fails.
-- **Continuous input** (op 27 sub 1 bursts of one detent every 50 ms for
-  10 s, and the encoder's own backlog measured separately in S1):
-  - **progress:** the settled count (byte 17) rises at least once in
-    every 500 ms of the burst;
-  - **the end:** the final cursor is the sum of the detents sent, and the
-    final target settles within **500 ms** of the last one;
-  - **the books balance:** targets created = settled + superseded + the
-    one outstanding.
-- **Timing:** over the supported workload, sub 10's longest pass is
-  **15 ms or less** and its count of 15 ms passes is 0. ge25 doesn't move.
+- **Continuous input** (op 27 sub 1, one detent every 50 ms for 10 s, read
+  every 100 ms; the encoder's own backlog is measured separately in S1):
+  - **progress:** the committed-slot count (byte 23) rises in every
+    500 ms of the burst. Settled whole targets aren't required during the
+    burst, since each lives only ~50 ms;
+  - **the end:** the final cursor is the sum of the detents, modulo the
+    rows; the final target settles within **500 ms** of the last detent;
+  - **the books:** targets created (`tgen`'s delta) equal the settled plus
+    the superseded, plus at most the one outstanding.
+- **Timing:** over the armed interval of the supported workload, byte 10-11
+  is at most **15,000 µs**, byte 12-13 is 0, and ge25 doesn't move.
 - **Every timeout fails the run,** logged or not. A run that fails any
   check isn't a measurement and isn't reported as one.
 
@@ -1114,7 +1159,7 @@ saved Off (`level + 1`).
   | 7 | | request a dashboard restore, as the startup callback does |
   | 8 | | mark a blit lost, as an exhausted recovery does |
   | 9 | | the handoff probe (the board's A3, `CONFIG-MENU-S0-BOARD-TESTS.md`): under a DONE dashboard, queue three glyphs and a lock label, then hand the panel to the Fn+D page in the same call. Bytes 7-10 of the reply: gq and lq before, then after. Refused (state 5) unless the dashboard is DONE |
-  | 10 | [5] 0 or 1: reset | S1: timing and targets, read at once with no sequence (C10). Bytes 6-19; `reset` 1 zeroes the maxima after the reply |
+  | 10 | [5] 0 or 1: arm | S1: timing and targets, read at once with no sequence (C10). Bytes 6-27; `arm` 1 starts a measurement interval, zeroing its maxima and counts after the reply |
 
 - **Sub 5's reply,** from byte 5 (byte 5 is the status, 0):
 
