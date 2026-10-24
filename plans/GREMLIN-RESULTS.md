@@ -426,6 +426,32 @@ order in `anim_toggle()` (`display_anim_admissible()` before
 the predicate. **Fn+F12 stays bound** until S0's hands-on cases are done;
 gremlin's keymap from before is saved.
 
+**A10, all but one case passes** (10-24, 08:30-08:39, JD's hands; armed by
+sub 6 and logged by `scripts/menu_s0_watch.py`, `a10-watch.json`). The knob
+is Mute and volume on gremlin, so a leaked press or turn shows as Windows'
+pop-up. Every case: no pop-up, no stuck key, the capture bits back to 0,
+dropped 0, `invariant_fail` 0.
+- **Fn+knob with Fn released first:** opened; the knob's release consumed.
+- **The idle close:** 24 s after the last input, timed by the log.
+- **Turns:** the cursor stepped both ways and wrapped.
+- **A hold:** the Back closed on the hold, still down; its release consumed
+  under the dashboard (a hold across a close).
+- **A timeout while held:** opened, held 30 s; closed at 24 s with the knob
+  down; the release consumed.
+- **The knob remapped in VIA, layer 0:** the menu opened and closed each time.
+  - one-shot Shift (`0x52A2`): the next letters lowercase;
+  - mod-tap Shift/Mute (`0x22A8`): lowercase, no Mute;
+  - layer-tap Fn/Mute (`0x41A8`): a plain tap afterwards gave Mute (the
+    correct result), so the Fn layer wasn't left on.
+
+  The knob is back to Mute (`0x00A8`).
+- **Not yet run:** a pending tap-hold on another key (F12 as mod-tap Shift,
+  held while Fn+knob opens). F12 is back to plain F12; JD paused here.
+- **⚠️ JD: every turn, and the opening, visibly dips the keyboard's LEDs.**
+  It's the fill finding above, now a requirement for S1 (the build plan's
+  "Open" item 4).
+
 **Still to run:**
+- **A10's last case:** the pending tap-hold on another key.
 - **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
   (the physical knob cases). A9 is done.

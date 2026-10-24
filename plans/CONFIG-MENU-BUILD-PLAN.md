@@ -1103,3 +1103,31 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
 
 1. **The cursor: lit text or inverted.** Settled on the panel in S1.
 2. **Half rows or full rows:** S1's measurements decide.
+3. **A menu keycode (JD, 10-24): wanted.** An opener JD can place anywhere in
+   VIA, beside Fn+knob, which stays. JD first thought of Fn+C (the clock
+   format today), then kept everything on the knob; JD wants the keycode as
+   well. To decide:
+   - **The enum:** append it to `ak820pro_keycodes` and via.json's
+     `customKeycodes[]` (append only).
+   - **Its press:** it opens through PO_EV_OPENER like the knob, and closes
+     an open session.
+   - **Its release:** captured like the knob's, so C2's release rules extend
+     to it (a second capture bit).
+   - **Which stage:** S1's input work, or P1.
+
+   C2 and the plan's tests need it before code.
+4. **The fixture's fills dim the RGB ~19% while they repaint** (A11,
+   `GREMLIN-RESULTS.md` §10). `lcd_fill_rect` runs through SPI0's FIFO
+   interrupt, which delays the row ISR. S1's paint budget counts row ISR/s
+   (`scripts/menu_s0_ledrate.py`) as well as milliseconds. **JD, A10
+   (10-24): every knob turn visibly flickers the keyboard's LEDs** (one
+   cursor move repaints two rows). So it's a requirement: a menu repaint
+   must not dip the row ISR rate.
+   - **First candidate:** fills sent by polling SPI0's FIFO, with no
+     interrupt; SPI1's polled path already does this. The main loop pays the
+     same time, but the row ISR runs on schedule.
+   - **Then:** fills by DMA.
+   - **Last:** a different priority (docs/leds.md's priority table is
+     load-bearing).
+
+   Measured with the script before and after.
