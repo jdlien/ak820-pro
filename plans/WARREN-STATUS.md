@@ -40,7 +40,7 @@ This file is the thread; read it first after a context loss. Updated
   polled once a pass, so no backlog forms) removed the bounded drain I'd
   added. quantum/encoder.c is now a seventh core file with a local change:
   CLAUDE.md's list needs it at the merge.
-- **The mono text, ON THE KEYBOARD ON GREMLIN NOW: dev `cbb51ac1`** (token
+- **The mono text, dev `cbb51ac1`** (token
   `0xc10209a3`, gap 240 B). `lcd_blit_mono` through the stream (a halfword
   a pixel), the face `graphics/res/font_small_mono.h` from
   `scripts/gen_mono_font.py`, `menu/menu_text.c` (a cell at a time), and
@@ -52,12 +52,14 @@ This file is the thread; read it first after a context loss. Updated
     5.1-5.4 ms; a move ~165 ms; failure paths 36 of 36 on devfault;
   - **JD settled: lit text** (plan "Open" 1); **half rows** by efficiency
     ("Open" 2); the face is tiny, kept for now (BACKLOG: a larger face).
-- **The gate on `cbb51ac1` FAILED on timing:** one pass of 20.3 ms, 2 over
-  15, from a path the gate's F1 doesn't change: the dashboard or the
-  debug pages. `scripts/menu_s1_dashwatch.py SECS OUT` (sub 10 + the HC_ACCT
-  ring + the track text) is watching the dashboard to name it
-  (`dashwatch-cbb51ac1.json`). Suspect: the housekeeping text slot on a
-  track change (~16 ms, known, not staged).
+- **ON THE KEYBOARD ON GREMLIN NOW: dev `ffa80947`** (token `0x73928d54`,
+  gap 232 B): the mono text above plus the dashboard's text slot staged,
+  one heavy step a main-loop pass (codex twice,
+  `review-codex-s1-textslot-2026-10-24.md`). A track change between two
+  lines and one made the gate's 19.6-20.3 ms passes (§19c); now the slot's
+  worst is 4.0 ms. **The gate PASSES** (§19d): the longest pass 14.8 ms.
+  **Owed:** JD's look at real track changes on the panel (no clipped
+  title, no fragments).
 - **Scripts made today:** `menu_s1_spin.py STOP OUT [--style N]` (arms the
   opener; sub 10 from the menu's opening; the ring for passes over 15 ms),
   `menu_s1_styles.py` (each style's cost, no hands), `menu_s1_dashwatch.py`,
@@ -66,7 +68,7 @@ This file is the thread; read it first after a context loss. Updated
   there (a held session; switch only when asked). An automated demo that
   moves on by itself frustrated JD (10-24).
 - **Next:**
-  1. Name and fix the dashboard's long pass; the gate passes again.
+  1. JD's look at track changes on `ffa80947`.
   2. P1's real menu: the tree, lit text, half rows; the old highlight
      removed before or with the new one (BACKLOG, fast spins); the menu
      keycode (plan "Open" 3).

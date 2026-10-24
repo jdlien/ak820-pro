@@ -95,6 +95,10 @@ class Board:
         self.token = self.hgen = None
         self.st = self.m = None
         self.next_poll = 0.0
+        # Which step a pass over 15 ms came in: the poller's own reads, no
+        # extra traffic (cbb51ac1's run failed with 20.3 ms from a path the
+        # gate's F1 doesn't change).
+        self.phase, self.over_log, self._over = "start", [], None
 
     def meas(self, arm=0):
         r, mid, half = bracketed(lambda: xfer(self.h, 10, bytes([arm])))
@@ -126,6 +130,10 @@ class Board:
         if force or now >= self.next_poll:
             self.st = self.state()
             self.m = self.meas()
+            if self._over is not None and self.m["over15"] != self._over:
+                self.over_log.append({"phase": self.phase, "over15": self.m["over15"],
+                                      "pass_max_us": self.m["pass_max_us"], "t": round(now, 3)})
+            self._over = self.m["over15"]
             self.next_poll = max(self.next_poll + POLL_S, now + POLL_S / 2)
             return True
         return False
@@ -244,6 +252,7 @@ def run(a):
         s_first = bd.sample()
 
         # Baseline: the poller alone.
+        bd.phase = "baseline"
         base5 = [window_rate(*run_window(bd, 5.0), f"baseline {i}") for i in range(3)]
         base = sum(base5) / 3
         base05 = [window_rate(*run_window(bd, WINDOW_S), f"baseline 500ms {i}") for i in range(10)]
@@ -251,6 +260,7 @@ def run(a):
         out["baseline"] = {"rate_5s": base5, "rate_500ms": base05}
 
         # Sustained: paced A/B repaints, each settled within 1,000 ms of its cause.
+        bd.phase = "sustained"
         open_menu(bd)
         pace = {"pat": 0, "cause": None, "tgen": None}
 
@@ -285,6 +295,7 @@ def run(a):
         # seen, then one more.
         def transition(kind, cause_fn, done):
             rec = out["transitions"].setdefault(kind, {"ms": [], "windows": []})
+            bd.phase = kind
             prev = bd.sample()
             cause = cause_fn()
             completed, extra = None, False
@@ -343,6 +354,7 @@ def run(a):
             check(min(d["windows"]) >= WINDOW_RATIO, f"{kind}: a window at {min(d['windows']):.3f} < {WINDOW_RATIO}")
 
         # Camera's clock second, by C10's procedure.
+        bd.phase = "camera_second"
         to_dash_checked(bd)
         bd.op1()
         bd.op1()
@@ -370,6 +382,7 @@ def run(a):
         bd.op1()   # Camera to the dashboard
         wait_poll(bd, lambda st, m: dash_done(st), time.perf_counter() + 5 * SETTLE_S, "Camera's exit didn't restore")
 
+        bd.phase = "continuous"
         # Continuous: exactly 200 detents, one every 50 ms on absolute
         # deadlines; the committed count read by a forced poll at each 500 ms
         # boundary, the last before the post-burst settling.
@@ -414,6 +427,7 @@ def run(a):
         close_menu(bd)
 
         # Timing over the whole armed interval.
+        bd.phase = "end"
         to_dash_checked(bd)
         mfin = bd.meas()
         s_last = bd.sample()
@@ -425,6 +439,7 @@ def run(a):
         fails.append(str(e))
     finally:
         h.close()
+    out["over15_phases"] = bd.over_log
     out["failures"] = fails
     with open(a.out, "w") as f:
         json.dump(out, f, indent=1, default=str)
@@ -435,6 +450,8 @@ def run(a):
         t = out.get("timing") or {}
         if t:
             print(f"  (timing read: longest pass {t.get('pass_max_us')} us, over 15 ms {t.get('over15')})")
+        for o in out["over15_phases"]:
+            print(f"  over 15 ms during {o['phase']}: count {o['over15']}, longest so far {o['pass_max_us']} us")
         return 1
     t = out["timing"]
     print(f"PASS: longest pass {t['pass_max_us']} us, piece {t['piece_us']} us, op {t['op_us']} us, "

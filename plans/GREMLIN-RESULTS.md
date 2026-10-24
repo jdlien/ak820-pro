@@ -880,3 +880,44 @@ longest pass 20.3 ms, 2 over 15. The gate never shows F3, and nothing on
 F1's paths changed, so it's a dashboard or debug-page path: the real spin
 on `cbcf93b6` also showed 17.7 ms on the dashboard before the menu opened.
 `scripts/menu_s1_dashwatch.py` is watching the dashboard to name it.
+
+### 19c. The gate's long pass, named: the dashboard's text slot (10-24, ~16:45)
+
+- **The idle dashboard is clean:** `menu_s1_dashwatch.py`, 15 min on
+  `cbb51ac1` with no track change: the longest pass 13.2 ms, none over 15
+  (`dashwatch-cbb51ac1.json`).
+- **The gate again on `cbb51ac1`: PASS** (`gate2-cbb51ac1.json`): the
+  longest pass 13.3 ms, none over 15; every LED window at least 0.998;
+  completions inside 1,000 ms. The gate now tags any pass over 15 ms with
+  the step it came in (no extra reads). The first run's 20.3 ms was
+  intermittent.
+- **Six host text pushes** (`hostagent/ak820text.py`, two lines each)
+  during a 70 s watch: one 19.6 ms pass, `display_hk` 13 ms of it (the
+  HC_ACCT ring; `dashwatch-text-cbb51ac1.json`).
+- **The display probe** over long two-line and short one-line texts
+  alternating: `hk: text slot` 13.40 ms; inside it `text icon` 3.71 ms and
+  `band clear` 2.66 ms each. A change between layouts clears the old icon,
+  draws the new one, clears the vacated cells and the retired line, and
+  redraws a clobbered icon, all in one pass. This is a dashboard path from
+  before the menu, so it likely explains the 17.7 ms in §18 as well.
+- **`f78e1157` stages it:** one heavy step a 10 Hz tick (the forced
+  restore path unchanged). Codex reviewing (`review-prompt-s1-textslot.txt`).
+
+### 19d. The staged text slot on the board: the gate passes (10-24, ~17:30)
+
+`ffa80947` (dev, token `0x73928d54`, heap gap 232 B): `f78e1157` plus
+codex's two fixes (`review-codex-s1-textslot-2026-10-24.md`: line 1 retires
+before line 0 paints whenever it retires; one heavy step a main-loop pass).
+- **Six alternating long two-line and short one-line texts** (as §19c)
+  during a 75 s watch: the longest pass 13.2 ms, none over 15
+  (`dashwatch-text-ffa80947.json`). The probe: `hk: text slot` 4.00 ms
+  (13.40 before), `text icon` 3.49, `band clear` 2.62.
+- **The gate: PASS** (`gate-ffa80947.json`): the longest pass 14.8 ms, none
+  over 15; sustained ratios 1.002; every transition window at least 0.998;
+  completions Fn+D in 631-770 ms, Camera 251-345, Fn+D out 214-312, open
+  711-793, layout 705-786, close 219-313; Camera's second 92-100 ms;
+  continuous input 5 commits in every bucket, the final settle 245 ms.
+  The longest pass is closer to 15 ms than §16's 13.8: run-to-run spread,
+  with no step tagged over 15. Thin margin, noted.
+- **Not yet seen:** the staged text on the panel after real track changes
+  (no clipped title, no fragments). One look for JD.
