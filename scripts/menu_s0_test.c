@@ -40,7 +40,9 @@ static bool     lost_latched;
 static int      fault_next_dma;     /* the next N transfers are given up */
 static int      fault_next_band;    /* the next N clear bands fail */
 static bool     bus_busy_once;      /* the next glyph finds the bus busy */
+static int      fault_next_fill;    /* the next N fills give up, as a polled send does: a loss, nothing painted */
 static int      glyph_ops, fill_ops, bands_ok;
+static uint32_t pass_bytes, max_pass_bytes;   /* CPU-fed pixels in the current pass, and the most in any (C4) */
 
 static void paint_fb(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c, bool glyph) {
     for (uint16_t y = y0; y <= y1 && y < MB_H; y++)
@@ -79,6 +81,12 @@ bool mb_clear_band(uint8_t band) {
 }
 void mb_fill(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c) {
     dma_settle();   /* bus_quiesce */
+    pass_bytes += (uint32_t)(x1 - x0 + 1) * (uint32_t)(y1 - y0 + 1) * 2u;
+    if (fault_next_fill > 0) {
+        fault_next_fill--;
+        lost_latched = true;   /* spi0_poll_send's give-up sets blit_lost */
+        return;
+    }
     fill_fb(x0, y0, x1, y1, c);
     fill_ops++;
 }
@@ -98,8 +106,9 @@ static void fake_reset(void) {
     memset(fb, 0x55, sizeof fb);   /* not black: a pixel the clear missed shows */
     memset(is_glyph, 0, sizeof is_glyph);
     dma_busy = lost_latched = bus_busy_once = false;
-    fault_next_dma = fault_next_band = 0;
+    fault_next_dma = fault_next_band = fault_next_fill = 0;
     glyph_ops = fill_ops = bands_ok = 0;
+    pass_bytes = max_pass_bytes = 0;
 }
 
 /* One pass of the menu's painter, as the pump runs it: the DMA's completion
@@ -107,7 +116,10 @@ static void fake_reset(void) {
 static ms_step_t pass(void) {
     dma_settle();
     if (take_lost()) fx_invalidate();
-    return ms_step();
+    pass_bytes = 0;
+    ms_step_t s = ms_step();
+    if (pass_bytes > max_pass_bytes) max_pass_bytes = pass_bytes;
+    return s;
 }
 static int run_until_settled(int max) {
     for (int i = 0; i < max; i++) {
@@ -577,6 +589,140 @@ static void test_fixture_paint(void) {
     CHECK(!fx_set_pattern(1));
 }
 
+/* --- S1: the pieces under MB_PASS_BYTES, and the op's end (C4, revision 9) ----- */
+
+/* A settled A on F1, cursor at row 0. */
+static void settled_a(void) {
+    fake_reset();
+    ms_init();
+    fx_open();
+    CHECK(run_until_settled(400) > 0 && f1_mismatches(0, 0) == 0);
+}
+
+static void test_pieces(void) {
+    /* No pass sends more than the budget: F1 from a fresh open, then F2. */
+    settled_a();
+    CHECK(max_pass_bytes > 0 && max_pass_bytes <= MB_PASS_BYTES);
+    fx_other_layout();
+    CHECK(run_until_settled(400) > 0 && f2_mismatches() == 0);
+    CHECK(max_pass_bytes <= MB_PASS_BYTES);
+
+    /* Still C9's 27 logical ops for a full B, and 4 for a selection change. */
+    settled_a();
+    fx_set_pattern(1);
+    int full = run_until_settled(400);
+    CHECK(full > 0 && ms_ops() == FX_F1_OPS && f1_mismatches(1, 0) == 0);
+    fx_input(1, MI_LATCH_NONE);
+    CHECK(run_until_settled(100) > 0 && ms_ops() == 4 && f1_mismatches(1, 1) == 0);
+
+    /* A retarget at every piece boundary of a B repaint: the frame ends right. */
+    for (int k = 0; k < full; k++) {
+        settled_a();
+        fx_set_pattern(1);
+        for (int i = 0; i < k; i++) pass();
+        fx_set_pattern(0);
+        CHECK(run_until_settled(400) > 0 && f1_mismatches(0, 0) == 0);
+    }
+    /* A selection change at every piece boundary of a B repaint. */
+    for (int k = 0; k < full; k++) {
+        settled_a();
+        fx_set_pattern(1);
+        for (int i = 0; i < k; i++) pass();
+        fx_input(3, MI_LATCH_NONE);
+        CHECK(run_until_settled(400) > 0 && f1_mismatches(1, 3) == 0);
+    }
+    /* A fill given up at every point of a B repaint: the loss repaints all. */
+    for (int k = 0; k < full; k++) {
+        settled_a();
+        fx_set_pattern(1);
+        for (int i = 0; i < k; i++) pass();
+        fault_next_fill = 1;
+        CHECK(run_until_settled(800) > 0 && f1_mismatches(1, 0) == 0);
+    }
+    /* F2: a layout change at every piece boundary of its tiles. */
+    settled_a();
+    fx_other_layout();
+    int f2full = run_until_settled(400);
+    CHECK(f2full > 0);
+    for (int k = 0; k < f2full; k++) {
+        settled_a();
+        fx_other_layout();
+        for (int i = 0; i < k; i++) pass();
+        fx_other_layout();   /* back to F1 */
+        CHECK(run_until_settled(400) > 0 && f1_mismatches(0, FX_ROW_F2) == 0);
+    }
+}
+
+static void test_op_end(void) {
+    /* The race revision 9 closes: navigation in the same pass an op reaches
+     * the stop. The stop must already be latched, not cancelled. Each n,
+     * glyph ops (a DMA) and fill ops (synchronous) alike. */
+    for (uint8_t n = 1; n < FX_F1_OPS; n++) {
+        settled_a();
+        fx_set_pattern(1);
+        ms_stop_after(n);
+        int guard = 0;
+        while (guard++ < 400) {
+            pass();
+            if (ms_stopped() || ms_ops() >= n) break;
+        }
+        fx_input(1, MI_LATCH_NONE);   /* navigation before the next pass */
+        CHECK(ms_stopped());
+        CHECK(!ms_stop_cancelled_take());
+        CHECK(ms_ops() == 0);         /* the new target's count, the stop held */
+        CHECK(pass() == MS_STEP_STOPPED);
+    }
+
+    /* A stop not yet reached is superseded by a retarget. */
+    settled_a();
+    fx_set_pattern(1);
+    ms_stop_after(20);
+    pass(); pass();
+    fx_input(1, MI_LATCH_NONE);
+    CHECK(!ms_stopped() && ms_stop_cancelled_take());
+
+    /* A reached stop holds a newly requested clear paused, then lets it run. */
+    settled_a();
+    fx_set_pattern(1);
+    ms_stop_after(5);
+    int guard = 0;
+    while (!ms_stopped() && guard++ < 400) pass();
+    CHECK(ms_stopped());
+    fx_other_layout();
+    CHECK(ms_clearing() && pass() == MS_STEP_STOPPED && ms_clearing());
+    ms_stop_release();
+    CHECK(run_until_settled(400) > 0 && f2_mismatches() == 0);
+
+    /* A loss in the pass an op reaches its stop: still latched. */
+    settled_a();
+    fx_set_pattern(1);
+    ms_stop_after(12);
+    guard = 0;
+    while (guard++ < 400) {
+        pass();
+        if (ms_stopped() || ms_ops() >= 12) break;
+    }
+    fx_invalidate();
+    CHECK(ms_stopped() && pass() == MS_STEP_STOPPED);
+
+    /* The final piece failing: its op still ends once, and the loss repaints. */
+    settled_a();
+    fx_set_pattern(1);
+    ms_stop_after(11);   /* op 11: row 0's first half (glyphs 1-9, the separator, then this) */
+    guard = 0;
+    while (guard++ < 400 && ms_ops() < 10) pass();
+    int f0 = fill_ops;
+    guard = 0;
+    while (guard++ < 50 && fill_ops < f0 + 3) pass();   /* three of its four pieces (a commit takes a pass too) */
+    CHECK(fill_ops == f0 + 3 && ms_ops() == 10);
+    fault_next_fill = 1;      /* the fourth gives up */
+    guard = 0;
+    while (guard++ < 50 && fault_next_fill) pass();
+    CHECK(ms_stopped() && ms_ops() == 11);
+    ms_stop_release();
+    CHECK(run_until_settled(800) > 0 && f1_mismatches(1, 0) == 0);
+}
+
 /* --- menu_ops.c through a fake environment -------------------------------------
  * The production task, op 27 and menu-side actions, with menu_env.h faked:
  * env_po_event runs po_event and then applies its actions as display.c's
@@ -869,6 +1015,8 @@ int main(int argc, char **argv) {
     test_input();
     test_op27_flight();
     test_fixture_paint();
+    test_pieces();
+    test_op_end();
     test_ops();
     if (fails) {
         printf("%d check(s) failed\n", fails);
