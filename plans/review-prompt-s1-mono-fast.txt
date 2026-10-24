@@ -1,0 +1,16 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A review before a flash to the test board, of a rewrite for speed in S1's mono text path: qmk_firmware-ak820pro gremlin/s1 commit cdde64e8 (`git -C qmk_firmware-ak820pro show cdde64e8`). Background: your reviews in plans/review-codex-s1-mono-2026-10-24.md. On the board (dev 158e876d), scripts/menu_s1_styles.py measured a 488 B mono piece at 7.7 ms (half rows) and 8.8 ms (full rows) of wall time, against 4.3 ms for a fill piece of 512 B (history/config-menu-s1-20261024/styles-158e876d.json, gate-a8b98bc0.json), and whole passes of 16-17.7 ms, over C10's 15 ms target.
+
+The rewrite:
+- menu/menu_text.c mt_bits: the edges set by column (ink_cols, only when inked), then the cells the band reaches, each glyph row's six bits (bits 7..2) shifted into place with two byte ORs; a cell cut on the band's left is shifted left by the cut (lshift), and bits at or past w are masked off (rmask). Spaces past the string are skipped.
+- graphics/lcd_bus.c lcd_blit_mono: the scratch is now a union of 512 bytes and 256 halfwords (lcd_scratch is its byte view, so sizeof and every other user is unchanged); the expansion stores one halfword a pixel from lut[2] (each colour byte-swapped so its little-endian bytes are panel order), eight to a source byte, and flushes before a row that wouldn't fit, so rows never split (a row is at most FRAME_W = 128 px).
+- scripts/menu_s0_test.c: an exhaustive comparison of mt_bits against a per-pixel reference (every band start and width up to 128 over lines with lead and trail 0-2, both inks, 0-20 cells, short strings, the extras and a code the face hasn't, bits past w required clear); two planted mutations (the right mask, the left shift) each fail it.
+
+Please review, adversarially:
+1. mt_bits: the clipping arithmetic for every band (x < 0, room < 8, a cell straddling w, a band entirely inside the lead or the trail, end == text), int promotion in ((g[r] & 0xFC) << lshift) & rmask and in (uint16_t)gb << 8 >> sh, the row[1] guard, and the early return. Is the exhaustive test's reference truly independent, and does its stride choice exercise the row[1] guard?
+2. lcd_blit_mono: the union and strict aliasing (GCC's documented union punning; lcd_scratch's other users write bytes); the halfword stores' alignment; endianness (the panel wants the hi byte first, as tx_pixels and the fills send); the flush-before-a-row logic, including the window-given-up case (stream_broken set by lcd_stream_begin: the loop must not run), a payload give-up mid-bitmap, the final partial send, stream_left's zeroing, and the _Static_assert. The tail loop for w % 8.
+3. Anything that makes this slower than it looks on a Cortex-M0 (flash wait states, the lut on the stack, the 16-bit loop counters' uxth), and whether a piece should now cost close to a fill's.
+4. Anything else.
+
+Say which findings must be fixed before the flash and which can wait. Be concrete.

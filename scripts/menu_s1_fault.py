@@ -13,10 +13,14 @@ byte):
           on one of the first glyph's DMA-arm window sends
   retry   a lost completion (HC_BLITFAULT 1) whose retry's window gives up
           (skip 5: the original arm's five window sends go through)
+  mono    S1's mono text (lcd_blit_mono through the stream, F3 in lit/half
+          rows): a selection change's first piece, skip 0-4 on its window,
+          skip 5 on its payload
 After each: the owner took the loss (op 27's losses +1) and repainted
-(pixels_done), a later DMA and a later fill both work, no blit timeout
-where none belongs, and invariant_fail holds only 0x20 (PO_FAIL_SPI0_POLL,
-sticky, expected). Never enumerates HID on Windows."""
+(pixels_done), a later DMA and a later fill both work (on F3: a later style
+change and a later selection change), no blit timeout where none belongs,
+and invariant_fail holds only 0x20 (PO_FAIL_SPI0_POLL, sticky, expected).
+Never enumerates HID on Windows."""
 import argparse
 import json
 import os
@@ -29,6 +33,7 @@ from menu_s0_session import mutate, open_device, read_state, wait  # noqa: E402
 from menu_s0_accept import to_dash, until  # noqa: E402
 
 SET_VALUE, CH = 0x07, 0x13
+MONO_FIRST = 16   # op 27 sub 0's F3 patterns: 16 lit/half ... 19 inverted/full
 HC_BLITFAULT, HC_POLLFAULT = 0x77, 0x75
 AK820 = os.path.join(os.path.dirname(__file__), "..", "ak820-agent", "target", "release", "ak820.exe")
 EXPECTED_FAIL = 0x20
@@ -76,7 +81,7 @@ def one(h, kind, mode, skip, pattern):
     else:
         hc(h, HC_POLLFAULT, [1, mode, skip])
     # The trigger: rows by a selection change, glyphs by a pattern change.
-    if kind == "fill":
+    if kind in ("fill", "mono"):
         mut(h, 1, bytes([1]))
     else:
         mut(h, 0, bytes([pattern[0], 0]))
@@ -93,10 +98,18 @@ def one(h, kind, mode, skip, pattern):
     ok, s1 = settle(h, timeout=5.0)
     left = hc(h, HC_POLLFAULT, [0, 0, 0])[3]   # writes 0 too: nothing may stay armed
     h1 = health()
-    # Afterwards: a DMA (title glyphs, a flash read on SPI1) and a fill (rows) work.
-    mut(h, 0, bytes([pattern[0], 0]))
-    pattern[0] ^= 1
-    ok_dma, _ = settle(h)
+    # Afterwards: a DMA (title glyphs, a flash read on SPI1) and a fill (rows)
+    # work; on F3, a style change (the title and every row) and a selection.
+    if kind == "mono":
+        mut(h, 0, bytes([MONO_FIRST + 2 + (pattern[0] & 1), 0]))   # inverted, half or full
+        pattern[0] ^= 1
+        ok_dma, _ = settle(h)
+        mut(h, 0, bytes([MONO_FIRST, 0]))                           # back to lit, half rows
+        settle(h)
+    else:
+        mut(h, 0, bytes([pattern[0], 0]))
+        pattern[0] ^= 1
+        ok_dma, _ = settle(h)
     mut(h, 1, bytes([1]))
     ok_fill, s2 = settle(h)
     h2 = health()
@@ -130,11 +143,20 @@ def main():
             raise RuntimeError("the fixture didn't settle")
         cases = [("fill", m, k) for m in (0, 1) for k in range(6)] + \
                 [("dma", m, k) for m in (0, 1) for k in range(5)] + \
-                [("retry", m, 5) for m in (0, 1)]   # the original arm's five window sends pass; the retry's first fails
+                [("retry", m, 5) for m in (0, 1)] + \
+                [("mono", m, k) for m in (0, 1) for k in range(6)]   # retry: the original arm's five window sends pass; the retry's first fails
         for kind, mode, skip in cases:
             # The fixture closes after 24 s idle: a selection change keeps it.
             if read_state(h)["session"] != "open":
                 mut(h, 4)
+                settle(h)
+            screen = read_state(h)["screen"]
+            if kind == "mono" and screen != 3:
+                mut(h, 0, bytes([MONO_FIRST, 0]))   # F3, lit text, half rows
+                settle(h)
+            elif kind != "mono" and screen != 1:
+                mut(h, 0, bytes([3, 0]))            # F3 -> F2 -> F1
+                mut(h, 0, bytes([3, 0]))
                 settle(h)
             good, ev = one(h, kind, mode, skip, pattern)
             ev["pass"] = good

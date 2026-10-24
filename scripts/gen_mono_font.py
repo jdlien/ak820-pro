@@ -37,7 +37,8 @@ EXTRAS = [("‹", 0x2039), ("›", 0x203A), ("•", 0x2022), ("▸", 0x25B8), ("
 
 
 def read_png(path):
-    """-> (w, h, rows of (r, g, b)). 8-bit RGB or RGBA, non-interlaced."""
+    """-> (w, h, rows of (r, g, b, a)), a = 255 for RGB. 8-bit RGB or RGBA,
+    non-interlaced."""
     data = open(path, "rb").read()
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         sys.exit(f"{path}: not a PNG")
@@ -78,7 +79,8 @@ def read_png(path):
                 line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 0xFF
             elif f != 0:
                 sys.exit(f"{path}: filter {f}")
-        rows.append([tuple(line[x * bpp:x * bpp + 3]) for x in range(w)])
+        rows.append([tuple(line[x * bpp:x * bpp + 3]) + ((line[x * bpp + 3],) if bpp == 4 else (255,))
+                     for x in range(w)])
         prev = line
     return w, h, rows
 
@@ -88,16 +90,23 @@ def atlas_glyphs():
     n = mkbdfatlas.LAST - mkbdfatlas.FIRST + 1
     if (w, h) != (CW * n, CH):
         sys.exit(f"{ATLAS}: {w}x{h}, want {CW * n}x{CH}")
+    # Strict, so the check below proves the atlas's RGB565 too, not only its
+    # ink: opaque magenta at each cell's (0, 0) and nowhere else, and every
+    # other pixel opaque pure black or pure white (codex, 10-24).
+    black, white, marker = (0, 0, 0, 255), (255, 255, 255, 255), mkbdfatlas.MARKER + (255,)
     out = []
     for g in range(n):
-        if px[0][g * CW] != mkbdfatlas.MARKER:
-            sys.exit(f"{ATLAS}: no marker at cell {g}")
         ink = set()
         for y in range(CH):
             for x in range(CW):
-                r, gg, b = px[y][g * CW + x]
-                if r > 200 and gg > 200 and b > 200:   # white is ink; the magenta marker isn't
+                v = px[y][g * CW + x]
+                if (x, y) == (0, 0):
+                    if v != marker:
+                        sys.exit(f"{ATLAS}: cell {g}'s marker is {v}, not opaque magenta")
+                elif v == white:
                     ink.add((x, y))
+                elif v != black:
+                    sys.exit(f"{ATLAS}: cell {g} ({x},{y}) is {v}: only opaque black and white are allowed")
         out.append(ink)
     return out
 

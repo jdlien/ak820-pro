@@ -2,13 +2,18 @@
  * restore (menu/panel_owner.c), the knob's capture and op 27's single flight
  * (menu/menu_input.c), the damage model (menu/menu_slots.c), the fixture
  * (menu/menu_fixture.c), and the task, op 27 and the menu's side of an owner
- * event (menu/menu_ops.c), against a fake framebuffer and environment. These are the firmware's
- * own files: plans/CONFIG-MENU-BUILD-PLAN.md, "S0". Build and run:
+ * event (menu/menu_ops.c), against a fake framebuffer and environment, and S1's
+ * mono text (menu/menu_text.c, the fixture's F3). These are the firmware's
+ * own files: plans/CONFIG-MENU-BUILD-PLAN.md, "S0" and "S1". Build and run:
  *
  *   D=qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro
  *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/menu_s0_test.c \
  *       $D/menu/panel_owner.c $D/menu/menu_input.c $D/menu/menu_slots.c \
- *       $D/menu/menu_fixture.c $D/menu/menu_ops.c -o ms0 && ./ms0
+ *       $D/menu/menu_fixture.c $D/menu/menu_ops.c $D/menu/menu_text.c -o ms0 && ./ms0
+ *
+ * The fake mb_mono stands in for lcd_blit_mono: the stream's byte order, CS
+ * and scratch handling and its failure paths are the board's tests
+ * (scripts/menu_s1_fault.py), not these.
  *
  * (On Windows, mingw64's gcc first on PATH: CLAUDE.md.) */
 #include <stdio.h>
@@ -798,10 +803,13 @@ static void test_mono(void) {
         fx_set_mono((uint8_t)(st + 1));
         CHECK(run_until_settled(400) > 0);
         fx_set_mono(st);
-        int full = run_until_settled(400);
-        CHECK(full > 0);
-        int consumed = 0;
-        for (int k = 0; k < full; k++) {
+        int full = run_until_settled(400);   /* st's repaint, which the selection change interrupts */
+        fx_set_mono((uint8_t)(st + 1));
+        int next = run_until_settled(400);   /* st + 1's, which the style change and the faults interrupt */
+        fx_set_mono(st);
+        CHECK(full > 0 && next > 0 && run_until_settled(400) > 0);
+        int consumed = 0, most = full > next ? full : next;
+        for (int k = 0; k < most; k++) {
             fx_set_mono((uint8_t)(st + 1));
             CHECK(run_until_settled(400) > 0);
             fx_set_mono(st);
@@ -826,7 +834,7 @@ static void test_mono(void) {
                 CHECK(run_until_settled(400) > 0);
             }
         }
-        CHECK(consumed >= full);
+        CHECK(consumed >= next);
     }
     /* Input on F3: turns move the row, a click on rows 0-5 is the next style,
      * row 6 goes to F2 and back to F1, row 7 is Diagnostics. */
@@ -851,6 +859,52 @@ static void test_mono(void) {
     CHECK(fx_screen() == FX_SCREEN_F1 && run_until_settled(400) > 0 && f1_mismatches(fx_pattern(), FX_ROW_DIAG) == 0);
     CHECK(fx_set_pattern(0));
 
+    /* mt_bits against a per-pixel reference, exhaustively over the band's
+     * start and width, the edges and their ink, short strings, the extras
+     * and a code the face hasn't. Bits past w must stay clear. */
+    {
+        static const char *const ss[] = {"", "A", "Hi, gjpqy|", "\x80\x81\x82\x83\x84\x7f~", "WWWWWWWWWWWWWWWWWWWW"};
+        uint8_t bb[14 * 17];
+        int     bad = 0, cases = 0;
+        for (unsigned si = 0; si < sizeof ss / sizeof ss[0]; si++)
+            for (uint8_t cells = 0; cells <= 20; cells += (cells < 4 ? 1 : 8))
+                for (uint8_t lead = 0; lead <= 2; lead++)
+                    for (uint8_t trail = 0; trail <= 2; trail++)
+                        for (int inks = 0; inks < 4; inks++) {
+                            mt_line_t ln = {ss[si], cells, lead, trail, (inks & 1) != 0, (inks & 2) != 0};
+                            uint16_t  lw = mt_width(&ln);
+                            size_t    sl = strlen(ss[si]);
+                            for (uint16_t c0 = 0; c0 < lw; c0++)
+                                for (uint16_t w = 1; c0 + w <= lw && w <= 128; w++) {
+                                    uint8_t st = (uint8_t)((w + 7) / 8 + (w % 3 == 0));   /* sometimes a spare byte */
+                                    uint8_t r0 = (uint8_t)((c0 + w) % 11), rows = (uint8_t)(1 + (w % 3));
+                                    if (r0 + rows > 14) r0 = (uint8_t)(14 - rows);
+                                    memset(bb, 0xA5, sizeof bb);
+                                    mt_bits(&ln, c0, w, r0, rows, bb, st);
+                                    cases++;
+                                    for (uint8_t r = 0; r < rows; r++)
+                                        for (uint16_t i = 0; i < st * 8u; i++) {
+                                            uint16_t c   = (uint16_t)(c0 + i);
+                                            bool     got = (bb[r * st + i / 8] >> (7 - i % 8)) & 1, want = false;
+                                            if (i < w) {
+                                                if (c < lead) want = ln.lead_ink;
+                                                else if (c >= lead + cells * 6) want = ln.trail_ink;
+                                                else {
+                                                    size_t  cell = (size_t)(c - lead) / 6;
+                                                    uint8_t code = cell < sl ? (uint8_t)ss[si][cell] : (uint8_t)' ';
+                                                    const uint8_t *g = code >= 0x20 && code < 0x7f ? font_small_mono[code - 0x20]
+                                                                     : code >= 0x80 && code < 0x85 ? font_small_mono[95 + code - 0x80]
+                                                                     : font_small_mono['?' - 0x20];
+                                                    want = (g[r0 + r] >> (7 - (c - lead) % 6)) & 1;
+                                                }
+                                            }
+                                            if (got != want) bad++;
+                                        }
+                                }
+                        }
+        CHECK(bad == 0 && cases > 10000);
+        if (bad) printf("mt_bits: %d wrong bits\n", bad);
+    }
     /* menu_text.c's edges and padding, on their own: a short string pads
      * with spaces; ink edges are set on every row asked for. */
     uint8_t   b[2 * 16];
@@ -1371,6 +1425,20 @@ static void test_ops(void) {
     CHECK(po_session() == SESSION_OPEN);
     fw_pass(20);
     CHECK(po_session() == SESSION_NONE);
+    CHECK(po_invariant_fail() == 0);
+
+    /* S1's F3 through op 27 sub 0: 16-19 take it with n 0; A, B and the
+     * stop need F1; 3 goes F3 -> F2 -> F1. */
+    CHECK(op27(0, 16, 0) == MI_BAD);   /* nothing open */
+    open_fixture();
+    CHECK(op27(0, 16, 0) == MI_OK && fx_screen() == FX_SCREEN_F3 && fx_pattern() == FX_MONO_FIRST);
+    CHECK(op27(0, 19, 0) == MI_OK && fx_pattern() == FX_MONO_FIRST + 3);
+    CHECK(op27(0, 20, 0) == MI_BAD && op27(0, 15, 0) == MI_BAD && op27(0, 17, 1) == MI_BAD);
+    CHECK(op27(0, 0, 0) == MI_BAD && op27(0, 1, 0) == MI_BAD && op27(0, 2, 5) == MI_BAD);
+    for (int i = 0; i < 400 && !(ms_settled() && !mb_busy()); i++) fw_pass(5);
+    CHECK(ms_settled() && f3_mismatches(3, fx_cursor()) == 0);
+    CHECK(op27(0, 3, 0) == MI_OK && fx_screen() == FX_SCREEN_F2);
+    CHECK(op27(0, 3, 0) == MI_OK && fx_screen() == FX_SCREEN_F1);
     CHECK(po_invariant_fail() == 0);
 }
 
