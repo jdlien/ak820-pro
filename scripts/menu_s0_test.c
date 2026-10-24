@@ -917,6 +917,14 @@ static void test_mono(void) {
         mt_bits(&wide, 1524, 7, 3, 1, bb, 1);   /* the last glyph's six columns and one trail pixel */
         CHECK(bb[0] == (uint8_t)(font_small_mono['W' - 0x20][3] & 0xFC) && bb[1] == 0xA5);
     }
+    /* The completion predicate: a loss latched and not yet taken isn't
+     * settled, though every slot is committed (codex, P1's design review). */
+    settled_a();
+    CHECK(ms_settled());
+    lost_latched = true;
+    CHECK(!ms_settled());
+    CHECK(run_until_settled(400) > 0 && f1_mismatches(0, 0) == 0);   /* pass() takes it: a repaint */
+
     /* menu_text.c's edges and padding, on their own: a short string pads
      * with spaces; ink edges are set on every row asked for. */
     uint8_t   b[2 * 16];

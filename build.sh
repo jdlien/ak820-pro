@@ -152,8 +152,9 @@ for sym in sleep_task power_sleep_wanted rtc_sleep_prepare battery_sleep_enter b
   [[ -n "$(awk -v s=$sym '$3 == s' <<<"$nm_out")" ]] || { echo "FAIL: the deep sleep's $sym is missing" >&2; fail=1; }
 done
 if [[ "$FLAVOR" == (daily|fpb) ]]; then
+  # power_set_mode left this list at the menu's P1a: its Power item calls it.
   for sym in sleep_deep_arm sleep_deep_cancel sleep_light_set power_set_bench_sleep_ms power_force_stage \
-             power_set_mode rtc_dev_delay_full_once; do
+             rtc_dev_delay_full_once; do
     [[ -z "$(awk -v s=$sym '$3 == s' <<<"$nm_out")" ]] || { echo "FAIL: a $FLAVOR build carries $sym" >&2; fail=1; }
   done
 fi

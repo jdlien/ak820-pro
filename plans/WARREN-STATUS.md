@@ -58,8 +58,7 @@ This file is the thread; read it first after a context loss. Updated
   `review-codex-s1-textslot-2026-10-24.md`). A track change between two
   lines and one made the gate's 19.6-20.3 ms passes (§19c); now the slot's
   worst is 4.0 ms. **The gate PASSES** (§19d): the longest pass 14.8 ms.
-  **Owed:** JD's look at real track changes on the panel (no clipped
-  title, no fragments).
+  **JD checked real track changes on the panel: "titles looked clean"**
 - **Scripts made today:** `menu_s1_spin.py STOP OUT [--style N]` (arms the
   opener; sub 10 from the menu's opening; the ring for passes over 15 ms),
   `menu_s1_styles.py` (each style's cost, no hands), `menu_s1_dashwatch.py`,
@@ -68,7 +67,7 @@ This file is the thread; read it first after a context loss. Updated
   there (a held session; switch only when asked). An automated demo that
   moves on by itself frustrated JD (10-24).
 - **Next:**
-  1. JD's look at track changes on `ffa80947`.
+  1. P1a: codex's second design round, then the code (plans/CONFIG-MENU-P1-DESIGN.md).
   2. P1's real menu: the tree, lit text, half rows; the old highlight
      removed before or with the new one (BACKLOG, fast spins); the menu
      keycode (plan "Open" 3).

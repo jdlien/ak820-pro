@@ -921,3 +921,12 @@ before line 0 paints whenever it retires; one heavy step a main-loop pass).
   with no step tagged over 15. Thin margin, noted.
 - **Not yet seen:** the staged text on the panel after real track changes
   (no clipped title, no fragments). One look for JD.
+- **JD's look (10-24, ~17:50), music playing, five or six real track
+  changes on `ffa80947`:** "titles looked clean". No clipped title, no
+  fragments, the icon whole. The staged text slot is accepted on the panel.
+- **The timing during JD's track changes** (`dashwatch-tracks-ffa80947.json`,
+  300 s, 13 track changes): one pass over 15 ms, 16.2 ms, and not the
+  display's (`display_hk` 1 ms, the CH582F 2, the battery 1, **unaccounted
+  12**: QMK's own work, the key and USB paths, the RGB effect). A lead, not
+  chased yet: if a key or the knob skipped the track, the modified-consumer
+  path's deliberate 8 ms gap (`MODIFIED_CONSUMER_GAP_MS`, config.h) fits.
