@@ -105,6 +105,18 @@ if grep -q '^#define POWER_HAS_MODES' "$build/power.h"; then
         for s in $devonly; do "$build/sim_dev_san" "$s" > /dev/null 2>&1 || { echo "FAIL $s under the sanitizers"; san=1; }; done
         [ $san = 0 ] && echo "ok   the dev-hooks scenarios under ASan and UBSan" || fail=1
     fi
+    # The devfault build (AK820_DEVFAULT, build.sh) keeps 8 log entries fewer
+    # for the configuration menu's RAM (plans/CONFIG-MENU-P1-DESIGN.md): the
+    # log's scenarios again against 712, wrap and oldest-first included. The
+    # 720 runs above stay.
+    if grep -q 'AK820_DEVFAULT' "$build/battery.c"; then
+        cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -DAK820_DEV_HOOKS -DWDT_TEST_HOOKS -DAK820_DEVFAULT \
+           -DSIM_LOG_LEN=712u -I"$build" -o "$build/sim_fault" "$here/sim.c" "$build/battery.c" "$build/power.c" -lm
+        for s in s_log_within s_log_across s_log_long s_log_pending s_log_recovery_boundary s_log_floor s_log_late_cut; do
+            "$build/sim_fault" "$s" || fail=1
+        done
+        for s in log_cadence ring_restart; do "$build/sim_fault" "$s" "$log" || fail=1; done
+    fi
 
     # The colour path (colour.c): QMK's own conversion and CIE table in place
     # of sim.c's stub, and the board's DRIFT and RAINFALL under the ceilings.

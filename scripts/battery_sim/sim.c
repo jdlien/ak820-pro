@@ -68,6 +68,9 @@ bool     display_band_busy(void) {
            (status_posted && now_ms - status_at < 2000u);
 }
 bool     display_debug_active(void) { return debug_open; }
+/* S0 (dde661d1): Lights out's exception asks whether an owner lights the
+ * panel, Fn+D's page or the menu; the sim has only the page. */
+bool     display_panel_lit_for_owner(void) { return debug_open; }
 /* QMK's conversion, for the dim hook: s = 0 (white) is all the sim needs.
  * The colour build (SIM_REAL_COLOUR, colour.c) links QMK's own instead. */
 #ifndef SIM_REAL_COLOUR

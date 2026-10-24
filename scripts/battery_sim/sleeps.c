@@ -302,13 +302,17 @@ static void s_replay_mixed(void) {
           got, want, p_awake);
 }
 
-/* A sleep longer than the log: its last 720 entries, all slept. */
+/* A sleep longer than the log: its last SIM_LOG_LEN entries, all slept (720;
+ * 712 in the devfault build, run.sh's AK820_DEVFAULT pass). */
+#ifndef SIM_LOG_LEN
+#    define SIM_LOG_LEN 720u
+#endif
 static void s_log_long(void) {
     c_start(96);
     sleep_for(8u * 24u * 3600000u, 300);
-    CHECK(log_count() == 720, "the log full: %u", log_count());
+    CHECK(log_count() == SIM_LOG_LEN, "the log full: %u", log_count());
     unsigned bad = 0;
-    for (unsigned k = 0; k < 720; k++) if (log_entry(k).slept != 900) bad++;
+    for (unsigned k = 0; k < SIM_LOG_LEN; k++) if (log_entry(k).slept != 900) bad++;
     CHECK(bad == 0, "every entry slept whole: %u not", bad);
 }
 

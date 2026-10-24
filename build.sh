@@ -27,7 +27,7 @@ FLAVOR="${1:-daily}"
 case "$FLAVOR" in
   daily)        FLAGS=();                        EXTRA="" ;;
   dev)          FLAGS=();                        EXTRA="-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS" ;;
-  devfault)     FLAGS=();                        EXTRA="-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS -DWDT_TEST_HOOKS" ;;
+  devfault)     FLAGS=();                        EXTRA="-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS -DWDT_TEST_HOOKS -DAK820_DEVFAULT" ;;
   instrumented) FLAGS=(-e CONSOLE_ENABLE=yes);   EXTRA="-DLOOPGAP_INSTRUMENT -DWDT_TEST_HOOKS" ;;
   fpb)          FLAGS=();                        EXTRA="-DAK820PRO_LCD_VARIANT_FPB" ;;
   *) echo "usage: build.sh [daily|dev|devfault|instrumented|fpb]" >&2; exit 2 ;;
@@ -47,7 +47,7 @@ while (( token == 0 )); do token=$(( 0x$(od -An -N4 -tx4 /dev/urandom | tr -d ' 
 token_hex=$(printf '0x%08x' "$token")
 # -g: line info for the archived ELF. Debug info only; GCC's code generation
 # does not depend on it (crash-hunt implementation review, finding 8).
-FLAGS+=(-e "EXTRAFLAGS=$EXTRA -g -DAK820_BUILD_TOKEN=${token_hex}u")
+EXTRA_CC="$EXTRA -g -DAK820_BUILD_TOKEN=${token_hex}u"   # into FLAGS below, with the source's identity
 
 WORK="$(cd "$(dirname "$0")" && pwd)"
 source "$WORK/env.sh"
@@ -76,6 +76,10 @@ pre_state=$(state)
 hash=$(git -C "$REPO" rev-parse --short HEAD)
 dirty=""
 [[ -n "$(git -C "$REPO" status --porcelain --untracked-files=no)" ]] && dirty="-dirty"
+# The configuration menu's About shows the source: eight hex digits as a
+# number (no string through make's quoting), and whether it was dirty.
+hash8=$(git -C "$REPO" rev-parse --short=8 HEAD | cut -c1-8)
+FLAGS+=(-e "EXTRAFLAGS=$EXTRA_CC -DAK820_BUILD_HASH=0x${hash8}u -DAK820_BUILD_DIRTY=$([[ -n $dirty ]] && echo 1 || echo 0)")
 
 # qmk compile writes ONE shared output path; a lock serialises compile+copy so
 # two invocations cannot interleave and mislabel each other's binary.
