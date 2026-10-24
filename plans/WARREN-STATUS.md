@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-24 ~16:00.
+2026-10-24 ~16:40.
 
 ## Where things stand
 
@@ -33,38 +33,44 @@ This file is the thread; read it first after a context loss. Updated
   synthetic gate can't see this: op 27's turns bypass `quantum/encoder.c`,
   whose drain waits ENCODER_MAP_KEY_DELAY (1 ms) after each half of every
   detent, captured or not.
-- **The encoder fix, `cbcf93b6`, ON THE KEYBOARD ON GREMLIN NOW** (dev, token
-  `0xde3d5c12`, gap 248 B; daily `via-daily-cbcf93b6-20261024-153641.bin`
-  builds, gap 2,360): a weak hook, `encoder_map_delay_wanted_kb()`, skips
-  the waits for halves the menu swallowed (`menu/menu_glue.c`). Codex
-  cleared it (`review-codex-s1-encoder-2026-10-24.md`); its finding 3 (the
-  knob is polled once a pass, so no backlog forms) removed the bounded
-  drain I'd added. **Waiting on:** JD's spin on it
-  (`spin-cbcf93b6.json`, the recorder `scratchpad/spinwatch.py`, stop file
-  `spinstop`). quantum/encoder.c is now a seventh core file with a local
-  change: CLAUDE.md's list needs it at the merge.
-- **The mono text, `3f0275ca`, built, not flashed; codex reviewing**
-  (`review-prompt-s1-mono.txt`):
-  - `lcd_blit_mono` (C4) through the stream; the face
-    `graphics/res/font_small_mono.h` from `scripts/gen_mono_font.py` (the
-    shipped atlas, checked against the BDF; five extras checked against the
-    mockup); `menu/menu_text.c` composes a band of a line;
-  - the fixture's **F3** (screen 3): C8's list in text, op 27 sub 0
-    patterns 16-19 = lit/half, lit/full, inverted/half, inverted/full. A
-    click on rows 0-5 cycles the style; row 6 goes to F2, row 7 to
-    Diagnostics. The title names the style.
-  - Host tests: `test_mono` (every style, the selection, every piece
-    boundary with a retarget and a give-up); `ms1 frames DIR` writes
-    `fixture-F3-<style>.ppm`.
+- **The encoder fix, `cbcf93b6`** (in every later build): a weak hook,
+  `encoder_map_delay_wanted_kb()`, skips `quantum/encoder.c`'s 1 ms waits
+  for detents the menu swallowed (`menu/menu_glue.c`). Codex cleared it
+  (`review-codex-s1-encoder-2026-10-24.md`); its finding 3 (the knob is
+  polled once a pass, so no backlog forms) removed the bounded drain I'd
+  added. quantum/encoder.c is now a seventh core file with a local change:
+  CLAUDE.md's list needs it at the merge.
+- **The mono text, ON THE KEYBOARD ON GREMLIN NOW: dev `cbb51ac1`** (token
+  `0xc10209a3`, gap 240 B). `lcd_blit_mono` through the stream (a halfword
+  a pixel), the face `graphics/res/font_small_mono.h` from
+  `scripts/gen_mono_font.py`, `menu/menu_text.c` (a cell at a time), and
+  the fixture's **F3** (op 27 sub 0 patterns 16-19: lit/half, lit/full,
+  inverted/half, inverted/full; a click on rows 0-5 cycles; row 6 F2, row 7
+  Diagnostics). Codex: `review-codex-s1-mono-2026-10-24.md` (three rounds).
+  GREMLIN-RESULTS §19, §19b:
+  - every style keeps every pass under 15 ms (13.1-14.5); a mono piece
+    5.1-5.4 ms; a move ~165 ms; failure paths 36 of 36 on devfault;
+  - **JD settled: lit text** (plan "Open" 1); **half rows** by efficiency
+    ("Open" 2); the face is tiny, kept for now (BACKLOG: a larger face).
+- **The gate on `cbb51ac1` FAILED on timing:** one pass of 20.3 ms, 2 over
+  15, from a path the gate's F1 doesn't change: the dashboard or the
+  debug pages. `scripts/menu_s1_dashwatch.py SECS OUT` (sub 10 + the HC_ACCT
+  ring + the track text) is watching the dashboard to name it
+  (`dashwatch-cbb51ac1.json`). Suspect: the housekeeping text slot on a
+  track change (~16 ms, known, not staged).
+- **Scripts made today:** `menu_s1_spin.py STOP OUT [--style N]` (arms the
+  opener; sub 10 from the menu's opening; the ring for passes over 15 ms),
+  `menu_s1_styles.py` (each style's cost, no hands), `menu_s1_dashwatch.py`,
+  and `menu_s1_fault.py`'s 12 mono cases.
+- ⚠️ **With JD looking at the panel:** put the screen up and LEAVE it
+  there (a held session; switch only when asked). An automated demo that
+  moves on by itself frustrated JD (10-24).
 - **Next:**
-  1. JD's spin on `cbcf93b6` -> GREMLIN-RESULTS §18.
-  2. Codex's mono review, dispositions, flash.
-  3. With JD by eye (one action a message): open the fixture, I set
-     pattern 16, JD clicks through the four styles and spins: the cursor
-     style ("Open" 1) and half or full rows ("Open" 2, also measured: sub
-     10's piece and op maxima per style).
-  4. Extend `menu_s1_gate.py` / `menu_s0_ledrate.py` to F3's patterns.
-  5. Then P1, the real menu, and its keycode (plan "Open" 3).
+  1. Name and fix the dashboard's long pass; the gate passes again.
+  2. P1's real menu: the tree, lit text, half rows; the old highlight
+     removed before or with the new one (BACKLOG, fast spins); the menu
+     keycode (plan "Open" 3).
+  3. Extend `menu_s0_ledrate.py` / the gate to F3.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;

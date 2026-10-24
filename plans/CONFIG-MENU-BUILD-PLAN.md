@@ -1515,15 +1515,22 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
 
 ## Open
 
-1. **The cursor: lit text or inverted.** Settled on the panel in S1. For
-   the same footprint, its cost doesn't depend on the style: the opaque
-   mono blit sends every pixel of a cell, foreground and background, either
-   way. (Revision 7 corrected a 10-24 remark that a lit-text cursor would
-   avoid fills. That holds for the flash atlas's DMA, which the menu's
-   generated font doesn't use.)
-2. **Half rows or full rows:** S1's measurements decide. Half rows make
-   each op smaller. They don't halve the total area of a cursor move,
-   which still repaints two whole rows, selected and unselected.
+1. **The cursor: SETTLED, lit text** (JD on the panel, 10-24, the
+   fixture's F3: "I'd lean the 'lit' rows instead of inverted"; both
+   "decent"). The rows a little dimmer than white (#C8C8C8, RGB565
+   `0xCE59`), the selected row pale yellow (#FFF2A0, `0xFF94`). For the
+   same footprint its cost doesn't depend on the style: the opaque mono
+   blit sends every pixel of a cell either way (measured: GREMLIN-RESULTS
+   §19). JD also found the 6x14 face small ("tiny"), and chose to go on
+   with it: a larger face is a redesign, in BACKLOG.
+2. **Half rows or full rows: SETTLED, half rows**, by measurement (JD, 10-24:
+   no visible difference, "do whatever is more efficient"). On `cbb51ac1`
+   both keep every pass under 15 ms; half rows have the more headroom
+   (the longest pass 13.1-13.5 ms against 13.5-14.5) and repaint only the
+   changed half when a value on the right changes; full rows finish a
+   cursor move ~10% sooner (158 ms against 165-182), with one window fewer
+   a row. They don't halve the total area of a cursor move, which still
+   repaints two whole rows.
 3. **A menu keycode (JD, 10-24): wanted.** An opener JD can place anywhere in
    VIA, beside Fn+knob, which stays. JD first thought of Fn+C (the clock
    format today), then kept everything on the knob; JD wants the keycode as

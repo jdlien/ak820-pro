@@ -859,15 +859,18 @@ static void test_mono(void) {
     CHECK(fx_screen() == FX_SCREEN_F1 && run_until_settled(400) > 0 && f1_mismatches(fx_pattern(), FX_ROW_DIAG) == 0);
     CHECK(fx_set_pattern(0));
 
-    /* mt_bits against a per-pixel reference, exhaustively over the band's
-     * start and width, the edges and their ink, short strings, the extras
-     * and a code the face hasn't. Bits past w must stay clear. */
+    /* mt_bits against a per-pixel reference over every band start and width
+     * up to 128, every cell count 0-20, leads and trails 0-2 and both inks,
+     * short strings, the extras and a code the face hasn't, glyph rows 0-13.
+     * Bits past w must stay clear, and the bytes after the band untouched.
+     * Then codex's wrap case: a 255-cell line, where the one-past cell index
+     * is 256. */
     {
         static const char *const ss[] = {"", "A", "Hi, gjpqy|", "\x80\x81\x82\x83\x84\x7f~", "WWWWWWWWWWWWWWWWWWWW"};
         uint8_t bb[14 * 17];
         int     bad = 0, cases = 0;
         for (unsigned si = 0; si < sizeof ss / sizeof ss[0]; si++)
-            for (uint8_t cells = 0; cells <= 20; cells += (cells < 4 ? 1 : 8))
+            for (uint8_t cells = 0; cells <= 20; cells++)
                 for (uint8_t lead = 0; lead <= 2; lead++)
                     for (uint8_t trail = 0; trail <= 2; trail++)
                         for (int inks = 0; inks < 4; inks++) {
@@ -877,7 +880,7 @@ static void test_mono(void) {
                             for (uint16_t c0 = 0; c0 < lw; c0++)
                                 for (uint16_t w = 1; c0 + w <= lw && w <= 128; w++) {
                                     uint8_t st = (uint8_t)((w + 7) / 8 + (w % 3 == 0));   /* sometimes a spare byte */
-                                    uint8_t r0 = (uint8_t)((c0 + w) % 11), rows = (uint8_t)(1 + (w % 3));
+                                    uint8_t r0 = (uint8_t)((c0 + w) % 14), rows = (uint8_t)(1 + (w % 3));
                                     if (r0 + rows > 14) r0 = (uint8_t)(14 - rows);
                                     memset(bb, 0xA5, sizeof bb);
                                     mt_bits(&ln, c0, w, r0, rows, bb, st);
@@ -900,10 +903,19 @@ static void test_mono(void) {
                                             }
                                             if (got != want) bad++;
                                         }
+                                    for (size_t k = (size_t)rows * st; k < sizeof bb; k++)
+                                        if (bb[k] != 0xA5) { bad++; break; }   /* past the band: untouched */
                                 }
                         }
-        CHECK(bad == 0 && cases > 10000);
+        CHECK(bad == 0 && cases > 100000);
         if (bad) printf("mt_bits: %d wrong bits\n", bad);
+
+        static char ws[256];
+        memset(ws, 'W', 255);
+        mt_line_t wide = {ws, 255, 0, 1, false, false};
+        memset(bb, 0xA5, sizeof bb);
+        mt_bits(&wide, 1524, 7, 3, 1, bb, 1);   /* the last glyph's six columns and one trail pixel */
+        CHECK(bb[0] == (uint8_t)(font_small_mono['W' - 0x20][3] & 0xFC) && bb[1] == 0xA5);
     }
     /* menu_text.c's edges and padding, on their own: a short string pads
      * with spaces; ink edges are set on every row asked for. */

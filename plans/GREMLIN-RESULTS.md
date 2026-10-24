@@ -785,3 +785,98 @@ This is codex's acceptance item for revisions 14 and 15. `dma_unprepare()`
 put SPID1 back each time.
 
 The keyboard on gremlin is back on dev `a8b98bc0`.
+
+## 18. Real spins, and the encoder's waits (10-24, afternoon)
+
+JD spun the knob by hand with the fixture open, recorded by a scratch
+watcher (sub 10 armed for the whole run, so its maximum spans everything
+the board did in it). Nothing dropped and no pass reached 25 ms in either run.
+
+| Build | Run | Passes over 15 ms in the menu | Worst pass | Record |
+|---|---|---|---|---|
+| `a8b98bc0` | ~55 s of spinning | 6 | 15.6 ms, in the menu | `spin-a8b98bc0.json` |
+| `cbcf93b6` | ~50 s of spinning, after ~13 min on the dashboard | 2 | 17.7 ms, **on the dashboard** at 93 s, before the menu opened; the menu's own maximum isn't separable | `spin-cbcf93b6.json` |
+
+- **Why the synthetic gate (§16) didn't see it:** op 27's turns bypass
+  `quantum/encoder.c`, whose drain waited `ENCODER_MAP_KEY_DELAY` (1 ms)
+  after each half of every detent, captured by the menu or not.
+- **`cbcf93b6`** skips those waits for halves the menu swallowed
+  (`encoder_map_delay_wanted_kb()`, a weak hook; codex,
+  `review-codex-s1-encoder-2026-10-24.md`). Over 15 ms in the menu went
+  from 6 to 2. That isn't proof: the runs differ, and the second's maximum
+  is the dashboard's.
+- **JD (cbcf93b6):** "if I spun fast it registered but looked like it would
+  change before the item finished redrawing, which is about what I'd
+  expect."
+- **Next time:** `scripts/menu_s1_spin.py` arms sub 10 only when the menu
+  opens, and reads HC_ACCT's slow-pass ring whenever a pass over 15 ms
+  appears, so each one comes with its per-scope breakdown.
+
+## 19. The mono text on F3 (10-24)
+
+`3f0275ca` + `158e876d` (codex's fixes): `lcd_blit_mono` through the
+stream, the generated Cozette face, `menu/menu_text.c`, and the fixture's
+F3 (op 27 sub 0 patterns 16-19: lit/half, lit/full, inverted/half,
+inverted/full).
+- **The failure paths, 36 of 36** on devfault `158e876d` (token
+  `0xcf21c59e`; `fault-158e876d.json`): §17's 24 again, plus 12 mono cases,
+  a give-up at each of a piece's five window sends and at its payload, in
+  both modes. Each: one loss, the repaint, a later style change and
+  selection change both fine, `invariant_fail` only `0x20`.
+- **The cost per style** on dev `158e876d` (`scripts/menu_s1_styles.py`,
+  `styles-158e876d.json`; sub 10 re-armed for each interval):
+
+  | Style | Piece max | Pass max (switch / moves) | Over 15 ms (switch / 10 moves) | A move | A style switch |
+  |---|---|---|---|---|---|
+  | lit, half rows | 7.7 ms | 17.2 / 16.4 ms | 15 / 8 | 208 ms | 1,103 ms |
+  | lit, full rows | 8.8 ms | 16.9 / 17.7 ms | 13 / 35 | 209 ms | 948 ms |
+  | inverted, half rows | 7.7 ms | 16.3 / 16.8 ms | 8 / 9 | 214 ms | 959 ms |
+  | inverted, full rows | 8.8 ms | 16.7 / 17.2 ms | 22 / 33 | 208 ms | 955 ms |
+
+  **The mono piece fails C10's 15 ms target:** a 488 B mono piece cost
+  7.7-8.8 ms against 4.3 ms for a 512 B fill piece (§16). The composing
+  went a pixel column at a time and the expansion a bit test and two byte
+  stores a pixel, which the M0 pays ~3.7x for under the row ISR. Full rows
+  cost more per piece than half rows at the same byte count: the composer's
+  per-column overhead. The op latency saturates sub 10's u16 for full rows
+  (65,535 us). `cdde64e8` rewrites both stages (a cell at a time; a
+  halfword a pixel); codex is reviewing it.
+
+### 19b. The faster composer, and JD's verdict (10-24, ~16:25)
+
+`cdde64e8` + `cbb51ac1` (codex: `review-codex-s1-mono-2026-10-24.md`, the
+follow-ups): `mt_bits` composes a cell at a time, `lcd_blit_mono` stores a
+halfword a pixel from a two-colour table.
+
+| Style | Piece max | Pass max (switch / moves) | Over 15 ms | A move | A style switch |
+|---|---|---|---|---|---|
+| lit, half rows | 5.1 ms | 13.5 / 13.3 ms | 0 / 0 | 165 ms | 764 ms |
+| lit, full rows | 5.2-5.4 ms | 13.6 / 14.5 ms | 0 / 0 | 158 ms | 717 ms |
+| inverted, half rows | 5.1 ms | 13.1 / 13.5 ms | 0 / 0 | 166 ms | 766 ms |
+| inverted, full rows | 5.2-5.4 ms | 13.5 / 13.5 ms | 0 / 0 | 158 ms | 723 ms |
+
+(`styles-cbb51ac1.json`.) A mono piece now costs ~5.1-5.4 ms against a
+fill's 4.3. **The failure paths, 36 of 36 again** on devfault `cbb51ac1`
+(`fault-cbb51ac1.json`).
+
+**JD on the panel** (the slow build `158e876d`, then held open on F3):
+- "Oof that text is small, but... it kind of is what it is"; later
+  "_tiny_ ... maybe a font size is going to be useful. But that's a
+  massive redesign. For now let's proceed with the tiny fonts."
+- "Yellow 'lit' text and gray unselected looks pretty good"; of both:
+  "both are decent but I think I'd lean the 'lit' rows". **Lit text.**
+- Half and full rows: "I can't see any meaningful difference" -> by
+  efficiency: **half rows** (plan "Open" 2).
+- "if I scroll at just the right speed I can make most of the options turn
+  yellow": a fast spin starts new highlights before the old rows are
+  repainted grey (BACKLOG, for P1).
+- A slow-build session on F3 with the HC_ACCT ring (`look-158e876d.json`):
+  every pass over 15 ms was the menu's piece (blit_pump 7-8 ms) plus
+  QMK's unaccounted work (keyboard task, RGB effect, USB: 5-7 ms) plus the
+  CH582F and the battery (~1 ms each).
+
+**The gate on `cbb51ac1` FAILED on timing** (`gate-cbb51ac1.json`): the
+longest pass 20.3 ms, 2 over 15. The gate never shows F3, and nothing on
+F1's paths changed, so it's a dashboard or debug-page path: the real spin
+on `cbcf93b6` also showed 17.7 ms on the dashboard before the menu opened.
+`scripts/menu_s1_dashwatch.py` is watching the dashboard to name it.

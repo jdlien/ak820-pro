@@ -39,6 +39,28 @@ ever matters:
   the screen off after a long idle, even on USB; the panel's inversion
   setting. JD's board sleeps on battery, so it's less exposed.
 
+## The menu's text is tiny: a larger face (2026-10-24) -- JD's idea, a redesign, later
+
+JD on the panel (S1's F3, Cozette 6x14, 20 columns by 8 rows): "_tiny_
+... maybe a font size is going to be useful. But that's a massive
+redesign. For now let's proceed with the tiny fonts." The next size the
+board has is the 10x23 Iosevka face: 12 columns, 4-5 rows, so every
+screen's words and paging change (`config-menu-mockup.html` stays the
+spec). A middle size (8x16 or so, 16 columns by 7 rows) would need a new
+1-bit face; `scripts/gen_mono_font.py` makes one from a BDF the same way,
+at ~1.6 KB of the MCU's flash. Cost per row grows with the cell's area.
+
+## Fast spins leave old menu rows highlighted (2026-10-24) -- for P1
+
+JD (F3, the slow build): "if I scroll at just the right speed I can make
+most of the options turn yellow". Each detent retargets: the new row's
+highlight and the old row's un-highlight are two slots, and a retarget
+before the old one repaints leaves it yellow while newer ones start. For
+P1: paint the old highlight's removal before (or with) the new one, so at
+most one row is ever lit; the slot order in `menu_slots.c` decides it.
+Check it again on the faster composer (`cbb51ac1`), where a move takes
+~165 ms instead of ~210.
+
 ## The knob is sampled once a main-loop pass (2026-10-24) -- noted, measure before acting
 
 Found in codex's review of the encoder change (`plans/review-codex-s1-encoder-2026-10-24.md`, finding 3):
