@@ -890,6 +890,50 @@ static void test_meas(void) {
     }
     CHECK(commits_in_burst >= 4);   /* C10 asks one a 500 ms, ~50 passes: twice that, at least */
     CHECK(run_until_settled(400) > 0 && f1_mismatches(0, (uint8_t)(25 % FX_ROWS)) == 0);
+
+    /* An op cut by a retarget that leaves its slot's signature alone resumes,
+     * and counts when it ends -- untimed: its latency isn't the resumed
+     * suffix's. At every pass of a B repaint, a selection change there and
+     * back (no slot's signature changes); the first op to end afterwards is
+     * either untimed (last unchanged) or a whole op begun after the
+     * retarget. A fill op is four pieces: 3 x 1,000 + 4 x 300 ticks. */
+    settled_a();
+    fx_set_pattern(1);
+    int fullb2 = run_until_settled(400);
+    int checked = 0;
+    for (int k = 1; k < fullb2; k++) {
+        settled_a();
+        fx_set_pattern(1);
+        for (int i = 0; i < k; i++) pass();
+        /* Within the rows' ops (11-26): past the title's glyphs and the
+         * separator, and before the one-piece scrollbar, which a retarget at
+         * its boundary times whole and short. */
+        if (ms_ops() < 10 || ms_ops() >= 10 + 2 * FX_ROWS) continue;
+        uint32_t last0 = ms_last_op_ticks();
+        int      f0    = fill_ops;
+        fx_input(1, MI_LATCH_NONE);
+        fx_input(-1, MI_LATCH_NONE);
+        int g = 0;
+        while (g++ < 50 && ms_ops() == 0) pass();
+        CHECK(ms_ops() == 1);
+        uint32_t last1 = ms_last_op_ticks();
+        CHECK(last1 == last0 || last1 >= 3u * 1000u + 4u * 300u);
+        if (fill_ops - f0 < 4) checked++;     /* a resumed op: fewer than its four pieces after */
+    }
+    CHECK(checked >= 3 * FX_ROWS);
+
+    /* A retarget while a glyph flies: its end is still counted, in the new
+     * target, once. */
+    settled_a();
+    fx_set_pattern(1);
+    int g2 = 0;
+    while (g2++ < 50 && !mb_busy()) pass();
+    CHECK(mb_busy());
+    fx_input(1, MI_LATCH_NONE);   /* the title's signature unchanged */
+    CHECK(ms_ops() == 0);
+    dma_settle();
+    CHECK(ms_ops() == 1);
+    CHECK(ms_ops() == 1);         /* once */
 }
 
 /* --- menu_ops.c through a fake environment -------------------------------------

@@ -711,8 +711,14 @@ the code is raised before working around it.
       is released by the next sub 0 (`ms_stop_release`), and separately by
       a fresh opening or a return from another owner (`fresh`), which is a
       new screen;
-    - **slot progress and clear progress are kept apart:** navigation resets
-      the slot's op and piece cursors, never a clear sweep in progress;
+    - **slot progress and clear progress are kept apart:** navigation keeps
+      the PARTIAL slot's op and piece cursors while its signature is
+      unchanged (revision 13), and discards them only when its signature
+      changes, it's invalidated, or its cursor is abandoned. It never
+      restarts a clear sweep in progress;
+    - **an op cut by a retarget** counts once when it ends, untimed, and a
+      glyph still in flight is kept and counted at its DMA's end, untimed
+      (revision 13, codex's review). A new op starts a fresh timing origin;
     - **a failed piece** stops the op and leaves the loss to the owner's
       handler (C1). No slot commits over a pending loss.
   - **Not by returning halfway.** No existing synchronous draw function

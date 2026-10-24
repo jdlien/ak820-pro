@@ -99,7 +99,7 @@ class Board:
     def meas(self, arm=0):
         r, mid, half = bracketed(lambda: xfer(self.h, 10, bytes([arm])))
         m = decode_meas(r)
-        m["t"] = mid
+        m["t"], m["t1"] = mid, mid + half
         if self.token is not None and arm == 0:
             if m["token"] != self.token:
                 raise GateFail(f"the session token changed ({self.token} -> {m['token']}): a reboot or a re-arm")
@@ -116,8 +116,8 @@ class Board:
         self.token, self.hgen = m["token"], m["health_gen"]
 
     def state(self):
-        s, mid, _ = bracketed(lambda: read_state(self.h))
-        s["t"] = mid
+        s, mid, half = bracketed(lambda: read_state(self.h))
+        s["t"], s["t1"] = mid, mid + half
         return s
 
     def poll(self, force=False):
@@ -137,15 +137,25 @@ class Board:
                 "passes": stl["passes"], "ge10": stl["count_ge_10ms"], "ge25": stl["count_ge_25ms"]}
 
     def mutate(self, sub, args=b""):
-        """A mutation's cause: its time is the bracket's midpoint. Its outcome
-        is judged by the poller (last_seq, last_state)."""
-        (st, seq), mid, _ = bracketed(lambda: mutate(self.h, sub, args))
-        ensure(st == 0, f"op 27 sub {sub} refused: status {st}")
-        return seq, mid
+        """A mutation, sent exactly once (never replayed like a read): its
+        cause is the bracket's midpoint, and a bracket over 25 ms makes the
+        trial uncertain, which fails the run. Its outcome is judged by the
+        poller (last_seq, last_state)."""
+        return self._once(lambda: mutate(self.h, sub, args), f"op 27 sub {sub}", check_status=True)
 
     def op1(self):
-        _, mid, _ = bracketed(lambda: op1(self.h))
-        return mid
+        return self._once(lambda: op1(self.h), "op 1")[1]
+
+    def _once(self, fn, what, check_status=False):
+        t0 = time.perf_counter()
+        v = fn()
+        t1 = time.perf_counter()
+        ensure(t1 - t0 <= BRACKET_S, f"{what}: its bracket was {(t1 - t0) * 1000:.0f} ms, the trial uncertain")
+        if check_status:
+            st, seq = v
+            ensure(st == 0, f"{what} refused: status {st}")
+            return seq, (t0 + t1) / 2
+        return v, (t0 + t1) / 2
 
 
 def window_rate(a, b, label):
@@ -178,12 +188,20 @@ def run_window(bd, secs, step=None):
     return a, bd.sample()
 
 
+def evidence(bd):
+    """(midpoint, end): the later of the two reads a judgement rests on."""
+    return max(bd.st["t"], bd.m["t"]), max(bd.st["t1"], bd.m["t1"])
+
+
 def wait_poll(bd, pred, deadline, what):
-    """Poll on schedule until pred(st, m), failing at the deadline."""
+    """Poll on schedule until pred(st, m), with its evidence's reads ended
+    by the deadline; returns the evidence's midpoint."""
     while True:
         bd.poll()
         if pred(bd.st, bd.m):
-            return bd.st["t"]
+            mid, end = evidence(bd)
+            ensure(end <= deadline, what)
+            return mid
         if time.perf_counter() > deadline:
             raise GateFail(what)
         time.sleep(0.005)
@@ -239,7 +257,9 @@ def run(a):
         def toggle_step():
             now = time.perf_counter()
             if pace["cause"] is not None:
-                if bd.st["pixels_done"] and bd.m["tgen"] == pace["tgen"] and bd.m["tgen"] is not None:
+                if bd.st["pixels_done"] and bd.m["tgen"] == pace["tgen"]:
+                    ensure(evidence(bd)[1] <= pace["cause"] + SETTLE_S,
+                           "a paced repaint settled after 1,000 ms")
                     pace["cause"] = None
                 elif now > pace["cause"] + SETTLE_S:
                     raise GateFail("a paced repaint didn't settle within 1,000 ms")
@@ -273,7 +293,8 @@ def run(a):
                 was = completed is not None
                 while time.perf_counter() < end:
                     if bd.poll() and completed is None and done(bd.st, bd.m):
-                        completed = bd.st["t"]
+                        completed, ended = evidence(bd)
+                        ensure(ended <= cause + SETTLE_S, f"{kind}: completed after {SETTLE_S * 1000:.0f} ms")
                     time.sleep(0.005)
                 b = bd.sample()
                 rec["windows"].append(window_rate(prev, b, kind) / b05)
@@ -293,8 +314,9 @@ def run(a):
         def restore_after(rg0):
             return lambda st, m: dash_done(st) and st["restore_gen"] != rg0
 
-        def menu_after(tg0):
-            return lambda st, m: st["pixels_done"] and m["tgen"] != tg0
+        def menu_after(tg0, screen=None):
+            return lambda st, m: st["pixels_done"] and m["tgen"] != tg0 and \
+                (screen is None or st["screen"] == screen)
 
         for i in range(a.repeats):
             to_dash_checked(bd)
@@ -311,7 +333,7 @@ def run(a):
             transition("open", lambda: bd.mutate(4)[1], menu_after(tg))
             bd.poll(force=True)
             tg = bd.m["tgen"]
-            transition("layout", lambda: bd.mutate(0, bytes([3, 0]))[1], menu_after(tg))
+            transition("layout", lambda: bd.mutate(0, bytes([3, 0]))[1], menu_after(tg, screen=2))
             bd.poll(force=True)
             rg = bd.st["restore_gen"]
             transition("close", lambda: bd.mutate(4)[1], restore_after(rg))
@@ -348,39 +370,46 @@ def run(a):
         bd.op1()   # Camera to the dashboard
         wait_poll(bd, lambda st, m: dash_done(st), time.perf_counter() + 5 * SETTLE_S, "Camera's exit didn't restore")
 
-        # Continuous: a detent every 50 ms for 10 s, on absolute deadlines.
+        # Continuous: exactly 200 detents, one every 50 ms on absolute
+        # deadlines; the committed count read by a forced poll at each 500 ms
+        # boundary, the last before the post-burst settling.
         open_menu(bd)
         m0, row0 = bd.m, bd.st["cursor"]
+        n_detents = int(round(BURST_S / DETENT_S))
+        n_buckets = int(round(BURST_S / BUCKET_S))
         t0 = time.perf_counter()
-        sent, late, buckets = 0, 0, []
-        last_c, next_bucket, t_last = m0["committed"], t0 + BUCKET_S, t0
-        while True:
+        sent, late, t_last = 0, 0, t0
+        marks = [m0["committed"]]   # the committed count at each boundary
+        while sent < n_detents or len(marks) <= n_buckets:
             now = time.perf_counter()
-            if now - t0 >= BURST_S:
-                break
-            due = t0 + sent * DETENT_S
-            if now >= due:
-                if now - due > DETENT_S / 2:
+            if sent < n_detents and now >= t0 + sent * DETENT_S:
+                if now - (t0 + sent * DETENT_S) > DETENT_S / 2:
                     late += 1
                 _, t_last = bd.mutate(1, bytes([1]))
                 sent += 1
-            if bd.poll() and bd.st["t"] >= next_bucket:
-                buckets.append((bd.m["committed"] - last_c) % M8)
-                last_c = bd.m["committed"]
-                next_bucket += BUCKET_S
+                continue
+            if len(marks) <= n_buckets and now >= t0 + len(marks) * BUCKET_S:
+                bd.poll(force=True)
+                marks.append(bd.m["committed"])
+                continue
+            bd.poll()
             time.sleep(0.002)
+        buckets = [(marks[i + 1] - marks[i]) % M8 for i in range(n_buckets)]
+
         def final_done(st, m):
             return st["pixels_done"] and st["cursor"] == (row0 + sent) % FX_ROWS
-        settled_at = wait_poll(bd, final_done, t_last + CONT_FINAL_S, "the burst's final target didn't settle in 500 ms")
-        bd.poll(force=True)
-        buckets.append((bd.m["committed"] - last_c) % M8)   # the final bucket
+        settled_at = wait_poll(bd, final_done, t_last + CONT_FINAL_S,
+                               "the burst's final target didn't settle in 500 ms")
         m1 = bd.m
         created = (m1["tgen"] - m0["tgen"]) % M8
         books = ((m1["settled"] - m0["settled"]) + (m1["superseded"] - m0["superseded"])) % M8
+        final_ms = round((settled_at - t_last) * 1000)
         out["continuous"] = {"sent": sent, "late": late, "buckets": buckets, "created": created,
-                             "books": books, "final_ms": round((settled_at - t_last) * 1000)}
+                             "books": books, "final_ms": final_ms}
+        check(sent == n_detents, f"continuous: {sent} detents, not {n_detents}")
         check(late == 0, f"continuous: {late} detents more than 25 ms late")
-        check(all(b > 0 for b in buckets), f"continuous: a 500 ms bucket committed nothing ({buckets})")
+        check(all(x > 0 for x in buckets), f"continuous: a 500 ms bucket committed nothing ({buckets})")
+        check(final_ms <= CONT_FINAL_S * 1000, f"continuous: the final target in {final_ms} ms")
         check(created == books, f"continuous: {created} targets against {books} settled + superseded")
         close_menu(bd)
 
