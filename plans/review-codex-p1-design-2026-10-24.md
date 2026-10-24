@@ -188,3 +188,125 @@ Every finding is answered in **draft 2** of the design:
 **Can wait:** RGB/Screen transaction implementation, preview editors, and their external-writer conflict tests can remain P1b once those controls are absent from P1a. The keycode implementation and its C2 amendment can remain P1c, with RAM reserved now. Keep Fn+D assigned until the end-of-P1 procedure; then perform the two `KC_NO` writes, readback, dump, and regeneration exactly as planned. P2–P4 and the larger-font redesign remain deferred.
 
 This was a read-only review. No files changed and no builds or hardware tests ran.
+## The second round (draft 2), verbatim
+
+Prompt: [`review-prompt-p1-design-2.txt`](review-prompt-p1-design-2.txt). Answered by draft 3: the `maybe_lit` mask and the cleanup order (at most one lit row); the latched model for Fn+B/Fn+C; C3 kept by globally unique row signatures and the transition table; sub 11 exactly sub 4 but the kind; sub 0 guarded by kind; sub 5 ids per node; `AK820_DEVFAULT` for the trim and the simulator's 712 variant; C5 amended to 420 B; the hash as 8 hex in a u32; the link's states; Reset counters before the gate's interval; `--menu` for the spin script.
+
+**P1a still needs a design revision before coding.** Draft 2 resolves the tree, production enablement, frozen About data, and most navigation details. The remaining blockers are the highlight scheduler, externally changed values, sub 11’s completion semantics, and the RAM fallback’s scope.
+
+Against the seven original findings:
+
+| Finding | Disposition after checking draft 2 |
+|---|---|
+| 1. Executable P1a tree and C7 | Resolved: six items, committing choices, visibility and persistence tests. |
+| 2. Fixture/menu identity | Routing is substantially resolved; protocol details below remain. |
+| 3. Production enablement | Resolved: promote only `power_set_mode()`, retain dev boundaries and daily verification. |
+| 4. Signatures and snapshot | Snapshot and title latch resolved; live values and signature lifetime still need work. |
+| 5. Art and rendering costs | Resolved for P1a by deferring art. Eleven slots/two chunks and corrected costs are sound. |
+| 6. RAM | Partially resolved: useful arithmetic, but the trim guard is wrong and the ceiling decision remains open. |
+| 7. Behavior and acceptance | Most behavior resolved; un-highlight-first is not yet correct. |
+
+1. **The proposed highlight rule loses information about pixels still lit.**
+
+   A PARTIAL signature describes the **target being painted**, not everything still on the panel. Starting an un-highlight overwrites the stored signature with `lit=0`, although the remaining pieces can still contain yellow text. Abandoning that partial operation or invalidating after a loss leaves those pixels behind, but the proposed scan considers only COMMITTED/PARTIAL signatures with `lit=1`. [Proposed rule](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-P1-DESIGN.md:182), [current signature replacement and abandonment](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:222)
+
+   A concrete failure sequence is: row 5 is lit; a loss invalidates all slots; navigation selects row 3. Ascending repair can paint row 3 before reaching row 5. Another loss and selection of row 1 can then leave rows 1, 3 and 5 lit. Loss invalidation does not clear the panel. The rule therefore cannot establish even its stated two-highlight bound.
+
+   Also, “old and new highlight together” weakens the cited backlog requirement, which says **at most one row ever lit**. That relaxation needs an explicit decision, not an assertion that the backlog is resolved. [Backlog](C:/Users/jdlien/code/ak820-pro/plans/BACKLOG.md:53)
+
+   Before code, specify:
+
+   - A conservative record of rows that **may still contain highlighted pixels**—for example, an eight-bit row mask. Retain the obligation through partial dimming, abandonment and loss; retire it only after successful complete dimming or a completed clear.
+   - Resume an unchanged active cleanup before selecting another cleanup. “Lowest first” is suitable for choosing a new cleanup, not for repeatedly preempting one already progressing.
+   - Restrict this policy to row slots. An odd title ID must not be interpreted as a highlighted row.
+   - Define abandonment explicitly: settle ended DMA bookkeeping first; never count an unfinished abandoned op; preserve completed-op counts and reached stops; retain revision 13’s untimed completion for an op resumed across a retarget. Scheduler priority changes must not themselves manufacture targets or commits. [Existing op lifecycle](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:58)
+
+   The tests need pixel assertions during partial cleanup, losses and preemption—not just a correct final frame.
+
+   Finally, correct “**5 commits a bucket**.” C10 requires the committed-slot count to increase in every **500 ms** bucket; the gate checks `x > 0`. It also requires final settlement within 500 ms and balanced target accounting. Five is an unannounced stronger requirement. [Contract](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-BUILD-PLAN.md:1073), [gate](C:/Users/jdlien/code/ak820-pro/scripts/menu_s1_gate.py:410)
+
+2. **“P1a’s values change only from their own choice” is false.**
+
+   Fn+C still calls the Clock setters, and Fn+B still calls `power_cycle_mode()`. Those keys remain operational while the menu owns the panel. This was explicitly raised in the first review and is not resolved by draft 2. [Incorrect assumption](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-P1-DESIGN.md:176), [existing writers](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ak820pro.c:397)
+
+   Specify that the menu task detects and latches changed settings, updates the displayed value/saved marker, and explicitly retargets. Both signature and painter must use that latched model. Merely consulting live getters inside callbacks would bypass target accounting.
+
+   For an open committing choice, keep the proposed cursor independent of the saved value: an external change moves the saved bullet; cancellation performs no write and preserves the external change; clicking commits the selected option.
+
+   The choice-row signature must explicitly cover the bullet. The four-bit value field can encode the current saved option, or a separate marker bit can do it. Either fits; leaving its meaning implicit does not prove correctness. Include these small model fields in the RAM budget.
+
+3. **The signature approach works, but its lifetime boundary must be made authoritative.**
+
+   These parts are sound:
+
+   - One row slot with two chunks: equality covers the whole row, and a value change repaints both halves.
+   - Six node bits + four value bits + one selection bit fit comfortably in 16 bits.
+   - Seven title bits suffice for a bounded, disjoint namespace containing screen titles, flashes and the hint.
+   - About line indices are sufficient while the snapshot is frozen and every replacement invalidates the old slots.
+
+   However, draft 2 makes **every different list a layout change**, while C3 explicitly says “a list to another list” repaints without clearing. The design calls the build-plan contract authoritative. Amend C3 explicitly. [Draft lifetime](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-P1-DESIGN.md:163), [conflicting C3 rule](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-BUILD-PLAN.md:599)
+
+   The transition rule should be unambiguous:
+
+   | Change | Scheduler action |
+   |---|---|
+   | Cursor move, wrap or page change within one list | Retarget; retain unchanged partial work |
+   | Enter another list or return to a parent list | Layout change, even if both use the same layout descriptor |
+   | Scroll within one text topic | Retarget |
+   | Replace topic/snapshot or change screen kind | Invalidate through a layout change |
+   | Hint, flash or latched value changes | Retarget |
+
+   `ms_set_layout()` already creates a target, so “every navigation is observable” does not mean calling `ms_retarget()` again afterward.
+
+   Finish the bounded-field specification: give scrollbar `top` and `count` explicit widths and limits—two eight-bit fields fit exactly, or narrower validated fields suffice—and define blank text rows. Enumerate the title namespace rather than independently numbering nodes and flashes.
+
+   Add confirm/done layouts to the slot table. Their mockup text sits at **y=22, 36, 72 and 86**, not the regular text-page grid. The result page must remove the absent confirmation lines. [Mockup geometry](C:/Users/jdlien/code/ak820-pro/plans/config-menu-mockup.html:559)
+
+4. **Sub 11 does not currently describe “sub 4’s semantics.”**
+
+   Existing sub 4 finishes when the owner event is applied. It can report DONE with a PENDING session; it does not wait for pixels. Draft 2 instead says DONE when OPEN and settled, or on PENDING resolution. [Draft](C:/Users/jdlien/code/ak820-pro/plans/CONFIG-MENU-P1-DESIGN.md:141), [implementation](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_ops.c:267)
+
+   This matters beyond wording: if the opener occupies the single-flight slot throughout PENDING, a second synthetic opener cannot cancel that request—it gets BUSY. “OPEN and settled” also fails to describe the closing case.
+
+   **Keep sub 11 identical to sub 4 except for the requested kind:** no arguments; complete when the transition is applied; report refusal as today; observe painting separately through `pixels_done` and `tgen`.
+
+   The remaining identity design is sound, with these implementation requirements:
+
+   - Consult `armed` directly to choose FIXTURE versus MENU. `menu_enabled()` only determines whether the physical opener is enabled.
+   - Install the accepted kind before synchronous opening callbacks dispatch, retain it through PENDING/DEBUG, and clear it on cancellation as well as close.
+   - Preserve the full sub 0 guard: **MENU owner + OPEN session + FIXTURE kind**, plus existing pattern validation. OPEN/FIXTURE alone also describes a fixture session visiting DEBUG.
+   - Preserve fixture Diagnostics return behavior separately from the real menu’s rebuilt stack.
+
+   Sub 5’s 16–21 range avoids fixture collisions. It identifies **screen kinds**, however: Help and Diagnostics both report 16, and Power and Clock both report 17. That is not a rendering blocker, but unique screen/node IDs would make board assertions substantially stronger. Define byte 15 for pages and non-menu ownership rather than exposing a stale fixture cursor.
+
+5. **The log trim is feasible, but `WDT_TEST_HOOKS` does not mean devfault-only.**
+
+   `build.sh` defines it for **both devfault and instrumented**. A trim guarded only by that macro changes the instrumented log too. Use a dedicated devfault flag, or a deliberately documented combination that selects only devfault. [Build flavours](C:/Users/jdlien/code/ak820-pro/build.sh:27)
+
+   The consumer audit found:
+
+   | Consumer | Result |
+   |---|---|
+   | `ak820battery.py` | Uses the reported count; no 720-entry dependency in the dump path. |
+   | `flash.sh` | Delegates the dump to that decoder; no capacity-dependent change needed. |
+   | Battery simulator | `s_log_long` explicitly asserts 720 and reads 720 entries. |
+
+   [Decoder](C:/Users/jdlien/code/ak820-pro/hostagent/ak820battery.py:288), [preflash dump](C:/Users/jdlien/code/ak820-pro/flash.sh:172), [simulator assumption](C:/Users/jdlien/code/ak820-pro/scripts/battery_sim/sleeps.c:305)
+
+   The current simulator runner builds normal and dev-hooks variants, not the proposed trimmed variant. Its existing passing result would therefore leave the new capacity untested. Add a trimmed build expecting **712**, retain the normal 720 test, and exercise wrap/oldest-entry ordering. Eight entries really do save **144 B** and reduce retention from **180 to 178 hours**.
+
+   The C5 choice also remains unresolved. “Take P3’s 24 B from its own stage’s budget” does not satisfy a ceiling expressly covering **all later stages together**. Choose an amended ceiling or actual savings. Recalculate after adding cleanup/live-value state; 403 B currently excludes those additions and padding. Linked deltas and stack measurements can occur during implementation, before acceptance.
+
+**About’s snapshot and build hash are substantially resolved.** The proposed fields total 12 B and naturally fit a 12-byte, four-byte-aligned struct in that order. Formatting each piece from those frozen facts avoids the old mixed-sample problem.
+
+`build.sh` **already knows the QMK hash and tracked dirty state before compilation**, and checks the state afterward. The new define is feasible. Append it after that capture; the existing `EXTRAFLAGS` construction currently precedes it. Make the display abbreviation explicitly ten characters—plain `git rev-parse --short` does not specify ten—and preserve the dirty indication. `Firmware ` + ten characters + `+` is exactly 20 cells. [Identity capture](C:/Users/jdlien/code/ak820-pro/build.sh:72)
+
+Implementation details still needed are sentinel-preserving minutes-to-hours conversion and a packed link value covering transport, BT slot and connection state. The connection API exposes linking, pairing, connected, rejected and idle; do not print “connected” for all BT snapshots. These are bounded formatting decisions, not reasons to redesign the snapshot.
+
+**Reset counters’ behavior is resolved; make the test boundary concrete.** Confirmation, result page, cancellation and return cursor now match the intended flow. A reset invalidates a measurement spanning it; it does not automatically end/reset the measurement machinery.
+
+The simplest gate arrangement is to exercise Reset before the measured interval. If measurement resumes afterward, capture a fresh token, generation and baselines. The current `Board.arm()` cannot simply be reused unchanged: its subsequent read validates against the old token before replacing it. [Gate interval handling](C:/Users/jdlien/code/ak820-pro/scripts/menu_s1_gate.py:103)
+
+**What can wait:** P1b’s preview transactions and possible half-row slots; P1c’s keycode implementation with its RAM reserved; P1d’s art adapters, geometry and hardware timing; P2–P4. Actual linked sizes, stack watermarks and board timing belong to P1a implementation/acceptance. The spin script also needs an explicit unarmed-menu mode during that work—it currently always arms the fixture opener. [Current spin setup](C:/Users/jdlien/code/ak820-pro/scripts/menu_s1_spin.py:47)
+
+This was a read-only review confined to the repository. No files changed, and no builds or hardware tests ran.

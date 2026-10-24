@@ -1,0 +1,7 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+The third round on P1's design: plans/CONFIG-MENU-P1-DESIGN.md, now draft 3, answering your second round (appended, verbatim, to plans/review-codex-p1-design-2026-10-24.md with a line on how each point is answered). Same references: plans/CONFIG-MENU-BUILD-PLAN.md, plans/config-menu-mockup.html, the code under qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ (menu/, graphics/, power.c, ak820pro.c, battery.c), build.sh, scripts/battery_sim/.
+
+Check, adversarially, that your second round's blockers are resolved and that the answers introduce no new blocker: the maybe_lit mask and the four-step cleanup order (against the slot scheduler's existing resume/abandon/stop machinery in menu_slots.c -- can the lit-target wait starve or deadlock, for example when the lit row is also the active PARTIAL, or the mask holds a row that is now past the list's end and blank?); the latched model; globally unique row signatures with list-to-list retargets (is any pair of targets for one row slot equal while their pixels differ, across lists, choices, topics and About -- and does a list-to-list retarget leave the title, separator and scrollbar correct?); the transition table; sub 11 and sub 0; sub 5; AK820_DEVFAULT and the simulator; the 420 B ceiling; About's formats; anything else that still blocks P1a's code.
+
+Answer with either "no blocker for P1a's code" plus anything that can wait, or the blockers. Be concrete.
