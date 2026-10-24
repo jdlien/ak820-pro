@@ -1,0 +1,18 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+This is a code review before a flash to the test board (the keyboard on gremlin, never the keyboard on Buzz). You cleared revision 12 of plans/CONFIG-MENU-BUILD-PLAN.md for S1 (plans/review-codex-config-menu-build-plan-rev12-2026-10-24.md). This is S1's first increment, on qmk_firmware-ak820pro's branch gremlin/s1, on top of gremlin/fill-poll (f2b107be, the polled SPI0 sends you reviewed in plans/review-codex-spi0-poll-2026-10-24.md):
+- 3ffa93a2: menu/menu_slots.c, menu_slots.h, menu_backend.h, menu_fixture.c: a chunk (a logical op) sent in pieces of at most MB_PASS_BYTES (512) of CPU-fed pixels, one piece a pass; end_op() counts an op and latches a reached stop in one step, with new_target() and ms_invalidate_all() settling first (C4 revisions 8-12).
+- b3d84f65: graphics/lcd_bus.c and hid_protocol.c: spi0_poll_send's entry check (refuses, never resets, unless SPI0 is idle) and HC_POLLFAULT (0x75, WDT_TEST_HOOKS builds only).
+- 517b5dda: the chibios-contrib gitlink moved to 5a1674e905 on branch gremlin/s1-fifo-ie: hal_spi_v2_lld.c's FIFO dispatch respects IE and transfer ownership; and PATCHES.md.
+`git -C qmk_firmware-ak820pro diff f2b107be 517b5dda` and `git -C qmk_firmware-ak820pro/lib/chibios-contrib show 5a1674e905` show it all. On ak820-pro's warren/config-menu, scripts/menu_s0_test.c gained test_pieces() and test_op_end() (commit bf98dd8); they pass, and 53 checks fail against a mutant whose end_op() doesn't latch.
+
+Not in this increment, by design: op 27 sub 10, debug_done and the rest of C10's instrumentation, and the mono paint. They come next.
+
+Please review, adversarially, for correctness and safety on the board:
+1. The piece scheduler against C4 as written (revision 12): the per-pass budget (can any pass send more than one piece, or a piece more than MB_PASS_BYTES?), the slot staying PARTIAL, resumption only for the same target, an op counted once, the stop's latch and its two releases, the clear's progress kept apart, and a failed piece. Check against the host tests: do they really exercise what they claim?
+2. The entry check: can it fire on a healthy path (BUSY or RX at entry right after lcd_window's spiSend, or after a DMA completion), and what would that cost? Is "refuse without reset, set blit_lost" right?
+3. The ChibiOS patch: is `spip->state != SPI_ACTIVE` the right ownership test for SPI0 and SPI1 (the flash's SPID1 too, and the flash->LCD DMA window, which disables SPID1's vector)? Can the idle drain steal bytes from anyone? Can the early return on IE leave a level-sensitive interrupt re-entering forever?
+4. HC_POLLFAULT: does mode 0 (half the bytes) and mode 1 (all bytes, then a give-up) exercise the real failure path faithfully, and leave the bus and the panel recoverable?
+5. Anything else that makes flashing this to the test board unsafe, or the measurement planned for it (the worst main-loop pass with the fixture repainting, against the prototype's 24 ms) misleading.
+
+For each finding: severity (blocker / should-fix / note), file and line, the failure scenario, and the fix. Say plainly whether it's safe to flash to the test board.
