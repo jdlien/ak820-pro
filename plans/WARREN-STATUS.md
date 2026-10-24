@@ -30,15 +30,21 @@ file is the thread; read it first after a context loss. Updated 2026-10-24
     codex's clearance from its review of `4773c826`, plus that review's two
     fixes. **Not yet flashed.**
   - **On the keyboard on gremlin now:** `b245bd84` (dev).
-- **Now on the keyboard on gremlin: `9902ff5b`.** Its gate run (§15) passed
-  every timing check it reached, but aborted when Fn+D entry took over
-  1,000 ms (755-940 ms in the seven repeats before). **Next: revision 15.**
-  `lcd_blit_flash()` sends its window with `lcd_window_polled()` BEFORE
-  `blit_done = false` and `spiSN32FlashDmaPrepare()` (SPI0 still plain 8-bit
-  FIFO then), so every DMA arm sheds ~1.8 ms of byte-at-a-time `spiSend`.
-  **Built as `7c157834`** (`via-dev-7c157834-20261024-134754.bin`, token
-  `0x3158f628`, heap gap 256 B; devfault 152). Then: codex (the DMA arm has a crash history: `docs/hardware.md`, the
-  2026-09-22/23 campaign), host tests, build, flash, rerun the gate.
+- **Now on the keyboard on gremlin: `a8b98bc0`** (dev, token `0x3304a081`).
+  **The S1 gate PASSES** (GREMLIN-RESULTS §16): the longest pass 13.8 ms,
+  every LED window 0.998-1.000, every completion inside 1,000 ms, and
+  continuous input committing 5 slots in every 500 ms bucket.
+- **Next, autonomous:** the failure-path tests on the devfault build
+  (`via-devfault-a8b98bc0-20261024-135852.bin`). HC_POLLFAULT
+  `[0x07,0x13,0x75,n,mode,skip]`: skip 0-4 is a fill's window send, 5 its
+  payload; for a DMA arm it's the same five window sends. Each in mode 0
+  and 1, then check that a SPI1 read, a CPU draw and a DMA work, the owner
+  repaints, and `invariant_fail` is only 0x20 (`PO_FAIL_SPI0_POLL`, sticky,
+  expected). Also a lost completion (HC_BLITFAULT) followed by a failing
+  retry window. Write the runner as `scripts/menu_s1_fault.py`, after
+  `menu_s0_fault.py`. Then flash dev back.
+- **Then S1 proper:** `lcd_blit_mono` and the generated font, as mono
+  patterns on the fixture; the cursor style and half or full rows with JD.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;

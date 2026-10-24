@@ -719,3 +719,41 @@ deferral added a little on top; codex warned the margin was 76 ms.
 polled, *after* `spiSN32FlashDmaPrepare()` (which runs with the panel's CS
 high) and *before* it clears `blit_done`. That should roughly halve every DMA
 arm (glyphs, clears, images) across the whole display; the gate measures it.
+
+## 16. The S1 gate passes (10-24, ~14:05)
+
+Firmware `gremlin/s1` `a8b98bc0` (dev, token `0x3304a081`, heap gap 256 B;
+devfault 152, daily built clean): the build plan's revision 15, the DMA
+arm's window polled between `Prepare()` and `Fire()`. Codex: safe to flash,
+its should-fixes done first
+([`review-codex-s1-step6-2026-10-24.md`](review-codex-s1-step6-2026-10-24.md)).
+`history/config-menu-s1-20261024/gate-a8b98bc0.json`.
+
+**`scripts/menu_s1_gate.py`: PASS, every C10 check.**
+
+| Check | Result |
+|---|---|
+| Longest pass in the armed interval | **13,813 us**, none over 15,000 |
+| Piece, op, repaint | 4,304 us, 35,946 us, 736 ms; the largest clear band 2 ms |
+| Sustained LED ratio | 1.000, 1.000 |
+| Fn+D in | mean 1.000 (min 0.998), completed in 649-841 ms |
+| Camera | mean 1.000 (min 0.999), 263-371 ms |
+| Fn+D out | mean 1.000 (min 0.999), 218-310 ms |
+| open | mean 1.000 (min 0.999), 738-824 ms |
+| layout | mean 1.000 (min 0.998), 724-822 ms |
+| close | mean 1.000 (min 0.998), 223-312 ms |
+| Camera's second | completed within the poll, five of five |
+| Continuous | 200 detents, none late; 5 commits in each of the 20 buckets; 200 created, 200 settled or superseded; the final target in 242 ms |
+
+The road here took five runs:
+1. the timebase (Windows' 15.6 ms monotonic clock);
+2. revision 13's signature resume;
+3. Camera's composition and the restore's split stages;
+4. revision 14's polled window;
+5. the debug page's pump yield;
+6. revision 15's polled DMA window.
+
+**Still to run before S1's paint work:** the failure paths on the devfault
+build. These are HC_POLLFAULT at each window send (fill and DMA) and at the
+payload, in both modes, each followed by a SPI1 read, a CPU draw and a DMA;
+and a lost completion followed by a failing retry window.
