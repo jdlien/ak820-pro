@@ -1,10 +1,10 @@
 # Warren's status: the configuration menu (resume here)
 
 Warren is gremlin's session (the Windows test PC). It owns the configuration
-menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md) (now
-revision 14). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-14. This
-file is the thread; read it first after a context loss. Updated 2026-10-24
-~13:40.
+menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
+(revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
+This file is the thread; read it first after a context loss. Updated
+2026-10-24 ~16:00.
 
 ## Where things stand
 
@@ -25,49 +25,59 @@ file is the thread; read it first after a context loss. Updated 2026-10-24
   of `gremlin/fill-poll` (the LED fix) on top of `gremlin/config-menu`. The
   chibios-contrib submodule is pinned at branch `gremlin/s1-fifo-ie`
   (`5a1674e905`, the FIFO dispatch respecting IE).
-  - **Latest built:** `9902ff5b`, `via-dev-9902ff5b-20261024-133753.bin`,
-    token `0x2a2e20e9`, heap gap 256 B (devfault 152 B, floor 128). It has
-    codex's clearance from its review of `4773c826`, plus that review's two
-    fixes. **Not yet flashed.**
-  - **On the keyboard on gremlin now:** `b245bd84` (dev).
-- **Now on the keyboard on gremlin: `a8b98bc0`** (dev, token `0x3304a081`).
-  **The S1 gate PASSES** (GREMLIN-RESULTS §16): the longest pass 13.8 ms,
-  every LED window 0.998-1.000, every completion inside 1,000 ms, and
-  continuous input committing 5 slots in every 500 ms bucket.
-- **The failure paths pass, 24 of 24** (GREMLIN-RESULTS §17,
-  `scripts/menu_s1_fault.py` on devfault). The board is back on dev `a8b98bc0`.
-- **Then S1 proper:** `lcd_blit_mono` and the generated font, as mono
-  patterns on the fixture; the cursor style and half or full rows with JD.
+- **The S1 gate PASSES on `a8b98bc0`** (GREMLIN-RESULTS §16): the longest
+  pass 13.8 ms, every LED window 0.998-1.000, every completion inside
+  1,000 ms. **The failure paths pass, 24 of 24** (§17, devfault).
+- **JD's real spin on `a8b98bc0`** (`history/config-menu-s1-20261024/spin-a8b98bc0.json`):
+  6 passes over 15 ms, the worst 15.6, nothing dropped, none >= 25. The
+  synthetic gate can't see this: op 27's turns bypass `quantum/encoder.c`,
+  whose drain waits ENCODER_MAP_KEY_DELAY (1 ms) after each half of every
+  detent, captured or not.
+- **The encoder fix, `cbcf93b6`, ON THE KEYBOARD ON GREMLIN NOW** (dev, token
+  `0xde3d5c12`, gap 248 B; daily `via-daily-cbcf93b6-20261024-153641.bin`
+  builds, gap 2,360): a weak hook, `encoder_map_delay_wanted_kb()`, skips
+  the waits for halves the menu swallowed (`menu/menu_glue.c`). Codex
+  cleared it (`review-codex-s1-encoder-2026-10-24.md`); its finding 3 (the
+  knob is polled once a pass, so no backlog forms) removed the bounded
+  drain I'd added. **Waiting on:** JD's spin on it
+  (`spin-cbcf93b6.json`, the recorder `scratchpad/spinwatch.py`, stop file
+  `spinstop`). quantum/encoder.c is now a seventh core file with a local
+  change: CLAUDE.md's list needs it at the merge.
+- **The mono text, `3f0275ca`, built, not flashed; codex reviewing**
+  (`review-prompt-s1-mono.txt`):
+  - `lcd_blit_mono` (C4) through the stream; the face
+    `graphics/res/font_small_mono.h` from `scripts/gen_mono_font.py` (the
+    shipped atlas, checked against the BDF; five extras checked against the
+    mockup); `menu/menu_text.c` composes a band of a line;
+  - the fixture's **F3** (screen 3): C8's list in text, op 27 sub 0
+    patterns 16-19 = lit/half, lit/full, inverted/half, inverted/full. A
+    click on rows 0-5 cycles the style; row 6 goes to F2, row 7 to
+    Diagnostics. The title names the style.
+  - Host tests: `test_mono` (every style, the selection, every piece
+    boundary with a retarget and a give-up); `ms1 frames DIR` writes
+    `fixture-F3-<style>.ppm`.
+- **Next:**
+  1. JD's spin on `cbcf93b6` -> GREMLIN-RESULTS §18.
+  2. Codex's mono review, dispositions, flash.
+  3. With JD by eye (one action a message): open the fixture, I set
+     pattern 16, JD clicks through the four styles and spins: the cursor
+     style ("Open" 1) and half or full rows ("Open" 2, also measured: sub
+     10's piece and op maxima per style).
+  4. Extend `menu_s1_gate.py` / `menu_s0_ledrate.py` to F3's patterns.
+  5. Then P1, the real menu, and its keycode (plan "Open" 3).
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
   3. `venv-win/Scripts/python.exe scripts/menu_s1_gate.py --out
-     history/config-menu-s1-20261024/gate-9902ff5b.json < /dev/null`;
-  4. record the result as GREMLIN-RESULTS §15.
-
-  The last run (`b245bd84`) failed only on timing: 2 passes over 15 ms, the
-  longest 17.5 ms. Everything else in C10 passed.
-- **If the gate still fails on timing:**
-  - read `scripts/devhook.py read` (each stage's worst) and
-    `scripts/menu_s1_acct_transitions.py` (HC_ACCT's worst passes per
-    transition);
-  - the remaining levers are a cheaper polled payload loop, and splitting
-    the Health page's composition.
-- **After the gate passes:** S1 proper.
-  - `lcd_blit_mono` and the generated font, as op 27 sub 0 mono patterns on
-    the fixture.
-  - With JD by eye: the cursor style (lit text or inverted) and half or full
-    rows.
-  - Real encoder spins and backlog measurement, with a bounded drain in
-    `quantum/encoder.c` if the 15 ms target fails.
-  - Then P1, the real menu, and the menu keycode in P1 (plan "Open" 3).
+     history/config-menu-s1-20261024/gate-<build>.json < /dev/null`;
+  4. record the result in GREMLIN-RESULTS.
 
 ## What S1 has done so far (all codex-reviewed before each flash)
 
 - **The LED flicker fix:** colour fills held off the RGB row ISR (-18%).
   Bulk SPI0 sends are polled with SPI0's IE cleared (`spi0_poll_send`); since
-  revision 14 their window is polled too (`lcd_window_polled`). The DMA arm
-  keeps its spiSend window. The row ISR now keeps ~99.4-100% of its rate
+  revision 14 their window is polled too (`lcd_window_polled`), and since
+  revision 15 the DMA arm's. The row ISR now keeps ~99.4-100% of its rate
   during menu activity. JD by eye: "no flicker", "feels responsive, not
   instant".
 - **`MB_PASS_BYTES` (512):** a slot's op is sent in pieces, one a pass.
@@ -101,7 +111,7 @@ file is the thread; read it first after a context loss. Updated 2026-10-24
   - `spi0_poll_send` refuses unless DMA is idle, `SPID0` is READY, BUSY is
     clear and RX is empty;
   - HC_POLLFAULT (0x75, devfault) takes `n, mode, skip` to fault a window
-    send or the payload. **The failure tests with it are still to run.**
+    send or the payload; `scripts/menu_s1_fault.py` runs the 24 cases.
 - **Findings recorded for later:**
   - the Fn timing miss inside a tap-hold's tapping term, settled as
     documented (plan "Open" 5);

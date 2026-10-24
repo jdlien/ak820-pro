@@ -39,6 +39,24 @@ ever matters:
   the screen off after a long idle, even on USB; the panel's inversion
   setting. JD's board sleeps on battery, so it's less exposed.
 
+## The knob is sampled once a main-loop pass (2026-10-24) -- noted, measure before acting
+
+Found in codex's review of the encoder change (`plans/review-codex-s1-encoder-2026-10-24.md`, finding 3):
+`encoder_driver_task()` reads the quadrature pins once a pass, from the
+main loop, not the row ISR that scans the matrix. One sample can enqueue at
+most one detent, so no backlog forms, but a long pass is a long gap
+between samples: at 15 ms a pass the knob is read at ~67 Hz. A fast spin
+that moves two transitions between samples loses or garbles a detent, and
+op 27's "nothing dropped" can't see that (it counts coalesced turns, not
+transitions). JD (10-24) on fast spins: "'hard as I can' gets ignored by
+the hardware, I'm sure". It may be this, not the hardware.
+- **To measure:** count the quadrature driver's skipped transitions (both
+  pins changed between samples: `encoder_LUT`'s entries 3, 6, 9 and 12 in
+  `drivers/encoder/encoder_quadrature.c`, which count as no movement)
+  during a hard spin, on a dev build.
+- **If it matters:** sample the pins in the row ISR (~3,900 Hz) into a small
+  ring, and decode in the main loop.
+
 ## `count_ge_10ms` ticks once a second: the clock's second edge (2026-10-22) -- fixed in `ce229f87c6`, on gremlin; JD's board after the drain
 
 On `36afff30e8`, every second produces one pass of 10-13 ms

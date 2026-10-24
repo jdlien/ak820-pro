@@ -22,6 +22,8 @@
 #include "panel_owner.h"
 #include "menu_env.h"
 #include "menu_ops.h"
+#include "menu_text.h"
+#include "../graphics/res/font_small_mono.h"   /* through -I $D/menu */
 
 static int fails;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d %s\n", __FILE__, __LINE__, #c); fails++; } } while (0)
@@ -106,6 +108,28 @@ bool mb_glyph(char c, uint16_t x, uint16_t y) {
     glyph_ops++;
     return true;
 }
+static int mono_ops;
+bool mb_mono(const uint8_t *bits, uint8_t stride, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t fg, uint16_t bg) {
+    dma_settle();   /* the stream quiesces */
+    pass_bytes += (uint32_t)w * h * 2u;
+    uint16_t rows = h;
+    bool     ok   = true;
+    if (fault_next_fill > 0) {   /* a polled send gives up, as for a fill */
+        fault_next_fill--;
+        rows = fault_fill_prefix ? (uint16_t)(h / 2u) : 0;
+        lost_latched = true;
+        ok           = false;
+    }
+    for (uint16_t r = 0; r < rows; r++)
+        for (uint16_t c = 0; c < w; c++) {
+            bool ink                   = (bits[r * stride + c / 8] >> (7 - c % 8)) & 1;
+            fb[y + r][x + c]       = ink ? fg : bg;
+            is_glyph[y + r][x + c] = false;
+        }
+    if (ok) mono_ops++;
+    fake_ticks += 300;
+    return ok;
+}
 bool mb_busy(void) { return dma_busy; }
 bool mb_lost_pending(void) { return lost_latched; }
 uint32_t mb_now_ticks(void) { return fake_ticks; }
@@ -118,7 +142,7 @@ static void fake_reset(void) {
     dma_busy = lost_latched = bus_busy_once = false;
     fault_next_dma = fault_next_band = fault_next_fill = 0;
     fault_fill_prefix = false;
-    glyph_ops = fill_ops = bands_ok = 0;
+    glyph_ops = fill_ops = bands_ok = mono_ops = 0;
     pass_bytes = max_pass_bytes = 0;
 }
 
@@ -162,6 +186,44 @@ static int f1_mismatches(uint8_t pat, uint8_t row) {
     for (uint16_t y = 0; y < MB_H; y++)
         for (uint16_t x = 0; x < MB_W; x++)
             if (fb[y][x] != expect_f1(x, y, pat, row)) bad++;
+    return bad;
+}
+/* The expected F3 frame (S1's mono text), from the face itself rather than
+ * menu_text.c: the title and rows' cells from x 4, the inverted row's pad at
+ * x 3, x 124 black, the separator, the scrollbar. */
+static uint16_t expect_f3(uint16_t x, uint16_t y, uint8_t style, uint8_t row) {
+    const bool inv = (style & FX_MONO_INV) != 0;
+    if (y == 14) return (x >= 4 && x <= 123) ? FX_MONO_GREY : 0;
+    if (x == 125) {
+        if (y < 15 || y > 126) return 0;
+        return y < 15 + FX_THUMB_H ? FX_MONO_WHITE : FX_MONO_TRACK;
+    }
+    if (x < 3 || x > 124 || y >= 15 + 8 * 14) return 0;
+    const char *s;
+    uint16_t    fg = FX_MONO_WHITE, bg = FX_MONO_BLACK, gy;
+    if (y < 14) {
+        s  = fx_mono_titles[style];
+        gy = y;
+    } else {
+        uint8_t r   = (uint8_t)((y - 15) / 14);
+        bool    sel = r == row;
+        s           = fx_mono_rows[r];
+        gy          = (uint16_t)((y - 15) % 14);
+        if (inv && sel) { fg = FX_MONO_BLACK; bg = FX_MONO_WHITE; }
+        else if (!inv) fg = sel ? FX_MONO_LIT : FX_MONO_DIM;
+    }
+    if (x == 3) return bg;
+    if (x == 124) return FX_MONO_BLACK;   /* ink on the inverted row, background elsewhere: black either way */
+    size_t        cell = (size_t)(x - 4) / 6, len = strlen(s);
+    uint8_t       code = cell < len ? (uint8_t)s[cell] : (uint8_t)' ';
+    const uint8_t *g   = code >= 0x80 ? font_small_mono[FONT_MONO_ASCII + code - 0x80] : font_small_mono[code - 0x20];
+    return (g[gy] & (0x80 >> ((x - 4) % 6))) ? fg : bg;
+}
+static int f3_mismatches(uint8_t style, uint8_t row) {
+    int bad = 0;
+    for (uint16_t y = 0; y < MB_H; y++)
+        for (uint16_t x = 0; x < MB_W; x++)
+            if (fb[y][x] != expect_f3(x, y, style, row) || is_glyph[y][x]) bad++;
     return bad;
 }
 static int f2_mismatches(void) {
@@ -684,6 +746,128 @@ static void test_pieces(void) {
         fx_other_layout();   /* back to F1 */
         CHECK(run_until_settled(400) > 0 && f1_mismatches(0, FX_ROW_F2) == 0);
     }
+}
+
+/* --- S1: the mono text on F3 (menu_text.c through mb_mono) ------------------- */
+
+static int mono_full_ops(uint8_t style) { return style & FX_MONO_FULL ? 1 + 1 + FX_ROWS + 1 : 2 + 1 + 2 * FX_ROWS + 1; }
+
+static void test_mono(void) {
+    /* Each style from a settled F1: a layout change, its clear, the frame. */
+    for (uint8_t st = 0; st < FX_MONO_STYLES; st++) {
+        settled_a();
+        max_pass_bytes = 0;
+        int g = glyph_ops;
+        fx_set_mono(st);
+        CHECK(ms_clearing() && fx_screen() == FX_SCREEN_F3 && fx_pattern() == FX_MONO_FIRST + st);
+        CHECK(run_until_settled(400) > 0 && f3_mismatches(st, 0) == 0);
+        CHECK(max_pass_bytes > 0 && max_pass_bytes <= MB_PASS_BYTES);
+        CHECK(ms_ops() == mono_full_ops(st));
+        CHECK(glyph_ops == g);   /* F3 sends no flash glyph */
+    }
+    /* Styles within F3: a retarget, no clear; the title and the rows repaint,
+     * the separator and the scrollbar don't. */
+    settled_a();
+    fx_set_mono(0);
+    CHECK(run_until_settled(400) > 0);
+    int g0 = glyph_ops;
+    for (uint8_t st = 1; st <= FX_MONO_STYLES; st++) {
+        uint8_t s = st % FX_MONO_STYLES;
+        bands_ok  = 0;
+        fx_set_mono(s);
+        CHECK(!ms_clearing());
+        CHECK(run_until_settled(400) > 0 && f3_mismatches(s, 0) == 0 && bands_ok == 0);
+        CHECK(ms_ops() == mono_full_ops(s) - 2);
+    }
+    CHECK(glyph_ops == g0);
+    /* A selection change: two rows, each 2 ops in half rows and 1 in full. */
+    for (uint8_t st = 0; st < FX_MONO_STYLES; st++) {
+        fx_set_mono(st);
+        CHECK(run_until_settled(400) > 0);
+        max_pass_bytes = 0;
+        fx_input(1, MI_LATCH_NONE);
+        CHECK(ms_unsettled() == 2);
+        CHECK(run_until_settled(100) > 0 && ms_ops() == (st & FX_MONO_FULL ? 2 : 4));
+        CHECK(f3_mismatches(st, fx_cursor()) == 0 && max_pass_bytes <= MB_PASS_BYTES);
+    }
+    /* At every piece boundary of a style's repaint: a selection change, a
+     * style change, and a mono send given up (nothing sent, then half): the
+     * frame ends right, and the fault was really taken. */
+    for (uint8_t st = 0; st < FX_MONO_STYLES; st++) {
+        settled_a();
+        fx_set_mono((uint8_t)(st + 1));
+        CHECK(run_until_settled(400) > 0);
+        fx_set_mono(st);
+        int full = run_until_settled(400);
+        CHECK(full > 0);
+        int consumed = 0;
+        for (int k = 0; k < full; k++) {
+            fx_set_mono((uint8_t)(st + 1));
+            CHECK(run_until_settled(400) > 0);
+            fx_set_mono(st);
+            for (int i = 0; i < k; i++) pass();
+            fx_input(3, MI_LATCH_NONE);
+            CHECK(run_until_settled(400) > 0 && f3_mismatches(st, fx_cursor()) == 0);
+
+            fx_set_mono((uint8_t)(st + 1));
+            for (int i = 0; i < k; i++) pass();
+            fx_set_mono(st);
+            CHECK(run_until_settled(400) > 0 && f3_mismatches(st, fx_cursor()) == 0);
+
+            for (int prefix = 0; prefix < 2; prefix++) {
+                fx_set_mono((uint8_t)(st + 1));
+                for (int i = 0; i < k; i++) pass();
+                fault_next_fill   = 1;
+                fault_fill_prefix = prefix;
+                CHECK(run_until_settled(800) > 0 && f3_mismatches((uint8_t)((st + 1) % FX_MONO_STYLES), fx_cursor()) == 0);
+                if (fault_next_fill == 0) consumed++;
+                fault_next_fill = 0;
+                fx_set_mono(st);
+                CHECK(run_until_settled(400) > 0);
+            }
+        }
+        CHECK(consumed >= full);
+    }
+    /* Input on F3: turns move the row, a click on rows 0-5 is the next style,
+     * row 6 goes to F2 and back to F1, row 7 is Diagnostics. */
+    settled_a();
+    fx_set_mono(0);
+    CHECK(run_until_settled(400) > 0);
+    CHECK(fx_input(2, MI_LATCH_CLICK) == FX_NONE && fx_cursor() == 2 && fx_pattern() == FX_MONO_FIRST + 1);
+    CHECK(run_until_settled(400) > 0 && f3_mismatches(1, 2) == 0);
+    for (int i = 0; i < 3; i++) fx_input(0, MI_LATCH_CLICK);
+    CHECK(fx_pattern() == FX_MONO_FIRST + 0);   /* wraps after inverted, full rows */
+    CHECK(fx_input(-1, MI_LATCH_NONE) == FX_NONE && fx_cursor() == 1);
+    while (fx_cursor() != FX_ROW_F2) fx_input(1, MI_LATCH_NONE);
+    CHECK(fx_input(0, MI_LATCH_CLICK) == FX_NONE && fx_screen() == FX_SCREEN_F2);
+    CHECK(run_until_settled(400) > 0 && f2_mismatches() == 0);
+    fx_other_layout();
+    CHECK(fx_screen() == FX_SCREEN_F1 && fx_pattern() == 0);
+    fx_set_mono(3);
+    CHECK(!fx_set_pattern(0) && fx_screen() == FX_SCREEN_F3);   /* A and B are F1's */
+    while (fx_cursor() != FX_ROW_DIAG) fx_input(1, MI_LATCH_NONE);
+    CHECK(fx_input(0, MI_LATCH_CLICK) == FX_DIAG);
+    fx_return_from_diag();
+    CHECK(fx_screen() == FX_SCREEN_F1 && run_until_settled(400) > 0 && f1_mismatches(fx_pattern(), FX_ROW_DIAG) == 0);
+    CHECK(fx_set_pattern(0));
+
+    /* menu_text.c's edges and padding, on their own: a short string pads
+     * with spaces; ink edges are set on every row asked for. */
+    uint8_t   b[2 * 16];
+    mt_line_t l = {"A", 3, 2, 3, true, false};
+    CHECK(mt_width(&l) == 2 + 18 + 3);
+    mt_bits(&l, 0, 23, 3, 2, b, 16);
+    for (int r = 0; r < 2; r++) {
+        CHECK((b[r * 16] & 0xC0) == 0xC0);       /* the lead, ink */
+        CHECK((b[r * 16 + 2] & 0x0E) == 0);      /* the trail, background: columns 20-22 */
+    }
+    CHECK(((b[0] >> 5) & 1) == ((font_small_mono['A' - 0x20][3] >> 7) & 1));   /* 'A' column 0, row 3 */
+    l.trail_ink = true;
+    mt_bits(&l, 20, 3, 0, 1, b, 16);
+    CHECK((b[0] & 0xE0) == 0xE0);   /* the trail, ink */
+    l.s = "\x7f";
+    mt_bits(&l, 2, 6, 0, MT_CELL_H, b, 1);
+    for (int r = 0; r < MT_CELL_H; r++) CHECK(b[r] == (uint8_t)(font_small_mono['?' - 0x20][r] & 0xFC));   /* no glyph: '?' */
 }
 
 static void test_op_end(void) {
@@ -1238,6 +1422,14 @@ static int frames(const char *dir, int n) {
     /* 0x8010, a fixture colour that equals a glyph code, stays purple: F2's
      * tile 7 and A's fourth row (codex's third verification). */
     CHECK(!is_glyph[7 / 4 * 32 + 16][7 % 4 * 32 + 16] && fb[7 / 4 * 32 + 16][7 % 4 * 32 + 16] == 0x8010);
+    /* S1's F3, each style, the cursor on row 2. */
+    for (uint8_t st = 0; st < FX_MONO_STYLES; st++) {
+        fx_set_mono(st);
+        while (fx_cursor() != 2) fx_input(1, MI_LATCH_NONE);
+        run_until_settled(400);
+        snprintf(name, sizeof name, "fixture-F3-%u.ppm", st);
+        write_ppm(dir, name);
+    }
     return fails ? 1 : 0;
 }
 
@@ -1250,6 +1442,7 @@ int main(int argc, char **argv) {
     test_op27_flight();
     test_fixture_paint();
     test_pieces();
+    test_mono();
     test_op_end();
     test_meas();
     test_ops();
