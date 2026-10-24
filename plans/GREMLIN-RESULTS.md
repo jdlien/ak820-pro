@@ -385,8 +385,10 @@ the same path and will dim briefly too, unmeasured.
 `scripts/menu_s0_photos.py`, which holds each frame until told to go on;
 `photos.json`):
 - **A13 passes.** Each photo matches its expected frame cell for cell:
-  - fixture-B-stop13: "FIXTURE B", rows 0-2 in B (magenta/cyan, yellow/yellow,
-    magenta/cyan), rows 3-7 still A's;
+  - fixture-B-stop13: "FIXTURE B", row 0 in B (magenta/cyan), row 1's
+    first half repainted (yellow), and rows 2-7 still A's. Row 2 is
+    magenta/cyan in both patterns, so it reads as B. Corrected from "rows
+    0-2 in B" (codex, 10-24); the reference frame always agreed;
   - fixture-A, and A again after the stop: identical, as they should be;
   - F2: the 4×4 grid in table order.
 
