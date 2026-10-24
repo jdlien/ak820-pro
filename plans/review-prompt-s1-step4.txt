@@ -1,0 +1,15 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+This is a code review before a flash to the test board (the keyboard on gremlin). The change: qmk_firmware-ak820pro gremlin/s1 commit 86c76027 (`git -C qmk_firmware-ak820pro show 86c76027`), and the build plan's revision 14 (`git diff 0424c6a HEAD -- plans/CONFIG-MENU-BUILD-PLAN.md`). plans/GREMLIN-RESULTS.md section 13 has the gate run that motivated it: every C10 check passes on b3dcaeca except the timing, the longest pass 17,050 us with four over 15,000, and a 512 B piece costs ~5.4 ms, most of it its window, whose 11 bytes each go through a whole spiSend() (tx8). Your earlier reviews of the polled send are plans/review-codex-spi0-poll-2026-10-24.md and plans/review-codex-s1-step1-2026-10-24.md.
+
+What it does, in graphics/lcd_bus.c: lcd_window_polled() sends the CASET, RASET and RAMWR commands and their parameters as polled sends (spi0_poll_send), toggling DC only between them, each send waiting out BUSY before it returns. lcd_fill_rect_ok(), lcd_stream_begin() and lcd_blit_ram() use it after bus_quiesce(); on a give-up the fill returns false with CS released, the stream marks itself broken (its bytes dropped), and the RAM blit skips its pixels. lcd_blit_flash() (the DMA arm) keeps lcd_window() through spiSend, because it sends its window after spiSN32FlashDmaPrepare() has set SPI0's IE for the DMA.
+
+Please review, adversarially, for correctness and safety on the board:
+1. DC and CS timing: is a polled send's return a safe point to change DC (all bits shifted, the panel latched the byte)? Does the GC9107 need anything between a command byte and its parameters that tx8 provided implicitly?
+2. The entry check of each of the six sends inside one window (IE cleared and restored around each; the ChibiOS driver idle; no DMA): can any of them refuse on a healthy path, and is a refusal in the middle of a window handled (CS, the panel's state, the next transaction)?
+3. Every caller of lcd_window_polled and every path that still calls lcd_window or tx8: is any of them reachable with SPI0 in a state the polled send doesn't expect (the DMA prepared, the animation, the panel init, set_madctl, the flash's SPID1 window)?
+4. The stream's broken flag set at begin, the RAM blit's skipped pixels, and the fill's early return: does each owner still get the loss (blit_lost) and repaint, as the data sends' give-ups do?
+5. Revision 14's text: does it say exactly what the code does?
+6. Anything else that makes flashing this unsafe.
+
+For each finding: severity (blocker / should-fix / note), file and line, the failure scenario, and the fix. Say plainly whether it's safe to flash to the test board.
