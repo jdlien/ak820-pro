@@ -1,5 +1,7 @@
 # The configuration menu: how to build it (revision 14, 2026-10-24)
 
+**Resume from [`WARREN-STATUS.md`](WARREN-STATUS.md)** (the thread: what is on the board, the next step, the rules).
+
 Status: **S0 built and accepted on the keyboard on gremlin**: A1-A13 pass,
 with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
 wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
