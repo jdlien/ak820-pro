@@ -24,18 +24,21 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hostagent"))
 from menu_s0_session import mutate, open_device, read_state, wait  # noqa: E402
-from menu_s0_accept import to_dash  # noqa: E402
+from menu_s0_accept import op1, to_dash  # noqa: E402
 from ak820health import isr_rates, read_isr, read_stalls  # noqa: E402
 
 WINDOW_S = 5.0
 
 
-def window(h, label, during=None):
-    """One page-4 window of WINDOW_S; `during` is called until it ends."""
+def window(h, label, during=None, secs=WINDOW_S, first=None):
+    """One page-4 window of `secs`: `first` is called once at its start (a
+    transition), `during` repeatedly until it ends."""
     sa = read_stalls(h)
     a = read_isr(h)
     ta = time.monotonic()
-    end = ta + WINDOW_S
+    end = ta + secs
+    if first:
+        first()
     work = 0
     while time.monotonic() < end:
         if during:
@@ -51,7 +54,7 @@ def window(h, label, during=None):
     print(f"{label:9s} {r['isr_per_s']:8.1f} ISR/s  mean {r['isr_mean_us']:6.1f} us  "
           f"max {r['isr_max_us']:6.1f} us  cpu {r['isr_cpu_pct']:5.1f}%  "
           f"timebase/wall {r['timebase_vs_wall']}  work {work}  "
-          f"ge10 +{r['ge10']}  ge25 +{r['ge25']}  passes/s {r['passes'] / WINDOW_S:.0f}")
+          f"ge10 +{r['ge10']}  ge25 +{r['ge25']}  passes/s {r['passes'] / secs:.0f}")
     return r
 
 
@@ -85,6 +88,17 @@ def main():
         to_dash(h)
         time.sleep(1.0)
         out += [window(h, "dash"), window(h, "dash")]
+        # The Fn+D page's transitions (op 1), each in a 1 s window from its
+        # start: its clear into Health, Camera's, and the staged restore out.
+        out.append(window(h, "dash-1s", secs=1.0))
+        out.append(window(h, "fnd-enter", secs=1.0, first=lambda: op1(h)))
+        time.sleep(2.0)
+        out.append(window(h, "health-1s", secs=1.0))
+        out.append(window(h, "fnd-camera", secs=1.0, first=lambda: op1(h)))
+        time.sleep(2.0)
+        out.append(window(h, "fnd-exit", secs=1.0, first=lambda: op1(h)))
+        time.sleep(2.0)
+        out.append(window(h, "dash-1s", secs=1.0))
     finally:
         h.close()
     with open(a.out, "w") as f:

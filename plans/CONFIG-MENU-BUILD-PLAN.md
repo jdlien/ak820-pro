@@ -1131,3 +1131,18 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
      load-bearing).
 
    Measured with the script before and after.
+5. **Fn is judged by `layer_state`, which lags a buffered Fn press** (A10,
+   10-24). Within the tapping term of an undecided tap-hold on another key,
+   QMK's tapping buffer still holds Fn's press, while C2's capture in
+   `pre_process_record_kb` sees the knob at once. Fn+knob then reads as a
+   plain knob, is forwarded and replayed, and the menu doesn't open. Nothing
+   sticks; the opener just misses.
+
+   Options, for C2 and codex:
+   - judge Fn by the physical Fn key (its matrix position), or by
+     `layer_state` OR a pending Fn press in the tapping buffer;
+   - or accept and document it: the window is the tapping term after a
+     tap-hold key, and gremlin's and JD's keymaps have no tap-hold keys
+     today.
+
+   The menu keycode (item 3) would meet the same question.

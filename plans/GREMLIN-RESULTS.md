@@ -445,13 +445,22 @@ dropped 0, `invariant_fail` 0.
     correct result), so the Fn layer wasn't left on.
 
   The knob is back to Mute (`0x00A8`).
-- **Not yet run:** a pending tap-hold on another key (F12 as mod-tap Shift,
-  held while Fn+knob opens). F12 is back to plain F12; JD paused here.
+- **A pending tap-hold on another key** (09:26-09:29; F12 as mod-tap
+  Shift/F12, `0x2245`, held while Fn+knob was pressed;
+  `a10-watch-taphold.json`). Safe: ten opens and closes, every capture back
+  to 0, nothing dropped, `invariant_fail` 0, the letters after lowercase. **⚠️
+  But the opener misses inside the tapping term.** Pressed within ~200 ms of
+  F12, Fn+knob didn't open the menu. With a pause it always did. The cause:
+  the capture runs in `pre_process_record_kb`, before QMK's tapping buffer,
+  and judges Fn by `layer_state`. Fn's own press is still held in that buffer
+  behind the undecided F12, so the knob reads as Fn-less and is forwarded.
+  QMK then replays it after F12 resolves. Nothing sticks; the opener just
+  doesn't fire. A finding for C2 (the build plan's "Open" item 5). F12 is
+  back to plain F12 (`0x0045`); the opener is disarmed.
 - **⚠️ JD: every turn, and the opening, visibly dips the keyboard's LEDs.**
   It's the fill finding above, now a requirement for S1 (the build plan's
   "Open" item 4).
 
 **Still to run:**
-- **A10's last case:** the pending tap-hold on another key.
 - **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
   (the physical knob cases). A9 is done.
