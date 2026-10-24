@@ -1,11 +1,16 @@
-# The configuration menu: how to build it (revision 11, 2026-10-24)
+# The configuration menu: how to build it (revision 12, 2026-10-24)
 
 Status: **S0 built and accepted on the keyboard on gremlin**: A1-A13 pass,
 with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
 wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
 animation slot is empty. A11's first runs missed the media gate on a slow
-SMTC. Revision 11 is for S1, awaiting codex's verification. Owned by Warren
+SMTC. Revision 12 is for S1, awaiting codex's verification. Owned by Warren
 (gremlin's session) from 10-23.
+- **Revision 12** folds in codex's verification of revision 11
+  ([`review-codex-config-menu-build-plan-rev11-2026-10-24.md`](review-codex-config-menu-build-plan-rev11-2026-10-24.md)),
+  its one remaining must-fix: a debug composition is tagged with the
+  second it shows, and a second that has elapsed but isn't composed yet
+  counts as pending.
 - **Revision 11** folds in codex's verification of revision 10
   ([`review-codex-config-menu-build-plan-rev10-2026-10-24.md`](review-codex-config-menu-build-plan-rev10-2026-10-24.md)):
   - the interval's reset names the right bytes, and validation counts come
@@ -903,7 +908,7 @@ that's S1.
 - **The expected frames** come from the same tables: the host tests compute
   each slot's pixels, and the board's photos are compared with them.
 
-### C10. S1's measurement contract (revisions 9 to 11)
+### C10. S1's measurement contract (revisions 9 to 12)
 
 What S1's scripts read, and the numbers they pass or fail on. **Every value
 is fixed here, before the measurement**; a value changes only in a plan
@@ -935,6 +940,8 @@ revision, never during a run.
   | 24, 25 | the passes in the interval (u16, **wrapping**): a summary only. Validation uses health page 2's u32 `passes`, `count_ge_10ms` and `count_ge_25ms`, which `health.c` snapshots together |
   | 26, 27 | the session token (u16): 0 at boot (in RAM cleared at reset); each `arm` 1 sets it to the next value of a boot-cleared counter, skipping 0. It reads 0 after any reboot, so a token that changed, or reads 0, ends the session: the run fails |
   | 28 | the health-reset generation (u8, wrapping): every `health_reset()` moves it. It must not change across a measured interval |
+  | 29 | `dbg_sec`: the RTC second (0-59) that the composition `dbg_gen` shows; 0xFF before the first composition |
+  | 30 | the RTC's current second (0-59), read in the same reply |
 
   **A1's "unknown sub" check moves from 10 to 31.**
 - **The debug page's completion** (`debug_done`, sub 5's byte 31, bit 0)
@@ -943,7 +950,11 @@ revision, never during a run.
   - a composition has happened since the page was entered;
   - the page's clear has finished;
   - the grid is clean (`dbg_dirty`, or `cam_dirty` on Camera, is 0);
-  - no composition is pending (`dbg_force_recompose` is false);
+  - no composition is pending: `dbg_force_recompose` is false, **and** the
+    RTC's current second equals `dbg_sec`. A second that has elapsed but
+    hasn't been composed is pending, since `draw_debug_page()` finds a new
+    second by comparing `sec` with `last_sec`, not through the flag
+    (`display.c:840-845`);
   - `dbg_done_gen == dbg_gen`;
   - no transfer is in flight, and no loss is waiting.
 
@@ -954,12 +965,19 @@ revision, never during a run.
 
   **A script ties a tested update to its completion like this:**
   1. it reads `dbg_gen` **before** the cause;
-  2. it makes the cause: an op 1, or waits for a clock second on Camera,
-     whose time line changes every second. A cause that leaves the
-     composed target unchanged isn't a tested update;
-  3. it waits for `dbg_gen` to move past the value it read;
-  4. it waits for `dbg_done_gen` to equal the new `dbg_gen`, with
-     `debug_done` set.
+  2. it makes the cause: an op 1, or a clock second on Camera, whose time
+     line changes every second. For a second, it names the expected second
+     `S` as byte 30's value plus one (mod 60), and the second's arrival is
+     byte 30 reading `S`. A cause that leaves the composed target unchanged
+     isn't a tested update;
+  3. it waits for `dbg_gen` to move past the value it read, **and, for a
+     clock second, for `dbg_sec` to equal `S`**. The composition is tagged
+     with the second it shows, so an earlier second's generation can't
+     stand in for it;
+  4. it waits for `dbg_done_gen` to equal that generation, with
+     `debug_done` set and `dbg_sec` still `S`. If the clock moves on to
+     `S + 1` first, that sample is discarded and the case retried; three
+     discards fail the run.
 
   A boolean read alone proves nothing. MENU's `pixels_done` keeps its
   current-target meaning.
@@ -1185,7 +1203,7 @@ saved Off (`level + 1`).
   | 7 | | request a dashboard restore, as the startup callback does |
   | 8 | | mark a blit lost, as an exhausted recovery does |
   | 9 | | the handoff probe (the board's A3, `CONFIG-MENU-S0-BOARD-TESTS.md`): under a DONE dashboard, queue three glyphs and a lock label, then hand the panel to the Fn+D page in the same call. Bytes 7-10 of the reply: gq and lq before, then after. Refused (state 5) unless the dashboard is DONE |
-  | 10 | [5] 0 or 1: arm | S1: timing and targets, read at once with no sequence (C10). Bytes 6-28; `arm` 1 starts a measurement interval, zeroing its maxima and counts after the reply and issuing a new session token |
+  | 10 | [5] 0 or 1: arm | S1: timing and targets, read at once with no sequence (C10). Bytes 6-30; `arm` 1 starts a measurement interval, zeroing its maxima and counts after the reply and issuing a new session token |
 
 - **Sub 5's reply,** from byte 5 (byte 5 is the status, 0):
 
