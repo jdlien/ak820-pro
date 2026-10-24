@@ -65,7 +65,7 @@ def read_state(h):
         "turns": r[18] - 256 if r[18] > 127 else r[18], "latch": LATCHES[r[19]],
         "dropped": r[20], "unsettled": r[21], "losses": r[22], "capture": r[23],
         "invariant_fail": u16(r, 24), "paint_us": u16(r, 26), "pairing": r[28],
-        "ops": r[29], "stopped": bool(r[30] & 1),
+        "ops": r[29], "stopped": bool(r[30] & 1), "debug_done": bool(r[31] & 1),
     }
 
 

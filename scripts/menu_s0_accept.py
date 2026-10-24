@@ -73,7 +73,7 @@ def to_dash(h):
 
 
 def a1(h):
-    r = xfer_raw(h, 10)
+    r = xfer_raw(h, 31)   # S1's C10 took sub 10; 31 is unknown
     ok_unknown = r[0] == UNHANDLED
     s5 = xfer(h, 5)
     ok_framing = s5[0] == SET_VALUE and s5[5] == OK
