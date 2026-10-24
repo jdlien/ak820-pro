@@ -518,3 +518,51 @@ their cases:
 
 What's left is the merge into `ak820pro-jdlien`, `deps.lock`, and
 `warren/config-menu` into main.
+
+## 11. S1's first increment on the keyboard on gremlin (10-24)
+
+Firmware `gremlin/s1` `6a9a16b7` (dev, token `0xe3a9d6ef`, heap gap 368 B),
+built from the build plan's revision 12. It's the polled fills plus:
+- pieces under `MB_PASS_BYTES` (512 B, one a pass);
+- the end-of-op latch, and a failed piece ending its op;
+- the entry check (`SPI_READY` included), HC_POLLFAULT, and the
+  chibios-contrib FIFO dispatch patch (`gremlin/s1-fifo-ie`).
+
+Codex: safe to flash; its three should-fixes were done first
+([`review-codex-s1-step1-2026-10-24.md`](review-codex-s1-step1-2026-10-24.md)).
+Host tests pass; two mutants fail 96 and 18 checks.
+
+**The LEDs** (`menu_s0_ledrate.py`, after a health reset outside the span;
+`history/config-menu-s1-20261024/ledrate-s1-6a9a16b7.json`): the toggling
+windows ran 3,697 row ISR/s against the dashboard's 3,750, **a ratio of
+0.986** (C10 needs 0.98). Fn+D's 1 s windows ran 0.996 to 0.998. Every
+repaint completed, `invariant_fail` 0, ge25 0.
+
+**The cost:** 7 full A/B repaints in 5 s, against the prototype's 12. One
+512 B piece a pass costs ~5 ms in `blit_pump`, because the polled send gets
+only the CPU the row ISR leaves (~26%), plus the window's command bytes.
+
+**Where the passes go** (HC_ACCT, `scripts/menu_s1_acct_toggle.py` and
+`menu_s1_acct_transitions.py`):
+- **A painting pass is 10-13 ms:** ~5 ms of piece, plus ~4-5 ms of QMK's own
+  pass, "unaccounted" (a dashboard pass is ~4.4 ms, 225 a second). So every
+  painting pass counts as a ge10, by design, and **none reaches 15 ms**:
+  the menu's own passes meet C10's target.
+- **The ge10 count follows the passes, not the polling:** with toggles 1.5 s
+  apart and no polling, 80 ge10 in 8 s; flat-out polling, 511.
+- **⚠️ The 19-23 ms passes are the dashboard's restore,** after the menu
+  closes or the Fn+D page exits (three runs of each). One pass spends
+  15-16 ms in `blit_pump`. The dashboard alone has none, and the Fn+D page's
+  entry and Camera peak at 12-17 ms (`second_edge` and `display_hk`, 7 ms
+  each). It's the restore's stages (`display.c:1442-1473`): most likely case
+  4, `draw_battery(true)`, with six small fills each preceded by its window
+  through byte-at-a-time `spiSend`, then the bolt tile and the percentage's
+  synchronous glyphs, or else case 2, the connection row and the clock.
+  S0's A11 already saw 20 ms there, so it's mainline cost, now ~2 ms more
+  with polling. **The next increment splits those stages one component a
+  pass**, as the lock stage was in 2026-09 (25-30 ms then), and C10's
+  instrumentation times each stage. C10's armed interval counts these
+  passes, so S1 can't pass without it.
+- **Boot alone** leaves a 23 ms pass (`loop_gap_max` read 20 s after the
+  flash). The prototype's "worst pass 24 ms" was read since boot, so it
+  mixed boot and restore with the fills.
