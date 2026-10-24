@@ -381,8 +381,38 @@ in milliseconds. Options to weigh: fills by DMA, fills spread across passes,
 smaller fill areas. The banded clears of the restore and the Fn+D page use
 the same path and will dim briefly too, unmeasured.
 
+**A13 and A2, photographed by JD** (10-24, 08:08-08:13,
+`scripts/menu_s0_photos.py`, which holds each frame until told to go on;
+`photos.json`):
+- **A13 passes.** Each photo matches its expected frame cell for cell:
+  - fixture-B-stop13: "FIXTURE B", rows 0-2 in B (magenta/cyan, yellow/yellow,
+    magenta/cyan), rows 3-7 still A's;
+  - fixture-A, and A again after the stop: identical, as they should be;
+  - F2: the 4×4 grid in table order.
+
+  The board's state agreed at every frame: the stop held through the shot,
+  the fixture stayed open, `invariant_fail` 0. The 1-pixel separator and
+  the scrollbar are too thin to resolve in a phone photo, so they rest on
+  the host test.
+- **A2 passes.** The Camera page at 08:12:49 and at 08:13:23, 3 s and 37 s
+  after the injected loss (losses +1, owner DEBUG). Both show the clock
+  line's colons, `V`, `%`, `5C` and `@`. There's no photo from before the
+  loss, but every conditional field is present in both photos, which is
+  stronger.
+- **The runner's first try lost frame 2:** the fixture closed on its idle
+  timer, because a pattern change (sub 0) isn't input and the keep-alive
+  clock restarted at each frame. Fixed with one clock across all the frames;
+  the rerun held frame 2 for 56 s.
+- **⚠️ A ghost of "100%"** shows faintly in the bottom-right dark grey cells
+  (A's row 7, F2's tile 15). It's at the dashboard's status-row battery
+  percentage (y 109-123), which gremlin's screen shows all day on USB. It's
+  faint and sits under a solid fill, so it's most likely the panel's image
+  retention, not a missed paint: a missed paint would show the text at full
+  white. Worth knowing for S1, whose menu will sit on that area.
+- The photos aren't in the repo: the phone's JPEGs carry location data, and
+  the crop that would have stripped it hung gremlin, which needed a hard
+  power-off.
+
 **Still to run:**
-- **The photographs:** A2's Camera page and A13's four fixture frames, against
-  the frames the host test rendered (`fixture-*.ppm` here).
 - **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
   (the physical knob cases).
