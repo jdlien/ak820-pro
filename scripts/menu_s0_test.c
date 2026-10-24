@@ -40,7 +40,8 @@ static bool     lost_latched;
 static int      fault_next_dma;     /* the next N transfers are given up */
 static int      fault_next_band;    /* the next N clear bands fail */
 static bool     bus_busy_once;      /* the next glyph finds the bus busy */
-static int      fault_next_fill;    /* the next N fills give up, as a polled send does: a loss, nothing painted */
+static int      fault_next_fill;    /* the next N fills give up, as a polled send does: a loss */
+static bool     fault_fill_prefix;  /* ...after painting their first half of rows (HC_POLLFAULT's mode 0) */
 static int      glyph_ops, fill_ops, bands_ok;
 static uint32_t pass_bytes, max_pass_bytes;   /* CPU-fed pixels in the current pass, and the most in any (C4) */
 
@@ -79,16 +80,18 @@ bool mb_clear_band(uint8_t band) {
     bands_ok++;
     return true;
 }
-void mb_fill(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c) {
+bool mb_fill(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t c) {
     dma_settle();   /* bus_quiesce */
     pass_bytes += (uint32_t)(x1 - x0 + 1) * (uint32_t)(y1 - y0 + 1) * 2u;
     if (fault_next_fill > 0) {
         fault_next_fill--;
+        if (fault_fill_prefix && y1 > y0) fill_fb(x0, y0, x1, (uint16_t)(y0 + (y1 - y0) / 2u), c);
         lost_latched = true;   /* spi0_poll_send's give-up sets blit_lost */
-        return;
+        return false;
     }
     fill_fb(x0, y0, x1, y1, c);
     fill_ops++;
+    return true;
 }
 bool mb_glyph(char c, uint16_t x, uint16_t y) {
     if (bus_busy_once) { bus_busy_once = false; return false; }
@@ -107,6 +110,7 @@ static void fake_reset(void) {
     memset(is_glyph, 0, sizeof is_glyph);
     dma_busy = lost_latched = bus_busy_once = false;
     fault_next_dma = fault_next_band = fault_next_fill = 0;
+    fault_fill_prefix = false;
     glyph_ops = fill_ops = bands_ok = 0;
     pass_bytes = max_pass_bytes = 0;
 }
@@ -631,13 +635,34 @@ static void test_pieces(void) {
         fx_input(3, MI_LATCH_NONE);
         CHECK(run_until_settled(400) > 0 && f1_mismatches(1, 3) == 0);
     }
-    /* A fill given up at every point of a B repaint: the loss repaints all. */
+    /* A fill given up at every point of a B repaint, with nothing painted
+     * and with a prefix painted: the loss repaints all, and the fault was
+     * really taken. */
+    int consumed = 0;
+    for (int prefix = 0; prefix < 2; prefix++)
+        for (int k = 0; k < full; k++) {
+            settled_a();
+            fx_set_pattern(1);
+            for (int i = 0; i < k; i++) pass();
+            fault_next_fill   = 1;
+            fault_fill_prefix = prefix;
+            CHECK(run_until_settled(800) > 0 && f1_mismatches(1, 0) == 0);
+            if (fault_next_fill == 0) consumed++;   /* late k: no fill was left to fail */
+            fault_next_fill = 0;
+        }
+    CHECK(consumed >= 2 * 4 * 2 * FX_ROWS);
+    /* A fresh opening, and a return from another owner, at every piece
+     * boundary of a B repaint. */
     for (int k = 0; k < full; k++) {
         settled_a();
         fx_set_pattern(1);
         for (int i = 0; i < k; i++) pass();
-        fault_next_fill = 1;
-        CHECK(run_until_settled(800) > 0 && f1_mismatches(1, 0) == 0);
+        fx_open();
+        CHECK(run_until_settled(400) > 0 && f1_mismatches(0, 0) == 0);
+        fx_set_pattern(1);
+        for (int i = 0; i < k; i++) pass();
+        fx_return_from_diag();
+        CHECK(run_until_settled(400) > 0 && f1_mismatches(1, FX_ROW_DIAG) == 0);
     }
     /* F2: a layout change at every piece boundary of its tiles. */
     settled_a();
@@ -704,6 +729,64 @@ static void test_op_end(void) {
     }
     fx_invalidate();
     CHECK(ms_stopped() && pass() == MS_STEP_STOPPED);
+
+    /* Every failed piece ends its op at once: counted, a stop on it latched,
+     * and the latch surviving navigation before the next pass. */
+    settled_a();
+    fx_set_pattern(1);
+    int fullb = run_until_settled(400);
+    int failed_pieces = 0;
+    for (int k = 0; k < fullb; k++) {
+        settled_a();
+        fx_set_pattern(1);
+        for (int i = 0; i < k; i++) pass();
+        uint8_t o = ms_ops();
+        ms_stop_after((uint8_t)(o + 1));
+        fault_next_fill = 1;
+        pass();
+        if (fault_next_fill) { fault_next_fill = 0; continue; }   /* that pass wasn't a fill */
+        failed_pieces++;
+        CHECK(ms_ops() == o + 1 && ms_stopped());
+        fx_input(1, MI_LATCH_NONE);
+        CHECK(ms_stopped() && !ms_stop_cancelled_take());
+    }
+    CHECK(failed_pieces >= 4 * 2 * FX_ROWS);   /* every row piece at least */
+
+    /* A glyph's DMA ends, then navigation or a loss comes before any
+     * ms_step() or ms_ops(): new_target() and the invalidation settle it
+     * first, so its stop is latched, not cancelled. */
+    for (uint8_t n = 1; n <= 9; n++)
+        for (int inval = 0; inval < 2; inval++) {
+            settled_a();
+            int g0 = glyph_ops;                           /* settled_a painted A's title */
+            fx_set_pattern(1);
+            ms_stop_after(n);
+            int g = 0;
+            while (g++ < 400) {
+                pass();
+                if (mb_busy() && glyph_ops - g0 >= n) break;   /* op n's DMA armed */
+            }
+            CHECK(mb_busy());
+            dma_settle();                                 /* it completes */
+            if (inval) fx_invalidate();
+            else       fx_input(1, MI_LATCH_NONE);
+            CHECK(ms_stopped());
+            CHECK(!ms_stop_cancelled_take());
+        }
+
+    /* A reached stop is let go by a fresh opening, and by a return. */
+    for (int ret = 0; ret < 2; ret++) {
+        settled_a();
+        fx_set_pattern(1);
+        ms_stop_after(10);
+        guard = 0;
+        while (!ms_stopped() && guard++ < 400) pass();
+        CHECK(ms_stopped());
+        if (ret) fx_return_from_diag();
+        else     fx_open();
+        CHECK(!ms_stopped());
+        CHECK(run_until_settled(400) > 0);
+    }
 
     /* The final piece failing: its op still ends once, and the loss repaints. */
     settled_a();
