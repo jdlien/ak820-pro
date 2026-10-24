@@ -34,15 +34,8 @@ file is the thread; read it first after a context loss. Updated 2026-10-24
   **The S1 gate PASSES** (GREMLIN-RESULTS §16): the longest pass 13.8 ms,
   every LED window 0.998-1.000, every completion inside 1,000 ms, and
   continuous input committing 5 slots in every 500 ms bucket.
-- **Next, autonomous:** the failure-path tests on the devfault build
-  (`via-devfault-a8b98bc0-20261024-135852.bin`). HC_POLLFAULT
-  `[0x07,0x13,0x75,n,mode,skip]`: skip 0-4 is a fill's window send, 5 its
-  payload; for a DMA arm it's the same five window sends. Each in mode 0
-  and 1, then check that a SPI1 read, a CPU draw and a DMA work, the owner
-  repaints, and `invariant_fail` is only 0x20 (`PO_FAIL_SPI0_POLL`, sticky,
-  expected). Also a lost completion (HC_BLITFAULT) followed by a failing
-  retry window. Write the runner as `scripts/menu_s1_fault.py`, after
-  `menu_s0_fault.py`. Then flash dev back.
+- **The failure paths pass, 24 of 24** (GREMLIN-RESULTS §17,
+  `scripts/menu_s1_fault.py` on devfault). The board is back on dev `a8b98bc0`.
 - **Then S1 proper:** `lcd_blit_mono` and the generated font, as mono
   patterns on the fixture; the cursor style and half or full rows with JD.
 - **The gate procedure (each run):**

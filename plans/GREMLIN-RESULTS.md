@@ -757,3 +757,31 @@ The road here took five runs:
 build. These are HC_POLLFAULT at each window send (fill and DMA) and at the
 payload, in both modes, each followed by a SPI1 read, a CPU draw and a DMA;
 and a lost completion followed by a failing retry window.
+
+## 17. The polled sends' failure paths: 24 of 24 (10-24)
+
+The devfault build of `a8b98bc0` (token `0x49f8e1e1`), run by
+`scripts/menu_s1_fault.py` (`history/config-menu-s1-20261024/fault-a8b98bc0.json`).
+HC_POLLFAULT `[n, mode, skip]` faulted, in mode 0 (gave up halfway) and
+mode 1 (after every byte):
+- **a row fill:** skips 0-4 are its five window sends, 5 its payload; a
+  selection change paints rows only;
+- **a title glyph's DMA arm:** skips 0-4, its five window sends, which are
+  revision 15's new path; a pattern change paints the title first;
+- **a lost completion** (HC_BLITFAULT 1) whose retry's window gave up (skip
+  5).
+
+**Every case passed:**
+- the menu owner took exactly one loss and repainted its target;
+- a later DMA (the title, with its flash read on SPI1) and a later fill both
+  worked;
+- no fault stayed armed;
+- `invariant_fail` held only `0x20` (`PO_FAIL_SPI0_POLL`, sticky, expected);
+- the owner stayed MENU;
+- no blit timeouts, except the retry cases' one each;
+- none after any case.
+
+This is codex's acceptance item for revisions 14 and 15. `dma_unprepare()`
+put SPID1 back each time.
+
+The keyboard on gremlin is back on dev `a8b98bc0`.
