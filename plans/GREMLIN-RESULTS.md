@@ -461,6 +461,29 @@ dropped 0, `invariant_fail` 0.
   It's the fill finding above, now a requirement for S1 (the build plan's
   "Open" item 4).
 
+**The LED dimming, fixed in a prototype** (10-24, firmware `gremlin/fill-poll`
+`f2b107be`, dev, token `0xc852966f`, heap gap 368 B; codex:
+[`review-codex-spi0-poll-2026-10-24.md`](review-codex-spi0-poll-2026-10-24.md),
+safe as it was, its three should-fixes done before the flash). Bulk SPI0
+sends (fills, RAM blits, the panel-order stream) are polled with the FIFO
+interrupt masked, so the row ISR preempts them instead of queueing behind
+them. Same script and checks before and after, every repaint completed,
+`invariant_fail` 0:
+
+| Window | `4b899118` row ISR/s | `f2b107be` row ISR/s |
+|---|---|---|
+| Dashboard | 3,725 | 3,726 |
+| The fixture toggling A and B | 3,039 / 3,062 (-18%) | **3,678 / 3,678 (-1.3%)** |
+| Fn+D in / Camera / out (1 s) | 3,714 / 3,721 / 3,713 | 3,710 / 3,720 / 3,721 |
+| Toggles in 5 s | 14 | 12 |
+| ge25 | 0 | 0 |
+
+**The cost:** a repaint takes ~15% longer in wall time (12 toggles in 5 s
+against 14), and the worst main-loop pass since the flash is **23 ms** (20
+before). That's under 25 ms but closer. The fixture paints a whole row or
+tile (up to 2,048 bytes) in one pass, so S1 splits big fills across passes
+(codex's point 4).
+
 **Still to run:**
 - **JD's hands:** A4 (a wake handed to Fn+D), A9 (Fn+Delete refused) and A10
   (the physical knob cases). A9 is done.

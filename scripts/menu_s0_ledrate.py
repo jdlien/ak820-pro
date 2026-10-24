@@ -48,13 +48,14 @@ def window(h, label, during=None, secs=WINDOW_S, first=None):
             time.sleep(0.1)
     b = read_isr(h)
     sb = read_stalls(h)
-    r = isr_rates(a, b, time.monotonic() - ta)
+    elapsed = time.monotonic() - ta   # a blocking toggle can overrun the nominal window
+    r = isr_rates(a, b, elapsed)
     r.update(label=label, work=work, ge10=sb["count_ge_10ms"] - sa["count_ge_10ms"],
              ge25=sb["count_ge_25ms"] - sa["count_ge_25ms"], passes=sb["passes"] - sa["passes"])
     print(f"{label:9s} {r['isr_per_s']:8.1f} ISR/s  mean {r['isr_mean_us']:6.1f} us  "
           f"max {r['isr_max_us']:6.1f} us  cpu {r['isr_cpu_pct']:5.1f}%  "
           f"timebase/wall {r['timebase_vs_wall']}  work {work}  "
-          f"ge10 +{r['ge10']}  ge25 +{r['ge25']}  passes/s {r['passes'] / secs:.0f}")
+          f"ge10 +{r['ge10']}  ge25 +{r['ge25']}  passes/s {r['passes'] / elapsed:.0f}")
     return r
 
 
@@ -65,14 +66,29 @@ def main():
     h = open_device()
     out = []
     pattern = [0]
+    failures = []
 
     def toggle():
+        """A pattern change, painted whole, or the measurement fails: a
+        repaint that didn't finish could pass for a cheap one (codex, 10-24)."""
         pattern[0] ^= 1
         st, seq = mutate(h, 0, bytes([pattern[0], 0]))
-        wait(h, seq)
+        if st != 0:
+            failures.append(f"sub 0 refused: status {st}")
+            return
+        state, s = wait(h, seq)
+        if state != "done":
+            failures.append(f"sub 0 {state}")
         end = time.monotonic() + 2.0
-        while not read_state(h)["pixels_done"] and time.monotonic() < end:
-            pass
+        while True:
+            s = read_state(h)
+            if s["pixels_done"]:
+                break
+            if time.monotonic() > end:
+                failures.append("pixels_done not reached in 2 s")
+                break
+        if s["invariant_fail"]:
+            failures.append(f"invariant_fail {s['invariant_fail']:#x}")
 
     try:
         to_dash(h)
@@ -99,10 +115,17 @@ def main():
         out.append(window(h, "fnd-exit", secs=1.0, first=lambda: op1(h)))
         time.sleep(2.0)
         out.append(window(h, "dash-1s", secs=1.0))
+        s = read_state(h)
+        if s["invariant_fail"]:
+            failures.append(f"invariant_fail {s['invariant_fail']:#x} at the end")
     finally:
         h.close()
     with open(a.out, "w") as f:
-        json.dump(out, f, indent=1)
+        json.dump({"windows": out, "failures": failures}, f, indent=1)
+    if failures:
+        print("FAILED, not a measurement:", "; ".join(sorted(set(failures))))
+        return 1
+    print("every repaint completed, invariant_fail 0")
     return 0
 
 
