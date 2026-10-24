@@ -44,7 +44,7 @@ sys.path.insert(0, HERE)
 import sleep_baseline as sb  # noqa: E402
 
 cm = sb.cm
-HUB, PORT = "0-1.4", "2"   # docs/test-bench.md: the relay cable's port
+HUB, PORT = "3-1.3.4", "2"   # docs/test-bench.md: the relay cable's port (the Acasis, from 10-23; 0-1.4 before)
 REASONS = {0: "none", 1: "key", 2: "cap", 3: "strays", 4: "blocked", 5: "knob", 6: "charge"}   # SLEEP_WAKE_*; 2 is the cap or the backstop
 # The record's flags (SLEEP_V_* in sleep.h)
 V_PCF, V_ACQ_DONE, V_USB_SOF, V_REATTACH, V_USB_20S, V_PLL_CEIL, V_SLEPT, V_BOUND = (1 << i for i in range(8))

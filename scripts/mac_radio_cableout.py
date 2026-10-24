@@ -5,7 +5,7 @@
     venv/bin/python scripts/mac_radio_cableout.py [--out-s 90] [--json OUT]
 
 a) the cable in: the status file reads transport=usb, radio=off;
-b) the cable's data cut (uhubctl, hub 0-1.4 port 2): within ~two media ticks
+b) the cable's data cut (uhubctl, hub 3-1.3.4 port 2): within ~two media ticks
    radio=qualified, transport=radio, radio_pushes counting; held --out-s;
 d) the data back: radio -> off ("the board is on USB") first, transport=usb
    on the next media tick; then the band read back over USB (HC_DEVHOOK op
@@ -27,7 +27,7 @@ import mac_raw81_s2 as ms  # noqa: E402  (patches win_raw81_s2's transfers for t
 cm = ds.cm
 w = ms.w
 STATUS = os.path.expanduser("~/Library/Application Support/ak820pro/ak820-agent.status")
-HUB = ["-l", "0-1.4", "-p", "2", "-e"]
+HUB = ["-l", "3-1.3.4", "-p", "2", "-e"]   # docs/test-bench.md: the relay cable's port
 KEYS = ("transport", "radio", "radio_qualified", "radio_sessions", "radio_pushes", "radio_failures",
         "radio_incomplete", "radio_silent", "radio_last_push", "radio_last_error", "media_last_text", "board")
 

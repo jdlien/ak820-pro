@@ -46,6 +46,7 @@ USAGE = """usage: relay status
        relay tap [ms]                  press the key (F19) once, default 100 ms
        relay on|off key|power|1|2|all  key: hold F19; power: the keyboard's 5 V
        relay toggle key|power|1|2
+       (either order: `relay power on` works too)
 (power off = on battery; keep the slider on BT or 2.4G. Details: scripts/usb_relay.py)"""
 
 
@@ -85,6 +86,9 @@ def switch(dev, n, on):
 
 
 def main(argv):
+    # Either order: `relay power on` reads as naturally as `relay on power`.
+    if len(argv) == 2 and argv[1] in ("on", "off", "toggle") and argv[0] not in ("on", "off", "toggle"):
+        argv = [argv[1], argv[0]]
     devs = hid.enumerate(VID, PID)
     if len(devs) != 1:
         sys.exit(f"expected one USB relay ({VID:04x}:{PID:04x}), found {len(devs)}")

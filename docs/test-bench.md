@@ -6,8 +6,22 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
 
 ## The short version
 
+- **The new Mac, from 10-23.** The bench moved to the Acasis, on bus 3:
+  - the keyboard's relay cable: hub `3-1.3.4` port 2;
+  - ⚠️ the UPS (`CP1000AVRLCDa`): the same hub's port 4, so name the port.
+    A wrong `-p` drops the UPS off the Mac, and with it the Mac's shutdown
+    signal;
+  - the relay and the 2.4G dongle: the hub on port 3 (`3-1.3.4.3`, ports 1
+    and 2);
+  - the QT Py: `3-1.3.3` port 2.
+
+  `0-1.4`, the dock's hub on the old Mac, does not exist here. The scripts
+  pass `-e`, so a stale location fails instead of cutting something else.
+  The wake rig is gone: a lead tore off its switch on 10-23, so relay 1
+  presses nothing.
 - **The bench's tools at a glance (10-16):** relay 2 switches the
-  keyboard's charging; relay 1 presses a key (the wake rig, below);
+  keyboard's charging; relay 1 presses a key (the wake rig, below; broken
+  10-23);
   `uhubctl` cuts its USB data; the power logger measures the pack; the
   lighting and the screen's backlight are set from the Mac; and a listener
   times every rig keystroke's arrival. Everything but the wiring runs
@@ -153,21 +167,25 @@ run. Two caveats:
 ## Truly unplugged, from software: the relay plus `uhubctl` (proven 10-09)
 
 The relay cuts the keyboard's 5 V. `uhubctl` cuts the data on the port the
-relay cable plugs into. Here that is the dock's hub `0-1.4`, port 2; port 3
-is the relay itself and port 4 JD's Stream Deck, so name the port. With both
-off, the keyboard is unplugged except for the ~0.2 mA its D+ pull-up drives
-into the hub's pull-down.
+relay cable plugs into. On the new Mac (from 10-23) that is the Acasis's
+hub `3-1.3.4`, port 2; port 3 is the hub holding the relay and the 2.4G
+dongle, and port 4 the UPS, so name the port. On the old Mac it was the
+dock's hub `0-1.4`, port 2. With both off, the keyboard is unplugged except
+for the ~0.2 mA its D+ pull-up drives into the hub's pull-down.
 
 ```sh
-uhubctl -l 0-1.4 -p 2 -a off -e   # data off; -e: this hub only, no USB3 twin
-uhubctl -l 0-1.4 -p 2 -a on  -e
+uhubctl -l 3-1.3.4 -p 2 -a off -e   # data off; -e: this hub only, no USB3 twin
+uhubctl -l 3-1.3.4 -p 2 -a on  -e
 ```
+
+`uhubctl` comes from Homebrew (`brew install uhubctl`); `setup.sh` does not
+install it.
 
 - **Measured 13:10-13:11 10-09**, with relay 2 off and the board on battery:
   - `off` at 13:10:28.34: the keyboard left USB 0.9 s later;
   - `on` at 13:11:29.28: back 0.7 s later, with no hang;
   - the board stayed on battery and linked throughout.
-- **Check the port map first** (`uhubctl -l 0-1.4`, status only) after any
+- **Check the port map first** (`uhubctl -l 3-1.3.4`, status only) after any
   re-cabling, and run it under a timeout: an `-a on` once hung on macOS.
   macOS has no `timeout`; `perl -e 'alarm 10; exec @ARGV' uhubctl …` works.
   ⚠️ On 10-15 that status call printed nothing within 10 s, with the keyboard
@@ -187,9 +205,9 @@ uhubctl -l 0-1.4 -p 2 -a on  -e
   off from 20:57 until 22:43: the board ran on the pack, awake (27.5 mA),
   out of the daemon's reach, and every later script would have refused to
   start ("relay 2 is off"). After killing one, check `usb_relay.py status`
-  and `uhubctl -l 0-1.4 -p 2`, then put back what the `finally` would have,
+  and `uhubctl -l 3-1.3.4 -p 2`, then put back what the `finally` would have,
   power first: relay 2 on (a board stopped asleep wakes when charging
-  starts; with a full pack, tap the rig), data on, the arm cancelled (op 14
+  starts; with a full pack, press a key: the rig is gone), data on, the arm cancelled (op 14
   sub 4, arg 2), the bench sleep time cleared (op 14 sub 5, 0 ms), the mode
   put back (op 14 sub 1; the run prints the one it found), the stage
   released.
@@ -361,8 +379,10 @@ converts them, finding the QT Py by its USB ids (Adafruit `239a`).
 **In service since 10-15**, with the keyboard back in JD's daily use: the
 pack's lead comes out of the reassembled case to the harness, and the board
 runs as it always does. That makes three USB ports for a keyboard built to
-need none: the keyboard on its relay cable (dock hub `0-1.4` port 2), the
-relay (port 3) and the QT Py (`0-1.4.1` port 4).
+need none. On the new Mac (from 10-23): the keyboard on its relay cable
+(hub `3-1.3.4` port 2), the relay (`3-1.3.4.3` port 1) and the QT Py
+(`3-1.3.3` port 2). On the old Mac they were on the dock's hub: `0-1.4`
+ports 2 and 3, and `0-1.4.1` port 4.
 
 **What to read for what:** current and mAh from the INA228 (`current_ma`,
 `charge_mah`); the pack's voltage from the MAX17048 (`vcell_mv`), not the
@@ -496,6 +516,14 @@ INA228's `vbus_mv` (below).
   the USB cables, which charging shifts by tens of mV (an estimate).
 
 ## The wake rig: relay 1 presses a key (10-16)
+
+⚠️ **Broken 10-23: a lead tore off the switch, and the rig is retired.**
+Relay 1 still clicks, but it presses nothing. Reading a sleeping board now
+takes a key pressed by hand, and the scripts below that tap the rig
+(`--rig`, `relay tap`, the wake and keydrop tests) have no key to press.
+(0,13) is play/pause again on both base layers (set in VIA, read back
+23:44 10-23); the knob's press is still play/pause too. The section stays
+as the record of how it worked.
 
 **What it is.** A key the Mac can press. A stripped switch
 housing with two leads soldered on sits in the socket at matrix (0,13), the
