@@ -36,7 +36,8 @@ file is the thread; read it first after a context loss. Updated 2026-10-24
   `lcd_blit_flash()` sends its window with `lcd_window_polled()` BEFORE
   `blit_done = false` and `spiSN32FlashDmaPrepare()` (SPI0 still plain 8-bit
   FIFO then), so every DMA arm sheds ~1.8 ms of byte-at-a-time `spiSend`.
-  Then: codex (the DMA arm has a crash history: `docs/hardware.md`, the
+  **Built as `7c157834`** (`via-dev-7c157834-20261024-134754.bin`, token
+  `0x3158f628`, heap gap 256 B; devfault 152). Then: codex (the DMA arm has a crash history: `docs/hardware.md`, the
   2026-09-22/23 campaign), host tests, build, flash, rerun the gate.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);

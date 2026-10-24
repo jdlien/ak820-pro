@@ -1,4 +1,4 @@
-# The configuration menu: how to build it (revision 14, 2026-10-24)
+# The configuration menu: how to build it (revision 15, 2026-10-24)
 
 **Resume from [`WARREN-STATUS.md`](WARREN-STATUS.md)** (the thread: what is on the board, the next step, the rules).
 
@@ -7,9 +7,17 @@ with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
 wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
 animation slot is empty. A11's first runs missed the media gate on a slow
 SMTC. **Revision 12 was cleared for S1** (codex, 10-24: "ready for S1 to be
-built from"); revisions 13 and 14 amend two rules from S1's gate runs,
-awaiting codex. Owned by Warren
+built from"); revisions 13 to 15 amend rules from S1's gate runs. Owned by Warren
 (gremlin's session) from 10-23.
+- **Revision 15** (10-24, from the gate's fourth run, `GREMLIN-RESULTS.md`
+  §15: Fn+D entry passed 1,000 ms once, at ~135 glyphs a pass each): **the
+  DMA arm's window is polled too.** `lcd_blit_flash()` sends it with
+  `lcd_window_polled()` after `spiSN32FlashDmaPrepare()`, which rewrites
+  SPI0's CTRL0 and toggles SPIEN so nothing may go out between it and the
+  pixels with CS low, and before `blit_done` falls, so the entry check
+  passes. A window that gives up hands SPID1's vector back
+  (`dma_unprepare`, as Abort would after Fire) and `lcd_blit_flash()`
+  returns false; the clear and the retry use that.
 - **Revision 14** (10-24, from S1's second gate run, `GREMLIN-RESULTS.md`
   §13): **a polled bulk send's window is polled too** (C4). Through `tx8()`
   each of its 11 bytes was a whole `spiSend()`, ~0.2 ms of wall time at
@@ -668,12 +676,11 @@ the code is raised before working around it.
 
   `lcd_fill_rect`, `tx_pixels` and the stream use it, and since revision 14
   their window too (`lcd_window_polled`: each command byte and its
-  parameters a polled send, DC changed only after one returns). The DMA
-  arm's window, the panel's init and MADCTL, and other single bytes stay on
-  `spiSend()`: the DMA arm sends its window after clearing `blit_done` for
-  its own transfer, and a polled send's entry check would refuse it. A test
-  build's HC_POLLFAULT takes a skip count, so a fault can land on each of a
-  fill's five window sends or on its payload. Callers have quiesced the bus, so no
+  parameters a polled send, DC changed only after one returns). Since
+  revision 15 the DMA arm's window as well, between `Prepare()` and
+  `blit_done` falling. The panel's init and MADCTL stay on `spiSend()`. A
+  test build's HC_POLLFAULT takes a skip count, so a fault can land on each
+  of a fill's five window sends or on its payload. Callers have quiesced the bus, so no
   DMA is in flight and none can start
   ([`review-codex-spi0-poll-2026-10-24.md`](review-codex-spi0-poll-2026-10-24.md)).
   Prototyped as `gremlin/fill-poll` `f2b107be`: the repaint cost fell from
