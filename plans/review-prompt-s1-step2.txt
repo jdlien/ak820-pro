@@ -1,0 +1,21 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+This is a code review before a flash to the test board (the keyboard on gremlin). It is S1's second increment, on qmk_firmware-ak820pro's branch gremlin/s1, after the first (6a9a16b7, which you reviewed in plans/review-codex-s1-step1-2026-10-24.md, dispositions there). `git -C qmk_firmware-ak820pro diff 6a9a16b7 01bd2982` shows all of it; ak820-pro's scripts/menu_s0_test.c gained test_meas() and sub 10's checks (they pass).
+
+What it does, against plans/CONFIG-MENU-BUILD-PLAN.md revision 12's C10:
+1. op 27 sub 10 (menu/menu_ops.c op27_meas) and sub 5's bytes 26-27 and 31; the scheduler's measures in menu/menu_slots.c (piece cost, op latency, repaint latency, tgen, settled, superseded, committed, the layout's clear bands), with note_settled() at pixels_done's first truth for a target.
+2. menu/menu_meas.c (new, compiled in every build): meas_ticks() extends the 16-bit system counter in software, meas_pass() times every pass from menu_task(), the restore's and the debug page's clear bands, the session token. health.c's health_reset_generation().
+3. graphics/display.c: the debug page's dbg_gen / dbg_done_gen / dbg_sec (dev builds only), dbg_note_composed()'s checksum, debug_painted() / display_debug_done(), and Camera's clock composed from draw_debug_page()'s single rtc_get_time() sample (all builds).
+4. graphics/display.c: the restore marks every text line's and the clock's shadow blank when its last clear band succeeds (shadow_mark_all_blank, a new `blank` field), so queue_line() paints them without its "unknown" full-width clears, retire_line() skips them, and draw_text_slot(true) keeps them (shadows_trusted). The display probe (scripts/devhook.py read) had the restore's text slot stage at 16.1 ms, most of it those clears of an already-blank band. This changes the dashboard's own restore in every build, not only the menu's.
+Sub 11 was considered and dropped: the existing DPROBE already times each restore stage.
+
+RAM: the heap gap fell from dev 368 to 272 B, devfault 256 to 168, daily 2,472 to 2,384 (the floor is 128).
+
+Please review, adversarially, for correctness and safety on the board:
+1. The blank shadows: is the claim "nothing the restore's stages 1-5 paint lands in a text line's or the clock's rect" true (check the geometry: TEXT_Y, CLOCK_Y, the AM/PM tile, the icon gutter, the conn status line, draw_clock's own paths)? Can anything between the last band and the text slot stage invalidate or overwrite those rows without clearing the blank mark (housekeeping during the restore, a loss, an overlay, the clock's AM/PM shadow, gq overflow or dropped glyphs, a WAITING restore resumed)? Could a stray glyph result, the bug the comments warn about?
+2. C10's measures against the plan's text: is each field what C10 says (the interval's scope "any owner", the over-15,000 µs boundary, op latency's start and end, an abandoned op, settling at pixels_done's first truth, superseded, the books), and can the scripts read them as C10 prescribes? Is debug_done's predicate C10's (clear, clean grid, no pending composition including an uncomposed RTC second, the generations, no transfer, no loss)? Does dbg_gen move exactly when C10 says?
+3. meas_ticks(): the software extension's correctness (a missed wrap if a pass exceeds 349 ms, deep sleep, the first call), and whether any caller can run off the main thread.
+4. Costs: the per-pass work added (meas_pass, debug_done_note's rtc_get_time on the debug page, the checksum), and the RAM.
+5. Anything that makes flashing this to the test board unsafe, or the measurement planned with it misleading.
+
+For each finding: severity (blocker / should-fix / note), file and line, the failure scenario, and the fix. Say plainly whether it's safe to flash to the test board.
