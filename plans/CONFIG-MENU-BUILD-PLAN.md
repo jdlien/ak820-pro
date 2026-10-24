@@ -4,7 +4,7 @@ Status: **S0 built and accepted on the keyboard on gremlin**: A1-A13 pass,
 with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
 wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
 animation slot is empty. A11's first runs missed the media gate on a slow
-SMTC. Revision 12 is for S1, awaiting codex's verification. Owned by Warren
+SMTC. **Revision 12 is cleared for S1** (codex, 10-24: "ready for S1 to be built from"). Owned by Warren
 (gremlin's session) from 10-23.
 - **Revision 12** folds in codex's verification of revision 11
   ([`review-codex-config-menu-build-plan-rev11-2026-10-24.md`](review-codex-config-menu-build-plan-rev11-2026-10-24.md)),
@@ -940,7 +940,7 @@ revision, never during a run.
   | 24, 25 | the passes in the interval (u16, **wrapping**): a summary only. Validation uses health page 2's u32 `passes`, `count_ge_10ms` and `count_ge_25ms`, which `health.c` snapshots together |
   | 26, 27 | the session token (u16): 0 at boot (in RAM cleared at reset); each `arm` 1 sets it to the next value of a boot-cleared counter, skipping 0. It reads 0 after any reboot, so a token that changed, or reads 0, ends the session: the run fails |
   | 28 | the health-reset generation (u8, wrapping): every `health_reset()` moves it. It must not change across a measured interval |
-  | 29 | `dbg_sec`: the RTC second (0-59) that the composition `dbg_gen` shows; 0xFF before the first composition |
+  | 29 | `dbg_sec`: the RTC second (0-59) that the composition `dbg_gen` shows, taken from the same `rtc_get_time()` sample that composes the clock text (not `rtc_get_seconds()`, the free-running edge counter, whose value mod 60 isn't the calendar second); 0xFF before the first composition |
   | 30 | the RTC's current second (0-59), read in the same reply |
 
   **A1's "unknown sub" check moves from 10 to 31.**
