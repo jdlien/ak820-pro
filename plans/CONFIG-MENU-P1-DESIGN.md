@@ -429,13 +429,185 @@ amendment is approved), every label, value, title, flash and the hint,
 About's lines, Reset counters' pages, and P1b-d's words. Nothing here is
 final until then.
 
+## P1b: Lighting, Screen and the edit transaction (draft 1, 10-24 night)
+
+The mockup's previewing half of the menu, on P1a's machinery. Everything not
+said here is P1a's (the slot rules, the one-lit-row rule, the session
+identity, the latched model, the hint and the flash, the icons).
+
+### The tree, added
+
+The top level becomes the mockup's page one less what is P2/P3's: **Lighting,
+Screen, Power, Clock, Diagnostics, Help, About, Exit** (eight rows: one page,
+no scrollbar). Connection, Indicators and Battery join with P2/P3.
+
+| Node | Kind | Rows / layout | Value on its parent's row |
+|---|---|---|---|
+| Lighting | list | ◀ Back, Effect, Brightness, Hue, Saturation, Second color *or* Speed, Lights | ▶ |
+| Screen | range editor, 0-23, step 1 | the range layout | `Off`, else `round(level*100/23)%` |
+| Effect | previewing choice | ◀ Back, the nine effects (two pages, the scrollbar) | the effect's readout name |
+| Brightness, Saturation, Speed | range editor, 0-255, step 5 (×4 fast) | the range layout | `(v*100+127)/255 %` (the readout's rounding) |
+| Hue, Second color | hue editor, 0-255 wrapping, step 3 (×4 fast: 12) | the hue layout | `h*360/256` degrees; Second color `+` that of `speed` |
+| Lights | previewing choice | ◀ Back, Off, On | `On` / `Off` |
+
+- **Second color or Speed** (the row's label and its editor) follows the
+  *live* effect: Alphas/Mods uses `speed` as its second colour's hue offset
+  (`alpha_mods_anim.h:11`), as the readout says (`fmt_speed`).
+- **The effects' names and order:** one table, `{mode, name}` for each enabled
+  effect in mode order (Solid, Alphas/Mods, Cycle All, Cycle L-R, Cycle U-D,
+  Jellybean, Heatmap, Rainfall, Drift), each entry under its `ENABLE_*` as
+  `rgb_mode_short()`'s cases are; `param_overlay.c` and the menu both read it
+  (the plan's "moved out of PARAM_OVERLAY"). A mode the table doesn't list
+  (none today) shows as its number and has no row: the choice opens on Back.
+- **Icons** (the face gains two cells' worth and a third): Lighting the bulb
+  (U+F834, one cell, JD's pick; the palette U+F8D7 is the alternative if the
+  dashboard's power-mode bulb confuses), Screen the desktop (U+F108, two
+  cells). Their headings carry them, as P1a's do.
+- **Fast turns:** an input carrying two or more detents, or one within 90 ms
+  of the last, takes the fast step (the mockup's rule; `menu_input` already
+  has the detents and the time).
+
+### Choosing and previewing (the mockup's rules)
+
+- **Previewing choices** (Effect, Lights) open with the cursor on the current
+  value, the saved one's square check beside it. Turning previews at once; on
+  Back, the value from before the edit. A click on an option saves it
+  ("Saved"); a click on Back, or a hold, cancels ("Cancelled").
+- **The editors** (range, hue): turning previews; a click saves; a hold
+  cancels. The flash shows on the list they return to.
+- **The backstop:** while a previewing edit is open, the 24 s idle close
+  doesn't apply; 3 minutes with no knob input cancels the edit and closes the
+  menu (C8). Typing and host traffic still don't count as input (C7).
+- **Closing mid-edit, by any route** (`Fn`+click, the backstop, the
+  animation or anything else that ends the session, C1): the edit cancels,
+  restoring, before the owner changes. A loss under the menu isn't a close.
+
+### C6: the edit transaction, concretely
+
+- **One edit at most,** `edit_t` (9 B, inside C5's 16 B reserve): the field;
+  the RGB snapshot (mode, h, s, v, speed, enable) or the LCD level; the
+  transaction's state. Opened when an editor or a previewing choice opens;
+  closed by Save, Cancel or an external write.
+- **The RGB adapter** (`menu_glue.c`, behind `menu_env.h`):
+  - QMK's mode and HSV setters return early while the lights are off
+    (`rgb_matrix.c:606, 658`); speed's doesn't. So preview, save and cancel
+    each run with `enable` set inside the call and restore it last (C6).
+  - **Preview:** the field's `_noeeprom` setter.
+  - **Save:** the field's saving setter (it flags the config dirty; QMK's
+    flush writes it, once the board's settle rule allows,
+    `ak820pro.c:703-758`). Lights: `rgb_matrix_enable()` or
+    `rgb_matrix_disable()`, explicitly, never a toggle.
+  - **Cancel:** every field of the snapshot back with `_noeeprom` setters,
+    `enable` last. A dirty flag set before the edit opened stays set, so its
+    pending write still happens, with the restored values.
+- **The flush hold:** `rgb_matrix_eeprom_flush_allowed()` (the board's
+  override) also returns false while an RGB edit is open, so no previewed
+  value is ever written.
+- **The Screen adapter:** preview `display_set_brightness(level)` (RAM only);
+  save that plus `kb_eeconfig_set_lcd_brightness()`; cancel
+  `display_set_brightness(before)`. C7's override keeps the panel lit at
+  `max(requested, 1)`, so previewing Off shows level 1 until the menu closes.
+- **External writers cancel first, then apply** (C6's list, at these sites):
+  - **VIA:** a new `via_command_kb()` on the board (none exists; the weak
+    default returns false, `via.c:286, 296`). For a custom set-value or save
+    on the RGB-matrix channel it cancels an open RGB edit and returns false,
+    so VIA's own processing and reply go on.
+  - **`RM_*` keys:** `process_record_kb` (`ak820pro.c:345`) runs before
+    `process_rgb_matrix` (`quantum.c:355, 417`); on release, since
+    `RGB_TRIGGER_ON_KEYDOWN` isn't defined.
+  - **`UG_*` keys:** the same place, on press (`process_underglow`,
+    `quantum.c:414`, runs them into the RGB-matrix setters).
+  - **`RGBM_*`** (`ak820pro.c:498-508`) and **`param_repeat_step()`**
+    (`param_overlay.c:44`), before each step.
+  - **`SCR_UP`/`SCR_DN`** (`ak820pro.c:386-395`, and their repeat) and dev
+    ops 4 and 5 cancel a Screen edit.
+  - The external cancel pops the editor to its list with "Cancelled"; the
+    list then shows the externally written values (the latched model).
+- **Not writers** (C6): the power ladder's caps and scale, the battery's RGB
+  cut, deep sleep, `consumer_mod.c`, the lock-light channel. They cancel
+  nothing.
+
+### The latched model, extended
+
+P1a's `model_power`/`model_clock` grow by the RGB fields and the LCD level,
+synced at `menu_input`'s start and in `menu_tick` as now. The rows show the
+model; while an edit is open the model *is* the preview, so the list behind
+an editor is right when it returns. An external change while a list shows
+repaints the rows whose signature it changes.
+
+### Signatures for value rows (exact, still 16 bits)
+
+P1a's item signature has four bits of value; a Lighting row needs eight. A
+new class in the About space, which uses only bits 8-10 under `0xC000`:
+**`0xE000 | which << 10 | lit << 9 | variant << 8 | value`**, `which` the row
+(Effect, Brightness, Hue, Saturation, Speed/Second color, Lights, Screen;
+seven of eight), `variant` Speed's label against Second color's, `value` the
+field's byte (the level for Screen). Exact, no hashing; distinct from every
+other class (bit 13 is clear in About's).
+
+### The editors' layouts (C8's geometry)
+
+New layouts beside `L_LIST` and `L_CONFIRM`; each slot one bounded op a pass
+(C3), whole footprint, background included.
+
+| Layout | Slots, in paint order |
+|---|---|
+| **Range** | the title; the separator; the **bar** as 7 column bands (x 13-114 in bands of 16, the last 6; y 51-60): each band's signature is where the fill's edge falls in it (empty, full, or the column), so a step repaints one or two bands, one piece each (≤ 320 B); the **value** (10 big-face cells at x 14, y 22, centred: one slot of 10 chunks, a glyph each, signature the field and its value); the three **hints** (y 72, 86, 100) |
+| **Hue** | the title; the separator; the **envelope** (x 0-127, y 20-40) as 16 column bands of 8: each band composes the strip's hue columns (y 22-35), the marker's white line (y 20-37) and its yellow triangle (5, 3, 1 px, y 38-40) where they fall in it, its signature the strip's presence and the marker's column relative to it, so a step repaints two or three bands (336 B each, one piece); the **value** (y 44, as the range's); the hints |
+
+- **Bands first, then the value:** the bar or marker moves at once and the
+  number follows, as the scrollbar leads the rows (JD).
+- **The big face** is `FONT_STATUS` (10x23, every ASCII glyph,
+  `display.c:72-88`), drawn by a new `mb_glyph_big()` beside `mb_glyph()`:
+  one DMA from external flash a pass, armed and completed as `mb_glyph`'s.
+- **The strip's colours:** `hsv_to_rgb(h, 255, 255)` per column, RGB565; the
+  marker at `4 + round(h*120/256)`, Second color's at `(hue + speed) & 255`.
+- **A new backend primitive, `mb_pixels(x, y, w, h, fn, ctx)`:** composes
+  w×h RGB565 pixels from `fn(ctx, col, row)` into the shared scratch and
+  sends them polled (the mono path's send, `lcd_blit_mono`'s cleanup on
+  failure), at most `MB_PASS_BYTES`. The bands use it; the host tests' fake
+  writes the framebuffer.
+- **Slots:** range 13, hue 22, within the 24.
+
+### What is deferred, and why
+
+- **Half-row slots** (a row as two slots, so a value-only change repaints
+  half): P1b's rows change value only on an external write or an edit's end,
+  and their exact signatures repaint them whole (9 pieces). The ticking
+  Clock examples need half rows; they come with the Clock options, after
+  P1b.
+- **Connection, Indicators, Battery:** P2/P3.
+
+### RAM
+
+`edit_t` 9 B (reserved 16); the model's new fields 6 B; the effect table and
+the editors' layouts in flash. No new buffer: the bands and the big face use
+the scratch and DMA. Under C5's 420 B.
+
+### Tests
+
+- **Host:** every row of Lighting and the top level against the face; each
+  editor's frames (the bands, the value, the hints) against a reference
+  render; turn, fast turn, wrap (hue), clamp (ranges); save, cancel by
+  click, hold, Back, close, backstop; each external writer mid-edit (a fake
+  VIA packet, RM_ release, UG_ press, RGBM_, the repeat, SCR_, dev ops 4/5):
+  restored, then applied; the flush hold; Save with the lights off; Lights
+  saved both ways; one lit row and one cursor a pass; no pass over
+  `MB_PASS_BYTES`.
+- **On the board (the plan's P1 exit gates):** real VIA set and save packets
+  mid-edit (a script over raw HID, never enumerating); real `RM_*` keys
+  (JD's `Fn`+arrows); a Save with RGB disabled, and Lights saved; visibility
+  from Screen Off and from level 0; the session through Diagnostics;
+  persistence across a reboot after a settled save and after a cancel; the
+  timing on the editors (`menu_p1a_board.py` extended); JD's session.
+
 ## P1b, P1c, P1d
 
-Each gets its own detailed section and codex round before its code. P1b's
-must cover the rows' values changing under a preview (slots per half),
-C6's writers, the editors' slots and pieces, and the Screen item's C7
-interplay (the requested level previewed while the override keeps it
-visible). P1d's: the bunny as 8-bit grey (1,134 B, amending "Generated
+P1b's design is the section above (the earlier note asked it to cover the
+rows' values changing under a preview, C6's writers, the editors' slots and
+pieces, and the Screen's C7 interplay: all there, half rows deferred with a
+reason). Each of P1c and P1d gets its own detailed section and codex round
+before its code. P1d's: the bunny as 8-bit grey (1,134 B, amending "Generated
 files"' 2,268 B RGB565), expanded by a new `lcd_bus.c` primitive beside
 `lcd_blit_mono` with its failure cleanup; image pieces and the credits'
 text pieces as separate ops; the QR code's module image (106 B) unpacked and
