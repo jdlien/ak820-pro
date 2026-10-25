@@ -74,18 +74,34 @@ This file is the thread; read it first after a context loss. Updated
   build's `test_menu_enable`. On the board (GREMLIN-RESULTS §20,
   `scripts/menu_p1a_board.py`): every screen right in 9 runs; **timing
   misses C10 marginally** (one pass of 15.1-16.8 ms in about two runs of
-  three): a text piece is ~5.6 ms. Owed: where the piece's time goes; the
-  deferred `report_kind` edge (codex, nonblocking); JD's hands-on session.
+  three): a text piece is ~5.6 ms. Since then (all in GREMLIN-RESULTS
+  §20-20c and the design doc's "JD's first look" and "JD's decisions"):
+  JD's first look ("flawless, as designed"), his tweaks (`22312b44`,
+  `62bb64f9`: the scrollbar first, #FF9A9A for Back and Exit, the dot's
+  space), the piece's time measured (§20b; JD chose (b), ~16-17 ms
+  accepted), the hint pair and the `report_kind` fix (`1e84bf17`, on the
+  board from ~20:00, dev token `0xd0254b00`).
+- **Icons (10-24 evening):** the icon picker
+  (https://claude.ai/artifact/CQcZf9LUWnyvUQyMaCa8PM, made by
+  `scripts/gen_icon_gallery.py`); JD's picks built in `925f029b` (dev token
+  `0x58ddeb40`): the wrench, ◀ ▶, the circled check (squared fallback, op 27
+  sub 14 flips it: scratchpad `check.py circle|box`), the cursor in x 0-2,
+  top-level icons. Design doc: "JD's icons". Codex before the flash.
 - 📌 **PINNED, JD (10-24): a manual review of ALL the menu's text before P1
   is accepted** -- Help's topics (`gen_menu_text.py`, its one amendment "3
   min mid-edit" approved), the labels, values, titles, flashes, the hint,
   About's lines, Reset counters' pages. JD will edit them himself.
+  **JD is editing `plans/MENU-TEXT.md` now (uncommitted, his): don't touch
+  it.** When he's done: carry his edits into the code in one batch, and
+  bring the file's glyphs up to date (◀ ▶, the check, the icons; it still
+  shows ‹ > •). One of his lines is cut off: "JD: I wonder if we can".
 - **Next:**
-  1. P1a: codex's second design round, then the code (plans/CONFIG-MENU-P1-DESIGN.md).
-  2. P1's real menu: the tree, lit text, half rows; the old highlight
-     removed before or with the new one (BACKLOG, fast spins); the menu
-     keycode (plan "Open" 3).
-  3. Extend `menu_s0_ledrate.py` / the gate to F3.
+  1. Flash `925f029b` after codex; JD's look at the icons, the cursor and
+     the circle against the square.
+  2. P1b (Lighting and Screen, the edit transaction, the editors, half-row
+     slots): its design section and a codex round before code.
+  3. The Clock options (the design doc's "JD's decisions").
+  4. JD's text edits; then P1c and P1d.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;

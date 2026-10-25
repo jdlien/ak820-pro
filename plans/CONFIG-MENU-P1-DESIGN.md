@@ -375,6 +375,35 @@ with the prototype's other items still to come (P1b-d, P2-P4). His notes:
   slots (P1b), at ~8 pieces a second while the Clock list shows. The top
   level keeps a short label, not a ticking time.
 
+## JD's icons (10-24, evening)
+
+Picked in the icon picker (`scripts/gen_icon_gallery.py`, an artifact: every
+icon-like Cozette glyph at the panel's pixels, with the menu's list geometry
+as a preview). Built in `925f029b`:
+
+- **The wrench** (U+1F527, double width) before "Configuration".
+- **◀ and ▶** (U+25C0, U+25B6) for Back's ‹ and the submenu rows' >.
+- **The circled check** (U+F058) for the saved option's dot, in cells 0-1;
+  **the squared one** (U+F631) is the fallback if the circle renders badly
+  (dev: op 27 sub 14 flips it live).
+- **A cursor** (U+1FB6C, the left triangular quarter block, 3 × 11 px) left
+  of the selected row, in its colour: a list row's lead is now x 0-3 (the
+  cursor's columns 0-2 and a 1 px gap) where it was x 3, so no text moves
+  (JD: "It only takes 4px + 1px margin"; the bezel is no concern, the menu is
+  read from straight above). The lead only widens chunk 0 (61 → 64 px; the
+  same four pieces, 512 B at most).
+- **Top-level icons**, label at cell 2: Power the bolt (F0E7), Clock the clock
+  (F017), Diagnostics the microchip (F2DB), Help the ? circle (F059), About
+  the i circle (F05A), Exit × (F00D). Proposed for the planned items, in the
+  picker: Lighting the bulb (F834; the dashboard's power mode is a bulb too,
+  so the palette F8D7 is the alternative), Screen the desktop (F108),
+  Connection Bluetooth (F293), Indicators the sun (F185, JD: "super bright
+  light shining in your eye"), Battery (F240), Bootloader (F498).
+- **Spacing:** a mark keeps at least 4 px before the next letter: a space
+  follows it unless its own blank right-hand columns give that (JD: "at least
+  1px of margin"; a double-width icon can ink all 12 columns). A 7 px icon on
+  a 6 px advance (half of Cozette's icons) takes two cells and leaves 5 blank.
+
 ## Before P1 is accepted: JD's text review (pinned, 10-24)
 
 JD will review and edit **all** the menu's text by hand once P1 nears its
