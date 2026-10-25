@@ -429,11 +429,15 @@ amendment is approved), every label, value, title, flash and the hint,
 About's lines, Reset counters' pages, and P1b-d's words. Nothing here is
 final until then.
 
-## P1b: Lighting, Screen and the edit transaction (draft 1, 10-24 night)
+## P1b: Lighting, Screen and the edit transaction (draft 2, 10-24 night)
 
 The mockup's previewing half of the menu, on P1a's machinery. Everything not
 said here is P1a's (the slot rules, the one-lit-row rule, the session
-identity, the latched model, the hint and the flash, the icons).
+identity, the latched model, the hint and the flash, the icons). **Draft 2
+answers codex's first round**
+([`review-codex-p1b-design-2026-10-24.md`](review-codex-p1b-design-2026-10-24.md)):
+the writers it missed, the lit bit, the rollback's place, the hue bands'
+overlap, the RAM, the tests.
 
 ### The tree, added
 
@@ -464,8 +468,12 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
   dashboard's power-mode bulb confuses), Screen the desktop (U+F108, two
   cells). Their headings carry them, as P1a's do.
 - **Fast turns:** an input carrying two or more detents, or one within 90 ms
-  of the last, takes the fast step (the mockup's rule; `menu_input` already
-  has the detents and the time).
+  of the last, takes the fast step (the mockup's rule). `menu_input` has the
+  detents and `now`; the last turn's time is new state (2 B, 16-bit ms,
+  compared as a signed difference).
+- **Diagnostics' place** on the top level is computed from its rows, not the
+  `2` that `menu_return_from_diag()` pushes today (`menu.c:512`); new title
+  ids follow P1a's table.
 
 ### Choosing and previewing (the mockup's rules)
 
@@ -476,18 +484,40 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
 - **The editors** (range, hue): turning previews; a click saves; a hold
   cancels. The flash shows on the list they return to.
 - **The backstop:** while a previewing edit is open, the 24 s idle close
-  doesn't apply; 3 minutes with no knob input cancels the edit and closes the
-  menu (C8). Typing and host traffic still don't count as input (C7).
-- **Closing mid-edit, by any route** (`Fn`+click, the backstop, the
-  animation or anything else that ends the session, C1): the edit cancels,
-  restoring, before the owner changes. A loss under the menu isn't a close.
+  (`menu_ops.c:155`) becomes 180 s, the same signed elapsed test; 3 minutes
+  with no knob input cancels the edit and closes the menu (C8). Typing and
+  host traffic still don't count as input (C7). An external cancel after
+  more than 24 s of knob idleness may close the returned list at once; the
+  idle clock isn't reset to show "Cancelled".
+- **Leaving the menu mid-edit, by any route:** the edit rolls back before the
+  panel changes hands (C6, "The rollback", below). A loss under the menu
+  isn't a leaving. The animation's start is refused during a session
+  (`panel_owner.c:170`), so it rolls nothing back.
 
 ### C6: the edit transaction, concretely
 
-- **One edit at most,** `edit_t` (9 B, inside C5's 16 B reserve): the field;
-  the RGB snapshot (mode, h, s, v, speed, enable) or the LCD level; the
+- **One edit at most,** `edit_t` (10 B, inside C5's 16 B reserve): the field;
+  the RGB snapshot (mode, h, s, v, speed, enable, **flags**, which `RM_FLGN`
+  and `RM_FLGP` write, `process_rgb_matrix.c:97`) or the LCD level; the
   transaction's state. Opened when an editor or a previewing choice opens;
-  closed by Save, Cancel or an external write.
+  closed by Save, Cancel, the rollback or an external write.
+- **The rollback, `menu_edit_rollback()`:** restores the snapshot and closes
+  the transaction; nothing else (no navigation, no flash, no repaint). Idempotent.
+  `panel_owner.c`'s two transitions away from the menu call it **first,
+  before `set_owner()` and the session change**: `do_close()`
+  (`panel_owner.c:93`: the close, the opener's close, the wake release's)
+  and `enter_debug()` (`:107`: the debug page's handoff, dev op 1). Both
+  return `PO_ACT_EDIT_CANCEL` today, which is applied only after the owner
+  has changed (`display.c:3971`, `menu_ops.c:75`); that action stays as the
+  record, the rollback having run.
+- **An external write's cancel** is the rollback, then (only while the menu
+  owns the panel) the pop to the editor's list and "Cancelled".
+- **Re-entrancy:** every hook below runs from a main-loop entry point outside
+  `menu_input()` (`process_record_kb`, `via_command_kb`, `command_extra`, the
+  `RGBM_*` handler, `param_repeat_step`, the `SCR_*` handler, the dev ops).
+  The adapter calls QMK's setters directly, never a hooked entry point, so no
+  hook can fire inside `menu_input()`'s call tree; a host test counts the
+  hooks across every input path.
 - **The RGB adapter** (`menu_glue.c`, behind `menu_env.h`):
   - QMK's mode and HSV setters return early while the lights are off
     (`rgb_matrix.c:606, 658`); speed's doesn't. So preview, save and cancel
@@ -498,8 +528,14 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
     `ak820pro.c:703-758`). Lights: `rgb_matrix_enable()` or
     `rgb_matrix_disable()`, explicitly, never a toggle.
   - **Cancel:** every field of the snapshot back with `_noeeprom` setters,
-    `enable` last. A dirty flag set before the edit opened stays set, so its
-    pending write still happens, with the restored values.
+    `enable` last. A dirty flag set before the edit opened stays set
+    (`eeconfig_flag` ORs it, `eeconfig.h:191`), so its pending write still
+    happens, with the restored values.
+  - Save always calls the saving setter, even when the preview already
+    equals the value (the dirty flag is the point). Mode is set only when it
+    changes, so an HSV or speed preview doesn't restart the effect.
+  - Persistence follows QMK's flush once the hold lifts, not the instant
+    "Saved" shows.
 - **The flush hold:** `rgb_matrix_eeprom_flush_allowed()` (the board's
   override) also returns false while an RGB edit is open, so no previewed
   value is ever written.
@@ -507,43 +543,74 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
   save that plus `kb_eeconfig_set_lcd_brightness()`; cancel
   `display_set_brightness(before)`. C7's override keeps the panel lit at
   `max(requested, 1)`, so previewing Off shows level 1 until the menu closes.
-- **External writers cancel first, then apply** (C6's list, at these sites):
+- **External writers cancel first, then apply** (C6's list, at these sites),
+  each through one `menu_edit_external(domain)`:
   - **VIA:** a new `via_command_kb()` on the board (none exists; the weak
-    default returns false, `via.c:286, 296`). For a custom set-value or save
-    on the RGB-matrix channel it cancels an open RGB edit and returns false,
-    so VIA's own processing and reply go on.
-  - **`RM_*` keys:** `process_record_kb` (`ak820pro.c:345`) runs before
-    `process_rgb_matrix` (`quantum.c:355, 417`); on release, since
-    `RGB_TRIGGER_ON_KEYDOWN` isn't defined.
+    default returns false, and `raw_hid_receive` calls it before dispatching,
+    `via.c:286, 296`). It cancels an open RGB edit for **any** custom command
+    on the RGB-matrix channel, reads included, and for
+    `id_device_indication` (a toggle, `via.c:167`), then returns false, so
+    VIA's own processing and reply go on. Reads cancel so a lighting backup
+    can't capture a preview (`flash.sh:153`, `ak820lighting.py`); the restore
+    after a flash is ordinary set and save packets (`ak820lighting.py:122`).
+  - **The magic reset** (both Shifts and Backspace: `command_common()` runs
+    `eeconfig_init()`, which writes the RGB defaults and force-flushes them,
+    `command.c:346`, `eeconfig.c:122, 163`; command support is on,
+    `keyboard.json:22`): the board's `command_extra()`, which
+    `command_proc()` calls first (`command.c:71, 75`), cancels for that code
+    and returns false. `eeconfig_init_kb()` would be too late.
+  - **`RM_*` keys, `RM_FLGN`/`RM_FLGP` included:** `process_record_kb`
+    (`ak820pro.c:345`) runs before `process_rgb_matrix` (`quantum.c:355,
+    417`); on release, since `RGB_TRIGGER_ON_KEYDOWN` isn't defined.
   - **`UG_*` keys:** the same place, on press (`process_underglow`,
     `quantum.c:414`, runs them into the RGB-matrix setters).
-  - **`RGBM_*`** (`ak820pro.c:498-508`) and **`param_repeat_step()`**
-    (`param_overlay.c:44`), before each step.
-  - **`SCR_UP`/`SCR_DN`** (`ak820pro.c:386-395`, and their repeat) and dev
-    ops 4 and 5 cancel a Screen edit.
-  - The external cancel pops the editor to its list with "Cancelled"; the
-    list then shows the externally written values (the latched model).
-- **Not writers** (C6): the power ladder's caps and scale, the battery's RGB
-  cut, deep sleep, `consumer_mod.c`, the lock-light channel. They cancel
-  nothing.
+  - **`RGBM_*`** (`ak820pro.c:498-508`, on press) and
+    **`param_repeat_step()`** (`param_overlay.c:44`), before each step, so
+    the step is computed from the restored value, not the preview.
+  - **`SCR_UP`/`SCR_DN`** (`ak820pro.c:386-395`, and their repeat), before
+    `display_brightness_up/down()` reads the level (`display.c:335`); dev ops
+    4 and 5 (5 sets the power, not the level: kept as C6 lists it).
+    `SCR_TOG` isn't a level writer.
+  - The list behind the editor then shows the externally written values.
+- **Resets aren't writers to roll back:** `QK_CLEAR_EEPROM`, `QK_BOOT`, the
+  raw-HID jump and every reboot discard RAM, and no shutdown path flushes the
+  RGB config (`quantum.c:208-239`), so the flush hold has left EEPROM at the
+  saved values. (A rollback at shutdown would also undo the bootloader
+  splash's full brightness, `display.c:1331`.) VIA's `id_eeprom_reset`
+  resets VIA's own storage only (`via.c:120`).
+- **Not writers** (C6): the power ladder's caps and scale (`power.c:119`
+  restarts an effect without changing its config), the battery's RGB cut,
+  deep sleep, `consumer_mod.c`, the lock-light channel, host text and
+  now-playing. They cancel nothing. **Excluded:** `HC_STALL` mode 2's
+  deliberate write of the persisted LCD data (`kb_eeconfig.c:161`), a
+  destructive fault injection.
 
-### The latched model, extended
+### The RGB and LCD values: read, not latched
 
-P1a's `model_power`/`model_clock` grow by the RGB fields and the LCD level,
-synced at `menu_input`'s start and in `menu_tick` as now. The rows show the
-model; while an edit is open the model *is* the preview, so the list behind
-an editor is right when it returns. An external change while a list shows
-repaints the rows whose signature it changes.
+Unlike `model_power`/`model_clock`, the Lighting and Screen rows read the
+live config through `env_*` getters as they compose. While an edit is open
+the live config *is* the preview, so the list behind an editor is right when
+it returns. A value that changes between a slot's pieces changes its
+signature, and P1a's rule restarts that slot, so no copy is needed (and none
+is kept: RAM). An external change while a list shows repaints the rows whose
+signature it changes.
 
 ### Signatures for value rows (exact, still 16 bits)
 
 P1a's item signature has four bits of value; a Lighting row needs eight. A
 new class in the About space, which uses only bits 8-10 under `0xC000`:
-**`0xE000 | which << 10 | lit << 9 | variant << 8 | value`**, `which` the row
-(Effect, Brightness, Hue, Saturation, Speed/Second color, Lights, Screen;
-seven of eight), `variant` Speed's label against Second color's, `value` the
-field's byte (the level for Screen). Exact, no hashing; distinct from every
-other class (bit 13 is clear in About's).
+**`0xE000 | which << 10 | variant << 9 | value << 1 | lit`**, keeping the
+scheduler's contract that **bit 0 is lit** (`menu_slots.h:41`; the one-lit-
+row rule tests it when it cleans, withholds, starts and commits rows,
+`menu_slots.c:271`). `which` is the row (Effect, Brightness, Hue,
+Saturation, Speed/Second color, Lights, Screen: seven of eight), `variant`
+Speed's label against Second color's (from the live effect), `value` the
+field's byte (the full level for Screen, the top level's row too). Exact, no
+hashing; codex enumerated all 7,168 against the other classes: none alias
+(bit 13 is clear in About's).
+- **A previewing choice's check** marks the entry snapshot's value, the
+  saved one, not the live preview (P1a's `saved_row()`, `menu.c:138`, reads
+  the model; for Effect and Lights it reads `edit_t`).
 
 ### The editors' layouts (C8's geometry)
 
@@ -552,21 +619,31 @@ New layouts beside `L_LIST` and `L_CONFIRM`; each slot one bounded op a pass
 
 | Layout | Slots, in paint order |
 |---|---|
-| **Range** | the title; the separator; the **bar** as 7 column bands (x 13-114 in bands of 16, the last 6; y 51-60): each band's signature is where the fill's edge falls in it (empty, full, or the column), so a step repaints one or two bands, one piece each (≤ 320 B); the **value** (10 big-face cells at x 14, y 22, centred: one slot of 10 chunks, a glyph each, signature the field and its value); the three **hints** (y 72, 86, 100) |
-| **Hue** | the title; the separator; the **envelope** (x 0-127, y 20-40) as 16 column bands of 8: each band composes the strip's hue columns (y 22-35), the marker's white line (y 20-37) and its yellow triangle (5, 3, 1 px, y 38-40) where they fall in it, its signature the strip's presence and the marker's column relative to it, so a step repaints two or three bands (336 B each, one piece); the **value** (y 44, as the range's); the hints |
+| **Range** | the title; the separator; the **bar** as 7 column bands (x 13-114 in bands of 16, the last 6; y 51-60): each band's signature is where the fill's edge falls in it (empty, full, or the column; the outline and the background are fixed, so that is enough), one piece each (≤ 320 B); the **value** (10 big-face cells at x 14, y 22, centred: one slot of 10 chunks, a glyph each, signature the field and its value); the three **hints** (y 72, 86, 100) |
+| **Hue** | the title; the separator; the **envelope** (x 0-127, y 20-40) as 16 column bands of 8: each band composes the strip's hue columns (y 22-35), the marker's white line (y 20-37) and its yellow triangle (5, 3, 1 px, y 38-40, so two columns either side of the line) where they fall in it, over the strip and the background it regenerates beneath; its signature is the strip's presence and **the marker's centre relative to the band, -2 through 9 (the triangle reaches in from two columns outside), or "no overlap"**, from the marker's absolute hue; one piece each (336 B); the **value** (y 44, as the range's); the hints |
 
 - **Bands first, then the value:** the bar or marker moves at once and the
   number follows, as the scrollbar leads the rows (JD).
+- **What a step costs:** one detent moves the bar's edge or the marker by a
+  few columns, typically one to three bands; a coalesced input (several
+  detents in a pass, or a fast turn) can repaint every band. The bounds are
+  per pass (one piece), not per step.
+- **Layouts change through `ms_set_layout()`, both ways** (list to editor,
+  editor to list): its clear; `ms_retarget()` alone can't erase the old
+  geometry.
 - **The big face** is `FONT_STATUS` (10x23, every ASCII glyph,
   `display.c:72-88`), drawn by a new `mb_glyph_big()` beside `mb_glyph()`:
   one DMA from external flash a pass, armed and completed as `mb_glyph`'s.
 - **The strip's colours:** `hsv_to_rgb(h, 255, 255)` per column, RGB565; the
   marker at `4 + round(h*120/256)`, Second color's at `(hue + speed) & 255`.
-- **A new backend primitive, `mb_pixels(x, y, w, h, fn, ctx)`:** composes
-  w×h RGB565 pixels from `fn(ctx, col, row)` into the shared scratch and
-  sends them polled (the mono path's send, `lcd_blit_mono`'s cleanup on
-  failure), at most `MB_PASS_BYTES`. The bands use it; the host tests' fake
-  writes the framebuffer.
+- **A new primitive, `lcd_blit_gen(x, y, w, h, fn, ctx)` in `lcd_bus.c`**
+  (which owns the shared scratch), behind a thin `mb_pixels()` in the
+  backend: composes w×h RGB565 pixels from `fn(ctx, col, row)` into the
+  scratch in the panel's byte order and sends them polled, with
+  `lcd_blit_mono`'s acquire, send, release and failure cleanup
+  (`lcd_bus.c:228`), at most `MB_PASS_BYTES`. The bands use it; the host
+  tests' fake writes the framebuffer. The big glyph uses flash DMA, not the
+  scratch.
 - **Slots:** range 13, hue 22, within the 24.
 
 ### What is deferred, and why
@@ -578,28 +655,72 @@ New layouts beside `L_LIST` and `L_CONFIRM`; each slot one bounded op a pass
   P1b.
 - **Connection, Indicators, Battery:** P2/P3.
 
-### RAM
+### RAM (from the linked builds, codex's point 5)
 
-`edit_t` 9 B (reserved 16); the model's new fields 6 B; the effect table and
-the editors' layouts in flash. No new buffer: the bands and the big face use
-the scratch and DMA. Under C5's 420 B.
+The heap gaps of `541a8cbd`, every flavour (floor 128 B): **dev 160**,
+devfault 200, instrumented 1,312, daily and fpb 2,312. Dev binds. P1a and the
+icons took 72 B, not P1a's estimated ~30, so the C5 ledger stands at ~384 of
+420 B.
+
+| Item | Bytes | Dev gap after |
+|---|---|---|
+| P1b: `edit_t` (10) and the last turn's time (2), padded | +16 | ~144 |
+| P1b: the piece-timing instrumentation removed (dev and devfault: `mono_t_*`, `mono_send_sum`, `compose_max`, op 27 sub 12) | -14 | ~158 |
+| P1c (reserved) | +12 | ~146 |
+| P2/P3 (reserved) | +36 | **~110, under the floor** |
+
+- **No latched copy** of the RGB fields or the LCD level (above): 7 B the
+  draft spent, not spent.
+- **Before P2 the menu needs RAM back.** Best first: the debug page's two
+  198 B text buffers shared with the menu (only one owns the panel at a time;
+  JD, 10-24: the debug page "isn't going to be visible in normal use"); the
+  stacks' measured watermarks (C5 owes them); the Camera page (JD: it can go
+  if RAM is needed). Named here, built with P1c or P2, each with its own
+  review.
+- **Every build checks its own gap** (`build.sh:196-210`); P1b's code
+  review reads every flavour's.
 
 ### Tests
 
-- **Host:** every row of Lighting and the top level against the face; each
-  editor's frames (the bands, the value, the hints) against a reference
-  render; turn, fast turn, wrap (hue), clamp (ranges); save, cancel by
-  click, hold, Back, close, backstop; each external writer mid-edit (a fake
-  VIA packet, RM_ release, UG_ press, RGBM_, the repeat, SCR_, dev ops 4/5):
-  restored, then applied; the flush hold; Save with the lights off; Lights
-  saved both ways; one lit row and one cursor a pass; no pass over
-  `MB_PASS_BYTES`.
-- **On the board (the plan's P1 exit gates):** real VIA set and save packets
-  mid-edit (a script over raw HID, never enumerating); real `RM_*` keys
-  (JD's `Fn`+arrows); a Save with RGB disabled, and Lights saved; visibility
-  from Screen Off and from level 0; the session through Diagnostics;
-  persistence across a reboot after a settled save and after a cancel; the
-  timing on the editors (`menu_p1a_board.py` extended); JD's session.
+The host target excludes `menu_glue.c`, VIA, QMK's RGB core and the display
+glue (`menu_s0_test.c:9`), so the hooks' real placement is the board's to
+prove; the host proves the logic.
+
+- **Host:**
+  - every row of Lighting and the top level against the face; each editor's
+    frames (the bands, the value, the hints) against a reference render,
+    including every hue band boundary, the wrap, a reversal and a large
+    jump, for Hue and Second color;
+  - turn, fast turn, wrap (hue), clamp (ranges); save, cancel by click,
+    hold and Back; the rollback at every `panel_owner` transition, the
+    values restored **before** the owner changes; the backstop;
+  - against a fake RGB core with QMK's early returns while disabled and its
+    dirty flags: clean against already-dirty at entry; Save, then another
+    edit, then Cancel; the lights off through preview, save and cancel;
+    Lights saved both ways; a forced save (VIA's) mid-preview after the
+    cancel; the flush hold;
+  - the keycode classification (`RM_*` with the flags, `UG_*`, `RGBM_*`,
+    `SCR_*`, the magic reset's code) and that no hook fires inside
+    `menu_input()`;
+  - piece boundaries for both editors with retarget, loss, close and
+    reopen, the glyph DMA's completion and a failed polled send;
+  - one lit row and one cursor a pass; no pass over `MB_PASS_BYTES`.
+- **On the board** (the plan's P1 exit gates, and C10's): every writer that
+  can be driven without destroying JD's state, through its real path, with
+  an op 27 count of external cancels: VIA set, save, get and device
+  indication packets mid-edit (a script over raw HID, never enumerating);
+  `RM_*` keys by JD's `Fn`+arrows and `Fn`+`\` (on gremlin they replace the
+  wake rig's remapped key, which is Buzz's); `SCR_*` by `Fn`+`PgUp`/`PgDn`.
+  The magic reset and `RM_FLG*` (they'd reset JD's EEPROM, or aren't bound)
+  rest on the host classification and inspection. A Save with RGB disabled,
+  and Lights saved; visibility from Screen Off and from level 0; the session
+  through Diagnostics; persistence across a reboot after a settled save and
+  after a cancel; C10's LED rate, transitions, continuous-input progress and
+  final settlement on both editors; every flavour's linked RAM and the
+  stacks' worst watermarks; JD's session.
+- **The pass limit:** JD's (b) accepts menu painting passes of ~16-17 ms, so
+  the board scripts fail a pass over 17 ms and still count those over 15
+  (`menu_p1a_board.py:202` fails at 15 today).
 
 ## P1b, P1c, P1d
 

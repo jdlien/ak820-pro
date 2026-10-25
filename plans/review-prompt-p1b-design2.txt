@@ -1,0 +1,13 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+Round two of a design review, before any code: the section "P1b: Lighting, Screen and the edit transaction (draft 2, 10-24 night)" in plans/CONFIG-MENU-P1-DESIGN.md. Your first round and its dispositions are plans/review-codex-p1b-design-2026-10-24.md; draft 2 answers it. The firmware is qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ (gremlin/s1 at 541a8cbd) and QMK core in qmk_firmware-ak820pro/quantum/.
+
+Check that each of your six findings is answered correctly against the code, and look for what the answers introduce:
+- the writer inventory as now listed (any VIA RGB-channel command, reads included, and id_device_indication through via_command_kb; the magic reset through command_extra, which command_proc calls before command_common; RM_FLGN/FLGP with flags in the snapshot; the reset paths treated as needing no rollback because no shutdown path flushes the RGB config and the flush hold kept EEPROM at the saved values: is that true of every reset and bootloader path, the raw-HID jump included?);
+- the signature 0xE000 | which<<10 | variant<<9 | value<<1 | lit, and the previewing choice's check from the entry snapshot;
+- menu_edit_rollback() called first in panel_owner.c's do_close() and enter_debug(), before set_owner(): does that cover every route away from the menu, and does calling menu.c from panel_owner.c's pure code break anything (its host tests, the order of other actions)? Is the re-entrancy argument sound (no hook reachable from menu_input()'s call tree)?
+- the hue bands' signature with the marker's centre relative to the band, -2..9, or no overlap;
+- the RAM table (the gaps measured from the linked builds: dev 160, devfault 200, instrumented 1312, daily and fpb 2312) and the decision to read the RGB and LCD values live rather than latch them (a value changing between a slot's pieces changes the signature, which restarts the slot): is that enough, including for the one-lit-row rule and the choice lists?
+- the tests, including the board-only proof of the hooks' placement and the 17 ms pass limit.
+
+Name each remaining problem with the file and line it rests on, and say whether it must be fixed before the code is written. Must anything change before the code?
