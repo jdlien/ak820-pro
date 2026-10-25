@@ -1,0 +1,125 @@
+{
+ "fails": [],
+ "log": [
+  {
+   "check": "the lights are on to start",
+   "ok": true
+  },
+  {
+   "check": "Brightness opens on 24: {'open': 1, 'field': 2, 'value': 24, 'saved': 24, 'ext': 6}",
+   "ok": true
+  },
+  {
+   "check": "the preview moved",
+   "ok": true
+  },
+  {
+   "check": "a VIA get mid-preview answers the restored 24: 24",
+   "ok": true
+  },
+  {
+   "check": "the get cancelled the edit: {'open': 0, 'field': 0, 'value': 0, 'saved': 0, 'ext': 7}",
+   "ok": true
+  },
+  {
+   "check": "back on Lighting: screen 40",
+   "ok": true
+  },
+  {
+   "check": "the set cancelled the edit: {'open': 0, 'field': 0, 'value': 0, 'saved': 0, 'ext': 8}",
+   "ok": true
+  },
+  {
+   "check": "the set applied: 14",
+   "ok": true
+  },
+  {
+   "check": "the indication cancelled the edit: {'open': 0, 'field': 0, 'value': 0, 'saved': 0, 'ext': 9}",
+   "ok": true
+  },
+  {
+   "check": "the indication toggled the lights off",
+   "ok": true
+  },
+  {
+   "check": "a second toggles them back, the brightness restored",
+   "ok": true
+  },
+  {
+   "check": "the save cancelled the edit: {'open': 0, 'field': 0, 'value': 0, 'saved': 0, 'ext': 10}",
+   "ok": true
+  },
+  {
+   "check": "what it saved is the restored 24",
+   "ok": true
+  },
+  {
+   "check": "the Screen editor: screen 41",
+   "ok": true
+  },
+  {
+   "check": "op 4 cancelled, then set 42: {'open': 0, 'field': 0, 'value': 0, 'saved': 0, 'ext': 11}, {'level': 42, 'max': 100, 'on': 1, 'effective': 42, 'saved1': 0}",
+   "ok": true
+  },
+  {
+   "check": "op 5 cancelled: {'open': 0, 'field': 0, 'value': 0, 'saved': 0, 'ext': 12}, {'level': 42, 'max': 100, 'on': 1, 'effective': 42, 'saved1': 0}",
+   "ok": true
+  },
+  {
+   "check": "Lights opens on On: 47, 2, {'open': 1, 'field': 6, 'value': 1, 'saved': 1, 'ext': 12}",
+   "ok": true
+  },
+  {
+   "check": "Off previewed",
+   "ok": true
+  },
+  {
+   "check": "Off saved: the lights off",
+   "ok": true
+  },
+  {
+   "check": "a preview with the lights off",
+   "ok": true
+  },
+  {
+   "check": "a Save with the lights off: saved, and still off",
+   "ok": true
+  },
+  {
+   "check": "Brightness saved back to 23 (the start 24's percentage)",
+   "ok": true
+  },
+  {
+   "check": "Lights opens on Off: 1",
+   "ok": true
+  },
+  {
+   "check": "Lights saved On, the effect as before",
+   "ok": true
+  },
+  {
+   "check": "level 0: the panel dark",
+   "ok": true
+  },
+  {
+   "check": "the menu shows it from level 0",
+   "ok": true
+  },
+  {
+   "check": "Screen Off: the panel dark",
+   "ok": true
+  },
+  {
+   "check": "the menu shows it from Screen Off",
+   "ok": true
+  },
+  {
+   "check": "the LCD as it was: {'level': 42, 'max': 100, 'on': 1, 'effective': 42, 'saved1': 0}",
+   "ok": true
+  },
+  {
+   "check": "the lights as they were (brightness 23)",
+   "ok": true
+  }
+ ]
+}

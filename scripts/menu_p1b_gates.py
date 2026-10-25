@@ -241,9 +241,6 @@ def main():
         # whose value is 87); the restore at the end puts v0 back exactly.
         back = (((v0 * 100 + 127) // 255) * 255 + 50) // 100
         check(via_brightness(h) == back, f"Brightness saved back to {back} (the start {v0}'s percentage)")
-        if back != v0:   # the start wasn't a percentage's own value: put it back exactly
-            via(h, [SET, RGB_CH, BRIGHTNESS, v0])
-            via(h, [SAVE, RGB_CH])
         turn(h, L_LIGHTS - L_BRIGHT)
         s = click(h)
         check(s["screen"] == LIGHTS and s["cursor"] == 1, f"Lights opens on Off: {s['cursor']}")
@@ -267,7 +264,10 @@ def main():
         devop(h, 5, 1)
         end = devop(h, 6)
         check(end["level"] == lcd0["level"] and end["on"] == lcd0["on"], f"the LCD as it was: {end}")
-        check(via_brightness(h) == v0 and via_effect(h) == e0, "the lights as they were")
+        # The brightness as the menu last saved it: the start's percentage's own
+        # value (`back`); the finally below puts v0 itself back, with the lights on
+        # (QMK ignores a brightness set while they are off).
+        check(via_brightness(h) == back and via_effect(h) == e0, f"the lights as they were (brightness {back})")
     finally:
         try:
             close_menu(h)

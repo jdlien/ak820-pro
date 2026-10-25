@@ -1,0 +1,1450 @@
+{
+ "steps": [
+  {
+   "what": "open (reset pass)",
+   "ms": 1114,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "to Diagnostics",
+   "ms": 237,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 6,
+   "inv": 0
+  },
+  {
+   "what": "Diagnostics",
+   "ms": 998,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "to Reset counters",
+   "ms": 234,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "Reset counters",
+   "ms": 675,
+   "owner": "menu",
+   "screen": 26,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "reset",
+   "ms": 563,
+   "owner": "menu",
+   "screen": 26,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "back to Diagnostics",
+   "ms": 1213,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "Reset counters again",
+   "ms": 668,
+   "owner": "menu",
+   "screen": 26,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "cancel it",
+   "ms": 995,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "close (reset pass)",
+   "ms": 541,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0
+  },
+  {
+   "what": "open",
+   "ms": 1117,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15205
+  },
+  {
+   "what": "down 1",
+   "ms": 241,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 5,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 2",
+   "ms": 240,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 5,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 3",
+   "ms": 239,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 6,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 4",
+   "ms": 232,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 6,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 5",
+   "ms": 239,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 6,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 6",
+   "ms": 232,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 7",
+   "ms": 242,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 8,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 8",
+   "ms": 996,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 8,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 9",
+   "ms": 236,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 9,
+   "inv": 0,
+   "over15": 8,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "down 10",
+   "ms": 237,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 10,
+   "inv": 0,
+   "over15": 8,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "wrap down",
+   "ms": 1006,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 10,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "wrap up",
+   "ms": 993,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 10,
+   "inv": 0,
+   "over15": 10,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "back to the top",
+   "ms": 1001,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 11,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "to Power",
+   "ms": 233,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 11,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "Power",
+   "ms": 997,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 11,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "to another mode",
+   "ms": 236,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 11,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "commit it",
+   "ms": 1000,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "Power again",
+   "ms": 984,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "to the original",
+   "ms": 230,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "commit the original",
+   "ms": 1007,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "to Clock",
+   "ms": 235,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "Clock",
+   "ms": 993,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "to another clock",
+   "ms": 230,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "commit it",
+   "ms": 1009,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "Clock again",
+   "ms": 998,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "to the original",
+   "ms": 228,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "commit the original",
+   "ms": 1008,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "Clock to cancel",
+   "ms": 991,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "move",
+   "ms": 231,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 17493
+  },
+  {
+   "what": "cancelled",
+   "ms": 906,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 14,
+   "pass_max_us": 17824
+  },
+  {
+   "what": "to Help",
+   "ms": 1003,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 15,
+   "pass_max_us": 17824
+  },
+  {
+   "what": "Help",
+   "ms": 672,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 15,
+   "pass_max_us": 17824
+  },
+  {
+   "what": "topic 0",
+   "ms": 881,
+   "owner": "menu",
+   "screen": 27,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 15,
+   "pass_max_us": 17824
+  },
+  {
+   "what": "topic 0 page 2",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 27,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 15,
+   "pass_max_us": 17824
+  },
+  {
+   "what": "topic 0 page 1",
+   "ms": 10,
+   "owner": "menu",
+   "screen": 27,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 15,
+   "pass_max_us": 17824
+  },
+  {
+   "what": "topic 0 back",
+   "ms": 885,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 15,
+   "pass_max_us": 17824
+  },
+  {
+   "what": "to topic 1",
+   "ms": 235,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 17,
+   "pass_max_us": 17824
+  },
+  {
+   "what": "topic 1",
+   "ms": 1000,
+   "owner": "menu",
+   "screen": 28,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 21,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 1 page 2",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 28,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 21,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 1 page 1",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 28,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 21,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 1 back",
+   "ms": 983,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 21,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "to topic 2",
+   "ms": 232,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 22,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 2",
+   "ms": 984,
+   "owner": "menu",
+   "screen": 29,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 22,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 2 page 2",
+   "ms": 874,
+   "owner": "menu",
+   "screen": 29,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 22,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 2 page 1",
+   "ms": 977,
+   "owner": "menu",
+   "screen": 29,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 22,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 2 back",
+   "ms": 990,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 22,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "to topic 3",
+   "ms": 235,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 22,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 3",
+   "ms": 993,
+   "owner": "menu",
+   "screen": 30,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 22,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 3 page 2",
+   "ms": 875,
+   "owner": "menu",
+   "screen": 30,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 24,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 3 page 1",
+   "ms": 863,
+   "owner": "menu",
+   "screen": 30,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 25,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "topic 3 back",
+   "ms": 999,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 29,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "Help back",
+   "ms": 564,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 29,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "to About",
+   "ms": 233,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 9,
+   "inv": 0,
+   "over15": 29,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "About",
+   "ms": 1097,
+   "owner": "menu",
+   "screen": 22,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 30,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "About back",
+   "ms": 1000,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 9,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "to Diagnostics",
+   "ms": 1009,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "Diagnostics",
+   "ms": 1007,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "Health page",
+   "ms": 860,
+   "owner": "debug",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "back from Health",
+   "ms": 1094,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "to Camera",
+   "ms": 230,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "Camera page",
+   "ms": 333,
+   "owner": "debug",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "back from Camera",
+   "ms": 1093,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "Diagnostics back",
+   "ms": 1005,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "to Lighting",
+   "ms": 229,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 31,
+   "pass_max_us": 17882
+  },
+  {
+   "what": "Lighting",
+   "ms": 1039,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 35,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "Effect",
+   "ms": 908,
+   "owner": "menu",
+   "screen": 42,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 38,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "preview the next effect",
+   "ms": 236,
+   "owner": "menu",
+   "screen": 42,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 40,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "Effect cancelled",
+   "ms": 927,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 48,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "to Brightness",
+   "ms": 350,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 50,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "Brightness",
+   "ms": 774,
+   "owner": "menu",
+   "screen": 43,
+   "cursor": 24,
+   "inv": 0,
+   "over15": 51,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "brightness up",
+   "ms": 118,
+   "owner": "menu",
+   "screen": 43,
+   "cursor": 26,
+   "inv": 0,
+   "over15": 51,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "brightness down",
+   "ms": 118,
+   "owner": "menu",
+   "screen": 43,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 52,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "Brightness cancelled",
+   "ms": 1018,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 57,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "Brightness again",
+   "ms": 669,
+   "owner": "menu",
+   "screen": 43,
+   "cursor": 24,
+   "inv": 0,
+   "over15": 57,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "Brightness cancelled again",
+   "ms": 1125,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 57,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "to Hue",
+   "ms": 345,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 57,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "Hue",
+   "ms": 903,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 237,
+   "inv": 0,
+   "over15": 62,
+   "pass_max_us": 18314
+  },
+  {
+   "what": "hue up 1",
+   "ms": 122,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 238,
+   "inv": 0,
+   "over15": 63,
+   "pass_max_us": 18933
+  },
+  {
+   "what": "hue up 2",
+   "ms": 125,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 239,
+   "inv": 0,
+   "over15": 64,
+   "pass_max_us": 18933
+  },
+  {
+   "what": "hue up 3",
+   "ms": 124,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 240,
+   "inv": 0,
+   "over15": 65,
+   "pass_max_us": 18933
+  },
+  {
+   "what": "hue up 4",
+   "ms": 123,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 241,
+   "inv": 0,
+   "over15": 65,
+   "pass_max_us": 18933
+  },
+  {
+   "what": "hue down, fast",
+   "ms": 123,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 169,
+   "inv": 0,
+   "over15": 66,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "Hue cancelled",
+   "ms": 1120,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 67,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "Lighting back",
+   "ms": 1017,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 71,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "to Screen",
+   "ms": 231,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 73,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "Screen",
+   "ms": 667,
+   "owner": "menu",
+   "screen": 41,
+   "cursor": 42,
+   "inv": 0,
+   "over15": 73,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "screen up",
+   "ms": 119,
+   "owner": "menu",
+   "screen": 41,
+   "cursor": 43,
+   "inv": 0,
+   "over15": 73,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "Screen cancelled",
+   "ms": 1092,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 73,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "to Connection",
+   "ms": 347,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 75,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "Connection",
+   "ms": 672,
+   "owner": "menu",
+   "screen": 52,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 75,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "Connection back",
+   "ms": 1103,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 75,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "to Indicators",
+   "ms": 234,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 75,
+   "pass_max_us": 20309
+  },
+  {
+   "what": "close",
+   "ms": 541,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0,
+   "over15": 75,
+   "pass_max_us": 20309
+  }
+ ],
+ "meas": {
+  "piece_us": 6597,
+  "op_us": 50410,
+  "pass_max_us": 20309,
+  "over15": 75,
+  "repaint_ms": 1097,
+  "tgen": 109,
+  "settled": 100,
+  "superseded": 9,
+  "band_ms": 2,
+  "page": 0,
+  "dbg_gen": 5,
+  "dbg_done_gen": 5,
+  "committed": 143,
+  "passes": 8597,
+  "token": 1,
+  "health_gen": 1,
+  "dbg_sec": 38,
+  "rtc_sec": 12,
+  "aliased": false
+ },
+ "fails": [
+  "open (reset pass): settled in 1114 ms",
+  "back to Diagnostics: settled in 1213 ms",
+  "open: settled in 1117 ms",
+  "wrap down: settled in 1006 ms",
+  "back to the top: settled in 1001 ms",
+  "commit it: settled in 1000 ms",
+  "commit the original: settled in 1007 ms",
+  "commit it: settled in 1009 ms",
+  "commit the original: settled in 1008 ms",
+  "to Help: settled in 1003 ms",
+  "topic 1: settled in 1000 ms",
+  "About: settled in 1097 ms",
+  "to Diagnostics: settled in 1009 ms",
+  "Diagnostics: settled in 1007 ms",
+  "back from Health: settled in 1094 ms",
+  "back from Camera: settled in 1093 ms",
+  "Lighting: settled in 1039 ms",
+  "Connection back: settled in 1103 ms",
+  "the longest pass 20309 us"
+ ],
+ "slow": [
+  {
+   "step": "open",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "open",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 2,
+    "blit_pump": 6,
+    "unaccounted": 5
+   }
+  },
+  {
+   "step": "down 1",
+   "pass_ms": 17,
+   "scopes": {
+    "ch582": 2,
+    "battery": 1,
+    "blit_pump": 7,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "down 1",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 5,
+    "blit_pump": 7,
+    "unaccounted": 5
+   }
+  },
+  {
+   "step": "down 3",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 2,
+    "blit_pump": 6,
+    "unaccounted": 5
+   }
+  },
+  {
+   "step": "down 6",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "down 7",
+   "pass_ms": 17,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "down 7",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "wrap down",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "wrap down",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 2,
+    "blit_pump": 6,
+    "unaccounted": 5
+   }
+  },
+  {
+   "step": "wrap down",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "commit it",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "cancelled",
+   "pass_ms": 18,
+   "scopes": {
+    "ch582": 5,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 5
+   }
+  },
+  {
+   "step": "cancelled",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "to topic 1",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "to topic 1",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "to topic 2",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "Lighting",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "Effect",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "preview the next effect",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 3,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "Effect cancelled",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "Effect cancelled",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "to Brightness",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "to Brightness",
+   "pass_ms": 19,
+   "scopes": {
+    "ch582": 1,
+    "battery": 2,
+    "blit_pump": 6,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "Brightness",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "brightness down",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 5,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "Brightness cancelled",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "Brightness cancelled",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "Hue",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "Hue",
+   "pass_ms": 18,
+   "scopes": {
+    "ch582": 5,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "hue up 1",
+   "pass_ms": 18,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 7,
+    "unaccounted": 10
+   }
+  },
+  {
+   "step": "hue up 2",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 3,
+    "unaccounted": 11
+   }
+  },
+  {
+   "step": "hue up 3",
+   "pass_ms": 18,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 7,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "hue down, fast",
+   "pass_ms": 20,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 10
+   }
+  },
+  {
+   "step": "Lighting back",
+   "pass_ms": 17,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "Lighting back",
+   "pass_ms": 17,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 7,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "to Screen",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "to Screen",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "to Connection",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "to Connection",
+   "pass_ms": 17,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  }
+ ]
+}

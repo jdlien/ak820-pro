@@ -20,7 +20,18 @@ from menu_s0_session import xfer  # noqa: E402
 from menu_p1b_gates import devop  # noqa: E402
 
 
+def drain(h):
+    """Windows hands every reply to every open handle: another reader's health
+    reply (the agent samples every 5 min) queued here during the wait would be
+    taken for ours, an older count (a run read 77.6 passes a second with none
+    over 10 ms). Read whatever is queued first."""
+    for _ in range(64):
+        if not h.read(32, 5):
+            return
+
+
 def sample(h):
+    drain(h)
     return H.read_stalls(h), H.read_isr(h)
 
 
