@@ -1,0 +1,3 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A short check before a flash: the commit after 077ab77c on qmk_firmware-ak820pro gremlin/s1 (`git -C qmk_firmware-ak820pro log -1 -p`) answers your review of the bootloader item (plans/review-codex-bootloader-item-2026-10-24.md): env_bootloader() now does HC_BOOTLOADER's preparation and returns false when a release can't be sent, menu_ops.c then calls menu_bootloader_refused() ("Try again"); bar_state() clamps the scrollbar's top; env_reserve() is battery_on_battery() && power_lights_cut(). Are the three answers right, and does anything new need fixing before the flash?

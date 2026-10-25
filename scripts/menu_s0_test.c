@@ -1367,8 +1367,8 @@ uint8_t     env_effect_mode(uint8_t i) { return (uint8_t)(i + 1u); }   /* modes 
 const char *env_effect_name(uint8_t i) { return i < 9 ? fk_effect_names[i] : ""; }
 bool        env_effect_two_tone(uint8_t mode) { return mode == 2; }   /* Alphas/Mods */
 static int  fk_boots;
-static bool fk_reserve;
-void env_bootloader(void) { fk_boots++; }   /* the board resets; the host carries on */
+static bool fk_reserve, fk_boot_fail;
+bool env_bootloader(void) { fk_boots++; return !fk_boot_fail; }   /* the board resets; the host carries on */
 bool env_reserve(void) { return fk_reserve; }
 static env_about_t fk_about = {93240u, 767u, 4017u, 3840u, 1u,
                                (uint8_t)(ENV_LINK_BT | (0u << 2) | (ENV_LINK_CONNECTED << 4))};
@@ -1791,6 +1791,8 @@ static void test_menu(void) {
     m_turn(-2);
     CHECK(sub5_cursor() == 8 && row_bad(0, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LIT) == 0 &&
           row_bad(1, "", 0) == 0);   /* page two */
+    /* Its thumb at the track's end, y 27-126 (codex: it was drawn off the panel). */
+    CHECK(fb[26][125] == MENU_TRACK && fb[27][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
     m_turn(1);
     CHECK(sub5_cursor() == 0);
 
@@ -2587,14 +2589,19 @@ static void test_p1b(void) {
     m_click();
     m_click();
     CHECK(fk_boots == 1);
+    /* A release that couldn't go over the radio: not entered, "Try again", the page stays. */
+    fk_boot_fail = true;
+    m_click();
+    CHECK(fk_boots == 2 && sub5_screen() == 16 + 34 && sub5_cursor() == 0 && title_bad("Try again") == 0);
+    fk_boot_fail = false;
     m_hold();
     fk_reserve = true;
     for (int i = 0; i < 300; i++) fw_pass(5);
     m_click();
     m_click();   /* refused: the second page */
-    CHECK(fk_boots == 1 && sub5_cursor() == 1 && text_slot_bad(22, "Plug in first:", MENU_WHITE, false) == 0);
+    CHECK(fk_boots == 2 && sub5_cursor() == 1 && text_slot_bad(22, "Plug in first:", MENU_WHITE, false) == 0);
     m_click();   /* back */
-    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == 5 && fk_boots == 1);
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == 5 && fk_boots == 2);
     fk_reserve = false;
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
