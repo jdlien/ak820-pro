@@ -1108,7 +1108,24 @@ perceptually spaced, the duty spread by the sigma-delta.
   level's bytes 0, 1, 2, 43, 101, 102, 255); the board (the menu pass, the
   dev ops, the timing); JD by eye.
 
-## P3: Connection, the Bluetooth slots and pairing (draft 2, 10-25)
+## P3: Connection, the Bluetooth slots and pairing (draft 3, 10-25)
+
+**Draft 3 (JD, 10-25 ~09:40, trying `560689ea`):** "simplify the pair a
+device to just pair the current bluetooth setting rather than allowing you
+to select any of the three", and "On the computer, add" becomes "On the
+device, add" ("could be an iPad ... or a phone"). So the pair list and its
+three nodes go: Connection's last row is `N_PAIRNOW` (43), `Pair a device`
+with the current slot as its value (`BT 2`: pairing takes over that slot),
+and a click opens `N_PAIRING` (now 44) for the current slot directly, three
+frames deep as before, Connection's cursor moved to the slot's row so
+leaving lands there. The menu's pair is then always the current slot's, so
+`bt_ui_pair_slot()` selects only a lost select's slot; its other-slot path
+stays for safety but the menu no longer takes it. Where this section says
+"Pair a device opens a list" or names `N_PAIRLIST`/`N_PAIR0`-`2`, read
+draft 3. Codex's design and code reviews and four verifies are under
+`plans/review-codex-p3-*-2026-10-25.md`; what changed after draft 2 is in
+their dispositions (the ACK boundary tried and backed out; the menu's pair
+failing closed on an undelivered select).
 
 JD (10-25): "can we do the BT channel selection now? If it makes sense,
 also pairing, unless that deserves to be a separate wave." Both, in one

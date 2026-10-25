@@ -330,7 +330,7 @@ Click: back
 ■ Bluetooth 1  Linked
   Bluetooth 2
   Bluetooth 3
-Pair a device      ▶
+Pair a device   BT 1
 ```
 
 - The current slot's word, in six cells: `Linked`, `Trying` (connecting),
@@ -338,12 +338,13 @@ Pair a device      ▶
 - A click on a slot switches to it: the title flashes `Now on BT 2`. On the
   slot you're already linked on (or still connecting on), nothing changes:
   `Already on BT 2`.
-- **Pair a device** (title `Pair a device`): `◀ Back`, `Bluetooth 1`,
-  `Bluetooth 2`, `Bluetooth 3`. A click starts pairing that slot.
+- **Pair a device** pairs the current slot (JD, 10-25), the one its row
+  names: a click goes straight to the Pairing page. Pairing takes over that
+  slot, so switch slots first to pair a new device on another.
 - **Pairing** (title `Pairing`), by what the radio says:
 
 ```
-Bluetooth 3              On the computer, add
+Bluetooth 3              On the device, add
 Getting ready...         AK820 5.1-3
 
 Click or hold: stop      Click or hold: stop

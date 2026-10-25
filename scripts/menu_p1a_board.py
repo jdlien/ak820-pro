@@ -35,7 +35,7 @@ TOP, POWER, CLOCK, DIAG, HELP, ABOUT, EXIT = 1, 2, 3, 4, 5, 6, 7
 RESET, TOPIC0 = 10, 11
 LIGHT, SCREEN, EFFECT, BRIGHT, HUE = 24, 25, 26, 27, 28   # P1b's nodes
 IND, CONN, LOCKS, CHGL = 35, 36, 37, 38                   # P2a's
-CONNINFO, PAIRLIST, PAIRING = 39, 43, 47                   # P3's
+CONNINFO, PAIRING = 39, 44                                 # P3's (Pair a device: the current slot's)
 # P3's link byte (menu_env.h's ENV_LINK_*: transport bits 1-0, slot 3-2,
 # state 6-4) and the pairing facts, for op 27 sub 16's stand-in.
 L_USB, L_BT = 0, 1
@@ -171,10 +171,8 @@ def connection(h):
     turn(h, -2, "to BT 1", SCR(CONN), 1)
     click(h, "BT 1", SCR(CONN), 1)
     turn(h, 3, "to Pair a device", SCR(CONN), 4)
-    click(h, "Pair a device", SCR(PAIRLIST), 1)
-    turn(h, 1, "to Bluetooth 2", SCR(PAIRLIST), 2)
-    standin(h, LINK(1, S_CONNECTED), PF_WAITING)
-    click(h, "pair Bluetooth 2", SCR(PAIRING), 1 << 4 | P_START)
+    standin(h, LINK(1, S_CONNECTED), PF_WAITING)   # the stand-in's slot (BT 2) is the current one
+    click(h, "Pair a device (BT 2)", SCR(PAIRING), 1 << 4 | P_START)
     for link, pf, ph, what in (
             (LINK(1, S_PAIRING), PF_RETRYING, P_START, "resending"),
             (LINK(1, S_PAIRING), PF_CONFIRMED, P_OPEN, "advertising"),
@@ -189,8 +187,7 @@ def connection(h):
               f"Pairing {what}: screen {s['screen']} cursor {s['cursor']:#x}, not {1 << 4 | ph:#x}")
     click(h, "stop it", SCR(CONN), 2)
     turn(h, 2, "to Pair a device again", SCR(CONN), 4)
-    click(h, "Pair a device again", SCR(PAIRLIST), 1)
-    click(h, "pair Bluetooth 1", SCR(PAIRING))
+    click(h, "Pair a device again", SCR(PAIRING))
     standin(h, L_USB)
     s, _ = settle(h, "the slider to the cable, under the Pairing page")
     check(s["screen"] == SCR(TOP) and s["cursor"] == R_CONN, f"off BT: screen {s['screen']} cursor {s['cursor']}")
