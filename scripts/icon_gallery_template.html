@@ -149,7 +149,7 @@ const ASCII = /*ASCII*/;     // the menu face's ASCII, from the same BDF
 const CATS = /*CATS*/;
 const byCp = new Map(DATA.map(d => [d[0], d]));
 
-const P565 = { lit: 0xFF94, dim: 0xCE59, leave: 0xFCD3, white: 0xFFFF, grey: 0x632C, track: 0x4228 };
+const P565 = { lit: 0xFF94, dim: 0xCE59, leave: 0xFCD3, white: 0xFFFF, grey: 0x632C, track: 0x4228, cursor: 0xA514 };
 const rgbOf = c => [Math.round(((c >> 11) & 31) * 255 / 31), Math.round(((c >> 5) & 63) * 255 / 63), Math.round((c & 31) * 255 / 31)];
 const PAL = Object.fromEntries(Object.entries(P565).map(([k, v]) => [k, rgbOf(v)]));
 const hexOf = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
@@ -167,7 +167,7 @@ const ROLES = [
   { id: "cursor", name: "Cursor", where: "x 0-2, left of the selected row", def: 0x1FB6C, on: LISTS },
   { id: "back", name: "Back mark", where: "the Back row", def: 0x25C0, on: ["power", "clock", "diag"] },
   { id: "sub", name: "Submenu mark", where: "the right edge of rows that open a page", def: 0x25B6, on: ["top", "diag", "all", "all2"] },
-  { id: "choice", name: "Choice mark", where: "the saved option, cells 0-1", def: 0xF058, on: ["power", "clock"] },
+  { id: "choice", name: "Choice mark", where: "the saved option, cells 0-1", def: 0xF631, on: ["power", "clock"] },
 ];
 // The top level, built (P1a) and planned (the mockup's, plus Bootloader): the
 // label, the value at the right (a string, SUB for the submenu mark, or none),
@@ -345,7 +345,9 @@ function drawLcd() {
   const S = state.screen, sub = roleCp("sub"), back = roleCp("back"), choice = roleCp("choice"), icon = roleCp("title");
   const title = { top: "Configuration", all: "Configuration", all2: "Configuration", power: "Power", clock: "Clock", diag: "Diagnostics" }[S];
   const isTop = S === "top" || S === "all" || S === "all2";
-  text(0, 0, (isTop && icon != null ? [icon, ...gap(icon)] : []).concat(toks(title)), PAL.white);
+  // A heading carries its section's icon (JD, 10-24): the wrench on the top level.
+  const head = isTop ? icon : roleCp("i:" + title);
+  text(0, 0, (head != null ? [head, ...gap(head)] : []).concat(toks(title)), PAL.white);
   fill(4, 14, 123, 14, PAL.grey);
   const colour = (lit, leave) => lit ? PAL.lit : leave ? PAL.leave : PAL.dim;
   const backRow = (r, lit) => row(r, [back, ...gap(back), ...toks("Back")], [], colour(lit, true));
@@ -360,13 +362,13 @@ function drawLcd() {
       text(at, y, toks(l), rgb);
       const right = v == null ? [] : v === SUB ? [sub] : toks(v);
       if (right.length) text(20 - cellsOf(right), y, right, rgb);
-      if (i === cur) cursorAt(k, rgb);
+      if (i === cur) cursorAt(k, PAL.cursor);
     });
     scrollbar(list.length, top);
   } else if (S === "diag") {
     backRow(0, false);
     ["Health page", "Camera page", "Reset counters"].forEach((l, i) => row(i + 1, toks(l), [sub], colour(i === 0, false)));
-    cursorAt(1, PAL.lit);
+    cursorAt(1, PAL.cursor);
   } else {
     const opts = S === "power" ? ["Always on", "Balanced", "Power saver", "Lights out"]
                                : [["24h", "13:45:01"], ["24h", "13:45"], ["12h", "1:45:01 PM"], ["12h", "1:45 PM"],
@@ -380,7 +382,7 @@ function drawLcd() {
       const [name, ex] = Array.isArray(l) ? l : [l, ""];
       text(at, y, toks(name), rgb);
       if (ex) text(20 - ex.length, y, toks(ex), rgb);
-      if (i === cursor) cursorAt(i + 1, rgb);
+      if (i === cursor) cursorAt(i + 1, PAL.cursor);
     });
   }
   document.getElementById("lcd").getContext("2d").putImageData(fb, 0, 0);
