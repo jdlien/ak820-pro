@@ -404,6 +404,19 @@ as a preview). Built in `925f029b`:
   1px of margin"; a double-width icon can ink all 12 columns). A 7 px icon on
   a 6 px advance (half of Cozette's icons) takes two cells and leaves 5 blank.
 
+After JD's look at `925f029b` ("looking quite good"), in `541a8cbd`:
+
+- **The squared check** is the mark; the circle "doesn't look good", so it
+  and its dev switch are gone.
+- **A section's icon on its headings** ("keep the consistency"): Power,
+  Clock, Diagnostics and Reset counters, Help and its topics, About. The
+  flashes and the hints are messages, not headings: no icon.
+- **The cursor in its own colour**, `MENU_CURSOR` #A5A2A5, a neutral grey a
+  shade under the dim rows (JD: in the lit colour it "kinda blends into" the
+  icon beside it); tunable live on dev (op 27 sub 13, `menu_tune.py`'s
+  `cursor`). A mono piece has one colour, so a row's lead is its own chunk,
+  first and one piece (112 B); the text's chunks are back to 60 and 61 px.
+
 ## Before P1 is accepted: JD's text review (pinned, 10-24)
 
 JD will review and edit **all** the menu's text by hand once P1 nears its
