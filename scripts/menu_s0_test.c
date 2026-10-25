@@ -1392,7 +1392,7 @@ void        env_about(env_about_t *a) { *a = fk_about; }
  * do what bt_ui.c does synchronously (a select: the slot, linking, the
  * facts cleared; a pair: the select unless current, then waiting; a stop:
  * waiting cleared, and the select while advertising or retrying). */
-static int     fk_bt_selects, fk_bt_pairs, fk_bt_stops;
+static int     fk_bt_selects, fk_bt_pairs, fk_bt_stops, fk_bt_cancels;
 static uint8_t fk_bt_last = 0xFF, fk_pf, fk_standin = 0xFF, fk_standin_pf;
 static uint8_t fk_link_of(uint8_t slot, uint8_t st) { return (uint8_t)(ENV_LINK_BT | (slot << 2) | (st << 4)); }
 static void    fk_select(uint8_t slot) {
@@ -1420,6 +1420,10 @@ void env_bt_pair_stop(void) {
     uint8_t st = (fk_about.link >> 4) & 7u;
     if ((fk_about.link & 3u) == ENV_LINK_BT && (st == ENV_LINK_PAIRING || (fk_pf & ENV_PF_RETRYING)))
         fk_select((fk_about.link >> 2) & 3u);
+}
+void env_bt_pair_cancel(void) {
+    fk_bt_cancels++;
+    fk_pf &= (uint8_t)~ENV_PF_WAITING;
 }
 uint8_t env_bt_pair_facts(void) { return fk_standin != 0xFF ? fk_standin_pf : fk_pf; }
 void    env_bt_standin(uint8_t link, uint8_t facts) {
@@ -3086,7 +3090,7 @@ static void test_p3(void) {
     fw_reset();
     fk_power = 1; fk_clock = 0;
     fk_lcd = fk_lcd_saved = 52;
-    fk_bt_selects = fk_bt_pairs = fk_bt_stops = 0;
+    fk_bt_selects = fk_bt_pairs = fk_bt_stops = fk_bt_cancels = 0;
     fk_pf = 0; fk_standin = 0xFF;
     menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
     const uint8_t     link0    = fk_about.link;
@@ -3117,6 +3121,19 @@ static void test_p3(void) {
         else m_click();
         CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN && title_bad("Cancelled") != 0);
     }
+    /* Its cursor is 0, whatever Reset counters' page was (codex). */
+    m_turn(T_DIAG - T_CONN);
+    m_click();
+    m_turn(2);
+    m_click();
+    m_click();   /* reset: its second page */
+    m_click();
+    m_hold();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_DIAG);
+    m_turn(T_CONN - T_DIAG);
+    m_click();
+    CHECK(sub5_screen() == SC_CONNINFO && sub5_cursor() == 0);
+    m_click();
     /* It follows the slider: BT arriving takes it back to the top level. */
     m_click();
     CHECK(sub5_screen() == SC_CONNINFO);
@@ -3136,9 +3153,10 @@ static void test_p3(void) {
     /* A click on the current slot: nothing while linked or linking. */
     static const uint8_t keep[2] = {ENV_LINK_CONNECTED, ENV_LINK_LINKING};
     for (int k = 0; k < 2; k++) {
-        fk_bt_set(fk_link_of(1, keep[k]), 0);
+        fk_bt_set(fk_link_of(1, keep[k]), ENV_PF_WAITING);   /* a pair still waiting from before */
         m_click();
         CHECK(fk_bt_selects == 0 && sub5_screen() == SC_CONN && sub5_cursor() == 2 && title_bad("Already on BT 2") == 0);
+        CHECK(fk_bt_cancels == k + 1 && fk_pf == 0);   /* superseded all the same (codex) */
     }
     /* Otherwise the tap's select: rejected (the retry), advertising (the
      * cancel), idle. */

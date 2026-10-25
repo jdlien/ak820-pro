@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-25 ~03:50.
+2026-10-25 ~08:30.
 
 ## Where things stand
 
@@ -150,9 +150,23 @@ This file is the thread; read it first after a context loss. Updated
      - **At the merge:** `power_model.py` (parses `bkl_duty`, 24),
        `current_map.py` (sweeps 0-23), `gauge_replay.py` (reads `bkl`): the
        session on Buzz's tools; CLAUDE.md's core-file list and docs.
-  3. The Clock options (the design doc's "JD's decisions"), with half-row
+  3. **P3, Connection (JD, 10-25 ~07:00: "can we do the BT channel
+     selection now? ... also pairing"):** firmware `c66e6eaf` on
+     `gremlin/s1`, tests `4ef7c41`. Design draft 2 (codex's design review:
+     four must-fixes, all taken: the pair never sent mid-bounce or after a
+     lost select, a driver fact for the select's outcome, an unsure phase,
+     the stand-in cut off from the radio). The top level shows the link;
+     off BT, JD's page ("Switch to BT mode to change Bluetooth settings.");
+     on BT the slots with the current one's word, and Pair a device with a
+     live Pairing page. Host tests pass (`test_p3`); `scripts/ch582_sim/`
+     runs `bt_ui.c` and the driver verbatim (`btui.c`, twelve cases, two
+     mutants caught). Dev gap 136 B. **Next:** codex's code review, the
+     flash, the board pass on op 27 sub 16's stand-in (the slider is on the
+     cable), then JD: the slider to BT, a slot switch, a pairing on a free
+     slot.
+  4. The Clock options (the design doc's "JD's decisions"), with half-row
      slots for the live examples.
-  4. JD's text edits; then P1c and P1d; P3 (Bluetooth), P4 (Battery).
+  5. JD's text edits; then P1c and P1d; P4 (Battery).
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;

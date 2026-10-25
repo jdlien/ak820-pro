@@ -28,12 +28,14 @@ void           display_set_pair_hint(int16_t pct) { (void)pct; }
 void           clear_keyboard(void) { clears++; }
 
 /* The loop: the driver's task each ms, every written frame ACKed (but the
- * driver's own ACK tokens), bt_ui's tick every 100 ms. */
-static int acked;
+ * driver's own ACK tokens) unless a case holds them, bt_ui's tick every
+ * 100 ms. */
+static int  acked;
+static bool auto_ack = true;
 static void run(uint32_t ms) {
     for (uint32_t i = 0; i < ms; i++) {
         ch582_task();
-        for (; acked < wr_n; acked++)
+        for (; auto_ack && acked < wr_n; acked++)
             if (wr[acked][0] != 0x61) rx_ack();
         if (now_ms % 100 == 0) bt_pair_hold_task();
         now_ms++;
@@ -167,10 +169,142 @@ static void pair_bounce(void) {
     CHECK(a6(PAIR, from) == 0, "no pair in the bounce");
     run(500);
     CHECK(a6(0x33, from) == 1, "the real select at 700 ms");
+    CHECK(ch582_get_conn_state() == CH582_CONN_LINKING, "the bounce slot's connected is gone (codex, code review 4)");
     frame(0x5B, 0x33);
     frame(0x5B, 0x36);
     run(110);
     CHECK(a6(PAIR, from) == 1 && a6_at(PAIR, from) > a6_at(0x33, from), "the pair after the target's select");
+}
+
+/* Codex on P3's code, 3: at the bounce's end the target's select goes out
+ * while a bounce-slot 5B 31 is still on its way; before the select's ACK it
+ * isn't the target's: not confirmed, not acted on, the pair still waiting. */
+static void bounce_boundary(void) {
+    boot_linked(0x31);
+    advertising();
+    int from = wr_n;
+    bt_ui_pair_slot(2);
+    run(600);
+    auto_ack = false;
+    for (int i = 0; i < 300 && a6(0x33, from) == 0; i++) run(1);
+    CHECK(a6(0x33, from) == 1, "the target's select written");
+    uint8_t f[3] = {0x5B, 0x31, 0x8C};
+    rx_feed(f, 3);
+    run(3);
+    CHECK(!ch582_pair_confirmed() && ch582_select_state() == CH582_SEL_PENDING && bt_ui_pair_waiting(),
+          "the bounce slot's advertising: not the target's");
+    acked = wr_n;   /* the held frames: ACK the select's (the latest) */
+    rx_ack();
+    auto_ack = true;
+    run(150);
+    CHECK(bt_ui_pair_waiting() && a6(PAIR, from) == 0, "still waiting: no 'already advertising'");
+    frame(0x5B, 0x33);
+    frame(0x5B, 0x36);
+    run(110);
+    CHECK(a6(PAIR, from) == 1 && a6_at(PAIR, from) > a6_at(0x33, from), "the pair, after the target's own answer");
+}
+
+/* Codex on P3's code, 4: the bounce slot linked up, then the target's select
+ * goes unanswered: linking and lost, not the bounce slot's connected. */
+static void bounce_lost(void) {
+    boot_linked(0x31);
+    advertising();
+    int from = wr_n;
+    bt_ui_pair_slot(2);
+    run(100);
+    frame(0x5B, 0x32);
+    run(16000);
+    CHECK(a6(0x33, from) == 8 && ch582_select_state() == CH582_SEL_LOST, "eight tries, lost: %d", a6(0x33, from));
+    CHECK(ch582_get_conn_state() == CH582_CONN_LINKING && !ch582_is_connected(), "linking, not connected");
+    CHECK(a6(PAIR, from) == 0 && !bt_ui_pair_waiting(), "no pair");
+}
+
+/* Codex on P3's code, 5: the eighth try gets its window: an answer 1 s after
+ * it still counts, and the pair goes. */
+static void last_try_window(void) {
+    boot_linked(0x31);
+    int from = wr_n;
+    bt_ui_pair_slot(2);
+    for (int i = 0; i < 12000 && a6(0x33, from) < 8; i++) run(1);
+    CHECK(a6(0x33, from) == 8, "the eighth try: %d", a6(0x33, from));
+    run(1000);
+    CHECK(ch582_select_state() == CH582_SEL_PENDING && bt_ui_pair_waiting(), "still pending 1 s after it");
+    frame(0x5B, 0x33);
+    frame(0x5B, 0x36);
+    run(110);
+    CHECK(a6(PAIR, from) == 1, "the pair: %d", a6(PAIR, from));
+}
+
+/* Codex on P3's code (could wait): a 36 with no 33 before it ends the
+ * select's retry, so the pair goes at once. */
+static void direct_36(void) {
+    boot_linked(0x31);
+    int from = wr_n;
+    bt_ui_pair_slot(2);
+    run(200);
+    frame(0x5B, 0x36);
+    run(110);
+    CHECK(ch582_select_state() == CH582_SEL_ACKED && a6(PAIR, from) == 1 && a6(0x33, from) == 1,
+          "acted on, the pair sent, no select retry: %d %d", a6(PAIR, from), a6(0x33, from));
+}
+
+/* Codex on P3's code, 5: the cold-boot retry still sending is pending, not
+ * lost. */
+static void boot_retry_pending(void) {
+    auto_ack = false;   /* the module isn't up */
+    bt_ui_mode_slider(1, true);
+    run(14000);
+    CHECK(ch582_select_state() == CH582_SEL_PENDING, "pending while the boot retry runs: %d", ch582_select_state());
+    auto_ack = true;
+    acked    = wr_n;
+    rx_ack();
+    run(20);
+    frame(0x5B, 0x33);
+    CHECK(ch582_select_state() == CH582_SEL_ACKED, "acted on once it's up: %d", ch582_select_state());
+}
+
+/* Codex on P3's code, 1: a key's hold still running is superseded by every
+ * menu action, so its pair never fires over them. */
+static void hold_superseded(void) {
+    boot_linked(0x31);
+    keyrecord_t down = {{true}}, up = {{false}};
+    int from = wr_n;
+    bt_ui_slot_key(BT2, &down);   /* held: selects BT 2, its pair due at 2 s */
+    run(200);
+    frame(0x5B, 0x33);
+    frame(0x5B, 0x32);
+    run(700);
+    bt_ui_pair_stop();            /* a menu stop: nothing to stop, but the hold goes */
+    run(2000);
+    CHECK(a6(PAIR, from) == 0, "the stop: no pair from the hold: %d", a6(PAIR, from));
+    bt_ui_slot_key(BT2, &up);
+    from = wr_n;
+    bt_ui_slot_key(BT2, &down);
+    run(500);
+    bt_ui_pair_cancel();          /* "Already on BT 2" */
+    run(2500);
+    CHECK(a6(PAIR, from) == 0, "the cancel: no pair from the hold");
+    bt_ui_slot_key(BT2, &up);
+    from = wr_n;
+    bt_ui_slot_key(BT2, &down);
+    run(500);
+    bt_ui_select_slot(0);         /* a menu select */
+    run(2500);
+    CHECK(a6(PAIR, from) == 0 && a6(0x31, from) >= 1, "the select: no pair from the hold");   /* resent at 1.5 s: the module is quiet here */
+    bt_ui_slot_key(BT2, &up);
+    from = wr_n;
+    frame(0x5B, 0x33);
+    frame(0x5B, 0x32);
+    bt_ui_slot_key(BT3, &down);   /* and a menu pair: only its own A6 51, after BT 1's select */
+    run(500);
+    bt_ui_pair_slot(0);
+    run(3000);
+    frame(0x5B, 0x33);
+    frame(0x5B, 0x36);
+    run(110);
+    CHECK(a6(PAIR, from) == 1 && a6_at(PAIR, from) > a6_at(0x31, from), "the pair: the menu's, once: %d",
+          a6(PAIR, from));
+    bt_ui_slot_key(BT3, &up);
 }
 
 /* Codex's must-fix 3: a select never answered (its 8 tries run out) gets no
@@ -319,6 +453,8 @@ int main(int argc, char **argv) {
         {"pair_lost_select", pair_lost_select}, {"pair_superseded", pair_superseded},
         {"pair_lost_confirm", pair_lost_confirm}, {"pair_promotion", pair_promotion},
         {"stop_cases", stop_cases}, {"already_advertising", already_advertising},
+        {"bounce_boundary", bounce_boundary}, {"bounce_lost", bounce_lost}, {"last_try_window", last_try_window},
+        {"direct_36", direct_36}, {"boot_retry_pending", boot_retry_pending}, {"hold_superseded", hold_superseded},
     };
     for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++)
         if (!strcmp(argv[1], cases[i].name)) {

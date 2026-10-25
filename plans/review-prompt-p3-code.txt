@@ -1,0 +1,12 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: P3, Connection in the menu, the Bluetooth slots and pairing (plans/CONFIG-MENU-P1-DESIGN.md's "P3" section, draft 2; your design review and its dispositions: plans/review-codex-p3-design-2026-10-25.md). The firmware diff is qmk_firmware-ak820pro, `git diff a9f750ff c66e6eaf -- keyboards/a_jazz/ak820pro` (bt_ui.c/.h, bluetooth/ch582f_ajazz.c/.h, menu/menu.c, menu/menu.h, menu/menu_env.h, menu/menu_glue.c, menu/menu_ops.c). The host side is this repo's last commit, 4ef7c41: scripts/ch582_sim/btui.c with stubs_btui/ and run.sh (bt_ui.c and the driver compiled verbatim, twelve cases), scripts/menu_s0_test.c (test_p3 and its fakes), scripts/menu_p1a_board.py (connection(), on op 27 sub 16's stand-in).
+
+Check:
+1. The driver's three new facts (pair_confirmed, select_acked, ch582_select_state()) at every place pa.kind and conn_state change: set_profile and its bounce, the bounce's PA_SELECT transition in the pump, the select retry's give-up, the 5B 23 re-issue, enter_pairing, cancel_connect, the 5A promotion, 5B 31/32/33/34/36, the cold-boot retry. Any path where the menu's pair fires on the wrong slot, never fires when it should, or where the Pairing page's phase is false.
+2. bt_ui.c: the menu's pending pair against the key's hold (bt_pair_armed, the pair hint), the slider, Fn+P and the slot keys; the refactor of the slot key's press into select_slot() (is the key's behaviour byte for byte the same?); the 16-bit timer.
+3. menu.c: the new nodes in every switch and predicate (is_list, is_confirm, is_bt_screen, rows_of, label_of, screen_title, title_icon, row_at, row_text, c_sig, c_paint, activate, menu_input, menu_tick, menu_cursor), the latch in sync_model() and its re-syncs after a select, a pair and a stop, the Pairing page replacing the pair list's frame, the follow-the-slider return, menu_long_wait() and the backstop in menu_ops.c; the signatures (bit 0 lit, 16 bits, the word in val).
+4. Op 27 sub 16's validation and the stand-in's suppression in menu_glue.c; sub 14's new bytes.
+5. Whether the tests would catch the failures you find, and anything else unsafe for the flash on the keyboard on gremlin (dev build; its slider is on the cable). RAM: the dev heap gap is 136 B against a 128 B floor.
+
+Name each problem with the file and line, and separate what must change before the flash from what can wait. Must anything change before flashing? Keep it under 900 words.
