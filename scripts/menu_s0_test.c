@@ -1636,7 +1636,7 @@ static void test_menu(void) {
     CHECK(row_bad(2, cells2("Diagnostics", ">"), MENU_DIM) == 0);
     CHECK(row_bad(3, cells2("Help", ">"), MENU_DIM) == 0);
     CHECK(row_bad(4, cells2("About", ">"), MENU_DIM) == 0);
-    CHECK(row_bad(5, cells2("Exit", ""), MENU_DIM) == 0);
+    CHECK(row_bad(5, cells2("Exit", ""), MENU_LEAVE) == 0);   /* JD, 10-24: Back and Exit in light red */
     CHECK(row_bad(6, "", 0) == 0 && row_bad(7, "", 0) == 0);
     CHECK(fb[20][125] == 0 && fb[100][125] == 0);   /* no scrollbar: its track black */
     CHECK(op27(0, 1, 0) == MI_BAD);                  /* sub 0 is the fixture's only */
@@ -1653,10 +1653,10 @@ static void test_menu(void) {
     /* Power: the choice opens on the saved option, its bullet in cell 0. */
     m_click();
     CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad("Power") == 0);
-    CHECK(row_bad(0, "\x80" " Back", MENU_DIM) == 0);
-    CHECK(row_bad(1, " Always on", MENU_DIM) == 0);
-    CHECK(row_bad(2, "\x82" "Balanced", MENU_LIT) == 0);
-    CHECK(row_bad(4, " Lights out", MENU_DIM) == 0);
+    CHECK(row_bad(0, "\x80" " Back", MENU_LEAVE) == 0);
+    CHECK(row_bad(1, "  Always on", MENU_DIM) == 0);   /* the bullet's cell, then a space: JD's breathing room */
+    CHECK(row_bad(2, "\x82" " Balanced", MENU_LIT) == 0);
+    CHECK(row_bad(4, "  Lights out", MENU_DIM) == 0);
     m_turn(2);   /* Lights out */
     m_click();   /* commits */
     CHECK(fk_power == 3 && fk_power_writes == 1);
@@ -1669,7 +1669,7 @@ static void test_menu(void) {
     /* Clock: a cancel by Back writes nothing, and says so. */
     m_turn(1);
     m_click();
-    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, "\x82" "24 hour", MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, "\x82" " 24 hour", MENU_LIT) == 0);
     m_turn(2);   /* Date: the enum's 3 */
     m_hold();
     CHECK(fk_clock == 0 && fk_clock_writes == 0 && title_bad("Cancelled") == 0 && sub5_screen() == 16 + 1);
@@ -1697,6 +1697,15 @@ static void test_menu(void) {
     CHECK(title_bad("Shortcuts") == 0 && sub5_cursor() == 0);
     CHECK(row_bad(0, "Fn+Q/W/E  BT slot", MENU_WHITE) == 0);
     CHECK(fb[20][125] == MENU_WHITE);   /* a scrollbar: the thumb at the top */
+    /* A page step paints the scrollbar first (JD, 10-24): in the pass that
+     * takes the turn, the thumb moves to the bottom while the first row
+     * still shows the old text. */
+    CHECK(op27(1, 1, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+    CHECK(fb[20][125] == MENU_TRACK && fb[120][125] == MENU_WHITE);
+    CHECK(row_bad(0, "Fn+Q/W/E  BT slot", MENU_WHITE) == 0);
+    m_settle();
+    m_turn(-1);
     m_turn(1);
     CHECK(sub5_cursor() == 4 && row_bad(0, "Fn+Up/Dn  brightness", MENU_WHITE) == 0);
     CHECK(row_bad(7, "Fn+Esc    bootloader", MENU_WHITE) == 0);
@@ -1797,13 +1806,13 @@ static void test_menu(void) {
     CHECK(op27(2, 0, 0) == MI_OK);
     CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
     m_settle();
-    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && row_bad(3, "\x82" "Power saver", MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && row_bad(3, "\x82" " Power saver", MENU_LIT) == 0);
     /* An external change inside an open choice: the bullet moves, the cursor
      * stays; then Back by its row cancels, writing nothing. */
     fk_power = 0;
     fw_pass(5);
     m_settle();
-    CHECK(sub5_cursor() == 3 && row_bad(1, "\x82" "Always on", MENU_DIM) == 0 && row_bad(3, " Power saver", MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 3 && row_bad(1, "\x82" " Always on", MENU_DIM) == 0 && row_bad(3, "  Power saver", MENU_LIT) == 0);
     int w0 = fk_power_writes;
     m_turn(-3);   /* to ‹ Back */
     m_click();
@@ -1892,7 +1901,7 @@ static void top_frame_ok(int cursor) {
     const char *rows[6][2] = {{"Power", "Balanced"}, {"Clock", "24h"}, {"Diagnostics", ">"},
                               {"Help", ">"}, {"About", ">"}, {"Exit", ""}};
     for (int r = 0; r < 6; r++)
-        CHECK(row_bad(r, cells2(rows[r][0], rows[r][1]), r == cursor ? MENU_LIT : MENU_DIM) == 0);
+        CHECK(row_bad(r, cells2(rows[r][0], rows[r][1]), r == cursor ? MENU_LIT : r == 5 ? MENU_LEAVE : MENU_DIM) == 0);
 }
 static void test_menu_stress(void) {
     fw_reset();
