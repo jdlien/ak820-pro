@@ -1040,3 +1040,25 @@ visibility from Screen Off and level 0, persistence across a reboot, C10's
 gates on the editors; the host's long-idle and 32-bit-wrap cases, the
 editors' piece-boundary loss/DMA/close-reopen cases, the forced-save
 semantics; JD's session.
+
+### 20f. P1b's exit gates on the board (10-24, ~23:00)
+
+`scripts/menu_p1b_gates.py` on `07b51f58` (`p1b-gates-07b51f58.json`):
+**PASS, 31 of 31**. Each outside writer through its real path mid-edit,
+observed in order: a VIA get answered the restored value; a VIA set and the
+device indication still applied after the cancel (the indication toggled the
+lights, a second back); a forced VIA save stored the restored value; dev ops
+4 and 5 cancelled a Screen edit, then applied. Lights saved Off, a Save with
+the lights off (saved, still off), Brightness and Lights saved back. The
+panel shown by the menu from level 0 and from Screen Off. Everything put
+back (`ak820lighting.py show`: board and backup the same).
+
+A first run failed the Lights gate on the script's own mistake: it read the
+lights by VIA mid-edit, and a VIA read is a writer here (gate 1), so it
+cancelled the edit and the later clicks went astray, leaving the lights saved
+Off. Restored from the flash's backup at once; the script now reads the edit
+by sub 14 only and puts the lighting back whatever fails.
+
+Still owed: persistence across a reboot (a power cycle: JD's step), C10's
+gates on the editors, the host's long-idle and wrap and piece-boundary
+cases, JD's session.
