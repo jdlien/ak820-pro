@@ -1,0 +1,11 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: P2b, the LCD backlight from 24 levels to 0-100 (plans/CONFIG-MENU-P1-DESIGN.md's "P2b" section; your design review and its dispositions: plans/review-codex-p2b-design-2026-10-25.md). The firmware diff is qmk_firmware-ak820pro, `git diff 8b4aec16 a9f750ff -- keyboards/a_jazz/ak820pro` (graphics/display.c, indicator_levels.h from scripts/gen_indicator_levels.py, config.h, power.c, kb_eeconfig.c, battery.h, param_overlay.c, menu/menu.c, menu/menu.h). The host side, in this repo's last two commits: hostagent/ak820battery.py (log v8, the bkl100 column), scripts/battery_sim/ (run.sh's sim_bkl.h, sim.c's adapter and bkl_ticks, ladder.c, count.c), scripts/menu_s0_test.c (test_ind_levels' backlight checks, test_p1b's Screen), scripts/diag_sim/kbee.c (the LCD byte), scripts/ind_timing.py (--lcd), scripts/menu_p1b_gates.py.
+
+Check:
+1. display_backlight_tick() with bkl_tick_pin(), display_backlight_duty() with ind_duty_ticks(), display_set_power()'s write, bkl_effective()'s cap, C7 floor and wake hold on the new scale, and the ISR's volatile accesses.
+2. Every place the 0-23 scale survives in firmware or the host tools this flash's board will meet (flash.sh's log dump and lighting/keymap restore, devhook.py, the menu's board scripts), and anything that would make the next flash.sh run fail.
+3. battery_sim: does the adapter keep the pinned baseline builds and old logs exactly as before, and the new build's scenarios right?
+4. Anything else unsafe for the flash on the keyboard on gremlin.
+
+Name each problem with the file and line, and separate what must change before the flash from what can wait. Must anything change before flashing?
