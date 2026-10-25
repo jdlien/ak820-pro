@@ -1284,9 +1284,10 @@ uint32_t    env_build_token(void) { return 0xef38330eu; }
 const char *env_build_flavour(void) { return "dev"; }
 
 /* The menu's tests watch every pass: the most CPU-fed bytes in one, and the
- * most rows showing the lit colour at once (P1a: one at most). */
+ * most rows showing the lit colour, and the cursor, at once (P1a: one at
+ * most of each; codex on 541a8cbd: the cursor has its own colour and chunk). */
 static bool menu_watch;
-static int  menu_max_lit;
+static int  menu_max_lit, menu_max_cursor;
 static int lit_rows(void) {
     int n = 0;
     for (int r = 0; r < 8; r++) {
@@ -1294,6 +1295,16 @@ static int lit_rows(void) {
         for (int y = 15 + 14 * r; y < 29 + 14 * r && !lit; y++)
             for (int x = 3; x <= 124 && !lit; x++) lit = fb[y][x] == MENU_LIT;
         n += lit;
+    }
+    return n;
+}
+static int cursor_rows(void) {
+    int n = 0;
+    for (int r = 0; r < 8; r++) {
+        bool c = false;
+        for (int y = 15 + 14 * r; y < 29 + 14 * r && !c; y++)
+            for (int x = 0; x < 3 && !c; x++) c = fb[y][x] == MENU_CURSOR;
+        n += c;
     }
     return n;
 }
@@ -1314,8 +1325,9 @@ static void fw_pass(uint32_t dt) {
     if (po_owner() == PANEL_MENU) menu_pump();
     if (pass_bytes > max_pass_bytes) max_pass_bytes = pass_bytes;
     if (menu_watch && po_owner() == PANEL_MENU) {
-        int l = lit_rows();
+        int l = lit_rows(), c = cursor_rows();
         if (l > menu_max_lit) menu_max_lit = l;
+        if (c > menu_max_cursor) menu_max_cursor = c;
     }
 }
 
@@ -1658,7 +1670,7 @@ static void test_menu(void) {
     fw_reset();
     fk_power = 1; fk_clock = 0;
     fk_power_writes = fk_clock_writes = fk_resets = 0;
-    menu_watch = true; menu_max_lit = 0; max_pass_bytes = 0;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
 
     /* sub 11 opens the menu: the top level, row 0 lit. */
     CHECK(op27(11, 0, 0) == MI_OK && mi_last_state() == MI_ST_DONE);
@@ -1963,7 +1975,7 @@ static void test_menu(void) {
     CHECK(sub5_screen() == FX_SCREEN_F1 && op27(0, 1, 0) == MI_OK);
     CHECK(op27(4, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
-    CHECK(menu_max_lit <= 1);
+    CHECK(menu_max_lit <= 1 && menu_max_cursor == 1);   /* one cursor, never two, and the watcher saw it */
     CHECK(max_pass_bytes <= MB_PASS_BYTES);
     CHECK(po_invariant_fail() == 0);
     if (menu_max_lit > 1) printf("menu: %d rows lit at once\n", menu_max_lit);
@@ -1982,7 +1994,7 @@ static void top_frame_ok(int cursor) {
 static void test_menu_stress(void) {
     fw_reset();
     fk_power = 1; fk_clock = 0;
-    menu_watch = true; menu_max_lit = 0; max_pass_bytes = 0;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
     CHECK(op27(11, 0, 0) == MI_OK);
     m_settle();
     /* How many passes a move's repaint takes, once the turn is taken. */
@@ -2026,7 +2038,7 @@ static void test_menu_stress(void) {
         }
     }
     CHECK(consumed >= full);
-    CHECK(menu_max_lit <= 1 && max_pass_bytes <= MB_PASS_BYTES);
+    CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
     if (menu_max_lit > 1) printf("menu stress: %d rows lit at once\n", menu_max_lit);
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);   /* sub 11 closes an open menu */
     menu_watch = false;
