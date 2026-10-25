@@ -23,14 +23,35 @@ The once-a-second slow pass's fix is on JD's board since 23:48 10-23.
 
 ### What is running
 
-- **Firmware on JD's board: `b9555ff3e6`** (dev, token `0x3c117332`), since
-  23:48:26 10-23, built and flashed from Buzz, the new Mac. `flash.sh`
-  restored and verified the keymap and the lighting, and synced the clock
-  to -4.3 ms.
+- **Firmware on JD's board since 22:02:56 10-24: `52acdffe99`** (dev,
+  token `0xab194817`), on `mac/wake-dark-frame`. It is `b9555ff3e6` plus
+  the wake's dark-frame fix (`plans/BACKLOG.md`, "The key lights flash at a
+  deep-sleep wake"):
+  - the sleep waits for the committed frame to be dark;
+  - the wake restages the ladder at once.
+
+  An independent review found no must-fix and four nits: one comment fixed,
+  one noted, two left. Codex isn't installed on Buzz.
+  - **Flashed mid-drain, on battery** (relay 2 off throughout), with JD's go.
+  - **The first jump was refused,** a minute of "a key moved in the last
+    2 s" while JD typed. The retry jumped at 22:02:36.
+  - **`flash.sh` restored and verified** the keymap and the lighting.
+  - **The gauge came back at 95.0%** (the clamped boot's guess), against
+    94.6% by the logger.
+  - **The clock settled** at +1.4 ms at 22:08:55.
+  - **Proven at 22:19:52 10-24** by JD's second 120 fps video, of a wake
+    from a real deep sleep (asleep at 22:18:25, 2.7 mA). The keys went dark
+    to his colour in one frame, with no dim frame and no gap, and the ladder
+    still sleeps.
+  - **Handed to Warren that evening** for the menu's build. It merges clean
+    into `gremlin/config-menu` and `gremlin/fill-poll` (git merge-tree). The
+    end-of-drain flash becomes S0 + fill-poll + this.
+- **Before it: `b9555ff3e6`** (dev, token `0x3c117332`), from 23:48:26
+  10-23, built and flashed from Buzz, the new Mac.
 - **Before it: `36afff30e8`** (dev, token `0xef38330e`), from
   14:22 10-21. It is Gremlin's frame trim (`01abfe0ecf`, codex cleared after
   four rounds) merged with `36330d5ec8` (the 81-LED model).
-- **The mainline: `b9555ff3e6`, now on JD's board too.** `ak820pro-jdlien` and
+- **The mainline: `b9555ff3e6`, on JD's board until 22:02 10-24.** `ak820pro-jdlien` and
   `deps.lock` point at it. It is `36afff30e8` plus the once-a-second slow
   pass's fix (`ce229f87c6`, below) and a comment crediting quill4gen7 in
   `lockchan.c` (the same code). Gremlin's board runs it since 17:03 10-22 (token
@@ -95,6 +116,15 @@ The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
     (`scripts/power_log_agent.sh`), out of cmux's reach. The switch lost
     no row: one a second through it, `qt_ms` unbroken. At 21:15:04, 196.2
     mAh since FULL (4.9%).
+- **The flash of `52acdffe99` mid-drain:** data on 21:51:44-22:09:03,
+  9.53 mAh in those 17 min, none charged. Afterwards, 219.1 mAh since FULL
+  (5.5%, at 22:09:05). The pre-flash battery log is
+  `~/Documents/ak820pro-battlogs/log-20261024-220230-preflash.csv`. The
+  board's gauge restarted at its 95.0% guess, so its check against the
+  logger runs from FULL to 22:02 and from 22:03 on, not across the flash.
+- **Power saver from ~22:15 10-24** (JD, `Fn`+`B`). The flash had reset
+  the mode to Balanced. From the logger: dimmed 1 min and asleep 3 min
+  after his input, against Balanced's 10 and 20.
 
 ### Stopped 23:46:52 10-23: the untethered drain at real use, restarted from FULL
 

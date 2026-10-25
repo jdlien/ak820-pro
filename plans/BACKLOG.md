@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## The key lights flash at a deep-sleep wake (2026-10-24) -- cause found: the sleep starts before the dark frame is committed; a fix proposed, for after the drain
+## The key lights flash at a deep-sleep wake (2026-10-24) -- cause found: the sleep starts before the dark frame is committed; fixed in `52acdffe99`, on JD's board since 22:02 10-24, proven at 22:19 10-24
 
 JD saw it twice on `b9555ff3e6`, on the pack, at his daily setting
 (Alphas/Mods, hue 185, sat 227, val 115, speed 231), the screen fine:
@@ -73,7 +73,7 @@ out goes dark at once and sleeps at 60 s, so it shows no flash.
 minutes. So the board went from USB power, lit at his full setting, straight
 to dark and asleep in one pass, and the frame it kept was the full one.
 
-**The fix, proposed, not built; for the flash after the drain:**
+**The fix: `52acdffe99` on `mac/wake-dark-frame`** (on `b9555ff3e6`; on JD's board since 22:02 10-24, mid-drain, with his go). JD's second 120 fps video (22:19:52 10-24, a wake from a real deep sleep) shows the keys going dark to his colour in one frame, with no dim frame and no gap, and the ladder still sleeps. Handed to Warren for the menu's build. It has two parts:
 - **Gate the sleep on the committed frame.** `blockers()` sets `DSB_RGB`
   until the driver's `drive_now[]` sums are zero too, through a new
   `sn32f2xx` accessor. The sleep then starts ~40 ms later, and a wake starts
@@ -81,8 +81,22 @@ to dark and asleep in one pass, and the frame it kept was the full one.
   block every sleep. The scale applies in `sn32f2xx_set_color` on every
   path, so at scale 0 every render commits zeros. The soak's sleep counts
   would show it.
-- **Optional:** run the ladder's tick in a key wake's first pass. The keys
-  would then light one render after the key, ~40 ms, not ~140.
+- **Run the ladder's tick in the wake's first pass** (`power_task()` in
+  `recovery_begin`). The keys then light one render after the key, ~40 ms,
+  not ~140.
+
+**The review** (an independent Claude reviewer, since codex isn't
+installed on Buzz) found no must-fix and no should-fix. Its nits:
+- **A comment overstated things.** A notice can be posted at the wake, but
+  it only sets the display's flags. Fixed.
+- **The low cap sees the level from before the sleep for one tick.** A
+  sleep that crossed 15% lights the keys at the mode's ceiling for ~100 ms,
+  once a discharge. Noted in the code. It cannot show at JD's value (115,
+  under Saver's 128).
+- **The bench's sleep arm masks `DSB_RGB` whole,** as designed: it sleeps
+  lit on purpose. Left.
+- **A separate blocker bit for "not yet committed".** Left: `0x4000` is
+  Warren's `DSB_MENU`, and op 14's stage read-back tells the two apart.
 
 The first code read (10-24) took `led_state` to be all zeros asleep, which
 is where it went wrong. The rest of it stands: no board code paints every

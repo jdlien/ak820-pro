@@ -120,8 +120,11 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
   to Buzz, the new Mac, on 10-23 spoiled the first;
 - stripping the bench, the soak, and the release for other owners.
 
-**On the board since 23:48 10-23: the mainline, `b9555ff3e6`** (dev, token
-`0x3c117332`), flashed from Buzz. `ak820pro-jdlien` and `deps.lock` point
+**On the board since 22:02 10-24: `52acdffe99`** (dev, token `0xab194817`,
+`mac/wake-dark-frame`): the mainline plus the wake's dark-frame fix
+(`plans/BACKLOG.md`), flashed mid-drain on battery to try it; Warren merges
+it into the menu's build once it proves out. **Before it, from 23:48 10-23:
+the mainline, `b9555ff3e6`** (dev, token `0x3c117332`), flashed from Buzz. `ak820pro-jdlien` and `deps.lock` point
 at it. It is `36afff30e8` plus `ce229f87c6` and a credit comment, and it
 moves the glyph pump off the clock's seconds tick, the pass that hit 10 ms
 every second. On gremlin's board since 17:03 10-22, `count_ge_10ms` fell
