@@ -982,3 +982,18 @@ Dev `62bb64f9` (token `0x7658391c`): op 27 sub 12's maxima over a full
   different but bright enough to be visible on a dim screen." The
   scrollbar first: "_definitely_ the right call. It's nearly instant so the
   user knows where they are as the text fills in."
+
+### 20c. A flash that stuck in the bootloader (10-24, ~20:00)
+
+Flashing `1e84bf17`: the firmware's jump worked and the bootloader
+enumerated (`0C45:7140`), but the flasher got "Device failed to init" and
+then "failed to fetch flash version" on every retry, in two runs
+(`%TEMP%/ak820flash.hnQpqU`, `.q1YVAx`). **Neither erased anything** (no
+"Erasing" line), so `62bb64f9` stayed on the chip; the board looked dead to
+JD ("not coming up at all and I can't type on it"). The 19:37 flash had one
+"failed to init" and then succeeded. **Recovery:** JD power-cycled it (the
+slider to cable, unplugged ~10 s, replugged); it came back as `0C45:8009` on
+`62bb64f9`, and the next `flash.sh` succeeded at once. Cause unknown: the
+bootloader's handshake, sometimes. If it recurs: check `Get-PnpDevice` for
+7140 (no HID enumeration), check the flasher log for "Erasing" before
+worrying, and power-cycle.
