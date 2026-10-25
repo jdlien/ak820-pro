@@ -36,6 +36,7 @@ RESET, TOPIC0 = 10, 11
 LIGHT, SCREEN, EFFECT, BRIGHT, HUE = 24, 25, 26, 27, 28   # P1b's nodes
 IND, CONN, LOCKS, CHGL = 35, 36, 37, 38                   # P2a's
 CONNINFO, PAIRING = 39, 44                                 # P3's (Pair a device: the current slot's)
+BATT = 45                                                  # P4's Battery
 # P3's link byte (menu_env.h's ENV_LINK_*: transport bits 1-0, slot 3-2,
 # state 6-4) and the pairing facts, for op 27 sub 16's stand-in.
 L_USB, L_BT = 0, 1
@@ -43,10 +44,10 @@ S_IDLE, S_LINKING, S_PAIRING, S_CONNECTED, S_REJECTED = range(5)
 PF_WAITING, PF_RETRYING, PF_CONFIRMED, PF_SEL_LOST = 1, 2, 4, 8
 P_START, P_OPEN, P_DONE, P_ENDED, P_FAILED, P_UNSURE = range(6)
 LINK = lambda slot, st: L_BT | slot << 2 | st << 4  # noqa: E731
-# The top level since P2a (the build plan's order): Lighting, Screen,
-# Connection, Power, Indicators, Clock, Diagnostics, Bootloader; Help, About,
-# Exit on page two.
-R_CONN, R_POWER, R_IND, R_CLOCK, R_DIAG, R_BOOT, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7, 8, 9, 10
+# The top level since P4 (JD, 10-25): Lighting, Screen, Connection, Power,
+# Indicators, Clock, Battery, Bootloader; Diagnostics, Help, About, Exit on
+# page two.
+R_CONN, R_POWER, R_IND, R_CLOCK, R_BATT, R_BOOT, R_DIAG, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 SCR = lambda n: 16 + n  # noqa: E731
 SETTLE_S = 1.0
 
@@ -259,8 +260,19 @@ def main():
         turn(h, 1, "move", SCR(CLOCK))
         hold(h, "cancelled", SCR(TOP), R_CLOCK)
 
+        # Battery (P4): the other readout, then the original again.
+        turn(h, R_BATT - R_CLOCK, "to Battery", SCR(TOP), R_BATT)
+        s = click(h, "Battery", SCR(BATT))
+        orig_b = s["cursor"]
+        nxt = 3 - orig_b
+        turn(h, nxt - orig_b, "to the other readout", SCR(BATT), nxt)
+        click(h, "commit it", SCR(TOP), R_BATT)
+        click(h, "Battery again", SCR(BATT), nxt)
+        turn(h, orig_b - nxt, "to the original", SCR(BATT), orig_b)
+        click(h, "commit the original", SCR(TOP), R_BATT)
+
         # Help: each topic, paged to its end and back.
-        turn(h, R_HELP - R_CLOCK, "to Help", SCR(TOP), R_HELP)
+        turn(h, R_HELP - R_BATT, "to Help", SCR(TOP), R_HELP)
         click(h, "Help", SCR(HELP), 1)
         for t in range(4):
             if t:

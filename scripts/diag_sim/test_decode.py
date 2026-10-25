@@ -65,20 +65,20 @@ if ("ACCT", 0) in pages:
 
 if ("FLASHW", 0) in pages:
     f = H.read_flashw(None)
-    p2a = ("FLASHW", 3) in pages   # the indicator levels' fields (the menu's P2a)
-    check(f["sessions"] == {"other": 1, "kb": 11 if p2a else 7, "rgb": 1, "via": 1}, f"sessions {f['sessions']}")
+    p2a = ("FLASHW", 3) in pages   # the indicator levels' fields (the menu's P2a), and P4's battery readout
+    check(f["sessions"] == {"other": 1, "kb": 13 if p2a else 7, "rgb": 1, "via": 1}, f"sessions {f['sessions']}")
     check(f["erases"]["rgb"] == 1 and f["programs"]["rgb"] == 3, f"rgb {f['erases']} {f['programs']}")
     check(f["kb_field_sessions"]["rtc_period"] == 5 and f["kb_field_sessions"]["batt_level"] == 1,
           f"fields {f['kb_field_sessions']}")
-    check(f["kb_mixed"] == (2 if p2a else 1) and f["kb_unknown"] == 0, f"mixed {f['kb_mixed']}")
+    check(f["kb_mixed"] == (3 if p2a else 1) and f["kb_unknown"] == 0, f"mixed {f['kb_mixed']}")
     if p2a:
-        check(f["kb_field_sessions"]["ind_locks"] == 2 and f["kb_field_sessions"]["ind_charging"] == 1,
-              f"P2a's fields {f['kb_field_sessions']}")
+        check(f["kb_field_sessions"]["ind_locks"] == 2 and f["kb_field_sessions"]["ind_charging"] == 1 and
+              f["kb_field_sessions"]["batt_view"] == 1, f"P2a's and P4's fields {f['kb_field_sessions']}")
         # Older firmware answers page 3 as unhandled: those fields are None, the rest unchanged.
         p3 = pages.pop(("FLASHW", 3))
         g = H.read_flashw(None)
-        check(g["kb_field_sessions"]["ind_locks"] is None and g["kb_field_sessions"]["ind_charging"] is None,
-              f"no page 3: {g['kb_field_sessions']}")
+        check(g["kb_field_sessions"]["ind_locks"] is None and g["kb_field_sessions"]["ind_charging"] is None and
+              g["kb_field_sessions"]["batt_view"] is None, f"no page 3: {g['kb_field_sessions']}")
         check({k: v for k, v in g.items() if k != "kb_field_sessions"} ==
               {k: v for k, v in f.items() if k != "kb_field_sessions"}, "no page 3: the rest the same")
         pages[("FLASHW", 3)] = p3

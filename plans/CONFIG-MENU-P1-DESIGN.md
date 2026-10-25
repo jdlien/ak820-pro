@@ -1375,6 +1375,78 @@ is 136 B** (from 144; the floor is 128), daily 2,264 (from 2,280).
 - **JD:** the slider to BT; a slot switch each way; pairing a device on a
   free slot, and a stop.
 
+## P4: Battery, the readout in percent or hours (draft 1, 10-25)
+
+JD (10-25): "The only feature remaining is the battery indicator toggle
+between hours of use and percent ... this would toggle on a '160 h' or
+something like that all the time there." The build plan has it (the
+settings table's last row, `kb_eeconfig` byte 9, `batt_view`) and
+MENU-TEXT has its words; nothing of it is built. The estimate is:
+`battery_time_left_min()`, hours of use to the RGB cut at the awake
+average, which the dashboard shows today only under 10 h with a mature
+average (`18% 6h`).
+
+**The menu.**
+- A top-level row, `Battery` with its value `Percent` or `Hours`, under
+  Clock; and Diagnostics under Bootloader, on page two (JD, 10-25): Lighting,
+  Screen, Connection, Power, Indicators, Clock, Battery, Bootloader;
+  Diagnostics, Help, About, Exit. Twelve rows.
+- Its icon: Material's vertical battery at 60% (U+F57F, one cell and a
+  space, rows 2-10 like the bolt). FontAwesome's horizontal ones (U+F240,
+  the picker's proposal) are 7 × 5 px, half the height of their neighbours.
+- A choice, title `Battery` with the icon: `◀ Back`, `Percent`, `Hours of
+  use`; the saved one's check box (green). A click commits, flashes
+  `Saved` and goes back, as Power and Clock do. No preview: the dashboard
+  isn't on the panel while the menu is.
+- Nodes appended, so no screen id moves: `N_BATT` 45, `N_BV0`-`N_BV1`
+  46-47 (`N_COUNT` 48, at most 63). Title `T_BATT` 44. The row's value is
+  read from `env_batt_view()` where it's built: nothing else changes the
+  view, so no latched model (and no RAM).
+
+**The setting.** `kb_eeconfig` byte 9, `batt_view`: 0 unset, 1 Percent, 2
+Hours; unset or invalid reads Percent (the build plan's frozen encoding).
+`EECONFIG_KB_DATA_SIZE` 10, `EECONFIG_KB_DATA_VERSION` 7. A flash erases the
+block anyway. Applied at boot beside the clock format; written through the
+deferred write (5 s settle).
+
+**The flash attribution** (`flash_stats.c`), the build plan's ninth field:
+`KBF_BVIEW 0x100`, `KBF_COUNT` 9; the mask carriers (`pending_mask`, the
+locals `mask` and `m`, `kb_byte_field[]`'s elements) widen to 16 bits, and
+the table's `_Static_assert` counts elements, not bytes. Page 1 stays
+frozen; page 3 gains its third u16 at offset 4 (`ak820health.py`'s
+`KB_FIELDS3`). The diag simulator's EEPROM stub goes to 10 bytes.
+
+**The readout** (`draw_battery()`, through a pure function the host tests
+run: `batt_text()` in `graphics/batt_text.c`):
+
+| State | Percent (today's) | Hours |
+|---|---|---|
+| On battery, the estimate ready (an hour of average, a known level) | `85%`; under 10 h `18% 6h`, `<1h` | `160h`; under 1 h `<1h` |
+| On battery, no estimate yet (the first hour after a boot or flash) | `85%` | `85%` |
+| Level 0, the cut | `Low` | `Low` |
+| USB, charging, no pack | `USB`, `Charge`, `No Batt` | the same |
+
+Hours round down, as today. At most 7 cells (`1092h` is the estimate's
+ceiling, 0xFFFE minutes). The hours count awake time only (slept time isn't
+in the average), so they move with what the lights draw.
+
+**RAM.** One byte in `kb_config`, a u16 in `kb_field_sessions`, the mask's
+second byte: 4 B. The readout reads the view from `kb_config` each time it
+composes (`kb_eeconfig_get_batt_hours()`), so `display.c` keeps no copy,
+and the menu reads it where it builds the row (no latch). **As built: the
+dev heap gap 128 B, the floor exactly** (136 before: the 4 B crossed the
+heap base's 8 B alignment). The layout's padding around the new fields is
+alignment the neighbours need anyway (`kb_config` lands 4-aligned, the
+next ring is 4-aligned), so reordering wins nothing; the savings that would
+(a diagnostics ring the host decodes, the dev palette's live tuning) aren't
+worth 4 B. Any later dev RAM needs savings first.
+
+**Tests.** The host test: the top level's twelve rows and both pages, the
+choice and its commit (the env call, the flash, the value), the green box;
+`batt_text()` over the table above. The diag simulator with the 10-byte
+block and the ninth field's attribution. The board: the menu pass with the
+new row and indices, and JD's look at the readout on battery after an hour.
+
 ## P1b, P1c, P1d
 
 P1b's design is the section above (the earlier note asked it to cover the

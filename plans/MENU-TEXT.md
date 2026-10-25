@@ -50,8 +50,9 @@ Connection      BT 1
 Power       Balanced
 Indicators         ▶
 Clock            24h
-Diagnostics        ▶
+Battery      Percent
 Bootloader         ▶
+Diagnostics        ▶
 Help               ▶
 About              ▶
 Exit
@@ -62,12 +63,15 @@ Exit
   Indicators the sun, Clock a clock, Diagnostics a chip, Bootloader a desktop
   with a download arrow, Help `?`, About `i`, Exit `×`. A heading carries its
   section's icon; the top level's, the wrench.
-- Eleven rows (P2a, 10-25, the mockup's order): Help, About and Exit are on
+- Twelve rows (P4, JD 10-25: Battery under Clock, Diagnostics under
+  Bootloader): Diagnostics, Help, About and Exit are on page two. Before P4,
+  eleven rows (P2a, 10-25, the mockup's order): Help, About and Exit were on
   page two (the scrollbar shows).
 - `Exit` and `◀ Back` rows show in light red when not selected; `▶` marks a
   row that opens a page; the saved option has a squared check.
-- The full top level will be (the mockup): Lighting, Screen, Connection,
-  Power, Indicators, Clock, Battery, Diagnostics, Bootloader, Help, About, Exit.
+- The full top level (P4): Lighting, Screen, Connection, Power, Indicators,
+  Clock, Battery, Bootloader, Diagnostics, Help, About, Exit. Battery's icon
+  is a vertical battery.
 
 ### Power (title: `Power`)
 
@@ -394,10 +398,26 @@ QMK Port by fpb
 The QR code to `https://github.com/jdlien/ak820-pro` (no text in the mockup;
 it shows `github.com/jdlien` / `  /ak820-pro` when the QR isn't drawn).
 
-### Battery (P4; on the top level)
+### Battery (P4; on the top level; title: `Battery`)
 
 A choice: `Percent`, `Hours of use`; the top level's value: `Percent`,
 `Hours`.
+
+```
+◀ Back
+■ Percent
+  Hours of use
+```
+
+What the dashboard's battery shows (JD, 10-25: "a '160 h' or something like
+that all the time there"):
+
+- **Percent:** `85%`; under 10 h of use left, the hours beside it, `18% 6h`
+  (`<1h` under an hour).
+- **Hours of use:** `160h`, `<1h` under an hour. Until there's an estimate
+  (the first hour on battery after a boot or a flash) it shows the percent.
+- Either way: `USB`, `Charge`, `No Batt` and `Low` as before. The hours
+  count awake time only, so they move with what the lights draw.
 
 ### Ideas waiting for words
 

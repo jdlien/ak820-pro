@@ -64,6 +64,7 @@ ICONS = [
     ("I_CONN", 0xF293, 2),         # Connection, nf-fa-bluetooth (the picker's proposal); in blue, a slot advertising
     ("I_WAIT", 0xF252, 2),         # P3: a slot linking, in grey (JD: "waiting/pending"), nf-fa-hourglass_half
     ("I_FAIL", 0xF057, 2),         # P3: a slot failed, in red (JD: "red x in a circle"), nf-fa-times_circle
+    ("I_BATT", 0xF57F, 1),         # P4: Battery, nf-mdi-battery_60 (vertical, the bolt's height; F240 is 7 x 5 px)
 ]
 
 

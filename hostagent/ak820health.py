@@ -70,7 +70,7 @@ LINK_FIELDS = ["sent", "timeouts", "queue_full", "giveups", "replaced",
 # HC_FLASHW: write sessions/programs/erases by writer (flash_stats.h).
 WRITERS = ["other", "kb", "rgb", "via"]
 KB_FIELDS = ["bt", "rtc_period", "lcd_brightness", "clock_mode", "batt_level", "power_mode"]
-KB_FIELDS3 = ["ind_locks", "ind_charging"]   # page 3 (the menu's P2a, 2026-10-25); None on older firmware
+KB_FIELDS3 = ["ind_locks", "ind_charging", "batt_view"]   # page 3 (the menu's P2a and P4, 2026-10-25); None before P2a, batt_view 0 before P4
 RTC_UNHANDLED = 0xFF   # the board's byte 0 for a command or page it doesn't know (VIA's id_unhandled)
 RTC_PATHS = {0: "-", 1: "sof", 2: "pcf"}
 # HC_ACCT: scope order is loop_acct.h's enum acct_scope, unaccounted last.
@@ -329,7 +329,7 @@ def read_flashw(h):
     v0 = struct.unpack_from("<4I4H2H", p0, 4)
     v1 = struct.unpack_from("<4I6H", p1, 4)   # the 6th: power_mode (was reserved, 0)
     v2 = struct.unpack_from("<HBBH4IIH", p2, 4)
-    v3 = struct.unpack_from("<2H", p3, 4) if p3 else (None,) * len(KB_FIELDS3)
+    v3 = struct.unpack_from(f"<{len(KB_FIELDS3)}H", p3, 4) if p3 else (None,) * len(KB_FIELDS3)
     return {
         "sessions": dict(zip(WRITERS, v0[0:4])),
         "erases": dict(zip(WRITERS, v0[4:8])),

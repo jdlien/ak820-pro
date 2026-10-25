@@ -203,9 +203,23 @@ This file is the thread; read it first after a context loss. Updated
        hand; his look at the icons and colours. Possible next: colours for
        the top level's icons (JD, 10-25: "not right away"; green and red
        stay status colours, Connection's would be the rune's blue).
-  4. The Clock options (the design doc's "JD's decisions"), with half-row
+  4. **P4, Battery (JD, 10-25 ~13:35: "The only feature remaining is the
+     battery indicator toggle between hours of use and percent"):** firmware
+     `d56980c9` on `gremlin/s1`, on the board since 13:53 (GREMLIN-RESULTS
+     §20k; codex: no must-fix). A top-level Battery row under Clock, and
+     Diagnostics under Bootloader on page two (JD); Percent / Hours of use;
+     `kb_eeconfig` byte 9 (version 7); the dashboard's `160h` through
+     `graphics/batt_text.c`. **The dev heap gap is 128 B, the floor:** any
+     more dev RAM needs savings first (codex's candidate: `draw_battery()`'s
+     `last_fw`, `last_txt_x`, `last_txt_w` as `uint8_t`).
+     - **Owed (JD):** the menu by eye; the hours with the cable out, after an
+       hour awake on battery.
+     - **Asked (JD's call):** a faster average for the hours readout (1-2 h,
+       the gauge keeping its 12 h), so a lighting change shows within an
+       afternoon; it needs the RAM above.
+  5. The Clock options (the design doc's "JD's decisions"), with half-row
      slots for the live examples.
-  5. JD's text edits; then P1c and P1d; P4 (Battery).
+  6. JD's text edits; then P1c and P1d.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;

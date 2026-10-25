@@ -214,16 +214,31 @@ static void flash(void) {
     blk[8] = 38; write(KB, blk, KBN, 1, false);        /* the charging light alone */
     write(KB, blk, KBN, 1, false);                     /* unchanged: no session */
     blk[7] = 14; blk[8] = 39; write(KB, blk, KBN, 1, false);   /* both: mixed */
+#ifdef KBF_BVIEW
+    /* P4's: the battery readout alone, then with the lock lights (mixed). */
+    blk[9] = 2; write(KB, blk, KBN, 1, false);
+    blk[9] = 1; blk[7] = 15; write(KB, blk, KBN, 1, false);
+#endif
     flash_stats_fill(3, p);
     CHECK(p[0] == 2 && p[2] == 1, "locks-alone %u charging-alone %u", p[0], p[2]);
+#ifdef KBF_BVIEW
+    CHECK(p[4] == 1 && p[5] == 0, "batt-view-alone %u", p[4]);
+    const int used3 = 6;
+#else
+    const int used3 = 4;
+#endif
     bool rest0 = true;
-    for (int i = 4; i < 28; i++) rest0 = rest0 && p[i] == 0;
+    for (int i = used3; i < 28; i++) rest0 = rest0 && p[i] == 0;
     CHECK(rest0, "page 3's reserved bytes are zero");
     CHECK(!flash_stats_fill(4, p), "page 4: unknown");
 #endif
     flash_stats_fill(0, p);
     uint32_t s_other = p[0], s_kb = p[4], s_rgb = p[8], s_via = p[12];
-#ifdef KBF_LOCKS
+#if defined(KBF_BVIEW)
+    CHECK(s_kb == 13 && s_rgb == 1 && s_via == 1 && s_other == 1, "sessions o%u kb%u rgb%u via%u", s_other, s_kb,
+          s_rgb, s_via);
+    CHECK(p[24] == 3 && p[26] == 0, "kb mixed %u unknown %u", p[24], p[26]);
+#elif defined(KBF_LOCKS)
     CHECK(s_kb == 11 && s_rgb == 1 && s_via == 1 && s_other == 1, "sessions o%u kb%u rgb%u via%u", s_other, s_kb,
           s_rgb, s_via);
     CHECK(p[24] == 2 && p[26] == 0, "kb mixed %u unknown %u", p[24], p[26]);

@@ -1,6 +1,7 @@
 /* Host check of the settings block (kb_eeconfig.c, compiled VERBATIM against
- * stubs_kbee/ and stubs/), for the menu's P2a (plans/CONFIG-MENU-P1-DESIGN.md;
- * codex on its design, point 3): the indicator levels' bytes 7 and 8 as
+ * stubs_kbee/ and stubs/), for the menu's P2a and P4 (plans/CONFIG-MENU-P1-DESIGN.md;
+ * codex on its design, point 3): the indicator levels' bytes 7 and 8 and P4's
+ * battery readout (byte 9) as
  * stored, every boundary, for each field alone; a zero-filled block (QMK's
  * answer to an older version); the deferred, coalesced write. Built and run
  * by run.sh. */
@@ -39,7 +40,7 @@ static void settle(void) {
 }
 
 int main(void) {
-    _Static_assert(EECONFIG_KB_DATA_SIZE == 9, "the block's P2a size");
+    _Static_assert(EECONFIG_KB_DATA_SIZE == 10, "the block's P4 size");
     /* Each field alone, each stored byte: 0 unset, 1 a saved Off, 2 the
      * level 1, 101 the level 100, 102 and 255 garbage (unset). */
     static const struct { uint8_t b; bool ok; uint8_t level; } cases[] = {
@@ -122,6 +123,35 @@ int main(void) {
     CHECK(writes == 1 && memcmp(stored, old7, sizeof old7) == 0 && stored[7] == 31 && stored[8] == 0,
           "bytes 0-6 kept, the pending save written: %d, %u %u", writes, stored[7], stored[8]);
 
-    printf("%s kbee: the settings block's indicator bytes\n", failures ? "FAIL" : "ok  ");
+    /* P4: the battery readout (byte 9), its frozen encoding: 0 unset, 1
+     * percent, 2 hours; unset and garbage read percent. */
+    static const struct { uint8_t b; bool hours; } bv[] = {{0, false}, {1, false}, {2, true}, {3, false}, {255, false}};
+    for (size_t i = 0; i < sizeof bv / sizeof bv[0]; i++) {
+        memset(stored, 0, sizeof stored);
+        stored[9] = bv[i].b;
+        boot();
+        CHECK(kb_eeconfig_get_batt_hours() == bv[i].hours, "batt_view byte %u", bv[i].b);
+    }
+    /* Saved through the deferred write, the other bytes kept; an unchanged
+     * save writes nothing; percent is stored as 1, not as unset. */
+    static const uint8_t old9[9] = {0x32, 0x40, 0x82, 43, 2, 150, 2, 31, 9};
+    memset(stored, 0, sizeof stored);
+    memcpy(stored, old9, sizeof old9);
+    boot();
+    writes = 0;
+    kb_eeconfig_set_batt_hours(true);
+    CHECK(kb_eeconfig_get_batt_hours() && kb_eeconfig_write_pending() && writes == 0, "hours: deferred");
+    settle();
+    CHECK(writes == 1 && stored[9] == 2 && memcmp(stored, old9, sizeof old9) == 0, "hours stored as 2, bytes 0-8 kept");
+    kb_eeconfig_set_batt_hours(true);
+    settle();
+    CHECK(writes == 1, "unchanged: nothing written");
+    kb_eeconfig_set_batt_hours(false);
+    settle();
+    CHECK(writes == 2 && stored[9] == 1, "percent stored as 1: %u", stored[9]);
+    boot();
+    CHECK(!kb_eeconfig_get_batt_hours(), "percent after a reboot");
+
+    printf("%s kbee: the settings block's indicator and battery-readout bytes\n", failures ? "FAIL" : "ok  ");
     return failures ? 1 : 0;
 }

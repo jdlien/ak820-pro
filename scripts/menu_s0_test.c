@@ -1319,6 +1319,11 @@ void    env_power_set(uint8_t m) { fk_power = m; fk_power_writes++; }
 uint8_t env_clock_mode(void) { return fk_clock; }
 void    env_clock_set(uint8_t m) { fk_clock = m; fk_clock_writes++; }
 void    env_health_reset(void) { fk_resets++; }
+/* P4: the battery readout. */
+static bool fk_batt_hours;
+static int  fk_batt_writes;
+bool env_batt_hours(void) { return fk_batt_hours; }
+void env_batt_hours_set(bool h) { fk_batt_hours = h; fk_batt_writes++; }
 
 /* P1b's primitives over a fake RGB core with QMK's semantics: the mode and
  * HSV setters do nothing while the lights are off; a saving setter raises
@@ -1766,14 +1771,15 @@ static int frames(const char *dir, int n) {
 /* P3: as text_slot_bad(), but cells 0-1 (x 4-15) in icon_fg when it isn't 0
  * (the current slot's status icon, in a colour of its own). text_slot_bad()
  * expects the saved option's check box in green, on every page, and the top
- * level's icons (I_POWER to I_CONN, the face's 0x8c-0x9d) in white, and on
+ * level's icons (I_POWER to I_CONN, the face's 0x8c-0x9d, and P4's I_BATT) in white, and on
  * the selected row (the cursor's) in #FFF7C6 (JD, 10-25). */
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg);
 static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor) {
     uint8_t c0 = (uint8_t)cells[0];
     return text_slot_bad2(y, cells, fg, cursor,
                           !strncmp(cells, FONT_MONO_CHECK_BOX, 2)                         ? 0x468Cu
-                          : c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1]
+                          : (c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1]) ||
+                                    c0 == (uint8_t)FONT_MONO_I_BATT[0]
                               ? (cursor ? 0xFFB8u : MENU_WHITE)
                               : 0);
 }
@@ -1834,14 +1840,16 @@ static void m_hold(void) {
 static uint8_t sub5_screen(void) { op27(5, 0, 0); return rpt[14]; }
 static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
 
-/* The top level's rows (P2a, the build plan's order): their indices, and
- * each row's cells with the defaults' values. */
-enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_DIAG, T_BOOT, T_HELP, T_ABOUT, T_EXIT, T_ROWS };
+/* The top level's rows (P4, JD 10-25: Battery under Clock, Diagnostics
+ * under Bootloader on page two): their indices, and each row's cells with
+ * the defaults' values. */
+enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_BOOT, T_DIAG, T_HELP, T_ABOUT, T_EXIT, T_ROWS };
 static const char *const top_rows_want[T_ROWS][2] = {
     {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 52 of 100 */
     {FONT_MONO_I_CONN "Connection", "BT 1"}, {FONT_MONO_I_POWER " Power", "Balanced"},   /* P3: the link */
     {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h"},
-    {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R}, {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
+    {FONT_MONO_I_BATT " Battery", "Percent"}, {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
+    {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R},
     {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
 };
 static void top_frame_ok(int cursor);
@@ -1869,8 +1877,8 @@ static void test_menu(void) {
     m_turn(-2);
     CHECK(sub5_cursor() == T_EXIT);
     top_frame_ok(T_EXIT);   /* page two */
-    /* Its thumb at the track's end: 81 px of 112, y 46-126 (codex: it was drawn off the panel). */
-    CHECK(fb[45][125] == MENU_TRACK && fb[46][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
+    /* Its thumb at the track's end: 75 px of 112 for twelve rows (P4), y 52-126 (codex: it was drawn off the panel). */
+    CHECK(fb[51][125] == MENU_TRACK && fb[52][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
     m_turn(1);
     CHECK(sub5_cursor() == 0);
 
@@ -2167,7 +2175,8 @@ static void top_frame_ok(int cursor) {
     for (int r = 0; r < 8; r++) {
         int i = page * 8 + r;
         if (i >= T_ROWS) CHECK(row_bad(r, "", 0) == 0);
-        else CHECK(row_bad(r, cells2(top_rows_want[i][0], top_rows_want[i][1]), i == cursor ? MENU_LIT : MENU_DIM) == 0);
+        else CHECK(row_bad(r, cells2(top_rows_want[i][0], top_rows_want[i][1]),
+                           i == cursor ? MENU_LIT : i == T_EXIT ? MENU_LEAVE : MENU_DIM) == 0);
     }
 }
 static void test_menu_stress(void) {
@@ -3345,6 +3354,70 @@ static void test_p3(void) {
     fk_pf         = 0;
 }
 
+/* --- P4: Battery, the readout in percent or hours ----------------------------
+ * (plans/CONFIG-MENU-P1-DESIGN.md, "P4"). Its screen id: 16 + N_BATT (45). */
+enum { SC_BATT = 16 + 45 };
+static void test_p4(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_lcd = fk_lcd_saved = 52;
+    fk_batt_hours = false; fk_batt_writes = 0;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+
+    /* The top level's row, under Clock: the value Percent. */
+    m_turn(T_BATT);
+    CHECK(sub5_cursor() == T_BATT && row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Percent"), MENU_LIT) == 0);
+    top_frame_ok(T_BATT);
+
+    /* The choice opens on the saved option, its box green. */
+    m_click();
+    CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 1 && title_bad(FONT_MONO_I_BATT " Battery") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, FONT_MONO_CHECK_BOX "Percent", MENU_LIT) == 0 &&
+          row_bad(2, "  Hours of use", MENU_DIM) == 0 && row_bad(3, "", 0) == 0);
+
+    /* A hold cancels: nothing written, and it says so. */
+    m_turn(1);
+    m_hold();
+    CHECK(fk_batt_writes == 0 && !fk_batt_hours && title_bad("Cancelled") == 0);
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_BATT);
+
+    /* Hours of use: a click commits, flashes Saved, and the top level shows it. */
+    m_click();
+    m_turn(1);
+    m_click();
+    CHECK(fk_batt_hours && fk_batt_writes == 1 && sub5_screen() == 16 + 1 && sub5_cursor() == T_BATT);
+    CHECK(title_bad("Saved") == 0 && row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Hours"), MENU_LIT) == 0);
+    for (int i = 0; i < 400; i++) fw_pass(5);   /* the flash's 1.3 s */
+    m_settle();
+
+    /* Reopened, on Hours of use; then Percent again. */
+    m_click();
+    CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 2 && row_bad(2, FONT_MONO_CHECK_BOX "Hours of use", MENU_LIT) == 0 &&
+          row_bad(1, "  Percent", MENU_DIM) == 0);
+    m_turn(-1);
+    m_click();
+    CHECK(!fk_batt_hours && fk_batt_writes == 2 && row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Percent"), MENU_LIT) == 0);
+    for (int i = 0; i < 400; i++) fw_pass(5);
+    m_settle();
+
+    /* Bootloader ends page one; Diagnostics opens page two (JD, 10-25). */
+    m_turn(T_BOOT - T_BATT);
+    CHECK(sub5_cursor() == T_BOOT);
+    top_frame_ok(T_BOOT);
+    m_turn(T_DIAG - T_BOOT);
+    CHECK(sub5_cursor() == T_DIAG);
+    top_frame_ok(T_DIAG);
+    m_click();
+    CHECK(sub5_screen() == 16 + 4);   /* Diagnostics */
+
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
+    CHECK(po_invariant_fail() == 0);
+    menu_watch = false;
+}
+
 int main(int argc, char **argv) {
 #ifdef MENU_ENABLE
     (void)argc; (void)argv;
@@ -3374,6 +3447,7 @@ int main(int argc, char **argv) {
     test_ind_levels();
     test_p2a();
     test_p3();
+    test_p4();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

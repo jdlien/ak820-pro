@@ -1223,3 +1223,30 @@ Three builds, each cleared by codex (`plans/review-codex-p3-green-2026-10-25.md`
   floor, so it's a constant. Codex cleared it
   (`review-codex-p3-iconlit-2026-10-25.md`). No menu pass: the same chunks
   and pieces as `1ff3d405`.
+
+### 20k. P4 on the board: Battery, percent or hours of use (10-25, 13:53)
+
+**On the board since 13:53: dev `d56980c9`** (token `0x12a5f25b`, gap
+128 B, the floor; daily `0xc6e3c466` builds at 2256 B). P4
+(`plans/CONFIG-MENU-P1-DESIGN.md`, "P4"; codex: no must-fix,
+`review-codex-p4-code-2026-10-25.md`): a top-level Battery row under Clock
+(Percent / Hours), Diagnostics under Bootloader on page two (JD), the choice,
+`kb_eeconfig` byte 9 (version 7), the flash attribution's ninth field, and
+the dashboard's readout through `graphics/batt_text.c`.
+
+- **Host:** `menu_s0_test` both ways (`test_p4`; the top level's twelve rows
+  and the scrollbar's 75 px thumb), `batt_text_test` (the design's table),
+  the diag sim with its golden against `781d071f` (pages 0-2
+  byte-identical).
+- **The menu pass** (`history/config-menu-p3-20261025/board-d56980c9.json`,
+  133 steps): the Battery steps all right (its page, screen 61; both commits
+  back to row 6). Three fails: the two old ones (back to Diagnostics
+  1,088 ms; the longest pass 17,322 us, the Hue editor) and Lighting's open
+  at 1,010 ms, which P4 doesn't touch: it settled in 884-1,015 ms across the
+  day's six runs, moving in the pass's 100 ms polls. The top level's
+  repaints are as on `1ff3d405`; Diagnostics back is faster (447 ms), since
+  it lands on page two's four rows.
+- **Owed (JD):** the menu by eye; the hours on the dashboard need the cable
+  out (with it in, the board is on external supply and shows `USB` or
+  `Charge`) and an hour awake on battery after the flash (the average
+  restarts at boot).
