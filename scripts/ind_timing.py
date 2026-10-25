@@ -44,22 +44,25 @@ def main():
     ap.add_argument("--out")
     a = ap.parse_args()
     h = H.open_device()
-    before, lcd0 = None, None
+    before, lcd0, lcd_eff = None, None, None
     try:
+        if a.set or a.lcd is not None:
+            # An open edit's live value is a preview: sub 15 or op 4 cancels
+            # it, and restoring the value read before would keep the preview
+            # (codex, P2a's and P2b's code reviews).
+            if ind_state(h)["open"]:
+                raise SystemExit("an edit is open in the menu: close it first")
         if a.set:
             force, locks, chg = (int(x) for x in a.set.split(","))
-            st = ind_state(h)
-            # An open edit's live levels are a preview: restoring them after
-            # sub 15 cancelled it would keep the preview (codex, P2a's code).
-            if st["open"]:
-                raise SystemExit("an edit is open in the menu: close it first")
-            before = st
+            before = ind_state(h)
             ind_set(h, force, locks, chg)
         if a.lcd is not None:
             lcd0 = devop(h, 6)
             st = devop(h, 4, a.lcd)
-            if st["level"] != a.lcd:
-                raise SystemExit(f"the LCD level set {st['level']}, not {a.lcd} (max {st['max']})")
+            # The workload is the effective level: powered, uncapped (codex).
+            if st["level"] != a.lcd or not st["on"] or st["effective"] != a.lcd:
+                raise SystemExit(f"the LCD isn't lit at {a.lcd}: {st}")
+            lcd_eff = st["effective"]
         time.sleep(1.0)
         s2a, s4a = sample(h)
         t0 = time.monotonic()
@@ -75,7 +78,7 @@ def main():
     rates = H.isr_rates(s4a, s4b, wall)
     dt = rates["isr_dt_s"]
     passes = (s2b["passes"] - s2a["passes"]) & 0xFFFFFFFF
-    row = {"label": a.label, "set": a.set, "lcd": a.lcd, "secs": round(wall, 2), "passes_per_s": round(passes / dt, 1) if dt else None,
+    row = {"label": a.label, "set": a.set, "lcd": a.lcd, "lcd_effective": lcd_eff, "secs": round(wall, 2), "passes_per_s": round(passes / dt, 1) if dt else None,
            "count_ge_10ms": (s2b["count_ge_10ms"] - s2a["count_ge_10ms"]) & 0xFFFFFFFF,
            "count_ge_25ms": (s2b["count_ge_25ms"] - s2a["count_ge_25ms"]) & 0xFFFFFFFF, **rates}
     print(json.dumps(row))

@@ -142,14 +142,17 @@ def main():
         lcd0 = devop(h, 6)
         print(f"start: brightness {v0}, effect {e0}, LCD {lcd0}")
         check(e0 != 0, "the lights are on to start")
-        step = 5 if v0 <= 250 else -5
+        # A slow detent is the next shown percentage (JD, 10-25: "micro-adjustments
+        # by one value/percent"; menu.c's pct_of/val_of_pct), up unless at the top.
+        step = 1 if (v0 * 100 + 127) // 255 < 100 else -1
+        moved = ((((v0 * 100 + 127) // 255) + step) * 255 + 50) // 100
 
         # 1. A VIA read mid-preview answers the restored value.
         to_brightness(h)
         ed = edit(h)
         check(ed["open"] == 1 and ed["value"] == v0 and ed["saved"] == v0, f"Brightness opens on {v0}: {ed}")
         turn(h, 1 if step > 0 else -1)
-        check(edit(h)["value"] == v0 + step, "the preview moved")
+        check(edit(h)["value"] == moved, "the preview moved")
         x0 = edit(h)["ext"]
         got = via_brightness(h)
         check(got == v0, f"a VIA get mid-preview answers the restored {v0}: {got}")
@@ -228,13 +231,19 @@ def main():
         turn(h, -(L_LIGHTS - L_BRIGHT))   # Brightness
         click(h)
         turn(h, 1 if step > 0 else -1)
-        check(edit(h)["value"] == v0 + step, "a preview with the lights off")
+        check(edit(h)["value"] == moved, "a preview with the lights off")
         click(h)      # saved with the lights off
-        check(via_brightness(h) == v0 + step and via_effect(h) == 0, "a Save with the lights off: saved, and still off")
+        check(via_brightness(h) == moved and via_effect(h) == 0, "a Save with the lights off: saved, and still off")
         click(h)      # Brightness back
         turn(h, -1 if step > 0 else 1)
         click(h)
-        check(via_brightness(h) == v0, f"Brightness saved back to {v0}")
+        # Back one detent: the start's percentage, at its own value (86 is 34%,
+        # whose value is 87); the restore at the end puts v0 back exactly.
+        back = (((v0 * 100 + 127) // 255) * 255 + 50) // 100
+        check(via_brightness(h) == back, f"Brightness saved back to {back} (the start {v0}'s percentage)")
+        if back != v0:   # the start wasn't a percentage's own value: put it back exactly
+            via(h, [SET, RGB_CH, BRIGHTNESS, v0])
+            via(h, [SAVE, RGB_CH])
         turn(h, L_LIGHTS - L_BRIGHT)
         s = click(h)
         check(s["screen"] == LIGHTS and s["cursor"] == 1, f"Lights opens on Off: {s['cursor']}")
