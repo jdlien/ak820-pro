@@ -84,9 +84,14 @@ This file is the thread; read it first after a context loss. Updated
 - **Icons (10-24 evening):** the icon picker
   (https://claude.ai/artifact/CQcZf9LUWnyvUQyMaCa8PM, made by
   `scripts/gen_icon_gallery.py`); JD's picks built in `925f029b` (dev token
-  `0x58ddeb40`): the wrench, ◀ ▶, the circled check (squared fallback, op 27
-  sub 14 flips it: scratchpad `check.py circle|box`), the cursor in x 0-2,
-  top-level icons. Design doc: "JD's icons". Codex before the flash.
+  `0x58ddeb40`): the wrench, ◀ ▶, the circled check, the cursor in x 0-2,
+  top-level icons. After JD's look ("looking quite good"): **`541a8cbd` ON
+  THE KEYBOARD ON GREMLIN NOW** (dev token `0xbe41a355`, flashed at JD's
+  word before codex finished; codex then: no must-fix): the squared check,
+  each section's icon on its headings, the cursor in its own grey
+  (`MENU_CURSOR` #A5A2A5, its own chunk). The selected row's yellow stays
+  (white, #FFF7C6, #FFFF00 tried live). Design doc: "JD's icons".
+  Scratchpad helpers: `setcolor.py NAME RRGGBB` (op 27 sub 13, live).
 - 📌 **PINNED, JD (10-24): a manual review of ALL the menu's text before P1
   is accepted** -- Help's topics (`gen_menu_text.py`, its one amendment "3
   min mid-edit" approved), the labels, values, titles, flashes, the hint,
@@ -96,12 +101,14 @@ This file is the thread; read it first after a context loss. Updated
   bring the file's glyphs up to date (◀ ▶, the check, the icons; it still
   shows ‹ > •). One of his lines is cut off: "JD: I wonder if we can".
 - **Next:**
-  1. Flash `925f029b` after codex; JD's look at the icons, the cursor and
-     the circle against the square.
-  2. P1b (Lighting and Screen, the edit transaction, the editors, half-row
-     slots): its design section and a codex round before code.
-  3. The Clock options (the design doc's "JD's decisions").
-  4. JD's text edits; then P1c and P1d.
+  1. P1b: the design is drafted (the design doc's "P1b: Lighting, Screen and
+     the edit transaction", draft 1; half rows deferred to the Clock
+     options); codex's first round is running
+     (`plans/review-prompt-p1b-design.txt`). Then the code, its review, the
+     flash, the plan's P1 exit gates, JD's session.
+  2. The Clock options (the design doc's "JD's decisions"), with half-row
+     slots for the live examples.
+  3. JD's text edits; then P1c and P1d.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
