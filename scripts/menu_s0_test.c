@@ -1328,7 +1328,7 @@ void    env_health_reset(void) { fk_resets++; }
 static env_rgb_t fk_rgb = {2, 240, 215, 86, 127, 1, 0xFF}, fk_rgb_ee;
 static bool      fk_rgb_dirty;
 static int       fk_rgb_noop;   /* setter calls QMK ignored (the lights off) */
-static uint8_t   fk_lcd = 12, fk_lcd_saved = 12;
+static uint8_t   fk_lcd = 52, fk_lcd_saved = 52;   /* 0-100 since P2b */
 static int       fk_lcd_saves;
 void env_rgb_get(env_rgb_t *c) { *c = fk_rgb; }
 void env_rgb_mode(uint8_t mode, bool save) {
@@ -1780,7 +1780,7 @@ static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
  * each row's cells with the defaults' values. */
 enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_DIAG, T_BOOT, T_HELP, T_ABOUT, T_EXIT, T_ROWS };
 static const char *const top_rows_want[T_ROWS][2] = {
-    {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 12 of 23 */
+    {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 52 of 100 */
     {FONT_MONO_I_CONN "Connection", FONT_MONO_TRI_R}, {FONT_MONO_I_POWER " Power", "Balanced"},
     {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h"},
     {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R}, {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
@@ -2242,7 +2242,7 @@ static void test_p1b(void) {
     fk_power = 1; fk_clock = 0;
     fk_rgb = (env_rgb_t){2, 240, 215, 86, 127, 1, 0xFF};
     fk_rgb_ee = fk_rgb; fk_rgb_dirty = false; fk_rgb_noop = 0;
-    fk_lcd = fk_lcd_saved = 12; fk_lcd_saves = 0;
+    fk_lcd = fk_lcd_saved = 52; fk_lcd_saves = 0;
     menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
 
     /* The key classification: RM_* on release, UG_* on press, nothing else. */
@@ -2472,20 +2472,22 @@ static void test_p1b(void) {
     fk_rgb.enable = 1;
     m_hold();   /* to the top */
 
-    /* Screen: from the top level; 0-23; the requested level previewed; saved. */
+    /* Screen: from the top level; 0-100 (P2b); the requested level previewed; saved. */
     for (int i = 0; i < 300; i++) fw_pass(5);
     m_settle();
     m_turn(1);   /* Screen (row 1) */
     m_click();
-    CHECK(sub5_screen() == SC_SCREEN && sub5_cursor() == 12 && title_bad(FONT_MONO_I_SCREEN "Screen") == 0);
-    CHECK(big_bad(22, "52%") == 0 && bar_bad(12, 23) == 0);
+    CHECK(sub5_screen() == SC_SCREEN && sub5_cursor() == 52 && title_bad(FONT_MONO_I_SCREEN "Screen") == 0);
+    CHECK(big_bad(22, "52%") == 0 && bar_bad(52, 100) == 0);
     for (int i = 0; i < 40; i++) fw_pass(5);
-    CHECK(op27(1, 2, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* never fast: a step of 1 */
+    m_turn(1);   /* slow: 1% */
+    CHECK(fk_lcd == 53 && fk_lcd_saved == 52 && big_bad(22, "53%") == 0 && bar_bad(53, 100) == 0);
+    CHECK(op27(1, 2, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* two in one input: fast, 8 each */
     m_settle();
-    CHECK(fk_lcd == 14 && fk_lcd_saved == 12 && big_bad(22, "61%") == 0 && bar_bad(14, 23) == 0);
+    CHECK(fk_lcd == 69 && fk_lcd_saved == 52 && big_bad(22, "69%") == 0 && bar_bad(69, 100) == 0);
     menu_edit_external(ME_DOM_RGB);   /* an RGB write: not the Screen's domain */
     fw_pass(5);
-    CHECK(me_active() && fk_lcd == 14);
+    CHECK(me_active() && fk_lcd == 69);
     m_turn(-16);
     CHECK(fk_lcd == 0 && big_bad(22, "Off") == 0);
     m_click();
@@ -2527,7 +2529,7 @@ static void test_p1b(void) {
      * idle and the 32-bit wrap, and re-entering an editor; a failed send and
      * a lost glyph DMA mid-band and mid-value; a close and a reopen
      * mid-paint. Each frame ends right. */
-    fk_lcd = fk_lcd_saved = 12;   /* as the top level's frame expects */
+    fk_lcd = fk_lcd_saved = 52;   /* as the top level's frame expects */
     m_open_top();
     m_click();
     m_turn(1);   /* Brightness */

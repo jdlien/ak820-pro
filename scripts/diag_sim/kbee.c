@@ -59,6 +59,22 @@ int main(void) {
         }
     CHECK(!kb_eeconfig_get_ind_level(2, &(uint8_t){0}), "no third group");
 
+    /* P2b: the LCD level (byte 3), 0-100 since version 6, the same +1
+     * encoding: 0 unset, 1 Off, 43 the default's 42, 101 full, 102 and 255
+     * garbage; the watchdog hook's poison (0x80 and up) is garbage too. */
+    static const struct { uint8_t b; bool ok; uint8_t level; } lcd[] = {
+        {0, false, 0}, {1, true, 0}, {2, true, 1}, {43, true, 42}, {101, true, 100}, {102, false, 0}, {0x80, false, 0},
+        {255, false, 0},
+    };
+    for (size_t i = 0; i < sizeof lcd / sizeof lcd[0]; i++) {
+        memset(stored, 0, sizeof stored);
+        stored[3] = lcd[i].b;
+        boot();
+        uint8_t lv = 0xEE;
+        bool    ok = kb_eeconfig_get_lcd_brightness(&lv);
+        CHECK(ok == lcd[i].ok && (!ok || lv == lcd[i].level), "LCD byte %u: %d %u", lcd[i].b, ok, lv);
+    }
+
     /* A zero-filled block (an older version, or after a flash): every
      * indicator field unset, so the compile-time defaults. */
     memset(stored, 0, sizeof stored);

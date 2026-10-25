@@ -278,7 +278,7 @@ Lights            On
 
 ### Screen (on the top level)
 
-A range: `Off`, then a percentage of its 23 levels (`75%`).
+A range: `Off`, then `1%` to `100%` (P2b, 10-25: it was a percentage of 23 levels), 1% a detent and 8% a fast turn; `Fn`+`PgUp`/`PgDn` 1% a press, repeating when held.
 
 ### The editors
 

@@ -197,14 +197,14 @@ def main():
         check(s["screen"] == SCREEN_ED, f"the Screen editor: screen {s['screen']}")
         ed = edit(h)
         lv = ed["value"]
-        turn(h, 1 if lv < 23 else -1)
+        turn(h, 1 if lv < lcd0["max"] else -1)   # the max from op 6 (100 since P2b)
         x1 = edit(h)["ext"]
         st = devop(h, 4, lv)
         ed = edit(h)
         check(ed["open"] == 0 and ed["ext"] == x1 + 1 and st["level"] == lv, f"op 4 cancelled, then set {lv}: {ed}, {st}")
         settle(h)
         click(h)   # the Screen again
-        turn(h, 1 if lv < 23 else -1)
+        turn(h, 1 if lv < lcd0["max"] else -1)   # the max from op 6 (100 since P2b)
         st = devop(h, 5, 1)
         ed = edit(h)
         check(ed["open"] == 0 and ed["ext"] == x1 + 2 and st["level"] == lv, f"op 5 cancelled: {ed}, {st}")
