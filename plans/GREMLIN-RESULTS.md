@@ -1128,3 +1128,16 @@ History: `history/config-menu-p2a-20261025/`.
   writes the byte as `bkl100`).
 - **The LCD on P2b:** `devhook.py lcd`: level 42/100, effective 42 (the old
   default's duty).
+- **Where the indicators' cost comes from** (10-25 ~04:15): the backlight alone
+  at 82% (49% duty, the most toggles) costs nothing against 42 or 1 (204-205
+  passes/s, the ISR 3,708/s), and at 100%, where its sigma-delta is skipped, a
+  little less than at 42 (207, 3,740/s): its arithmetic is ~1% of the passes,
+  and toggling is free because it writes its pin every tick anyway. The
+  indicators write a pin only when its bit changes, through a few branches
+  run from flash (`pwm_tick_cb`'s disassembly: one `str` to BSET/BCLR a
+  write; ~20 instructions with nothing lit), so 82% on three pins (~60,000
+  changes a second) is the -15%; their two groups' arithmetic is the -4 to
+  -6% at any level. Proposed, not built: write the three pins every tick
+  while any is lit (as the backlight does), and skip a group's arithmetic at
+  0 and full duty (the charging light at Off while charging steps every tick
+  today). Both keep the sigma-delta, so the flicker is unchanged.
