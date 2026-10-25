@@ -1,0 +1,10 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A fourth verify before the flash, as narrow as the change: your third verify's two must-fixes (plans/review-codex-p3-verify3-2026-10-25.md, my dispositions at the top), fixed in qmk_firmware-ak820pro `git diff ea91b3d0 560689ea` (bluetooth/ch582f_ajazz.c's ACK hook; menu/menu.c's slot click). Tests: this repo's a509882 (scripts/ch582_sim/btui.c's target_refused_mixed; scripts/menu_s0_test.c).
+
+Check only:
+1. With the last select frame to resolve deciding select_tx_failed (ACKed for the requested slot: false; ACKed for another, given up, or refused: true), and ch582_select_state() reading pending while any select frame is queued or in flight: can the menu's pair (bt_ui.c: only on ACKED) now reach any slot but the one the module was last told? Can a normal reconnect or a boot read LOST or PENDING forever?
+2. The slot click: anything that now re-selects a live link it shouldn't?
+3. Unsafe for the flash on the keyboard on gremlin (dev, slider on the cable)? Dev heap gap 136 B, floor 128.
+
+Must anything change before flashing? File and line. Under 300 words.
