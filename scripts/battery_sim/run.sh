@@ -16,6 +16,13 @@ cp "$kb/battery.c" "$kb/battery.h" "$kb/power.c" "$kb/power.h" "$build/"
 [ -f "$kb/rgb_matrix_kb.inc" ] && cp "$kb/rgb_matrix_kb.inc" "$build/"   # the colour build's effects
 qroot="$(cd "$kb/../../.." && pwd)"   # the tree $kb is in: QMK's quantum/color.c for the colour build
 [ -f "$kb/battery_tail.h" ] && cp "$kb/battery_tail.h" "$build/"   # flash 2's generated tail table
+# The menu's P2b (10-25): the backlight 0-100 on indicator_levels.h's table,
+# once display.c has no 24-entry bkl_duty[] (sim.c's SIM_BKL_100). The pinned
+# builds below have no sim_bkl.h: the 24 levels, as their firmware has.
+if [ -f "$kb/indicator_levels.h" ] && ! grep -q 'static const uint8_t bkl_duty\[\]' "$kb/graphics/display.c"; then
+    cp "$kb/indicator_levels.h" "$build/"
+    echo '#define SIM_BKL_100 1' > "$build/sim_bkl.h"
+fi
 cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -I"$build" \
    -o "$build/sim" "$here/sim.c" "$build/battery.c" "$build/power.c" -lm
 fail=0

@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ak820health as H  # noqa: E402
 from menu_s0_session import xfer  # noqa: E402
+from menu_p1b_gates import devop  # noqa: E402
 
 
 def sample(h):
@@ -38,11 +39,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("label")
     ap.add_argument("--set", help="FORCE,LOCKS,CHG: the force bits (1 locks, 2 charging) and the levels 0-100")
+    ap.add_argument("--lcd", type=int, help="the LCD level for the run (dev op 4, RAM only; put back after)")
     ap.add_argument("--secs", type=float, default=10.0)
     ap.add_argument("--out")
     a = ap.parse_args()
     h = H.open_device()
-    before = None
+    before, lcd0 = None, None
     try:
         if a.set:
             force, locks, chg = (int(x) for x in a.set.split(","))
@@ -53,6 +55,11 @@ def main():
                 raise SystemExit("an edit is open in the menu: close it first")
             before = st
             ind_set(h, force, locks, chg)
+        if a.lcd is not None:
+            lcd0 = devop(h, 6)
+            st = devop(h, 4, a.lcd)
+            if st["level"] != a.lcd:
+                raise SystemExit(f"the LCD level set {st['level']}, not {a.lcd} (max {st['max']})")
         time.sleep(1.0)
         s2a, s4a = sample(h)
         t0 = time.monotonic()
@@ -62,11 +69,13 @@ def main():
     finally:
         if before is not None:
             ind_set(h, before["force"], before["locks"], before["charging"])
+        if lcd0 is not None:
+            devop(h, 4, lcd0["level"])
         h.close()
     rates = H.isr_rates(s4a, s4b, wall)
     dt = rates["isr_dt_s"]
     passes = (s2b["passes"] - s2a["passes"]) & 0xFFFFFFFF
-    row = {"label": a.label, "set": a.set, "secs": round(wall, 2), "passes_per_s": round(passes / dt, 1) if dt else None,
+    row = {"label": a.label, "set": a.set, "lcd": a.lcd, "secs": round(wall, 2), "passes_per_s": round(passes / dt, 1) if dt else None,
            "count_ge_10ms": (s2b["count_ge_10ms"] - s2a["count_ge_10ms"]) & 0xFFFFFFFF,
            "count_ge_25ms": (s2b["count_ge_25ms"] - s2a["count_ge_25ms"]) & 0xFFFFFFFF, **rates}
     print(json.dumps(row))

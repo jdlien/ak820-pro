@@ -81,6 +81,21 @@ static inline uint8_t ind_tick_out(bool caps, bool win, bool chg, uint8_t force,
 static inline uint8_t ind_pins_to_write(uint8_t out, uint8_t last) {{
     return last == IND_OUT_UNKNOWN ? 7u : (uint8_t)((out ^ last) & 7u);
 }}
+
+/* The LCD backlight's tick (P2b, graphics/display.c): its pin for a level's
+ * duty, written every tick. Full and zero duty hold the pin without stepping
+ * the accumulator; between them, the sigma-delta. */
+static inline bool bkl_tick_pin(uint16_t duty, uint16_t *acc) {{
+    if (duty >= IND_FULL) return true;
+    if (duty == 0) return false;
+    return ind_sd_step(acc, duty);
+}}
+
+/* A level's duty in whole ticks, rounded (display_backlight_duty(), which
+ * battery.c's draw model takes in ticks of IND_PWM_TICKS). */
+static inline uint8_t ind_duty_ticks(uint16_t duty) {{
+    return (uint8_t)((duty + 128u) >> 8);
+}}
 """
 
 

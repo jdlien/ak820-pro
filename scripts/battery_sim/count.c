@@ -415,7 +415,7 @@ static void c_replay(const char *what, const char *path, const char *t0, double 
     for (int i = 0; i < rp_n; i++) {
         rp_row_t *r = &rp[i];
         if (r->led_pm >= 0) drive_sum = (uint32_t)r->led_pm * (81u * 3u * 255u) / 1000u;   /* the log's per mille is of LED_LOAD_MAX */
-        if (r->bkl >= 0) sim_bkl = (uint8_t)r->bkl;
+        if (r->bkl_ticks >= 0) sim_bkl = sim_bkl_from_ticks((uint8_t)r->bkl_ticks);   /* in either scale (P2b) */
         cr_row = i; cr_sec = 0;
         rp_play(i);
     }

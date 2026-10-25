@@ -85,12 +85,55 @@ bool kb_eeconfig_get_power_mode(uint8_t *m) {
 void kb_eeconfig_set_power_mode(uint8_t m) { power_mode_p1 = (uint8_t)(m + 1u); }
 static uint8_t bkl_cap = 0xFF;
 void     display_set_backlight_cap(uint8_t c) { bkl_cap = c; }
+/* The backlight as display.c has it. The menu's P2b (10-25) made the level
+ * 0-100 on indicator_levels.h's table (run.sh passes SIM_BKL_100 when
+ * display.c has no 24-entry bkl_duty[]); before it, 24 levels. Either way
+ * display_backlight_duty() is whole ticks of 48, as battery.c takes it, and a
+ * replayed log's level goes through its ticks (sim_bkl_from_ticks), so a log
+ * in either scale replays on a build in either. */
+#if __has_include("sim_bkl.h")
+#include "sim_bkl.h"   /* run.sh's: SIM_BKL_100 for a P2b firmware */
+#endif
+#ifdef SIM_BKL_100
+#define SIM_DIM_CAP 37u   /* power.c's SCREEN_DIM_LEVEL on the 0-100 scale (4.09 ticks) */
+#else
+#define SIM_DIM_CAP 4u    /* ... on the 24 levels */
+#endif
+static const uint8_t bkl_duty_legacy[24] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+                                            12, 14, 16, 18, 20, 23, 26, 29, 33, 37, 42, 48};
+/* A 0-100 level's ticks (gen_indicator_levels.py's formula, rounded as
+ * display.c rounds): for a v8 log on any build. */
+static uint8_t sim_ticks_of_bkl100(int p) {
+    if (p <= 0) return 0;
+    if (p > 100) p = 100;
+    long d = lround(256.0 * pow(48.0, (p - 1) / 99.0));
+    return (uint8_t)((d + 128) >> 8);
+}
+#ifdef SIM_BKL_100
+#include "indicator_levels.h"
+static uint8_t sim_bkl = 60;   /* the user's level: 10 ticks, as the 24-level 10 was; a replay sets it */
+static uint8_t bkl_cap;   /* below */
+uint8_t  display_backlight_effective(void) { return bkl_cap < sim_bkl ? bkl_cap : sim_bkl; }   /* as display.c */
+uint8_t  display_backlight_duty(void) { return (uint8_t)((ind_level_duty[display_backlight_effective()] + 128u) >> 8); }
+/* The level whose fine duty is nearest `t` whole ticks. */
+static uint8_t sim_bkl_from_ticks(uint8_t t) {
+    uint8_t best = 0;
+    for (uint8_t p = 1; p <= IND_LEVEL_MAX; p++)
+        if (labs((long)ind_level_duty[p] - 256L * t) < labs((long)ind_level_duty[best] - 256L * t)) best = p;
+    return best;
+}
+#else
 static uint8_t sim_bkl = 10;   /* the user's backlight level; a replay sets it per entry */
 static uint8_t bkl_cap;   /* below */
 uint8_t  display_backlight_effective(void) { return bkl_cap < sim_bkl ? bkl_cap : sim_bkl; }   /* as display.c */
-static const uint8_t bkl_duty_sim[24] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-                                         12, 14, 16, 18, 20, 23, 26, 29, 33, 37, 42, 48};
-uint8_t  display_backlight_duty(void) { return bkl_duty_sim[display_backlight_effective()]; }
+uint8_t  display_backlight_duty(void) { return bkl_duty_legacy[display_backlight_effective()]; }
+static uint8_t sim_bkl_from_ticks(uint8_t t) {
+    uint8_t best = 0;
+    for (uint8_t l = 1; l < 24; l++)
+        if (abs(bkl_duty_legacy[l] - t) < abs(bkl_duty_legacy[best] - t)) best = l;
+    return best;
+}
+#endif
 static int      rgb_restarts;
 static uint8_t  rgb_mode = 2;
 uint8_t  rgb_matrix_get_mode(void) { return rgb_mode; }
@@ -818,6 +861,7 @@ typedef struct {
     int      c5_n, c5_min, c5_max, c5_single;
     int      level_pm;     /* the logged level, per mille, -1 if none */
     int      led_pm, bkl;  /* the entry's LED drive and backlight, -1 if not logged */
+    int      bkl_ticks;    /* the backlight in ticks of 48: "bkl" (0-23, before log v8) or "bkl100" (v8) */
     bool     chg_end, chg_any, ext_end;
     /* what the replay showed at the interval's end */
     uint16_t r_level;
@@ -880,7 +924,7 @@ static bool rp_load(const char *path) {
     int i_mean = rp_col(h, hn, "c5_mean"), i_n = rp_col(h, hn, "c5_n"), i_mn = rp_col(h, hn, "c5_min"),
         i_mx = rp_col(h, hn, "c5_max"), i_lvl = rp_col(h, hn, "level"), i_pct = rp_col(h, hn, "module_pct"),
         i_chg = rp_col(h, hn, "charging"), i_ext = rp_col(h, hn, "external"), i_any = rp_col(h, hn, "flags_any"),
-        i_led = rp_col(h, hn, "led_pm"), i_bkl = rp_col(h, hn, "bkl");
+        i_led = rp_col(h, hn, "led_pm"), i_bkl = rp_col(h, hn, "bkl"), i_b100 = rp_col(h, hn, "bkl100");
     bool v34 = i_mean >= 0;
     rp_n = 0;
     while (fgets(line, sizeof line, f) && rp_n < RP_MAX) {
@@ -899,6 +943,12 @@ static bool rp_load(const char *path) {
         r->level_pm = -1;
         r->led_pm   = (i_led >= 0 && c[i_led][0]) ? atoi(c[i_led]) : -1;
         r->bkl      = (i_bkl >= 0 && c[i_bkl][0]) ? atoi(c[i_bkl]) : -1;
+        r->bkl_ticks = -1;
+        if (i_b100 >= 0 && c[i_b100][0]) {   /* log v8: the 0-100 level (the menu's P2b) */
+            r->bkl       = atoi(c[i_b100]);
+            r->bkl_ticks = sim_ticks_of_bkl100(r->bkl);
+        } else if (r->bkl >= 0)
+            r->bkl_ticks = r->bkl < 24 ? bkl_duty_legacy[r->bkl] : 48;
         if (v34) {
             r->c5_n = atoi(c[i_n]);
             r->c5_mean = c[i_mean][0] ? atof(c[i_mean]) : -1.0;

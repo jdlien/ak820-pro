@@ -2685,6 +2685,26 @@ static void test_ind_levels(void) {
         last = out;
     }
     CHECK(pins == 1);
+
+    /* P2b: the backlight's tick and its duty in ticks. Full and zero hold the
+     * pin and leave the accumulator; between, the sigma-delta, through a
+     * level change with the residual kept. */
+    uint16_t ab = 5000;
+    CHECK(bkl_tick_pin(IND_FULL, &ab) && ab == 5000 && !bkl_tick_pin(0, &ab) && ab == 5000);
+    long on = 0;
+    for (long t = 0; t < (long)IND_FULL; t++) on += bkl_tick_pin(ind_level_duty[42], &ab);
+    for (long t = 0; t < (long)IND_FULL; t++) on += bkl_tick_pin(ind_level_duty[1], &ab);
+    CHECK(on == ind_level_duty[42] + ind_level_duty[1] || on == ind_level_duty[42] + ind_level_duty[1] + 1);
+    CHECK(ind_duty_ticks(ind_level_duty[0]) == 0 && ind_duty_ticks(ind_level_duty[1]) == 1 &&
+          ind_duty_ticks(ind_level_duty[100]) == IND_PWM_TICKS);
+    for (int p = 0; p <= 100; p++) {   /* within half a tick, never decreasing */
+        long d = (long)ind_duty_ticks(ind_level_duty[p]) * 256 - ind_level_duty[p];
+        CHECK(d >= -128 && d < 128);
+        if (p) CHECK(ind_duty_ticks(ind_level_duty[p]) >= ind_duty_ticks(ind_level_duty[p - 1]));
+    }
+    /* The old 24 levels' ticks map to the level P2b names for them: the
+     * default's 5 to 42; the dim cap 37 is never dimmer than the old 4. */
+    CHECK(ind_duty_ticks(ind_level_duty[42]) == 5 && ind_level_duty[37] >= 4u * 256u && ind_level_duty[36] < 4u * 256u);
 }
 
 static void test_p2a(void) {
