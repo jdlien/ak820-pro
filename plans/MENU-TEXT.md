@@ -31,13 +31,14 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 
 ### The title area
 
-| Text | When |
-|---|---|
-| `Configuration` | the top level's title |
-| `Turn + Click Knob` | the hint: on lists, after 4 s with no knob input, for 1 s in every 5 |
-| `Saved` | 1.3 s after a choice is saved |
-| `Cancelled` | 1.3 s after a choice is left without saving, or Reset counters cancelled |
-| `Counters reset` | 1.3 s after Reset counters |
+| Text                | When                                                                     |
+|:--------------------|:-------------------------------------------------------------------------|
+| `Configuration`     | the top level's title                                                    |
+| `Turn + Click Knob` | the hint: on lists, after 4 s with no knob input, for 1 s in every 5     |
+| `Hold to Go Back`   | second hint displayed for 1s after the `Turn + Click` hint               |
+| `Saved`             | 1.3 s after a choice is saved                                            |
+| `Cancelled`         | 1.3 s after a choice is left without saving, or Reset counters cancelled |
+| `Counters reset`    | 1.3 s after Reset counters                                               |
 
 ### The top level (title: `Configuration`)
 
@@ -50,10 +51,9 @@ About              >
 Exit
 ```
 
-- `Exit` and `‹ Back` rows show in light red when not selected (a trial, for
-  JD's eye).
+- `Exit` and `‹ Back` rows show in light red when not selected.
 - The full top level will be (the mockup): Lighting, Screen, Connection,
-  Power, Indicators, Clock, Battery, Diagnostics, Help, About, Exit.
+  Power, Indicators, Clock, Battery, Diagnostics, Bootloader, Help, About, Exit.
 
 ### Power (title: `Power`)
 
@@ -72,9 +72,11 @@ The top level's value uses short forms: `Always on`, `Balanced`, `Saver`,
 
 ```
 ‹ Back
-• 24 hour
-  12 hour
-  Date
+• 24h       13:45:01
+  24h          13:45
+  12h    1:45:01 PM
+  12h        1:45 PM
+  Date  Oct 24, 2026
   Off
 ```
 
@@ -134,32 +136,21 @@ Click: choose, save
 Hold: back, cancel
 Fn+click: close
 
-It closes by itself
-after 24 s idle, or
-3 min mid-edit.
-
-Typing still works
-while it's open.
+Auto-closes after
+24 seconds idle.
 ```
-
-(Lines 6-8 already amended from the mockup's "never mid-edit"; JD
-approved.)
 
 #### Customizing
 
 ```
-Remap keys and the
-knob at usevia.app,
-with the cable in.
+Remap keys & knob at
+usevia.app over USB
 
 Load via.json from
 the repo: Settings,
 Show Design tab,
 Load Draft
 Definition.
-
-Lighting changes
-show up here too.
 ```
 
 #### Shortcuts
@@ -178,6 +169,8 @@ Fn+C      clock
 Fn+PgUp/Dn screen
 Fn+Esc    bootloader
 ```
+
+JD: There's a chance we may remove some of these since, for rarely-used shortcuts, we can use the menu now.
 
 #### Pro tips
 
@@ -212,28 +205,30 @@ Mode Balanced
 Link BT 1 connected
 ```
 
-| Line | Format | When unknown |
-|---|---|---|
-| Firmware | `Firmware <8 hex>`, `+` after it for a build from uncommitted source | |
-| Build | `<flavour>, 0x<token>`; flavours: `dev`, `daily`, `fpb`, `instr`, `fault` | |
-| Uptime | `Up <d>d <h>h <m>m`, or `Up <h>h <m>m` under a day | |
-| Battery | `Battery <n.n>%` | `Battery -` |
-| Pack | `Pack <mV> mV` | `Pack -` |
-| Time left | `Left <h>h of use` | `Left -` |
-| Mode | `Mode <Always on / Balanced / Power saver / Lights out>` | |
-| Link | `Link USB`; `Link 2.4G <state>`; `Link BT <n> <state>`; states: `idle`, `linking`, `pairing`, `connected`, `rejected` | |
+| Line      | Format                                                                                                                | When unknown |
+|:----------|:----------------------------------------------------------------------------------------------------------------------|:-------------|
+| Firmware  | `Firmware <8 hex>`, `+` after it for a build from uncommitted source                                                  |              |
+| Build     | `<flavour>, 0x<token>`; flavours: `dev`, `daily`, `fpb`, `instr`, `fault`                                             |              |
+| Uptime    | `Up <d>d <h>h <m>m`, or `Up <h>h <m>m` under a day                                                                    |              |
+| Battery   | `Battery <n.n>%`                                                                                                      | `Battery -`  |
+| Pack      | `Pack <mV> mV`                                                                                                        | `Pack -`     |
+| Time left | `Left <h>h of use`                                                                                                    | `Left -`     |
+| Mode      | `Mode <Always on / Balanced / Power saver / Lights out>`                                                              |              |
+| Link      | `Link USB`; `Link 2.4G <state>`; `Link BT <n> <state>`; states: `idle`, `linking`, `pairing`, `connected`, `rejected` |              |
 
 ## Not built yet (the mockup's words)
 
 ### About, page 2 (P1d: the bunny beside the first three lines)
 
 ```
+[bunny] AJAZZ
 [bunny] Jackrabbit
 [bunny] by JD Lien
-[bunny] QMK port: fpb
 
 github.com/jdlien
   /ak820-pro
+
+QMK Port by fpb
 ```
 
 ### Help > More info (P1d)
