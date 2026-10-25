@@ -1171,3 +1171,16 @@ sub 16's stand-in.
   step.
 - **Owed (JD):** the slider to BT; a slot switch each way; pairing a device
   on a free slot, and a stop; the knob by hand.
+- **JD's changes, flashed the same morning:** `d6483b2b` (09:47: Pair a
+  device pairs the current slot; "On the device, add") and `2d8512ae`
+  (10:05: the current slot's status icon, coloured: the checked box green
+  for Linked, a grey hourglass for Trying, the blue rune for Pair, a red
+  circled X for Failed), each cleared by codex
+  (`review-codex-p3-pairnow-2026-10-25.md`, `review-codex-p3-icons-2026-10-25.md`).
+  The knob read `11` at rest after the first (JD had turned it): both rests
+  agree, as the rule assumes. The menu passes (`board-d6483b2b.json`,
+  `board-2d8512ae.json`, the slider on BT, the Connection steps all on the
+  stand-in): the same two fails as above and nothing else; the Connection
+  steps add no pass over 15 ms in either (the longest passes elsewhere:
+  18.7 ms and 17.0 ms, the Hue editor both times; the count over 15 ms
+  varies run to run, 6 to 14, in Power, Diagnostics and the editors).
