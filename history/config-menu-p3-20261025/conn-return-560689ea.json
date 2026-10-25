@@ -1,0 +1,53 @@
+{
+ "runs": [
+  {
+   "what": "run 0: off BT under the Pairing page",
+   "screen": 17,
+   "cursor": 2,
+   "settle_ms": 990,
+   "pass_max_us": 13157,
+   "over15": 0
+  },
+  {
+   "what": "run 0: off BT under the slot list",
+   "screen": 17,
+   "cursor": 2,
+   "settle_ms": 990,
+   "pass_max_us": 13568,
+   "over15": 0
+  },
+  {
+   "what": "run 1: off BT under the Pairing page",
+   "screen": 17,
+   "cursor": 2,
+   "settle_ms": 978,
+   "pass_max_us": 12869,
+   "over15": 0
+  },
+  {
+   "what": "run 1: off BT under the slot list",
+   "screen": 17,
+   "cursor": 2,
+   "settle_ms": 887,
+   "pass_max_us": 14960,
+   "over15": 0
+  },
+  {
+   "what": "run 2: off BT under the Pairing page",
+   "screen": 17,
+   "cursor": 2,
+   "settle_ms": 983,
+   "pass_max_us": 13077,
+   "over15": 0
+  },
+  {
+   "what": "run 2: off BT under the slot list",
+   "screen": 17,
+   "cursor": 2,
+   "settle_ms": 989,
+   "pass_max_us": 13808,
+   "over15": 0
+  }
+ ],
+ "fails": []
+}

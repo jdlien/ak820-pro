@@ -1141,3 +1141,33 @@ History: `history/config-menu-p2a-20261025/`.
   while any is lit (as the backlight does), and skip a group's arithmetic at
   0 and full duty (the charging light at Off while charging steps every tick
   today). Both keep the sigma-delta, so the flicker is unchanged.
+
+### 20i. P3 on the board: Connection, the Bluetooth slots and pairing; the knob's rest rule (10-25, 09:11-09:22)
+
+**On the board since 09:11: dev `560689ea`** (token `0xa2ca82f6`, gap
+136 B): P3 (design draft 2 and four code verifies by codex,
+`plans/review-codex-p3-*-2026-10-25.md`) and `ENCODER_REST_PINS_EQUAL`.
+The slider is on the cable, so the Connection screens on BT ran on op 27
+sub 16's stand-in.
+
+- **The knob's rest:** `scripts/knob_rest.py` right after the flash, before
+  anyone touched it: `00` five times. The pins agree at rest, as the rule
+  assumes.
+- **The menu pass** (`history/config-menu-p3-20261025/board-560689ea.json`):
+  128 steps, every screen and cursor right. The Connection steps: the real
+  off-BT page (screen 55), the slot list on the stand-in (52) with each
+  word, a click on the current slot (nothing), on BT 3 and BT 1, Pair a
+  device (59), the Pairing page (63) through all six phases, a stop, and the
+  slider-follow return. **Two fails, neither P3's:** the longest pass
+  18,544 us in the Hue editor ("hue up 1": the P1b issue both earlier
+  builds show, §20h), and "back to Diagnostics" settling in 1,082 ms (82
+  over, Reset counters' page, outside the interval). The Connection steps
+  added no pass over 15 ms but two in the step that moved the stand-in off
+  BT under the Pairing page.
+- **That return alone** (`scripts/menu_conn_return.py`,
+  `history/config-menu-p3-20261025/conn-return-560689ea.json`): three runs,
+  each from the Pairing page and from the slot list: the longest passes
+  12.9-15.0 ms, none over 15. The pass's two came from elsewhere in that
+  step.
+- **Owed (JD):** the slider to BT; a slot switch each way; pairing a device
+  on a free slot, and a stop; the knob by hand.
