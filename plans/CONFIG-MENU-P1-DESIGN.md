@@ -1042,6 +1042,72 @@ C5's 128 floor; daily 2,280, devfault 192.
   - the flash counters' page 3 counting a save's write.
 - **JD:** the levels by eye, and a saved level surviving his power cycle.
 
+## P2b: the Screen in 1% steps (draft 2, 10-25)
+
+JD (10-25): fine steps for the editors, "same goes for the screen,
+obviously", and on P2a's flash: "The screen lighting adjustment is still way
+too coarse." The Screen's 24 levels are `display.c`'s `bkl_duty[]` (0-48
+ticks of the same 20 kHz tick, a 48-tick period), so the menu can't step
+finer than the panel. P2a's indicator method carries over: a level 0-100,
+perceptually spaced, the duty spread by the sigma-delta.
+
+- **The level becomes 0-100**, with P2a's table (`indicator_levels.h`'s
+  `ind_level_duty[]`, the same 48-tick floor): 1% is today's level 1 (one
+  tick in 48), 100% full. `bkl_duty[]` goes; `BKL_MAX_LEVEL` and
+  `MENU_LCD_MAX` become 100 (`IND_LEVEL_MAX`), and display.c's assert ties
+  them. Today's 24 levels map onto it by their ticks,
+  `p = round(1 + 99 × ln(ticks) / ln 48)`: the default
+  (`DISPLAY_BRIGHTNESS_DEFAULT`, `config.h`), level 5 (5 ticks), becomes 42
+  (4.97 ticks).
+- **The menu's Screen editor** steps 1, fast 8 (the indicators' rule) and
+  shows the level as its percentage, `Off` at 0. The top level's Screen row
+  the same.
+- **The tick** (`display_backlight_tick()`): its phase compare becomes a
+  sigma-delta with its own accumulator, `ind_sd_step(&bkl_acc,
+  ind_level_duty[bkl_effective()])`. Full and zero duty are still written
+  without stepping; the pin is written every tick, as now. `bkl_phase` goes.
+  `display_set_power()`'s immediate write tests the duty `> 0` as now.
+- **`SCR_UP`/`SCR_DN`** (`Fn`+`PgUp`/`PgDn`): JD (10-25): "1% per press on
+  the keys would be good if we use the same acceleration we do for lights.
+  keep the behaviour the same unless it's physically impossible." So a
+  press is still one level, now 1%, and a held key keeps the lighting keys'
+  repeat (`param_repeat_task()`: 400 ms, then every 60 ms, then every 12 ms
+  after 800 ms more), which crosses 0-100 in about 2.2 s.
+  `display_brightness_up()`/`down()` are unchanged but for the range.
+- **`param_overlay.c`'s readout** keeps its expression,
+  `(lvl * 100u + mx / 2u) / mx`, which with `mx` 100 is the level itself
+  (`scripts/power_model.py` checks that string).
+- **`power.c`'s dim cap**, `SCREEN_DIM_LEVEL`, 4 of 23 (4 ticks), becomes 37
+  (4.09 ticks: never dimmer than today's cap).
+- **C7's menu override** (`level >= 1`): unchanged; 1 is still the floor.
+- **`battery.c`'s draw model stays as it is:** `display_backlight_duty()`
+  keeps its type and its 0-48 ticks, rounded from the fine duty,
+  `(duty + 128) >> 8` (at most half a tick, 0.4 mW, off), so `battery.c`,
+  `scripts/battery_sim/` and `scripts/power_oracle.c` don't change.
+- **The RAM battery log's `bkl` byte** (`log_put()`, the effective level)
+  becomes the 0-100 level. `ak820battery.py` prints it raw. Two of the
+  battery work's tools read the 0-23 scale and must follow at the merge
+  (they read pinned commits, so nothing breaks before): `battery_sim`'s
+  replay of a log's level through its own `bkl_duty_sim[]`, and
+  `power_model.py`, which parses `display.c`'s `bkl_duty` (24 entries). Both
+  are the session on Buzz's; noted for the merge, not edited here.
+- **`kb_eeconfig`'s saved LCD level:** the validation goes from `<= 32` to
+  `<= 101` (`+1` encoding) and `EECONFIG_KB_DATA_VERSION` to 6, so an old
+  0-23 value is never read as a percentage (a flash erases it anyway). The
+  watchdog test hook's poison (`0x80 | ...`) stays invalid.
+- **Dev ops 4 and 5** set and report the level on the new scale (their state
+  reply carries the max, now 100). The host scripts that assume 23
+  (`menu_p1b_gates.py`'s `lv < 23`) take the max from the reply.
+- **The splash's forced maximum** (`display_get_brightness_max()`) is 100.
+- **The cost:** the tick already looks its duty up and writes the pin every
+  tick; the sigma-delta replaces the phase compare. Measured with P2a's
+  timing gate.
+- **RAM:** the accumulator (2), less the phase (1).
+- **Tests:** the host (the Screen editor's steps and display, the keys' step
+  and its ends, the old levels' mapping); the diag simulator (the saved
+  level's bytes 0, 1, 2, 43, 101, 102, 255); the board (the menu pass, the
+  dev ops, the timing); JD by eye.
+
 ## P1b, P1c, P1d
 
 P1b's design is the section above (the earlier note asked it to cover the
