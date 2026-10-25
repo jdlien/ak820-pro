@@ -1,59 +1,90 @@
 #!/usr/bin/env python3
 """The configuration menu's Help pages (P1a; plans/CONFIG-MENU-P1-DESIGN.md):
-writes graphics/res/menu_text_pages.h from the mockup's PAGES.
+writes graphics/res/menu_text_pages.h from JD's text, plans/MENU-TEXT.md.
 
     python scripts/gen_menu_text.py [--check] < /dev/null
 
-- The four topics (Using the menu, Customizing, Shortcuts, Pro tips) are read
-  from plans/config-menu-mockup.html, which stays the spec; blank lines and
-  the shortcuts' spelling are kept.
-- AMENDMENTS below are the only changes, each with its reason.
+- The four topics (Using the menu, Customizing, Shortcuts, Pro tips) are the
+  fenced blocks under their "#### <title>" headings in MENU-TEXT.md, which JD
+  edits (10-24: it replaced the mockup as the words' source, so his edits
+  reach the firmware as they are); blank lines are kept, notes outside the
+  fences ignored.
+- FACTS below: a number the text quotes (the idle close, the backstop, a
+  mode's sleep) is checked against the firmware's own constant, and a
+  disagreement refuses, so the text can't silently go stale.
 - Every line must fit 20 cells of the 6x14 face, in printable ASCII: the
   generator refuses otherwise.
 - --check writes nothing and fails if the header on disk differs."""
 import argparse
-import json
 import os
 import re
 import sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-MOCKUP = os.path.join(ROOT, "plans", "config-menu-mockup.html")
-OUT = os.path.join(ROOT, "qmk_firmware-ak820pro", "keyboards", "a_jazz", "ak820pro",
-                   "graphics", "res", "menu_text_pages.h")
-TOPICS = ["h-menu", "h-via", "h-keys", "h-tips"]
+TEXT = os.path.join(ROOT, "plans", "MENU-TEXT.md")
+FW = os.path.join(ROOT, "qmk_firmware-ak820pro", "keyboards", "a_jazz", "ak820pro")
+OUT = os.path.join(FW, "graphics", "res", "menu_text_pages.h")
+TOPICS = ["Using the menu", "Customizing", "Shortcuts", "Pro tips"]
 COLS = 20
-
-# (topic, old lines, new lines, why). The mockup's "never mid-edit"
-# contradicts the plan's 3-minute backstop (P1 design, draft 2): for JD's word.
-AMENDMENTS = [
-    ("h-menu", ["It closes by itself", "after 24 s idle, but", "never mid-edit."],
-     ["It closes by itself", "after 24 s idle, or", "3 min mid-edit."],
-     "the 3-minute backstop (plan C8): a walk-away mid-edit does close"),
-]
 
 
 def read_pages():
-    src = open(MOCKUP, encoding="utf-8").read()
+    """-> {title: lines}: each topic's fenced block under "#### <title>"."""
+    src = open(TEXT, encoding="utf-8").read().splitlines()
     out = {}
-    for tid in TOPICS:
-        m = re.search(r'"' + re.escape(tid) + r'":\s*\{\s*title:\s*"([^"]*)",\s*lines:\s*\(\)\s*=>\s*(\[[^\]]*\])', src)
-        if not m:
-            sys.exit(f"{MOCKUP}: no page {tid}")
-        out[tid] = (m.group(1), json.loads(m.group(2)))
+    for title in TOPICS:
+        try:
+            i = src.index("#### " + title)
+        except ValueError:
+            sys.exit(f"{TEXT}: no '#### {title}'")
+        while i < len(src) and not src[i].startswith("```"):
+            i += 1
+            if i < len(src) and src[i].startswith("#"):
+                sys.exit(f"{TEXT}: '{title}' has no fenced block before the next heading")
+        j = i + 1
+        while j < len(src) and not src[j].startswith("```"):
+            j += 1
+        if j >= len(src):
+            sys.exit(f"{TEXT}: '{title}''s block isn't closed")
+        out[title] = [s.rstrip() for s in src[i + 1:j]]
     return out
 
 
-def amend(pages):
-    for tid, old, new, _why in AMENDMENTS:
-        title, lines = pages[tid]
-        for i in range(len(lines) - len(old) + 1):
-            if lines[i:i + len(old)] == old:
-                pages[tid] = (title, lines[:i] + new + lines[i + len(old):])
-                break
-        else:
-            sys.exit(f"amendment for {tid} no longer matches the mockup: {old}")
-    return pages
+def define(path, name):
+    m = re.search(r"#define\s+" + name + r"\s+(\d+)u?\b", open(path, encoding="utf-8").read())
+    if not m:
+        sys.exit(f"{path}: no {name}")
+    return int(m.group(1))
+
+
+def ladder_sleep_ms(mode):
+    m = re.search(r"\[" + mode + r"\]\s*=\s*\{([^}]*)\}", open(os.path.join(FW, "power.c"), encoding="utf-8").read())
+    if not m:
+        sys.exit(f"power.c: no ladder for {mode}")
+    return int(m.group(1).split(",")[3].strip().rstrip("u"))   # dim, lights off, screen off, sleep
+
+
+# A number the text quotes, and the firmware's own (topic, a pattern over the
+# topic's lines joined with spaces, its value from the firmware, what it is).
+# A pattern the text doesn't use isn't checked; one it uses must agree.
+FACTS = [
+    ("Using the menu", r"(\d+) seconds idle|after (\d+) s idle",
+     lambda: define(os.path.join(FW, "menu", "menu_input.h"), "MI_IDLE_MS") // 1000, "the idle close, s"),
+    ("Using the menu", r"(\d+) min mid-edit",
+     lambda: define(os.path.join(FW, "menu", "menu_input.h"), "MI_BACKSTOP_MS") // 60000, "the backstop, min"),
+    ("Pro tips", r"Balanced sleeps after (\d+) min",
+     lambda: ladder_sleep_ms("POWER_MODE_NORMAL") // 60000, "Balanced's sleep, min"),
+]
+
+
+def check_facts(pages):
+    for title, pat, value, what in FACTS:
+        m = re.search(pat, " ".join(pages[title]))
+        if not m:
+            continue
+        said = int(next(g for g in m.groups() if g))
+        if said != value():
+            sys.exit(f"{TEXT}, {title}: says {said} for {what}; the firmware says {value()}")
 
 
 def c_str(s):
@@ -64,17 +95,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
-    pages = amend(read_pages())
-    for tid, (title, lines) in pages.items():
+    pages = read_pages()
+    check_facts(pages)
+    for title, lines in pages.items():
         for s in [title] + lines:
             if len(s) > COLS or any(not (0x20 <= ord(c) < 0x7F) for c in s):
-                sys.exit(f"{tid}: {s!r} doesn't fit {COLS} cells of printable ASCII")
+                sys.exit(f"{title}: {s!r} doesn't fit {COLS} cells of printable ASCII")
     out = [
         "// Copyright 2026 JD Lien",
         "// SPDX-License-Identifier: GPL-2.0-or-later",
         "//",
         "// GENERATED by scripts/gen_menu_text.py -- do not edit. The menu's Help",
-        "// topics, from plans/config-menu-mockup.html, every line <= 20 cells.",
+        "// topics, from plans/MENU-TEXT.md (JD's text), every line <= 20 cells.",
         "#pragma once",
         "",
         "#include <stdint.h>",
@@ -83,19 +115,19 @@ def main():
         "",
     ]
     flat, starts = [], []
-    for tid in TOPICS:
+    for title in TOPICS:
         starts.append(len(flat))
-        flat += pages[tid][1]
+        flat += pages[title]
     out.append("static const char *const menu_help_titles[MENU_HELP_TOPICS] = {")
-    out += [f"    {c_str(pages[t][0])}," for t in TOPICS]
+    out += [f"    {c_str(t)}," for t in TOPICS]
     out += ["};", ""]
     out.append("/* A topic's lines are menu_help_lines[menu_help_start[t] .. menu_help_start[t + 1]). */")
     out.append(f"static const uint8_t menu_help_start[MENU_HELP_TOPICS + 1] = {{{', '.join(str(s) for s in starts + [len(flat)])}}};")
     out.append("")
     out.append(f"static const char *const menu_help_lines[{len(flat)}] = {{")
-    for tid in TOPICS:
-        out.append(f"    /* {pages[tid][0]} */")
-        out += [f"    {c_str(s)}," for s in pages[tid][1]]
+    for title in TOPICS:
+        out.append(f"    /* {title} */")
+        out += [f"    {c_str(s)}," for s in pages[title]]
     out += ["};", ""]
     text = "\n".join(out)
     if a.check:

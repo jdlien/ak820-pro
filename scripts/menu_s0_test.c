@@ -2004,12 +2004,12 @@ static void test_menu(void) {
         CHECK(row_bad(6, want, MENU_WHITE) == 0);
     }
     m_click();
-    /* Every Help topic paged to its end: 11, 12, 12 and 13 lines, so its
-     * last top is 3, 4, 4 and 5. */
+    /* Every Help topic paged to its end: 7, 7, 12 and 13 lines (JD's text, 10-24), so its
+     * last top is 0, 0, 4 and 5. */
     m_turn(-1);   /* Help */
     m_click();
     for (int t = 0; t < 4; t++) {
-        static const uint8_t last_top[4] = {3, 4, 4, 5};
+        static const uint8_t last_top[4] = {0, 0, 4, 5};
         if (t) m_turn(1);
         m_click();
         m_turn(1);
