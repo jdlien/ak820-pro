@@ -32,11 +32,12 @@ void           clear_keyboard(void) { clears++; }
  * 100 ms. */
 static int  acked;
 static bool auto_ack = true;
+static int  no_ack_param = -1;   /* A6 frames with this parameter are never ACKed (the UART losing them) */
 static void run(uint32_t ms) {
     for (uint32_t i = 0; i < ms; i++) {
         ch582_task();
         for (; auto_ack && acked < wr_n; acked++)
-            if (wr[acked][0] != 0x61) rx_ack();
+            if (wr[acked][0] != 0x61 && !(wr[acked][0] == 0xA6 && wr[acked][1] == no_ack_param)) rx_ack();
         if (now_ms % 100 == 0) bt_pair_hold_task();
         now_ms++;
     }
@@ -251,12 +252,22 @@ static void boot_retry_pending(void) {
     bt_ui_mode_slider(1, true);
     run(14000);
     CHECK(ch582_select_state() == CH582_SEL_PENDING, "pending while the boot retry runs: %d", ch582_select_state());
+    /* It comes up: whatever is in flight is ACKed, and the boot retry stops.
+     * Every select sent while it was down was given up, so it was never told
+     * a slot: lost (codex's second verify: fail closed), until a select gets
+     * through and it answers. */
+    wr_n = acked = 0;   /* 14 s of retransmits filled the harness's write log (256): start it over */
     auto_ack = true;
-    acked    = wr_n;
+    no_ack_param = 0x31;   /* the one in flight, if a select, isn't the one ACKed */
     rx_ack();
-    run(20);
+    run(500);
+    no_ack_param = -1;
     frame(0x5B, 0x33);
-    CHECK(ch582_select_state() == CH582_SEL_ACKED, "acted on once it's up: %d", ch582_select_state());
+    CHECK(ch582_select_state() == CH582_SEL_LOST, "never told a slot: lost, %d", ch582_select_state());
+    bt_ui_select_slot(0);
+    run(30);
+    frame(0x5B, 0x33);
+    CHECK(ch582_select_state() == CH582_SEL_ACKED, "a select through, answered: %d", ch582_select_state());
 }
 
 /* Codex on P3's code, 1: a key's hold still running is superseded by every
@@ -441,6 +452,52 @@ static void already_advertising(void) {
     CHECK(!bt_ui_pair_waiting() && a6(PAIR, from) == 1, "advertising by the fire: the pair, once: %d", a6(PAIR, from));
 }
 
+/* Codex's second verify: the target's select frame never gets through (its
+ * retransmits all unACKed) while a stale 5B 32 of the old slot retires the
+ * select's retry: the pair must fail closed, never reach the old slot. */
+static void target_given_up(void) {
+    boot_linked(0x31);
+    int from = wr_n;
+    no_ack_param = 0x33;
+    bt_ui_pair_slot(2);
+    run(5);
+    frame(0x5B, 0x32);   /* the old slot's, late */
+    run(400);
+    CHECK(a6(0x33, from) >= 2, "the target's frame retransmitted: %d", a6(0x33, from));
+    CHECK(ch582_select_state() == CH582_SEL_LOST, "given up: lost, %d", ch582_select_state());
+    no_ack_param = -1;
+    run(8000);
+    CHECK(a6(PAIR, from) == 0 && !bt_ui_pair_waiting(), "no pair: %d", a6(PAIR, from));
+    /* A later select of it that gets through clears the failure. */
+    int from2 = wr_n;
+    bt_ui_pair_slot(2);   /* the current slot, lost: selected again */
+    run(30);
+    frame(0x5B, 0x33);
+    frame(0x5B, 0x36);
+    run(110);
+    CHECK(a6(0x33, from2) == 1 && a6(PAIR, from2) == 1 && a6_at(PAIR, from2) > a6_at(0x33, from2),
+          "selected again, then the pair");
+}
+
+/* The target's select refused by a full queue, a stale 5B 32 retiring the
+ * retry: lost, no pair. */
+static void target_refused(void) {
+    boot_linked(0x31);
+    auto_ack = false;
+    run(5);
+    int from = wr_n;
+    for (int i = 0; i < 30; i++) poll();   /* the ring holds 23 */
+    bt_ui_pair_slot(2);
+    frame(0x5B, 0x32);
+    auto_ack = true;
+    acked    = wr_n;
+    rx_ack();
+    run(3000);
+    CHECK(a6(0x33, from) == 0, "never sent: %d", a6(0x33, from));
+    CHECK(ch582_select_state() == CH582_SEL_LOST && a6(PAIR, from) == 0 && !bt_ui_pair_waiting(),
+          "lost, no pair: %d, %d", ch582_select_state(), a6(PAIR, from));
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) { fprintf(stderr, "usage: btui CASE\n"); return 2; }
     static const struct { const char *name; void (*fn)(void); } cases[] = {
@@ -452,6 +509,7 @@ int main(int argc, char **argv) {
         {"stop_cases", stop_cases}, {"already_advertising", already_advertising},
         {"bounce_stale", bounce_stale}, {"bounce_lost", bounce_lost}, {"last_try_window", last_try_window},
         {"direct_36", direct_36}, {"boot_retry_pending", boot_retry_pending}, {"hold_superseded", hold_superseded},
+        {"target_given_up", target_given_up}, {"target_refused", target_refused},
     };
     for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++)
         if (!strcmp(argv[1], cases[i].name)) {

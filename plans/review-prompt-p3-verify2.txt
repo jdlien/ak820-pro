@@ -1,0 +1,12 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A second verify before the flash, narrow. Your verify (plans/review-codex-p3-verify-2026-10-25.md, my dispositions at the top) found two holes in the ACK boundary; I backed the boundary out rather than patch it: qmk_firmware-ak820pro `git diff 44d11c28 a7c19f85 -- keyboards/a_jazz/ak820pro`. The whole P3 firmware against the board's current build is `git diff a9f750ff a7c19f85` (plus drivers/encoder/encoder_quadrature.c's ENCODER_REST_PINS_EQUAL from 44d11c28). Tests: this repo's 864d190 (scripts/ch582_sim/btui.c's bounce_stale and already_advertising, scripts/menu_s0_test.c, scripts/encoder_sim/).
+
+Check:
+1. bluetooth/ch582f_ajazz.c against a9f750ff: the driver's own state machine (pa, the bounce, the retries, the 5B handling) must be a9f750ff's but for the bounce's end leaving the link attempting, the last tries' windows, a 36 retiring PA_SELECT, and the three read-only facts. Is that so, and is each of those four safe?
+2. The wrong-slot argument in the dispositions: the menu's pair never fires while ch582_select_state() is pending (a bounce or a select retry), and A6 51 then queues behind the target's select. Is there any path where A6 51 can reach the module before the target's select, or while the module is still on another slot it will stay on (a given-up target frame, the cold-boot retry, the 5B 23 re-issue, a slot key or the slider in between)?
+3. bt_ui.c's tick now sends the pair even when the link reads confirmed advertising; bt_ui_pair_slot()'s at-open shortcut still sends nothing then. Any harm in either?
+4. Op 27 sub 14 byte 17 (env_knob_state(), dev only) and the plan to read it right after the flash to confirm the knob's rest states.
+5. Anything else unsafe for the flash on the keyboard on gremlin (dev, slider on the cable). Dev heap gap 136 B, floor 128.
+
+Name each problem with the file and line, and separate must-fix-before-flash from can-wait. Must anything change before flashing? Under 600 words.
