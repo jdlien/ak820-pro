@@ -1,0 +1,25 @@
+{
+ "summary": {
+  "piece_us": 5056,
+  "op_us": 37296,
+  "pass_max_us": 14426,
+  "over15": 0,
+  "repaint_ms": 825,
+  "tgen": 53,
+  "settled": 30,
+  "superseded": 23,
+  "band_ms": 2,
+  "page": 0,
+  "dbg_gen": 20,
+  "dbg_done_gen": 20,
+  "committed": 155,
+  "passes": 5448,
+  "token": 5,
+  "health_gen": 4,
+  "dbg_sec": 25,
+  "rtc_sec": 30,
+  "aliased": false
+ },
+ "slow": [],
+ "tracks": []
+}

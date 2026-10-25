@@ -330,6 +330,14 @@ Measured: dev `ffa80947` gap 232 B (104 over the floor), devfault
   Clock across a reboot after a settled save, and no write on a cancel (the
   flash write counters); a daily build's check; JD's session.
 
+## Before P1 is accepted: JD's text review (pinned, 10-24)
+
+JD will review and edit **all** the menu's text by hand once P1 nears its
+end: Help's four topics (`scripts/gen_menu_text.py`; the "3 min mid-edit"
+amendment is approved), every label, value, title, flash and the hint,
+About's lines, Reset counters' pages, and P1b-d's words. Nothing here is
+final until then.
+
 ## P1b, P1c, P1d
 
 Each gets its own detailed section and codex round before its code. P1b's

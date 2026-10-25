@@ -22,8 +22,10 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hostagent"))
+from ak820health import read_acct  # noqa: E402
 from menu_s0_session import mutate, open_device, read_state, wait, xfer  # noqa: E402
-from menu_s0_accept import to_dash  # noqa: E402
+from menu_s0_accept import dash_done, to_dash  # noqa: E402
 from menu_s1_gate import decode_meas  # noqa: E402
 
 # menu.c's nodes: sub 5 byte 14 is 16 + the node showing.
@@ -33,6 +35,8 @@ SCR = lambda n: 16 + n  # noqa: E731
 SETTLE_S = 1.0
 
 log, fails = [], []
+slow, seen = [], set()   # HC_ACCT's passes of >= 15 ms, with their scopes
+meas_on = {"on": False, "over": 0}   # in the measured interval: each step's over-15 count
 
 
 def check(ok, what):
@@ -45,6 +49,8 @@ def settle(h, what):
     t0 = time.perf_counter()
     while True:
         s = read_state(h)
+        if s["owner"] == "dash" and s["session"] == "none" and dash_done(s):   # a close: the restore done
+            return s, (time.perf_counter() - t0) * 1000
         if s["pixels_done"] and s["owner"] in ("menu", "debug"):
             return s, (time.perf_counter() - t0) * 1000
         if s["owner"] == "debug" and s["debug_done"]:
@@ -52,17 +58,30 @@ def settle(h, what):
         if time.perf_counter() - t0 > 3.0:
             check(False, f"{what}: not settled in 3 s ({s['owner']}, screen {s['screen']})")
             return s, 3000.0
-        time.sleep(0.01)
+        time.sleep(0.1)   # the gate's rate (POLL_S): this script's own traffic is load too
 
 
 def step(h, sub, args, what, screen=None, cursor=None, owner="menu"):
     st, seq = mutate(h, sub, args)
     check(st == 0, f"{what}: op 27 sub {sub} refused ({st})")
-    state, s = wait(h, seq)
+    state, s = wait(h, seq, poll=0.1)
     check(state == "done", f"{what}: {state}")
     s, ms = settle(h, what)
     e = {"what": what, "ms": round(ms), "owner": s["owner"], "screen": s["screen"], "cursor": s["cursor"],
          "inv": s["invariant_fail"]}
+    if meas_on["on"]:
+        m = decode_meas(xfer(h, 10, bytes([0])))
+        e["over15"], e["pass_max_us"] = m["over15"], m["pass_max_us"]
+        if m["over15"] != meas_on["over"]:
+            print(f"  ^ {m['over15'] - meas_on['over']} pass(es) over 15 ms in this step "
+                  f"(the interval's longest {m['pass_max_us']} us)", flush=True)
+            meas_on["over"] = m["over15"]
+            for r in read_acct(h)["ring"]:
+                if r["pass_ms"] >= 15 and r["uptime_ms"] not in seen:
+                    seen.add(r["uptime_ms"])
+                    top = {k: v for k, v in r["scopes_ms"].items() if v}
+                    slow.append({"step": what, "pass_ms": r["pass_ms"], "scopes": top})
+                    print(f"    {r['pass_ms']} ms: {top}", flush=True)
     log.append(e)
     print(json.dumps(e), flush=True)
     check(s["owner"] == owner, f"{what}: owner {s['owner']}, not {owner}")
@@ -70,14 +89,21 @@ def step(h, sub, args, what, screen=None, cursor=None, owner="menu"):
         check(s["screen"] == screen, f"{what}: screen {s['screen']}, not {screen}")
     if cursor is not None:
         check(s["cursor"] == cursor, f"{what}: cursor {s['cursor']}, not {cursor}")
-    check(ms <= SETTLE_S * 1000 or sub == 3, f"{what}: settled in {ms:.0f} ms")
+    check(ms <= SETTLE_S * 1000 or sub == 3 or owner == "dash", f"{what}: settled in {ms:.0f} ms")
     check(s["invariant_fail"] & ~0x20 == 0, f"{what}: invariant_fail {s['invariant_fail']:#x}")
     return s
 
 
-turn = lambda h, n, what, **k: step(h, 1, bytes([n & 0xFF]), what, **k)  # noqa: E731
-click = lambda h, what, **k: step(h, 2, b"", what, **k)  # noqa: E731
-hold = lambda h, what, **k: step(h, 3, b"", what, **k)  # noqa: E731
+def turn(h, n, what, *a, **k):
+    return step(h, 1, bytes([n & 0xFF]), what, *a, **k)
+
+
+def click(h, what, *a, **k):
+    return step(h, 2, b"", what, *a, **k)
+
+
+def hold(h, what, *a, **k):
+    return step(h, 3, b"", what, *a, **k)
 
 
 def main():
@@ -102,7 +128,10 @@ def main():
         time.sleep(1.5)   # the restore
 
         # 2. The measured interval.
+        read_acct(h, "on")
+        read_acct(h, "reset")
         xfer(h, 10, bytes([1]))
+        meas_on["on"] = True
         step(h, 11, b"", "open", SCR(TOP), 0)
         for i in range(1, 6):
             turn(h, 1, f"down {i}", SCR(TOP), i)
@@ -176,7 +205,7 @@ def main():
     finally:
         h.close()
         with open(a.out, "w") as f:
-            json.dump({"steps": log, "meas": meas, "fails": fails}, f, indent=1)
+            json.dump({"steps": log, "meas": meas, "fails": fails, "slow": slow}, f, indent=1)
     ms = [e["ms"] for e in log]
     print(f"{len(log)} steps, the slowest settle {max(ms) if ms else 0} ms; "
           f"longest pass {meas.get('pass_max_us')} us, over 15 ms {meas.get('over15')}, piece {meas.get('piece_us')} us")

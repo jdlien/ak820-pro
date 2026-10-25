@@ -66,6 +66,20 @@ This file is the thread; read it first after a context loss. Updated
 - ⚠️ **With JD looking at the panel:** put the screen up and LEAVE it
   there (a held session; switch only when asked). An automated demo that
   moves on by itself frustrated JD (10-24).
+- **P1a, the real menu, ON THE KEYBOARD ON GREMLIN NOW: dev `5527c898`**
+  (token `0x69ff475f`, gap 192 B). Fn+knob opens it in every flavour.
+  Design: `CONFIG-MENU-P1-DESIGN.md` draft 3.1 (codex three rounds); code:
+  codex two rounds (`review-codex-p1a-code-2026-10-24.md`). Host tests: the
+  S0 suite plus `test_menu`, `test_menu_stress`, and a `-DMENU_ENABLE`
+  build's `test_menu_enable`. On the board (GREMLIN-RESULTS §20,
+  `scripts/menu_p1a_board.py`): every screen right in 9 runs; **timing
+  misses C10 marginally** (one pass of 15.1-16.8 ms in about two runs of
+  three): a text piece is ~5.6 ms. Owed: where the piece's time goes; the
+  deferred `report_kind` edge (codex, nonblocking); JD's hands-on session.
+- 📌 **PINNED, JD (10-24): a manual review of ALL the menu's text before P1
+  is accepted** -- Help's topics (`gen_menu_text.py`, its one amendment "3
+  min mid-edit" approved), the labels, values, titles, flashes, the hint,
+  About's lines, Reset counters' pages. JD will edit them himself.
 - **Next:**
   1. P1a: codex's second design round, then the code (plans/CONFIG-MENU-P1-DESIGN.md).
   2. P1's real menu: the tree, lit text, half rows; the old highlight

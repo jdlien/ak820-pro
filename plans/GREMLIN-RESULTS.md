@@ -930,3 +930,29 @@ before line 0 paints whenever it retires; one heavy step a main-loop pass).
   12**: QMK's own work, the key and USB paths, the RGB effect). A lead, not
   chased yet: if a key or the knob skipped the track, the modified-consumer
   path's deliberate 8 ms gap (`MODIFIED_CONSUMER_GAP_MS`, config.h) fits.
+
+## 20. P1a on the board: the real menu (10-24, ~18:40-19:30)
+
+Dev `5527c898` (token `0x69ff475f`, heap gap 192 B): the tree, the session
+kind, one lit row at most, `MENU_ENABLE` on (codex: `review-codex-p1a-code-2026-10-24.md`,
+two rounds). `scripts/menu_p1a_board.py` drives every screen by op 27: Reset
+counters' two pages and a cancel outside the measured interval, then in it
+the open, moves both ways with wraps, Power and Clock committed and put
+back, a Clock cancel by a hold, Help's four topics paged to their ends and
+back, About, Health and Camera handed off and back, the hint, the close.
+- **Every step lands where it should**, in 9 runs (621 steps): the screen
+  id (16 + the node) and the cursor each time, both Diagnostics returns on
+  their rows, the settings committed and restored, `invariant_fail` 0.
+  Screens settle in 170-990 ms by the script's 100 ms polls (opens
+  ~800-900 ms, a move ~170 ms).
+- **Timing, C10's 15 ms: a marginal, sporadic miss.** Six of nine runs had
+  one or two passes over 15 ms, each in a different step, at 15.1-16.8 ms
+  (most 15.1-15.4); three runs passed (longest 14.2-14.8 ms). Nothing near
+  25 ms. Polling at 10 ms, 50 ms or the gate's 100 ms made no clear
+  difference, so it isn't the measurement's traffic. Two Clock commits under
+  HC_ACCT made no long pass (longest 14.4 ms), so it isn't the settings'
+  saves. A menu text piece costs ~5.6 ms (a fill piece of the same size
+  4.3, F3's mono piece 5.1): with QMK's own varying work in the same pass,
+  about one pass a minute of driving goes just over. Next: measure where the
+  piece's time goes (the composition, the expansion, the send) before
+  choosing a fix; smaller pieces would push the opens past 1,000 ms.
