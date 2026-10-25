@@ -35,6 +35,14 @@ TOP, POWER, CLOCK, DIAG, HELP, ABOUT, EXIT = 1, 2, 3, 4, 5, 6, 7
 RESET, TOPIC0 = 10, 11
 LIGHT, SCREEN, EFFECT, BRIGHT, HUE = 24, 25, 26, 27, 28   # P1b's nodes
 IND, CONN, LOCKS, CHGL = 35, 36, 37, 38                   # P2a's
+CONNINFO, PAIRLIST, PAIRING = 39, 43, 47                   # P3's
+# P3's link byte (menu_env.h's ENV_LINK_*: transport bits 1-0, slot 3-2,
+# state 6-4) and the pairing facts, for op 27 sub 16's stand-in.
+L_USB, L_BT = 0, 1
+S_IDLE, S_LINKING, S_PAIRING, S_CONNECTED, S_REJECTED = range(5)
+PF_WAITING, PF_RETRYING, PF_CONFIRMED, PF_SEL_LOST = 1, 2, 4, 8
+P_START, P_OPEN, P_DONE, P_ENDED, P_FAILED, P_UNSURE = range(6)
+LINK = lambda slot, st: L_BT | slot << 2 | st << 4  # noqa: E731
 # The top level since P2a (the build plan's order): Lighting, Screen,
 # Connection, Power, Indicators, Clock, Diagnostics, Bootloader; Help, About,
 # Exit on page two.
@@ -135,12 +143,68 @@ def ind_editors(h, ind_state):
     hold(h, "Indicators back", SCR(TOP), R_IND)
 
 
+def standin(h, link, pf=0):
+    """Op 27 sub 16: the menu's link and pairing facts (0xFF: the live ones).
+    While it's set the menu's calls go nowhere."""
+    r = xfer(h, 16, bytes([link, pf]))
+    check(r[5] == 0, f"op 27 sub 16 ({link:#x}, {pf}) refused ({r[5]})")
+
+
+def connection(h):
+    """P3: the real page off BT (the board's slider is on the cable), then,
+    on the stand-in, the slot list in each state, a click on each slot, the
+    pair list, the Pairing page in each phase, a stop, and the screens
+    following the slider. The stand-in is cleared at the end, and by main()'s
+    finally."""
+    live = xfer(h, 14)[15]
+    check(live & 3 != L_BT, f"Connection: the live link {live:#x} is on BT (the pass expects the cable or 2.4G)")
+    click(h, "Connection, off BT", SCR(CONNINFO), 0)
+    click(h, "Connection back", SCR(TOP), R_CONN)
+    standin(h, LINK(1, S_CONNECTED))
+    click(h, "Connection, on BT 2", SCR(CONN), 2)
+    for st in (S_IDLE, S_LINKING, S_PAIRING, S_REJECTED, S_CONNECTED):
+        standin(h, LINK(1, st))
+        settle(h, f"BT 2's word, state {st}")
+    click(h, "BT 2 again: nothing", SCR(CONN), 2)
+    turn(h, 1, "to BT 3", SCR(CONN), 3)
+    click(h, "BT 3: a select (not sent: the stand-in)", SCR(CONN), 3)
+    turn(h, -2, "to BT 1", SCR(CONN), 1)
+    click(h, "BT 1", SCR(CONN), 1)
+    turn(h, 3, "to Pair a device", SCR(CONN), 4)
+    click(h, "Pair a device", SCR(PAIRLIST), 1)
+    turn(h, 1, "to Bluetooth 2", SCR(PAIRLIST), 2)
+    standin(h, LINK(1, S_CONNECTED), PF_WAITING)
+    click(h, "pair Bluetooth 2", SCR(PAIRING), 1 << 4 | P_START)
+    for link, pf, ph, what in (
+            (LINK(1, S_PAIRING), PF_RETRYING, P_START, "resending"),
+            (LINK(1, S_PAIRING), PF_CONFIRMED, P_OPEN, "advertising"),
+            (LINK(1, S_CONNECTED), PF_CONFIRMED, P_DONE, "connected"),
+            (LINK(1, S_REJECTED), PF_CONFIRMED, P_ENDED, "ended"),
+            (LINK(1, S_LINKING), PF_SEL_LOST, P_FAILED, "failed"),
+            (LINK(1, S_PAIRING), 0, P_UNSURE, "unsure"),
+            (LINK(1, S_PAIRING), PF_CONFIRMED, P_OPEN, "advertising again")):
+        standin(h, link, pf)
+        s, _ = settle(h, f"Pairing: {what}")
+        check(s["screen"] == SCR(PAIRING) and s["cursor"] == (1 << 4 | ph),
+              f"Pairing {what}: screen {s['screen']} cursor {s['cursor']:#x}, not {1 << 4 | ph:#x}")
+    click(h, "stop it", SCR(CONN), 2)
+    turn(h, 2, "to Pair a device again", SCR(CONN), 4)
+    click(h, "Pair a device again", SCR(PAIRLIST), 1)
+    click(h, "pair Bluetooth 1", SCR(PAIRING))
+    standin(h, L_USB)
+    s, _ = settle(h, "the slider to the cable, under the Pairing page")
+    check(s["screen"] == SCR(TOP) and s["cursor"] == R_CONN, f"off BT: screen {s['screen']} cursor {s['cursor']}")
+    standin(h, 0xFF)
+    settle(h, "the stand-in cleared")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="menu_p1a_board.json")
     ap.add_argument("--no-ind", action="store_true",
                     help="skip the indicator editors (they clear the bench's force bits): the timing run with "
                          "the indicators forced by op 27 sub 15 (codex, P2a's code review)")
+    ap.add_argument("--no-conn", action="store_true", help="skip P3's Connection screens (and op 27 sub 16)")
     a = ap.parse_args()
     h = open_device()
     meas = {}
@@ -259,16 +323,16 @@ def main():
         hold(h, "Screen cancelled", SCR(TOP), 1)
         check(edit_state()[0] == 0, "Screen: the edit still open")
 
-        # P2a: Connection's stub page, and Indicators' two editors, each
-        # cancelled; sub 14 says the edit closed, the level restored and the
-        # preview's force gone.
+        # P3: Connection, every screen (the stand-in for BT); P2a: Indicators'
+        # two editors, each cancelled; sub 14 says the edit closed, the level
+        # restored and the preview's force gone.
         def ind_state():
             r = xfer(h, 14)
             return r[6], r[12], r[13], r[14]   # open, the lock lights, the charging light, the force bits
 
         turn(h, R_CONN - 1, "to Connection", SCR(TOP), R_CONN)
-        click(h, "Connection", SCR(CONN), 0)
-        click(h, "Connection back", SCR(TOP), R_CONN)
+        if not a.no_conn:
+            connection(h)
         turn(h, R_IND - R_CONN, "to Indicators", SCR(TOP), R_IND)
         if not a.no_ind:
             ind_editors(h, ind_state)
@@ -285,6 +349,10 @@ def main():
         check(meas["pass_max_us"] <= 17000, f"the longest pass {meas['pass_max_us']} us")   # JD's (b)
         to_dash(h)
     finally:
+        try:
+            xfer(h, 16, bytes([0xFF, 0]))   # never leave the stand-in set
+        except Exception as e:   # noqa: BLE001
+            print("clearing the stand-in:", e)
         h.close()
         with open(a.out, "w") as f:
             json.dump({"steps": log, "meas": meas, "fails": fails, "slow": slow}, f, indent=1)

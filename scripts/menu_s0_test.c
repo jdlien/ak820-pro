@@ -1388,6 +1388,44 @@ bool env_reserve(void) { return fk_reserve; }
 static env_about_t fk_about = {93240u, 767u, 4017u, 3840u, 1u,
                                (uint8_t)(ENV_LINK_BT | (0u << 2) | (ENV_LINK_CONNECTED << 4))};
 void        env_about(env_about_t *a) { *a = fk_about; }
+/* P3's Bluetooth: the live link is fk_about.link; the calls are counted and
+ * do what bt_ui.c does synchronously (a select: the slot, linking, the
+ * facts cleared; a pair: the select unless current, then waiting; a stop:
+ * waiting cleared, and the select while advertising or retrying). */
+static int     fk_bt_selects, fk_bt_pairs, fk_bt_stops;
+static uint8_t fk_bt_last = 0xFF, fk_pf, fk_standin = 0xFF, fk_standin_pf;
+static uint8_t fk_link_of(uint8_t slot, uint8_t st) { return (uint8_t)(ENV_LINK_BT | (slot << 2) | (st << 4)); }
+static void    fk_select(uint8_t slot) {
+    fk_about.link = fk_link_of(slot, ENV_LINK_LINKING);
+    fk_pf         = 0;
+}
+uint8_t env_link(void) { return fk_standin != 0xFF ? fk_standin : fk_about.link; }
+void    env_bt_select(uint8_t slot) {
+    fk_bt_selects++;
+    fk_bt_last = slot;
+    if ((fk_about.link & 3u) == ENV_LINK_BT) fk_select(slot);
+}
+void env_bt_pair(uint8_t slot) {
+    fk_bt_pairs++;
+    fk_bt_last = slot;
+    if ((fk_about.link & 3u) != ENV_LINK_BT) return;
+    uint8_t cur = (fk_about.link >> 2) & 3u, st = (fk_about.link >> 4) & 7u;
+    if (slot == cur && st == ENV_LINK_PAIRING && (fk_pf & ENV_PF_CONFIRMED)) return;
+    if (slot != cur || (fk_pf & ENV_PF_SEL_LOST)) fk_select(slot);
+    fk_pf |= ENV_PF_WAITING;
+}
+void env_bt_pair_stop(void) {
+    fk_bt_stops++;
+    fk_pf &= (uint8_t)~ENV_PF_WAITING;
+    uint8_t st = (fk_about.link >> 4) & 7u;
+    if ((fk_about.link & 3u) == ENV_LINK_BT && (st == ENV_LINK_PAIRING || (fk_pf & ENV_PF_RETRYING)))
+        fk_select((fk_about.link >> 2) & 3u);
+}
+uint8_t env_bt_pair_facts(void) { return fk_standin != 0xFF ? fk_standin_pf : fk_pf; }
+void    env_bt_standin(uint8_t link, uint8_t facts) {
+    fk_standin    = link;
+    fk_standin_pf = facts;
+}
 uint32_t    env_build_hash(void) { return 0x36afff30u; }
 bool        env_build_dirty(void) { return false; }
 uint32_t    env_build_token(void) { return 0xef38330eu; }
@@ -1781,7 +1819,7 @@ static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
 enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_DIAG, T_BOOT, T_HELP, T_ABOUT, T_EXIT, T_ROWS };
 static const char *const top_rows_want[T_ROWS][2] = {
     {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 52 of 100 */
-    {FONT_MONO_I_CONN "Connection", FONT_MONO_TRI_R}, {FONT_MONO_I_POWER " Power", "Balanced"},
+    {FONT_MONO_I_CONN "Connection", "BT 1"}, {FONT_MONO_I_POWER " Power", "Balanced"},   /* P3: the link */
     {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h"},
     {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R}, {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
     {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
@@ -2899,40 +2937,6 @@ static void test_p2a(void) {
     m_hold();
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
-    /* Connection: the stub page, the link frozen as it opened. */
-    static const struct { uint8_t link; const char *l[4]; } conn[3] = {
-        {(uint8_t)(ENV_LINK_BT | (1u << 2) | (ENV_LINK_CONNECTED << 4)),
-         {"Link BT 2 connected", "Slots: coming soon", "Fn+Q/W/E: a slot", "Hold one 2 s: pair"}},
-        {(uint8_t)(ENV_LINK_USB), {"Link USB", "Slots: coming soon", "The slider picks", "BT, 2.4G or cable."}},
-        {(uint8_t)(ENV_LINK_24G | (ENV_LINK_LINKING << 4)), {"Link 2.4G linking", "Slots: coming soon", "The slider picks",
-                                                            "BT, 2.4G or cable."}},
-    };
-    uint8_t link0 = fk_about.link;
-    m_open_top();
-    m_turn(T_CONN);
-    CHECK(row_bad(T_CONN, cells2(FONT_MONO_I_CONN "Connection", FONT_MONO_TRI_R), MENU_LIT) == 0);
-    for (int k = 0; k < 3; k++) {
-        fk_about.link = conn[k].link;
-        /* Frozen (codex, P2a's code review): the live link changes between
-         * the first paint's pieces, and again before a full repaint; every
-         * line keeps the snapshot taken as the page opened. */
-        CHECK(op27(2, 0, 0) == MI_OK && wait_terminal(rpt[6], 300) == MI_ST_DONE);
-        fw_pass(5);
-        fw_pass(5);
-        fk_about.link = link0;
-        m_settle();
-        CHECK(sub5_screen() == SC_CONN && sub5_cursor() == 0 && title_bad(FONT_MONO_I_CONN "Connection") == 0);
-        static const uint16_t ys[4] = {22, 36, 72, 86};
-        for (int i = 0; i < 4; i++) CHECK(text_slot_bad(ys[i], conn[k].l[i], MENU_WHITE, false) == 0);
-        menu_invalidate();   /* every slot repaints */
-        m_settle();
-        for (int i = 0; i < 4; i++) CHECK(text_slot_bad(ys[i], conn[k].l[i], MENU_WHITE, false) == 0);
-        if (k == 1) m_hold();    /* a hold goes back too, without "Cancelled" */
-        else m_click();
-        CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN);
-        if (k == 1) CHECK(title_bad("Cancelled") != 0);
-    }
-    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
     CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
     CHECK(po_invariant_fail() == PO_FAIL_WAKE_OPEN);   /* the wake while open above, recorded as it should be; nothing else */
@@ -3022,6 +3026,286 @@ static void test_menu_enable(void) {
 }
 #endif
 
+/* --- P3: Connection, the Bluetooth slots and pairing --------------------------
+ * (plans/CONFIG-MENU-P1-DESIGN.md, "P3"). Screen ids: Connection 52, its
+ * off-BT page 55, Pair a device 59, the Pairing page 63. */
+enum { SC_CONNINFO = 16 + 39, SC_PAIRLIST = 16 + 43, SC_PAIRING = 16 + 47 };
+enum { PH_START = 0, PH_OPEN, PH_DONE, PH_ENDED, PH_FAILED, PH_UNSURE };
+
+/* Connection's rows on BT: `lit` the cursor's row; the current slot's check
+ * and its link's word. */
+static int conn_bad(int lit, int cur, const char *word) {
+    int bad = row_bad(0, FONT_MONO_TRI_L " Back", lit == 0 ? MENU_LIT : MENU_LEAVE);
+    for (int sl = 0; sl < 3; sl++) {
+        char label[24];
+        snprintf(label, sizeof label, "%sBluetooth %d", sl == cur ? FONT_MONO_CHECK_BOX : "  ", sl + 1);
+        bad += row_bad(1 + sl, cells2(label, sl == cur ? word : ""), lit == 1 + sl ? MENU_LIT : MENU_DIM);
+    }
+    return bad + row_bad(4, cells2("Pair a device", FONT_MONO_TRI_R), lit == 4 ? MENU_LIT : MENU_DIM);
+}
+/* The Pairing page's four lines, at the confirm pages' y. */
+static int pairing_bad(int slot, int phase) {
+    static const uint16_t ys[4] = {22, 36, 72, 86};
+    char        a[32], b[32];
+    const char *l[4] = {a, b, "Click or hold: stop", ""};
+    switch (phase) {
+        case PH_START: snprintf(a, sizeof a, "Bluetooth %d", slot + 1); snprintf(b, sizeof b, "Getting ready..."); break;
+        case PH_OPEN:  snprintf(a, sizeof a, "On the computer, add"); snprintf(b, sizeof b, "AK820 5.1-%d", slot + 1); break;
+        case PH_DONE:  snprintf(a, sizeof a, "Bluetooth %d is", slot + 1); snprintf(b, sizeof b, "connected."); break;
+        case PH_ENDED: snprintf(a, sizeof a, "Pairing ended."); b[0] = '\0'; break;
+        case PH_UNSURE: snprintf(a, sizeof a, "The radio didn't"); snprintf(b, sizeof b, "confirm pairing."); break;
+        default:       snprintf(a, sizeof a, "Pairing didn't"); snprintf(b, sizeof b, "start. Try again."); break;
+    }
+    if (phase >= PH_DONE && phase != PH_UNSURE) l[2] = "Click: back";
+    int bad = title_bad(FONT_MONO_I_CONN "Pairing");
+    for (int i = 0; i < 4; i++) bad += text_slot_bad(ys[i], l[i], MENU_WHITE, false);
+    return bad;
+}
+/* The link and the facts change under the menu: a pass latches them. */
+static void fk_bt_set(uint8_t link, uint8_t pf) {
+    fk_about.link = link;
+    fk_pf         = pf;
+    fw_pass(5);
+    m_settle();
+}
+/* From a closed menu to the Pairing page of `slot`, on BT. */
+static void to_pairing(int slot) {
+    m_open_top();
+    m_turn(T_CONN);
+    m_click();
+    CHECK(sub5_screen() == SC_CONN);
+    m_turn(4 - sub5_cursor());   /* Pair a device */
+    m_click();
+    CHECK(sub5_screen() == SC_PAIRLIST && sub5_cursor() == 1);
+    if (slot) m_turn(slot);
+    m_click();
+    CHECK(sub5_screen() == SC_PAIRING && (sub5_cursor() >> 4) == slot);
+}
+
+static void test_p3(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_lcd = fk_lcd_saved = 52;
+    fk_bt_selects = fk_bt_pairs = fk_bt_stops = 0;
+    fk_pf = 0; fk_standin = 0xFF;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    const uint8_t     link0    = fk_about.link;
+    const char *const words[5] = {"", "Trying", "Pair", "Linked", "Failed"};
+
+    /* The top level's value for each link, live through the latch. */
+    const struct { uint8_t link; const char *v; } tops[] = {
+        {ENV_LINK_USB, "USB"}, {(uint8_t)(ENV_LINK_24G | (ENV_LINK_CONNECTED << 4)), "2.4G"},
+        {fk_link_of(0, ENV_LINK_CONNECTED), "BT 1"}, {fk_link_of(1, ENV_LINK_LINKING), "BT 2"},
+        {fk_link_of(2, ENV_LINK_REJECTED), "BT 3"},
+    };
+    m_open_top();
+    m_turn(T_CONN);
+    for (size_t k = 0; k < sizeof tops / sizeof tops[0]; k++) {
+        fk_bt_set(tops[k].link, 0);
+        CHECK(row_bad(T_CONN, cells2(FONT_MONO_I_CONN "Connection", tops[k].v), MENU_LIT) == 0);
+    }
+
+    /* Off BT (USB, then 2.4G): JD's page, and back by a click or a hold. */
+    static const uint16_t    info_y[4] = {22, 36, 50, 86};
+    static const char *const info[4]   = {"Switch to BT mode to", "change Bluetooth", "settings.", "Click: back"};
+    for (int k = 0; k < 2; k++) {
+        fk_bt_set(k ? tops[1].link : tops[0].link, 0);
+        m_click();
+        CHECK(sub5_screen() == SC_CONNINFO && title_bad(FONT_MONO_I_CONN "Connection") == 0);
+        for (int i = 0; i < 4; i++) CHECK(text_slot_bad(info_y[i], info[i], MENU_WHITE, false) == 0);
+        if (k) m_hold();
+        else m_click();
+        CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN && title_bad("Cancelled") != 0);
+    }
+    /* It follows the slider: BT arriving takes it back to the top level. */
+    m_click();
+    CHECK(sub5_screen() == SC_CONNINFO);
+    fk_bt_set(fk_link_of(1, ENV_LINK_CONNECTED), 0);
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN &&
+          row_bad(T_CONN, cells2(FONT_MONO_I_CONN "Connection", "BT 2"), MENU_LIT) == 0);
+    CHECK(fk_bt_selects == 0 && fk_bt_pairs == 0 && fk_bt_stops == 0);
+
+    /* On BT: the list, the cursor on the current slot, its word live. */
+    m_click();
+    CHECK(sub5_screen() == SC_CONN && sub5_cursor() == 2 && title_bad(FONT_MONO_I_CONN "Connection") == 0);
+    CHECK(conn_bad(2, 1, "Linked") == 0);
+    for (uint8_t st = 0; st <= ENV_LINK_REJECTED; st++) {
+        fk_bt_set(fk_link_of(1, st), 0);
+        CHECK(conn_bad(2, 1, words[st]) == 0);
+    }
+    /* A click on the current slot: nothing while linked or linking. */
+    static const uint8_t keep[2] = {ENV_LINK_CONNECTED, ENV_LINK_LINKING};
+    for (int k = 0; k < 2; k++) {
+        fk_bt_set(fk_link_of(1, keep[k]), 0);
+        m_click();
+        CHECK(fk_bt_selects == 0 && sub5_screen() == SC_CONN && sub5_cursor() == 2 && title_bad("Already on BT 2") == 0);
+    }
+    /* Otherwise the tap's select: rejected (the retry), advertising (the
+     * cancel), idle. */
+    static const uint8_t redo[3] = {ENV_LINK_REJECTED, ENV_LINK_PAIRING, ENV_LINK_IDLE};
+    for (int k = 0; k < 3; k++) {
+        fk_bt_set(fk_link_of(1, redo[k]), 0);
+        m_click();
+        CHECK(fk_bt_selects == k + 1 && fk_bt_last == 1 && sub5_screen() == SC_CONN && sub5_cursor() == 2);
+        CHECK(title_bad("Now on BT 2") == 0 && conn_bad(2, 1, "Trying") == 0);
+    }
+    /* Linking on a select whose retries ran out unanswered: selected again
+     * (codex on P3's design: "nothing" there made it permanently inert). */
+    fk_bt_set(fk_link_of(1, ENV_LINK_LINKING), ENV_PF_SEL_LOST);
+    m_click();
+    CHECK(fk_bt_selects == 4 && fk_bt_last == 1 && title_bad("Now on BT 2") == 0 && fk_pf == 0);
+    /* Another slot: its select; the check moves, the cursor stays. */
+    m_turn(1);
+    m_click();
+    CHECK(fk_bt_selects == 5 && fk_bt_last == 2 && sub5_cursor() == 3 && title_bad("Now on BT 3") == 0);
+    CHECK(conn_bad(3, 2, "Trying") == 0);
+    m_turn(-2);
+    m_click();
+    CHECK(fk_bt_selects == 6 && fk_bt_last == 0 && sub5_cursor() == 1 && conn_bad(1, 0, "Trying") == 0);
+    /* Off BT under the list: the top level. */
+    fk_bt_set(ENV_LINK_USB, 0);
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN &&
+          row_bad(T_CONN, cells2(FONT_MONO_I_CONN "Connection", "USB"), MENU_LIT) == 0);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    /* Pair a device: its list; Bluetooth 3 from BT 1, linked. */
+    fk_bt_set(fk_link_of(0, ENV_LINK_CONNECTED), 0);
+    m_open_top();
+    m_turn(T_CONN);
+    m_click();
+    CHECK(sub5_cursor() == 1);
+    m_turn(3);
+    m_click();
+    CHECK(sub5_screen() == SC_PAIRLIST && sub5_cursor() == 1 && title_bad(FONT_MONO_I_CONN "Pair a device") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, "Bluetooth 1", MENU_LIT) == 0 &&
+          row_bad(2, "Bluetooth 2", MENU_DIM) == 0 && row_bad(3, "Bluetooth 3", MENU_DIM) == 0);
+    m_turn(2);
+    m_click();   /* not the current slot: selected, then the pair waits */
+    CHECK(fk_bt_pairs == 1 && fk_bt_last == 2 && fk_about.link == fk_link_of(2, ENV_LINK_LINKING));
+    CHECK(sub5_screen() == SC_PAIRING && sub5_cursor() == (2 << 4 | PH_START) && pairing_bad(2, PH_START) == 0);
+    /* Each phase from the facts. */
+    const struct { uint8_t link, pf, phase; } ph[] = {
+        {fk_link_of(2, ENV_LINK_PAIRING), ENV_PF_RETRYING, PH_START},     /* sent, optimistic, unconfirmed */
+        {fk_link_of(2, ENV_LINK_LINKING), ENV_PF_RETRYING, PH_START},     /* mid-attempt, still resent */
+        {fk_link_of(2, ENV_LINK_PAIRING), ENV_PF_CONFIRMED, PH_OPEN},
+        {fk_link_of(2, ENV_LINK_CONNECTED), ENV_PF_CONFIRMED, PH_DONE},
+        {fk_link_of(2, ENV_LINK_REJECTED), ENV_PF_CONFIRMED, PH_ENDED},   /* advertising ended, no device */
+        {fk_link_of(0, ENV_LINK_PAIRING), ENV_PF_CONFIRMED, PH_ENDED},    /* another slot's */
+        {fk_link_of(2, ENV_LINK_PAIRING), 0, PH_UNSURE},                  /* optimistic, the retry gave up */
+        {fk_link_of(2, ENV_LINK_CONNECTED), 0, PH_FAILED},                /* the old host won the race */
+        {fk_link_of(2, ENV_LINK_LINKING), ENV_PF_SEL_LOST, PH_FAILED},    /* the select was never answered */
+        {fk_link_of(2, ENV_LINK_PAIRING), ENV_PF_WAITING | ENV_PF_CONFIRMED, PH_START},
+    };
+    for (size_t k = 0; k < sizeof ph / sizeof ph[0]; k++) {
+        fk_bt_set(ph[k].link, ph[k].pf);
+        CHECK(sub5_screen() == SC_PAIRING && sub5_cursor() == (2 << 4 | ph[k].phase) && pairing_bad(2, ph[k].phase) == 0);
+    }
+    CHECK(fk_bt_stops == 0 && fk_bt_selects == 6);
+
+    /* Leaving: a click while starting stops it (only the wait: no select). */
+    fk_bt_set(fk_link_of(2, ENV_LINK_LINKING), ENV_PF_WAITING);
+    m_click();
+    CHECK(fk_bt_stops == 1 && fk_about.link == fk_link_of(2, ENV_LINK_LINKING) && fk_pf == 0);
+    CHECK(sub5_screen() == SC_CONN && sub5_cursor() == 3 && title_bad("Pairing stopped") == 0 && conn_bad(3, 2, "Trying") == 0);
+    /* A hold while advertising: the stop, and its select (the cancel). */
+    m_turn(1);
+    m_click();
+    m_turn(2);
+    m_click();   /* the current slot: no select; waiting */
+    CHECK(fk_bt_pairs == 2 && fk_about.link == fk_link_of(2, ENV_LINK_LINKING) && (fk_pf & ENV_PF_WAITING));
+    fk_bt_set(fk_link_of(2, ENV_LINK_PAIRING), ENV_PF_CONFIRMED);
+    CHECK(pairing_bad(2, PH_OPEN) == 0);
+    m_hold();
+    CHECK(fk_bt_stops == 2 && fk_about.link == fk_link_of(2, ENV_LINK_LINKING));
+    CHECK(sub5_screen() == SC_CONN && sub5_cursor() == 3 && title_bad("Pairing stopped") == 0);
+    /* Connected, ended or failed: a click or a hold only goes back. */
+    static const uint8_t done_st[3] = {ENV_LINK_CONNECTED, ENV_LINK_REJECTED, ENV_LINK_LINKING};
+    static const uint8_t done_pf[3] = {ENV_PF_CONFIRMED, ENV_PF_CONFIRMED, 0};
+    for (int k = 0; k < 3; k++) {
+        m_turn(1);
+        m_click();
+        m_turn(2);
+        m_click();
+        fk_bt_set(fk_link_of(2, done_st[k]), done_pf[k]);
+        CHECK(sub5_cursor() == (2 << 4 | (k == 0 ? PH_DONE : k == 1 ? PH_ENDED : PH_FAILED)));
+        if (k == 1) m_hold();
+        else m_click();
+        CHECK(fk_bt_stops == 2 && sub5_screen() == SC_CONN && sub5_cursor() == 3 && title_bad("Pairing stopped") != 0);
+    }
+    /* Unsure (a lost 5B 31): a click stops it; the stop's select cancels the
+     * optimistic advertising. */
+    m_turn(1);
+    m_click();
+    m_turn(2);
+    m_click();
+    fk_bt_set(fk_link_of(2, ENV_LINK_PAIRING), 0);
+    CHECK(sub5_cursor() == (2 << 4 | PH_UNSURE) && pairing_bad(2, PH_UNSURE) == 0);
+    m_click();
+    CHECK(fk_bt_stops == 3 && fk_about.link == fk_link_of(2, ENV_LINK_LINKING) && sub5_screen() == SC_CONN &&
+          title_bad("Pairing stopped") == 0);
+    /* Already advertising on the current slot: the page opens advertising. */
+    fk_bt_set(fk_link_of(2, ENV_LINK_PAIRING), ENV_PF_CONFIRMED);
+    m_turn(1);
+    m_click();
+    m_turn(2);
+    m_click();
+    fw_pass(MENU_FLASH_MS);   /* the stop's "Pairing stopped" outlasts the steps here */
+    m_settle();
+    CHECK(fk_bt_pairs == 7 && sub5_cursor() == (2 << 4 | PH_OPEN) && pairing_bad(2, PH_OPEN) == 0);
+
+    /* The whole Pairing page has the backstop (codex: a page that turned
+     * connected after 24 s would otherwise close at once); a close never
+     * stops it. */
+    fw_pass(MI_IDLE_MS + 10);
+    CHECK(po_session() == SESSION_OPEN && sub5_screen() == SC_PAIRING);
+    fk_bt_set(fk_link_of(2, ENV_LINK_LINKING), ENV_PF_RETRYING);
+    fw_pass(MI_BACKSTOP_MS);
+    CHECK(po_session() == SESSION_NONE && fk_bt_stops == 3);
+    to_pairing(1);
+    fk_bt_set(fk_link_of(1, ENV_LINK_CONNECTED), ENV_PF_CONFIRMED);
+    CHECK(sub5_cursor() == (1 << 4 | PH_DONE));
+    fw_pass(MI_IDLE_MS + 10);
+    CHECK(po_session() == SESSION_OPEN && sub5_screen() == SC_PAIRING);
+    fw_pass(MI_BACKSTOP_MS);
+    CHECK(po_session() == SESSION_NONE && fk_bt_stops == 3);
+    /* Fn plus a click (op 27 sub 11 here) while advertising: closed, not stopped. */
+    to_pairing(0);
+    fk_bt_set(fk_link_of(0, ENV_LINK_PAIRING), ENV_PF_CONFIRMED);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE && fk_bt_stops == 3);
+
+    /* It follows the slider from the page and from the pair list. */
+    to_pairing(0);
+    fk_bt_set(ENV_LINK_USB, 0);
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN);
+    CHECK(row_bad(T_CONN, cells2(FONT_MONO_I_CONN "Connection", "USB"), MENU_LIT) == 0 && fk_bt_stops == 3);
+    fk_bt_set(fk_link_of(0, ENV_LINK_CONNECTED), 0);
+    m_click();
+    m_turn(3);
+    m_click();
+    CHECK(sub5_screen() == SC_PAIRLIST);
+    fk_bt_set((uint8_t)(ENV_LINK_24G | (ENV_LINK_CONNECTED << 4)), 0);
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    /* Op 27: sub 14's link and facts; sub 16's stand-in and its checks. */
+    fk_about.link = fk_link_of(1, ENV_LINK_LINKING);
+    fk_pf         = ENV_PF_RETRYING;
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[15] == fk_about.link && rpt[16] == ENV_PF_RETRYING);
+    CHECK(op27(16, fk_link_of(2, ENV_LINK_PAIRING), ENV_PF_CONFIRMED) == MI_OK);
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[15] == fk_link_of(2, ENV_LINK_PAIRING) && rpt[16] == ENV_PF_CONFIRMED);
+    static const int bad_links[4] = {3, 1 | (3 << 2), 1 | (5 << 4), 0x81};
+    for (int k = 0; k < 4; k++) CHECK(op27(16, bad_links[k], 0) == MI_BAD);
+    CHECK(op27(16, fk_link_of(0, 0), 16) == MI_BAD);
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[15] == fk_link_of(2, ENV_LINK_PAIRING));   /* a refused one changes nothing */
+    CHECK(op27(16, 0xFF, 0) == MI_OK && op27(14, 0, 0) == MI_OK && rpt[15] == fk_about.link && rpt[16] == ENV_PF_RETRYING);
+
+    CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
+    CHECK(po_invariant_fail() == 0);
+    menu_watch    = false;
+    fk_about.link = link0;
+    fk_pf         = 0;
+}
+
 int main(int argc, char **argv) {
 #ifdef MENU_ENABLE
     (void)argc; (void)argv;
@@ -3050,6 +3334,7 @@ int main(int argc, char **argv) {
     test_p1b();
     test_ind_levels();
     test_p2a();
+    test_p3();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

@@ -27,7 +27,7 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 |....+....|....+....|   <- 20 columns
 ```
 
-## Built (P1a, P1b, the bootloader item and P2a)
+## Built (P1a, P1b, the bootloader item, P2a and P3)
 
 ### The title area
 
@@ -39,13 +39,14 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 | `Saved`             | 1.3 s after a choice is saved                                            |
 | `Cancelled`         | 1.3 s after a choice is left without saving, or Reset counters cancelled |
 | `Counters reset`    | 1.3 s after Reset counters                                               |
+| `Now on BT 2`, `Already on BT 2`, `Pairing stopped` | 1.3 s after a slot click, or a stop (P3) |
 
 ### The top level (title: `Configuration`)
 
 ```
 Lighting           ▶
 Screen           52%
-Connection         ▶
+Connection      BT 1
 Power       Balanced
 Indicators         ▶
 Clock            24h
@@ -308,21 +309,63 @@ Charging         Off
   (Caps and Win lock both, or the charging light), whatever their state.
 - 1% is the old dimmest level, unchanged; the steps are spaced to look even.
 
-### Connection (P2a's stub, 10-25; title: `Connection`)
+### Connection (P3, 10-25; title: `Connection`)
 
-On Bluetooth, the link as the page opened, then how to change it for now:
+The top level's value is the link: `BT 1`, `BT 2`, `BT 3`, `2.4G` or `USB`.
+
+**Off Bluetooth** (the slider on 2.4G or the cable), JD's words (10-25):
 
 ```
-Link BT 2 connected
-Slots: coming soon
+Switch to BT mode to
+change Bluetooth
+settings.
 
-Fn+Q/W/E: a slot
-Hold one 2 s: pair
+Click: back
 ```
 
-On 2.4G or the cable, the last two lines are `The slider picks` /
-`BT, 2.4G or cable.` (the link line as About's: `Link USB`,
-`Link 2.4G connected`). A click or a hold goes back.
+**On Bluetooth**, a list, the cursor on the current slot:
+
+```
+◀ Back
+■ Bluetooth 1  Linked
+  Bluetooth 2
+  Bluetooth 3
+Pair a device      ▶
+```
+
+- The current slot's word, in six cells: `Linked`, `Trying` (connecting),
+  `Pair` (advertising), `Failed`, or none.
+- A click on a slot switches to it: the title flashes `Now on BT 2`. On the
+  slot you're already linked on (or still connecting on), nothing changes:
+  `Already on BT 2`.
+- **Pair a device** (title `Pair a device`): `◀ Back`, `Bluetooth 1`,
+  `Bluetooth 2`, `Bluetooth 3`. A click starts pairing that slot.
+- **Pairing** (title `Pairing`), by what the radio says:
+
+```
+Bluetooth 3              On the computer, add
+Getting ready...         AK820 5.1-3
+
+Click or hold: stop      Click or hold: stop
+```
+
+```
+Bluetooth 3 is           Pairing ended.
+connected.
+
+Click: back              Click: back
+```
+
+```
+Pairing didn't           The radio didn't
+start. Try again.        confirm pairing.
+
+Click: back              Click or hold: stop
+```
+
+  `AK820 5.1-3` is the name the computer lists (the module's own). A flash
+  when stopped: `Pairing stopped`. The page stays up to 3 minutes; closing
+  the menu leaves pairing running, and the status band shows it.
 
 ## Not built yet (the mockup's words)
 
@@ -343,34 +386,6 @@ QMK Port by fpb
 
 The QR code to `https://github.com/jdlien/ak820-pro` (no text in the mockup;
 it shows `github.com/jdlien` / `  /ak820-pro` when the QR isn't drawn).
-
-### Connection (P3; title: `Connection`)
-
-```
-‹ Back
-• Bluetooth 1
-  Bluetooth 2
-  Bluetooth 3
-Pair a device      >
-```
-
-- The top level's value: `BT 1`, `BT 2`, `BT 3` (2.4G belongs to the
-  slider).
-- A flash on switching: `Now on BT 1`.
-- **Pair a device** (title `Pair a device`): `‹ Back`, `Bluetooth 1`,
-  `Bluetooth 2`, `Bluetooth 3`.
-- **Pairing** (title `Pairing`), the slot's name, a progress strip, then:
-
-```
-On the computer, add
-AK820 in Bluetooth
-settings.
-
-Click or hold: stop
-```
-
-  (for the dongle: `Plug the dongle in` / `and keep it close.`). A flash
-  when stopped: `Pairing stopped`.
 
 ### Battery (P4; on the top level)
 

@@ -1108,6 +1108,230 @@ perceptually spaced, the duty spread by the sigma-delta.
   level's bytes 0, 1, 2, 43, 101, 102, 255); the board (the menu pass, the
   dev ops, the timing); JD by eye.
 
+## P3: Connection, the Bluetooth slots and pairing (draft 2, 10-25)
+
+JD (10-25): "can we do the BT channel selection now? If it makes sense,
+also pairing, unless that deserves to be a separate wave." Both, in one
+wave: pairing is the same few calls as `Fn`+`Q`/`W`/`E`'s hold, and one
+hands-on session covers both. And on the stub: "you shouldn't even display
+this option if you're not in BT mode (or at least we should show a screen
+saying 'Switch to BT mode to change Bluetooth settings' or such)". The row
+stays, so the top level keeps its shape whatever the slider says, and off
+Bluetooth it opens his screen. Draft 2 takes codex's design review
+(`plans/review-codex-p3-design-2026-10-25.md`): the select's outcome as a
+driver fact, the pair never sent mid-bounce or after a lost select, an
+unsure phase, the whole Pairing page on the backstop, and the stand-in cut
+off from the radio.
+
+### The tree, changed and added
+
+- **The top level's Connection row** shows the link where its ▶ was:
+  `BT 1`, `BT 2`, `BT 3`, `2.4G` or `USB` (as Power's and Clock's rows show
+  theirs). Its signature's `val`: 0 USB, 1 2.4G, 2-4 BT 1-3.
+- **Off Bluetooth** (the slider on 2.4G or the cable), the row opens
+  `N_CONNINFO`, a page in the confirm geometry, title `Connection`:
+  `Switch to BT mode to` / `change Bluetooth` / `settings.` and, at the
+  bottom, `Click: back`. Its lines sit at y 22, 36, 50 and 86, so the
+  sentence isn't split by the confirm pages' gap. Fixed text, so its
+  signatures are `0x8000 | line`; the stub's frozen snapshot goes. A click
+  or a hold goes back.
+- **On Bluetooth**, the row opens `N_CONN`, a list, title `Connection`:
+  - `◀ Back`;
+  - `Bluetooth 1`, `Bluetooth 2`, `Bluetooth 3` (`N_BT0`-`N_BT2`), laid out
+    as options: the label from cell 2, the current slot's check box in cells
+    0-1. The current slot also shows its link at the right, in at most six
+    cells: `Linked` (connected), `Trying` (linking), `Pair` (advertising),
+    `Failed` (rejected), nothing when idle. The menu hides the status band,
+    so this is the only feedback a switch gets while the menu is open. The
+    word's state is the row signature's `val` (bits 7-4), beside the bullet
+    and lit bits, so a change repaints the row.
+  - `Pair a device` ▶ (`N_PAIRLIST`), from cell 0, as the mockup draws it.
+
+  The cursor opens on the current slot's row.
+- **Choosing a slot** (a click on `Bluetooth n`):
+  - another slot, or the current one while it's rejected, advertising, or
+    linking on a lost select: the tap's select (saved, as the key saves it),
+    and the title flashes `Now on BT n`. On the current slot that's the
+    key's retry, and while it advertises, the key's cancel-pairing bounce
+    (`ch582_set_profile()`'s `was_pairing`).
+  - the current slot while it's connected, or linking on a select that
+    isn't lost: nothing is sent, and the title flashes `Already on BT n`.
+    Re-selecting a linked slot drops the link, and re-selecting one
+    mid-attempt restarts the attempt, which starves a slow macOS reconnect
+    (`docs/wireless.md`, the select backstop). A lost select (its eight
+    tries ran out unanswered) leaves the state the optimistic `LINKING`
+    for good, so "nothing" there would make the slot impossible to retry
+    (codex).
+
+  The page stays, unlike Power's choice: the feedback is on it.
+- **`Pair a device`** opens a list, title `Pair a device`: `◀ Back`,
+  `Bluetooth 1`, `Bluetooth 2`, `Bluetooth 3` (`N_PAIR0`-`N_PAIR2`, from
+  cell 0, no check). The cursor opens on row 1.
+- **A click on one starts pairing it** and replaces that list's frame with
+  `N_PAIRING`, the slot in the frame's `cursor` (the stack is three deep
+  at most). Connection's cursor moves to that slot's row, so leaving the
+  page lands there, where the row shows how it ended.
+- **The Pairing page**, title `Pairing`, in the confirm geometry, its lines
+  by phase (the next section):
+  - starting: `Bluetooth n` / `Getting ready...` / `Click or hold: stop`;
+  - advertising: `On the computer, add` / `AK820 5.1-n` /
+    `Click or hold: stop`. The band's exact advertised name
+    (`display.c`'s note: the module appends the slot);
+  - connected: `Bluetooth n is` / `connected.` / `Click: back`;
+  - ended (advertising stopped with no device, or the slot changed):
+    `Pairing ended.` / `Click: back`;
+  - failed (nothing confirmed or pending, and not advertising): `Pairing
+    didn't` / `start. Try again.` / `Click: back`;
+  - unsure (the driver's optimistic `PAIRING`, never confirmed, nothing
+    being resent: a lost `5B 31` looks the same as a module that never
+    started): `The radio didn't` / `confirm pairing.` /
+    `Click or hold: stop`.
+
+  Its signatures: `0xA000 | slot << 8 | phase << 4 | line`.
+- **A click or a hold** while starting, advertising or unsure stops it
+  (below), flashes `Pairing stopped` and goes back. Otherwise it only goes
+  back.
+- **The screens follow the slider:** if `N_CONN`, `N_PAIRLIST` or
+  `N_PAIRING` shows and the link isn't Bluetooth, or `N_CONNINFO` shows and
+  it is, the menu goes back to the top level, the cursor on Connection,
+  whose value then shows the new link. (Most slider moves reboot the board
+  anyway.)
+- **While the Pairing page shows, the idle timeout is the 3-minute
+  backstop,** as for an open edit: adding a device on a computer can take
+  longer than 24 s, and since the idle time dates from the last knob input,
+  a page that turned connected after that would otherwise close the moment
+  it did (codex). Any close (the timeout, `Fn` and a click, Exit) leaves
+  pairing running, and the band takes over (`Pair with:` /
+  `AK820 5.1-n`), as after the key's hold. A start still waiting still
+  fires.
+- **Known gap, shared with the band:** the end of advertising with no
+  device isn't observed. The driver ignores `5B 23` (periodic, in every
+  state), so a page left advertising says so until something changes; the
+  backstop bounds it.
+- **New nodes:** `N_CONNINFO` 39, `N_BT0`-`N_BT2` 40-42, `N_PAIRLIST` 43,
+  `N_PAIR0`-`N_PAIR2` 44-46, `N_PAIRING` 47; `N_COUNT` 48 (at most 63).
+  Titles: `T_PAIRLIST`, `T_PAIRING`, and the flashes `T_NOW_BT1`-`3`,
+  `T_ALREADY_BT1`-`3`, `T_PAIR_STOPPED`. The headings carry the Bluetooth
+  icon; the flashes, none.
+
+### Starting, stopping, and the phases
+
+The decisions about the radio live in `bt_ui.c`, beside the key's hold,
+and the menu only reads facts.
+
+- **The select** is the slot key's press without its hold:
+  `bt_ui_slot_key()`'s press body moves into `select_slot()`, which both
+  call (save, `ch582_set_profile()`, the host, the logo). The key keeps its
+  hold's arm and progress bar.
+- **`bt_ui_pair_slot(slot)`**, nothing off Bluetooth:
+  - if the slot is current, confirmed advertising (below) and still
+    advertising, nothing: it's already pairable (from the key's hold, or
+    if the module advertises a slot by itself, which isn't known to happen
+    but would otherwise draw a redundant `A6 51` it might not answer);
+  - otherwise, the slot is selected unless it's the current one with a
+    select that isn't lost, and a pending pair is armed.
+- **The pending pair fires** from `bt_pair_hold_task()` (10 Hz), sending
+  `ch582_enter_pairing()` once the module has acted on the select (below)
+  and the link isn't linking, or 6 s after the arm if it's still linking
+  then. That's when the module listens: `A6 51` is dropped mid-attempt
+  (`docs/wireless.md`). And a pair sent at once could lose to the slot's
+  old host: its `5B 32` clears the pair's retry, and the menu would show a
+  connection that's really the old bond.
+  - While the select is still being sent (a bounce, or its retries), it
+    waits: a bounce's own `5B 32` says connected, and `A6 51` then would
+    replace the bounce (`PA_PAIR` supersedes `PA_BOUNCE`) and pair the
+    bounce slot (codex's first must-fix).
+  - A lost select disarms it unsent: the module may be on another slot.
+    The page reads failed.
+  - Confirmed advertising when it would fire: disarmed unsent.
+  - The current slot while connected fires on the next tick: `A6 51` on a
+    live link is the hold's fast case (a phone's reconnect beats 2 s).
+  - A menu select, a slot key's press, `Fn`+`P` and every slider event
+    disarm it; a pair re-arms after its own select.
+- **`bt_ui_pair_stop()`** disarms it. Then, if the link is advertising (its
+  state `PAIRING`, optimistic or confirmed) or the driver's pair retry is
+  still pending, it selects the current slot, which is the key's cancel
+  (the bounce, or a plain select that supersedes the retry).
+- **The driver** (`ch582f_ajazz.c`) gains three reads and two flags:
+  - `ch582_pair_retrying()`: `pa.kind == PA_PAIR`, a pair sent and not yet
+    confirmed;
+  - `ch582_pair_confirmed()`: a `5B 31` has arrived, outside a bounce,
+    since the last pair request or select. It's set in `5B 31`'s case and
+    cleared by `ch582_enter_pairing()`, `ch582_set_profile()` and
+    `ch582_cancel_connect()`. The state alone can't say this: `conn_state`
+    goes to `PAIRING` optimistically when the pair is sent, and stays there
+    if the module never answers and the retry gives up;
+  - `ch582_select_state()`: pending (`PA_BOUNCE` or `PA_SELECT`), acked, or
+    lost. Acked (`select_acked`) is a `5B 31`, `32`, `33`, `34` or `36`, or
+    the 5A promotion, outside a bounce, since `ch582_set_profile()` or
+    `ch582_cancel_connect()`, which clear it. Lost is neither pending nor
+    acked: the select's eight tries ran out unanswered.
+- **The menu's facts** (`menu_env.h`): `env_link()`, the packed link as
+  About's (About now builds its byte from it); `env_bt_select(slot)`,
+  `env_bt_pair(slot)`, `env_bt_pair_stop()`; `env_bt_pair_facts()`: bit 0
+  waiting (`bt_ui`'s pending pair), bit 1 retrying, bit 2 confirmed, bit 3
+  the select lost.
+- **The menu latches them** with the power mode and the clock
+  (`sync_model()`: `model_link`, `model_pf`), each pass and before
+  navigation. A change retargets, as Power's does, so rows and pages
+  compose from the latch and never read the radio mid-piece. After a
+  select or a pair the menu syncs again before it composes.
+- **The phase**, a pure function in `menu.c` of the latch and the page's
+  slot, in this order:
+  1. the link isn't Bluetooth, or not on this slot: ended;
+  2. waiting: starting;
+  3. confirmed: advertising if the state is `PAIRING`, connected if
+     `CONNECTED`, otherwise ended;
+  4. retrying: starting;
+  5. the state `PAIRING`: unsure;
+  6. otherwise: failed.
+
+### Op 27 (dev)
+
+- **Sub 14** gains `[15]` `env_link()` and `[16]` `env_bt_pair_facts()`.
+- **A new sub 16, the bench's stand-in:** `[5]` a link byte, or `0xFF` for
+  the live one; `[6]` the facts. While set, `env_link()` and
+  `env_bt_pair_facts()` return them, and `env_bt_select()`, `env_bt_pair()`
+  and `env_bt_pair_stop()` do nothing: the cable doesn't mean the slider is
+  on it (codex). MI_BAD for a transport over 2, a slot over 2, a state over
+  4, bit 7 set, or facts over 15.
+- **`menu_cursor()`** reports `slot << 4 | phase` for the Pairing page.
+
+### RAM
+
+The latch (2), `bt_ui`'s pending pair (a flag and a 16-bit start, 3), the
+driver's two flags (2), and in dev the stand-in (2). **Linked: the dev gap
+is 136 B** (from 144; the floor is 128), daily 2,264 (from 2,280).
+
+### Tests
+
+- **The host** (`menu_s0_test.c`): the top level's value for each link; the
+  off-Bluetooth page, its lines and back; the list's rows, the check and
+  the link word for each state, live through the latch; a click on each
+  slot in each state (the select or nothing, the flash, the cursor kept);
+  the screens following the slider both ways, from each screen; the pair
+  list; the Pairing page in each phase from the facts; stop in each phase
+  (the stop or none, the flash, back on that slot's row); the backstop on
+  every phase, and a close never stopping; the one-lit-row and pass-bytes
+  watches throughout.
+- **`bt_ui.c` and the driver, both compiled as they are**
+  (`scripts/ch582_sim/btui.c`, on the radio harness's world: recorded
+  writes, the module ACKing every frame, the case's `5B` frames; codex: the
+  sequences need the real driver). Twelve cases: the tap's select, with no
+  pair; a pair on the current slot linked, on the next tick, no select;
+  another slot: its select, nothing mid-attempt, the pair after `5B 36`, or
+  at 6 s, or on the old host's link; the bounce (the bounce slot's `5B 32`,
+  then the target's select at 700 ms, then the pair); a lost select (eight
+  tries, no pair, then a re-select); every supersession; a lost `5B 31`
+  (twelve tries, still `PAIRING`, the stop's bounce); the 5A promotion; the
+  stops; already advertising; off Bluetooth, nothing at all. Two mutants
+  (the pair while the select is pending; no re-select of a lost select),
+  each caught.
+- **The board** (the cable, the stand-in): the menu pass over every
+  Connection screen and phase, its timing, and the real off-Bluetooth page.
+- **JD:** the slider to BT; a slot switch each way; pairing a device on a
+  free slot, and a stop.
+
 ## P1b, P1c, P1d
 
 P1b's design is the section above (the earlier note asked it to cover the
