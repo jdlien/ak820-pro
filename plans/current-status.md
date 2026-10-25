@@ -341,6 +341,13 @@ and clicks, and the debug pages move into it. The design, its decisions, and wha
 
 ### Open, none of them blocking
 
+- **The keys flash at a deep-sleep wake: cause found from JD's slow-motion
+  video (21:16 10-24).** The sleep starts in the same pass as the dark
+  stage, before a dark frame is committed, so the wake shows the old dim
+  frame for ~40 ms. Then the keys are dark until the 10 Hz tick, ~140 ms
+  after the key. It has been there since the modes' revision (`0e322097f4`,
+  10-20). The fix is proposed in `plans/BACKLOG.md`, not built, and would
+  go with the flash after the drain.
 - **Six passes of 25 ms or more since the flash** (worst 29 ms, `blit`). The
   same six at 23:14 10-21 and at 14:56 10-22, so none overnight or today.
   The 30 min cut added none (14:29-14:59), so they came in 14:22-14:29 or

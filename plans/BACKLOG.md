@@ -25,65 +25,70 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## The key lights flash white at a deep-sleep wake (2026-10-24) -- seen once, very subtle, cause not known; low priority
+## The key lights flash at a deep-sleep wake (2026-10-24) -- cause found: the sleep starts before the dark frame is committed; a fix proposed, for after the drain
 
-JD saw it at ~10:45 10-24 on `b9555ff3e6`, waking the board on its pack
-after ~6 h of deep sleep (from 04:44:31), in Balanced, at his daily setting
-(Alphas/Mods, hue 185, sat 227, val 115, speed 231). Every key flashed
-white, the whole board, then showed his colours. The screen looked fine.
-It was too fast to see clearly without a slow-motion camera, and very
-subtle: a curiosity, not a nuisance.
-- **A second wake, evening 10-24:** maybe not full white this time. It
-  flashed a little, went dark, and flashed again, all within ~50 ms.
-- **The whole board is itself a clue.** The row ISR selects an LED row only
-  when the frame it drives has a non-zero LED in that row. So a white board
-  means a white frame was committed for a few fields, which points at the
-  lighting's first frames after the lit stage returns, not at the sleep's
-  hardware exit. Unless something outside the driver's logic lit them.
-- **Not noticed before, as far as we know.** But until ~20:10 10-22 the
-  board ran full white, where a white flash cannot show. The deep-sleep
-  wakes at the daily setting since then went unremarked: 9 deep sleeps
-  since boot by 10:16 10-23, on `36afff30e8`.
-- **The logger (1 Hz) shows nothing distinctive.** Its first awake row is
-  10:45:32 at 33.3 mA, ~33.5 for 3 s, then 31.6.
+JD saw it twice on `b9555ff3e6`, on the pack, at his daily setting
+(Alphas/Mods, hue 185, sat 227, val 115, speed 231), the screen fine:
+- **~10:45 10-24,** after ~6 h asleep: every key flashed white, then his
+  colours.
+- **That evening:** a flash, dark, a flash, all within ~50 ms.
 
-**The code read (10-24) found nothing that paints white:**
-- **Asleep:** `sn32f2xx_sleep_enterI` disables every column's channel and
-  deselects all 18 LED rows. The ladder's dark stage holds the driver's power
-  scale at 0, so `led_state` is all zeros.
-- **At the wake:** `sn32f2xx_sleep_exitI` re-arms the timers, and a row ISR
-  selects a row only if one of its LEDs is non-zero, so the LEDs stay dark.
-  Then `power_task` (10 Hz) applies the lit stage: scale 255 and
-  `rgb_matrix_reinit_effect()`. Alphas/Mods then paints its two colours
-  through `rgb_matrix_hsv_to_rgb`, and neither is near saturation 0.
-- **The key rows driven high at the wake are not LED rows:** they are B14,
-  B15, B19, D19, A19 and A18.
-- **No board code paints every LED one colour,** and there is no
-  indicator hook: `rgb_matrix_set_color` appears only in the custom
-  effects in `rgb_matrix_kb.inc`, which JD's setting does not use.
-- **Not the old row flash at a flash write** (fixed 09-01). That showed one
-  row in its own colour.
+**The video (JD's phone, slow motion, the wake at 21:16:22 10-24, in
+Balanced).** 120 frames at 120 fps, 8.3 ms each. The audio track runs
+1.0 s against the 120 frames, and the dark gap fits the 10 Hz tick (below).
+The screen's clock reads 21:16:22 throughout. From the first lit frame:
+- **0-42 ms (frames 5-9): the keys lit in JD's colour, at about half the
+  relit frames' pixel level.** Its red/green/blue share is 0.19/0.24/0.58,
+  against 0.19/0.24/0.57 relit: the same colour, dimmer, which is the dim
+  stage's frame (value 64 against his 115). Not white.
+- **42-100 ms (10-16): dark.**
+- **~100 ms (17): the screen lights.**
+- **~140 ms (22): the keys back at his colour.**
 
-- **Not the settings writes:** every flash write blanks the LEDs for a few
-  ms, but `kb_eeconfig_task` waits out the wake's recovery
-  (`sleep_recovering()`), seconds after the key, not 50 ms.
-- **Not QMK's own lighting timeout:** `RGB_MATRIX_TIMEOUT` is not set.
-  `rgb_task_start` blanks for `suspend_state` too, and that path is not yet
-  checked across a wake.
+**The cause.**
+1. In one 10 Hz pass, `power_task` applies the dark stage: scale 0, the
+   screen's cap 0, the effect's re-init.
+2. At the end of that same pass, `sleep_task` sleeps. Its RGB gate is
+   `power_rgb_dark()`, which is `applied_scale == 0` and so true at once;
+   the backlight's gate is the cap.
+3. `rgb_matrix_task` never runs in between, so `led_state` (what the row
+   ISR drives) keeps the frame from before: the dim frame in Balanced.
+4. `sn32f2xx_sleep_enterI` turns the outputs off around it, and
+   `sn32f2xx_sleep_exitI` turns the ISR back on with it at the wake.
+5. The first render at scale 0 then commits zeros, ~40 ms after the wake:
+   five calls of 17 LEDs, and the 16 ms flush limit.
+6. The next 10 Hz block comes ~100 ms after the wake. The system timer
+   stood still through the sleep, so the block's 100 ms counts from the pass
+   that slept. It applies the lit stage, and one render later the keys
+   light.
 
-So the cause is outside the path read so far.
+**Why only now:** since `0e322097f4` (10-20 16:25, the modes' revision),
+Balanced goes dark and to sleep at the same 20 minutes, and Power saver at
+the same 3. Before it, Balanced turned the lights off at 5 minutes and slept
+at 7, so the zero frame was committed two minutes before the sleep. Lights
+out goes dark at once and sleeps at 60 s, so it shows no flash.
 
-**Understand it before fixing it.** Holding the lights dark a little longer
-at a wake would likely hide it, but would not explain it. The order:
-1. **Film a wake in slow motion** (a phone's 240 fps is 4 ms a frame) on
-   JD's board, at a wake he makes anyway, so the drain is not affected. It
-   shows each flash's colour, the dark gap, and the timing from the key.
-2. **If the board really drives a white or dark frame,** a dev build on
-   gremlin's board logs the first frames after a wake: each committed
-   frame's per-colour drive sums, and the power stage and scale changes,
-   with times.
-3. **If the frames are right,** it is electrical or the driver's timing at
-   the restart, and the video's detail says where to look.
+**The first sighting's frame was the full one.** That sleep began at
+04:44:31, five seconds after relay 2 went off, with JD idle well past 20
+minutes. So the board went from USB power, lit at his full setting, straight
+to dark and asleep in one pass, and the frame it kept was the full one.
+
+**The fix, proposed, not built; for the flash after the drain:**
+- **Gate the sleep on the committed frame.** `blockers()` sets `DSB_RGB`
+  until the driver's `drive_now[]` sums are zero too, through a new
+  `sn32f2xx` accessor. The sleep then starts ~40 ms later, and a wake starts
+  dark. The risk to check: anything that kept the committed frame lit would
+  block every sleep. The scale applies in `sn32f2xx_set_color` on every
+  path, so at scale 0 every render commits zeros. The soak's sleep counts
+  would show it.
+- **Optional:** run the ladder's tick in a key wake's first pass. The keys
+  would then light one render after the key, ~40 ms, not ~140.
+
+The first code read (10-24) took `led_state` to be all zeros asleep, which
+is where it went wrong. The rest of it stands: no board code paints every
+LED one colour, the key rows driven at the wake are not LED rows (B14, B15,
+B19, D19, A19, A18), the settings writes wait out the recovery, and
+`RGB_MATRIX_TIMEOUT` is not set.
 
 ## `count_ge_10ms` ticks once a second: the clock's second edge (2026-10-22) -- fixed in `ce229f87c6`, on gremlin; JD's board after the drain
 
