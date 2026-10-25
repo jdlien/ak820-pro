@@ -994,7 +994,7 @@ static void test_mono(void) {
      * 1 px gap before cell 0. */
     const uint8_t *cg = font_small_mono[95 + (uint8_t)MT_CURSOR[0] - 0x80];
     mt_line_t      lg = {"A", 1, 4, 1, true, false, (uint8_t)MT_CURSOR[0]};
-    CHECK(cg[5] == 0xE0);   /* three columns at its widest */
+    CHECK(cg[5] == 0x80 && cg[0] == 0x80 && cg[13] == 0);   /* the thin bar (JD, 10-24): column 0, rows 0-12 */
     mt_bits(&lg, 0, 11, 0, MT_CELL_H, b, 2);
     for (int r = 0; r < MT_CELL_H; r++) {
         CHECK((cg[r] & 0x1F) == 0);

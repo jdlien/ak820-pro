@@ -47,7 +47,8 @@ EXTRA_NAMES = ["LSAQUO", "RSAQUO", "BULLET", "TRIANGLE", "CHECK"]
 ICONS = [
     ("TRI_L", 0x25C0, 1),          # ◀ Back
     ("TRI_R", 0x25B6, 1),          # ▶ a row that opens a page
-    ("CURSOR", 0x1FB6C, 1),        # 🭬 the selected row's, in its line's lead (columns 0-2)
+    ("CURSOR", 0x1FB70, 1),        # the selected row's, in its line's lead (columns 0-2): the thin bar
+                                   # (JD, 10-24; U+1FB6C's triangle was "a little too cramped")
     ("WRENCH", 0x1F527, 2),        # 🔧 before "Configuration"
     ("CHECK_BOX", 0xF631, 2),      # the saved option (nf-mdi-checkbox_marked; JD: the circle "doesn't look good")
     ("I_POWER", 0xF0E7, 1),        # the top level's icons: nf-fa-bolt,
