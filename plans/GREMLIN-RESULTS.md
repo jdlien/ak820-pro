@@ -956,3 +956,29 @@ back, About, Health and Camera handed off and back, the hint, the close.
   about one pass a minute of driving goes just over. Next: measure where the
   piece's time goes (the composition, the expansion, the send) before
   choosing a fix; smaller pieces would push the opens past 1,000 ms.
+
+### 20b. Where a menu text piece's time goes (10-24, ~19:45)
+
+Dev `62bb64f9` (token `0x7658391c`): op 27 sub 12's maxima over a full
+`menu_p1a_board.py` run (`p1a-board6-62bb64f9.json`):
+
+| Part | Max |
+|---|---|
+| the window (11 bytes, 5 polled sends) | 0.58 ms |
+| the expansion (244 px into the scratch) | 1.02 ms |
+| the sends (488 B) | 3.50 ms |
+| the whole mono call | 4.50 ms |
+| the composition (`mt_bits`, before the call) | 0.86 ms |
+
+- **The send dominates,** and it's what a fill pays too: 488 B is 0.16 ms on
+  the wire at SPI0's 24 MHz (`clkdiv` 0, already the fastest), so ~3.3 ms is
+  the polled loop's CPU time under the row ISR's ~73%.
+- **Everything runs 4-5x slower than its instruction count predicts**
+  (`mt_bits` ~1,100 instructions, 0.86 ms; the expansion ~1,400, 1.0 ms):
+  most likely the flash's wait states (no cache) on top of the ISR's share.
+  The real cure is the hot loops in SRAM, which costs SRAM the dev build
+  doesn't have (160 B over the floor with this build's diagnostics).
+- **JD (on `62bb64f9`):** Back/Exit's #FF9A9A "reads well. It's clearly
+  different but bright enough to be visible on a dim screen." The
+  scrollbar first: "_definitely_ the right call. It's nearly instant so the
+  user knows where they are as the text fills in."
