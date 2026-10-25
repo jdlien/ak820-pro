@@ -1075,3 +1075,56 @@ entered the bootloader, `0C45:7140` after 3.1 s** (the 1.5 s notice, the
 reset, USB enumerating; PnP only); `flash.sh` took the entered bootloader
 (the last backups, no jump), flashed, and restored the keymap and the
 lighting (`ak820lighting.py show`: board and backup the same).
+
+### 20h. P2a and P2b on the board: Indicators, the Connection stub, fine steps, the Screen 0-100 (10-25, 01:40-03:45)
+
+Two flashes: **`8b4aec16`** (01:40, dev, token `0x0173e93e`: P2a, the Indicators
+and the Connection stub, the editors' fine steps) and **`a9f750ff`** (02:55,
+dev, token `0xa3282d1c`: P2b, the Screen 0-100 and the keys 1% a press, the
+battery log v8). Codex before each: two design rounds, two code rounds, no
+firmware fix asked before either flash (`plans/review-codex-p2a-*`,
+`review-codex-p2b-*`). The dev heap gap is 144 B on both (the floor 128).
+History: `history/config-menu-p2a-20261025/`.
+
+- **The menu pass** (`menu_p1a_board.py`, 114 steps, the new rows and both
+  indicator editors with their sub 14 readbacks: open, the level restored and
+  the force gone after a cancel): every screen right in all four runs. Its
+  timing fails C10's 17 ms in two of four: the longest passes 18.7, 16.9, 16.8
+  (`8b4aec16`) and 18.6 ms (`a9f750ff`), each in the Hue editor.
+- **The A/B (codex's timing gate), the board idle, the lighting as JD left it,
+  `781d071f` flashed back for it:** its own menu pass (98 steps) ran 18.5,
+  **24.8** and 17.0 ms, its Hue editor's passes at 18.2-18.5. So the Hue
+  editor's ~18.5 ms is tonight's conditions on both builds, not P2a's; the
+  old 16.2 ms (§20g) was another evening's. Step by step the settles match
+  (the median step 1.002 times the old). An open question for P1b: the Hue
+  editor over 17 ms, and one core spike of 17 ms "unaccounted" (old build).
+- **The idle cost** (`ind_timing.py`, 10 s, health pages 2 and 4): the old
+  firmware 206-210 passes/s, the row ISR 3,730/s at 197.6 us; the new 204-206
+  passes/s, 3,708/s at 198.4 us: about 1.5% fewer passes, 0.6% of the ISR's
+  rate.
+- **The indicators' worst case,** all three LEDs forced by op 27 sub 15, the
+  LCD at 42: at 1%, 196.5 passes/s (-4%); at 82-83% (49-51% electrical duty,
+  the most toggles), 175 (-15%) and the row ISR 3,507/s (-5.4%); at 100%, 192
+  (-6.5%); with the LCD at 20, the same. The menu pass under the 82% load: the
+  longest pass 20.3 ms, 75 passes over 15 ms, most settles just over 1 s, the
+  piece 6.6 ms against 5.6 (`board-a9f750ff-forced82.json`; the load held
+  through the pass and was put back). With one LED, or the default 1%, the
+  cost is the old firmware's (Caps lit at its level 1: 195 against 200 old,
+  199 against 205 new). The tick's per-tick arithmetic and the pin toggles
+  (about 20,000 a second a pin near 50% duty) come out of the main loop's
+  ~26% of the CPU.
+- ⚠️ **A measuring trap found:** `ind_timing.py`'s second sample took a
+  queued health reply to another reader (the agent samples every 5 min;
+  Windows gives every handle every reply): 77.6 and 6.6 passes/s with none
+  over 10 ms. It drains the queue first now; those runs are marked.
+- **The P1b gates** (`menu_p1b_gates.py`, on `a9f750ff`): **30 of 30, PASS**,
+  after two fixes in the script (its RGB steps are the menu's percentages
+  now, and its exact put-back waits for the lights to be on: QMK ignores a
+  brightness set while they're off).
+- **Write attribution** (`menu_ind_save_board.py`): a Lock lights save
+  through the menu counted once on page 3's `ind_locks` and nothing else;
+  its put-back once more; the level back at 1%. **PASS.**
+- **The battery log v8:** `flash.sh`'s dump read it (`ak820battery.py`
+  writes the byte as `bkl100`).
+- **The LCD on P2b:** `devhook.py lcd`: level 42/100, effective 42 (the old
+  default's duty).

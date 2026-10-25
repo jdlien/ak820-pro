@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-24 ~16:40.
+2026-10-25 ~03:50.
 
 ## Where things stand
 
@@ -111,13 +111,44 @@ This file is the thread; read it first after a context loss. Updated
      from the menu on the board and flashed back. The cursor is the thin bar
      (U+1FB70, JD). Help's text comes from `plans/MENU-TEXT.md` (committed,
      JD's), its quoted numbers checked against the firmware.
-     **Owed before P1b is accepted:** JD's session (Lighting, the editors,
-     the Screen, an Fn+arrow mid-edit, the bootloader item); a power cycle
-     to prove a save survives a reboot; C10's gates on the editors
-     (`menu_s1_gate.py`'s 15 ms to 17).
-  2. The Clock options (the design doc's "JD's decisions"), with half-row
+     **Owed before P1b is accepted:** a power cycle to prove a save survives
+     a reboot; C10's gates on the editors (`menu_s1_gate.py`'s 15 ms to 17).
+     JD tried Lighting 10-25 ~01:30: "The UI looks excellent", small effect
+     quirks "not worth chasing"; he asked for fine steps (done, P2a).
+  2. **ON THE KEYBOARD ON GREMLIN NOW: `a9f750ff`** (dev, token
+     `0xa3282d1c`, 10-25 02:55; GREMLIN-RESULTS §20h). On top of P1b:
+     - **P2a** (`8b4aec16`): Indicators (Lock lights, Charging: 0-100, 1% a
+       detent, 8 fast, the preview lights the LEDs; a sigma-delta tick,
+       `indicator_levels.h` from `scripts/gen_indicator_levels.py`;
+       kb_eeconfig v5 bytes 7-8; flash counters' page 3), the Connection
+       stub (the link frozen at open, the shortcuts), eleven top-level rows,
+       the editors' fine steps (JD: "micro-adjustments by one
+       value/percent": the next percentage a detent, hue 1 unit; fast 8%/12).
+     - **P2b** (JD: the Screen "way too coarse"): the backlight 0-100 on the
+       same table and sigma-delta; `Fn`+`PgUp`/`PgDn` 1% a press with the
+       lights' repeat (JD's ask); dim cap 37, default 42 (the old duties);
+       kb_eeconfig v6; the battery log v8 (`bkl100`); `battery_sim` follows
+       the scale (`sim_bkl.h`).
+     - Board: the menu pass right; the gates 30/30; page 3's attribution;
+       the A/B vs `781d071f` (the Hue editor's ~18.5 ms is both builds'
+       tonight). **The cost of lit indicators:** at 82% on all three LEDs
+       -15% main-loop passes (the menu's longest pass 20.3 ms); at 1% or one
+       LED, the old firmware's cost. A hybrid (sigma-delta below ~8-16 ticks,
+       period PWM with a dithered length above) would cut the high-level
+       cost to about the old PWM's; its flicker risk needs JD's eye: his
+       call (proposed, not built).
+     - **Owed:** JD's look at the lock lights and the Screen's 1% steps; his
+       power cycle (the saved levels across a reboot); codex's test gaps
+       (the review files' dispositions: the frozen-link test, `kbee.c`'s
+       pending write, the Diagnostics/wake rollbacks with an indicator edit,
+       the sim's saturation, every starting byte, `mutants.py`'s scale, the
+       legacy replay's ticks).
+     - **At the merge:** `power_model.py` (parses `bkl_duty`, 24),
+       `current_map.py` (sweeps 0-23), `gauge_replay.py` (reads `bkl`): the
+       session on Buzz's tools; CLAUDE.md's core-file list and docs.
+  3. The Clock options (the design doc's "JD's decisions"), with half-row
      slots for the live examples.
-  3. JD's text edits; then P1c and P1d.
+  4. JD's text edits; then P1c and P1d; P3 (Bluetooth), P4 (Battery).
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
