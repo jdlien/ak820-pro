@@ -473,9 +473,11 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
   of the last, takes the fast step (the mockup's rule). `menu_input` has the
   detents and `now`; the last turn's time is new state: **32-bit ms** (a
   16-bit one aliases inside the 180 s backstop: a turn 65,556 ms after the
-  last would read as 20 ms), cleared when an editor opens, so its first turn
-  is never fast; a turn counts as fast only for an unsigned difference under
-  90 ms since a turn in the same editor.
+  last would read as 20 ms), with a flag for "a previous turn in this
+  editor", cleared when an editor opens. The predicate (codex, round three):
+  `abs(turns) >= 2 || (have_previous_turn && (uint32_t)(now - last_turn_ms)
+  < 90)`, so an editor's first single-detent input is never time-accelerated.
+  Tests: a long idle, the 32-bit wrap, re-entering an editor.
 - **Diagnostics' place** on the top level is computed from its rows, not the
   `2` that `menu_return_from_diag()` pushes today (`menu.c:512`); new title
   ids follow P1a's table.
@@ -618,9 +620,14 @@ pending stop and marks interrupted timing; `note_settled()` (`:189`) ignores
 a later settlement while the old one stands; and `menu_tick()` (`menu.c:673`)
 notices only power, clock and the title. So **every external hook, with or
 without an open edit, sets a pending-change bit** (in an existing flags
-byte), and `menu_tick()`, which runs before the pump each pass, consumes it
-with `ms_retarget()`: after the write (the hook runs just before it, in the
-same main-loop step) and before any painting. The menu's own previews go
+byte), and `menu_tick()`, which runs before the pump in every pass of the
+menu's normal path (`menu_ops_task()`; the board's housekeeping runs the
+repeats, then the menu's task, then the display pump), consumes it with
+`ms_retarget()` (which is `new_target()`): after the write (the hook runs
+just before it, in the same main-loop step) and before any painting. The
+two passes without a tick are harmless: a fixture doesn't tick, and the
+return from Diagnostics (`menu_ops.c:128`) installs a fresh layout, target
+and clear through `menu_return_from_diag()`. The menu's own previews go
 through `menu_input()`, which already retargets. Tests: an external change
 after settlement and during a partial slot, with C10's accounting and a
 pending stop.
