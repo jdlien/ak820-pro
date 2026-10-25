@@ -133,10 +133,14 @@ This file is the thread; read it first after a context loss. Updated
        the A/B vs `781d071f` (the Hue editor's ~18.5 ms is both builds'
        tonight). **The cost of lit indicators:** at 82% on all three LEDs
        -15% main-loop passes (the menu's longest pass 20.3 ms); at 1% or one
-       LED, the old firmware's cost. A hybrid (sigma-delta below ~8-16 ticks,
-       period PWM with a dithered length above) would cut the high-level
-       cost to about the old PWM's; its flicker risk needs JD's eye: his
-       call (proposed, not built).
+       LED, the old firmware's cost. The backlight's toggles are free (it
+       writes every tick); the indicators' per-change writes and their two
+       groups' arithmetic are the cost (§20h). **Proposed, not built:** write
+       the three pins every tick while any is lit, and skip a group's
+       arithmetic at 0 and full duty (the charging light at Off while
+       charging steps every tick now). Keeps the sigma-delta; no flicker
+       trade-off. (A hybrid with period PWM above ~8 ticks was considered
+       and dropped: it trades flicker for CPU.)
      - **Owed:** JD's look at the lock lights and the Screen's 1% steps; his
        power cycle (the saved levels across a reboot); codex's test gaps
        (the review files' dispositions: the frozen-link test, `kbee.c`'s
