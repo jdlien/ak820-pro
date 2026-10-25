@@ -25,7 +25,7 @@ def sample(h):
 
 def ind_state(h):
     r = xfer(h, 14)
-    return {"locks": r[12], "charging": r[13], "force": r[14]}
+    return {"open": r[6], "locks": r[12], "charging": r[13], "force": r[14]}
 
 
 def ind_set(h, force, locks, chg):
@@ -46,7 +46,12 @@ def main():
     try:
         if a.set:
             force, locks, chg = (int(x) for x in a.set.split(","))
-            before = ind_state(h)
+            st = ind_state(h)
+            # An open edit's live levels are a preview: restoring them after
+            # sub 15 cancelled it would keep the preview (codex, P2a's code).
+            if st["open"]:
+                raise SystemExit("an edit is open in the menu: close it first")
+            before = st
             ind_set(h, force, locks, chg)
         time.sleep(1.0)
         s2a, s4a = sample(h)
@@ -56,7 +61,7 @@ def main():
         wall = time.monotonic() - t0
     finally:
         if before is not None:
-            ind_set(h, 0, before["locks"], before["charging"])
+            ind_set(h, before["force"], before["locks"], before["charging"])
         h.close()
     rates = H.isr_rates(s4a, s4b, wall)
     dt = rates["isr_dt_s"]
