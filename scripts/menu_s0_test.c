@@ -133,9 +133,10 @@ bool mb_glyph_big(char c, uint16_t x, uint16_t y) {
     big_ops++;
     return true;
 }
-/* P1b: generated pixels, a polled stream as mb_mono's (its faults too). */
+/* P1b: generated rows, a polled stream as mb_mono's (its faults too); the
+ * rows come in panel order, the frame keeps RGB565. */
 static int pixel_ops;
-bool mb_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h, mb_px_fn fn, const void *ctx) {
+bool mb_rows(uint16_t x, uint16_t y, uint16_t w, uint16_t h, mb_row_fn fn, const void *ctx) {
     dma_settle();
     pass_bytes += (uint32_t)w * h * 2u;
     uint16_t rows = h;
@@ -146,11 +147,14 @@ bool mb_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h, mb_px_fn fn, cons
         lost_latched = true;
         ok           = false;
     }
-    for (uint16_t r = 0; r < rows; r++)
+    for (uint16_t r = 0; r < rows; r++) {
+        uint16_t px[MB_W];
+        fn(ctx, r, px, w);
         for (uint16_t c = 0; c < w; c++) {
-            fb[y + r][x + c]       = fn(ctx, c, r);
+            fb[y + r][x + c]       = MB_PANEL(px[c]);
             is_glyph[y + r][x + c] = false;
         }
+    }
     if (ok) pixel_ops++;
     fake_ticks += 300;
     return ok;
