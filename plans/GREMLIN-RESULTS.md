@@ -997,3 +997,16 @@ slider to cable, unplugged ~10 s, replugged); it came back as `0C45:8009` on
 bootloader's handshake, sometimes. If it recurs: check `Get-PnpDevice` for
 7140 (no HID enumeration), check the flasher log for "Erasing" before
 worrying, and power-cycle.
+
+### 20d. JD's icons on the board (10-24, ~21:05)
+
+`925f029b` (dev, token `0x58ddeb40`; codex: no fix,
+`review-codex-p1a-icons-2026-10-24.md`): the wrench, ◀ ▶, the circled
+check, the cursor in x 0-2 and the top-level icons (the design doc's "JD's
+icons"). The flash went on first time. `menu_p1a_board.py`
+(`history/config-menu-s1-20261024/p1a-board-925f029b.json`): **all 69 steps
+right**; the longest pass 15.26 ms, 3 over 15 (C10's line, which JD's (b)
+relaxes to ~16-17 ms for menu painting), against 15.1-16.8 ms before; the
+piece 5.84 ms, ~4% more for the row's 64 px first half. The one pass whose
+causes were logged was the radio and the dashboard's blit pump on the way
+back from the Health page, not a text piece.
