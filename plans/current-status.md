@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-24, 04:50. The block below is where things stand, written to
+Updated 2026-10-24, 21:20. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -49,7 +49,9 @@ The once-a-second slow pass's fix is on JD's board since 23:48 10-23.
   - uhubctl hub `3-1.3.4` port 2 off: no USB data (the new Mac, from
     10-23; `0-1.4` port 2 on the old one);
   - relay 1 off;
-  - the INA228 logging to `history/power-bench-2026-10-15/power.csv`;
+  - the INA228 logging to `history/power-bench-2026-10-15/power.csv`,
+    under launchd since 21:14:45 10-24 (`com.jdlien.ak820pro.powerlog`;
+    `scripts/power_log_agent.sh status`);
   - JD's daily setting (effect 2, hue 185, sat 227, val 115, speed 231;
     screen 5), in Balanced, the slider on BT. The drain from FULL runs
     since 04:44:26 10-24.
@@ -77,6 +79,22 @@ The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
 - **The daemon at the start:** board absent, radio silent (the slider is on
   BT), lockchan held. Its last health read before the cut (04:44:24) showed
   `stall_ge_25ms` 0 and a worst loop gap of 24 ms (`blit`).
+- **To 14:11:47, 9.45 h, 98.2 mAh:** 6.99 h asleep at 2.96 mA, 2.46 h awake
+  at 31.45 mA (JD's daily setting), none above 40 mA. JD's first wake was
+  ~10:45.
+- ⚠️ **The logger died at 14:11:47 10-24 and restarted at 19:06:12.**
+  - **The cause:** cmux, the terminal app, restarted at 14:11:59, and its
+    restart killed the logger even though `--detach` had double-forked and
+    `setsid` it. It died with no log line and no crash report.
+  - **The QT Py never reset:** `qt_ms` runs on unbroken, so the INA228's
+    charge register counted through the gap.
+  - **The gap, 4.9 h, used 51.95 mAh** (10.6 mA on average). Totals since
+    FULL stand; only the gap's profile is lost.
+  - At 19:06:54, 150.2 mAh since FULL (3.7%).
+  - **Fixed at 21:14:45 10-24: the logger runs as a LaunchAgent**
+    (`scripts/power_log_agent.sh`), out of cmux's reach. The switch lost
+    no row: one a second through it, `qt_ms` unbroken. At 21:15:04, 196.2
+    mAh since FULL (4.9%).
 
 ### Stopped 23:46:52 10-23: the untethered drain at real use, restarted from FULL
 
@@ -342,6 +360,11 @@ and clicks, and the debug pages move into it. The design, its decisions, and wha
 
 ### Bench rules learned this stretch
 
+- **Run the power logger as a LaunchAgent during a drain**
+  (`scripts/power_log_agent.sh install`). One started from a cmux shell
+  died at the next cmux restart, even detached. `power_log.py` now refuses
+  a second recorder on the same CSV or port. `uninstall` when the bench is
+  stripped.
 - **Data alone never deep-sleeps** (`docs/test-bench.md`). A battery run
   meant to match real use cuts both relay 2 and port 2.
 - **FULL is `(full)` with 100.0%, never the `done` flag.** The charger's
