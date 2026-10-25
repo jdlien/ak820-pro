@@ -240,6 +240,15 @@ painted.
 
   So at most one row ever shows yellow: the new highlight starts only when
   the old one is fully grey.
+- **As built (P1a's code review):** step 1 resumes **any** unchanged active
+  PARTIAL slot, not only a cleanup, before step 2 (rev 13's resume rule
+  untouched). It can't add a lit row: an active partial is never a second
+  highlight, since a lit row starts only when no other row may be lit. It
+  only delays a cleanup by the active op's remaining pieces (at most 8).
+  The host tests check one lit row at most after every pass, through
+  reversals, wraps, a second move and a send given up at every pass of a
+  move; removing both the cleanup-first scan and the lit-target wait makes
+  them fail (two rows lit); either alone keeps them passing.
 - **Abandonment** keeps today's rules: ended DMA bookkeeping settles first;
   an unfinished abandoned op isn't counted; completed ops and reached stops
   are kept; an op resumed across a retarget completes untimed (rev 13). The

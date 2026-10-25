@@ -9,7 +9,10 @@
  *   D=qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro
  *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/menu_s0_test.c \
  *       $D/menu/panel_owner.c $D/menu/menu_input.c $D/menu/menu_slots.c \
- *       $D/menu/menu_fixture.c $D/menu/menu_ops.c $D/menu/menu_text.c -o ms0 && ./ms0
+ *       $D/menu/menu_fixture.c $D/menu/menu_ops.c $D/menu/menu_text.c $D/menu/menu.c -o ms0 && ./ms0
+ *
+ * and again with -DMENU_ENABLE (the production opener, P1a): that build runs
+ * test_menu_enable() only, since the S0 suite expects the opener off unarmed.
  *
  * The fake mb_mono stands in for lcd_blit_mono: the stream's byte order, CS
  * and scratch handling and its failure paths are the board's tests
@@ -1784,6 +1787,93 @@ static void test_menu(void) {
     fw_pass(5);
     CHECK(po_session() == SESSION_NONE);
 
+    /* Codex, P1a's code review. */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    /* 1. Fn+B and a click in one pass: Power opens on the NEW saved value. */
+    fk_power = 1;
+    m_settle();
+    fk_power = 2;
+    CHECK(op27(2, 0, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+    m_settle();
+    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && row_bad(3, "\x82" "Power saver", MENU_LIT) == 0);
+    /* An external change inside an open choice: the bullet moves, the cursor
+     * stays; then Back by its row cancels, writing nothing. */
+    fk_power = 0;
+    fw_pass(5);
+    m_settle();
+    CHECK(sub5_cursor() == 3 && row_bad(1, "\x82" "Always on", MENU_DIM) == 0 && row_bad(3, " Power saver", MENU_LIT) == 0);
+    int w0 = fk_power_writes;
+    m_turn(-3);   /* to ‹ Back */
+    m_click();
+    CHECK(fk_power_writes == w0 && fk_power == 0 && title_bad("Cancelled") == 0 && sub5_screen() == 16 + 1);
+    /* 2. A layout change in the middle of an op: the new layout's first op is
+     * timed from its own start. Diagnostics, onto Reset counters, one pass
+     * of its repaint, then the click. */
+    for (int i = 0; i < 300; i++) fw_pass(5);
+    m_turn(2);
+    m_click();
+    m_turn(1);   /* Camera */
+    CHECK(op27(1, 1, 0) == MI_OK);   /* Reset counters */
+    CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+    fw_pass(5);
+    ms_meas_reset();
+    CHECK(op27(2, 0, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+    for (int i = 0; i < 200 && ms_ops() == 0; i++) fw_pass(5);
+    CHECK(ms_ops() == 1 && ms_op_max_ticks() > 0);
+    m_settle();
+    CHECK(sub5_screen() == 16 + 10);
+    m_hold();
+    /* The Camera page's return lands on its row. */
+    m_turn(-1);
+    m_click();
+    CHECK(po_owner() == PANEL_DEBUG);
+    CHECK(op27(2, 0, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
+    m_settle();
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 2 && row_bad(2, cells2("Camera page", ">"), MENU_LIT) == 0);
+    m_hold();
+    /* 4. About replaced while its old rows are still committed: Back for one
+     * pass, new facts, in again, at several boundaries. */
+    m_turn(2);   /* About: row 4 from Diagnostics' row 2 */
+    m_click();
+    for (int k = 0; k < 6; k++) {
+        CHECK(op27(2, 0, 0) == MI_OK);   /* Back */
+        CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        for (int i = 0; i < k; i++) fw_pass(5);
+        fk_about.mode    = (uint8_t)(k & 3u);
+        fk_about.pack_mv = (uint16_t)(3500u + k);
+        CHECK(op27(2, 0, 0) == MI_OK);   /* in again: About's row is the cursor's */
+        CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        m_settle();
+        char want[21];
+        snprintf(want, sizeof want, "Pack %u mV", 3500u + k);
+        CHECK(title_bad("About") == 0 && row_bad(4, want, MENU_WHITE) == 0);
+        snprintf(want, sizeof want, "Mode %s", (const char *[]){"Always on", "Balanced", "Power saver", "Lights out"}[k & 3]);
+        CHECK(row_bad(6, want, MENU_WHITE) == 0);
+    }
+    m_click();
+    /* Every Help topic paged to its end: 11, 12, 12 and 13 lines, so its
+     * last top is 3, 4, 4 and 5. */
+    m_turn(-1);   /* Help */
+    m_click();
+    for (int t = 0; t < 4; t++) {
+        static const uint8_t last_top[4] = {3, 4, 4, 5};
+        if (t) m_turn(1);
+        m_click();
+        m_turn(1);
+        CHECK(sub5_cursor() == last_top[t]);
+        m_turn(1);
+        CHECK(sub5_cursor() == last_top[t]);
+        m_click();
+        CHECK(sub5_cursor() == 1 + t);
+    }
+    m_hold();
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
     /* sub 4 still opens the fixture, and sub 0 works on it. */
     CHECK(op27(4, 0, 0) == MI_OK && fx_screen() == FX_SCREEN_F1);
     CHECK(sub5_screen() == FX_SCREEN_F1 && op27(0, 1, 0) == MI_OK);
@@ -1857,7 +1947,91 @@ static void test_menu_stress(void) {
     menu_watch = false;
 }
 
+#ifdef MENU_ENABLE
+/* The production opener (MENU_ENABLE, P1a): built and run on its own, since
+ * the S0 suite above expects the opener off when unarmed. */
+static void knob(bool fn) {
+    CHECK(menu_physical(MI_KNOB, true, fn, fk_now) == false);   /* captured */
+    fw_pass(5);
+    CHECK(menu_physical(MI_KNOB, false, false, fk_now) == false);   /* its release, consumed */
+    fw_pass(5);
+}
+static void test_menu_enable(void) {
+    fw_reset();
+    CHECK(menu_enabled());
+    /* Unarmed: Fn+knob opens the menu; again closes it. */
+    knob(true);
+    CHECK(po_session() == SESSION_OPEN && sub5_screen() == 16 + 1);
+    m_settle();
+    knob(true);
+    CHECK(po_session() == SESSION_NONE);
+    /* Armed: the fixture, for the S0/S1 scripts. */
+    CHECK(op27(6, 1, 0) == MI_OK);
+    knob(true);
+    CHECK(po_session() == SESSION_OPEN && sub5_screen() == FX_SCREEN_F1 && fx_screen() == FX_SCREEN_F1);
+    /* Disarming closes it; then the unarmed opener opens the menu again. */
+    CHECK(op27(6, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    knob(true);
+    CHECK(po_session() == SESSION_OPEN && sub5_screen() == 16 + 1);
+    knob(true);
+    /* A plain knob press isn't the opener: forwarded. */
+    CHECK(menu_physical(MI_KNOB, true, false, fk_now) == true);
+    CHECK(menu_physical(MI_KNOB, false, false, fk_now) == true);
+    CHECK(po_session() == SESSION_NONE);
+    /* PENDING under the wake hold: a second opener cancels it, and the next
+     * session's kind is chosen afresh. */
+    fk_wake_held = true;
+    knob(true);
+    CHECK(po_session() == SESSION_PENDING);
+    knob(true);
+    CHECK(po_session() == SESSION_NONE);
+    fk_wake_held = false;
+    CHECK(op27(4, 0, 0) == MI_OK && po_session() == SESSION_OPEN && sub5_screen() == FX_SCREEN_F1);
+    CHECK(op27(4, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    /* A close and an opener with no task between: the new kind. */
+    CHECK(op27(4, 0, 0) == MI_OK);
+    CHECK(op27(4, 0, 0) == MI_OK);
+    knob(true);
+    CHECK(po_session() == SESSION_OPEN && sub5_screen() == 16 + 1);
+    knob(true);
+    /* From the Fn+D page with no session (DEBUG/NONE): C1 hands off to a fresh
+     * menu, its top level (do_open). Then Diagnostics > Camera and its
+     * return, which lands on Camera's row. */
+    (void)env_po_event(PO_EV_DBG_PAGE);
+    CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_NONE);
+    knob(true);
+    m_settle();
+    CHECK(po_owner() == PANEL_MENU && sub5_screen() == 16 + 1 && sub5_cursor() == 0);
+    m_turn(2);
+    m_click();
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1);
+    m_turn(1);
+    m_click();
+    CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_OPEN);
+    CHECK(op27(2, 0, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
+    m_settle();
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 2);
+    knob(true);
+    CHECK(po_session() == SESSION_NONE);
+    /* After a menu session, sub 5 says so: no fixture cursor. */
+    CHECK(sub5_cursor() == 0xFF);
+    CHECK(po_invariant_fail() == 0);
+}
+#endif
+
 int main(int argc, char **argv) {
+#ifdef MENU_ENABLE
+    (void)argc; (void)argv;
+    test_menu_enable();
+    if (fails) {
+        printf("%d check(s) failed\n", fails);
+        return 1;
+    }
+    printf("menu (MENU_ENABLE): all checks passed\n");
+    return 0;
+#endif
     if (argc >= 3 && strcmp(argv[1], "frames") == 0)
         return frames(argv[2], argc >= 4 ? atoi(argv[3]) : 13);
     test_transitions();
