@@ -1766,15 +1766,16 @@ static int frames(const char *dir, int n) {
 /* P3: as text_slot_bad(), but cells 0-1 (x 4-15) in icon_fg when it isn't 0
  * (the current slot's status icon, in a colour of its own). text_slot_bad()
  * expects the saved option's check box in green, on every page, and the top
- * level's icons (I_POWER to I_CONN, the face's 0x8c-0x9d) in white, lit or
- * not (JD, 10-25). */
+ * level's icons (I_POWER to I_CONN, the face's 0x8c-0x9d) in white, and on
+ * the selected row (the cursor's) in #FFF7C6 (JD, 10-25). */
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg);
 static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor) {
     uint8_t c0 = (uint8_t)cells[0];
     return text_slot_bad2(y, cells, fg, cursor,
                           !strncmp(cells, FONT_MONO_CHECK_BOX, 2)                         ? 0x468Cu
-                          : c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1] ? MENU_WHITE
-                                                                                          : 0);
+                          : c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1]
+                              ? (cursor ? 0xFFB8u : MENU_WHITE)
+                              : 0);
 }
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg) {
     int            bad = 0;

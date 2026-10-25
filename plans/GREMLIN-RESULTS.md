@@ -1216,3 +1216,10 @@ Three builds, each cleared by codex (`plans/review-codex-p3-green-2026-10-25.md`
   don't touch (help topics, Lighting's: 35,640 / 37,036 / 36,780 over 60
   steps), so run-to-run variation, not the icons. The settles are polled
   every 100 ms, so a step moves in 100 ms steps.
+- **`b99d5405`** (token `0xeaf214c2`, 13:36): the selected row's top-level
+  icon in #FFF7C6, a whiter yellow than its text (JD: "feels weird when they
+  don't change at all"), white on the others. A palette slot for it
+  (`32314c3f`, never flashed) took the dev heap gap from 136 B to 128, the
+  floor, so it's a constant. Codex cleared it
+  (`review-codex-p3-iconlit-2026-10-25.md`). No menu pass: the same chunks
+  and pieces as `1ff3d405`.

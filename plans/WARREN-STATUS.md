@@ -195,8 +195,9 @@ This file is the thread; read it first after a context loss. Updated
        (`2d8512ae`); the check box green on every page and `Pair device to
        BT 1` (`eb00c2ee`); the top level's icons white, lit or not
        (`1de9df2f`), whose 8 extra pieces cost ~100 ms a top-level repaint
-       until a split row's cells 2-9 went to 5-row pieces (`1ff3d405`, on
-       the board since 13:05). GREMLIN-RESULTS §20i-20j.
+       until a split row's cells 2-9 went to 5-row pieces (`1ff3d405`); the
+       selected row's icon #FFF7C6 (`b99d5405`, on the board since 13:36).
+       GREMLIN-RESULTS §20i-20j.
      - **Owed (JD):** a slot switch on the real radio (BT 2 and back), a
        pairing on a slot he doesn't mind losing (and a stop), the knob by
        hand; his look at the icons and colours. Possible next: colours for

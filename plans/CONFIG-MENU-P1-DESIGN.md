@@ -426,8 +426,11 @@ After JD's look at `925f029b` ("looking quite good"), in `541a8cbd`:
 - **The check box is green on every page** (`MENU_SAVED` #40D060, JD:
   "green everywhere is the right call"), as the current BT slot's is when
   linked: the box means "this one is in effect".
-- **The top level's icons are white, lit or not** (JD: "so they pop a bit";
-  the headings' were white already). Colours of their own are an idea for
+- **The top level's icons are white** (JD: "so they pop a bit"; the
+  headings' were white already), **and on the selected row #FFF7C6**, a
+  whiter yellow than its text (JD: "feels weird when they don't change at
+  all"; `MENU_ICON_LIT`, a constant: a palette slot for live tuning cost the
+  dev heap 8 B, to its floor). Colours of their own are an idea for
   later ("not right away"): if they come, green and red stay the status
   colours, and Connection's would be the rune's blue, as a slot shows
   pairing.
