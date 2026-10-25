@@ -109,12 +109,19 @@ static uint8_t sim_ticks_of_bkl100(int p) {
     long d = lround(256.0 * pow(48.0, (p - 1) / 99.0));
     return (uint8_t)((d + 128) >> 8);
 }
+/* A replayed row's own ticks, used while the cap isn't below its level (codex,
+ * P2b's code review: the nearest 0-100 level rounds the legacy 33 to 32 and
+ * 42 to 43, so a historical log replays its exact ticks this way); -1 off. */
+static int sim_bkl_ticks = -1;
 #ifdef SIM_BKL_100
 #include "indicator_levels.h"
 static uint8_t sim_bkl = 60;   /* the user's level: 10 ticks, as the 24-level 10 was; a replay sets it */
 static uint8_t bkl_cap;   /* below */
 uint8_t  display_backlight_effective(void) { return bkl_cap < sim_bkl ? bkl_cap : sim_bkl; }   /* as display.c */
-uint8_t  display_backlight_duty(void) { return (uint8_t)((ind_level_duty[display_backlight_effective()] + 128u) >> 8); }
+uint8_t  display_backlight_duty(void) {
+    if (sim_bkl_ticks >= 0 && bkl_cap >= sim_bkl) return (uint8_t)sim_bkl_ticks;
+    return (uint8_t)((ind_level_duty[display_backlight_effective()] + 128u) >> 8);
+}
 /* The level whose fine duty is nearest `t` whole ticks. */
 static uint8_t sim_bkl_from_ticks(uint8_t t) {
     uint8_t best = 0;
@@ -126,7 +133,10 @@ static uint8_t sim_bkl_from_ticks(uint8_t t) {
 static uint8_t sim_bkl = 10;   /* the user's backlight level; a replay sets it per entry */
 static uint8_t bkl_cap;   /* below */
 uint8_t  display_backlight_effective(void) { return bkl_cap < sim_bkl ? bkl_cap : sim_bkl; }   /* as display.c */
-uint8_t  display_backlight_duty(void) { return bkl_duty_legacy[display_backlight_effective()]; }
+uint8_t  display_backlight_duty(void) {
+    if (sim_bkl_ticks >= 0 && bkl_cap >= sim_bkl) return (uint8_t)sim_bkl_ticks;
+    return bkl_duty_legacy[display_backlight_effective()];
+}
 static uint8_t sim_bkl_from_ticks(uint8_t t) {
     uint8_t best = 0;
     for (uint8_t l = 1; l < 24; l++)

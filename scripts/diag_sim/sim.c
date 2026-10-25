@@ -237,9 +237,20 @@ static void flash(void) {
     CHECK(p[16 + 2 * 1] == 5 && p[16 + 2 * 4] == 1, "rtc-alone %u batt-alone %u", p[18], p[24]);
     for (uint8_t pg = 0; pg <= 3; pg++) dump("FLASHW", pg, flash_stats_fill);
 #ifdef KBF_LOCKS
+    /* Past 255 and to saturation (codex, P2a's code review): the counters are
+     * u16, so 300 reads as 300 and 70,000 as 65,535; then the reset clears the
+     * whole page. */
+    for (int i = 0; i < 300; i++) { blk[7] = (uint8_t)(blk[7] == 20 ? 21 : 20); write(KB, blk, KBN, 1, false); }
+    flash_stats_fill(3, p);
+    CHECK((p[0] | p[1] << 8) == 302, "locks-alone past 255: %u", p[0] | p[1] << 8);
+    for (int i = 0; i < 70000; i++) { blk[8] = (uint8_t)(blk[8] == 40 ? 41 : 40); write(KB, blk, KBN, 1, false); }
+    flash_stats_fill(3, p);
+    CHECK((p[2] | p[3] << 8) == 65535, "charging-alone saturates: %u", p[2] | p[3] << 8);
     flash_stats_reset();   /* the reset clears page 3 too */
     flash_stats_fill(3, p);
-    CHECK(p[0] == 0 && p[2] == 0, "page 3 after the reset: %u %u", p[0], p[2]);
+    bool zero = true;
+    for (int i = 0; i < 28; i++) zero = zero && p[i] == 0;
+    CHECK(zero, "page 3 after the reset: all 28 bytes zero");
 #endif
 }
 

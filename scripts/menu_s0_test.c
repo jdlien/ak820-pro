@@ -2735,6 +2735,18 @@ static void test_p2a(void) {
     }
     m_settle();
     CHECK(fk_rgb.v == 0 && big_bad(22, "0%") == 0);
+    /* And from every starting value, not only a percentage's own (codex,
+     * P2a's code review): a slow detent each way moves the shown percentage
+     * by exactly one, but at the ends. */
+    for (int v = 0; v < 256; v++)
+        for (int dir = -1; dir <= 1; dir += 2) {
+            fk_rgb.v = (uint8_t)v;
+            fw_pass(100);   /* past the 90 ms fast window */
+            CHECK(op27(1, dir, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
+            int p0 = (v * 100 + 127) / 255, want = p0 + dir < 0 ? 0 : p0 + dir > 100 ? 100 : p0 + dir;
+            CHECK((fk_rgb.v * 100 + 127) / 255 == want);
+        }
+    m_settle();
     m_hold();
     m_hold();
     fk_rgb.v = v0;
@@ -2828,6 +2840,42 @@ static void test_p2a(void) {
     fw_pass(5);
     CHECK(po_session() == SESSION_NONE && fk_ind[0] == 17 && fk_ind_force == 0);
 
+    /* The other routes out of an open indicator edit (codex, P2a's code
+     * review): the debug page's handoff (enter_debug), a wake's release
+     * (do_close), and a second edit opened over it (me_open's rollback). */
+    m_open_top();
+    m_turn(T_IND);
+    m_click();
+    m_click();   /* Lock lights */
+    m_turn(1);
+    CHECK(me_active() && fk_ind[0] == 18 && fk_ind_force == 1);
+    (void)env_po_event(PO_EV_DBG_PAGE);   /* Fn+D or op 1 from the menu: Health */
+    CHECK(po_owner() == PANEL_DEBUG && !me_active() && fk_ind[0] == 17 && fk_ind_force == 0);
+    (void)env_po_event(PO_EV_DBG_PAGE);   /* Camera */
+    (void)env_po_event(PO_EV_DBG_PAGE);   /* back to the menu */
+    for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
+    m_settle();
+    CHECK(po_owner() == PANEL_MENU && fk_ind[0] == 17 && fk_ind_force == 0);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    m_open_top();
+    m_turn(T_IND);
+    m_click();
+    m_turn(1);
+    m_click();   /* Charging light */
+    m_turn(1);
+    CHECK(me_active() && fk_ind[1] == 59 && fk_ind_force == 2);
+    (void)env_po_event(PO_EV_WAKE_WHILE_OPEN);
+    (void)env_po_event(PO_EV_WAKE_RELEASED);   /* the session closes when the hold lifts */
+    CHECK(po_session() == SESSION_NONE && !me_active() && fk_ind[1] == 58 && fk_ind_force == 0);
+    for (int i = 0; i < 300; i++) fw_pass(5);
+    me_open(ME_LOCKS);
+    me_preview(40);
+    CHECK(fk_ind[0] == 40 && fk_ind_force == 1);
+    me_open(ME_CHG);   /* over it: the lock lights' edit rolled back, its force gone */
+    CHECK(me_field() == ME_CHG && fk_ind[0] == 17 && fk_ind_force == 2 && me_saved() == 58);
+    me_cancel();
+    CHECK(!me_active() && fk_ind_force == 0 && fk_ind[1] == 58);
+
     /* Sub 15, the bench: an external writer, so it cancels an open indicator
      * edit first ("Cancelled"); a bad level is refused. */
     m_open_top();
@@ -2865,14 +2913,20 @@ static void test_p2a(void) {
     CHECK(row_bad(T_CONN, cells2(FONT_MONO_I_CONN "Connection", FONT_MONO_TRI_R), MENU_LIT) == 0);
     for (int k = 0; k < 3; k++) {
         fk_about.link = conn[k].link;
-        m_click();
+        /* Frozen (codex, P2a's code review): the live link changes between
+         * the first paint's pieces, and again before a full repaint; every
+         * line keeps the snapshot taken as the page opened. */
+        CHECK(op27(2, 0, 0) == MI_OK && wait_terminal(rpt[6], 300) == MI_ST_DONE);
+        fw_pass(5);
+        fw_pass(5);
+        fk_about.link = link0;
+        m_settle();
         CHECK(sub5_screen() == SC_CONN && sub5_cursor() == 0 && title_bad(FONT_MONO_I_CONN "Connection") == 0);
         static const uint16_t ys[4] = {22, 36, 72, 86};
         for (int i = 0; i < 4; i++) CHECK(text_slot_bad(ys[i], conn[k].l[i], MENU_WHITE, false) == 0);
-        fk_about.link = link0;   /* frozen: a change while it shows doesn't repaint it */
-        fw_pass(5);
+        menu_invalidate();   /* every slot repaints */
         m_settle();
-        CHECK(text_slot_bad(22, conn[k].l[0], MENU_WHITE, false) == 0);
+        for (int i = 0; i < 4; i++) CHECK(text_slot_bad(ys[i], conn[k].l[i], MENU_WHITE, false) == 0);
         if (k == 1) m_hold();    /* a hold goes back too, without "Cancelled" */
         else m_click();
         CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN);
@@ -2881,7 +2935,7 @@ static void test_p2a(void) {
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
     CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
-    CHECK(po_invariant_fail() == 0);
+    CHECK(po_invariant_fail() == PO_FAIL_WAKE_OPEN);   /* the wake while open above, recorded as it should be; nothing else */
     menu_watch = false;
 }
 

@@ -175,13 +175,20 @@ def build(src, mutations, sanitize=False, target="battery.c", flavour="sim", qro
     for f in ("battery.c", "battery.h", "power.c", "power.h", "battery_tail.h", "rgb_matrix_kb.inc"):
         if f != "rgb_matrix_kb.inc" or os.path.exists(os.path.join(src, f)):
             shutil.copy(os.path.join(src, f), d)
+    # The backlight's scale, as run.sh selects it (the menu's P2b: 0-100 once
+    # display.c has no 24-entry bkl_duty[]; codex, P2b's code review).
+    disp = os.path.join(src, "graphics", "display.c")
+    if os.path.exists(os.path.join(src, "indicator_levels.h")) and os.path.exists(disp) and \
+            "static const uint8_t bkl_duty[]" not in open(disp, encoding="utf-8").read():
+        shutil.copy(os.path.join(src, "indicator_levels.h"), d)
+        open(os.path.join(d, "sim_bkl.h"), "w").write("#define SIM_BKL_100 1\n")
     p = os.path.join(d, target)
-    s = open(p).read()
+    s = open(p, encoding="utf-8").read()   # UTF-8 on every host (Windows' default is cp1252)
     for old, new in mutations:
         if s.count(old) != 1:
             raise SystemExit(f"mutation site not found exactly once: {old[:70]!r}")
         s = s.replace(old, new)
-    open(p, "w").write(s)
+    open(p, "w", encoding="utf-8").write(s)
     extra, objs = [], []
     if flavour == "dev":
         extra = ["-DAK820_DEV_HOOKS"]
@@ -237,7 +244,7 @@ def main():
     a = ap.parse_args()
     qroot = os.path.normpath(os.path.join(a.src, "..", "..", ".."))
     # The power mutants need the revised power.c (its want_val) and DRIFT.
-    power = "want_val" in open(os.path.join(a.src, "power.c")).read() and \
+    power = "want_val" in open(os.path.join(a.src, "power.c"), encoding="utf-8").read() and \
         os.path.exists(os.path.join(a.src, "rgb_matrix_kb.inc"))
     pmuts = POWER_MUTANTS if power else []
     bad = known = 0

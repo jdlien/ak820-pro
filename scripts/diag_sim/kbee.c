@@ -107,8 +107,20 @@ int main(void) {
     boot();
     CHECK(kb_eeconfig_get_ind_level(IND_LOCKS, &lv) && lv == 100, "locks after a reboot: %u", lv);
     CHECK(kb_eeconfig_get_ind_level(IND_CHARGING, &lv) && lv == 0, "charging (saved Off) after a reboot: %u", lv);
-    /* The old fields keep their bytes. */
-    CHECK(stored[0] == 0 && stored[6] == 0, "bytes 0-6 untouched");
+    /* The old fields keep their bytes (codex, P2a's code review: all seven,
+     * seeded, not two zeros): a save of the indicators writes the block, so
+     * bytes 0-6 must come back as they were. And a save left pending when a
+     * menu preview is later cancelled still writes the saved level: the
+     * cancel restores the live level only, never kb_eeconfig. */
+    static const uint8_t old7[7] = {0x32, 0x40, 0x82, 43, 2, 150, 2};
+    memset(stored, 0, sizeof stored);
+    memcpy(stored, old7, sizeof old7);
+    boot();
+    writes = 0;
+    kb_eeconfig_set_ind_level(IND_LOCKS, 30);   /* saved; a preview and its cancel touch nothing here */
+    settle();
+    CHECK(writes == 1 && memcmp(stored, old7, sizeof old7) == 0 && stored[7] == 31 && stored[8] == 0,
+          "bytes 0-6 kept, the pending save written: %d, %u %u", writes, stored[7], stored[8]);
 
     printf("%s kbee: the settings block's indicator bytes\n", failures ? "FAIL" : "ok  ");
     return failures ? 1 : 0;
