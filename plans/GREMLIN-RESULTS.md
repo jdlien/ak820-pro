@@ -1062,3 +1062,16 @@ by sub 14 only and puts the lighting back whatever fails.
 Still owed: persistence across a reboot (a power cycle: JD's step), C10's
 gates on the editors, the host's long-idle and wrap and piece-boundary
 cases, JD's session.
+
+### 20g. The bootloader item and the thin cursor on the board (10-24, ~23:25)
+
+`781d071f` (dev, token `0x6b34941c`): the bootloader item (JD's ask; codex:
+the radio's releases pumped first, the scrollbar on Exit's page clamped,
+flash.sh's reserve rule; then no fix) and the cursor as the thin bar
+(U+1FB70, JD). `menu_p1a_board.py` over the nine-row top level: **all 98
+steps right, PASS**, the longest pass 16.2 ms
+(`p1a-board-781d071f.json`). **`menu_boot_board.py`: the menu's click
+entered the bootloader, `0C45:7140` after 3.1 s** (the 1.5 s notice, the
+reset, USB enumerating; PnP only); `flash.sh` took the entered bootloader
+(the last backups, no jump), flashed, and restored the keymap and the
+lighting (`ak820lighting.py show`: board and backup the same).
