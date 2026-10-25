@@ -61,7 +61,9 @@ ICONS = [
     ("I_SCREEN", 0xF108, 2),       # Screen, nf-fa-desktop;
     ("I_BOOT", 0xF498, 2),         # the bootloader item, nf-oct-desktop_download
     ("I_IND", 0xF185, 2),          # P2a: Indicators, nf-fa-sun (JD's pick: "super bright light shining in your eye"),
-    ("I_CONN", 0xF293, 2),         # Connection, nf-fa-bluetooth (the picker's proposal)
+    ("I_CONN", 0xF293, 2),         # Connection, nf-fa-bluetooth (the picker's proposal); in blue, a slot advertising
+    ("I_WAIT", 0xF252, 2),         # P3: a slot linking, in grey (JD: "waiting/pending"), nf-fa-hourglass_half
+    ("I_FAIL", 0xF057, 2),         # P3: a slot failed, in red (JD: "red x in a circle"), nf-fa-times_circle
 ]
 
 
