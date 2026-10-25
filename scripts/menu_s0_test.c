@@ -878,7 +878,7 @@ static void test_mono(void) {
                 for (uint8_t lead = 0; lead <= 2; lead++)
                     for (uint8_t trail = 0; trail <= 2; trail++)
                         for (int inks = 0; inks < 4; inks++) {
-                            mt_line_t ln = {ss[si], cells, lead, trail, (inks & 1) != 0, (inks & 2) != 0};
+                            mt_line_t ln = {ss[si], cells, lead, trail, (inks & 1) != 0, (inks & 2) != 0, 0};
                             uint16_t  lw = mt_width(&ln);
                             size_t    sl = strlen(ss[si]);
                             for (uint16_t c0 = 0; c0 < lw; c0++)
@@ -900,7 +900,7 @@ static void test_mono(void) {
                                                     size_t  cell = (size_t)(c - lead) / 6;
                                                     uint8_t code = cell < sl ? (uint8_t)ss[si][cell] : (uint8_t)' ';
                                                     const uint8_t *g = code >= 0x20 && code < 0x7f ? font_small_mono[code - 0x20]
-                                                                     : code >= 0x80 && code < 0x85 ? font_small_mono[95 + code - 0x80]
+                                                                     : code >= 0x80 && code < 0x80 + FONT_MONO_N - 95 ? font_small_mono[95 + code - 0x80]
                                                                      : font_small_mono['?' - 0x20];
                                                     want = (g[r0 + r] >> (7 - (c - lead) % 6)) & 1;
                                                 }
@@ -916,7 +916,7 @@ static void test_mono(void) {
 
         static char ws[256];
         memset(ws, 'W', 255);
-        mt_line_t wide = {ws, 255, 0, 1, false, false};
+        mt_line_t wide = {ws, 255, 0, 1, false, false, 0};
         memset(bb, 0xA5, sizeof bb);
         mt_bits(&wide, 1524, 7, 3, 1, bb, 1);   /* the last glyph's six columns and one trail pixel */
         CHECK(bb[0] == (uint8_t)(font_small_mono['W' - 0x20][3] & 0xFC) && bb[1] == 0xA5);
@@ -932,7 +932,7 @@ static void test_mono(void) {
     /* menu_text.c's edges and padding, on their own: a short string pads
      * with spaces; ink edges are set on every row asked for. */
     uint8_t   b[2 * 16];
-    mt_line_t l = {"A", 3, 2, 3, true, false};
+    mt_line_t l = {"A", 3, 2, 3, true, false, 0};
     CHECK(mt_width(&l) == 2 + 18 + 3);
     mt_bits(&l, 0, 23, 3, 2, b, 16);
     for (int r = 0; r < 2; r++) {
@@ -946,6 +946,33 @@ static void test_mono(void) {
     l.s = "\x7f";
     mt_bits(&l, 2, 6, 0, MT_CELL_H, b, 1);
     for (int r = 0; r < MT_CELL_H; r++) CHECK(b[r] == (uint8_t)(font_small_mono['?' - 0x20][r] & 0xFC));   /* no glyph: '?' */
+
+    /* A lead glyph (the menu's cursor, JD 10-24): its columns fill the lead,
+     * over lead_ink, cut to the band; the glyph never reaches column 3, the
+     * 1 px gap before cell 0. */
+    const uint8_t *cg = font_small_mono[95 + (uint8_t)MT_CURSOR[0] - 0x80];
+    mt_line_t      lg = {"A", 1, 4, 1, true, false, (uint8_t)MT_CURSOR[0]};
+    CHECK(cg[5] == 0xE0);   /* three columns at its widest */
+    mt_bits(&lg, 0, 11, 0, MT_CELL_H, b, 2);
+    for (int r = 0; r < MT_CELL_H; r++) {
+        CHECK((cg[r] & 0x1F) == 0);
+        CHECK((b[r * 2] & 0xF0) == (cg[r] & 0xF0));
+        CHECK(((b[r * 2] >> 3) & 1) == ((font_small_mono['A' - 0x20][r] >> 7) & 1));   /* 'A' column 0 at line column 4 */
+    }
+    mt_bits(&lg, 2, 3, 0, MT_CELL_H, b, 1);   /* a band from column 2: the glyph's column 2, the gap, 'A' */
+    for (int r = 0; r < MT_CELL_H; r++)
+        CHECK((b[r] & 0xE0) == (uint8_t)(((cg[r] << 2) & 0x80) | ((font_small_mono['A' - 0x20][r] >> 2) & 0x20)));
+
+    /* menu_text.h spells the generator's codes. */
+    CHECK(!strcmp(MT_LSAQUO, FONT_MONO_LSAQUO) && !strcmp(MT_RSAQUO, FONT_MONO_RSAQUO) &&
+          !strcmp(MT_BULLET, FONT_MONO_BULLET) && !strcmp(MT_TRIANGLE, FONT_MONO_TRIANGLE) &&
+          !strcmp(MT_CHECK, FONT_MONO_CHECK));
+    CHECK(!strcmp(MT_TRI_L, FONT_MONO_TRI_L) && !strcmp(MT_TRI_R, FONT_MONO_TRI_R) &&
+          !strcmp(MT_CURSOR, FONT_MONO_CURSOR) && !strcmp(MT_WRENCH, FONT_MONO_WRENCH) &&
+          !strcmp(MT_CHECK_CIRCLE, FONT_MONO_CHECK_CIRCLE) && !strcmp(MT_CHECK_BOX, FONT_MONO_CHECK_BOX));
+    CHECK(!strcmp(MT_I_POWER, FONT_MONO_I_POWER) && !strcmp(MT_I_CLOCK, FONT_MONO_I_CLOCK) &&
+          !strcmp(MT_I_DIAG, FONT_MONO_I_DIAG) && !strcmp(MT_I_HELP, FONT_MONO_I_HELP) &&
+          !strcmp(MT_I_ABOUT, FONT_MONO_I_ABOUT) && !strcmp(MT_I_EXIT, FONT_MONO_I_EXIT));
 }
 
 static void test_op_end(void) {
@@ -1568,17 +1595,21 @@ static int frames(const char *dir, int n) {
  * the production menu_ops; every expected row is spelled out here and drawn
  * from the face, not from menu.c. */
 
-/* A text slot (x 3-124) at y: the cells from x 4 in fg on black. */
-static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg) {
-    int    bad = 0;
-    size_t len = strlen(cells);
+/* A text slot at y: the cells from x 4 in fg on black, x 0-3 and 124 black
+ * but for the cursor's columns 0-2 in x 0-2 when `cursor` (JD, 10-24). */
+static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor) {
+    int            bad = 0;
+    size_t         len = strlen(cells);
+    const uint8_t *cg  = font_small_mono[95 + (uint8_t)FONT_MONO_CURSOR[0] - 0x80];
     for (uint16_t r = 0; r < 14; r++)
-        for (uint16_t x = 3; x <= 124; x++) {
+        for (uint16_t x = 0; x <= 124; x++) {
             uint16_t want = 0;
-            if (x >= 4 && x <= 123) {
+            if (x < 3) {
+                if (cursor && (cg[r] & (0x80 >> x))) want = fg;
+            } else if (x >= 4 && x <= 123) {
                 size_t  cell = (size_t)(x - 4) / 6;
                 uint8_t code = cell < len ? (uint8_t)cells[cell] : (uint8_t)' ';
-                const uint8_t *g = code >= 0x80 && code < 0x85 ? font_small_mono[95 + code - 0x80]
+                const uint8_t *g = code >= 0x80 && code < 0x80 + FONT_MONO_N - 95 ? font_small_mono[95 + code - 0x80]
                                  : code >= 0x20 && code < 0x7F ? font_small_mono[code - 0x20]
                                                                : font_small_mono['?' - 0x20];
                 if (g[r] & (0x80 >> ((x - 4) % 6))) want = fg;
@@ -1596,8 +1627,11 @@ static const char *cells2(const char *label, const char *value) {
     memcpy(out + 20 - strlen(value), value, strlen(value));
     return out;
 }
-static int row_bad(int r, const char *cells, uint16_t fg) { return text_slot_bad((uint16_t)(15 + 14 * r), cells, fg); }
-static int title_bad(const char *t) { return text_slot_bad(0, t, MENU_WHITE); }
+/* A list row: the cursor with the lit colour. */
+static int row_bad(int r, const char *cells, uint16_t fg) {
+    return text_slot_bad((uint16_t)(15 + 14 * r), cells, fg, fg == MENU_LIT);
+}
+static int title_bad(const char *t) { return text_slot_bad(0, t, MENU_WHITE, false); }
 static void m_settle(void) {
     for (int i = 0; i < 3000 && !(ms_settled() && !mb_busy()); i++) fw_pass(5);
     CHECK(ms_settled());
@@ -1631,60 +1665,60 @@ static void test_menu(void) {
     CHECK(po_owner() == PANEL_MENU && po_session() == SESSION_OPEN);
     m_settle();
     CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 0);
-    CHECK(title_bad("Configuration") == 0);
-    CHECK(row_bad(0, cells2("Power", "Balanced"), MENU_LIT) == 0);
-    CHECK(row_bad(1, cells2("Clock", "24h"), MENU_DIM) == 0);
-    CHECK(row_bad(2, cells2("Diagnostics", ">"), MENU_DIM) == 0);
-    CHECK(row_bad(3, cells2("Help", ">"), MENU_DIM) == 0);
-    CHECK(row_bad(4, cells2("About", ">"), MENU_DIM) == 0);
-    CHECK(row_bad(5, cells2("Exit", ""), MENU_LEAVE) == 0);   /* JD, 10-24: Back and Exit in light red */
+    CHECK(title_bad(FONT_MONO_WRENCH " Configuration") == 0);
+    CHECK(row_bad(0, cells2(FONT_MONO_I_POWER " Power", "Balanced"), MENU_LIT) == 0);
+    CHECK(row_bad(1, cells2(FONT_MONO_I_CLOCK "Clock", "24h"), MENU_DIM) == 0);
+    CHECK(row_bad(2, cells2(FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R), MENU_DIM) == 0);
+    CHECK(row_bad(3, cells2(FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R), MENU_DIM) == 0);
+    CHECK(row_bad(4, cells2(FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R), MENU_DIM) == 0);
+    CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);   /* JD, 10-24: Back and Exit in light red */
     CHECK(row_bad(6, "", 0) == 0 && row_bad(7, "", 0) == 0);
     CHECK(fb[20][125] == 0 && fb[100][125] == 0);   /* no scrollbar: its track black */
     CHECK(op27(0, 1, 0) == MI_BAD);                  /* sub 0 is the fixture's only */
 
     /* Moves: down, a wrap up, and back. */
     m_turn(1);
-    CHECK(sub5_cursor() == 1 && row_bad(1, cells2("Clock", "24h"), MENU_LIT) == 0 &&
-          row_bad(0, cells2("Power", "Balanced"), MENU_DIM) == 0);
+    CHECK(sub5_cursor() == 1 && row_bad(1, cells2(FONT_MONO_I_CLOCK "Clock", "24h"), MENU_LIT) == 0 &&
+          row_bad(0, cells2(FONT_MONO_I_POWER " Power", "Balanced"), MENU_DIM) == 0);
     m_turn(-2);
-    CHECK(sub5_cursor() == 5 && row_bad(5, cells2("Exit", ""), MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 5 && row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LIT) == 0);
     m_turn(1);
     CHECK(sub5_cursor() == 0);
 
     /* Power: the choice opens on the saved option, its bullet in cell 0. */
     m_click();
     CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad("Power") == 0);
-    CHECK(row_bad(0, "\x80" " Back", MENU_LEAVE) == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
     CHECK(row_bad(1, "  Always on", MENU_DIM) == 0);   /* the bullet's cell, then a space: JD's breathing room */
-    CHECK(row_bad(2, "\x82" " Balanced", MENU_LIT) == 0);
+    CHECK(row_bad(2, FONT_MONO_CHECK_CIRCLE "Balanced", MENU_LIT) == 0);
     CHECK(row_bad(4, "  Lights out", MENU_DIM) == 0);
     m_turn(2);   /* Lights out */
     m_click();   /* commits */
     CHECK(fk_power == 3 && fk_power_writes == 1);
     CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 0);
-    CHECK(title_bad("Saved") == 0 && row_bad(0, cells2("Power", "Lights out"), MENU_LIT) == 0);
+    CHECK(title_bad("Saved") == 0 && row_bad(0, cells2(FONT_MONO_I_POWER " Power", "Lights out"), MENU_LIT) == 0);
     for (int i = 0; i < 400; i++) fw_pass(5);   /* the flash's 1.3 s */
     m_settle();
-    CHECK(title_bad("Configuration") == 0);
+    CHECK(title_bad(FONT_MONO_WRENCH " Configuration") == 0);
 
     /* Clock: a cancel by Back writes nothing, and says so. */
     m_turn(1);
     m_click();
-    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, "\x82" " 24 hour", MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, FONT_MONO_CHECK_CIRCLE "24 hour", MENU_LIT) == 0);
     m_turn(2);   /* Date: the enum's 3 */
     m_hold();
     CHECK(fk_clock == 0 && fk_clock_writes == 0 && title_bad("Cancelled") == 0 && sub5_screen() == 16 + 1);
     m_click();
     m_turn(2);
     m_click();   /* Date */
-    CHECK(fk_clock == 3 && fk_clock_writes == 1 && row_bad(1, cells2("Clock", "Date"), MENU_LIT) == 0);
+    CHECK(fk_clock == 3 && fk_clock_writes == 1 && row_bad(1, cells2(FONT_MONO_I_CLOCK "Clock", "Date"), MENU_LIT) == 0);
 
     /* An external change (Fn+B) shows at once. */
     fk_power = 0;
     m_settle();
     fw_pass(5);
     m_settle();
-    CHECK(row_bad(0, cells2("Power", "Always on"), MENU_DIM) == 0);
+    CHECK(row_bad(0, cells2(FONT_MONO_I_POWER " Power", "Always on"), MENU_DIM) == 0);
 
     /* Help: a topic pages by 8, clamped. Shortcuts has 12 lines: its top
      * stops at 4. */
@@ -1692,7 +1726,7 @@ static void test_menu(void) {
     m_turn(2);   /* Help (row 3) */
     m_click();
     CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 1 && title_bad("Help") == 0);
-    CHECK(row_bad(1, cells2("Using the menu", ">"), MENU_LIT) == 0);
+    CHECK(row_bad(1, cells2("Using the menu", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_turn(2);   /* Shortcuts */
     m_click();
     CHECK(title_bad("Shortcuts") == 0 && sub5_cursor() == 0);
@@ -1715,7 +1749,7 @@ static void test_menu(void) {
     m_turn(-1);
     CHECK(sub5_cursor() == 0);
     m_click();   /* back to Help, Shortcuts' row */
-    CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 3 && row_bad(3, cells2("Shortcuts", ">"), MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 3 && row_bad(3, cells2("Shortcuts", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_hold();    /* Back to the top: Help's row */
     CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 3);
 
@@ -1755,17 +1789,17 @@ static void test_menu(void) {
     for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
     m_settle();
     CHECK(po_owner() == PANEL_MENU && sub5_screen() == 16 + 4 && sub5_cursor() == 1);
-    CHECK(row_bad(1, cells2("Health page", ">"), MENU_LIT) == 0);
+    CHECK(row_bad(1, cells2("Health page", FONT_MONO_TRI_R), MENU_LIT) == 0);
 
     /* Reset counters: the question, a click resets, the done page, back. */
     m_turn(2);
     m_click();
     CHECK(sub5_screen() == 16 + 10 && sub5_cursor() == 0 && title_bad("Reset counters") == 0);
-    CHECK(text_slot_bad(22, "Clear the health", MENU_WHITE) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE) == 0);
+    CHECK(text_slot_bad(22, "Clear the health", MENU_WHITE, false) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE, false) == 0);
     m_click();
     CHECK(fk_resets == 1 && sub5_cursor() == 1 && title_bad("Counters reset") == 0);
-    CHECK(text_slot_bad(22, "Counters reset.", MENU_WHITE) == 0 && text_slot_bad(36, "", 0) == 0 &&
-          text_slot_bad(86, "", 0) == 0);
+    CHECK(text_slot_bad(22, "Counters reset.", MENU_WHITE, false) == 0 && text_slot_bad(36, "", 0, false) == 0 &&
+          text_slot_bad(86, "", 0, false) == 0);
     m_click();
     CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 3 && fk_resets == 1);
     m_click();   /* again, then a hold cancels */
@@ -1810,13 +1844,13 @@ static void test_menu(void) {
     CHECK(op27(2, 0, 0) == MI_OK);
     CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
     m_settle();
-    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && row_bad(3, "\x82" " Power saver", MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && row_bad(3, FONT_MONO_CHECK_CIRCLE "Power saver", MENU_LIT) == 0);
     /* An external change inside an open choice: the bullet moves, the cursor
      * stays; then Back by its row cancels, writing nothing. */
     fk_power = 0;
     fw_pass(5);
     m_settle();
-    CHECK(sub5_cursor() == 3 && row_bad(1, "\x82" " Always on", MENU_DIM) == 0 && row_bad(3, "  Power saver", MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 3 && row_bad(1, FONT_MONO_CHECK_CIRCLE "Always on", MENU_DIM) == 0 && row_bad(3, "  Power saver", MENU_LIT) == 0);
     int w0 = fk_power_writes;
     m_turn(-3);   /* to ‹ Back */
     m_click();
@@ -1847,7 +1881,7 @@ static void test_menu(void) {
     CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
     for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
     m_settle();
-    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 2 && row_bad(2, cells2("Camera page", ">"), MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 2 && row_bad(2, cells2("Camera page", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_hold();
     /* 4. About replaced while its old rows are still committed: Back for one
      * pass, new facts, in again, at several boundaries. */
@@ -1893,19 +1927,41 @@ static void test_menu(void) {
     m_settle();
     m_turn(-1);   /* Exit selected: lit */
     m_turn(-1);   /* About: Exit unselected, light red */
-    CHECK(row_bad(5, cells2("Exit", ""), MENU_LEAVE) == 0);
+    CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);
     memset(rpt, 0, sizeof rpt);   /* [5] the index, [6..7] the colour: op27() takes only two args */
     rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 13;
     rpt[5] = MP_LEAVE; rpt[6] = 0x00; rpt[7] = 0xF8;   /* pure red, 0xF800 */
     CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
     m_settle();
-    CHECK(row_bad(5, cells2("Exit", ""), 0xF800u) == 0 && row_bad(4, cells2("About", ">"), MENU_LIT) == 0);
+    CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), 0xF800u) == 0 && row_bad(4, cells2(FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R), MENU_LIT) == 0);
     CHECK(op27(13, MP_N, 0) == MI_BAD);
     rpt[5] = MP_LEAVE; rpt[6] = (uint8_t)MENU_LEAVE; rpt[7] = (uint8_t)(MENU_LEAVE >> 8);
     rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 13;
     CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
     m_settle();
-    CHECK(row_bad(5, cells2("Exit", ""), MENU_LEAVE) == 0);
+    CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);
+    /* sub 14 (JD, 10-24): the squared check for the circled one, live; a
+     * third style is refused. The saved option is the cursor's on entry. */
+    m_turn(-4);   /* Power */
+    m_click();
+    {
+        const char *pw = (const char *[]){"Always on", "Balanced", "Power saver", "Lights out"}[fk_power & 3];
+        char        want[24];
+        CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 1 + (fk_power & 3));
+        snprintf(want, sizeof want, "%s%s", FONT_MONO_CHECK_CIRCLE, pw);
+        CHECK(row_bad(1 + (fk_power & 3), want, MENU_LIT) == 0);
+        CHECK(op27(14, 1, 0) == MI_OK);
+        m_settle();
+        snprintf(want, sizeof want, "%s%s", FONT_MONO_CHECK_BOX, pw);
+        CHECK(row_bad(1 + (fk_power & 3), want, MENU_LIT) == 0);
+        CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
+        CHECK(op27(14, 2, 0) == MI_BAD);
+        CHECK(op27(14, 0, 0) == MI_OK);
+        m_settle();
+        snprintf(want, sizeof want, "%s%s", FONT_MONO_CHECK_CIRCLE, pw);
+        CHECK(row_bad(1 + (fk_power & 3), want, MENU_LIT) == 0);
+    }
+    m_hold();
     CHECK(op27(12, 1, 0) == MI_OK);
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
@@ -1924,8 +1980,9 @@ static void test_menu(void) {
 /* At every pass of a move's repaint: a reversal, a second move, and a send
  * given up. The frame ends right, and no pass ever shows two lit rows. */
 static void top_frame_ok(int cursor) {
-    const char *rows[6][2] = {{"Power", "Balanced"}, {"Clock", "24h"}, {"Diagnostics", ">"},
-                              {"Help", ">"}, {"About", ">"}, {"Exit", ""}};
+    const char *rows[6][2] = {{FONT_MONO_I_POWER " Power", "Balanced"}, {FONT_MONO_I_CLOCK "Clock", "24h"},
+                              {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R}, {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R},
+                              {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""}};
     for (int r = 0; r < 6; r++)
         CHECK(row_bad(r, cells2(rows[r][0], rows[r][1]), r == cursor ? MENU_LIT : r == 5 ? MENU_LEAVE : MENU_DIM) == 0);
 }

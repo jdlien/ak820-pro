@@ -31,6 +31,9 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "assets-src"))
 import mkbdfatlas  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gen_mono_font import dwidths, place  # noqa: E402  the font's own placement
+
 BDF = os.path.join(ROOT, "assets-src", "cozette.bdf")
 CH, BASELINE = 14, 9
 CATS = [
@@ -42,27 +45,6 @@ CATS = [
     ("Symbols and dingbats", [(0x2010, 0x205E), (0x2100, 0x218F), (0x2300, 0x23FF), (0x2600, 0x27BF),
                               (0x2B30, 0x2B4B)]),
 ]
-
-
-def dwidths(path):
-    out, enc = {}, None
-    for line in open(path, encoding="utf-8", errors="replace"):
-        if line.startswith("ENCODING"):
-            enc = int(line.split()[1])
-        elif line.startswith("DWIDTH") and enc is not None:
-            out[enc] = int(line.split()[1])
-    return out
-
-
-def place(g, base, dx):
-    """-> (width, shift, kind) for a glyph whose advance is `base`."""
-    px = mkbdfatlas.glyph_pixels(g, BASELINE)
-    lo, hi = min(x for x, _ in px), max(x for x, _ in px)
-    for w in (base, base + 6):
-        for s in (dx, 0, -lo):
-            if lo + s >= 0 and hi + s < w:
-                return w, s, (1 if base == 12 else 0) if w == base else 2
-    sys.exit(f"ink columns {lo}..{hi} fit no cell")
 
 
 def raster(g, w, s, cp=0):

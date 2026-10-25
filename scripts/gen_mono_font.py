@@ -13,6 +13,11 @@
   xshift). A mismatch refuses: the atlas and the BDF have drifted.
 - `‹ › • ▸ ✓` come from the BDF, placed the same way, at codes 0x80-0x84,
   and are checked against the mockup's EXTRA13 (plans/config-menu-mockup.html).
+- Then ICONS, JD's picks from the icon picker (10-24,
+  scripts/gen_icon_gallery.py), from 0x85, placed by place(): ASCII's shift
+  when the ink fits a cell with it, else unshifted; a glyph wider than a cell
+  (double width, or 7 px of ink on a 6 px advance) takes two codes, its left
+  and right halves. The picker draws with this same place().
 - 14 B a glyph, a byte a row, column 0 in bit 7.
 
 --check writes nothing and fails if the header on disk differs."""
@@ -34,6 +39,23 @@ OUT = os.path.join(ROOT, "qmk_firmware-ak820pro", "keyboards", "a_jazz", "ak820p
                    "graphics", "res", "font_small_mono.h")
 CW, CH, BASELINE = 6, 14, 9
 EXTRAS = [("‹", 0x2039), ("›", 0x203A), ("•", 0x2022), ("▸", 0x25B8), ("✓", 0x2713)]
+EXTRA_NAMES = ["LSAQUO", "RSAQUO", "BULLET", "TRIANGLE", "CHECK"]
+# JD's picks, 10-24: (the macro's name, the code point, its cells). APPEND
+# ONLY: a code is its place in this list, and menu_text.h spells the codes.
+ICONS = [
+    ("TRI_L", 0x25C0, 1),          # ◀ Back
+    ("TRI_R", 0x25B6, 1),          # ▶ a row that opens a page
+    ("CURSOR", 0x1FB6C, 1),        # 🭬 the selected row's, in its line's lead (columns 0-2)
+    ("WRENCH", 0x1F527, 2),        # 🔧 before "Configuration"
+    ("CHECK_CIRCLE", 0xF058, 2),   # the saved option (nf-fa-check_circle)
+    ("CHECK_BOX", 0xF631, 2),      # its fallback (nf-mdi-checkbox_marked)
+    ("I_POWER", 0xF0E7, 1),        # the top level's icons: nf-fa-bolt,
+    ("I_CLOCK", 0xF017, 2),        # nf-fa-clock,
+    ("I_DIAG", 0xF2DB, 1),         # nf-fa-microchip,
+    ("I_HELP", 0xF059, 2),         # nf-fa-question_circle,
+    ("I_ABOUT", 0xF05A, 2),        # nf-fa-info_circle,
+    ("I_EXIT", 0xF00D, 1),         # nf-fa-times
+]
 
 
 def read_png(path):
@@ -123,6 +145,31 @@ def bdf_cell(glyphs, cp, dx, name):
     return ink
 
 
+def dwidths(path):
+    """-> {codepoint: DWIDTH} (parse_bdf keeps only the bitmap)."""
+    out, enc = {}, None
+    for line in open(path, encoding="utf-8", errors="replace"):
+        if line.startswith("ENCODING"):
+            enc = int(line.split()[1])
+        elif line.startswith("DWIDTH") and enc is not None:
+            out[enc] = int(line.split()[1])
+    return out
+
+
+def place(g, base, dx):
+    """-> (width, shift, kind) for a glyph whose advance is `base` (6, or 12
+    for double width): the first of ASCII's shift, none, or flush left that
+    keeps the ink inside `base` columns, else inside base + 6. kind: 0 one
+    cell, 1 double width, 2 wider than its advance (Cozette's 7 px icons)."""
+    px = mkbdfatlas.glyph_pixels(g, BASELINE)
+    lo, hi = min(x for x, _ in px), max(x for x, _ in px)
+    for w in (base, base + 6):
+        for s in (dx, 0, -lo):
+            if lo + s >= 0 and hi + s < w:
+                return w, s, (1 if base == 12 else 0) if w == base else 2
+    sys.exit(f"ink columns {lo}..{hi} fit no cell")
+
+
 def mockup_extras():
     m = re.search(r"const EXTRA13 = (\{[^}]*\})", open(MOCKUP, encoding="utf-8").read())
     if not m:
@@ -138,10 +185,8 @@ def rows_of(ink):
 
 
 def label(i):
-    if i < 95:
-        c = chr(0x20 + i)
-        return "space" if c == " " else "'\\\\'" if c == "\\" else f"'{c}'"
-    return EXTRAS[i - 95][0] + f" U+{EXTRAS[i - 95][1]:04X}"
+    c = chr(0x20 + i)
+    return "space" if c == " " else "'\\\\'" if c == "\\" else f"'{c}'"
 
 
 def main():
@@ -163,12 +208,30 @@ def main():
         sys.exit("a glyph has ink under the atlas's marker")
 
     mock = mockup_extras()
-    extras = []
-    for ch, cp in EXTRAS:
+    extras, xlabels, defines = [], [], []
+    for (ch, cp), name in zip(EXTRAS, EXTRA_NAMES):
         ink = bdf_cell(glyphs, cp, dx, ch)
         if mock.get(ch) != ink:
             sys.exit(f"{ch}: the BDF's placement differs from the mockup's EXTRA13")
+        defines.append((name, [0x80 + len(extras)], f"{ch} U+{cp:04X}"))
         extras.append(ink)
+        xlabels.append(f"{ch} U+{cp:04X}")
+    dw = dwidths(BDF)
+    for name, cp, n in ICONS:
+        if cp not in glyphs:
+            sys.exit(f"{BDF}: no glyph for U+{cp:04X} ({name})")
+        w, s, _ = place(glyphs[cp], 12 if dw.get(cp, 6) > 6 else 6, dx)
+        if w // CW != n:
+            sys.exit(f"{name} U+{cp:04X}: {w // CW} cells, ICONS says {n}")
+        ink = {(x + s, y) for x, y in mkbdfatlas.glyph_pixels(glyphs[cp], BASELINE)}
+        if any(not 0 <= y < CH for _, y in ink):
+            sys.exit(f"{name} U+{cp:04X}: ink outside the {CH} rows")
+        defines.append((name, [0x80 + len(extras) + k for k in range(n)], f"U+{cp:04X}"))
+        for k in range(n):
+            extras.append({(x - k * CW, y) for x, y in ink if k * CW <= x < (k + 1) * CW})
+            xlabels.append(f"{name} U+{cp:04X}" + ("" if n == 1 else " left" if k == 0 else " right"))
+    if 0x80 + len(extras) > 0x100:
+        sys.exit("more extras than codes 0x80-0xFF")
 
     cells = [rows_of(g) for g in atlas + extras]
     lines = [
@@ -178,8 +241,8 @@ def main():
         "// GENERATED by scripts/gen_mono_font.py -- do not edit. The configuration",
         "// menu's 1-bit small face: Cozette 6x14, the 95 ASCII glyphs as the shipped",
         "// atlas has them (assets-src/current/Iosevka-Medium-13.png, FONT_SMALL), and",
-        "// five more from assets-src/cozette.bdf at 0x80-0x84. A byte a row, column 0",
-        "// in bit 7.",
+        f"// {len(extras)} more from assets-src/cozette.bdf at 0x80-0x{0x7F + len(extras):02X}: five marks, then JD's",
+        "// icons (a two-cell icon is two codes). A byte a row, column 0 in bit 7.",
         "#pragma once",
         "",
         "#include <stdint.h>",
@@ -192,12 +255,13 @@ def main():
         f"#define FONT_MONO_N     {len(cells)}",
         "",
     ]
-    for i, (ch, cp) in enumerate(EXTRAS):
-        name = {0x2039: "LSAQUO", 0x203A: "RSAQUO", 0x2022: "BULLET", 0x25B8: "TRIANGLE", 0x2713: "CHECK"}[cp]
-        lines.append(f'#define FONT_MONO_{name:8} "\\x{0x80 + i:02x}"   /* {ch} U+{cp:04X} */')
+    for name, codes, what in defines:
+        s = "".join(f"\\x{c:02x}" for c in codes)
+        lines.append(f'#define FONT_MONO_{name:12} "{s}"' + " " * (10 - len(s)) + f"/* {what} */")
     lines += ["", "static const uint8_t font_small_mono[FONT_MONO_N][FONT_MONO_H] = {"]
     for i, rows in enumerate(cells):
-        lines.append("    {" + ", ".join(f"0x{r:02X}" for r in rows) + "},   /* " + label(i) + " */")
+        lines.append("    {" + ", ".join(f"0x{r:02X}" for r in rows) + "},   /* "
+                     + (label(i) if i < 95 else xlabels[i - 95]) + " */")
     lines += ["};", ""]
     text = "\n".join(lines)
 
