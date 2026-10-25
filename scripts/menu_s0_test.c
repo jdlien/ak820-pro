@@ -2165,15 +2165,22 @@ static int bar_bad(unsigned v, unsigned max) {
 }
 /* The hue envelope for a marker at hue a: the strip, the white line, the
  * triangle in the lit colour, black elsewhere (y 20-40, x 0-127). */
+/* QMK's hsv_to_rgb_impl() (quantum/color.c), verbatim in its arithmetic,
+ * with s = v = 255; and two of its values checked by hand below. */
 static uint16_t t_hue565(uint8_t h) {
-    uint8_t region = (uint8_t)(h / 43u), rem = (uint8_t)((h - region * 43u) * 6u), r, g, b;
+    uint8_t  region = (uint8_t)(h * 6 / 255), remainder = (uint8_t)((h * 2 - region * 85) * 3), r, g, b;
+    uint16_t s = 255, v = 255;
+    uint8_t  p = (uint8_t)((v * (255 - s)) >> 8);
+    uint8_t  q = (uint8_t)((v * (255 - ((s * remainder) >> 8))) >> 8);
+    uint8_t  t = (uint8_t)((v * (255 - ((s * (255 - remainder)) >> 8))) >> 8);
     switch (region) {
-        case 0: r = 255; g = rem; b = 0; break;
-        case 1: r = (uint8_t)(255u - rem); g = 255; b = 0; break;
-        case 2: r = 0; g = 255; b = rem; break;
-        case 3: r = 0; g = (uint8_t)(255u - rem); b = 255; break;
-        case 4: r = rem; g = 0; b = 255; break;
-        default: r = 255; g = 0; b = (uint8_t)(255u - rem); break;
+        case 6:
+        case 0: r = (uint8_t)v; g = t; b = p; break;
+        case 1: r = q; g = (uint8_t)v; b = p; break;
+        case 2: r = p; g = (uint8_t)v; b = t; break;
+        case 3: r = p; g = q; b = (uint8_t)v; break;
+        case 4: r = t; g = p; b = (uint8_t)v; break;
+        default: r = (uint8_t)v; g = p; b = q; break;
     }
     return (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
 }
@@ -2213,6 +2220,8 @@ static void test_p1b(void) {
     CHECK(me_key_domain(0x782B, true) == 0 && me_key_domain(0x782B, false) == 0 && me_key_domain(0x784F, false) == 0);
 
     /* Lighting: its rows, the live values as the readout writes them. */
+    CHECK(t_hue565(0) == 0xF800u && t_hue565(213) == 0xF81Fu);   /* red; codex's hue 213, magenta */
+
     m_open_top();
     m_click();
     CHECK(sub5_screen() == SC_LIGHT && sub5_cursor() == 1 && title_bad(FONT_MONO_I_LIGHT " Lighting") == 0);
@@ -2302,14 +2311,42 @@ static void test_p1b(void) {
     fw_pass(5);
     m_settle();
     CHECK(sub5_screen() == SC_LIGHT && title_bad("Cancelled") == 0 && row_bad(2, cells2("Brightness", "39%"), MENU_LIT) == 0);
+    /* Codex, P1b's code review: an external write, then a click (k 0) or a
+     * turn (k 1) queued behind it in the same pass (op 27 flies one input at
+     * a time). Neither may act on the rolled-back edit: no "Saved", no
+     * preview over the external value; "Cancelled", the list; and the
+     * cancel's pop is one target, not two. */
+    for (int k = 0; k < 2; k++) {
+        for (int i = 0; i < 300; i++) fw_pass(5);
+        m_settle();
+        CHECK(sub5_screen() == SC_LIGHT && sub5_cursor() == 2);
+        m_click();
+        for (int i = 0; i < 40; i++) fw_pass(5);
+        m_turn(1);
+        CHECK(me_active() && fk_rgb.v == 105);
+        fk_rgb_dirty = false;
+        menu_edit_external(ME_DOM_RGB);
+        fk_rgb.v = 120;   /* the writer applies */
+        CHECK(op27(k ? 1 : 2, k ? 1 : 0, 0) == MI_OK);   /* queued behind the write */
+        uint8_t g0 = ms_tgen();
+        fw_pass(5);
+        CHECK(ms_tgen() == (uint8_t)(g0 + 1));
+        m_settle();
+        CHECK(sub5_screen() == SC_LIGHT && title_bad("Cancelled") == 0 && !me_active());
+        CHECK(fk_rgb.v == 120 && !fk_rgb_dirty);
+        fk_rgb.v = 100;
+    }
+
     /* With no edit open, an external write is a new target: the row repaints. */
     for (int i = 0; i < 300; i++) fw_pass(5);
     m_settle();
+    uint16_t ext1 = me_external_count();
+    CHECK(ext1 == ext0 + 3);   /* the three above */
     fk_rgb.v = 86;
     menu_edit_external(ME_DOM_RGB);
     fw_pass(5);
     m_settle();
-    CHECK(me_external_count() == ext0 + 1 && row_bad(2, cells2("Brightness", "34%"), MENU_LIT) == 0);
+    CHECK(me_external_count() == ext1 && row_bad(2, cells2("Brightness", "34%"), MENU_LIT) == 0);
 
     /* Hue: the hue editor, the marker across band edges, the wrap. */
     fk_rgb.h = 8;   /* the marker at x 8: its triangle across bands 0 and 1 */
