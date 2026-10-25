@@ -9,7 +9,8 @@
  *   D=qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro
  *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/menu_s0_test.c \
  *       $D/menu/panel_owner.c $D/menu/menu_input.c $D/menu/menu_slots.c \
- *       $D/menu/menu_fixture.c $D/menu/menu_ops.c $D/menu/menu_text.c $D/menu/menu.c -o ms0 && ./ms0
+ *       $D/menu/menu_fixture.c $D/menu/menu_ops.c $D/menu/menu_text.c $D/menu/menu.c \
+ *       $D/menu/menu_edit.c -o ms0 && ./ms0
  *
  * and again with -DMENU_ENABLE (the production opener, P1a): that build runs
  * test_menu_enable() only, since the S0 suite expects the opener off unarmed.
@@ -32,6 +33,7 @@
 #include "menu_ops.h"
 #include "menu_text.h"
 #include "menu.h"
+#include "menu_edit.h"
 #include "../graphics/res/font_small_mono.h"   /* through -I $D/menu */
 
 static int fails;
@@ -46,7 +48,7 @@ static int fails;
 static uint16_t fb[MB_H][MB_W];
 static bool     is_glyph[MB_H][MB_W];
 static bool     dma_busy;
-static uint16_t dma_x, dma_y, dma_col;
+static uint16_t dma_x, dma_y, dma_col, dma_w = MB_GLYPH_W, dma_h = MB_GLYPH_H;
 static bool     lost_latched;
 static int      fault_next_dma;     /* the next N transfers are given up */
 static int      fault_next_band;    /* the next N clear bands fail */
@@ -81,7 +83,7 @@ static void dma_settle(void) {
         lost_latched = true;
         return;
     }
-    paint_fb(dma_x, dma_y, (uint16_t)(dma_x + MB_GLYPH_W - 1), (uint16_t)(dma_y + MB_GLYPH_H - 1), dma_col, true);
+    paint_fb(dma_x, dma_y, (uint16_t)(dma_x + dma_w - 1), (uint16_t)(dma_y + dma_h - 1), dma_col, true);
 }
 
 bool mb_clear_band(uint8_t band) {
@@ -114,8 +116,44 @@ bool mb_glyph(char c, uint16_t x, uint16_t y) {
     if (dma_busy) return false;
     dma_busy = true;
     dma_x = x; dma_y = y; dma_col = glyph_color(c);
+    dma_w = MB_GLYPH_W; dma_h = MB_GLYPH_H;
     glyph_ops++;
     return true;
+}
+/* P1b: a big glyph (FONT_STATUS) is a DMA as a small one is; its cell is
+ * painted as big_color(c). */
+static uint16_t big_color(char c) { return (uint16_t)(0xB000u | (uint8_t)c); }
+static int      big_ops;
+bool mb_glyph_big(char c, uint16_t x, uint16_t y) {
+    if (bus_busy_once) { bus_busy_once = false; return false; }
+    if (dma_busy) return false;
+    dma_busy = true;
+    dma_x = x; dma_y = y; dma_col = big_color(c);
+    dma_w = MB_BIG_W; dma_h = MB_BIG_H;
+    big_ops++;
+    return true;
+}
+/* P1b: generated pixels, a polled stream as mb_mono's (its faults too). */
+static int pixel_ops;
+bool mb_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h, mb_px_fn fn, const void *ctx) {
+    dma_settle();
+    pass_bytes += (uint32_t)w * h * 2u;
+    uint16_t rows = h;
+    bool     ok   = true;
+    if (fault_next_fill > 0) {
+        fault_next_fill--;
+        rows = fault_fill_prefix ? (uint16_t)(h / 2u) : 0;
+        lost_latched = true;
+        ok           = false;
+    }
+    for (uint16_t r = 0; r < rows; r++)
+        for (uint16_t c = 0; c < w; c++) {
+            fb[y + r][x + c]       = fn(ctx, c, r);
+            is_glyph[y + r][x + c] = false;
+        }
+    if (ok) pixel_ops++;
+    fake_ticks += 300;
+    return ok;
 }
 static int mono_ops;
 bool mb_mono(const uint8_t *bits, uint8_t stride, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t fg, uint16_t bg) {
@@ -1274,6 +1312,54 @@ void    env_power_set(uint8_t m) { fk_power = m; fk_power_writes++; }
 uint8_t env_clock_mode(void) { return fk_clock; }
 void    env_clock_set(uint8_t m) { fk_clock = m; fk_clock_writes++; }
 void    env_health_reset(void) { fk_resets++; }
+
+/* P1b's primitives over a fake RGB core with QMK's semantics: the mode and
+ * HSV setters do nothing while the lights are off; a saving setter raises
+ * the dirty flag, a _noeeprom one leaves it; the flush (fk_flush) writes
+ * the config to the fake EEPROM only when dirty and the board's hold allows
+ * (menu_edit_rgb_open). The LCD: the requested level, and its saved copy. */
+static env_rgb_t fk_rgb = {2, 240, 215, 86, 127, 1, 0xFF}, fk_rgb_ee;
+static bool      fk_rgb_dirty;
+static int       fk_rgb_noop;   /* setter calls QMK ignored (the lights off) */
+static uint8_t   fk_lcd = 12, fk_lcd_saved = 12;
+static int       fk_lcd_saves;
+void env_rgb_get(env_rgb_t *c) { *c = fk_rgb; }
+void env_rgb_mode(uint8_t mode, bool save) {
+    if (!fk_rgb.enable) { fk_rgb_noop++; return; }
+    fk_rgb.mode = mode;
+    if (save) fk_rgb_dirty = true;
+}
+void env_rgb_hsv(uint8_t h, uint8_t s, uint8_t v, bool save) {
+    if (!fk_rgb.enable) { fk_rgb_noop++; return; }
+    fk_rgb.h = h; fk_rgb.s = s; fk_rgb.v = v;
+    if (save) fk_rgb_dirty = true;
+}
+void env_rgb_speed(uint8_t speed, bool save) {
+    fk_rgb.speed = speed;
+    if (save) fk_rgb_dirty = true;
+}
+void env_rgb_flags(uint8_t flags) { fk_rgb.flags = flags; }
+void env_rgb_enable(bool on, bool save) {
+    fk_rgb.enable = on ? 1u : 0u;
+    if (save) fk_rgb_dirty = true;
+}
+static void fk_flush(void) {
+    if (fk_rgb_dirty && !menu_edit_rgb_open()) {
+        fk_rgb_ee    = fk_rgb;
+        fk_rgb_dirty = false;
+    }
+}
+uint8_t env_lcd_level(void) { return fk_lcd; }
+void    env_lcd_set(uint8_t level, bool save) {
+    fk_lcd = level;
+    if (save) { fk_lcd_saved = level; fk_lcd_saves++; }
+}
+static const char *const fk_effect_names[9] = {"Solid", "Alphas/Mods", "Cycle All", "Cycle L-R", "Cycle U-D",
+                                               "Jellybean", "Heatmap", "Rainfall", "Drift"};
+uint8_t     env_effects(void) { return 9; }
+uint8_t     env_effect_mode(uint8_t i) { return (uint8_t)(i + 1u); }   /* modes 1-9 */
+const char *env_effect_name(uint8_t i) { return i < 9 ? fk_effect_names[i] : ""; }
+bool        env_effect_two_tone(uint8_t mode) { return mode == 2; }   /* Alphas/Mods */
 static env_about_t fk_about = {93240u, 767u, 4017u, 3840u, 1u,
                                (uint8_t)(ENV_LINK_BT | (0u << 2) | (ENV_LINK_CONNECTED << 4))};
 void        env_about(env_about_t *a) { *a = fk_about; }
@@ -1677,26 +1763,28 @@ static void test_menu(void) {
     m_settle();
     CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 0);
     CHECK(title_bad(FONT_MONO_WRENCH " Configuration") == 0);
-    CHECK(row_bad(0, cells2(FONT_MONO_I_POWER " Power", "Balanced"), MENU_LIT) == 0);
-    CHECK(row_bad(1, cells2(FONT_MONO_I_CLOCK "Clock", "24h"), MENU_DIM) == 0);
-    CHECK(row_bad(2, cells2(FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R), MENU_DIM) == 0);
-    CHECK(row_bad(3, cells2(FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R), MENU_DIM) == 0);
-    CHECK(row_bad(4, cells2(FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R), MENU_DIM) == 0);
-    CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);   /* JD, 10-24: Back and Exit in light red */
-    CHECK(row_bad(6, "", 0) == 0 && row_bad(7, "", 0) == 0);
-    CHECK(fb[20][125] == 0 && fb[100][125] == 0);   /* no scrollbar: its track black */
+    CHECK(row_bad(0, cells2(FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R), MENU_LIT) == 0);   /* P1b */
+    CHECK(row_bad(1, cells2(FONT_MONO_I_SCREEN "Screen", "52%"), MENU_DIM) == 0);               /* 12 of 23 */
+    CHECK(row_bad(2, cells2(FONT_MONO_I_POWER " Power", "Balanced"), MENU_DIM) == 0);
+    CHECK(row_bad(3, cells2(FONT_MONO_I_CLOCK "Clock", "24h"), MENU_DIM) == 0);
+    CHECK(row_bad(4, cells2(FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R), MENU_DIM) == 0);
+    CHECK(row_bad(5, cells2(FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R), MENU_DIM) == 0);
+    CHECK(row_bad(6, cells2(FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R), MENU_DIM) == 0);
+    CHECK(row_bad(7, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);   /* JD, 10-24: Back and Exit in light red */
+    CHECK(fb[20][125] == 0 && fb[100][125] == 0);   /* eight rows: no scrollbar, its track black */
     CHECK(op27(0, 1, 0) == MI_BAD);                  /* sub 0 is the fixture's only */
 
     /* Moves: down, a wrap up, and back. */
     m_turn(1);
-    CHECK(sub5_cursor() == 1 && row_bad(1, cells2(FONT_MONO_I_CLOCK "Clock", "24h"), MENU_LIT) == 0 &&
-          row_bad(0, cells2(FONT_MONO_I_POWER " Power", "Balanced"), MENU_DIM) == 0);
+    CHECK(sub5_cursor() == 1 && row_bad(1, cells2(FONT_MONO_I_SCREEN "Screen", "52%"), MENU_LIT) == 0 &&
+          row_bad(0, cells2(FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R), MENU_DIM) == 0);
     m_turn(-2);
-    CHECK(sub5_cursor() == 5 && row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 7 && row_bad(7, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LIT) == 0);
     m_turn(1);
     CHECK(sub5_cursor() == 0);
 
     /* Power: the choice opens on the saved option, its bullet in cell 0. */
+    m_turn(2);
     m_click();
     CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad(FONT_MONO_I_POWER " Power") == 0);
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
@@ -1706,8 +1794,8 @@ static void test_menu(void) {
     m_turn(2);   /* Lights out */
     m_click();   /* commits */
     CHECK(fk_power == 3 && fk_power_writes == 1);
-    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 0);
-    CHECK(title_bad("Saved") == 0 && row_bad(0, cells2(FONT_MONO_I_POWER " Power", "Lights out"), MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 2);
+    CHECK(title_bad("Saved") == 0 && row_bad(2, cells2(FONT_MONO_I_POWER " Power", "Lights out"), MENU_LIT) == 0);
     for (int i = 0; i < 400; i++) fw_pass(5);   /* the flash's 1.3 s */
     m_settle();
     CHECK(title_bad(FONT_MONO_WRENCH " Configuration") == 0);
@@ -1723,19 +1811,19 @@ static void test_menu(void) {
     m_click();
     m_turn(2);
     m_click();   /* Date */
-    CHECK(fk_clock == 3 && fk_clock_writes == 1 && row_bad(1, cells2(FONT_MONO_I_CLOCK "Clock", "Date"), MENU_LIT) == 0);
+    CHECK(fk_clock == 3 && fk_clock_writes == 1 && row_bad(3, cells2(FONT_MONO_I_CLOCK "Clock", "Date"), MENU_LIT) == 0);
 
     /* An external change (Fn+B) shows at once. */
     fk_power = 0;
     m_settle();
     fw_pass(5);
     m_settle();
-    CHECK(row_bad(0, cells2(FONT_MONO_I_POWER " Power", "Always on"), MENU_DIM) == 0);
+    CHECK(row_bad(2, cells2(FONT_MONO_I_POWER " Power", "Always on"), MENU_DIM) == 0);
 
     /* Help: a topic pages by 8, clamped. Shortcuts has 12 lines: its top
      * stops at 4. */
     for (int i = 0; i < 300; i++) fw_pass(5);   /* past the Saved flash */
-    m_turn(2);   /* Help (row 3) */
+    m_turn(2);   /* Help (row 5) */
     m_click();
     CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 1 && title_bad(FONT_MONO_I_HELP "Help") == 0);
     CHECK(row_bad(1, cells2("Using the menu", FONT_MONO_TRI_R), MENU_LIT) == 0);
@@ -1763,7 +1851,7 @@ static void test_menu(void) {
     m_click();   /* back to Help, Shortcuts' row */
     CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 3 && row_bad(3, cells2("Shortcuts", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_hold();    /* Back to the top: Help's row */
-    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 3);
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 5);
 
     /* About: the snapshot, formatted. */
     m_turn(1);
@@ -1791,7 +1879,7 @@ static void test_menu(void) {
     m_click();
 
     /* Diagnostics: Health hands off; a click comes back to its row. */
-    m_turn(-2);   /* Diagnostics (row 2) */
+    m_turn(-2);   /* Diagnostics (row 4) */
     m_click();
     CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1 && title_bad(FONT_MONO_I_DIAG " Diagnostics") == 0);
     m_click();
@@ -1832,9 +1920,9 @@ static void test_menu(void) {
 
     /* Exit closes; the session's kind with it. */
     m_hold();
-    m_turn(2);   /* Exit: row 5 from Diagnostics' row 2 ... */
+    m_turn(2);   /* Exit: row 7 from Diagnostics' row 4 ... */
     m_turn(1);
-    CHECK(sub5_cursor() == 5);
+    CHECK(sub5_cursor() == 7);
     CHECK(op27(2, 0, 0) == MI_OK);
     for (int i = 0; i < 50 && po_session() != SESSION_NONE; i++) fw_pass(5);
     CHECK(po_session() == SESSION_NONE);
@@ -1850,6 +1938,7 @@ static void test_menu(void) {
     CHECK(op27(11, 0, 0) == MI_OK);
     m_settle();
     /* 1. Fn+B and a click in one pass: Power opens on the NEW saved value. */
+    m_turn(2);   /* Power */
     fk_power = 1;
     m_settle();
     fk_power = 2;
@@ -1897,7 +1986,7 @@ static void test_menu(void) {
     m_hold();
     /* 4. About replaced while its old rows are still committed: Back for one
      * pass, new facts, in again, at several boundaries. */
-    m_turn(2);   /* About: row 4 from Diagnostics' row 2 */
+    m_turn(2);   /* About: row 6 from Diagnostics' row 4 */
     m_click();
     for (int k = 0; k < 6; k++) {
         CHECK(op27(2, 0, 0) == MI_OK);   /* Back */
@@ -1939,19 +2028,19 @@ static void test_menu(void) {
     m_settle();
     m_turn(-1);   /* Exit selected: lit */
     m_turn(-1);   /* About: Exit unselected, light red */
-    CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);
+    CHECK(row_bad(7, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);
     memset(rpt, 0, sizeof rpt);   /* [5] the index, [6..7] the colour: op27() takes only two args */
     rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 13;
     rpt[5] = MP_LEAVE; rpt[6] = 0x00; rpt[7] = 0xF8;   /* pure red, 0xF800 */
     CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
     m_settle();
-    CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), 0xF800u) == 0 && row_bad(4, cells2(FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    CHECK(row_bad(7, cells2(FONT_MONO_I_EXIT " Exit", ""), 0xF800u) == 0 && row_bad(6, cells2(FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R), MENU_LIT) == 0);
     CHECK(op27(13, MP_N, 0) == MI_BAD);
     rpt[5] = MP_LEAVE; rpt[6] = (uint8_t)MENU_LEAVE; rpt[7] = (uint8_t)(MENU_LEAVE >> 8);
     rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 13;
     CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
     m_settle();
-    CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);
+    CHECK(row_bad(7, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);
     /* JD, 10-24: the squared check on the saved option (the cursor's on
      * entry), Power's icon on its heading, ◀ on Back. */
     m_turn(-4);   /* Power */
@@ -1983,11 +2072,12 @@ static void test_menu(void) {
 /* At every pass of a move's repaint: a reversal, a second move, and a send
  * given up. The frame ends right, and no pass ever shows two lit rows. */
 static void top_frame_ok(int cursor) {
-    const char *rows[6][2] = {{FONT_MONO_I_POWER " Power", "Balanced"}, {FONT_MONO_I_CLOCK "Clock", "24h"},
+    const char *rows[8][2] = {{FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},
+                              {FONT_MONO_I_POWER " Power", "Balanced"}, {FONT_MONO_I_CLOCK "Clock", "24h"},
                               {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R}, {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R},
                               {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""}};
-    for (int r = 0; r < 6; r++)
-        CHECK(row_bad(r, cells2(rows[r][0], rows[r][1]), r == cursor ? MENU_LIT : r == 5 ? MENU_LEAVE : MENU_DIM) == 0);
+    for (int r = 0; r < 8; r++)
+        CHECK(row_bad(r, cells2(rows[r][0], rows[r][1]), r == cursor ? MENU_LIT : r == 7 ? MENU_LEAVE : MENU_DIM) == 0);
 }
 static void test_menu_stress(void) {
     fw_reset();
@@ -2030,7 +2120,7 @@ static void test_menu_stress(void) {
             m_settle();
             if (fault_next_fill == 0) consumed++;
             fault_next_fill = 0;
-            top_frame_ok(5);
+            top_frame_ok(7);
             m_turn(1);
             top_frame_ok(0);
         }
@@ -2039,6 +2129,330 @@ static void test_menu_stress(void) {
     CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
     if (menu_max_lit > 1) printf("menu stress: %d rows lit at once\n", menu_max_lit);
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);   /* sub 11 closes an open menu */
+    menu_watch = false;
+}
+
+
+/* --- P1b: Lighting, Screen and the edit transaction ---------------------------
+ * (plans/CONFIG-MENU-P1-DESIGN.md, "P1b"). Screen ids are 16 + the node:
+ * Lighting 40, the Screen's editor 41, Effect 42, Brightness 43, Hue 44,
+ * Saturation 45, Speed or Second color 46, Lights 47. */
+enum { SC_TOP = 17, SC_LIGHT = 40, SC_SCREEN, SC_EFFECT, SC_BRIGHT, SC_HUE, SC_SAT, SC_SPEED, SC_LIGHTS };
+
+/* The big value: the string centred in 10 cells at x 14, y (each cell is a
+ * big glyph, painted in big_color by the fake DMA). */
+static int big_bad(uint16_t y, const char *s) {
+    char   cells[11];
+    size_t n = strlen(s), at = (10 - n) / 2;
+    memset(cells, ' ', 10);
+    cells[10] = '\0';
+    memcpy(cells + at, s, n);
+    int bad = 0;
+    for (int c = 0; c < 10; c++)
+        if (fb[y][14 + 10 * c] != big_color(cells[c]) || fb[y + 22][14 + 10 * c + 9] != big_color(cells[c])) bad++;
+    return bad;
+}
+/* The bar for a value of max: the outline grey, filled white below the edge. */
+static int bar_bad(unsigned v, unsigned max) {
+    unsigned e   = 14u + (v * 100u + max / 2u) / max;
+    int      bad = 0;
+    for (unsigned x = 13; x <= 114; x++)
+        for (unsigned y = 51; y <= 60; y++) {
+            uint16_t want = (x == 13 || x == 114 || y == 51 || y == 60) ? MENU_GREY : x < e ? MENU_WHITE : 0;
+            if (fb[y][x] != want) bad++;
+        }
+    return bad;
+}
+/* The hue envelope for a marker at hue a: the strip, the white line, the
+ * triangle in the lit colour, black elsewhere (y 20-40, x 0-127). */
+static uint16_t t_hue565(uint8_t h) {
+    uint8_t region = (uint8_t)(h / 43u), rem = (uint8_t)((h - region * 43u) * 6u), r, g, b;
+    switch (region) {
+        case 0: r = 255; g = rem; b = 0; break;
+        case 1: r = (uint8_t)(255u - rem); g = 255; b = 0; break;
+        case 2: r = 0; g = 255; b = rem; break;
+        case 3: r = 0; g = (uint8_t)(255u - rem); b = 255; break;
+        case 4: r = rem; g = 0; b = 255; break;
+        default: r = 255; g = 0; b = (uint8_t)(255u - rem); break;
+    }
+    return (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
+}
+static int env_bad(uint8_t a) {
+    int mx = 4 + (a * 120 + 128) / 256, bad = 0;
+    for (int y = 20; y <= 40; y++)
+        for (int x = 0; x < 128; x++) {
+            int      d = x - mx;
+            uint16_t want;
+            if (y >= 38) want = (d < 0 ? -d : d) <= 2 - (y - 38) ? MENU_LIT : 0;
+            else if (d == 0) want = MENU_WHITE;
+            else if (y >= 22 && y <= 35 && x >= 4 && x <= 123) want = t_hue565((uint8_t)(((x - 4) * 256 + 60) / 120));
+            else want = 0;
+            if (fb[y][x] != want) bad++;
+        }
+    return bad;
+}
+static void m_open_top(void) {
+    if (po_session() != SESSION_NONE) CHECK(op27(11, 0, 0) == MI_OK);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_OPEN);
+    m_settle();
+}
+
+static void test_p1b(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_rgb = (env_rgb_t){2, 240, 215, 86, 127, 1, 0xFF};
+    fk_rgb_ee = fk_rgb; fk_rgb_dirty = false; fk_rgb_noop = 0;
+    fk_lcd = fk_lcd_saved = 12; fk_lcd_saves = 0;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+
+    /* The key classification: RM_* on release, UG_* on press, nothing else. */
+    CHECK(me_key_domain(0x7849, false) == ME_DOM_RGB && me_key_domain(0x7849, true) == 0);
+    CHECK(me_key_domain(0x784E, false) == ME_DOM_RGB && me_key_domain(0x7840, false) == ME_DOM_RGB);   /* flags, on */
+    CHECK(me_key_domain(0x7827, true) == ME_DOM_RGB && me_key_domain(0x7827, false) == 0);
+    CHECK(me_key_domain(0x7820, true) == ME_DOM_RGB && me_key_domain(0x782A, true) == ME_DOM_RGB);
+    CHECK(me_key_domain(0x782B, true) == 0 && me_key_domain(0x782B, false) == 0 && me_key_domain(0x784F, false) == 0);
+
+    /* Lighting: its rows, the live values as the readout writes them. */
+    m_open_top();
+    m_click();
+    CHECK(sub5_screen() == SC_LIGHT && sub5_cursor() == 1 && title_bad(FONT_MONO_I_LIGHT " Lighting") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
+    CHECK(row_bad(1, cells2("Effect", "Alphas/Mods"), MENU_LIT) == 0);
+    CHECK(row_bad(2, cells2("Brightness", "34%"), MENU_DIM) == 0);   /* 86 */
+    CHECK(row_bad(3, cells2("Hue", "337"), MENU_DIM) == 0);          /* 240 */
+    CHECK(row_bad(4, cells2("Saturation", "84%"), MENU_DIM) == 0);   /* 215 */
+    CHECK(row_bad(5, cells2("Second color", "+178"), MENU_DIM) == 0);   /* Alphas/Mods: speed 127 */
+    CHECK(row_bad(6, cells2("Lights", "On"), MENU_DIM) == 0);
+    CHECK(row_bad(7, "", 0) == 0);
+
+    /* Brightness: the range editor. */
+    m_turn(1);
+    m_click();
+    CHECK(sub5_screen() == SC_BRIGHT && sub5_cursor() == 86 && me_active() && me_field() == ME_VAL);
+    CHECK(title_bad(FONT_MONO_I_LIGHT " Brightness") == 0 && big_bad(22, "34%") == 0 && bar_bad(86, 255) == 0);
+    CHECK(text_slot_bad(72, "Turn: change", MENU_WHITE, false) == 0 && text_slot_bad(100, "Hold: cancel", MENU_WHITE, false) == 0);
+    for (int i = 0; i < 40; i++) fw_pass(5);   /* 200 ms: the next turn isn't fast */
+    m_turn(1);
+    CHECK(fk_rgb.v == 91 && !fk_rgb_dirty && big_bad(22, "36%") == 0 && bar_bad(91, 255) == 0);
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[6] == 1 && rpt[7] == ME_VAL && rpt[8] == 91 && rpt[9] == 86);   /* sub 14: the edit, read */
+    CHECK(op27(1, 2, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* two detents in one input: fast */
+    m_settle();
+    CHECK(fk_rgb.v == 131 && big_bad(22, "51%") == 0);
+    /* One detent within 90 ms of the last: fast; after a pause, not. */
+    CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
+    CHECK(fk_rgb.v == 151);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
+    CHECK(fk_rgb.v == 156);
+    CHECK(op27(1, 16, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* clamped (sub 1: 16 at most) */
+    m_settle();
+    CHECK(fk_rgb.v == 255 && big_bad(22, "100%") == 0 && bar_bad(255, 255) == 0);
+    /* The flush holds while the edit is open, even for a write already due. */
+    fk_rgb_dirty = true;
+    fk_flush();
+    CHECK(fk_rgb_dirty && fk_rgb_ee.v == 86);
+    m_hold();   /* cancels: the old value, back to Lighting on its row */
+    CHECK(fk_rgb.v == 86 && !me_active() && sub5_screen() == SC_LIGHT && sub5_cursor() == 2);
+    CHECK(title_bad("Cancelled") == 0 && row_bad(2, cells2("Brightness", "34%"), MENU_LIT) == 0);
+    fk_flush();   /* the earlier write goes now, with the restored values */
+    CHECK(!fk_rgb_dirty && fk_rgb_ee.v == 86);
+    /* Save. */
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    m_click();
+    CHECK(fk_rgb.v == 91 && fk_rgb_dirty && !me_active() && title_bad("Saved") == 0);
+    CHECK(sub5_screen() == SC_LIGHT && row_bad(2, cells2("Brightness", "36%"), MENU_LIT) == 0);
+    fk_flush();
+    CHECK(fk_rgb_ee.v == 91);
+
+    /* The lights off: a preview, a save and a cancel still reach the values,
+     * and the lights stay off (QMK's setters return early while off). */
+    fk_rgb.enable = 0;
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    CHECK(fk_rgb.v == 96 && fk_rgb.enable == 0 && fk_rgb_noop == 0);
+    m_hold();
+    CHECK(fk_rgb.v == 91 && fk_rgb.enable == 0 && fk_rgb_noop == 0);
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(-1);
+    m_click();
+    CHECK(fk_rgb.v == 86 && fk_rgb.enable == 0 && fk_rgb_dirty && fk_rgb_noop == 0);
+    fk_flush();
+    CHECK(fk_rgb_ee.v == 86 && fk_rgb_ee.enable == 0);
+    fk_rgb.enable = 1;
+
+    /* An external write mid-edit (an RM key, VIA): rolled back at once, then
+     * the menu pops with "Cancelled"; an LCD write doesn't touch an RGB edit. */
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    CHECK(fk_rgb.v == 96);
+    menu_edit_external(ME_DOM_LCD);
+    m_settle();
+    CHECK(me_active() && fk_rgb.v == 96 && sub5_screen() == SC_BRIGHT);
+    uint16_t ext0 = me_external_count();
+    menu_edit_external(ME_DOM_RGB);
+    CHECK(fk_rgb.v == 86 && !me_active() && me_external_count() == ext0 + 1);
+    fk_rgb.v = 100;   /* the writer applies */
+    fw_pass(5);
+    m_settle();
+    CHECK(sub5_screen() == SC_LIGHT && title_bad("Cancelled") == 0 && row_bad(2, cells2("Brightness", "39%"), MENU_LIT) == 0);
+    /* With no edit open, an external write is a new target: the row repaints. */
+    for (int i = 0; i < 300; i++) fw_pass(5);
+    m_settle();
+    fk_rgb.v = 86;
+    menu_edit_external(ME_DOM_RGB);
+    fw_pass(5);
+    m_settle();
+    CHECK(me_external_count() == ext0 + 1 && row_bad(2, cells2("Brightness", "34%"), MENU_LIT) == 0);
+
+    /* Hue: the hue editor, the marker across band edges, the wrap. */
+    fk_rgb.h = 8;   /* the marker at x 8: its triangle across bands 0 and 1 */
+    m_turn(1);
+    m_click();
+    CHECK(sub5_screen() == SC_HUE && title_bad(FONT_MONO_I_LIGHT " Hue") == 0 && env_bad(8) == 0 && big_bad(44, "11") == 0);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    CHECK(fk_rgb.h == 20 && env_bad(20) == 0 && big_bad(44, "28") == 0);   /* the old triangle gone from band 0 */
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(-7);   /* fast, through 0: 20 - 84 wraps to 192 */
+    CHECK(fk_rgb.h == 192 && env_bad(192) == 0 && big_bad(44, "270") == 0);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(-1);   /* a reversal */
+    CHECK(fk_rgb.h == 189 && env_bad(189) == 0);
+    m_hold();
+    CHECK(fk_rgb.h == 8 && sub5_screen() == SC_LIGHT);
+    for (int i = 0; i < 300; i++) fw_pass(5);   /* past the flash, which carries over to the next screen */
+
+    /* Second color: Alphas/Mods' speed in the hue editor, its marker at hue +
+     * speed; with another effect it's Speed, a range. */
+    m_turn(2);
+    m_click();
+    CHECK(sub5_screen() == SC_SPEED && title_bad(FONT_MONO_I_LIGHT " Second color") == 0);
+    CHECK(env_bad((uint8_t)(8 + 127)) == 0 && big_bad(44, "+178") == 0);
+    m_hold();
+    for (int i = 0; i < 300; i++) fw_pass(5);
+    fk_rgb.mode = 1;   /* Solid */
+    fw_pass(5);
+    m_settle();
+    menu_edit_external(ME_DOM_RGB);   /* (the writer's hook; the list repaints its label) */
+    fw_pass(5);
+    m_settle();
+    CHECK(row_bad(5, cells2("Speed", "50%"), MENU_LIT) == 0 && row_bad(1, cells2("Effect", "Solid"), MENU_DIM) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_SPEED && title_bad(FONT_MONO_I_LIGHT " Speed") == 0 && big_bad(22, "50%") == 0 && bar_bad(127, 255) == 0);
+    m_hold();
+    fk_rgb.mode = 2;
+    menu_edit_external(ME_DOM_RGB);
+    for (int i = 0; i < 300; i++) fw_pass(5);
+    m_settle();
+
+    /* Effect: a previewing choice, two pages; the check on the saved effect. */
+    m_turn(-4);
+    m_click();
+    CHECK(sub5_screen() == SC_EFFECT && sub5_cursor() == 2 && title_bad(FONT_MONO_I_LIGHT " Effect") == 0);
+    CHECK(row_bad(2, FONT_MONO_CHECK_BOX "Alphas/Mods", MENU_LIT) == 0 && row_bad(1, "  Solid", MENU_DIM) == 0);
+    CHECK(fb[20][125] == MENU_WHITE);   /* ten rows: a scrollbar */
+    m_turn(1);
+    CHECK(fk_rgb.mode == 3 && !fk_rgb_dirty && row_bad(2, FONT_MONO_CHECK_BOX "Alphas/Mods", MENU_DIM) == 0);
+    m_turn(-3);   /* Back: the old effect */
+    CHECK(sub5_cursor() == 0 && fk_rgb.mode == 2);
+    m_turn(-1);   /* wraps to Drift, page two */
+    CHECK(sub5_cursor() == 9 && fk_rgb.mode == 9 && row_bad(1, "  Drift", MENU_LIT) == 0);
+    m_click();
+    CHECK(fk_rgb.mode == 9 && fk_rgb_dirty && sub5_screen() == SC_LIGHT && title_bad("Saved") == 0);
+    CHECK(row_bad(1, cells2("Effect", "Drift"), MENU_LIT) == 0 && row_bad(5, cells2("Speed", "50%"), MENU_DIM) == 0);
+    fk_flush();
+    /* Its cancel with the lights off. */
+    fk_rgb.enable = 0;
+    m_click();
+    m_turn(2);   /* from Drift: past Back to Solid */
+    CHECK(fk_rgb.mode == 1 && fk_rgb.enable == 0 && fk_rgb_noop == 0);
+    m_hold();
+    CHECK(fk_rgb.mode == 9 && fk_rgb.enable == 0 && sub5_screen() == SC_LIGHT && title_bad("Cancelled") == 0);
+    fk_rgb.enable = 1;
+
+    /* Lights: Off, On, the saved one checked; Off saved explicitly. */
+    m_turn(5);
+    m_click();
+    CHECK(sub5_screen() == SC_LIGHTS && sub5_cursor() == 2 && row_bad(2, FONT_MONO_CHECK_BOX "On", MENU_LIT) == 0);
+    m_turn(-1);
+    CHECK(fk_rgb.enable == 0 && row_bad(1, "  Off", MENU_LIT) == 0);
+    m_turn(-1);
+    CHECK(fk_rgb.enable == 1);   /* Back: the old state */
+    m_turn(1);
+    fk_rgb_dirty = false;
+    m_click();
+    CHECK(fk_rgb.enable == 0 && fk_rgb_dirty && title_bad("Saved") == 0 && row_bad(6, cells2("Lights", "Off"), MENU_LIT) == 0);
+    fk_flush();
+    CHECK(fk_rgb_ee.enable == 0);
+    fk_rgb.enable = 1;
+    m_hold();   /* to the top */
+
+    /* Screen: from the top level; 0-23; the requested level previewed; saved. */
+    for (int i = 0; i < 300; i++) fw_pass(5);
+    m_settle();
+    m_turn(1);   /* Screen (row 1) */
+    m_click();
+    CHECK(sub5_screen() == SC_SCREEN && sub5_cursor() == 12 && title_bad(FONT_MONO_I_SCREEN "Screen") == 0);
+    CHECK(big_bad(22, "52%") == 0 && bar_bad(12, 23) == 0);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    CHECK(op27(1, 2, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* never fast: a step of 1 */
+    m_settle();
+    CHECK(fk_lcd == 14 && fk_lcd_saved == 12 && big_bad(22, "61%") == 0 && bar_bad(14, 23) == 0);
+    menu_edit_external(ME_DOM_RGB);   /* an RGB write: not the Screen's domain */
+    fw_pass(5);
+    CHECK(me_active() && fk_lcd == 14);
+    m_turn(-16);
+    CHECK(fk_lcd == 0 && big_bad(22, "Off") == 0);
+    m_click();
+    CHECK(fk_lcd == 0 && fk_lcd_saved == 0 && fk_lcd_saves == 1 && sub5_screen() == SC_TOP && sub5_cursor() == 1);
+    CHECK(row_bad(1, cells2(FONT_MONO_I_SCREEN "Screen", "Off"), MENU_LIT) == 0);
+    m_click();
+    m_turn(12);
+    menu_edit_external(ME_DOM_LCD);   /* SCR_UP mid-edit: back to the saved 0 */
+    CHECK(fk_lcd == 0 && !me_active());
+    fw_pass(5);
+    m_settle();
+    CHECK(sub5_screen() == SC_TOP && title_bad("Cancelled") == 0);
+
+    /* The close rolls an open edit back (panel_owner's do_close). */
+    m_turn(-1);   /* Lighting */
+    m_click();
+    m_turn(1);   /* Brightness */
+    m_click();
+    m_turn(3);
+    CHECK(me_active() && fk_rgb.v != 86);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    CHECK(fk_rgb.v == 86 && !me_active() && po_owner() != PANEL_MENU);
+
+    /* The backstop: an open edit outlasts 24 s idle, not 180 s. */
+    m_open_top();
+    m_click();
+    m_turn(1);
+    m_click();
+    m_turn(1);
+    CHECK(me_active() && fk_rgb.v == 91);
+    fw_pass(MI_IDLE_MS + 10);
+    fw_pass(5);
+    CHECK(po_session() == SESSION_OPEN && me_active());
+    fw_pass(MI_BACKSTOP_MS);
+    fw_pass(5);
+    CHECK(po_session() == SESSION_NONE && !me_active() && fk_rgb.v == 86);
+
+    CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
+    CHECK(po_invariant_fail() == 0);
     menu_watch = false;
 }
 
@@ -2097,7 +2511,7 @@ static void test_menu_enable(void) {
     knob(true);
     m_settle();
     CHECK(po_owner() == PANEL_MENU && sub5_screen() == 16 + 1 && sub5_cursor() == 0);
-    m_turn(2);
+    m_turn(4);   /* Diagnostics (P1b: Lighting and Screen above it) */
     m_click();
     CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1);
     m_turn(1);
@@ -2150,6 +2564,7 @@ int main(int argc, char **argv) {
     test_ops();
     test_menu();
     test_menu_stress();
+    test_p1b();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

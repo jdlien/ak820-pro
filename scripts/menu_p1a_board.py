@@ -33,6 +33,9 @@ from menu_s1_gate import decode_meas  # noqa: E402
 # menu.c's nodes: sub 5 byte 14 is 16 + the node showing.
 TOP, POWER, CLOCK, DIAG, HELP, ABOUT, EXIT = 1, 2, 3, 4, 5, 6, 7
 RESET, TOPIC0 = 10, 11
+LIGHT, SCREEN, EFFECT, BRIGHT, HUE = 24, 25, 26, 27, 28   # P1b's nodes
+# The top level since P1b: Lighting, Screen, Power, Clock, Diagnostics, Help, About, Exit.
+R_POWER, R_CLOCK, R_DIAG, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7
 SCR = lambda n: 16 + n  # noqa: E731
 SETTLE_S = 1.0
 
@@ -118,7 +121,7 @@ def main():
         to_dash(h)
         # 1. Reset counters, outside the interval.
         step(h, 11, b"", "open (reset pass)", SCR(TOP), 0)
-        turn(h, 2, "to Diagnostics", SCR(TOP), 2)
+        turn(h, R_DIAG, "to Diagnostics", SCR(TOP), R_DIAG)
         click(h, "Diagnostics", SCR(DIAG), 1)
         turn(h, 2, "to Reset counters", SCR(DIAG), 3)
         click(h, "Reset counters", SCR(RESET), 0)
@@ -135,38 +138,39 @@ def main():
         xfer(h, 10, bytes([1]))
         meas_on["on"] = True
         step(h, 11, b"", "open", SCR(TOP), 0)
-        for i in range(1, 6):
+        for i in range(1, R_EXIT + 1):
             turn(h, 1, f"down {i}", SCR(TOP), i)
         turn(h, 1, "wrap down", SCR(TOP), 0)
-        turn(h, -1, "wrap up", SCR(TOP), 5)
+        turn(h, -1, "wrap up", SCR(TOP), R_EXIT)
         turn(h, 1, "back to the top", SCR(TOP), 0)
 
         # Power: commit the next mode, then the original again.
+        turn(h, R_POWER, "to Power", SCR(TOP), R_POWER)
         s = click(h, "Power", SCR(POWER))
         orig_p = s["cursor"]
         nxt = 1 + (orig_p % 4)
         turn(h, nxt - orig_p, "to another mode", SCR(POWER), nxt)
-        click(h, "commit it", SCR(TOP), 0)
+        click(h, "commit it", SCR(TOP), R_POWER)
         click(h, "Power again", SCR(POWER), nxt)
         turn(h, orig_p - nxt, "to the original", SCR(POWER), orig_p)
-        click(h, "commit the original", SCR(TOP), 0)
+        click(h, "commit the original", SCR(TOP), R_POWER)
 
         # Clock: the same, then a cancel.
-        turn(h, 1, "to Clock", SCR(TOP), 1)
+        turn(h, 1, "to Clock", SCR(TOP), R_CLOCK)
         s = click(h, "Clock", SCR(CLOCK))
         orig_c = s["cursor"]
         nxt = 1 + (orig_c % 4)
         turn(h, nxt - orig_c, "to another clock", SCR(CLOCK), nxt)
-        click(h, "commit it", SCR(TOP), 1)
+        click(h, "commit it", SCR(TOP), R_CLOCK)
         click(h, "Clock again", SCR(CLOCK), nxt)
         turn(h, orig_c - nxt, "to the original", SCR(CLOCK), orig_c)
-        click(h, "commit the original", SCR(TOP), 1)
+        click(h, "commit the original", SCR(TOP), R_CLOCK)
         click(h, "Clock to cancel", SCR(CLOCK), orig_c)
         turn(h, 1, "move", SCR(CLOCK))
-        hold(h, "cancelled", SCR(TOP), 1)
+        hold(h, "cancelled", SCR(TOP), R_CLOCK)
 
         # Help: each topic, paged to its end and back.
-        turn(h, 2, "to Help", SCR(TOP), 3)
+        turn(h, 2, "to Help", SCR(TOP), R_HELP)
         click(h, "Help", SCR(HELP), 1)
         for t in range(4):
             if t:
@@ -175,22 +179,58 @@ def main():
             turn(h, 1, f"topic {t} page 2", SCR(TOPIC0 + t))
             turn(h, -1, f"topic {t} page 1", SCR(TOPIC0 + t), 0)
             click(h, f"topic {t} back", SCR(HELP), 1 + t)
-        hold(h, "Help back", SCR(TOP), 3)
+        hold(h, "Help back", SCR(TOP), R_HELP)
 
         # About.
-        turn(h, 1, "to About", SCR(TOP), 4)
+        turn(h, 1, "to About", SCR(TOP), R_ABOUT)
         click(h, "About", SCR(ABOUT), 0)
-        click(h, "About back", SCR(TOP), 4)
+        click(h, "About back", SCR(TOP), R_ABOUT)
 
         # Diagnostics: Health and Camera, handed off and back.
-        turn(h, -2, "to Diagnostics", SCR(TOP), 2)
+        turn(h, -2, "to Diagnostics", SCR(TOP), R_DIAG)
         click(h, "Diagnostics", SCR(DIAG), 1)
         click(h, "Health page", owner="debug")
         click(h, "back from Health", SCR(DIAG), 1, owner="menu")
         turn(h, 1, "to Camera", SCR(DIAG), 2)
         click(h, "Camera page", owner="debug")
         click(h, "back from Camera", SCR(DIAG), 2, owner="menu")
-        hold(h, "Diagnostics back", SCR(TOP), 2)
+        hold(h, "Diagnostics back", SCR(TOP), R_DIAG)
+
+        # P1b: Lighting's list, a choice and the editors, each cancelled (the
+        # board keeps its settings); sub 14 says the edit closed, restored.
+        def edit_state():
+            r = xfer(h, 14)
+            return r[6], r[8], r[9]
+
+        turn(h, -R_DIAG, "to Lighting", SCR(TOP), 0)
+        click(h, "Lighting", SCR(LIGHT), 1)
+        click(h, "Effect", SCR(EFFECT))
+        _, _, saved = edit_state()
+        turn(h, 1, "preview the next effect", SCR(EFFECT))
+        hold(h, "Effect cancelled", SCR(LIGHT), 1)
+        check(edit_state()[0] == 0, "Effect: the edit still open")
+        turn(h, 1, "to Brightness", SCR(LIGHT), 2)
+        click(h, "Brightness", SCR(BRIGHT))
+        _, v0, _ = edit_state()
+        turn(h, 1, "brightness up", SCR(BRIGHT))
+        turn(h, -2, "brightness down", SCR(BRIGHT))
+        hold(h, "Brightness cancelled", SCR(LIGHT), 2)
+        check(edit_state()[0] == 0, "Brightness: the edit still open")
+        click(h, "Brightness again", SCR(BRIGHT))
+        check(edit_state()[1] == v0, f"Brightness: {edit_state()[1]} after the cancel, not {v0}")
+        hold(h, "Brightness cancelled again", SCR(LIGHT), 2)
+        turn(h, 1, "to Hue", SCR(LIGHT), 3)
+        click(h, "Hue", SCR(HUE))
+        for i in range(4):
+            turn(h, 1, f"hue up {i + 1}", SCR(HUE))
+        turn(h, -6, "hue down, fast", SCR(HUE))
+        hold(h, "Hue cancelled", SCR(LIGHT), 3)
+        hold(h, "Lighting back", SCR(TOP), 0)
+        turn(h, 1, "to Screen", SCR(TOP), 1)
+        click(h, "Screen", SCR(SCREEN))
+        turn(h, 1, "screen up", SCR(SCREEN))
+        hold(h, "Screen cancelled", SCR(TOP), 1)
+        check(edit_state()[0] == 0, "Screen: the edit still open")
 
         # The hint: 5 s idle on the top level (the session stays open: 24 s).
         time.sleep(5.0)
