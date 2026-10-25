@@ -55,8 +55,11 @@ static int detent(int d) {
     step(d);
     int mid = (up - u) + (down - w);
     step(d);
-    int total = (up - u) + (down - w);
-    CHECK(mid == 0 || total == 1, "an event mid-detent then another");
+#ifdef ENCODER_REST_PINS_EQUAL
+    CHECK(mid == 0, "an event mid-detent (codex: the check let one through)");
+#else
+    (void)mid;   /* begun off, without the rule, events come mid-detent: part of the symptom */
+#endif
     return d > 0 ? up - u : down - w;
 }
 static void boot(int at, int read_as) {   /* the knob at `at`; the init reads `read_as` */

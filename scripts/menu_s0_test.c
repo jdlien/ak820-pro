@@ -1421,7 +1421,9 @@ void env_bt_pair_stop(void) {
     if ((fk_about.link & 3u) == ENV_LINK_BT && (st == ENV_LINK_PAIRING || (fk_pf & ENV_PF_RETRYING)))
         fk_select((fk_about.link >> 2) & 3u);
 }
-void env_bt_pair_cancel(void) {
+uint8_t fk_knob = 3;   /* the knob at rest, 11 */
+uint8_t env_knob_state(void) { return fk_knob; }
+void    env_bt_pair_cancel(void) {
     fk_bt_cancels++;
     fk_pf &= (uint8_t)~ENV_PF_WAITING;
 }
@@ -3308,7 +3310,7 @@ static void test_p3(void) {
     /* Op 27: sub 14's link and facts; sub 16's stand-in and its checks. */
     fk_about.link = fk_link_of(1, ENV_LINK_LINKING);
     fk_pf         = ENV_PF_RETRYING;
-    CHECK(op27(14, 0, 0) == MI_OK && rpt[15] == fk_about.link && rpt[16] == ENV_PF_RETRYING);
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[15] == fk_about.link && rpt[16] == ENV_PF_RETRYING && rpt[17] == 3);
     CHECK(op27(16, fk_link_of(2, ENV_LINK_PAIRING), ENV_PF_CONFIRMED) == MI_OK);
     CHECK(op27(14, 0, 0) == MI_OK && rpt[15] == fk_link_of(2, ENV_LINK_PAIRING) && rpt[16] == ENV_PF_CONFIRMED);
     static const int bad_links[4] = {3, 1 | (3 << 2), 1 | (5 << 4), 0x81};

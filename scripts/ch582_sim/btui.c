@@ -177,9 +177,11 @@ static void pair_bounce(void) {
 }
 
 /* Codex on P3's code, 3: at the bounce's end the target's select goes out
- * while a bounce-slot 5B 31 is still on its way; before the select's ACK it
- * isn't the target's: not confirmed, not acted on, the pair still waiting. */
-static void bounce_boundary(void) {
+ * while a bounce-slot 5B 31 is still on its way. A 5B names no slot, so the
+ * driver takes it as the target's; the pair must neither be dropped for it
+ * nor go to the bounce slot: it is sent, and only behind the target's select,
+ * whose ACK is held here so nothing else can be in between. */
+static void bounce_stale(void) {
     boot_linked(0x31);
     advertising();
     int from = wr_n;
@@ -187,21 +189,15 @@ static void bounce_boundary(void) {
     run(600);
     auto_ack = false;
     for (int i = 0; i < 300 && a6(0x33, from) == 0; i++) run(1);
-    CHECK(a6(0x33, from) == 1, "the target's select written");
+    CHECK(a6(0x33, from) == 1 && a6(PAIR, from) == 0, "the target's select written, no pair yet");
     uint8_t f[3] = {0x5B, 0x31, 0x8C};
     rx_feed(f, 3);
-    run(3);
-    CHECK(!ch582_pair_confirmed() && ch582_select_state() == CH582_SEL_PENDING && bt_ui_pair_waiting(),
-          "the bounce slot's advertising: not the target's");
-    acked = wr_n;   /* the held frames: ACK the select's (the latest) */
+    acked = wr_n;   /* then the select's ACK, and the module ACKs as usual */
     rx_ack();
     auto_ack = true;
     run(150);
-    CHECK(bt_ui_pair_waiting() && a6(PAIR, from) == 0, "still waiting: no 'already advertising'");
-    frame(0x5B, 0x33);
-    frame(0x5B, 0x36);
-    run(110);
-    CHECK(a6(PAIR, from) == 1 && a6_at(PAIR, from) > a6_at(0x33, from), "the pair, after the target's own answer");
+    CHECK(a6(PAIR, from) >= 1 && a6_at(PAIR, from) > a6_at(0x33, from), "the pair, behind the target's select");
+    CHECK(a6(0x31, from) == 1, "and no other select after the bounce's");
 }
 
 /* Codex on P3's code, 4: the bounce slot linked up, then the target's select
@@ -426,8 +422,9 @@ static void stop_cases(void) {
     (void)from;
 }
 
-/* Already advertising: a pair sends nothing; and a slot that starts
- * advertising by itself before the pair fires is left as it is. */
+/* Already advertising: a pair sends nothing; but a slot that reads
+ * advertising only by the time the pair fires gets it (the 5B may be the old
+ * slot's: codex on P3's code). */
 static void already_advertising(void) {
     boot_linked(0x31);
     advertising();
@@ -441,7 +438,7 @@ static void already_advertising(void) {
     run(30);
     frame(0x5B, 0x31);
     run(200);
-    CHECK(!bt_ui_pair_waiting() && a6(PAIR, from) == 0, "advertising by itself: no pair");
+    CHECK(!bt_ui_pair_waiting() && a6(PAIR, from) == 1, "advertising by the fire: the pair, once: %d", a6(PAIR, from));
 }
 
 int main(int argc, char **argv) {
@@ -453,7 +450,7 @@ int main(int argc, char **argv) {
         {"pair_lost_select", pair_lost_select}, {"pair_superseded", pair_superseded},
         {"pair_lost_confirm", pair_lost_confirm}, {"pair_promotion", pair_promotion},
         {"stop_cases", stop_cases}, {"already_advertising", already_advertising},
-        {"bounce_boundary", bounce_boundary}, {"bounce_lost", bounce_lost}, {"last_try_window", last_try_window},
+        {"bounce_stale", bounce_stale}, {"bounce_lost", bounce_lost}, {"last_try_window", last_try_window},
         {"direct_36", direct_36}, {"boot_retry_pending", boot_retry_pending}, {"hold_superseded", hold_superseded},
     };
     for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++)

@@ -141,12 +141,9 @@ This file is the thread; read it first after a context loss. Updated
        charging steps every tick now). Keeps the sigma-delta; no flicker
        trade-off. (A hybrid with period PWM above ~8 ticks was considered
        and dropped: it trades flicker for CPU.)
-     - **Owed:** JD's look at the lock lights and the Screen's 1% steps; his
-       power cycle (the saved levels across a reboot); codex's test gaps
-       (the review files' dispositions: the frozen-link test, `kbee.c`'s
-       pending write, the Diagnostics/wake rollbacks with an indicator edit,
-       the sim's saturation, every starting byte, `mutants.py`'s scale, the
-       legacy replay's ticks).
+     - **JD's power cycle passed (10-25 ~08:30):** "settings gets saved and
+       persists after I unplug" (the lock lights). Codex's test gaps are in
+       (`fcf4552`). **Still owed:** JD's look at the Screen's 1% steps.
      - **At the merge:** `power_model.py` (parses `bkl_duty`, 24),
        `current_map.py` (sweeps 0-23), `gauge_replay.py` (reads `bkl`): the
        session on Buzz's tools; CLAUDE.md's core-file list and docs.
@@ -160,10 +157,38 @@ This file is the thread; read it first after a context loss. Updated
      on BT the slots with the current one's word, and Pair a device with a
      live Pairing page. Host tests pass (`test_p3`); `scripts/ch582_sim/`
      runs `bt_ui.c` and the driver verbatim (`btui.c`, twelve cases, two
-     mutants caught). Dev gap 136 B. **Next:** codex's code review, the
-     flash, the board pass on op 27 sub 16's stand-in (the slider is on the
-     cable), then JD: the slider to BT, a slot switch, a pairing on a free
-     slot.
+     mutants caught). Dev gap 136 B.
+     - **Codex's code review** (`review-codex-p3-code-2026-10-25.md`): five
+       must-fixes, all taken in `47567935` (a key's hold superseded by menu
+       actions; "Already" superseding a pending pair; the select's ACK as
+       the boundary, `select_unsent`, **assuming the module ACKs before it
+       answers: to check on the wire with the RX tap, slider on BT**; the
+       bounce's end resetting the link; the last tries' windows). Six more
+       `btui.c` cases, each with a mutant caught (18 cases).
+     - **The knob (JD, 10-25 ~08:20):** "the first click in any direction
+       doesn't move ... If I reverse direction, the same thing", gone after
+       his reboot. Cause: the knob rests where its pins agree (00, 11), so
+       the count's parity at rest is fixed at init; pins read mid-change
+       there leave it half a detent off for the session. Fix `44d11c28`:
+       `ENCODER_REST_PINS_EQUAL` (a local change to
+       `drivers/encoder/encoder_quadrature.c`, CLAUDE.md's core-file list at
+       the merge) zeroes the count at every rest. `scripts/encoder_sim/`
+       runs the decoder verbatim: the rule passes every case; without it, a
+       half-detent start shows exactly JD's symptom. **The rests (00/11)
+       are inferred, not measured:** op 27 sub 14 byte 17 reads the
+       decoder's state; read it right after the flash with the knob at rest
+       (0 or 3 confirms; 1 or 2 means reflash without the rule: with 01/10
+       rests a reversal's first detent is lost and turns fire mid-detent).
+     - **Codex's verify** (`review-codex-p3-verify-2026-10-25.md`): two more
+       holes in the ACK boundary, and the boundary itself could restart a
+       legitimate attempt. **Backed out** (`a7c19f85`): the driver's rules are
+       `a9f750ff`'s; the wrong-slot safety comes from order (never during a
+       bounce or select retry; the pair queues behind the target's select);
+       the pair is sent even if the link already reads advertising.
+     - **Next:** codex's second verify, the flash, the knob's rest read, the
+       board pass on op 27 sub 16's stand-in (the slider is on the cable),
+       then JD: the slider to BT, a slot switch, a pairing on a free slot;
+       the knob by hand.
   4. The Clock options (the design doc's "JD's decisions"), with half-row
      slots for the live examples.
   5. JD's text edits; then P1c and P1d; P4 (Battery).
