@@ -151,13 +151,15 @@ def standin(h, link, pf=0):
 
 
 def connection(h):
-    """P3: the real page off BT (the board's slider is on the cable), then,
-    on the stand-in, the slot list in each state, a click on each slot, the
-    pair list, the Pairing page in each phase, a stop, and the screens
-    following the slider. The stand-in is cleared at the end, and by main()'s
-    finally."""
-    live = xfer(h, 14)[15]
-    check(live & 3 != L_BT, f"Connection: the live link {live:#x} is on BT (the pass expects the cable or 2.4G)")
+    """P3, all on op 27 sub 16's stand-in, whatever the slider says (its
+    calls go nowhere, so a real link is never touched; codex: with the
+    slider on BT the real screens' clicks would re-select): the page off BT,
+    the slot list in each state, a click on each slot, Pair a device (the
+    current slot's), the Pairing page in each phase, a stop, and the screens
+    following the slider. The stand-in is cleared at the end, and by
+    main()'s finally."""
+    standin(h, L_USB)
+    settle(h, "the stand-in off BT")
     click(h, "Connection, off BT", SCR(CONNINFO), 0)
     click(h, "Connection back", SCR(TOP), R_CONN)
     standin(h, LINK(1, S_CONNECTED))
