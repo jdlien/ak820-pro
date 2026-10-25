@@ -1764,10 +1764,17 @@ static int frames(const char *dir, int n) {
 /* A text slot at y: the cells from x 4 in fg on black, x 0-3 and 124 black
  * but for the cursor's columns 0-2 in x 0-2, in MENU_CURSOR, when `cursor`. */
 /* P3: as text_slot_bad(), but cells 0-1 (x 4-15) in icon_fg when it isn't 0
- * (the current slot's status icon, in a colour of its own). */
+ * (the current slot's status icon, in a colour of its own). text_slot_bad()
+ * expects the saved option's check box in green, on every page, and the top
+ * level's icons (I_POWER to I_CONN, the face's 0x8c-0x9d) in white, lit or
+ * not (JD, 10-25). */
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg);
 static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor) {
-    return text_slot_bad2(y, cells, fg, cursor, 0);
+    uint8_t c0 = (uint8_t)cells[0];
+    return text_slot_bad2(y, cells, fg, cursor,
+                          !strncmp(cells, FONT_MONO_CHECK_BOX, 2)                         ? 0x468Cu
+                          : c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1] ? MENU_WHITE
+                                                                                          : 0);
 }
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg) {
     int            bad = 0;
@@ -3049,12 +3056,12 @@ enum { PH_START = 0, PH_OPEN, PH_DONE, PH_ENDED, PH_FAILED, PH_UNSURE };
  * and its link's word; Pair a device naming the current slot. */
 static int conn_bad(int lit, int cur, const char *word) {
     /* The current slot's icon and its colour, by its word's state (JD, 10-25):
-     * idle the plain box; linking the grey hourglass; advertising the blue
-     * rune; linked the box in green; failed the red circled X. */
+     * idle and linked the box in green, as on every page; linking the grey
+     * hourglass; advertising the blue rune; failed the red circled X. */
     static const char *const words[5] = {"", "Trying", "Pair", "Linked", "Failed"};
     static const char *const icons[5] = {FONT_MONO_CHECK_BOX, FONT_MONO_I_WAIT, FONT_MONO_I_CONN, FONT_MONO_CHECK_BOX,
                                          FONT_MONO_I_FAIL};
-    static const uint16_t    colours[5] = {0, 0x9492u, 0x3CFFu, 0x468Cu, 0xFACBu};
+    static const uint16_t    colours[5] = {0x468Cu, 0x9492u, 0x3CFFu, 0x468Cu, 0xFACBu};
     int st = 0;
     for (int i = 0; i < 5; i++)
         if (!strcmp(word, words[i])) st = i;
@@ -3066,9 +3073,9 @@ static int conn_bad(int lit, int cur, const char *word) {
         bad += text_slot_bad2((uint16_t)(15 + 14 * (1 + sl)), cells2(label, sl == cur ? word : ""), fg, fg == MENU_LIT,
                               sl == cur ? colours[st] : 0);
     }
-    char bt[16];
-    snprintf(bt, sizeof bt, "BT %d", cur + 1);
-    return bad + row_bad(4, cells2("Pair a device", bt), lit == 4 ? MENU_LIT : MENU_DIM);
+    char pair[32];   /* JD, 10-25: "Pair (a )device to BT N"; the "a" doesn't fit */
+    snprintf(pair, sizeof pair, "Pair device to BT %d", cur + 1);
+    return bad + row_bad(4, cells2(pair, ""), lit == 4 ? MENU_LIT : MENU_DIM);
 }
 /* The Pairing page's four lines, at the confirm pages' y. */
 static int pairing_bad(int slot, int phase) {
