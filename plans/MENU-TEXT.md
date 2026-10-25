@@ -330,16 +330,22 @@ Click: back
 ■ Bluetooth 1  Linked
   Bluetooth 2
   Bluetooth 3
-Pair a device   BT 1
+Pair device to BT 1
 ```
 
 - The current slot's word, in six cells: `Linked`, `Trying` (connecting),
   `Pair` (advertising), `Failed`, or none.
+- Its icon in the check box's cells, by the same state (JD, 10-25): the
+  check box in green (linked, or none), a grey hourglass (`Trying`), the
+  Bluetooth rune in blue (`Pair`), a red circled X (`Failed`). The check box
+  is green beside the saved option on every page (JD, 10-25: "green
+  everywhere").
 - A click on a slot switches to it: the title flashes `Now on BT 2`. On the
   slot you're already linked on (or still connecting on), nothing changes:
   `Already on BT 2`.
-- **Pair a device** pairs the current slot (JD, 10-25), the one its row
-  names: a click goes straight to the Pairing page. Pairing takes over that
+- **Pair device to BT 1** pairs the current slot (JD, 10-25), the one its
+  row names ("Pair (a )device to BT N": with the "a" it's 21 cells of 20):
+  a click goes straight to the Pairing page. Pairing takes over that
   slot, so switch slots first to pair a new device on another.
 - **Pairing** (title `Pairing`), by what the radio says:
 

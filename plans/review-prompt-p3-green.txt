@@ -1,0 +1,14 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: qmk_firmware-ak820pro `git diff 2d8512ae eb00c2ee -- keyboards/a_jazz/ak820pro` (menu/menu.c, menu/menu.h). Two changes JD asked for:
+1. The saved option's check box is green (MENU_SAVED) on every option page (Power, Clock, Effect, Lights; the BT slots already had it), through the split chunk the BT slots' status icons used: row_icon_colour() now returns a colour for any RK_ITEM row whose node is_option() and whose bullet is set. is_option() factors the predicate the row text used.
+2. Pair a device's row: the label "Pair device to BT n" by the slot (pair_labels[]), no value; label_of(N_PAIRNOW) removed.
+Tests: this repo's scripts/menu_s0_test.c (uncommitted: text_slot_bad expects the box green whenever a row's cells start with it; conn_bad's idle colour and the Pair row).
+
+Check only:
+1. That every row the text draws a check box in gets the green colour and no other row splits: the bullet's sources (row_at: the BT slots, and is_choice pages' saved_row), the Effect list's scrolling (does a row's split change as it scrolls, and does the signature cover it?), the Lights option, the preview pages (Effect, Lights) whose saved row changes on a click.
+2. The scheduler contract for a chunk count that now varies on more pages (plans/CONFIG-MENU-BUILD-PLAN.md, C3/C4; the previous review plans/review-codex-p3-icons-2026-10-25.md cleared it for the slots).
+3. Any other user of label_of(N_PAIRNOW) or of the Pair row's value (titles, flashes, the About page, menu_ops.c).
+4. Anything unsafe for the flash on the keyboard on gremlin (dev, slider on BT). Dev heap gap 136 B, floor 128 (unchanged).
+
+Must anything change before flashing? File and line. Under 300 words.

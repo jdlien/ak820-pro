@@ -421,6 +421,22 @@ After JD's look at `925f029b` ("looking quite good"), in `541a8cbd`:
   #FFF7C6 ("not bad"), #FFFF00. JD: the original "combines clarity and
   contrast"; "leave it for now".
 
+10-25, with P3's status icons on the board:
+
+- **The check box is green on every page** (`MENU_SAVED` #40D060, JD:
+  "green everywhere is the right call"), as the current BT slot's is when
+  linked: the box means "this one is in effect".
+- **The top level's icons are white, lit or not** (JD: "so they pop a bit";
+  the headings' were white already). Colours of their own are an idea for
+  later ("not right away"): if they come, green and red stay the status
+  colours, and Connection's would be the rune's blue, as a slot shows
+  pairing.
+- **A row with its icon in a colour of its own** paints cells 0-1 as a
+  chunk of their own (one piece, 336 B), and its cells 2-9 (48 px) in
+  5-row pieces, so it is 9 pieces, as a plain row: a piece costs about a
+  pass whatever its size, and 4-row pieces made the top level's repaint
+  ~100 ms slower (GREMLIN-RESULTS §20j).
+
 ## Before P1 is accepted: JD's text review (pinned, 10-24)
 
 JD will review and edit **all** the menu's text by hand once P1 nears its
@@ -1126,6 +1142,13 @@ draft 3. Codex's design and code reviews and four verifies are under
 `plans/review-codex-p3-*-2026-10-25.md`; what changed after draft 2 is in
 their dispositions (the ACK boundary tried and backed out; the menu's pair
 failing closed on an undelivered select).
+
+**After draft 3 (JD, 10-25, on the board):** the current slot's check box
+cells show its link's state in a colour of their own (the box in green when
+linked, a grey hourglass, the blue rune, a red circled X), painted as a
+fourth chunk of the row (`row_icon_colour()`); then the box went green on
+every page ("green everywhere"), and the row reads `Pair device to BT 1`
+("Pair (a )device to BT N"; with the "a" it's 21 cells of 20).
 
 JD (10-25): "can we do the BT channel selection now? If it makes sense,
 also pairing, unless that deserves to be a separate wave." Both, in one

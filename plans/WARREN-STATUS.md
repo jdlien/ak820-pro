@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-25 ~08:30.
+2026-10-25 ~13:15.
 
 ## Where things stand
 
@@ -185,10 +185,23 @@ This file is the thread; read it first after a context loss. Updated
        `a9f750ff`'s; the wrong-slot safety comes from order (never during a
        bounce or select retry; the pair queues behind the target's select);
        the pair is sent even if the link already reads advertising.
-     - **Next:** codex's second verify, the flash, the knob's rest read, the
-       board pass on op 27 sub 16's stand-in (the slider is on the cable),
-       then JD: the slider to BT, a slot switch, a pairing on a free slot;
-       the knob by hand.
+     - **Then (10-25, 09:00-13:10), all cleared by codex before each flash
+       (`review-codex-p3-verify2..4`, `-pairnow`, `-icons`, `-green`,
+       `-white`, `-split5`):** the select's outcome failing closed
+       (`ea91b3d0`, `560689ea`); the knob's rests read 00 and 11, as the
+       rule assumes; JD's power cycle of the lock lights passed. JD's
+       changes on the board: Pair a device pairs the current slot, "On the
+       device, add" (`d6483b2b`); the current slot's status icon, coloured
+       (`2d8512ae`); the check box green on every page and `Pair device to
+       BT 1` (`eb00c2ee`); the top level's icons white, lit or not
+       (`1de9df2f`), whose 8 extra pieces cost ~100 ms a top-level repaint
+       until a split row's cells 2-9 went to 5-row pieces (`1ff3d405`, on
+       the board since 13:05). GREMLIN-RESULTS §20i-20j.
+     - **Owed (JD):** a slot switch on the real radio (BT 2 and back), a
+       pairing on a slot he doesn't mind losing (and a stop), the knob by
+       hand; his look at the icons and colours. Possible next: colours for
+       the top level's icons (JD, 10-25: "not right away"; green and red
+       stay status colours, Connection's would be the rune's blue).
   4. The Clock options (the design doc's "JD's decisions"), with half-row
      slots for the live examples.
   5. JD's text edits; then P1c and P1d; P4 (Battery).

@@ -1,0 +1,11 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: qmk_firmware-ak820pro `git diff eb00c2ee 1de9df2f -- keyboards/a_jazz/ak820pro` (menu/menu.c only). JD asked for the top level's icons in white, lit or not. row_icon_colour() now returns pal[MP_WHITE] for any RK_ITEM or RK_VALUE row whose node has icon_of(), so those rows paint cells 0-1 as their own chunk (the split chunk the status icons and the green check box use; plans/review-codex-p3-icons-2026-10-25.md and plans/review-codex-p3-green-2026-10-25.md cleared that mechanism). Tests: scripts/menu_s0_test.c (uncommitted: text_slot_bad expects white for cells 0-1 when a row's cells start with a code in 0x8c-0x9d, I_POWER to I_CONN).
+
+Check only:
+1. Which rows icon_of() now splits: the top level (RK_ITEM and the Screen's RK_VALUE row), and whether any other page has a row whose node icon_of() knows (a submenu reusing N_BOOT, N_IND, N_LIGHT or the like) that would now paint white where it shouldn't, or a row of another kind.
+2. The scheduler contract (plans/CONFIG-MENU-BUILD-PLAN.md, C3/C4): a row's split now follows its node; does every row signature (RK_ITEM and RK_VALUE's 0xE000 form) cover the node so a scroll or page change that swaps an icon row for a plain one restarts the slot? The top level now has up to 8 split rows: any per-pass byte or op limit, or a pass-time cost, that grows with it?
+3. pal[MP_WHITE] is settable at run time on dev (menu_set_color): 0 there means "no split"; anything wrong with that?
+4. Anything unsafe for the flash on the keyboard on gremlin (dev, slider on BT). Dev heap gap 136 B, floor 128.
+
+Must anything change before flashing? File and line. Under 300 words.

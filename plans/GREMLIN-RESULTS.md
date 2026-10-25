@@ -1184,3 +1184,35 @@ sub 16's stand-in.
   steps add no pass over 15 ms in either (the longest passes elsewhere:
   18.7 ms and 17.0 ms, the Hue editor both times; the count over 15 ms
   varies run to run, 6 to 14, in Power, Diagnostics and the editors).
+
+### 20j. JD's look changes: the green check box, Pair device to BT n, white icons; their paint cost (10-25, 12:45-13:10)
+
+Three builds, each cleared by codex (`plans/review-codex-p3-green-2026-10-25.md`,
+`-white-`, `-split5-`):
+
+- **`eb00c2ee`** (token `0x5f1f7ff3`, 12:47): the saved option's check box in
+  green (`MENU_SAVED`, #40D060) on every page, not only the current BT slot
+  (JD: "green everywhere is the right call"); Connection's last row reads
+  `Pair device to BT 1` (JD: "Pair (a )device to BT N"; with the "a" it's
+  21 cells of 20).
+- **`1de9df2f`** (token `0xa122631d`, 12:53): the top level's icons in white,
+  lit or not ("so they pop a bit"). **The menu pass**
+  (`history/config-menu-p3-20261025/board-1de9df2f.json`): seven fails. Five
+  were new: settles over 1 s in open (twice), Lighting, Connection back and
+  Indicators. Against `board-2d8512ae.json`, 28 steps were slower by more
+  than 50 ms and none faster (runs before differed both ways: 2 up and 12
+  down, 8 and 6). The top level's whole repaints totalled 15,891 ms against
+  14,522, ~80 ms a step. The cause: each icon is a piece of its own (the
+  split chunk), and a piece costs about a pass whatever its size, so 8 split
+  rows added 8 pieces to a repaint.
+- **`1ff3d405`** (token `0xc27e1130`, 13:05): a split row's cells 2-9 (48 px)
+  take 5 pixel rows a piece (480 B of 512), 3 pieces, not 4, so a split row
+  is 9 pieces, as an unsplit one. **The menu pass** (`board-1ff3d405.json`):
+  **the two old fails only** (back to Diagnostics 1,101 ms; the longest pass
+  17,088 us, the Hue editor), 9 passes over 15 ms. By kind of repaint
+  (settles summed: `2d8512ae` / `1de9df2f` / `1ff3d405`): the top level whole
+  14,522 / 15,891 / 14,708 ms (17 steps); the pages with check boxes
+  6,706 / 7,052 / 6,743 (10). The rest of the gap is on pages these changes
+  don't touch (help topics, Lighting's: 35,640 / 37,036 / 36,780 over 60
+  steps), so run-to-run variation, not the icons. The settles are polled
+  every 100 ms, so a step moves in 100 ms steps.
