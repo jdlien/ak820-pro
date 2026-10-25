@@ -498,6 +498,30 @@ static void target_refused(void) {
           "lost, no pair: %d, %d", ch582_select_state(), a6(PAIR, from));
 }
 
+/* Codex's third verify: older selects of BT 3 then BT 2 still queued, the
+ * new BT 3 select refused by the full ring, a stale 5B 32 retiring the
+ * retry. The older BT 3's ACK must not stand: BT 2's after it leaves the
+ * module on BT 2, so lost, and no pair. */
+static void target_refused_mixed(void) {
+    boot_linked(0x31);
+    auto_ack = false;
+    run(5);
+    int from = wr_n;
+    bt_ui_select_slot(2);
+    bt_ui_select_slot(1);
+    for (int i = 0; i < 30; i++) poll();
+    bt_ui_pair_slot(2);   /* BT 3 again: its select refused */
+    frame(0x5B, 0x32);
+    auto_ack = true;
+    acked    = wr_n;
+    rx_ack();
+    run(3000);
+    CHECK(a6(0x33, from) >= 1 && a6(0x32, from) >= 1, "the older selects went: %d %d", a6(0x33, from), a6(0x32, from));
+    CHECK(a6_at(0x32, from) > a6_at(0x33, from), "BT 2's after BT 3's");
+    CHECK(ch582_select_state() == CH582_SEL_LOST && a6(PAIR, from) == 0 && !bt_ui_pair_waiting(),
+          "lost, no pair: %d, %d", ch582_select_state(), a6(PAIR, from));
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) { fprintf(stderr, "usage: btui CASE\n"); return 2; }
     static const struct { const char *name; void (*fn)(void); } cases[] = {
@@ -510,6 +534,7 @@ int main(int argc, char **argv) {
         {"bounce_stale", bounce_stale}, {"bounce_lost", bounce_lost}, {"last_try_window", last_try_window},
         {"direct_36", direct_36}, {"boot_retry_pending", boot_retry_pending}, {"hold_superseded", hold_superseded},
         {"target_given_up", target_given_up}, {"target_refused", target_refused},
+        {"target_refused_mixed", target_refused_mixed},
     };
     for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++)
         if (!strcmp(argv[1], cases[i].name)) {

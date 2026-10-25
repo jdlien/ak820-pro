@@ -3174,14 +3174,18 @@ static void test_p3(void) {
     fk_bt_set(fk_link_of(1, ENV_LINK_LINKING), ENV_PF_SEL_LOST);
     m_click();
     CHECK(fk_bt_selects == 4 && fk_bt_last == 1 && title_bad("Now on BT 2") == 0 && fk_pf == 0);
+    /* And connected on a lost select: a stale CONNECTED (codex's third verify). */
+    fk_bt_set(fk_link_of(1, ENV_LINK_CONNECTED), ENV_PF_SEL_LOST);
+    m_click();
+    CHECK(fk_bt_selects == 5 && fk_bt_last == 1 && title_bad("Now on BT 2") == 0);
     /* Another slot: its select; the check moves, the cursor stays. */
     m_turn(1);
     m_click();
-    CHECK(fk_bt_selects == 5 && fk_bt_last == 2 && sub5_cursor() == 3 && title_bad("Now on BT 3") == 0);
+    CHECK(fk_bt_selects == 6 && fk_bt_last == 2 && sub5_cursor() == 3 && title_bad("Now on BT 3") == 0);
     CHECK(conn_bad(3, 2, "Trying") == 0);
     m_turn(-2);
     m_click();
-    CHECK(fk_bt_selects == 6 && fk_bt_last == 0 && sub5_cursor() == 1 && conn_bad(1, 0, "Trying") == 0);
+    CHECK(fk_bt_selects == 7 && fk_bt_last == 0 && sub5_cursor() == 1 && conn_bad(1, 0, "Trying") == 0);
     /* Off BT under the list: the top level. */
     fk_bt_set(ENV_LINK_USB, 0);
     CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN &&
@@ -3220,7 +3224,7 @@ static void test_p3(void) {
         fk_bt_set(ph[k].link, ph[k].pf);
         CHECK(sub5_screen() == SC_PAIRING && sub5_cursor() == (2 << 4 | ph[k].phase) && pairing_bad(2, ph[k].phase) == 0);
     }
-    CHECK(fk_bt_stops == 0 && fk_bt_selects == 6);
+    CHECK(fk_bt_stops == 0 && fk_bt_selects == 7);
 
     /* Leaving: a click while starting stops it (only the wait: no select). */
     fk_bt_set(fk_link_of(2, ENV_LINK_LINKING), ENV_PF_WAITING);

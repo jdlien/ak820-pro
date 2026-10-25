@@ -1,0 +1,11 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A third verify before the flash, narrow: your second verify's must-fix (plans/review-codex-p3-verify2-2026-10-25.md, my disposition at the top), fixed in qmk_firmware-ak820pro `git diff a7c19f85 ea91b3d0 -- keyboards/a_jazz/ak820pro/bluetooth` (select_tx_failed, select_frame_queued(), ch582_select_state()). Tests: this repo's last commit (scripts/ch582_sim/btui.c: target_given_up, target_refused, boot_retry_pending).
+
+Check only:
+1. Does the menu's pair (bt_ui.c's bt_pair_hold_task(): it fires only when ch582_select_state() is ACKED) now fail closed on every path where the target's select frame doesn't reach the module (TX give-up, queue-full refusal, a frame of another slot still queued behind or ahead), and can the new facts read ACKED while a select frame is still outstanding?
+2. Can they read LOST or PENDING forever in a normal reconnect (the module up, a select delivered and answered), or at boot, in a way that breaks the menu's slot click or pairing?
+3. The facts touch only the driver's own reads: is its state machine (pa, conn_state, the TX queue) exactly a7c19f85's?
+4. Anything unsafe for the flash on the keyboard on gremlin (dev, slider on the cable). Dev heap gap 136 B, floor 128.
+
+Must anything change before flashing? Name file and line. Under 400 words.

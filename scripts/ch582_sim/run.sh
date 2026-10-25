@@ -33,7 +33,7 @@ done
 for c in tap_select pair_current_linked pair_other_rejected pair_other_cap pair_other_oldhost pair_bounce \
          pair_lost_select pair_superseded pair_lost_confirm pair_promotion stop_cases already_advertising \
          bounce_stale bounce_lost last_try_window direct_36 boot_retry_pending hold_superseded \
-         target_given_up target_refused; do
+         target_given_up target_refused target_refused_mixed; do
     "$build/btui" "$c" || fail=1
 done
 # D2's profile (flash 1c): the C case, then hostagent/ak820health.py's own
