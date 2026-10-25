@@ -1010,3 +1010,33 @@ relaxes to ~16-17 ms for menu painting), against 15.1-16.8 ms before; the
 piece 5.84 ms, ~4% more for the row's 64 px first half. The one pass whose
 causes were logged was the radio and the dashboard's blit pump on the way
 back from the Health page, not a text piece.
+
+### 20e. P1b on the board: Lighting, Screen, the editors (10-24, ~22:30-22:50)
+
+Flashed with JD's wake-dark-frame fix merged in (`52acdffe99`, at JD's ask
+via the session on Buzz; codex: no must-fix,
+`review-codex-wake-dark-merge-2026-10-24.md`). P1b's code had codex's review
+(`review-codex-p1b-code-2026-10-24.md`): one must-fix, a click queued behind
+an external cancel showed "Saved", fixed in `04adb63f` with regressions.
+
+- **`04adb63f`** (dev, token `0xdea4348f`): `menu_p1a_board.py` with its P1b
+  pass (Lighting, the Effect choice previewed and cancelled, Brightness up and
+  down and cancelled, then reopened on the original value, Hue up four and a
+  fast turn down, cancelled, the Screen up and cancelled; sub 14 says each
+  edit closed): **all 97 steps right**, but each turn in the hue editor took a
+  pass to 16.3-18.8 ms (`p1a-board-04adb63f.json`). The band's pixels came
+  from a callback a pixel.
+- **`07b51f58`** (dev, token `0x8a933567`; the bands fill a row at a time,
+  `lcd_blit_rows`; codex: no must-fix): **all 97 steps right, PASS**: the
+  longest pass 16.25 ms (a list move with the radio busy, not the editor),
+  7 over 15 ms, the hue editor's turns 15-16 ms
+  (`p1a-board-07b51f58.json`); the text piece 5.9 ms.
+- Heap gaps at `04adb63f`: dev 152 B, devfault 200, daily 2,288.
+
+Owed before P1b is accepted (codex's review, item 4; the design's tests):
+the board's order-observing writer checks (VIA get/set/save/indication
+mid-edit, dev ops 4/5), a Save with the lights off and Lights saved, the
+visibility from Screen Off and level 0, persistence across a reboot, C10's
+gates on the editors; the host's long-idle and 32-bit-wrap cases, the
+editors' piece-boundary loss/DMA/close-reopen cases, the forced-save
+semantics; JD's session.
