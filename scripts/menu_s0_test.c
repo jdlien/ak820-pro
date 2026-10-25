@@ -2274,18 +2274,20 @@ static void test_p1b(void) {
     CHECK(title_bad(FONT_MONO_I_LIGHT " Brightness") == 0 && big_bad(22, "34%") == 0 && bar_bad(86, 255) == 0);
     CHECK(text_slot_bad(72, "Turn: change", MENU_WHITE, false) == 0 && text_slot_bad(100, "Hold: cancel", MENU_WHITE, false) == 0);
     for (int i = 0; i < 40; i++) fw_pass(5);   /* 200 ms: the next turn isn't fast */
+    /* A slow detent is the next percentage (JD, 10-25: "micro-adjustments by
+     * one value/percent"): 34% (86) to 35% (89); a fast one 8%. */
     m_turn(1);
-    CHECK(fk_rgb.v == 91 && !fk_rgb_dirty && big_bad(22, "36%") == 0 && bar_bad(91, 255) == 0);
-    CHECK(op27(14, 0, 0) == MI_OK && rpt[6] == 1 && rpt[7] == ME_VAL && rpt[8] == 91 && rpt[9] == 86);   /* sub 14: the edit, read */
+    CHECK(fk_rgb.v == 89 && !fk_rgb_dirty && big_bad(22, "35%") == 0 && bar_bad(89, 255) == 0);
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[6] == 1 && rpt[7] == ME_VAL && rpt[8] == 89 && rpt[9] == 86);   /* sub 14: the edit, read */
     CHECK(op27(1, 2, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* two detents in one input: fast */
     m_settle();
-    CHECK(fk_rgb.v == 131 && big_bad(22, "51%") == 0);
+    CHECK(fk_rgb.v == 130 && big_bad(22, "51%") == 0);
     /* One detent within 90 ms of the last: fast; after a pause, not. */
     CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
-    CHECK(fk_rgb.v == 151);
+    CHECK(fk_rgb.v == 150);   /* 59% */
     for (int i = 0; i < 40; i++) fw_pass(5);
     CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
-    CHECK(fk_rgb.v == 156);
+    CHECK(fk_rgb.v == 153);   /* 60% */
     CHECK(op27(1, 16, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* clamped (sub 1: 16 at most) */
     m_settle();
     CHECK(fk_rgb.v == 255 && big_bad(22, "100%") == 0 && bar_bad(255, 255) == 0);
@@ -2303,10 +2305,10 @@ static void test_p1b(void) {
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(1);
     m_click();
-    CHECK(fk_rgb.v == 91 && fk_rgb_dirty && !me_active() && title_bad("Saved") == 0);
-    CHECK(sub5_screen() == SC_LIGHT && row_bad(2, cells2("Brightness", "36%"), MENU_LIT) == 0);
+    CHECK(fk_rgb.v == 89 && fk_rgb_dirty && !me_active() && title_bad("Saved") == 0);
+    CHECK(sub5_screen() == SC_LIGHT && row_bad(2, cells2("Brightness", "35%"), MENU_LIT) == 0);
     fk_flush();
-    CHECK(fk_rgb_ee.v == 91);
+    CHECK(fk_rgb_ee.v == 89);
 
     /* The lights off: a preview, a save and a cancel still reach the values,
      * and the lights stay off (QMK's setters return early while off). */
@@ -2314,16 +2316,16 @@ static void test_p1b(void) {
     m_click();
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(1);
-    CHECK(fk_rgb.v == 96 && fk_rgb.enable == 0 && fk_rgb_noop == 0);
+    CHECK(fk_rgb.v == 92 && fk_rgb.enable == 0 && fk_rgb_noop == 0);   /* 36% */
     m_hold();
-    CHECK(fk_rgb.v == 91 && fk_rgb.enable == 0 && fk_rgb_noop == 0);
+    CHECK(fk_rgb.v == 89 && fk_rgb.enable == 0 && fk_rgb_noop == 0);
     m_click();
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(-1);
     m_click();
-    CHECK(fk_rgb.v == 86 && fk_rgb.enable == 0 && fk_rgb_dirty && fk_rgb_noop == 0);
+    CHECK(fk_rgb.v == 87 && fk_rgb.enable == 0 && fk_rgb_dirty && fk_rgb_noop == 0);   /* 34% */
     fk_flush();
-    CHECK(fk_rgb_ee.v == 86 && fk_rgb_ee.enable == 0);
+    CHECK(fk_rgb_ee.v == 87 && fk_rgb_ee.enable == 0);
     fk_rgb.enable = 1;
 
     /* An external write mid-edit (an RM key, VIA): rolled back at once, then
@@ -2333,13 +2335,13 @@ static void test_p1b(void) {
     m_turn(1);
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(1);
-    CHECK(fk_rgb.v == 96);
+    CHECK(fk_rgb.v == 92);   /* 34% to 36% */
     menu_edit_external(ME_DOM_LCD);
     m_settle();
-    CHECK(me_active() && fk_rgb.v == 96 && sub5_screen() == SC_BRIGHT);
+    CHECK(me_active() && fk_rgb.v == 92 && sub5_screen() == SC_BRIGHT);
     uint16_t ext0 = me_external_count();
     menu_edit_external(ME_DOM_RGB);
-    CHECK(fk_rgb.v == 86 && !me_active() && me_external_count() == ext0 + 1);
+    CHECK(fk_rgb.v == 87 && !me_active() && me_external_count() == ext0 + 1);
     fk_rgb.v = 100;   /* the writer applies */
     fw_pass(5);
     m_settle();
@@ -2356,7 +2358,7 @@ static void test_p1b(void) {
         m_click();
         for (int i = 0; i < 40; i++) fw_pass(5);
         m_turn(1);
-        CHECK(me_active() && fk_rgb.v == 105);
+        CHECK(me_active() && fk_rgb.v == 102);   /* 39% to 40% */
         fk_rgb_dirty = false;
         menu_edit_external(ME_DOM_RGB);
         fk_rgb.v = 120;   /* the writer applies */
@@ -2394,13 +2396,13 @@ static void test_p1b(void) {
     m_turn(1);
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(1);
-    CHECK(fk_rgb.h == 20 && env_bad(20) == 0 && big_bad(44, "28") == 0);   /* the old triangle gone from band 0 */
+    CHECK(fk_rgb.h == 12 && env_bad(12) == 0 && big_bad(44, "16") == 0);   /* a unit a detent; the old triangle gone from band 0 */
     for (int i = 0; i < 40; i++) fw_pass(5);
-    m_turn(-7);   /* fast, through 0: 20 - 84 wraps to 192 */
-    CHECK(fk_rgb.h == 192 && env_bad(192) == 0 && big_bad(44, "270") == 0);
+    m_turn(-7);   /* fast, through 0: 12 - 84 wraps to 184 */
+    CHECK(fk_rgb.h == 184 && env_bad(184) == 0 && big_bad(44, "258") == 0);
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(-1);   /* a reversal */
-    CHECK(fk_rgb.h == 189 && env_bad(189) == 0);
+    CHECK(fk_rgb.h == 183 && env_bad(183) == 0);
     m_hold();
     CHECK(fk_rgb.h == 8 && sub5_screen() == SC_LIGHT);
     for (int i = 0; i < 300; i++) fw_pass(5);   /* past the flash, which carries over to the next screen */
@@ -2513,7 +2515,7 @@ static void test_p1b(void) {
     m_turn(1);
     m_click();
     m_turn(1);
-    CHECK(me_active() && fk_rgb.v == 91);
+    CHECK(me_active() && fk_rgb.v == 89);
     fw_pass(MI_IDLE_MS + 10);
     fw_pass(5);
     CHECK(po_session() == SESSION_OPEN && me_active());
@@ -2532,27 +2534,27 @@ static void test_p1b(void) {
     m_click();
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(1);
-    CHECK(fk_rgb.v == 91);
+    CHECK(fk_rgb.v == 89);
     fw_pass(65556 - 20);   /* a 16-bit clock would read this as 20 ms */
     m_turn(1);
-    CHECK(fk_rgb.v == 96);   /* a single step, not the fast 20 */
+    CHECK(fk_rgb.v == 92);   /* a single step, not the fast 8% */
     m_hold();
     CHECK(fk_rgb.v == 86);
     m_click();   /* re-entered at once: its first turn is never fast */
     m_turn(1);
-    CHECK(fk_rgb.v == 91);
+    CHECK(fk_rgb.v == 89);
     m_hold();
     fk_now = 0xFFFFFF80u;   /* just before the 32-bit wrap */
     fw_pass(5);
     m_settle();
     m_click();
     m_turn(1);
-    CHECK(fk_rgb.v == 91);
+    CHECK(fk_rgb.v == 89);
     for (int i = 0; i < 30; i++) fw_pass(5);   /* across the wrap, 150 ms on */
     m_turn(1);
-    CHECK(fk_rgb.v == 96);
+    CHECK(fk_rgb.v == 92);
     CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* within 90 ms, after the wrap */
-    CHECK(fk_rgb.v == 116);
+    CHECK(fk_rgb.v == 112);   /* 36% + 8 */
     /* A send given up mid-band (nothing sent, then half), and a glyph's DMA
      * lost mid-value: the loss repaints everything, and the frame ends right. */
     for (int prefix = 0; prefix < 2; prefix++) {
@@ -2573,7 +2575,7 @@ static void test_p1b(void) {
     m_settle();
     CHECK(fault_next_dma == 0);   /* met */
     fault_next_dma = 0;
-    CHECK(fk_rgb.v == 131 && bar_bad(131, 255) == 0 && big_bad(22, "51%") == 0);
+    CHECK(fk_rgb.v == 120 && bar_bad(120, 255) == 0 && big_bad(22, "47%") == 0);   /* 44% and three slow detents */
     /* Closed mid-paint, the edit rolled back; reopened, every frame right. */
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(1);
@@ -2690,6 +2692,33 @@ static void test_p2a(void) {
     menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
     m_open_top();
 
+    /* JD, 10-25: "micro-adjustments by one value/percent". Brightness from 0
+     * to 100%: every slow detent shows the next percentage, none skipped or
+     * repeated; then back down by 1s, and the cancel. */
+    uint8_t v0 = fk_rgb.v;
+    fk_rgb.v = 0;
+    m_click();   /* Lighting */
+    m_turn(1);   /* Brightness */
+    m_click();
+    for (int p = 1; p <= 100; p++) {
+        for (int i = 0; i < 20; i++) fw_pass(5);   /* 100 ms: slow */
+        CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        CHECK((fk_rgb.v * 100 + 127) / 255 == p);
+    }
+    CHECK(fk_rgb.v == 255);
+    for (int p = 99; p >= 0; p--) {
+        for (int i = 0; i < 20; i++) fw_pass(5);
+        CHECK(op27(1, -1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        CHECK((fk_rgb.v * 100 + 127) / 255 == p);
+    }
+    m_settle();
+    CHECK(fk_rgb.v == 0 && big_bad(22, "0%") == 0);
+    m_hold();
+    m_hold();
+    fk_rgb.v = v0;
+    for (int i = 0; i < 300; i++) fw_pass(5);
+    m_settle();
+
     /* Indicators: a list of two value rows. */
     m_turn(T_IND);
     CHECK(sub5_cursor() == T_IND && row_bad(T_IND, cells2(FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R), MENU_LIT) == 0);
@@ -2710,9 +2739,9 @@ static void test_p2a(void) {
     CHECK(fk_ind[0] == 2 && fk_ind_saved[0] == 1 && fk_ind_saves == 0 && big_bad(22, "2%") == 0 && bar_bad(2, 100) == 0);
     CHECK(op27(14, 0, 0) == MI_OK && rpt[6] == 1 && rpt[7] == ME_LOCKS && rpt[8] == 2 && rpt[9] == 1 && rpt[12] == 2 &&
           rpt[13] == 0 && rpt[14] == 1);
-    CHECK(op27(1, 3, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* three detents in one input: fast, 5 each */
+    CHECK(op27(1, 3, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* three detents in one input: fast, 8 each */
     m_settle();
-    CHECK(fk_ind[0] == 17 && big_bad(22, "17%") == 0 && bar_bad(17, 100) == 0);
+    CHECK(fk_ind[0] == 26 && big_bad(22, "26%") == 0 && bar_bad(26, 100) == 0);
     CHECK(op27(1, -16, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* clamped at 0: Off */
     m_settle();
     CHECK(fk_ind[0] == 0 && big_bad(22, "Off") == 0 && bar_bad(0, 100) == 0);
@@ -2728,18 +2757,18 @@ static void test_p2a(void) {
     /* Save. */
     m_click();
     for (int i = 0; i < 40; i++) fw_pass(5);
-    CHECK(op27(1, 2, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* fast: 1 + 10 */
+    CHECK(op27(1, 2, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* fast: 1 + 16 */
     m_settle();
     m_click();
-    CHECK(fk_ind[0] == 11 && fk_ind_saved[0] == 11 && fk_ind_saves == 1 && fk_ind_force == 0 && !me_active());
-    CHECK(sub5_screen() == SC_IND && title_bad("Saved") == 0 && row_bad(1, cells2("Lock lights", "11%"), MENU_LIT) == 0);
-    CHECK(op27(14, 0, 0) == MI_OK && rpt[6] == 0 && rpt[12] == 11 && rpt[14] == 0);
+    CHECK(fk_ind[0] == 17 && fk_ind_saved[0] == 17 && fk_ind_saves == 1 && fk_ind_force == 0 && !me_active());
+    CHECK(sub5_screen() == SC_IND && title_bad("Saved") == 0 && row_bad(1, cells2("Lock lights", "17%"), MENU_LIT) == 0);
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[6] == 0 && rpt[12] == 17 && rpt[14] == 0);
     /* A cancel after the save restores the saved level and writes nothing. */
     m_click();
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(1);
     m_hold();
-    CHECK(fk_ind[0] == 11 && fk_ind_saved[0] == 11 && fk_ind_saves == 1 && fk_ind_force == 0);
+    CHECK(fk_ind[0] == 17 && fk_ind_saved[0] == 17 && fk_ind_saves == 1 && fk_ind_force == 0);
 
     /* Charging light: its own group and force. */
     for (int i = 0; i < 300; i++) fw_pass(5);
@@ -2748,24 +2777,24 @@ static void test_p2a(void) {
     CHECK(sub5_screen() == SC_CHGL && me_field() == ME_CHG && fk_ind_force == 2 && big_bad(22, "Off") == 0);
     CHECK(title_bad(FONT_MONO_I_IND "Charging light") == 0);
     for (int i = 0; i < 40; i++) fw_pass(5);
-    CHECK(op27(1, 7, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* 35 */
+    CHECK(op27(1, 7, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* 56 */
     m_settle();
     for (int k = 0; k < 2; k++) {
         for (int i = 0; i < 40; i++) fw_pass(5);   /* 200 ms apart: each slow */
         m_turn(1);
     }
-    CHECK(fk_ind[1] == 37 && fk_ind[0] == 11 && big_bad(22, "37%") == 0);
+    CHECK(fk_ind[1] == 58 && fk_ind[0] == 17 && big_bad(22, "58%") == 0);
     m_click();
-    CHECK(fk_ind_saved[1] == 37 && fk_ind_saved[0] == 11 && fk_ind_force == 0);
-    CHECK(sub5_cursor() == 2 && row_bad(2, cells2("Charging", "37%"), MENU_LIT) == 0);
+    CHECK(fk_ind_saved[1] == 58 && fk_ind_saved[0] == 17 && fk_ind_force == 0);
+    CHECK(sub5_cursor() == 2 && row_bad(2, cells2("Charging", "58%"), MENU_LIT) == 0);
 
     /* Closed mid-edit (the opener, sub 11): rolled back, the force gone. */
     m_click();
     for (int i = 0; i < 40; i++) fw_pass(5);
     m_turn(1);
-    CHECK(fk_ind[1] == 38 && fk_ind_force == 2);
+    CHECK(fk_ind[1] == 59 && fk_ind_force == 2);
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
-    CHECK(fk_ind[1] == 37 && fk_ind_force == 0 && !me_active());
+    CHECK(fk_ind[1] == 58 && fk_ind_force == 0 && !me_active());
     /* The backstop closes one too. */
     m_open_top();
     m_turn(T_IND);
@@ -2775,7 +2804,7 @@ static void test_p2a(void) {
     m_turn(1);
     fw_pass(MI_BACKSTOP_MS + 10);
     fw_pass(5);
-    CHECK(po_session() == SESSION_NONE && fk_ind[0] == 11 && fk_ind_force == 0);
+    CHECK(po_session() == SESSION_NONE && fk_ind[0] == 17 && fk_ind_force == 0);
 
     /* Sub 15, the bench: an external writer, so it cancels an open indicator
      * edit first ("Cancelled"); a bad level is refused. */
@@ -2795,8 +2824,8 @@ static void test_p2a(void) {
     m_settle();
     CHECK(sub5_screen() == SC_IND && title_bad("Cancelled") == 0 && row_bad(1, cells2("Lock lights", "82%"), MENU_LIT) == 0);
     rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 15;
-    rpt[5] = 0; rpt[6] = 11; rpt[7] = 37;
-    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK && fk_ind_force == 0 && fk_ind[0] == 11);
+    rpt[5] = 0; rpt[6] = 17; rpt[7] = 58;
+    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK && fk_ind_force == 0 && fk_ind[0] == 17);
     m_hold();
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 

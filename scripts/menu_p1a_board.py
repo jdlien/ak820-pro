@@ -252,7 +252,7 @@ def main():
         check(ind_state()[3] == 1, f"Lock lights: the force bits {ind_state()[3]}, not 1")
         turn(h, 1, "lock lights up", SCR(LOCKS))
         turn(h, 3, "lock lights up, fast", SCR(LOCKS))
-        check(ind_state()[1] == min(100, locks0 + 16), f"Lock lights: {ind_state()[1]}, not {locks0} + 16")
+        check(ind_state()[1] == min(100, locks0 + 25), f"Lock lights: {ind_state()[1]}, not {locks0} + 25")
         hold(h, "Lock lights cancelled", SCR(IND), 1)
         check(ind_state() == (0, locks0, chg0, 0), f"Lock lights: after the cancel {ind_state()}")
         turn(h, 1, "to Charging light", SCR(IND), 2)

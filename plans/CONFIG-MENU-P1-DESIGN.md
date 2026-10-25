@@ -452,8 +452,8 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
 | Lighting | list | ◀ Back, Effect, Brightness, Hue, Saturation, Second color *or* Speed, Lights | ▶ |
 | Screen | range editor, 0-23, step 1 | the range layout | `Off`, else `round(level*100/23)%` |
 | Effect | previewing choice | ◀ Back, the nine effects (two pages, the scrollbar) | the effect's readout name |
-| Brightness, Saturation, Speed | range editor, 0-255, step 5 (×4 fast) | the range layout | `(v*100+127)/255 %` (the readout's rounding) |
-| Hue, Second color | hue editor, 0-255 wrapping, step 3 (×4 fast: 12) | the hue layout | `h*360/256` degrees; Second color `+` that of `speed` |
+| Brightness, Saturation, Speed | range editor, 0-255; a detent the next percentage, 8% fast (JD, 10-25: was 5 of 255, ×4 fast) | the range layout | `(v*100+127)/255 %` (the readout's rounding) |
+| Hue, Second color | hue editor, 0-255 wrapping, step 1 (fast 12; JD, 10-25: was 3) | the hue layout | `h*360/256` degrees; Second color `+` that of `speed` |
 | Lights | previewing choice | ◀ Back, Off, On | `On` / `Off` |
 
 - **Second color or Speed** (the row's label and its editor) follows the
@@ -803,6 +803,25 @@ for overnight. Built on P1b's tree:
   `flash.sh` brings it back (it takes an already-entered bootloader: the last
   backups, no jump).
 
+## JD's look at P1b (10-25, ~01:30, on `781d071f`)
+
+- "The UI looks excellent to me." A couple of small quirks in how some
+  effects behave: "minor and not worth chasing in general".
+- **Fine steps:** "we should be able to make micro-adjustments by one
+  value/percent - right now it adjusts by a few percent at a time ... we're
+  already doing decent acceleration with quick knob turns." Built with P2a:
+  a slow detent is the next percentage for Brightness, Saturation and Speed
+  (it was 5 of 255, about 2%), one unit for Hue and Second color (it was
+  3); a fast turn stays as fast (8%, or 12 hue units). A host test walks
+  0-100% and back by single detents.
+- **"Same goes for the screen, obviously":** the Screen's 24 levels are the
+  backlight's own (`bkl_duty[]`, 48 ticks), one a detent already, ~4%
+  apart. Finer needs the backlight dimmed the way P2a dims the indicators
+  (a 0-100 perceptual table spread by the sigma-delta), which touches
+  `display.c`'s tick, `SCR_UP`/`SCR_DN`, the saved level's encoding, the
+  power ladder's caps, the wake hold, and `battery.c`'s draw model
+  (`display_backlight_duty()`). Its own design and codex round, next.
+
 ## P2a: Indicators, and the Connection stub (JD, 10-25 night)
 
 JD (10-25): "I'd add those as stubs into the menu sooner than later", "we can
@@ -824,8 +843,8 @@ order, plus a stub for P3's Connection. Battery (P4) isn't added yet.
   the right ("Off", or "1%" to "100%").
 - **Lock lights** and **Charging light** each open a range editor, the
   same geometry as Brightness: the bar, the big value, the three hints.
-  The range is 0-100: 0 is Off. A detent is 1, and a fast turn is 5 (the
-  existing fast-turn rule). The bar's edge is `14 + level`.
+  The range is 0-100: 0 is Off. A detent is 1, and a fast turn is 8 (the
+  existing fast-turn rule; 8, as Lighting's percentages, JD's fine steps). The bar's edge is `14 + level`.
   - **The preview lights the LEDs.** While a Lock lights edit is open, Caps
     and Win lock both show at the previewed level, whatever their state;
     while a Charging light edit is open, the charging LED does. Otherwise a

@@ -303,7 +303,7 @@ Charging         Off
 ```
 
 - Each opens the range editor, titled `Lock lights` or `Charging light`: `Off`,
-  then `1%` to `100%`, 1% a detent and 5% a fast turn (JD: "1-100 in 1%
+  then `1%` to `100%`, 1% a detent and 8% a fast turn (JD: "1-100 in 1%
   increments"). While it's open, the LEDs it sets light at the level shown
   (Caps and Win lock both, or the charging light), whatever their state.
 - 1% is the old dimmest level, unchanged; the steps are spaced to look even.
