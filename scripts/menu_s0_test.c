@@ -2504,6 +2504,75 @@ static void test_p1b(void) {
     fw_pass(5);
     CHECK(po_session() == SESSION_NONE && !me_active() && fk_rgb.v == 86);
 
+    /* Owed (codex, P1b's code review, item 4): the fast turn across a long
+     * idle and the 32-bit wrap, and re-entering an editor; a failed send and
+     * a lost glyph DMA mid-band and mid-value; a close and a reopen
+     * mid-paint. Each frame ends right. */
+    fk_lcd = fk_lcd_saved = 12;   /* as the top level's frame expects */
+    m_open_top();
+    m_click();
+    m_turn(1);   /* Brightness */
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    CHECK(fk_rgb.v == 91);
+    fw_pass(65556 - 20);   /* a 16-bit clock would read this as 20 ms */
+    m_turn(1);
+    CHECK(fk_rgb.v == 96);   /* a single step, not the fast 20 */
+    m_hold();
+    CHECK(fk_rgb.v == 86);
+    m_click();   /* re-entered at once: its first turn is never fast */
+    m_turn(1);
+    CHECK(fk_rgb.v == 91);
+    m_hold();
+    fk_now = 0xFFFFFF80u;   /* just before the 32-bit wrap */
+    fw_pass(5);
+    m_settle();
+    m_click();
+    m_turn(1);
+    CHECK(fk_rgb.v == 91);
+    for (int i = 0; i < 30; i++) fw_pass(5);   /* across the wrap, 150 ms on */
+    m_turn(1);
+    CHECK(fk_rgb.v == 96);
+    CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* within 90 ms, after the wrap */
+    CHECK(fk_rgb.v == 116);
+    /* A send given up mid-band (nothing sent, then half), and a glyph's DMA
+     * lost mid-value: the loss repaints everything, and the frame ends right. */
+    for (int prefix = 0; prefix < 2; prefix++) {
+        for (int i = 0; i < 40; i++) fw_pass(5);
+        fault_next_fill   = 1;   /* armed before the turn: the first send of its repaint, a band's */
+        fault_fill_prefix = prefix;
+        CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        m_settle();
+        CHECK(fault_next_fill == 0);   /* the fault was met, not left over */
+        fault_next_fill = 0;
+        char pc[8];
+        snprintf(pc, sizeof pc, "%u%%", (unsigned)((fk_rgb.v * 100u + 127u) / 255u));
+        CHECK(bar_bad(fk_rgb.v, 255) == 0 && big_bad(22, pc) == 0);
+    }
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    fault_next_dma = 1;   /* armed before the turn: the repaint's first DMA, a glyph of the value */
+    CHECK(op27(1, 1, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
+    m_settle();
+    CHECK(fault_next_dma == 0);   /* met */
+    fault_next_dma = 0;
+    CHECK(fk_rgb.v == 131 && bar_bad(131, 255) == 0 && big_bad(22, "51%") == 0);
+    /* Closed mid-paint, the edit rolled back; reopened, every frame right. */
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    fw_pass(5);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE && fk_rgb.v == 86);
+    m_open_top();
+    top_frame_ok(0);
+    m_click();
+    m_turn(1);
+    m_click();
+    CHECK(big_bad(22, "34%") == 0 && bar_bad(86, 255) == 0);
+    m_hold();
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    fk_now = 1000000u;   /* off the wrap for what follows */
+    fw_pass(5);
+
     /* The bootloader item (JD, 10-24): a confirm page; a hold cancels; a
      * click enters it (Fn+Esc's path), except on the battery's reserve. */
     fk_boots = 0; fk_reserve = false;
