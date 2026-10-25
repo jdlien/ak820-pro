@@ -28,6 +28,7 @@
 #include "menu_env.h"
 #include "menu_ops.h"
 #include "menu_text.h"
+#include "menu.h"
 #include "../graphics/res/font_small_mono.h"   /* through -I $D/menu */
 
 static int fails;
@@ -1235,11 +1236,43 @@ uint16_t env_meas_arm(void) {
 }
 bool env_debug_done(void) { return false; }
 
+/* P1a's settings and facts. */
+static uint8_t fk_power = 1, fk_clock = 0;
+static int     fk_power_writes, fk_clock_writes, fk_resets;
+uint8_t env_power_mode(void) { return fk_power; }
+void    env_power_set(uint8_t m) { fk_power = m; fk_power_writes++; }
+uint8_t env_clock_mode(void) { return fk_clock; }
+void    env_clock_set(uint8_t m) { fk_clock = m; fk_clock_writes++; }
+void    env_health_reset(void) { fk_resets++; }
+static env_about_t fk_about = {93240u, 767u, 4017u, 3840u, 1u,
+                               (uint8_t)(ENV_LINK_BT | (0u << 2) | (ENV_LINK_CONNECTED << 4))};
+void        env_about(env_about_t *a) { *a = fk_about; }
+uint32_t    env_build_hash(void) { return 0x36afff30u; }
+bool        env_build_dirty(void) { return false; }
+uint32_t    env_build_token(void) { return 0xef38330eu; }
+const char *env_build_flavour(void) { return "dev"; }
+
+/* The menu's tests watch every pass: the most CPU-fed bytes in one, and the
+ * most rows showing the lit colour at once (P1a: one at most). */
+static bool menu_watch;
+static int  menu_max_lit;
+static int lit_rows(void) {
+    int n = 0;
+    for (int r = 0; r < 8; r++) {
+        bool lit = false;
+        for (int y = 15 + 14 * r; y < 29 + 14 * r && !lit; y++)
+            for (int x = 3; x <= 124 && !lit; x++) lit = fb[y][x] == MENU_LIT;
+        n += lit;
+    }
+    return n;
+}
+
 /* One main-loop pass as housekeeping_task_kb runs it: the task, then the pump
  * (its loss taken at the top, then the owner's operation). */
 static void fw_pass(uint32_t dt) {
     fk_now += dt;
     fake_ticks += dt * (MB_TICK_HZ / 1000u);
+    pass_bytes = 0;
     menu_ops_task(fk_now);
     dma_settle();
     if (take_lost()) {
@@ -1248,6 +1281,11 @@ static void fw_pass(uint32_t dt) {
         if (a & PO_ACT_RESET_BUFFERS) menu_screen_invalidate();
     }
     if (po_owner() == PANEL_MENU) menu_pump();
+    if (pass_bytes > max_pass_bytes) max_pass_bytes = pass_bytes;
+    if (menu_watch && po_owner() == PANEL_MENU) {
+        int l = lit_rows();
+        if (l > menu_max_lit) menu_max_lit = l;
+    }
 }
 
 static uint8_t rpt[32];
@@ -1521,6 +1559,304 @@ static int frames(const char *dir, int n) {
     return fails ? 1 : 0;
 }
 
+/* --- P1a: the menu (plans/CONFIG-MENU-P1-DESIGN.md) ---------------------------
+ * Driven as the board's scripts drive it, op 27 subs 11, 1, 2 and 3 through
+ * the production menu_ops; every expected row is spelled out here and drawn
+ * from the face, not from menu.c. */
+
+/* A text slot (x 3-124) at y: the cells from x 4 in fg on black. */
+static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg) {
+    int    bad = 0;
+    size_t len = strlen(cells);
+    for (uint16_t r = 0; r < 14; r++)
+        for (uint16_t x = 3; x <= 124; x++) {
+            uint16_t want = 0;
+            if (x >= 4 && x <= 123) {
+                size_t  cell = (size_t)(x - 4) / 6;
+                uint8_t code = cell < len ? (uint8_t)cells[cell] : (uint8_t)' ';
+                const uint8_t *g = code >= 0x80 && code < 0x85 ? font_small_mono[95 + code - 0x80]
+                                 : code >= 0x20 && code < 0x7F ? font_small_mono[code - 0x20]
+                                                               : font_small_mono['?' - 0x20];
+                if (g[r] & (0x80 >> ((x - 4) % 6))) want = fg;
+            }
+            if (fb[y + r][x] != want) bad++;
+        }
+    return bad;
+}
+/* A row's 20 cells: the label left, the value right. */
+static const char *cells2(const char *label, const char *value) {
+    static char out[21];
+    memset(out, ' ', 20);
+    out[20] = '\0';
+    memcpy(out, label, strlen(label));
+    memcpy(out + 20 - strlen(value), value, strlen(value));
+    return out;
+}
+static int row_bad(int r, const char *cells, uint16_t fg) { return text_slot_bad((uint16_t)(15 + 14 * r), cells, fg); }
+static int title_bad(const char *t) { return text_slot_bad(0, t, MENU_WHITE); }
+static void m_settle(void) {
+    for (int i = 0; i < 3000 && !(ms_settled() && !mb_busy()); i++) fw_pass(5);
+    CHECK(ms_settled());
+}
+static void m_click(void) {
+    CHECK(op27(2, 0, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    m_settle();
+}
+static void m_turn(int n) {
+    CHECK(op27(1, n, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    m_settle();
+}
+static void m_hold(void) {
+    CHECK(op27(3, 0, 0) == MI_OK);   /* 650 ms */
+    CHECK(wait_terminal(rpt[6], 400) == MI_ST_DONE);
+    m_settle();
+}
+static uint8_t sub5_screen(void) { op27(5, 0, 0); return rpt[14]; }
+static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
+
+static void test_menu(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_power_writes = fk_clock_writes = fk_resets = 0;
+    menu_watch = true; menu_max_lit = 0; max_pass_bytes = 0;
+
+    /* sub 11 opens the menu: the top level, row 0 lit. */
+    CHECK(op27(11, 0, 0) == MI_OK && mi_last_state() == MI_ST_DONE);
+    CHECK(po_owner() == PANEL_MENU && po_session() == SESSION_OPEN);
+    m_settle();
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 0);
+    CHECK(title_bad("Configuration") == 0);
+    CHECK(row_bad(0, cells2("Power", "Balanced"), MENU_LIT) == 0);
+    CHECK(row_bad(1, cells2("Clock", "24h"), MENU_DIM) == 0);
+    CHECK(row_bad(2, cells2("Diagnostics", ">"), MENU_DIM) == 0);
+    CHECK(row_bad(3, cells2("Help", ">"), MENU_DIM) == 0);
+    CHECK(row_bad(4, cells2("About", ">"), MENU_DIM) == 0);
+    CHECK(row_bad(5, cells2("Exit", ""), MENU_DIM) == 0);
+    CHECK(row_bad(6, "", 0) == 0 && row_bad(7, "", 0) == 0);
+    CHECK(fb[20][125] == 0 && fb[100][125] == 0);   /* no scrollbar: its track black */
+    CHECK(op27(0, 1, 0) == MI_BAD);                  /* sub 0 is the fixture's only */
+
+    /* Moves: down, a wrap up, and back. */
+    m_turn(1);
+    CHECK(sub5_cursor() == 1 && row_bad(1, cells2("Clock", "24h"), MENU_LIT) == 0 &&
+          row_bad(0, cells2("Power", "Balanced"), MENU_DIM) == 0);
+    m_turn(-2);
+    CHECK(sub5_cursor() == 5 && row_bad(5, cells2("Exit", ""), MENU_LIT) == 0);
+    m_turn(1);
+    CHECK(sub5_cursor() == 0);
+
+    /* Power: the choice opens on the saved option, its bullet in cell 0. */
+    m_click();
+    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad("Power") == 0);
+    CHECK(row_bad(0, "\x80" " Back", MENU_DIM) == 0);
+    CHECK(row_bad(1, " Always on", MENU_DIM) == 0);
+    CHECK(row_bad(2, "\x82" "Balanced", MENU_LIT) == 0);
+    CHECK(row_bad(4, " Lights out", MENU_DIM) == 0);
+    m_turn(2);   /* Lights out */
+    m_click();   /* commits */
+    CHECK(fk_power == 3 && fk_power_writes == 1);
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 0);
+    CHECK(title_bad("Saved") == 0 && row_bad(0, cells2("Power", "Lights out"), MENU_LIT) == 0);
+    for (int i = 0; i < 400; i++) fw_pass(5);   /* the flash's 1.3 s */
+    m_settle();
+    CHECK(title_bad("Configuration") == 0);
+
+    /* Clock: a cancel by Back writes nothing, and says so. */
+    m_turn(1);
+    m_click();
+    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, "\x82" "24 hour", MENU_LIT) == 0);
+    m_turn(2);   /* Date: the enum's 3 */
+    m_hold();
+    CHECK(fk_clock == 0 && fk_clock_writes == 0 && title_bad("Cancelled") == 0 && sub5_screen() == 16 + 1);
+    m_click();
+    m_turn(2);
+    m_click();   /* Date */
+    CHECK(fk_clock == 3 && fk_clock_writes == 1 && row_bad(1, cells2("Clock", "Date"), MENU_LIT) == 0);
+
+    /* An external change (Fn+B) shows at once. */
+    fk_power = 0;
+    m_settle();
+    fw_pass(5);
+    m_settle();
+    CHECK(row_bad(0, cells2("Power", "Always on"), MENU_DIM) == 0);
+
+    /* Help: a topic pages by 8, clamped. Shortcuts has 12 lines: its top
+     * stops at 4. */
+    for (int i = 0; i < 300; i++) fw_pass(5);   /* past the Saved flash */
+    m_turn(2);   /* Help (row 3) */
+    m_click();
+    CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 1 && title_bad("Help") == 0);
+    CHECK(row_bad(1, cells2("Using the menu", ">"), MENU_LIT) == 0);
+    m_turn(2);   /* Shortcuts */
+    m_click();
+    CHECK(title_bad("Shortcuts") == 0 && sub5_cursor() == 0);
+    CHECK(row_bad(0, "Fn+Q/W/E  BT slot", MENU_WHITE) == 0);
+    CHECK(fb[20][125] == MENU_WHITE);   /* a scrollbar: the thumb at the top */
+    m_turn(1);
+    CHECK(sub5_cursor() == 4 && row_bad(0, "Fn+Up/Dn  brightness", MENU_WHITE) == 0);
+    CHECK(row_bad(7, "Fn+Esc    bootloader", MENU_WHITE) == 0);
+    m_turn(1);
+    CHECK(sub5_cursor() == 4);
+    m_turn(-1);
+    CHECK(sub5_cursor() == 0);
+    m_click();   /* back to Help, Shortcuts' row */
+    CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 3 && row_bad(3, cells2("Shortcuts", ">"), MENU_LIT) == 0);
+    m_hold();    /* Back to the top: Help's row */
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 3);
+
+    /* About: the snapshot, formatted. */
+    m_turn(1);
+    m_click();
+    CHECK(title_bad("About") == 0);
+    CHECK(row_bad(0, "Firmware 36afff30", MENU_WHITE) == 0);
+    CHECK(row_bad(1, "dev, 0xef38330e", MENU_WHITE) == 0);
+    CHECK(row_bad(2, "Up 1d 1h 54m", MENU_WHITE) == 0);
+    CHECK(row_bad(3, "Battery 76.7%", MENU_WHITE) == 0);
+    CHECK(row_bad(4, "Pack 4017 mV", MENU_WHITE) == 0);
+    CHECK(row_bad(5, "Left 64h of use", MENU_WHITE) == 0);
+    CHECK(row_bad(6, "Mode Balanced", MENU_WHITE) == 0);
+    CHECK(row_bad(7, "Link BT 1 connected", MENU_WHITE) == 0);
+    /* Reopened with new facts, before its later rows paint: no stale row. */
+    m_click();
+    fk_about.mode = 3; fk_about.pack_mv = ENV_UNKNOWN; fk_about.batt_pm = ENV_UNKNOWN;
+    CHECK(op27(2, 0, 0) == MI_OK);
+    fw_pass(5); fw_pass(5);
+    CHECK(op27(2, 0, 0) == MI_OK);   /* back before it's done */
+    fw_pass(5); fw_pass(5);
+    CHECK(op27(2, 0, 0) == MI_OK);   /* and in again */
+    m_settle();
+    CHECK(title_bad("About") == 0 && row_bad(6, "Mode Lights out", MENU_WHITE) == 0);
+    CHECK(row_bad(3, "Battery -", MENU_WHITE) == 0 && row_bad(4, "Pack -", MENU_WHITE) == 0);
+    m_click();
+
+    /* Diagnostics: Health hands off; a click comes back to its row. */
+    m_turn(-2);   /* Diagnostics (row 2) */
+    m_click();
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1 && title_bad("Diagnostics") == 0);
+    m_click();
+    CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_OPEN);
+    CHECK(op27(2, 0, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
+    m_settle();
+    CHECK(po_owner() == PANEL_MENU && sub5_screen() == 16 + 4 && sub5_cursor() == 1);
+    CHECK(row_bad(1, cells2("Health page", ">"), MENU_LIT) == 0);
+
+    /* Reset counters: the question, a click resets, the done page, back. */
+    m_turn(2);
+    m_click();
+    CHECK(sub5_screen() == 16 + 10 && sub5_cursor() == 0 && title_bad("Reset counters") == 0);
+    CHECK(text_slot_bad(22, "Clear the health", MENU_WHITE) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE) == 0);
+    m_click();
+    CHECK(fk_resets == 1 && sub5_cursor() == 1 && title_bad("Counters reset") == 0);
+    CHECK(text_slot_bad(22, "Counters reset.", MENU_WHITE) == 0 && text_slot_bad(36, "", 0) == 0 &&
+          text_slot_bad(86, "", 0) == 0);
+    m_click();
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 3 && fk_resets == 1);
+    m_click();   /* again, then a hold cancels */
+    m_hold();
+    CHECK(fk_resets == 1 && sub5_screen() == 16 + 4 && title_bad("Cancelled") == 0);
+
+    /* The hint: 4 s idle on a list, the title says how; a flash wins. */
+    for (int i = 0; i < 300; i++) fw_pass(5);   /* past the flash */
+    for (int i = 0; i < 600; i++) fw_pass(5);   /* 4.5 s idle in all */
+    m_settle();
+    CHECK(title_bad("Turn + Click Knob") == 0);
+    for (int i = 0; i < 200; i++) fw_pass(5);   /* 5.5 s: its second is over */
+    m_settle();
+    CHECK(title_bad("Diagnostics") == 0);
+
+    /* Exit closes; the session's kind with it. */
+    m_hold();
+    m_turn(2);   /* Exit: row 5 from Diagnostics' row 2 ... */
+    m_turn(1);
+    CHECK(sub5_cursor() == 5);
+    CHECK(op27(2, 0, 0) == MI_OK);
+    for (int i = 0; i < 50 && po_session() != SESSION_NONE; i++) fw_pass(5);
+    CHECK(po_session() == SESSION_NONE);
+
+    /* The 24 s timeout closes the menu too. */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    fw_pass(MI_IDLE_MS + 10);
+    fw_pass(5);
+    CHECK(po_session() == SESSION_NONE);
+
+    /* sub 4 still opens the fixture, and sub 0 works on it. */
+    CHECK(op27(4, 0, 0) == MI_OK && fx_screen() == FX_SCREEN_F1);
+    CHECK(sub5_screen() == FX_SCREEN_F1 && op27(0, 1, 0) == MI_OK);
+    CHECK(op27(4, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    CHECK(menu_max_lit <= 1);
+    CHECK(max_pass_bytes <= MB_PASS_BYTES);
+    CHECK(po_invariant_fail() == 0);
+    if (menu_max_lit > 1) printf("menu: %d rows lit at once\n", menu_max_lit);
+    menu_watch = false;
+}
+
+/* At every pass of a move's repaint: a reversal, a second move, and a send
+ * given up. The frame ends right, and no pass ever shows two lit rows. */
+static void top_frame_ok(int cursor) {
+    const char *rows[6][2] = {{"Power", "Balanced"}, {"Clock", "24h"}, {"Diagnostics", ">"},
+                              {"Help", ">"}, {"About", ">"}, {"Exit", ""}};
+    for (int r = 0; r < 6; r++)
+        CHECK(row_bad(r, cells2(rows[r][0], rows[r][1]), r == cursor ? MENU_LIT : MENU_DIM) == 0);
+}
+static void test_menu_stress(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    menu_watch = true; menu_max_lit = 0; max_pass_bytes = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    /* How many passes a move's repaint takes, once the turn is taken. */
+    CHECK(op27(1, 1, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+    int full = 0;
+    while (!(ms_settled() && !mb_busy()) && full < 500) { fw_pass(5); full++; }
+    m_turn(-1);
+    int consumed = 0;
+    for (int k = 0; k <= full; k++) {
+        /* Down two, then back up one after k passes: cursor 1. */
+        CHECK(op27(1, 2, 0) == MI_OK);
+        CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        for (int i = 0; i < k; i++) fw_pass(5);
+        CHECK(op27(1, -1, 0) == MI_OK);
+        CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        m_settle();
+        top_frame_ok(1);
+        /* Up one after k passes of a move down: a reversal through 0. */
+        CHECK(op27(1, 1, 0) == MI_OK);
+        CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        for (int i = 0; i < k; i++) fw_pass(5);
+        CHECK(op27(1, -2, 0) == MI_OK);
+        CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        m_settle();
+        top_frame_ok(0);
+        /* A wrap, and a send given up k passes into it (nothing sent, then a
+         * prefix): the loss repaints everything. */
+        for (int prefix = 0; prefix < 2; prefix++) {
+            CHECK(op27(1, -1, 0) == MI_OK);   /* to Exit, wrapping */
+            CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
+            for (int i = 0; i < k; i++) fw_pass(5);
+            fault_next_fill   = 1;
+            fault_fill_prefix = prefix;
+            m_settle();
+            if (fault_next_fill == 0) consumed++;
+            fault_next_fill = 0;
+            top_frame_ok(5);
+            m_turn(1);
+            top_frame_ok(0);
+        }
+    }
+    CHECK(consumed >= full);
+    CHECK(menu_max_lit <= 1 && max_pass_bytes <= MB_PASS_BYTES);
+    if (menu_max_lit > 1) printf("menu stress: %d rows lit at once\n", menu_max_lit);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);   /* sub 11 closes an open menu */
+    menu_watch = false;
+}
+
 int main(int argc, char **argv) {
     if (argc >= 3 && strcmp(argv[1], "frames") == 0)
         return frames(argv[2], argc >= 4 ? atoi(argv[3]) : 13);
@@ -1534,6 +1870,8 @@ int main(int argc, char **argv) {
     test_op_end();
     test_meas();
     test_ops();
+    test_menu();
+    test_menu_stress();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;
