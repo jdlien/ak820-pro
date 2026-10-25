@@ -1777,7 +1777,10 @@ static void test_menu(void) {
     for (int i = 0; i < 600; i++) fw_pass(5);   /* 4.5 s idle in all */
     m_settle();
     CHECK(title_bad("Turn + Click Knob") == 0);
-    for (int i = 0; i < 200; i++) fw_pass(5);   /* 5.5 s: its second is over */
+    for (int i = 0; i < 200; i++) fw_pass(5);   /* 5.5 s: then how to go back (JD) */
+    m_settle();
+    CHECK(title_bad("Hold to Go Back") == 0);
+    for (int i = 0; i < 200; i++) fw_pass(5);   /* 6.5 s: the title again */
     m_settle();
     CHECK(title_bad("Diagnostics") == 0);
 
@@ -2047,8 +2050,17 @@ static void test_menu_enable(void) {
     CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 2);
     knob(true);
     CHECK(po_session() == SESSION_NONE);
-    /* After a menu session, sub 5 says so: no fixture cursor. */
+    /* After a menu session, sub 5 says so: no fixture cursor; and an opener
+     * refused under the animation doesn't change that (codex). */
     CHECK(sub5_cursor() == 0xFF);
+    while (po_phase() == RESTORE_CLEAR || po_phase() == RESTORE_STAGES) po_restore_advance();   /* the display's part */
+    po_residual_in_t rin = {0};
+    (void)po_residual_next(&rin, 0);
+    (void)env_po_event(PO_EV_ANIM_START);
+    CHECK(po_owner() == PANEL_ANIM);
+    CHECK(op27(4, 0, 0) == MI_OK && mi_last_state() == MI_ST_REFUSED);
+    CHECK(sub5_cursor() == 0xFF);
+    (void)env_po_event(PO_EV_ANIM_STOP);
     CHECK(po_invariant_fail() == 0);
 }
 #endif
