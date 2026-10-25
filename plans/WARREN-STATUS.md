@@ -101,11 +101,15 @@ This file is the thread; read it first after a context loss. Updated
   bring the file's glyphs up to date (◀ ▶, the check, the icons; it still
   shows ‹ > •). One of his lines is cut off: "JD: I wonder if we can".
 - **Next:**
-  1. P1b: the design is drafted (the design doc's "P1b: Lighting, Screen and
-     the edit transaction", draft 1; half rows deferred to the Clock
-     options); codex's first round is running
-     (`plans/review-prompt-p1b-design.txt`). Then the code, its review, the
-     flash, the plan's P1 exit gates, JD's session.
+  1. P1b: designed (draft 3, codex three rounds, cleared) and **built**:
+     `feeb9aa3` (groundwork) and `8cb713e3` (P1b) on gremlin/s1; host
+     tests pass (`test_p1b`, both builds); dev heap gap 152 B. Codex's code
+     review is running (`plans/review-prompt-p1b-code.txt`). Then the
+     flash, `menu_p1a_board.py` (its P1b pass), the plan's P1 exit gates
+     (VIA packets mid-edit by script, JD's Fn keys, Save with RGB off,
+     visibility from Screen Off, persistence across a reboot), JD's
+     session. Sub 14 reads the edit (open, field, value, saved, external
+     cancels).
   2. The Clock options (the design doc's "JD's decisions"), with half-row
      slots for the live examples.
   3. JD's text edits; then P1c and P1d.
