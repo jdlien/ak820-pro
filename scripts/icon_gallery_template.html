@@ -281,7 +281,17 @@ function blit(x0, y0, g, rgb) {
     const i = (Y * W + X) * 4; fb.data[i] = rgb[0]; fb.data[i + 1] = rgb[1]; fb.data[i + 2] = rgb[2];
   }
 }
-const gap = cp => ((rowsOf(cp) || { w: 6 }).w > 6 ? [] : [0x20]);
+// The blank columns at a glyph's right edge; a mark gets a space after it
+// unless it leaves 4 of its own (JD, 10-24: a double-width icon, inked to its
+// last column, ran into the C).
+const MIN_GAP = 4;
+const trail = cp => {
+  const g = rowsOf(cp); if (!g) return 6;
+  const ink = g.rows.reduce((a, r) => a | r, 0); let t = 0;
+  while (t < g.w && !((ink >> t) & 1)) t++;
+  return t;
+};
+const gap = cp => (trail(cp) < MIN_GAP ? [0x20] : []);
 const roleCp = id => (id in state.roles ? state.roles[id] : ROLES.find(r => r.id === id).def);
 const toks = s => [...s].map(ch => ch.codePointAt(0));
 const cellsOf = list => list.reduce((n, cp) => n + ((rowsOf(cp) || { w: 6 }).w / 6), 0);
@@ -312,12 +322,13 @@ function drawLcd() {
                                : [["24h", "13:45:01"], ["24h", "13:45"], ["12h", "1:45:01 PM"], ["12h", "1:45 PM"],
                                   ["Date", "Oct 24, 2026"], ["Off", ""]];   // MENU-TEXT.md, JD's rows
     const saved = S === "power" ? 1 : 0, cursor = saved;
+    const at = Math.max(2, cellsOf([choice]) + gap(choice).length);   // the labels' cell: 2, unless the mark needs more
     row(0, [back, ...gap(back), ...toks("Back")], [], colour(false, true));
     opts.forEach((l, i) => {
       const y = 15 + 14 * (i + 1), rgb = colour(i === cursor, false);
       if (i === saved) text(0, y, [choice], rgb);
       const [name, ex] = Array.isArray(l) ? l : [l, ""];
-      text(2, y, toks(name), rgb);
+      text(at, y, toks(name), rgb);
       if (ex) text(20 - ex.length, y, toks(ex), rgb);
     });
   }
