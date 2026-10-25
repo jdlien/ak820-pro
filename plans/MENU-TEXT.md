@@ -27,7 +27,7 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 |....+....|....+....|   <- 20 columns
 ```
 
-## Built (P1a)
+## Built (P1a, P1b and the bootloader item)
 
 ### The title area
 
@@ -43,15 +43,24 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 ### The top level (title: `Configuration`)
 
 ```
+Lighting           ▶
+Screen           52%
 Power       Balanced
 Clock            24h
-Diagnostics        >
-Help               >
-About              >
+Diagnostics        ▶
+Bootloader         ▶
+Help               ▶
+About              ▶
 Exit
 ```
 
-- `Exit` and `‹ Back` rows show in light red when not selected.
+- Each row starts with its icon, its label at the third cell: Lighting the
+  bulb, Screen a desktop, Power the bolt, Clock a clock, Diagnostics a chip,
+  Bootloader a desktop with a download arrow, Help `?`, About `i`, Exit `×`.
+  A heading carries its section's icon; the top level's, the wrench.
+- Nine rows: Exit is on page two (the scrollbar shows).
+- `Exit` and `◀ Back` rows show in light red when not selected; `▶` marks a
+  row that opens a page; the saved option has a squared check.
 - The full top level will be (the mockup): Lighting, Screen, Connection,
   Power, Indicators, Clock, Battery, Diagnostics, Bootloader, Help, About, Exit.
 
@@ -111,6 +120,31 @@ After a click:
 
 ```
 Counters reset.
+
+
+Click: back
+```
+
+### Bootloader (title: `Bootloader`)
+
+For a firmware update, as `Fn`+`Esc` does (the board shows its bootloader
+notice for 1.5 s, then resets into the ROM, where it looks dead until it's
+flashed or replugged). The question:
+
+```
+For a firmware
+update over USB.
+
+
+Click: enter
+Hold: cancel
+```
+
+On battery in its reserve (the RGB cut has fired), the click shows instead:
+
+```
+Plug in first:
+the battery is low.
 
 
 Click: back
@@ -216,6 +250,46 @@ Link BT 1 connected
 | Mode      | `Mode <Always on / Balanced / Power saver / Lights out>`                                                              |              |
 | Link      | `Link USB`; `Link 2.4G <state>`; `Link BT <n> <state>`; states: `idle`, `linking`, `pairing`, `connected`, `rejected` |              |
 
+### Lighting (title: `Lighting`)
+
+```
+◀ Back
+Effect   Alphas/Mods
+Brightness       45%
+Hue              260
+Saturation       89%
+Second color    +324
+Lights            On
+```
+
+- `Second color` shows for the Alphas/Mods effect (its value is the
+  offset in degrees, `+324`); every other effect shows `Speed` with a
+  percentage instead.
+- **Effect** (a choice that previews as you turn): `Solid`, `Alphas/Mods`,
+  `Cycle All`, `Cycle L-R`, `Cycle U-D`, `Jellybean`, `Heatmap`,
+  `Rainfall`, `Drift`.
+- **Lights** (a choice): `Off`, `On`.
+- **Brightness, Saturation, Speed** open the range editor; **Hue, Second
+  color** the hue editor (both below).
+
+### Screen (on the top level)
+
+A range: `Off`, then a percentage of its 23 levels (`75%`).
+
+### The editors
+
+The range editor: the title (the item's name), a big value in the 20 px
+face (10 characters), a bar, then three hints:
+
+```
+Turn: change
+Click: save
+Hold: cancel
+```
+
+The hue editor: the title, a colour strip with a marker, the big value
+(degrees, `+324` for the second colour), and the same three hints.
+
 ## Not built yet (the mockup's words)
 
 ### About, page 2 (P1d: the bunny beside the first three lines)
@@ -235,46 +309,6 @@ QMK Port by fpb
 
 The QR code to `https://github.com/jdlien/ak820-pro` (no text in the mockup;
 it shows `github.com/jdlien` / `  /ak820-pro` when the QR isn't drawn).
-
-### Lighting (P1b; title: `Lighting`)
-
-```
-‹ Back
-Effect   Alphas/Mods
-Brightness       45%
-Hue              260
-Saturation       89%
-Second color    +324
-Lights            On
-```
-
-- `Second color` shows for the Alphas/Mods effect (its value is the
-  offset in degrees, `+324`); every other effect shows `Speed` with a
-  percentage instead.
-- **Effect** (a choice that previews as you turn): `Solid`, `Alphas/Mods`,
-  `Cycle All`, `Cycle L-R`, `Cycle U-D`, `Jellybean`, `Heatmap`,
-  `Rainfall`, `Drift`.
-- **Lights** (a choice): `Off`, `On`.
-- **Brightness, Saturation, Speed** open the range editor; **Hue, Second
-  color** the hue editor (both below).
-
-### Screen (P1b; on the top level)
-
-A range: `Off`, then a percentage of its 23 levels (`75%`).
-
-### The editors (P1b)
-
-The range editor: the title (the item's name), a big value in the 20 px
-face (10 characters), a bar, then three hints:
-
-```
-Turn: change
-Click: save
-Hold: cancel
-```
-
-The hue editor: the title, a colour strip with a marker, the big value
-(degrees, `+324` for the second colour), and the same three hints.
 
 ### Connection (P3; title: `Connection`)
 

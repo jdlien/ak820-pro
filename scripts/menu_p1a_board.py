@@ -34,8 +34,9 @@ from menu_s1_gate import decode_meas  # noqa: E402
 TOP, POWER, CLOCK, DIAG, HELP, ABOUT, EXIT = 1, 2, 3, 4, 5, 6, 7
 RESET, TOPIC0 = 10, 11
 LIGHT, SCREEN, EFFECT, BRIGHT, HUE = 24, 25, 26, 27, 28   # P1b's nodes
-# The top level since P1b: Lighting, Screen, Power, Clock, Diagnostics, Help, About, Exit.
-R_POWER, R_CLOCK, R_DIAG, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7
+# The top level since P1b and the bootloader item: Lighting, Screen, Power,
+# Clock, Diagnostics, Bootloader, Help, About, Exit (Exit on page two).
+R_POWER, R_CLOCK, R_DIAG, R_BOOT, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7, 8
 SCR = lambda n: 16 + n  # noqa: E731
 SETTLE_S = 1.0
 
@@ -170,7 +171,7 @@ def main():
         hold(h, "cancelled", SCR(TOP), R_CLOCK)
 
         # Help: each topic, paged to its end and back.
-        turn(h, 2, "to Help", SCR(TOP), R_HELP)
+        turn(h, R_HELP - R_CLOCK, "to Help", SCR(TOP), R_HELP)
         click(h, "Help", SCR(HELP), 1)
         for t in range(4):
             if t:
@@ -187,7 +188,7 @@ def main():
         click(h, "About back", SCR(TOP), R_ABOUT)
 
         # Diagnostics: Health and Camera, handed off and back.
-        turn(h, -2, "to Diagnostics", SCR(TOP), R_DIAG)
+        turn(h, R_DIAG - R_ABOUT, "to Diagnostics", SCR(TOP), R_DIAG)
         click(h, "Diagnostics", SCR(DIAG), 1)
         click(h, "Health page", owner="debug")
         click(h, "back from Health", SCR(DIAG), 1, owner="menu")

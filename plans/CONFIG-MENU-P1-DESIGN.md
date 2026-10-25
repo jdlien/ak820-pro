@@ -769,6 +769,40 @@ included, against fakes with QMK's semantics.
   still fails at 15 ms and any pass over it: both assertions move to 17 ms,
   keeping the count, when the gate runs on the editors).
 
+## The bootloader item (JD, 10-24 night)
+
+JD's idea from his first look (`plans/BACKLOG.md`, "A bootloader item"), asked
+for overnight. Built on P1b's tree:
+
+- **The top level gains Bootloader**, after Diagnostics as JD's
+  `MENU-TEXT.md` places it: Lighting, Screen, Power, Clock, Diagnostics,
+  Bootloader, Help, About, Exit. Nine rows: Exit is on page two, the
+  scrollbar shows. Its icon is the picker's proposal, nf-oct-desktop_download
+  (U+F498, 7 px, two cells), on its row and its heading.
+- **It opens a confirm page** (the confirm geometry, as Reset counters):
+  "For a firmware" / "update over USB." / "Click: enter" / "Hold: cancel".
+  The words wait for JD's text pass (they're in `MENU-TEXT.md`).
+- **A click enters the bootloader exactly as `Fn`+`Esc` does** (`ak820pro.c`,
+  `QK_BOOT`): `display_bootloader_splash()`, 1.5 s so it can be read, then
+  `reset_keyboard()`, QMK's clean reset into the ROM. Never the direct jump
+  to `SN32_BOOTLOADER_ADDRESS`, which made flashing unreliable (the comment
+  there, 2026-08-31). Through a new `MENU_BOOTLOADER` result and
+  `env_bootloader()`; op 27's synthetic click reaches it too, so the board's
+  test needs no hands (dev builds only, as op 27 is).
+- **Never on battery in its reserve** (`flash.sh`'s rule: a pack that dies
+  mid-write leaves the board half-erased): when `power_lights_cut()`, the
+  click shows a second page instead, "Plug in first:" / "the battery is low."
+  / "Click: back".
+- **What a reset loses** is what `Fn`+`Esc` loses: RAM, and a pending
+  EEPROM write. No edit can be open on the top level.
+- `Fn`+`Esc` stays bound; whether to free it is JD's call (the backlog's
+  note).
+- **Tests:** the host: the row, the page, the click's result, the refusal on
+  reserve, the hold's cancel. The board: entered by op 27 from the menu, the
+  board shows `0C45:7140` (`Get-PnpDevice`, never enumerating HID), and
+  `flash.sh` brings it back (it takes an already-entered bootloader: the last
+  backups, no jump).
+
 ## P1b, P1c, P1d
 
 P1b's design is the section above (the earlier note asked it to cover the

@@ -57,7 +57,8 @@ ICONS = [
     ("I_ABOUT", 0xF05A, 2),        # nf-fa-info_circle,
     ("I_EXIT", 0xF00D, 1),         # nf-fa-times;
     ("I_LIGHT", 0xF834, 1),        # P1b: Lighting, nf-mdi-lightbulb (JD's pick),
-    ("I_SCREEN", 0xF108, 2),       # Screen, nf-fa-desktop
+    ("I_SCREEN", 0xF108, 2),       # Screen, nf-fa-desktop;
+    ("I_BOOT", 0xF498, 2),         # the bootloader item, nf-oct-desktop_download
 ]
 
 
