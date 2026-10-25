@@ -5,7 +5,8 @@ only the menu's session, not whatever the dashboard did before it.
 
     venv-win/Scripts/python.exe scripts/menu_s1_spin.py STOPFILE OUT.json [--style 16..19] < /dev/null
 
-- Arms the opener (op 27 sub 6) and HC_ACCT, the loop accounting.
+- Arms the fixture's opener (op 27 sub 6) and HC_ACCT, the loop accounting;
+  with --menu (P1a), doesn't arm: Fn+knob opens the real menu.
 - When the owner becomes the menu, arms sub 10 (its maxima from there) and,
   with --style, sets F3 in that style (op 27 sub 0).
 - Every 250 ms: sub 5 and sub 10. When sub 10's count of passes over 15 ms
@@ -38,6 +39,7 @@ def main():
     ap.add_argument("stop")
     ap.add_argument("out")
     ap.add_argument("--style", type=int, default=None, help="op 27 sub 0 pattern, 16-19: F3 once open")
+    ap.add_argument("--menu", action="store_true", help="the real menu (P1a): the opener left unarmed")
     a = ap.parse_args()
     if os.path.exists(a.stop):
         os.remove(a.stop)
@@ -47,8 +49,9 @@ def main():
     try:
         read_acct(h, "on")
         read_acct(h, "reset")
-        mut(h, 6, bytes([1]))
-        print("armed: open the menu with Fn+knob", flush=True)
+        if not a.menu:
+            mut(h, 6, bytes([1]))
+        print("ready: open the menu with Fn+knob", flush=True)
         t0 = time.perf_counter()
         opened = closed = None
         s0 = over = None
@@ -95,7 +98,8 @@ def main():
         print("SUMMARY " + json.dumps(res), flush=True)
     finally:
         try:
-            mut(h, 6, bytes([0]))
+            if not a.menu:
+                mut(h, 6, bytes([0]))
             read_acct(h, "off")
         finally:
             h.close()
