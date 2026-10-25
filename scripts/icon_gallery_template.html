@@ -43,6 +43,10 @@ header p { margin: 0; color: var(--muted); max-width: 78ch; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed=true] { background: var(--accent-soft); color: var(--ink); }
 .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.hex { font: 11px "IBM Plex Mono", monospace; color: var(--muted); }
+.palette { list-style: none; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 13px; }
+.palette li { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.palette .pn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .chip { font: 500 13px "IBM Plex Sans", sans-serif; border: 1px solid var(--line); background: var(--surface); color: var(--muted); padding: 5px 11px; border-radius: 999px; cursor: pointer; }
@@ -127,6 +131,7 @@ aside { position: sticky; top: 16px; display: flex; flex-direction: column; gap:
         <p class="sub">The menu's 128-pixel-wide area, rows and colours as the firmware draws them.</p>
         <div class="bezel"><canvas id="lcd" width="128" height="128" aria-label="Menu preview"></canvas></div>
         <div class="seg screens" id="screens" role="group" aria-label="Preview screen"></div>
+        <ul class="palette" id="palette" aria-label="The menu's colours"></ul>
         <div class="roles" id="roles"></div>
       </div>
       <div class="card">
@@ -154,6 +159,8 @@ const rgbOf = c => [Math.round(((c >> 11) & 31) * 255 / 31), Math.round(((c >> 5
 const PAL = Object.fromEntries(Object.entries(P565).map(([k, v]) => [k, rgbOf(v)]));
 const hexOf = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
 const COLORS = [["lit", "Lit"], ["dim", "Dim"], ["leave", "Back red"], ["white", "White"]];
+const PALETTE = [["lit", "Selected row"], ["dim", "Other rows"], ["leave", "Back, Exit"], ["white", "Titles, pages"],
+                 ["cursor", "Cursor"], ["grey", "Separator"], ["track", "Scrollbar track"]];
 const SIZES = [2, 3, 4, 6];
 const CELL_BG = [18, 18, 18];
 const KIND_NOTE = ["", "  (double width: two cells)", "  (7 px wide on a 6 px advance: takes two cells)"];
@@ -271,6 +278,7 @@ function seg(el, items, cur, on) {
     b.setAttribute("aria-pressed", v === cur);
     if (sw) { const s = document.createElement("span"); s.className = "swatch"; s.style.background = sw; b.appendChild(s); }
     b.appendChild(document.createTextNode(text));
+    if (sw) { const h = document.createElement("span"); h.className = "hex"; h.textContent = sw; b.appendChild(h); }
     b.addEventListener("click", () => on(v));
     el.appendChild(b);
   });
@@ -279,6 +287,14 @@ function drawControls() {
   seg(document.getElementById("colors"), COLORS.map(([k, n]) => [k, n, hexOf(PAL[k])]), state.color, v => { state.color = v; save(); drawControls(); repaintTiles(); });
   seg(document.getElementById("sizes"), SIZES.map(s => [s, s + "×"]), state.size, v => { state.size = v; save(); drawControls(); repaintTiles(); });
   seg(document.getElementById("screens"), SCREENS, state.screen, v => { state.screen = v; save(); drawControls(); drawLcd(); });
+  // The menu's palette as the panel shows it: RGB565, expanded.
+  const pl = document.getElementById("palette"); pl.innerHTML = "";
+  PALETTE.forEach(([k, what]) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="swatch" style="background:${hexOf(PAL[k])}"></span><span class="pn">${what}</span>` +
+                   `<span class="hex">${hexOf(PAL[k])}</span><span class="hex">0x${P565[k].toString(16).toUpperCase()}</span>`;
+    pl.appendChild(li);
+  });
   const chips = document.getElementById("chips"); chips.innerHTML = "";
   [[-1, "All", DATA.length], ...CATS.map((n, k) => [k, n, DATA.filter(d => d[4] === k).length])].forEach(([k, n, c]) => {
     const b = document.createElement("button"); b.type = "button"; b.className = "chip";
