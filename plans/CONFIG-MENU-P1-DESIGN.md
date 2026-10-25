@@ -416,6 +416,10 @@ After JD's look at `925f029b` ("looking quite good"), in `541a8cbd`:
   icon beside it); tunable live on dev (op 27 sub 13, `menu_tune.py`'s
   `cursor`). A mono piece has one colour, so a row's lead is its own chunk,
   first and one piece (112 B); the text's chunks are back to 60 and 61 px.
+- **The selected row's colour stays `0xFF94`** (#FFF3A5 on the panel). Tried
+  live on `541a8cbd`: pure white ("a tint still helps differentiate it"),
+  #FFF7C6 ("not bad"), #FFFF00. JD: the original "combines clarity and
+  contrast"; "leave it for now".
 
 ## Before P1 is accepted: JD's text review (pinned, 10-24)
 
