@@ -350,6 +350,31 @@ with the prototype's other items still to come (P1b-d, P2-P4). His notes:
    "maybe we don't need it at all"; the words wait for his text pass
    ("LLM text is often overly verbose"). BACKLOG.
 
+## JD's decisions, later on 10-24
+
+- **Timing (C10's 15 ms):** (b) for now: menu painting passes of ~16-17
+  ms are accepted (the hard line, 25 ms, keeps 8 ms of margin). (a), the
+  polled send and the expansion in SRAM, stays on the table for a refinement
+  pass "if it's clear it'll work". RAM to find for it, best first: the
+  stacks' measured watermarks (C5 owes them); the debug page's two 198 B
+  text buffers, shared with the menu (JD: "not going to be visible in normal
+  use, just an artifact of when I was chasing down the keyboard eating my
+  keystrokes"); the battery log last (likely not in a production build, but
+  wanted for now).
+- **The hint is a pair** (`1e84bf17`): "Turn + Click Knob", then "Hold to
+  Go Back" (JD: the hold "is a very non-obvious gesture").
+- **Clock, more options** (with the dashboard's renderer, later): seconds
+  first, the default 24 hour with seconds (today's 24H, enum 0, unchanged);
+  12 hour with seconds (today's 12H); then new modes appended (the enum is
+  persisted): 24 hour and 12 hour without seconds; Date; Off. Fn+C's cycle
+  goes once the menu has it ("keep those in the menu"). Rows show a short
+  label and an example of the format, e.g. `24h       13:45:01`,
+  `12h    1:45:01 PM`, `Date  Oct 24, 2026` (all fit: the longest is 18
+  cells; the menu has room for a plain "PM", unlike the dashboard's tiny
+  AM/PM glyph). Static examples first; live ones once rows split into half
+  slots (P1b), at ~8 pieces a second while the Clock list shows. The top
+  level keeps a short label, not a ticking time.
+
 ## Before P1 is accepted: JD's text review (pinned, 10-24)
 
 JD will review and edit **all** the menu's text by hand once P1 nears its
