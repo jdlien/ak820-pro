@@ -7,7 +7,7 @@ been idle 18 s.
     venv-win/Scripts/python.exe scripts/menu_tune.py CMDFILE < /dev/null
 
 CMDFILE is read once a second; each new line is a command:
-    leave FF9A9A     a colour by name, as RGB888 hex: lit, dim, leave, white, grey, track
+    leave FF9A9A     a colour by name, as RGB888 hex: lit, dim, leave, white, grey, track, cursor
     stop             close the menu and exit
 The palette's names are menu.h's MP_* order. Never enumerates HID on Windows."""
 import os
@@ -17,7 +17,7 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 from menu_s0_session import mutate, open_device, read_state, wait, xfer  # noqa: E402
 
-NAMES = ["lit", "dim", "leave", "white", "grey", "track"]
+NAMES = ["lit", "dim", "leave", "white", "grey", "track", "cursor"]
 
 
 def rgb565(hexstr):

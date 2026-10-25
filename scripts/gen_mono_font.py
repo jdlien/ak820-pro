@@ -40,15 +40,16 @@ OUT = os.path.join(ROOT, "qmk_firmware-ak820pro", "keyboards", "a_jazz", "ak820p
 CW, CH, BASELINE = 6, 14, 9
 EXTRAS = [("‹", 0x2039), ("›", 0x203A), ("•", 0x2022), ("▸", 0x25B8), ("✓", 0x2713)]
 EXTRA_NAMES = ["LSAQUO", "RSAQUO", "BULLET", "TRIANGLE", "CHECK"]
-# JD's picks, 10-24: (the macro's name, the code point, its cells). APPEND
-# ONLY: a code is its place in this list, and menu_text.h spells the codes.
+# JD's picks, 10-24: (the macro's name, the code point, its cells). A code
+# is its place in this list; menu_text.h spells the codes, and the host tests
+# hold it to these (nothing stores them, so a removal only moves the later
+# ones).
 ICONS = [
     ("TRI_L", 0x25C0, 1),          # ◀ Back
     ("TRI_R", 0x25B6, 1),          # ▶ a row that opens a page
     ("CURSOR", 0x1FB6C, 1),        # 🭬 the selected row's, in its line's lead (columns 0-2)
     ("WRENCH", 0x1F527, 2),        # 🔧 before "Configuration"
-    ("CHECK_CIRCLE", 0xF058, 2),   # the saved option (nf-fa-check_circle)
-    ("CHECK_BOX", 0xF631, 2),      # its fallback (nf-mdi-checkbox_marked)
+    ("CHECK_BOX", 0xF631, 2),      # the saved option (nf-mdi-checkbox_marked; JD: the circle "doesn't look good")
     ("I_POWER", 0xF0E7, 1),        # the top level's icons: nf-fa-bolt,
     ("I_CLOCK", 0xF017, 2),        # nf-fa-clock,
     ("I_DIAG", 0xF2DB, 1),         # nf-fa-microchip,

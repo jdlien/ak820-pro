@@ -969,7 +969,7 @@ static void test_mono(void) {
           !strcmp(MT_CHECK, FONT_MONO_CHECK));
     CHECK(!strcmp(MT_TRI_L, FONT_MONO_TRI_L) && !strcmp(MT_TRI_R, FONT_MONO_TRI_R) &&
           !strcmp(MT_CURSOR, FONT_MONO_CURSOR) && !strcmp(MT_WRENCH, FONT_MONO_WRENCH) &&
-          !strcmp(MT_CHECK_CIRCLE, FONT_MONO_CHECK_CIRCLE) && !strcmp(MT_CHECK_BOX, FONT_MONO_CHECK_BOX));
+          !strcmp(MT_CHECK_BOX, FONT_MONO_CHECK_BOX));
     CHECK(!strcmp(MT_I_POWER, FONT_MONO_I_POWER) && !strcmp(MT_I_CLOCK, FONT_MONO_I_CLOCK) &&
           !strcmp(MT_I_DIAG, FONT_MONO_I_DIAG) && !strcmp(MT_I_HELP, FONT_MONO_I_HELP) &&
           !strcmp(MT_I_ABOUT, FONT_MONO_I_ABOUT) && !strcmp(MT_I_EXIT, FONT_MONO_I_EXIT));
@@ -1596,7 +1596,7 @@ static int frames(const char *dir, int n) {
  * from the face, not from menu.c. */
 
 /* A text slot at y: the cells from x 4 in fg on black, x 0-3 and 124 black
- * but for the cursor's columns 0-2 in x 0-2 when `cursor` (JD, 10-24). */
+ * but for the cursor's columns 0-2 in x 0-2, in MENU_CURSOR, when `cursor`. */
 static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor) {
     int            bad = 0;
     size_t         len = strlen(cells);
@@ -1605,7 +1605,7 @@ static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor
         for (uint16_t x = 0; x <= 124; x++) {
             uint16_t want = 0;
             if (x < 3) {
-                if (cursor && (cg[r] & (0x80 >> x))) want = fg;
+                if (cursor && (cg[r] & (0x80 >> x))) want = MENU_CURSOR;   /* its own colour (JD, 10-24) */
             } else if (x >= 4 && x <= 123) {
                 size_t  cell = (size_t)(x - 4) / 6;
                 uint8_t code = cell < len ? (uint8_t)cells[cell] : (uint8_t)' ';
@@ -1687,10 +1687,10 @@ static void test_menu(void) {
 
     /* Power: the choice opens on the saved option, its bullet in cell 0. */
     m_click();
-    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad("Power") == 0);
+    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad(FONT_MONO_I_POWER " Power") == 0);
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
     CHECK(row_bad(1, "  Always on", MENU_DIM) == 0);   /* the bullet's cell, then a space: JD's breathing room */
-    CHECK(row_bad(2, FONT_MONO_CHECK_CIRCLE "Balanced", MENU_LIT) == 0);
+    CHECK(row_bad(2, FONT_MONO_CHECK_BOX "Balanced", MENU_LIT) == 0);
     CHECK(row_bad(4, "  Lights out", MENU_DIM) == 0);
     m_turn(2);   /* Lights out */
     m_click();   /* commits */
@@ -1704,7 +1704,8 @@ static void test_menu(void) {
     /* Clock: a cancel by Back writes nothing, and says so. */
     m_turn(1);
     m_click();
-    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, FONT_MONO_CHECK_CIRCLE "24 hour", MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, FONT_MONO_CHECK_BOX "24 hour", MENU_LIT) == 0 &&
+          title_bad(FONT_MONO_I_CLOCK "Clock") == 0);
     m_turn(2);   /* Date: the enum's 3 */
     m_hold();
     CHECK(fk_clock == 0 && fk_clock_writes == 0 && title_bad("Cancelled") == 0 && sub5_screen() == 16 + 1);
@@ -1725,11 +1726,11 @@ static void test_menu(void) {
     for (int i = 0; i < 300; i++) fw_pass(5);   /* past the Saved flash */
     m_turn(2);   /* Help (row 3) */
     m_click();
-    CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 1 && title_bad("Help") == 0);
+    CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 1 && title_bad(FONT_MONO_I_HELP "Help") == 0);
     CHECK(row_bad(1, cells2("Using the menu", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_turn(2);   /* Shortcuts */
     m_click();
-    CHECK(title_bad("Shortcuts") == 0 && sub5_cursor() == 0);
+    CHECK(title_bad(FONT_MONO_I_HELP "Shortcuts") == 0 && sub5_cursor() == 0);
     CHECK(row_bad(0, "Fn+Q/W/E  BT slot", MENU_WHITE) == 0);
     CHECK(fb[20][125] == MENU_WHITE);   /* a scrollbar: the thumb at the top */
     /* A page step paints the scrollbar first (JD, 10-24): in the pass that
@@ -1756,7 +1757,7 @@ static void test_menu(void) {
     /* About: the snapshot, formatted. */
     m_turn(1);
     m_click();
-    CHECK(title_bad("About") == 0);
+    CHECK(title_bad(FONT_MONO_I_ABOUT "About") == 0);
     CHECK(row_bad(0, "Firmware 36afff30", MENU_WHITE) == 0);
     CHECK(row_bad(1, "dev, 0xef38330e", MENU_WHITE) == 0);
     CHECK(row_bad(2, "Up 1d 1h 54m", MENU_WHITE) == 0);
@@ -1774,14 +1775,14 @@ static void test_menu(void) {
     fw_pass(5); fw_pass(5);
     CHECK(op27(2, 0, 0) == MI_OK);   /* and in again */
     m_settle();
-    CHECK(title_bad("About") == 0 && row_bad(6, "Mode Lights out", MENU_WHITE) == 0);
+    CHECK(title_bad(FONT_MONO_I_ABOUT "About") == 0 && row_bad(6, "Mode Lights out", MENU_WHITE) == 0);
     CHECK(row_bad(3, "Battery -", MENU_WHITE) == 0 && row_bad(4, "Pack -", MENU_WHITE) == 0);
     m_click();
 
     /* Diagnostics: Health hands off; a click comes back to its row. */
     m_turn(-2);   /* Diagnostics (row 2) */
     m_click();
-    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1 && title_bad("Diagnostics") == 0);
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1 && title_bad(FONT_MONO_I_DIAG " Diagnostics") == 0);
     m_click();
     CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_OPEN);
     CHECK(op27(2, 0, 0) == MI_OK);
@@ -1794,7 +1795,7 @@ static void test_menu(void) {
     /* Reset counters: the question, a click resets, the done page, back. */
     m_turn(2);
     m_click();
-    CHECK(sub5_screen() == 16 + 10 && sub5_cursor() == 0 && title_bad("Reset counters") == 0);
+    CHECK(sub5_screen() == 16 + 10 && sub5_cursor() == 0 && title_bad(FONT_MONO_I_DIAG " Reset counters") == 0);
     CHECK(text_slot_bad(22, "Clear the health", MENU_WHITE, false) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE, false) == 0);
     m_click();
     CHECK(fk_resets == 1 && sub5_cursor() == 1 && title_bad("Counters reset") == 0);
@@ -1816,7 +1817,7 @@ static void test_menu(void) {
     CHECK(title_bad("Hold to Go Back") == 0);
     for (int i = 0; i < 200; i++) fw_pass(5);   /* 6.5 s: the title again */
     m_settle();
-    CHECK(title_bad("Diagnostics") == 0);
+    CHECK(title_bad(FONT_MONO_I_DIAG " Diagnostics") == 0);
 
     /* Exit closes; the session's kind with it. */
     m_hold();
@@ -1844,13 +1845,13 @@ static void test_menu(void) {
     CHECK(op27(2, 0, 0) == MI_OK);
     CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
     m_settle();
-    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && row_bad(3, FONT_MONO_CHECK_CIRCLE "Power saver", MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && row_bad(3, FONT_MONO_CHECK_BOX "Power saver", MENU_LIT) == 0);
     /* An external change inside an open choice: the bullet moves, the cursor
      * stays; then Back by its row cancels, writing nothing. */
     fk_power = 0;
     fw_pass(5);
     m_settle();
-    CHECK(sub5_cursor() == 3 && row_bad(1, FONT_MONO_CHECK_CIRCLE "Always on", MENU_DIM) == 0 && row_bad(3, "  Power saver", MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 3 && row_bad(1, FONT_MONO_CHECK_BOX "Always on", MENU_DIM) == 0 && row_bad(3, "  Power saver", MENU_LIT) == 0);
     int w0 = fk_power_writes;
     m_turn(-3);   /* to ‹ Back */
     m_click();
@@ -1898,7 +1899,7 @@ static void test_menu(void) {
         m_settle();
         char want[21];
         snprintf(want, sizeof want, "Pack %u mV", 3500u + k);
-        CHECK(title_bad("About") == 0 && row_bad(4, want, MENU_WHITE) == 0);
+        CHECK(title_bad(FONT_MONO_I_ABOUT "About") == 0 && row_bad(4, want, MENU_WHITE) == 0);
         snprintf(want, sizeof want, "Mode %s", (const char *[]){"Always on", "Balanced", "Power saver", "Lights out"}[k & 3]);
         CHECK(row_bad(6, want, MENU_WHITE) == 0);
     }
@@ -1940,26 +1941,18 @@ static void test_menu(void) {
     CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
     m_settle();
     CHECK(row_bad(5, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LEAVE) == 0);
-    /* sub 14 (JD, 10-24): the squared check for the circled one, live; a
-     * third style is refused. The saved option is the cursor's on entry. */
+    /* JD, 10-24: the squared check on the saved option (the cursor's on
+     * entry), Power's icon on its heading, ◀ on Back. */
     m_turn(-4);   /* Power */
     m_click();
     {
         const char *pw = (const char *[]){"Always on", "Balanced", "Power saver", "Lights out"}[fk_power & 3];
         char        want[24];
         CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 1 + (fk_power & 3));
-        snprintf(want, sizeof want, "%s%s", FONT_MONO_CHECK_CIRCLE, pw);
-        CHECK(row_bad(1 + (fk_power & 3), want, MENU_LIT) == 0);
-        CHECK(op27(14, 1, 0) == MI_OK);
-        m_settle();
         snprintf(want, sizeof want, "%s%s", FONT_MONO_CHECK_BOX, pw);
         CHECK(row_bad(1 + (fk_power & 3), want, MENU_LIT) == 0);
         CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
-        CHECK(op27(14, 2, 0) == MI_BAD);
-        CHECK(op27(14, 0, 0) == MI_OK);
-        m_settle();
-        snprintf(want, sizeof want, "%s%s", FONT_MONO_CHECK_CIRCLE, pw);
-        CHECK(row_bad(1 + (fk_power & 3), want, MENU_LIT) == 0);
+        CHECK(title_bad(FONT_MONO_I_POWER " Power") == 0);
     }
     m_hold();
     CHECK(op27(12, 1, 0) == MI_OK);
