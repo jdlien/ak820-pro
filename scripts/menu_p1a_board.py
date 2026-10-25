@@ -12,7 +12,9 @@ gate (plans/CONFIG-MENU-P1-DESIGN.md, "Tests (P1a)").
    own settings at the end); Help's four topics paged; About; Health and
    Camera handed off and back; a choice cancelled; the hint; the close.
 3. Every step: the expected screen id (16 + the node) and cursor, pixels_done
-   within 1,000 ms, invariant_fail 0. The interval: no pass over 15 ms, none
+   within 1,000 ms, invariant_fail 0. The interval: no pass over 17 ms (JD's
+   (b), 10-24: menu painting passes of ~16-17 ms accepted; those over 15 are
+   counted and printed, not failed), none
    of 340 ms (aliased).
 Never enumerates HID on Windows."""
 import argparse
@@ -199,8 +201,7 @@ def main():
         time.sleep(1.5)
         meas = decode_meas(xfer(h, 10, bytes([0])))
         check(not meas["aliased"], "a pass of 340 ms or more in the interval")
-        check(meas["pass_max_us"] <= 15000, f"the longest pass {meas['pass_max_us']} us")
-        check(meas["over15"] == 0, f"{meas['over15']} passes over 15 ms")
+        check(meas["pass_max_us"] <= 17000, f"the longest pass {meas['pass_max_us']} us")   # JD's (b)
         to_dash(h)
     finally:
         h.close()
