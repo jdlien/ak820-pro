@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cozette Icon Picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f3ef; --surface: #ffffff; --surface-2: #ebe9e3; --ink: #1c1b19; --muted: #66645e;
+  --line: #dcd9d1; --accent: #7a5c00; --accent-soft: #f6ecc4; --tile-line: #2a2a2a;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121212; --surface: #1a1a1a; --surface-2: #242424; --ink: #ebeae6; --muted: #9b9a94;
+    --line: #2e2e2e; --accent: #f2dc8a; --accent-soft: #3a3320; --tile-line: #262626;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121212; --surface: #1a1a1a; --surface-2: #242424; --ink: #ebeae6; --muted: #9b9a94;
+  --line: #2e2e2e; --accent: #f2dc8a; --accent-soft: #3a3320; --tile-line: #262626;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 "IBM Plex Sans", system-ui, sans-serif; }
+.wrap { max-width: 1440px; margin: 0 auto; padding: 28px 16px 72px; }
+header h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--muted); max-width: 78ch; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 412px; gap: 28px; align-items: start; margin-top: 22px; }
+@media (max-width: 1000px) { .layout { grid-template-columns: minmax(0, 1fr); } aside { position: static !important; } }
+
+.controls { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0 12px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.controls input[type=search] { flex: 1 1 220px; min-width: 0; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.controls input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { font: 500 13px "IBM Plex Sans", sans-serif; border: 0; background: transparent; color: var(--muted); padding: 7px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed=true] { background: var(--accent-soft); color: var(--ink); }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.chip { font: 500 13px "IBM Plex Sans", sans-serif; border: 1px solid var(--line); background: var(--surface); color: var(--muted); padding: 5px 11px; border-radius: 999px; cursor: pointer; }
+.chip[aria-pressed=true] { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+.chip .n { font-family: "IBM Plex Mono", monospace; font-size: 12px; opacity: 0.75; margin-left: 4px; }
+
+.armed { display: none; margin: 12px 0 0; padding: 9px 12px; border-radius: 8px; background: var(--accent-soft); border: 1px solid var(--accent); font-size: 14px; }
+.armed.on { display: block; }
+section.cat h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 26px 0 10px; }
+section.cat h2 span { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile, 64px), 1fr)); gap: 6px; }
+.tile { position: relative; background: #000; border: 1px solid var(--tile-line); border-radius: 6px; padding: 10px 2px 6px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 7px; cursor: pointer; font: 11px "IBM Plex Mono", monospace; color: #8c8c8c; min-height: 0; }
+.tile:hover { border-color: #555; }
+.tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tile[aria-pressed=true] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.tile[aria-pressed=true] .cp { color: #f2dc8a; }
+.tile canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.tile .badge { position: absolute; top: 3px; right: 4px; font-size: 9px; color: #ff9a9a; letter-spacing: 0.02em; }
+.tile .wide { position: absolute; top: 3px; left: 5px; font-size: 9px; color: #7a7a7a; }
+.empty { color: var(--muted); padding: 40px 0; text-align: center; display: none; }
+
+aside { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.card h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+.card .sub { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+.bezel { background: #000; border-radius: 10px; padding: 12px; border: 1px solid #2a2a2a; }
+.bezel canvas { width: 100%; max-width: 384px; aspect-ratio: 1; display: block; margin: 0 auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+.screens { margin: 12px 0 14px; display: flex; flex-wrap: wrap; }
+.roles { display: flex; flex-direction: column; gap: 8px; }
+.role { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; }
+.role.armed-role { border-color: var(--accent); background: var(--accent-soft); }
+.role .g { width: 40px; height: 40px; background: #000; border-radius: 6px; display: grid; place-items: center; }
+.role .g canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+.role .what { min-width: 0; }
+.role .what b { display: block; font-size: 14px; font-weight: 500; }
+.role .what span { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn { font: 500 13px "IBM Plex Sans", sans-serif; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); padding: 6px 11px; border-radius: 7px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.btn.ghost { background: transparent; color: var(--muted); }
+.short-head { display: flex; align-items: center; gap: 8px; }
+.short-head h3 { flex: 1; margin: 0; }
+.shortlist { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow: auto; }
+.shortlist li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 4px; border-radius: 8px; }
+.shortlist li:hover { background: var(--surface-2); }
+.shortlist .g { width: 34px; height: 34px; background: #000; border-radius: 6px; display: grid; place-items: center; cursor: pointer; }
+.shortlist .g canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+.shortlist .t { min-width: 0; font-size: 13px; }
+.shortlist .t .c { font-family: "IBM Plex Mono", monospace; }
+.shortlist .t .nm { color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shortlist .x { border: 0; background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; padding: 2px 8px; border-radius: 6px; }
+.shortlist .x:hover { color: var(--ink); background: var(--surface); }
+.hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+.toast { font-size: 13px; color: var(--accent); min-height: 1.2em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Cozette Icon Picker</h1>
+    <p>Every icon-like glyph in Cozette, the menu's font, drawn at the keyboard's own pixels: a 6&times;14 cell, or 12&times;14 for a wide one, on LCD black in the menu's colours. Hover a glyph for its name, click it to shortlist. To try one in the menu, press <b>Pick</b> beside a role in the preview, then click a glyph.</p>
+  </header>
+
+  <div class="layout">
+    <main>
+      <div class="controls">
+        <input type="search" id="q" placeholder="Search: gear, wrench, triangle, check, 2699, U+F013" aria-label="Search glyphs" autocomplete="off">
+        <div class="seg" id="colors" role="group" aria-label="Glyph colour"></div>
+        <div class="seg" id="sizes" role="group" aria-label="Zoom"></div>
+        <label class="check" title="Hide glyphs that take two of the menu's 6-px cells"><input type="checkbox" id="oneCell"> One cell only</label>
+        <div class="chips" id="chips" role="group" aria-label="Category"></div>
+      </div>
+      <div class="armed" id="armed"></div>
+      <div id="sections"></div>
+      <div class="empty" id="empty">No glyph matches that search.</div>
+    </main>
+
+    <aside>
+      <div class="card">
+        <h3>In the menu</h3>
+        <p class="sub">The menu's 128-pixel-wide area, rows and colours as the firmware draws them.</p>
+        <div class="bezel"><canvas id="lcd" width="128" height="128" aria-label="Menu preview"></canvas></div>
+        <div class="seg screens" id="screens" role="group" aria-label="Preview screen"></div>
+        <div class="roles" id="roles"></div>
+      </div>
+      <div class="card">
+        <div class="short-head">
+          <h3>Shortlist <span class="mono" id="count"></span></h3>
+          <button class="btn ghost" id="clear">Clear</button>
+          <button class="btn primary" id="copy">Copy</button>
+        </div>
+        <ul class="shortlist" id="shortlist"></ul>
+        <p class="hint" id="shortHint">Nothing yet. Click glyphs to collect them here; Copy gives the code points and the roles, to paste back in the chat.</p>
+        <div class="toast" id="toast" aria-live="polite"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const DATA = /*DATA*/;       // [code point, width, rows as hex, name, category, kind: 0 one cell, 1 double width, 2 seven px]
+const ASCII = /*ASCII*/;     // the menu face's ASCII, from the same BDF
+const CATS = /*CATS*/;
+const byCp = new Map(DATA.map(d => [d[0], d]));
+
+const P565 = { lit: 0xFF94, dim: 0xCE59, leave: 0xFCD3, white: 0xFFFF, grey: 0x632C, track: 0x4228 };
+const rgbOf = c => [Math.round(((c >> 11) & 31) * 255 / 31), Math.round(((c >> 5) & 63) * 255 / 63), Math.round((c & 31) * 255 / 31)];
+const PAL = Object.fromEntries(Object.entries(P565).map(([k, v]) => [k, rgbOf(v)]));
+const hexOf = rgb => '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+const COLORS = [["lit", "Lit"], ["dim", "Dim"], ["leave", "Back red"], ["white", "White"]];
+const SIZES = [2, 3, 4, 6];
+const CELL_BG = [18, 18, 18];
+const KIND_NOTE = ["", "  (double width: two cells)", "  (7 px wide on a 6 px advance: takes two cells)"];
+const KIND_SHORT = ["", " · two cells", " · 7 px, two cells"];
+
+const ROLES = [
+  { id: "title", name: "Menu icon", where: "before the title, “Configuration”", def: null },
+  { id: "back", name: "Back mark", where: "the “‹ Back” row", def: 0x2039 },
+  { id: "sub", name: "Submenu mark", where: "the right edge of rows that open a page", def: 0x3E },
+  { id: "choice", name: "Choice mark", where: "the saved option, cell 0", def: 0x2022 },
+];
+const SCREENS = [["top", "Top"], ["power", "Power"], ["clock", "Clock"], ["diag", "Diagnostics"]];
+
+const KEY = "cozette-picker-v1";
+let state = { short: [], roles: {}, color: "lit", size: 3, cat: -1, screen: "top", oneCell: false };
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) state = Object.assign(state, s); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+let armed = null;
+
+function rowsOf(cp) {
+  const d = typeof cp === "object" ? cp : byCp.get(cp);
+  if (d) {
+    if (!d.rows) { const n = (d[1] + 3) >> 2; d.rows = []; for (let y = 0; y < 14; y++) d.rows.push(parseInt(d[2].substr(y * n, n), 16)); }
+    return { w: d[1], rows: d.rows };
+  }
+  const a = ASCII[cp];
+  if (a) { const rows = []; for (let y = 0; y < 14; y++) rows.push(parseInt(a.substr(y * 2, 2), 16)); return { w: 6, rows }; }
+  return null;
+}
+const label = cp => { const d = byCp.get(cp); return d ? d[3] : (cp >= 0x20 && cp < 0x7F ? "ascii “" + String.fromCodePoint(cp) + "”" : ""); };
+const ucp = cp => "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+const isPua = cp => (cp >= 0xE000 && cp <= 0xF8FF) || cp >= 0xF0000;
+
+function paintGlyph(cv, g, rgb, bg) {
+  cv.width = g.w; cv.height = 14;
+  const ctx = cv.getContext("2d"), img = ctx.createImageData(g.w, 14), px = img.data;
+  for (let y = 0; y < 14; y++) for (let x = 0; x < g.w; x++) {
+    const on = (g.rows[y] >> (g.w - 1 - x)) & 1, c = on ? rgb : bg, i = (y * g.w + x) * 4;
+    px[i] = c[0]; px[i + 1] = c[1]; px[i + 2] = c[2]; px[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function sizeCanvas(cv, w, s) { cv.style.width = w * s + "px"; cv.style.height = 14 * s + "px"; }
+
+// --- The grid ---------------------------------------------------------------
+const sectionsEl = document.getElementById("sections"), tiles = new Map(), sectionEls = [];
+function buildGrid() {
+  CATS.forEach((name, k) => {
+    const items = DATA.filter(d => d[4] === k);
+    const sec = document.createElement("section"); sec.className = "cat";
+    sec.innerHTML = `<h2>${name} <span>· ${items.length}</span></h2>`;
+    const grid = document.createElement("div"); grid.className = "grid";
+    items.forEach(d => {
+      const b = document.createElement("button");
+      b.className = "tile"; b.type = "button";
+      const nm = d[3] || "unnamed";
+      b.title = `${ucp(d[0])}  ${nm}${KIND_NOTE[d[5]]}`;
+      b.setAttribute("aria-label", `${ucp(d[0])} ${nm}`);
+      const cv = document.createElement("canvas");
+      b.appendChild(cv);
+      const cpEl = document.createElement("span"); cpEl.className = "cp"; cpEl.textContent = d[0].toString(16).toUpperCase(); b.appendChild(cpEl);
+      if (d[5] === 1) { const w = document.createElement("span"); w.className = "wide"; w.textContent = "2×"; b.appendChild(w); }
+      if (d[5] === 2) { const c = document.createElement("span"); c.className = "badge"; c.textContent = "7px"; b.appendChild(c); }
+      b.addEventListener("click", () => onGlyph(d[0]));
+      grid.appendChild(b);
+      tiles.set(d[0], { el: b, cv, d, hay: (d[0].toString(16) + " u+" + d[0].toString(16).padStart(4, "0") + " " + nm + " " + (isPua(d[0]) ? "" : String.fromCodePoint(d[0]))).toLowerCase() });
+    });
+    sec.appendChild(grid); sectionsEl.appendChild(sec); sectionEls.push({ sec, k });
+  });
+}
+function repaintTiles() {
+  const rgb = PAL[state.color];
+  for (const t of tiles.values()) { paintGlyph(t.cv, rowsOf(t.d), rgb, CELL_BG); sizeCanvas(t.cv, t.d[1], state.size); }
+  document.documentElement.style.setProperty("--tile", Math.max(58, 12 * state.size + 18) + "px");
+}
+function filter() {
+  const q = document.getElementById("q").value.trim().toLowerCase().replace(/^u\+/, "u+");
+  const terms = q.split(/\s+/).filter(Boolean);
+  let shown = 0;
+  const per = new Map();
+  for (const [cp, t] of tiles) {
+    const inCat = state.cat < 0 || t.d[4] === state.cat;
+    const ok = inCat && !(state.oneCell && t.d[5]) && terms.every(w => t.hay.includes(w));
+    t.el.style.display = ok ? "" : "none";
+    if (ok) { shown++; per.set(t.d[4], (per.get(t.d[4]) || 0) + 1); }
+  }
+  for (const { sec, k } of sectionEls) sec.style.display = per.get(k) ? "" : "none";
+  document.getElementById("empty").style.display = shown ? "none" : "block";
+}
+function syncPressed() { const set = new Set(state.short); for (const [cp, t] of tiles) t.el.setAttribute("aria-pressed", set.has(cp)); }
+
+// --- Controls ---------------------------------------------------------------
+function seg(el, items, cur, on) {
+  el.innerHTML = "";
+  items.forEach(([v, text, sw]) => {
+    const b = document.createElement("button"); b.type = "button";
+    b.setAttribute("aria-pressed", v === cur);
+    if (sw) { const s = document.createElement("span"); s.className = "swatch"; s.style.background = sw; b.appendChild(s); }
+    b.appendChild(document.createTextNode(text));
+    b.addEventListener("click", () => on(v));
+    el.appendChild(b);
+  });
+}
+function drawControls() {
+  seg(document.getElementById("colors"), COLORS.map(([k, n]) => [k, n, hexOf(PAL[k])]), state.color, v => { state.color = v; save(); drawControls(); repaintTiles(); });
+  seg(document.getElementById("sizes"), SIZES.map(s => [s, s + "×"]), state.size, v => { state.size = v; save(); drawControls(); repaintTiles(); });
+  seg(document.getElementById("screens"), SCREENS, state.screen, v => { state.screen = v; save(); drawControls(); drawLcd(); });
+  const chips = document.getElementById("chips"); chips.innerHTML = "";
+  [[-1, "All", DATA.length], ...CATS.map((n, k) => [k, n, DATA.filter(d => d[4] === k).length])].forEach(([k, n, c]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip";
+    b.setAttribute("aria-pressed", k === state.cat);
+    b.innerHTML = `${n}<span class="n">${c}</span>`;
+    b.addEventListener("click", () => { state.cat = k; save(); drawControls(); filter(); });
+    chips.appendChild(b);
+  });
+}
+
+// --- The preview: the list geometry from menu.c ----------------------------
+const W = 128, H = 128, fb = new ImageData(W, H);
+function fill(x0, y0, x1, y1, rgb) {
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = (y * W + x) * 4; fb.data[i] = rgb[0]; fb.data[i + 1] = rgb[1]; fb.data[i + 2] = rgb[2]; fb.data[i + 3] = 255; }
+}
+function blit(x0, y0, g, rgb) {
+  for (let y = 0; y < 14; y++) for (let x = 0; x < g.w; x++) if ((g.rows[y] >> (g.w - 1 - x)) & 1) {
+    const X = x0 + x, Y = y0 + y; if (X < 4 || X > 123 || Y >= H) continue;
+    const i = (Y * W + X) * 4; fb.data[i] = rgb[0]; fb.data[i + 1] = rgb[1]; fb.data[i + 2] = rgb[2];
+  }
+}
+const gap = cp => ((rowsOf(cp) || { w: 6 }).w > 6 ? [] : [0x20]);
+const roleCp = id => (id in state.roles ? state.roles[id] : ROLES.find(r => r.id === id).def);
+const toks = s => [...s].map(ch => ch.codePointAt(0));
+const cellsOf = list => list.reduce((n, cp) => n + ((rowsOf(cp) || { w: 6 }).w / 6), 0);
+function text(cell, y, list, rgb) {
+  let c = cell;
+  for (const cp of list) { const g = rowsOf(cp); if (g && c < 20) blit(4 + 6 * c, y, g, rgb); c += g ? g.w / 6 : 1; }
+}
+function row(r, left, right, rgb) {
+  const y = 15 + 14 * r;
+  text(0, y, left, rgb);
+  if (right && right.length) text(20 - cellsOf(right), y, right, rgb);
+}
+function drawLcd() {
+  fill(0, 0, W - 1, H - 1, [0, 0, 0]);
+  const S = state.screen, sub = roleCp("sub"), back = roleCp("back"), choice = roleCp("choice"), icon = roleCp("title");
+  const title = { top: "Configuration", power: "Power", clock: "Clock", diag: "Diagnostics" }[S];
+  text(0, 0, (S === "top" && icon != null ? [icon, ...gap(icon)] : []).concat(toks(title)), PAL.white);
+  fill(4, 14, 123, 14, PAL.grey);
+  const colour = (lit, leave) => lit ? PAL.lit : leave ? PAL.leave : PAL.dim;
+  if (S === "top") {
+    const items = [["Power", "Balanced"], ["Clock", "24h"], ["Diagnostics", sub], ["Help", sub], ["About", sub], ["Exit", null]];
+    items.forEach(([l, v], i) => row(i, toks(l), v == null ? [] : typeof v === "string" ? toks(v) : [v], colour(i === 0, l === "Exit")));
+  } else if (S === "diag") {
+    row(0, [back, ...gap(back), ...toks("Back")], [], colour(false, true));
+    ["Health page", "Camera page", "Reset counters"].forEach((l, i) => row(i + 1, toks(l), [sub], colour(i === 0, false)));
+  } else {
+    const opts = S === "power" ? ["Always on", "Balanced", "Power saver", "Lights out"]
+                               : [["24h", "13:45:01"], ["24h", "13:45"], ["12h", "1:45:01 PM"], ["12h", "1:45 PM"],
+                                  ["Date", "Oct 24, 2026"], ["Off", ""]];   // MENU-TEXT.md, JD's rows
+    const saved = S === "power" ? 1 : 0, cursor = saved;
+    row(0, [back, ...gap(back), ...toks("Back")], [], colour(false, true));
+    opts.forEach((l, i) => {
+      const y = 15 + 14 * (i + 1), rgb = colour(i === cursor, false);
+      if (i === saved) text(0, y, [choice], rgb);
+      const [name, ex] = Array.isArray(l) ? l : [l, ""];
+      text(2, y, toks(name), rgb);
+      if (ex) text(20 - ex.length, y, toks(ex), rgb);
+    });
+  }
+  document.getElementById("lcd").getContext("2d").putImageData(fb, 0, 0);
+}
+
+// --- Roles and the shortlist ------------------------------------------------
+function miniCanvas(cp, scale, rgb) {
+  const cv = document.createElement("canvas"), g = rowsOf(cp);
+  if (g) { paintGlyph(cv, g, rgb, [0, 0, 0]); sizeCanvas(cv, g.w, scale); }
+  return cv;
+}
+function drawRoles() {
+  const el = document.getElementById("roles"); el.innerHTML = "";
+  ROLES.forEach(r => {
+    const cp = roleCp(r.id), div = document.createElement("div");
+    div.className = "role" + (armed === r.id ? " armed-role" : "");
+    const g = document.createElement("div"); g.className = "g";
+    if (cp != null) g.appendChild(miniCanvas(cp, 2, PAL.lit));
+    const what = document.createElement("div"); what.className = "what";
+    const now = cp == null ? "none" : `${ucp(cp)} ${label(cp)}`;
+    what.innerHTML = `<b>${r.name}</b><span title="${now}">${r.where} · ${now}</span>`;
+    const pick = document.createElement("button"); pick.className = "btn"; pick.type = "button";
+    pick.textContent = armed === r.id ? "Cancel" : "Pick";
+    pick.addEventListener("click", () => arm(armed === r.id ? null : r.id));
+    const reset = document.createElement("button"); reset.className = "btn ghost"; reset.type = "button"; reset.textContent = "Reset";
+    reset.disabled = !(r.id in state.roles);
+    reset.style.visibility = r.id in state.roles ? "visible" : "hidden";
+    reset.addEventListener("click", () => { delete state.roles[r.id]; save(); drawRoles(); drawLcd(); });
+    div.append(g, what, pick, reset); el.appendChild(div);
+  });
+}
+function arm(id) {
+  armed = id;
+  const a = document.getElementById("armed");
+  if (id) {
+    const r = ROLES.find(x => x.id === id);
+    a.innerHTML = `Picking the <b>${r.name}</b>: click any glyph (here or in the shortlist) to put it there. Esc cancels.`;
+    a.classList.add("on");
+    if (state.screen !== "top" && id === "title") { state.screen = "top"; drawControls(); }
+    if (id === "choice" && !["power", "clock"].includes(state.screen)) { state.screen = "power"; drawControls(); }
+    if (id === "back" && state.screen === "top") { state.screen = "power"; drawControls(); }
+    if (id === "sub" && !["top", "diag"].includes(state.screen)) { state.screen = "top"; drawControls(); }
+    drawLcd();
+  } else a.classList.remove("on");
+  drawRoles();
+}
+function onGlyph(cp) {
+  if (armed) {
+    state.roles[armed] = cp; save(); arm(null); drawLcd();
+    if (!state.short.includes(cp)) { state.short.push(cp); save(); drawShort(); syncPressed(); }
+    return;
+  }
+  const i = state.short.indexOf(cp);
+  if (i >= 0) state.short.splice(i, 1); else state.short.push(cp);
+  save(); drawShort(); syncPressed();
+}
+function drawShort() {
+  const ul = document.getElementById("shortlist"); ul.innerHTML = "";
+  state.short.forEach(cp => {
+    const li = document.createElement("li");
+    const g = document.createElement("div"); g.className = "g"; g.title = "Click to use in the armed role";
+    g.appendChild(miniCanvas(cp, 2, PAL.lit));
+    g.addEventListener("click", () => { if (armed) onGlyph(cp); });
+    const t = document.createElement("div"); t.className = "t";
+    const d = byCp.get(cp);
+    t.innerHTML = `<span class="c">${ucp(cp)}</span>${d ? KIND_SHORT[d[5]] : ""}<span class="nm">${label(cp) || "unnamed"}</span>`;
+    const x = document.createElement("button"); x.className = "x"; x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "Remove " + ucp(cp));
+    x.addEventListener("click", () => onGlyphRemove(cp));
+    li.append(g, t, x); ul.appendChild(li);
+  });
+  document.getElementById("count").textContent = state.short.length ? `(${state.short.length})` : "";
+  document.getElementById("shortHint").style.display = state.short.length ? "none" : "";
+}
+function onGlyphRemove(cp) { state.short = state.short.filter(c => c !== cp); save(); drawShort(); syncPressed(); }
+function copyText() {
+  const line = cp => { const d = byCp.get(cp); return `${ucp(cp)}${isPua(cp) || cp < 0x7F ? "" : " " + String.fromCodePoint(cp)}  ${label(cp) || "unnamed"}${d ? KIND_SHORT[d[5]].replace(" · ", "  (") + (d[5] ? ")" : "") : ""}`; };
+  const out = ["Cozette picks for the AK820 menu", ""];
+  ROLES.forEach(r => { const cp = roleCp(r.id); out.push(`${r.name}: ${cp == null ? "none" : line(cp)}${r.id in state.roles ? "" : "  [unchanged]"}`); });
+  if (state.short.length) { out.push("", "Shortlist:"); state.short.forEach(cp => out.push("  " + line(cp))); }
+  return out.join("\n");
+}
+async function doCopy() {
+  const t = copyText(), toast = document.getElementById("toast");
+  try { await navigator.clipboard.writeText(t); toast.textContent = "Copied. Paste it back in the chat."; }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast.textContent = "Copied. Paste it back in the chat."; } catch (e2) { toast.textContent = "Copy failed; select the list by hand."; }
+    ta.remove();
+  }
+  setTimeout(() => { toast.textContent = ""; }, 4000);
+}
+
+document.getElementById("q").addEventListener("input", filter);
+document.getElementById("oneCell").checked = !!state.oneCell;
+document.getElementById("oneCell").addEventListener("change", e => { state.oneCell = e.target.checked; save(); filter(); });
+document.getElementById("copy").addEventListener("click", doCopy);
+document.getElementById("clear").addEventListener("click", () => { state.short = []; save(); drawShort(); syncPressed(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && armed) arm(null); });
+
+buildGrid(); drawControls(); repaintTiles(); filter(); syncPressed(); drawRoles(); drawShort(); drawLcd();
+</script>
+</body>
+</html>
