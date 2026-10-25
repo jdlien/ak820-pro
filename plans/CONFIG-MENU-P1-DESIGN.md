@@ -803,6 +803,188 @@ for overnight. Built on P1b's tree:
   `flash.sh` brings it back (it takes an already-entered bootloader: the last
   backups, no jump).
 
+## P2a: Indicators, and the Connection stub (JD, 10-25 night)
+
+JD (10-25): "I'd add those as stubs into the menu sooner than later", "we can
+have lights adjustable from 1-100 in 1% increments like with the other light
+parameters, just 1-10", and "maybe we can land the lock lights before I
+review in the morning". So this is the build plan's P2 Indicators, out of
+order, plus a stub for P3's Connection. Battery (P4) isn't added yet.
+
+### The tree, added
+
+- **The top level** takes the build plan's order, eleven rows: Lighting,
+  Screen, Connection, Power, Indicators, Clock, Diagnostics, Bootloader on
+  page one; Help, About, Exit on page two. Icons, from the picker's
+  proposals that JD saw: Indicators the sun (U+F185, JD's pick), Connection
+  nf-fa-bluetooth (U+F293). Both rows end in ▶. Each icon is also on its
+  section's headings.
+- **Indicators** is a list: "◀ Back", "Lock lights", "Charging light". Each
+  is a value row, the way Lighting's are: the label, and the live level at
+  the right ("Off", or "1%" to "100%").
+- **Lock lights** and **Charging light** each open a range editor, the
+  same geometry as Brightness: the bar, the big value, the three hints.
+  The range is 0-100: 0 is Off. A detent is 1, and a fast turn is 5 (the
+  existing fast-turn rule). The bar's edge is `14 + level`.
+  - **The preview lights the LEDs.** While a Lock lights edit is open, Caps
+    and Win lock both show at the previewed level, whatever their state;
+    while a Charging light edit is open, the charging LED does. Otherwise a
+    preview would show nothing unless Caps happened to be on. This is a
+    force bit per group, set when the edit opens and cleared by every
+    close.
+- **Connection** opens a stub page in the confirm geometry, as Bootloader's
+  does. It shows the link frozen when the page opened (About's line, from
+  the same snapshot) and how to change it today:
+  - on Bluetooth: "Link BT 2 connected" / "Slots: coming soon" /
+    "Fn+Q/W/E: a slot" / "Hold one 2 s: pair";
+  - off Bluetooth: the link, then "The slider picks" / "BT, 2.4G or cable."
+    (the build plan's "Set by the slider").
+
+  A click or a hold goes back. No edit. The words wait for JD's text pass:
+  they go in `MENU-TEXT.md`.
+
+### The indicator levels: 0-100, by pulse-density modulation
+
+Today's indicators have ten levels, `ind_duty[] = {0, 1, 2, 3, 5, 8, 12,
+18, 28, 48}` ticks of a 48-tick software PWM period on the 20 kHz CT16B3
+tick. A 48-tick period has only 49 distinct duties, and a perceptual curve
+needs most of its steps at the bottom, where they're under a tick. A longer
+period flickers: the comment in `indicators.c` records 128 ticks (146 Hz)
+flickering visibly.
+
+- **The level means perceived brightness:** 1% is today's level 1 (one tick
+  in 48, 2.1% duty, the dimmest that doesn't flicker). 100% is full on.
+  Between them each step is ×1.04 (48^(1/99)). Today's levels land at 1%,
+  19%, 29%, 42%, 54%, 65%, 75%, 86% and 100%. The default is unchanged:
+  the lock lights at 1%, the charging light Off.
+- **The duty** is a table of 101 `uint16_t` in flash (202 B), in 1/256
+  ticks: `duty(0) = 0`; `duty(p) = round(256 × 48^((p - 1) / 99))`, so
+  duty(1) is 256 and duty(100) is 12,288 = `IND_FULL` (48 × 256). A host
+  test checks that it's strictly increasing, so every step changes the
+  light.
+- **The tick spreads the duty** (first-order sigma-delta) instead of
+  comparing a phase: per group, `acc += duty; if (acc >= IND_FULL) { acc -=
+  IND_FULL; on }`. At duty(1) that is one tick in 48, exactly today's level
+  1. Above it the on-ticks are spread evenly, so the longest gap between
+  pulses never exceeds 48 ticks (417 Hz) at any level from 1%. The phase
+  counter goes; `acc` stays below `IND_FULL`, and `acc + duty` stays below
+  2 × `IND_FULL` (24,576), so `uint16_t` holds both.
+  - Dithering the pulse width per period instead would beat at the bottom
+    (1.04 ticks is a 2-tick pulse every 25th period, ~17 Hz). The
+    sigma-delta's pulses are all one tick wide there, and only their spacing
+    varies.
+- **The tick's cost:** a group's accumulator runs only while that LED is
+  lit or forced. The pins are written only when their bit changes, one by
+  one; today all three are written when any changes. A lit LED costs one
+  add, one compare and one store a tick (~15 cycles). Near 50% it toggles
+  its pin most ticks, about 20,000 writes a second; a few cycles each.
+  Typical use (Caps off, the charging light Off) costs less than today's
+  phase compares.
+- **The live state:** `ind_duty_locks` and `ind_duty_chg` (volatile
+  `uint16_t`, one aligned store each, so the ISR never sees a torn value);
+  the levels for the getters; `ind_force` (bits 0 and 1). The 10 Hz
+  `update_leds()` is unchanged. `indicators_any_lit()` counts a forced
+  group, so light sleep's bit 3 won't stop the tick under a preview (the
+  menu's `DSB_MENU` already blocks sleep).
+- **The API** is `indicator_get_level(which)` and `indicator_set_level(which,
+  level)`, which clamps to 100 (`IND_LOCKS`, `IND_CHARGING`), and
+  `indicator_force(which, on)`. They replace
+  `indicator_get/set_brightness()`, which nothing outside `indicators.c`
+  calls (`grep`). `INDICATOR_BRIGHTNESS_DEFAULT` (`config.h`) and
+  `CHARGING_LED_BRIGHTNESS` keep their names and become percentages (1 and
+  0, the same light).
+
+### Persisting: the settings block's version 5
+
+- **`kb_eeconfig` grows from 7 bytes to 9:** byte 7 is `ind_locks_p1`, byte
+  8 `ind_charging_p1`. Each is the level plus one (1-101), and 0 means
+  unset, so a saved Off is distinct from unset (the build plan's rule).
+  Unset, or over 101, means the compile-time default. `EECONFIG_KB_DATA_SIZE`
+  becomes 9 and `EECONFIG_KB_DATA_VERSION` 5. A flash erases the emulated
+  EEPROM anyway; VIA's region starts two bytes later, and `flash.sh`
+  restores the keymap through VIA's commands, not by address.
+- **Deviation from the build plan:** its version 5 also carries byte 9, the
+  battery view. That waits for P4, with its own version bump, so nothing
+  unused is stored now.
+- **Applied at boot:** `indicators_load_saved()`, called right after
+  `kb_eeconfig_init()` in `keyboard_post_init_kb()`. `pwm_tick_init()` runs
+  earlier with the compile-time defaults, and no indicator lights before
+  that point.
+- **Saved by `kb_eeconfig`'s deferred write** (5 s settle, coalesced). A
+  save within 5 s of losing power isn't kept, as for every field there.
+
+### Flash attribution (`flash_stats.c`)
+
+- **The new fields:** `KBF_LOCKS 0x40`, `KBF_CHG 0x80`, `KBF_COUNT 8`.
+  `kb_byte_field[]` gains two entries; its `_Static_assert` against
+  `EECONFIG_KB_DATA_SIZE` holds it to the layout. Eight fields still fit
+  the `uint8_t` masks, so the build plan's widening to 16 bits waits for
+  P4's ninth.
+- **Page 1 is frozen** at its six counters. **A new page 3** carries
+  `kb_field_sessions[6]` and `[7]` as two `u16` at offsets 0 and 2, the
+  rest zero. Old firmware answers page 3 as unhandled.
+- **`ak820health.py`** reads page 3 and shows "-" when the firmware doesn't
+  answer it. The diag simulator's EEPROM stub goes to 9 bytes.
+
+### The edit transaction (C6), extended
+
+- **Two fields,** `ME_LOCKS` (8) and `ME_CHG` (9), in a new domain
+  `ME_DOM_IND`. The snapshot is the level when the edit opened (`ed.lcd`
+  becomes `ed.level`, shared with the Screen's). Preview: the level, live,
+  not saved. Save: live, and `kb_eeconfig_set_ind_level()`. Cancel and the
+  rollback: the snapshot back. Opening sets the group's force bit; Save and
+  the rollback clear it. Those are the only two ways an edit closes, so the
+  bit can't outlive the edit. `panel_owner.c`'s close and debug handoff
+  already roll back first.
+- **External writers:** none exist. Nothing else sets an indicator level:
+  no key, no VIA command, no HID op. The domain match in
+  `menu_edit_external()` becomes `domain_of(field) == domain`, which
+  covers the new domain.
+- **Op 27:** sub 14 reports the new fields by their numbers. The screen ids
+  are `16 + node`, as before.
+
+### Signatures
+
+- **The value rows:** `0xE000 | which << 10 | variant << 9 | value << 1 |
+  lit`. `which` is 3 bits and 0-6 are taken. Both indicator rows are
+  `which` 7: Lock lights is variant 0, Charging light variant 1. Variant is
+  otherwise only Second color's.
+- **The Connection page:** the confirm layout's text slots are
+  `0x8000 | link << 4 | line`, with the link from the frozen snapshot. Each
+  open is a layout change anyway, so its clear repaints every slot.
+
+### RAM
+
+Two bytes in `kb_config`, 4 in `kb_field_sessions`, and about 9 net in
+`indicators.c`: the accumulators (6), the duties replacing the three levels
+(+1), the two levels (2), the force bits (1), with the phase counter gone
+(-1). The edit's snapshot is reused, and the tables are `const`. About
+15 B in all, so the dev gap goes from 152 to about 137, above C5's 128 floor.
+The linked build is the check; `build.sh` fails below the floor.
+
+### Tests
+
+- **The host:**
+  - the top level's eleven rows and its scrollbar;
+  - Indicators' list and value rows;
+  - each editor: open (force set), a slow and a fast turn, the clamps at 0
+    and 100, the bar's edge, "Off" and "N%", Save (saved, force clear),
+    Cancel and a hold (restored, force clear), the close mid-edit
+    (restored, force clear);
+  - Connection's page on BT, 2.4G and USB, and its click and hold;
+  - the duty table: strictly increasing, the ends.
+  - The sigma-delta, simulated for every level from 1: the average duty
+    within one tick in 10,000 of the table's, and the longest gap at most
+    48 ticks.
+- **The board:**
+  - the menu pass over the new rows;
+  - the editors driven by op 27 and read by sub 14;
+  - a saved level read back by reopening the editor;
+  - the flash counters' page 3 counting the save's write;
+  - the main loop's rate with both groups forced at 50%, against them at
+    0, from health page 4.
+- **JD:** the levels by eye, and a saved level surviving his power cycle.
+
 ## P1b, P1c, P1d
 
 P1b's design is the section above (the earlier note asked it to cover the
