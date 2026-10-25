@@ -25,7 +25,15 @@ def fake_txn_page(h, cmd, page, arg=0, timeout_ms=500):
     return bytes([H.SET_VALUE, H.HEALTH_CHANNEL, cmd, page]) + body
 
 
+def fake_txn_page_optional(h, cmd, page, timeout_ms=500):
+    """A page the firmware didn't fill (flash_stats_fill() false) is the
+    board's unhandled answer: None, never zeros (codex, P2a)."""
+    body = pages.get((CMD[cmd], page))
+    return None if body is None else bytes([H.SET_VALUE, H.HEALTH_CHANNEL, cmd, page]) + body
+
+
 H._txn_page = fake_txn_page
+H._txn_page_optional = fake_txn_page_optional
 fails = 0
 
 
@@ -57,11 +65,23 @@ if ("ACCT", 0) in pages:
 
 if ("FLASHW", 0) in pages:
     f = H.read_flashw(None)
-    check(f["sessions"] == {"other": 1, "kb": 7, "rgb": 1, "via": 1}, f"sessions {f['sessions']}")
+    p2a = ("FLASHW", 3) in pages   # the indicator levels' fields (the menu's P2a)
+    check(f["sessions"] == {"other": 1, "kb": 11 if p2a else 7, "rgb": 1, "via": 1}, f"sessions {f['sessions']}")
     check(f["erases"]["rgb"] == 1 and f["programs"]["rgb"] == 3, f"rgb {f['erases']} {f['programs']}")
     check(f["kb_field_sessions"]["rtc_period"] == 5 and f["kb_field_sessions"]["batt_level"] == 1,
           f"fields {f['kb_field_sessions']}")
-    check(f["kb_mixed"] == 1 and f["kb_unknown"] == 0, f"mixed {f['kb_mixed']}")
+    check(f["kb_mixed"] == (2 if p2a else 1) and f["kb_unknown"] == 0, f"mixed {f['kb_mixed']}")
+    if p2a:
+        check(f["kb_field_sessions"]["ind_locks"] == 2 and f["kb_field_sessions"]["ind_charging"] == 1,
+              f"P2a's fields {f['kb_field_sessions']}")
+        # Older firmware answers page 3 as unhandled: those fields are None, the rest unchanged.
+        p3 = pages.pop(("FLASHW", 3))
+        g = H.read_flashw(None)
+        check(g["kb_field_sessions"]["ind_locks"] is None and g["kb_field_sessions"]["ind_charging"] is None,
+              f"no page 3: {g['kb_field_sessions']}")
+        check({k: v for k, v in g.items() if k != "kb_field_sessions"} ==
+              {k: v for k, v in f.items() if k != "kb_field_sessions"}, "no page 3: the rest the same")
+        pages[("FLASHW", 3)] = p3
     check(f["rtc_last_proposed"] == 33300 and f["rtc_last_proposed_path"] == "pcf", f"rtc {f}")
     check(f["rtc_last_stored"] == 33300 and f["rtc_stores"] == {"sof": 0, "pcf": 1}, f"rtc stores {f}")
     check(f["rtc_proposals"] == {"sof": 1, "pcf": 1}, f"proposals {f['rtc_proposals']}")
@@ -94,6 +114,21 @@ check(H2._txn_page(d, H2.HC_ACCT, 0xF0, 1)[3] == 0, "0xF0 answers as page 0")
 d = FakeDev([rep_(H2.HC_LINK, 0x21, 1), rep_(H2.HC_LINK, 8, 0)])
 got = H2.read_link(d)
 check(got["sent"] == 0, f"read_link skips another reader's profile page 0x21: {got}")
+# An optional page (P2a's page 3): the board's unhandled answer to THIS
+# command and page is None; another page's answer, handled or not, is skipped.
+def unh_(cmd, page):
+    return bytes([H2.RTC_UNHANDLED, H2.HEALTH_CHANNEL, cmd, page] + [0] * 28)
+d = FakeDev([rep_(H2.HC_FLASHW, 2, 9), unh_(H2.HC_FLASHW, 2), unh_(H2.HC_FLASHW, 3)])
+check(H2._txn_page_optional(d, H2.HC_FLASHW, 3) is None, "page 3 unhandled: None")
+d = FakeDev([unh_(H2.HC_FLASHW, 2), rep_(H2.HC_FLASHW, 3, 4)])
+got = H2._txn_page_optional(d, H2.HC_FLASHW, 3)
+check(got is not None and got[3] == 3 and got[4] == 4, f"page 3 answered: {got and got[:6]}")
+d = FakeDev([unh_(H2.HC_LINK, 3)])
+try:
+    H2._txn_page_optional(d, H2.HC_FLASHW, 3)
+    check(False, "another command's unhandled reply taken")
+except SystemExit:
+    pass
 print(f"{'FAIL' if fails else 'ok  '} reply validation")
 
 sys.exit(1 if fails else 0)

@@ -34,9 +34,11 @@ from menu_s1_gate import decode_meas  # noqa: E402
 TOP, POWER, CLOCK, DIAG, HELP, ABOUT, EXIT = 1, 2, 3, 4, 5, 6, 7
 RESET, TOPIC0 = 10, 11
 LIGHT, SCREEN, EFFECT, BRIGHT, HUE = 24, 25, 26, 27, 28   # P1b's nodes
-# The top level since P1b and the bootloader item: Lighting, Screen, Power,
-# Clock, Diagnostics, Bootloader, Help, About, Exit (Exit on page two).
-R_POWER, R_CLOCK, R_DIAG, R_BOOT, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7, 8
+IND, CONN, LOCKS, CHGL = 35, 36, 37, 38                   # P2a's
+# The top level since P2a (the build plan's order): Lighting, Screen,
+# Connection, Power, Indicators, Clock, Diagnostics, Bootloader; Help, About,
+# Exit on page two.
+R_CONN, R_POWER, R_IND, R_CLOCK, R_DIAG, R_BOOT, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7, 8, 9, 10
 SCR = lambda n: 16 + n  # noqa: E731
 SETTLE_S = 1.0
 
@@ -157,7 +159,7 @@ def main():
         click(h, "commit the original", SCR(TOP), R_POWER)
 
         # Clock: the same, then a cancel.
-        turn(h, 1, "to Clock", SCR(TOP), R_CLOCK)
+        turn(h, R_CLOCK - R_POWER, "to Clock", SCR(TOP), R_CLOCK)
         s = click(h, "Clock", SCR(CLOCK))
         orig_c = s["cursor"]
         nxt = 1 + (orig_c % 4)
@@ -232,6 +234,34 @@ def main():
         turn(h, 1, "screen up", SCR(SCREEN))
         hold(h, "Screen cancelled", SCR(TOP), 1)
         check(edit_state()[0] == 0, "Screen: the edit still open")
+
+        # P2a: Connection's stub page, and Indicators' two editors, each
+        # cancelled; sub 14 says the edit closed, the level restored and the
+        # preview's force gone.
+        def ind_state():
+            r = xfer(h, 14)
+            return r[6], r[12], r[13], r[14]   # open, the lock lights, the charging light, the force bits
+
+        turn(h, R_CONN - 1, "to Connection", SCR(TOP), R_CONN)
+        click(h, "Connection", SCR(CONN), 0)
+        click(h, "Connection back", SCR(TOP), R_CONN)
+        turn(h, R_IND - R_CONN, "to Indicators", SCR(TOP), R_IND)
+        click(h, "Indicators", SCR(IND), 1)
+        _, locks0, chg0, _ = ind_state()
+        click(h, "Lock lights", SCR(LOCKS))
+        check(ind_state()[3] == 1, f"Lock lights: the force bits {ind_state()[3]}, not 1")
+        turn(h, 1, "lock lights up", SCR(LOCKS))
+        turn(h, 3, "lock lights up, fast", SCR(LOCKS))
+        check(ind_state()[1] == min(100, locks0 + 16), f"Lock lights: {ind_state()[1]}, not {locks0} + 16")
+        hold(h, "Lock lights cancelled", SCR(IND), 1)
+        check(ind_state() == (0, locks0, chg0, 0), f"Lock lights: after the cancel {ind_state()}")
+        turn(h, 1, "to Charging light", SCR(IND), 2)
+        click(h, "Charging light", SCR(CHGL))
+        check(ind_state()[3] == 2, f"Charging light: the force bits {ind_state()[3]}, not 2")
+        turn(h, 2, "charging light up, fast", SCR(CHGL))
+        hold(h, "Charging light cancelled", SCR(IND), 2)
+        check(ind_state() == (0, locks0, chg0, 0), f"Charging light: after the cancel {ind_state()}")
+        hold(h, "Indicators back", SCR(TOP), R_IND)
 
         # The hint: 5 s idle on the top level (the session stays open: 24 s).
         time.sleep(5.0)

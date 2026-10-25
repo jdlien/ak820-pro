@@ -27,7 +27,7 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 |....+....|....+....|   <- 20 columns
 ```
 
-## Built (P1a, P1b and the bootloader item)
+## Built (P1a, P1b, the bootloader item and P2a)
 
 ### The title area
 
@@ -45,7 +45,9 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 ```
 Lighting           ▶
 Screen           52%
+Connection         ▶
 Power       Balanced
+Indicators         ▶
 Clock            24h
 Diagnostics        ▶
 Bootloader         ▶
@@ -55,10 +57,12 @@ Exit
 ```
 
 - Each row starts with its icon, its label at the third cell: Lighting the
-  bulb, Screen a desktop, Power the bolt, Clock a clock, Diagnostics a chip,
-  Bootloader a desktop with a download arrow, Help `?`, About `i`, Exit `×`.
-  A heading carries its section's icon; the top level's, the wrench.
-- Nine rows: Exit is on page two (the scrollbar shows).
+  bulb, Screen a desktop, Connection the Bluetooth rune, Power the bolt,
+  Indicators the sun, Clock a clock, Diagnostics a chip, Bootloader a desktop
+  with a download arrow, Help `?`, About `i`, Exit `×`. A heading carries its
+  section's icon; the top level's, the wrench.
+- Eleven rows (P2a, 10-25, the mockup's order): Help, About and Exit are on
+  page two (the scrollbar shows).
 - `Exit` and `◀ Back` rows show in light red when not selected; `▶` marks a
   row that opens a page; the saved option has a squared check.
 - The full top level will be (the mockup): Lighting, Screen, Connection,
@@ -290,6 +294,36 @@ Hold: cancel
 The hue editor: the title, a colour strip with a marker, the big value
 (degrees, `+324` for the second colour), and the same three hints.
 
+### Indicators (P2a, 10-25; title: `Indicators`)
+
+```
+◀ Back
+Lock lights       1%
+Charging         Off
+```
+
+- Each opens the range editor, titled `Lock lights` or `Charging light`: `Off`,
+  then `1%` to `100%`, 1% a detent and 5% a fast turn (JD: "1-100 in 1%
+  increments"). While it's open, the LEDs it sets light at the level shown
+  (Caps and Win lock both, or the charging light), whatever their state.
+- 1% is the old dimmest level, unchanged; the steps are spaced to look even.
+
+### Connection (P2a's stub, 10-25; title: `Connection`)
+
+On Bluetooth, the link as the page opened, then how to change it for now:
+
+```
+Link BT 2 connected
+Slots: coming soon
+
+Fn+Q/W/E: a slot
+Hold one 2 s: pair
+```
+
+On 2.4G or the cable, the last two lines are `The slider picks` /
+`BT, 2.4G or cable.` (the link line as About's: `Link USB`,
+`Link 2.4G connected`). A click or a hold goes back.
+
 ## Not built yet (the mockup's words)
 
 ### About, page 2 (P1d: the bunny beside the first three lines)
@@ -337,17 +371,6 @@ Click or hold: stop
 
   (for the dongle: `Plug the dongle in` / `and keep it close.`). A flash
   when stopped: `Pairing stopped`.
-
-### Indicators (P2; title: `Indicators`)
-
-```
-‹ Back
-Lock lights      11%
-Charging         Off
-```
-
-- Levels shown as `Off` or a percentage of 9 steps.
-- `Charging` opens as `Charging light` (the editor's title).
 
 ### Battery (P4; on the top level)
 

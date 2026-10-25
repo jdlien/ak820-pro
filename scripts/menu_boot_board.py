@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import menu_p1b_gates as g  # noqa: E402
 from menu_s0_session import mutate, open_device  # noqa: E402
 
-BOOT_PAGE, R_BOOT = 16 + 34, 5
+BOOT_PAGE, R_BOOT = 16 + 34, 7   # P2a: page one's last row
 
 
 def in_bootloader():

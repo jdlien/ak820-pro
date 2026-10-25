@@ -60,6 +60,8 @@ ICONS = [
     ("I_LIGHT", 0xF834, 1),        # P1b: Lighting, nf-mdi-lightbulb (JD's pick),
     ("I_SCREEN", 0xF108, 2),       # Screen, nf-fa-desktop;
     ("I_BOOT", 0xF498, 2),         # the bootloader item, nf-oct-desktop_download
+    ("I_IND", 0xF185, 2),          # P2a: Indicators, nf-fa-sun (JD's pick: "super bright light shining in your eye"),
+    ("I_CONN", 0xF293, 2),         # Connection, nf-fa-bluetooth (the picker's proposal)
 ]
 
 

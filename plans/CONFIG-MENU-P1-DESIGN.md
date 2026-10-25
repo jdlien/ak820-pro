@@ -852,8 +852,11 @@ needs most of its steps at the bottom, where they're under a tick. A longer
 period flickers: the comment in `indicators.c` records 128 ticks (146 Hz)
 flickering visibly.
 
-- **The level means perceived brightness:** 1% is today's level 1 (one tick
-  in 48, 2.1% duty, the dimmest that doesn't flicker). 100% is full on.
+- **The levels are spaced perceptually** (not calibrated to the eye): 1% is
+  today's level 1 (one tick in 48, 2.1% duty), which keeps today's tested
+  minimum brightness (codex: the comment records a dimmer 64-tick floor
+  without flicker, so "the dimmest that doesn't flicker" overstated it; JD
+  can judge the floor). 100% is full on.
   Between them each step is ×1.04 (48^(1/99)). Today's levels land at 1%,
   19%, 29%, 42%, 54%, 65%, 75%, 86% and 100%. The default is unchanged:
   the lock lights at 1%, the charging light Off.
@@ -876,10 +879,17 @@ flickering visibly.
 - **The tick's cost:** a group's accumulator runs only while that LED is
   lit or forced. The pins are written only when their bit changes, one by
   one; today all three are written when any changes. A lit LED costs one
-  add, one compare and one store a tick (~15 cycles). Near 50% it toggles
-  its pin most ticks, about 20,000 writes a second; a few cycles each.
-  Typical use (Caps off, the charging light Off) costs less than today's
-  phase compares.
+  add, one compare and one store a tick (~15 cycles). The worst switching
+  is at 82-83% (codex: 49-51% electrical duty), about 19,800 toggles a second
+  a pin; 50% on this curve is only 14% duty. Typical use (Caps off, the
+  charging light Off) costs less than today's phase compares. The board
+  measures it (Tests).
+- **After a restart** (the light sleep's tick stop drives every pin low),
+  every pin is written on the first tick: `ind_pins_to_write()` with
+  `IND_OUT_UNKNOWN` (codex: comparing against 0xFF skipped a pin already
+  meant to be on, Caps at 100%, and left it dark). The tick's whole decision
+  is pure and inline in the generated `indicator_levels.h`
+  (`ind_tick_out()`, `ind_pins_to_write()`), so the host tests run it.
 - **The live state:** `ind_duty_locks` and `ind_duty_chg` (volatile
   `uint16_t`, one aligned store each, so the ISR never sees a torn value);
   the levels for the getters; `ind_force` (bits 0 and 1). The 10 Hz
@@ -923,8 +933,11 @@ flickering visibly.
 - **Page 1 is frozen** at its six counters. **A new page 3** carries
   `kb_field_sessions[6]` and `[7]` as two `u16` at offsets 0 and 2, the
   rest zero. Old firmware answers page 3 as unhandled.
-- **`ak820health.py`** reads page 3 and shows "-" when the firmware doesn't
-  answer it. The diag simulator's EEPROM stub goes to 9 bytes.
+- **`ak820health.py`** reads page 3 through `_txn_page_optional()`, which
+  takes the board's unhandled answer to that command and page (byte 0
+  `RTC_UNHANDLED`) as "not answered", shown "-"; no answer at all is still
+  an error. The diag simulator's EEPROM stub goes to 9 bytes, and its fake
+  no longer invents zero-filled pages for an optional one.
 
 ### The edit transaction (C6), extended
 
@@ -940,8 +953,12 @@ flickering visibly.
   no key, no VIA command, no HID op. The domain match in
   `menu_edit_external()` becomes `domain_of(field) == domain`, which
   covers the new domain.
-- **Op 27:** sub 14 reports the new fields by their numbers. The screen ids
-  are `16 + node`, as before.
+- **Op 27:** sub 14 reports the new fields by their numbers, and bytes
+  12-14 the two live levels and the force bits. A new **sub 15** is the
+  bench's writer (codex's timing gate): the force bits and both levels,
+  live, not saved; it is an external writer of `ME_DOM_IND`, so it cancels
+  an open indicator edit first. Op 27 is dev-only. The screen ids are
+  `16 + node`, as before.
 
 ### Signatures
 
@@ -955,12 +972,12 @@ flickering visibly.
 
 ### RAM
 
-Two bytes in `kb_config`, 4 in `kb_field_sessions`, and about 9 net in
-`indicators.c`: the accumulators (6), the duties replacing the three levels
-(+1), the two levels (2), the force bits (1), with the phase counter gone
-(-1). The edit's snapshot is reused, and the tables are `const`. About
-15 B in all, so the dev gap goes from 152 to about 137, above C5's 128 floor.
-The linked build is the check; `build.sh` fails below the floor.
+Two bytes in `kb_config`, 4 in `kb_field_sessions`, and about 7 net in
+`indicators.c`: the two groups' accumulators (4), the duties replacing the
+three levels (+1), the two levels (2), the force bits (1), with the phase
+counter gone (-1). The edit's snapshot is reused, and the tables are
+`const`. **Linked (`081d7914`): the dev gap is 144 B** (from 152), above
+C5's 128 floor; daily 2,280, devfault 192.
 
 ### Tests
 
@@ -973,16 +990,37 @@ The linked build is the check; `build.sh` fails below the floor.
     (restored, force clear);
   - Connection's page on BT, 2.4G and USB, and its click and hold;
   - the duty table: strictly increasing, the ends.
-  - The sigma-delta, simulated for every level from 1: the average duty
-    within one tick in 10,000 of the table's, and the longest gap at most
-    48 ticks.
+  - The sigma-delta, simulated for every level over 2 × `IND_FULL` ticks:
+    the on-ticks exactly the table's duty, the longest dark run at most 47
+    ticks and the pulse spacing at most 48, level 1 exactly today's;
+    `ind_tick_out()`'s groups and force; `ind_pins_to_write()` for every
+    output against every last state and after a restart, and a restart
+    with Caps at 100% and a retained accumulator.
+  - Sub 15 cancelling an open indicator edit, and refusing a level over 100.
+- **The settings block and the counters** (`scripts/diag_sim/`, the
+  production files compiled verbatim):
+  - `kbee.c` runs `kb_eeconfig.c`: stored bytes 0, 1, 2, 51, 101, 102 and
+    255 for each field alone, with the other field garbage; a zero-filled
+    block (QMK's answer to an older version); the deferred, coalesced write,
+    an unchanged save writing nothing, 101 refused, saved Off and 100 read
+    back after a reboot;
+  - the flash counters: page 3 for each field alone, an unchanged write,
+    both together as mixed, the reset; and, with
+    `DIAG_SIM_GOLDEN_BASE=781d071f`, pages 0-2 byte-identical to that
+    commit's `flash_stats.c` under the old fields' workload;
+  - `ak820health.py`'s decoders over those pages, page 3 missing (older
+    firmware: its fields None, the rest unchanged), and the optional-page
+    transaction against unhandled replies.
 - **The board:**
-  - the menu pass over the new rows;
-  - the editors driven by op 27 and read by sub 14;
-  - a saved level read back by reopening the editor;
-  - the flash counters' page 3 counting the save's write;
-  - the main loop's rate with both groups forced at 50%, against them at
-    0, from health page 4.
+  - the menu pass over the new rows, with both editors and their sub 14
+    readbacks (open, the levels restored, the force gone);
+  - the timing (codex's gate), `scripts/ind_timing.py`, 10 s runs: the
+    main loop's passes a second, the row ISR's rate and CPU share, passes
+    over 10 and 25 ms. The old firmware (`781d071f`) idle and with Caps lit
+    from the host; the new idle, Caps at 1% from the host, and all three
+    LEDs forced at 1%, 82%, 83% and 100% by sub 15; then the menu's board
+    pass with all three at 82%, against C10's 17 ms;
+  - the flash counters' page 3 counting a save's write.
 - **JD:** the levels by eye, and a saved level surviving his power cycle.
 
 ## P1b, P1c, P1d

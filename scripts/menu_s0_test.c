@@ -35,6 +35,7 @@
 #include "menu.h"
 #include "menu_edit.h"
 #include "../graphics/res/font_small_mono.h"   /* through -I $D/menu */
+#include "../indicator_levels.h"               /* P2a: the indicators' levels and tick */
 
 static int fails;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d %s\n", __FILE__, __LINE__, #c); fails++; } } while (0)
@@ -1360,6 +1361,20 @@ void    env_lcd_set(uint8_t level, bool save) {
     fk_lcd = level;
     if (save) { fk_lcd_saved = level; fk_lcd_saves++; }
 }
+/* P2a's indicator groups: the live level, its saved copy, the force bits. */
+static uint8_t fk_ind[2] = {1, 0}, fk_ind_saved[2] = {1, 0}, fk_ind_force;
+static int     fk_ind_saves;
+uint8_t env_ind_level(uint8_t which) { return which < 2 ? fk_ind[which] : 0; }
+void    env_ind_set(uint8_t which, uint8_t level, bool save) {
+    if (which > 1) return;
+    fk_ind[which] = level > ENV_IND_MAX ? (uint8_t)ENV_IND_MAX : level;
+    if (save) { fk_ind_saved[which] = fk_ind[which]; fk_ind_saves++; }
+}
+void    env_ind_force(uint8_t which, bool on) {
+    if (which > 1) return;
+    fk_ind_force = on ? (uint8_t)(fk_ind_force | (1u << which)) : (uint8_t)(fk_ind_force & ~(1u << which));
+}
+uint8_t env_ind_forced(void) { return fk_ind_force; }
 static const char *const fk_effect_names[9] = {"Solid", "Alphas/Mods", "Cycle All", "Cycle L-R", "Cycle U-D",
                                                "Jellybean", "Heatmap", "Rainfall", "Drift"};
 uint8_t     env_effects(void) { return 9; }
@@ -1761,6 +1776,18 @@ static void m_hold(void) {
 static uint8_t sub5_screen(void) { op27(5, 0, 0); return rpt[14]; }
 static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
 
+/* The top level's rows (P2a, the build plan's order): their indices, and
+ * each row's cells with the defaults' values. */
+enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_DIAG, T_BOOT, T_HELP, T_ABOUT, T_EXIT, T_ROWS };
+static const char *const top_rows_want[T_ROWS][2] = {
+    {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 12 of 23 */
+    {FONT_MONO_I_CONN "Connection", FONT_MONO_TRI_R}, {FONT_MONO_I_POWER " Power", "Balanced"},
+    {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h"},
+    {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R}, {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
+    {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
+};
+static void top_frame_ok(int cursor);
+
 static void test_menu(void) {
     fw_reset();
     fk_power = 1; fk_clock = 0;
@@ -1773,15 +1800,8 @@ static void test_menu(void) {
     m_settle();
     CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 0);
     CHECK(title_bad(FONT_MONO_WRENCH " Configuration") == 0);
-    CHECK(row_bad(0, cells2(FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R), MENU_LIT) == 0);   /* P1b */
-    CHECK(row_bad(1, cells2(FONT_MONO_I_SCREEN "Screen", "52%"), MENU_DIM) == 0);               /* 12 of 23 */
-    CHECK(row_bad(2, cells2(FONT_MONO_I_POWER " Power", "Balanced"), MENU_DIM) == 0);
-    CHECK(row_bad(3, cells2(FONT_MONO_I_CLOCK "Clock", "24h"), MENU_DIM) == 0);
-    CHECK(row_bad(4, cells2(FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R), MENU_DIM) == 0);
-    CHECK(row_bad(5, cells2(FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R), MENU_DIM) == 0);   /* JD, 10-24 */
-    CHECK(row_bad(6, cells2(FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R), MENU_DIM) == 0);
-    CHECK(row_bad(7, cells2(FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R), MENU_DIM) == 0);
-    CHECK(fb[20][125] == MENU_WHITE && fb[120][125] == MENU_TRACK);   /* nine rows: Exit on page two, the scrollbar */
+    top_frame_ok(0);   /* P2a's eleven rows: Help, About and Exit on page two */
+    CHECK(fb[20][125] == MENU_WHITE && fb[120][125] == MENU_TRACK);   /* the scrollbar: the thumb at the top */
     CHECK(op27(0, 1, 0) == MI_BAD);                  /* sub 0 is the fixture's only */
 
     /* Moves: down, a wrap up, and back. */
@@ -1789,15 +1809,15 @@ static void test_menu(void) {
     CHECK(sub5_cursor() == 1 && row_bad(1, cells2(FONT_MONO_I_SCREEN "Screen", "52%"), MENU_LIT) == 0 &&
           row_bad(0, cells2(FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R), MENU_DIM) == 0);
     m_turn(-2);
-    CHECK(sub5_cursor() == 8 && row_bad(0, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LIT) == 0 &&
-          row_bad(1, "", 0) == 0);   /* page two */
-    /* Its thumb at the track's end, y 27-126 (codex: it was drawn off the panel). */
-    CHECK(fb[26][125] == MENU_TRACK && fb[27][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
+    CHECK(sub5_cursor() == T_EXIT);
+    top_frame_ok(T_EXIT);   /* page two */
+    /* Its thumb at the track's end: 81 px of 112, y 46-126 (codex: it was drawn off the panel). */
+    CHECK(fb[45][125] == MENU_TRACK && fb[46][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
     m_turn(1);
     CHECK(sub5_cursor() == 0);
 
     /* Power: the choice opens on the saved option, its bullet in cell 0. */
-    m_turn(2);
+    m_turn(T_POWER);
     m_click();
     CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad(FONT_MONO_I_POWER " Power") == 0);
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
@@ -1807,14 +1827,14 @@ static void test_menu(void) {
     m_turn(2);   /* Lights out */
     m_click();   /* commits */
     CHECK(fk_power == 3 && fk_power_writes == 1);
-    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 2);
-    CHECK(title_bad("Saved") == 0 && row_bad(2, cells2(FONT_MONO_I_POWER " Power", "Lights out"), MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_POWER);
+    CHECK(title_bad("Saved") == 0 && row_bad(T_POWER, cells2(FONT_MONO_I_POWER " Power", "Lights out"), MENU_LIT) == 0);
     for (int i = 0; i < 400; i++) fw_pass(5);   /* the flash's 1.3 s */
     m_settle();
     CHECK(title_bad(FONT_MONO_WRENCH " Configuration") == 0);
 
     /* Clock: a cancel by Back writes nothing, and says so. */
-    m_turn(1);
+    m_turn(T_CLOCK - T_POWER);
     m_click();
     CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, FONT_MONO_CHECK_BOX "24 hour", MENU_LIT) == 0 &&
           title_bad(FONT_MONO_I_CLOCK "Clock") == 0);
@@ -1824,19 +1844,19 @@ static void test_menu(void) {
     m_click();
     m_turn(2);
     m_click();   /* Date */
-    CHECK(fk_clock == 3 && fk_clock_writes == 1 && row_bad(3, cells2(FONT_MONO_I_CLOCK "Clock", "Date"), MENU_LIT) == 0);
+    CHECK(fk_clock == 3 && fk_clock_writes == 1 && row_bad(T_CLOCK, cells2(FONT_MONO_I_CLOCK "Clock", "Date"), MENU_LIT) == 0);
 
     /* An external change (Fn+B) shows at once. */
     fk_power = 0;
     m_settle();
     fw_pass(5);
     m_settle();
-    CHECK(row_bad(2, cells2(FONT_MONO_I_POWER " Power", "Always on"), MENU_DIM) == 0);
+    CHECK(row_bad(T_POWER, cells2(FONT_MONO_I_POWER " Power", "Always on"), MENU_DIM) == 0);
 
     /* Help: a topic pages by 8, clamped. Shortcuts has 12 lines: its top
      * stops at 4. */
     for (int i = 0; i < 300; i++) fw_pass(5);   /* past the Saved flash */
-    m_turn(3);   /* Help (row 6) */
+    m_turn(T_HELP - T_CLOCK);   /* Help (page two's first row) */
     m_click();
     CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 1 && title_bad(FONT_MONO_I_HELP "Help") == 0);
     CHECK(row_bad(1, cells2("Using the menu", FONT_MONO_TRI_R), MENU_LIT) == 0);
@@ -1864,10 +1884,10 @@ static void test_menu(void) {
     m_click();   /* back to Help, Shortcuts' row */
     CHECK(sub5_screen() == 16 + 5 && sub5_cursor() == 3 && row_bad(3, cells2("Shortcuts", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_hold();    /* Back to the top: Help's row */
-    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == 6);
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_HELP);
 
     /* About: the snapshot, formatted. */
-    m_turn(1);
+    m_turn(T_ABOUT - T_HELP);
     m_click();
     CHECK(title_bad(FONT_MONO_I_ABOUT "About") == 0);
     CHECK(row_bad(0, "Firmware 36afff30", MENU_WHITE) == 0);
@@ -1892,7 +1912,7 @@ static void test_menu(void) {
     m_click();
 
     /* Diagnostics: Health hands off; a click comes back to its row. */
-    m_turn(-3);   /* Diagnostics (row 4) */
+    m_turn(T_DIAG - T_ABOUT);   /* Diagnostics */
     m_click();
     CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1 && title_bad(FONT_MONO_I_DIAG " Diagnostics") == 0);
     m_click();
@@ -1933,9 +1953,9 @@ static void test_menu(void) {
 
     /* Exit closes; the session's kind with it. */
     m_hold();
-    m_turn(3);   /* Exit: row 8 from Diagnostics' row 4 ... */
+    m_turn(T_EXIT - T_DIAG - 1);   /* Exit, from Diagnostics ... */
     m_turn(1);
-    CHECK(sub5_cursor() == 8);
+    CHECK(sub5_cursor() == T_EXIT);
     CHECK(op27(2, 0, 0) == MI_OK);
     for (int i = 0; i < 50 && po_session() != SESSION_NONE; i++) fw_pass(5);
     CHECK(po_session() == SESSION_NONE);
@@ -1951,7 +1971,7 @@ static void test_menu(void) {
     CHECK(op27(11, 0, 0) == MI_OK);
     m_settle();
     /* 1. Fn+B and a click in one pass: Power opens on the NEW saved value. */
-    m_turn(2);   /* Power */
+    m_turn(T_POWER);   /* Power */
     fk_power = 1;
     m_settle();
     fk_power = 2;
@@ -1973,7 +1993,7 @@ static void test_menu(void) {
      * timed from its own start. Diagnostics, onto Reset counters, one pass
      * of its repaint, then the click. */
     for (int i = 0; i < 300; i++) fw_pass(5);
-    m_turn(2);
+    m_turn(T_DIAG - T_POWER);
     m_click();
     m_turn(1);   /* Camera */
     CHECK(op27(1, 1, 0) == MI_OK);   /* Reset counters */
@@ -1999,7 +2019,7 @@ static void test_menu(void) {
     m_hold();
     /* 4. About replaced while its old rows are still committed: Back for one
      * pass, new facts, in again, at several boundaries. */
-    m_turn(3);   /* About: row 7 from Diagnostics' row 4 */
+    m_turn(T_ABOUT - T_DIAG);   /* About, from Diagnostics */
     m_click();
     for (int k = 0; k < 6; k++) {
         CHECK(op27(2, 0, 0) == MI_OK);   /* Back */
@@ -2056,7 +2076,7 @@ static void test_menu(void) {
     m_hold();     /* the top, on Lighting */
     /* JD, 10-24: the squared check on the saved option (the cursor's on
      * entry), Power's icon on its heading, ◀ on Back. */
-    m_turn(2);    /* Power */
+    m_turn(T_POWER);    /* Power */
     m_click();
     {
         const char *pw = (const char *[]){"Always on", "Balanced", "Power saver", "Lights out"}[fk_power & 3];
@@ -2085,17 +2105,12 @@ static void test_menu(void) {
 /* At every pass of a move's repaint: a reversal, a second move, and a send
  * given up. The frame ends right, and no pass ever shows two lit rows. */
 static void top_frame_ok(int cursor) {
-    if (cursor == 8) {   /* Exit, alone on page two */
-        CHECK(row_bad(0, cells2(FONT_MONO_I_EXIT " Exit", ""), MENU_LIT) == 0);
-        for (int r = 1; r < 8; r++) CHECK(row_bad(r, "", 0) == 0);
-        return;
+    const int page = cursor / 8;
+    for (int r = 0; r < 8; r++) {
+        int i = page * 8 + r;
+        if (i >= T_ROWS) CHECK(row_bad(r, "", 0) == 0);
+        else CHECK(row_bad(r, cells2(top_rows_want[i][0], top_rows_want[i][1]), i == cursor ? MENU_LIT : MENU_DIM) == 0);
     }
-    const char *rows[8][2] = {{FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},
-                              {FONT_MONO_I_POWER " Power", "Balanced"}, {FONT_MONO_I_CLOCK "Clock", "24h"},
-                              {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R}, {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
-                              {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}};
-    for (int r = 0; r < 8; r++)
-        CHECK(row_bad(r, cells2(rows[r][0], rows[r][1]), r == cursor ? MENU_LIT : MENU_DIM) == 0);
 }
 static void test_menu_stress(void) {
     fw_reset();
@@ -2138,7 +2153,7 @@ static void test_menu_stress(void) {
             m_settle();
             if (fault_next_fill == 0) consumed++;
             fault_next_fill = 0;
-            top_frame_ok(8);
+            top_frame_ok(T_EXIT);
             m_turn(1);
             top_frame_ok(0);
         }
@@ -2579,13 +2594,13 @@ static void test_p1b(void) {
      * click enters it (Fn+Esc's path), except on the battery's reserve. */
     fk_boots = 0; fk_reserve = false;
     m_open_top();
-    m_turn(5);
-    CHECK(sub5_cursor() == 5 && row_bad(5, cells2(FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_turn(T_BOOT);   /* P2a: page one's last row */
+    CHECK(sub5_cursor() == T_BOOT && row_bad(T_BOOT, cells2(FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_click();
     CHECK(sub5_screen() == 16 + 34 && sub5_cursor() == 0 && title_bad(FONT_MONO_I_BOOT "Bootloader") == 0);
     CHECK(text_slot_bad(22, "For a firmware", MENU_WHITE, false) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE, false) == 0);
     m_hold();
-    CHECK(fk_boots == 0 && sub5_screen() == SC_TOP && sub5_cursor() == 5 && title_bad("Cancelled") == 0);
+    CHECK(fk_boots == 0 && sub5_screen() == SC_TOP && sub5_cursor() == T_BOOT && title_bad("Cancelled") == 0);
     m_click();
     m_click();
     CHECK(fk_boots == 1);
@@ -2601,8 +2616,217 @@ static void test_p1b(void) {
     m_click();   /* refused: the second page */
     CHECK(fk_boots == 2 && sub5_cursor() == 1 && text_slot_bad(22, "Plug in first:", MENU_WHITE, false) == 0);
     m_click();   /* back */
-    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == 5 && fk_boots == 2);
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_BOOT && fk_boots == 2);
     fk_reserve = false;
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
+    CHECK(po_invariant_fail() == 0);
+    menu_watch = false;
+}
+
+/* --- P2a: Indicators and the Connection stub ----------------------------------
+ * (plans/CONFIG-MENU-P1-DESIGN.md, "P2a"). Screen ids: Indicators 51,
+ * Connection 52, Lock lights 53, Charging light 54. */
+enum { SC_IND = 16 + 35, SC_CONN, SC_LOCKS, SC_CHGL };
+
+/* The levels and the tick (indicator_levels.h, what indicators.c's ISR runs):
+ * the table's ends and order, and the sigma-delta at every level. */
+static void test_ind_levels(void) {
+    CHECK(ind_level_duty[0] == 0 && ind_level_duty[1] == 256 && ind_level_duty[100] == IND_FULL);
+    for (int p = 1; p <= 100; p++) CHECK(ind_level_duty[p] > ind_level_duty[p - 1]);   /* every step changes the light */
+    for (int p = 0; p <= 100; p++) {
+        uint16_t acc = 0;
+        long     ons = 0, run = 0, max_dark = 0, last_on = -1, max_space = 0;
+        for (long t = 0; t < 2L * (long)IND_FULL; t++) {
+            bool on = ind_sd_step(&acc, ind_level_duty[p]);
+            CHECK(acc < IND_FULL);
+            if (on) {
+                ons++;
+                if (last_on >= 0 && t - last_on > max_space) max_space = t - last_on;
+                last_on = t;
+                run     = 0;
+            } else if (++run > max_dark) max_dark = run;
+        }
+        CHECK(ons == 2L * ind_level_duty[p]);   /* exact over IND_FULL ticks: the table's duty */
+        if (p == 0) CHECK(ons == 0);
+        else CHECK(max_dark <= IND_PWM_TICKS - 1 && max_space <= IND_PWM_TICKS);   /* never darker for longer than level 1 */
+        if (p == 1) CHECK(max_space == IND_PWM_TICKS && max_dark == IND_PWM_TICKS - 1);   /* today's level 1, exactly */
+    }
+    /* An unlit group keeps its accumulator and shows nothing; a forced one
+     * lights whatever the lock state; Caps and Win lock share the locks'. */
+    uint16_t al = 100, ac = 200;
+    CHECK(ind_tick_out(false, false, false, 0, &al, &ac, IND_FULL, IND_FULL) == 0 && al == 100 && ac == 200);
+    CHECK(ind_tick_out(true, false, false, 0, &al, &ac, IND_FULL, IND_FULL) == 1 && al == 100 && ac == 200);
+    CHECK(ind_tick_out(false, true, false, 0, &al, &ac, IND_FULL, IND_FULL) == 2);
+    CHECK(ind_tick_out(false, false, false, 1, &al, &ac, IND_FULL, IND_FULL) == 3);   /* the locks' preview: both */
+    CHECK(ind_tick_out(false, false, false, 2, &al, &ac, IND_FULL, IND_FULL) == 4);   /* the charging light's */
+    CHECK(ind_tick_out(false, false, true, 0, &al, &ac, 0, 0) == 0);                  /* level 0: dark */
+    /* The pins to write: after a restart every one, whatever the output
+     * (codex: Caps at 100% was skipped and stayed dark); else the changes. */
+    for (unsigned out = 0; out < 8; out++) {
+        CHECK(ind_pins_to_write((uint8_t)out, IND_OUT_UNKNOWN) == 7);
+        for (unsigned last = 0; last < 8; last++) CHECK(ind_pins_to_write((uint8_t)out, (uint8_t)last) == ((out ^ last) & 7u));
+    }
+    /* A restart with Caps full on and a retained accumulator: the first tick
+     * writes Caps on, and nothing more while it holds. */
+    uint8_t last = IND_OUT_UNKNOWN, pins = 0;
+    al = 12000;
+    for (int t = 0; t < 10; t++) {
+        uint8_t out = ind_tick_out(true, false, false, 0, &al, &ac, IND_FULL, 0), w = ind_pins_to_write(out, last);
+        if (t == 0) CHECK(w == 7 && out == 1);
+        else CHECK(w == 0);
+        for (int b = 0; b < 3; b++)
+            if (w & (1u << b)) pins = (uint8_t)((pins & ~(1u << b)) | (out & (1u << b)));
+        last = out;
+    }
+    CHECK(pins == 1);
+}
+
+static void test_p2a(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_ind[0] = fk_ind_saved[0] = 1; fk_ind[1] = fk_ind_saved[1] = 0; fk_ind_force = 0; fk_ind_saves = 0;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    m_open_top();
+
+    /* Indicators: a list of two value rows. */
+    m_turn(T_IND);
+    CHECK(sub5_cursor() == T_IND && row_bad(T_IND, cells2(FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_IND && sub5_cursor() == 1 && title_bad(FONT_MONO_I_IND "Indicators") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
+    CHECK(row_bad(1, cells2("Lock lights", "1%"), MENU_LIT) == 0);
+    CHECK(row_bad(2, cells2("Charging", "Off"), MENU_DIM) == 0);
+    CHECK(row_bad(3, "", 0) == 0 && fb[20][125] == 0);   /* three rows: no scrollbar */
+
+    /* Lock lights: the range editor, 0-100; the preview lights both lock LEDs. */
+    m_click();
+    CHECK(sub5_screen() == SC_LOCKS && sub5_cursor() == 1 && me_active() && me_field() == ME_LOCKS && fk_ind_force == 1);
+    CHECK(title_bad(FONT_MONO_I_IND "Lock lights") == 0 && big_bad(22, "1%") == 0 && bar_bad(1, 100) == 0);
+    CHECK(text_slot_bad(72, "Turn: change", MENU_WHITE, false) == 0 && text_slot_bad(100, "Hold: cancel", MENU_WHITE, false) == 0);
+    for (int i = 0; i < 40; i++) fw_pass(5);   /* 200 ms: not fast */
+    m_turn(1);
+    CHECK(fk_ind[0] == 2 && fk_ind_saved[0] == 1 && fk_ind_saves == 0 && big_bad(22, "2%") == 0 && bar_bad(2, 100) == 0);
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[6] == 1 && rpt[7] == ME_LOCKS && rpt[8] == 2 && rpt[9] == 1 && rpt[12] == 2 &&
+          rpt[13] == 0 && rpt[14] == 1);
+    CHECK(op27(1, 3, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* three detents in one input: fast, 5 each */
+    m_settle();
+    CHECK(fk_ind[0] == 17 && big_bad(22, "17%") == 0 && bar_bad(17, 100) == 0);
+    CHECK(op27(1, -16, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* clamped at 0: Off */
+    m_settle();
+    CHECK(fk_ind[0] == 0 && big_bad(22, "Off") == 0 && bar_bad(0, 100) == 0);
+    for (int k = 0; k < 2; k++) {
+        CHECK(op27(1, 16, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);
+        m_settle();
+    }
+    CHECK(fk_ind[0] == 100 && big_bad(22, "100%") == 0 && bar_bad(100, 100) == 0);   /* clamped at 100 */
+    m_hold();   /* cancels: the old level, the preview's force gone */
+    CHECK(fk_ind[0] == 1 && fk_ind_saves == 0 && fk_ind_force == 0 && !me_active());
+    CHECK(sub5_screen() == SC_IND && sub5_cursor() == 1 && title_bad("Cancelled") == 0);
+    CHECK(row_bad(1, cells2("Lock lights", "1%"), MENU_LIT) == 0);
+    /* Save. */
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    CHECK(op27(1, 2, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* fast: 1 + 10 */
+    m_settle();
+    m_click();
+    CHECK(fk_ind[0] == 11 && fk_ind_saved[0] == 11 && fk_ind_saves == 1 && fk_ind_force == 0 && !me_active());
+    CHECK(sub5_screen() == SC_IND && title_bad("Saved") == 0 && row_bad(1, cells2("Lock lights", "11%"), MENU_LIT) == 0);
+    CHECK(op27(14, 0, 0) == MI_OK && rpt[6] == 0 && rpt[12] == 11 && rpt[14] == 0);
+    /* A cancel after the save restores the saved level and writes nothing. */
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    m_hold();
+    CHECK(fk_ind[0] == 11 && fk_ind_saved[0] == 11 && fk_ind_saves == 1 && fk_ind_force == 0);
+
+    /* Charging light: its own group and force. */
+    for (int i = 0; i < 300; i++) fw_pass(5);
+    m_turn(1);
+    m_click();
+    CHECK(sub5_screen() == SC_CHGL && me_field() == ME_CHG && fk_ind_force == 2 && big_bad(22, "Off") == 0);
+    CHECK(title_bad(FONT_MONO_I_IND "Charging light") == 0);
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    CHECK(op27(1, 7, 0) == MI_OK && wait_terminal(rpt[6], 50) == MI_ST_DONE);   /* 35 */
+    m_settle();
+    for (int k = 0; k < 2; k++) {
+        for (int i = 0; i < 40; i++) fw_pass(5);   /* 200 ms apart: each slow */
+        m_turn(1);
+    }
+    CHECK(fk_ind[1] == 37 && fk_ind[0] == 11 && big_bad(22, "37%") == 0);
+    m_click();
+    CHECK(fk_ind_saved[1] == 37 && fk_ind_saved[0] == 11 && fk_ind_force == 0);
+    CHECK(sub5_cursor() == 2 && row_bad(2, cells2("Charging", "37%"), MENU_LIT) == 0);
+
+    /* Closed mid-edit (the opener, sub 11): rolled back, the force gone. */
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_turn(1);
+    CHECK(fk_ind[1] == 38 && fk_ind_force == 2);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    CHECK(fk_ind[1] == 37 && fk_ind_force == 0 && !me_active());
+    /* The backstop closes one too. */
+    m_open_top();
+    m_turn(T_IND);
+    m_click();
+    m_click();
+    CHECK(fk_ind_force == 1);
+    m_turn(1);
+    fw_pass(MI_BACKSTOP_MS + 10);
+    fw_pass(5);
+    CHECK(po_session() == SESSION_NONE && fk_ind[0] == 11 && fk_ind_force == 0);
+
+    /* Sub 15, the bench: an external writer, so it cancels an open indicator
+     * edit first ("Cancelled"); a bad level is refused. */
+    m_open_top();
+    m_turn(T_IND);
+    m_click();
+    m_click();
+    memset(rpt, 0, sizeof rpt);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 15;
+    rpt[5] = 3; rpt[6] = 82; rpt[7] = 101;
+    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_BAD && me_active() && fk_ind_force == 1);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 15;
+    rpt[5] = 3; rpt[6] = 82; rpt[7] = 83;
+    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
+    CHECK(!me_active() && fk_ind[0] == 82 && fk_ind[1] == 83 && fk_ind_force == 3 && fk_ind_saves == 2);
+    fw_pass(5);
+    m_settle();
+    CHECK(sub5_screen() == SC_IND && title_bad("Cancelled") == 0 && row_bad(1, cells2("Lock lights", "82%"), MENU_LIT) == 0);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 15;
+    rpt[5] = 0; rpt[6] = 11; rpt[7] = 37;
+    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK && fk_ind_force == 0 && fk_ind[0] == 11);
+    m_hold();
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    /* Connection: the stub page, the link frozen as it opened. */
+    static const struct { uint8_t link; const char *l[4]; } conn[3] = {
+        {(uint8_t)(ENV_LINK_BT | (1u << 2) | (ENV_LINK_CONNECTED << 4)),
+         {"Link BT 2 connected", "Slots: coming soon", "Fn+Q/W/E: a slot", "Hold one 2 s: pair"}},
+        {(uint8_t)(ENV_LINK_USB), {"Link USB", "Slots: coming soon", "The slider picks", "BT, 2.4G or cable."}},
+        {(uint8_t)(ENV_LINK_24G | (ENV_LINK_LINKING << 4)), {"Link 2.4G linking", "Slots: coming soon", "The slider picks",
+                                                            "BT, 2.4G or cable."}},
+    };
+    uint8_t link0 = fk_about.link;
+    m_open_top();
+    m_turn(T_CONN);
+    CHECK(row_bad(T_CONN, cells2(FONT_MONO_I_CONN "Connection", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    for (int k = 0; k < 3; k++) {
+        fk_about.link = conn[k].link;
+        m_click();
+        CHECK(sub5_screen() == SC_CONN && sub5_cursor() == 0 && title_bad(FONT_MONO_I_CONN "Connection") == 0);
+        static const uint16_t ys[4] = {22, 36, 72, 86};
+        for (int i = 0; i < 4; i++) CHECK(text_slot_bad(ys[i], conn[k].l[i], MENU_WHITE, false) == 0);
+        fk_about.link = link0;   /* frozen: a change while it shows doesn't repaint it */
+        fw_pass(5);
+        m_settle();
+        CHECK(text_slot_bad(22, conn[k].l[0], MENU_WHITE, false) == 0);
+        if (k == 1) m_hold();    /* a hold goes back too, without "Cancelled" */
+        else m_click();
+        CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_CONN);
+        if (k == 1) CHECK(title_bad("Cancelled") != 0);
+    }
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
     CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
@@ -2665,7 +2889,7 @@ static void test_menu_enable(void) {
     knob(true);
     m_settle();
     CHECK(po_owner() == PANEL_MENU && sub5_screen() == 16 + 1 && sub5_cursor() == 0);
-    m_turn(4);   /* Diagnostics (P1b: Lighting and Screen above it) */
+    m_turn(T_DIAG);   /* Diagnostics */
     m_click();
     CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1);
     m_turn(1);
@@ -2719,6 +2943,8 @@ int main(int argc, char **argv) {
     test_menu();
     test_menu_stress();
     test_p1b();
+    test_ind_levels();
+    test_p2a();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;
