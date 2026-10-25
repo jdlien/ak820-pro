@@ -101,15 +101,20 @@ This file is the thread; read it first after a context loss. Updated
   bring the file's glyphs up to date (◀ ▶, the check, the icons; it still
   shows ‹ > •). One of his lines is cut off: "JD: I wonder if we can".
 - **Next:**
-  1. P1b: designed (draft 3, codex three rounds, cleared) and **built**:
-     `feeb9aa3` (groundwork) and `8cb713e3` (P1b) on gremlin/s1; host
-     tests pass (`test_p1b`, both builds); dev heap gap 152 B. Codex's code
-     review is running (`plans/review-prompt-p1b-code.txt`). Then the
-     flash, `menu_p1a_board.py` (its P1b pass), the plan's P1 exit gates
-     (VIA packets mid-edit by script, JD's Fn keys, Save with RGB off,
-     visibility from Screen Off, persistence across a reboot), JD's
-     session. Sub 14 reads the edit (open, field, value, saved, external
-     cancels).
+  1. **P1b and the bootloader item are ON THE KEYBOARD ON GREMLIN:
+     `781d071f`** (dev, token `0x6b34941c`; GREMLIN-RESULTS §20e-g). P1b:
+     design draft 3 (codex three rounds), code (codex: the queued-click race
+     fixed; the bands fill rows: the longest pass 16.2 ms), the board pass
+     PASS (98 steps), the exit gates PASS (`menu_p1b_gates.py`, 31 of 31),
+     the owed host tests in. JD's wake-dark-frame fix (`52acdffe99`) merged
+     at his ask. The bootloader item: built, codex-reviewed twice, entered
+     from the menu on the board and flashed back. The cursor is the thin bar
+     (U+1FB70, JD). Help's text comes from `plans/MENU-TEXT.md` (committed,
+     JD's), its quoted numbers checked against the firmware.
+     **Owed before P1b is accepted:** JD's session (Lighting, the editors,
+     the Screen, an Fn+arrow mid-edit, the bootloader item); a power cycle
+     to prove a save survives a reboot; C10's gates on the editors
+     (`menu_s1_gate.py`'s 15 ms to 17).
   2. The Clock options (the design doc's "JD's decisions"), with half-row
      slots for the live examples.
   3. JD's text edits; then P1c and P1d.
