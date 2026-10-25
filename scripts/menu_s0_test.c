@@ -1238,6 +1238,7 @@ uint16_t env_meas_arm(void) {
     return fk_token;
 }
 bool env_debug_done(void) { return false; }
+void env_mono_timing(uint16_t out4[4], bool reset) { (void)reset; out4[0] = out4[1] = out4[2] = out4[3] = 0; }
 
 /* P1a's settings and facts. */
 static uint8_t fk_power = 1, fk_clock = 0;
@@ -1881,6 +1882,28 @@ static void test_menu(void) {
         CHECK(sub5_cursor() == 1 + t);
     }
     m_hold();
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    /* sub 13: a colour changed live repaints the menu in it (JD tunes shades
+     * on the panel); a bad index is refused; sub 12 reads the piece timing. */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(-1);   /* Exit selected: lit */
+    m_turn(-1);   /* About: Exit unselected, light red */
+    CHECK(row_bad(5, cells2("Exit", ""), MENU_LEAVE) == 0);
+    memset(rpt, 0, sizeof rpt);   /* [5] the index, [6..7] the colour: op27() takes only two args */
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 13;
+    rpt[5] = MP_LEAVE; rpt[6] = 0x00; rpt[7] = 0xF8;   /* pure red, 0xF800 */
+    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
+    m_settle();
+    CHECK(row_bad(5, cells2("Exit", ""), 0xF800u) == 0 && row_bad(4, cells2("About", ">"), MENU_LIT) == 0);
+    CHECK(op27(13, MP_N, 0) == MI_BAD);
+    rpt[5] = MP_LEAVE; rpt[6] = (uint8_t)MENU_LEAVE; rpt[7] = (uint8_t)(MENU_LEAVE >> 8);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 13;
+    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
+    m_settle();
+    CHECK(row_bad(5, cells2("Exit", ""), MENU_LEAVE) == 0);
+    CHECK(op27(12, 1, 0) == MI_OK);
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
     /* sub 4 still opens the fixture, and sub 0 works on it. */
