@@ -55,7 +55,9 @@ ICONS = [
     ("I_DIAG", 0xF2DB, 1),         # nf-fa-microchip,
     ("I_HELP", 0xF059, 2),         # nf-fa-question_circle,
     ("I_ABOUT", 0xF05A, 2),        # nf-fa-info_circle,
-    ("I_EXIT", 0xF00D, 1),         # nf-fa-times
+    ("I_EXIT", 0xF00D, 1),         # nf-fa-times;
+    ("I_LIGHT", 0xF834, 1),        # P1b: Lighting, nf-mdi-lightbulb (JD's pick),
+    ("I_SCREEN", 0xF108, 2),       # Screen, nf-fa-desktop
 ]
 
 

@@ -1265,7 +1265,6 @@ uint16_t env_meas_arm(void) {
     return fk_token;
 }
 bool env_debug_done(void) { return false; }
-void env_mono_timing(uint16_t out4[4], bool reset) { (void)reset; out4[0] = out4[1] = out4[2] = out4[3] = 0; }
 
 /* P1a's settings and facts. */
 static uint8_t fk_power = 1, fk_clock = 0;
@@ -1967,7 +1966,6 @@ static void test_menu(void) {
         CHECK(title_bad(FONT_MONO_I_POWER " Power") == 0);
     }
     m_hold();
-    CHECK(op27(12, 1, 0) == MI_OK);
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
     /* sub 4 still opens the fixture, and sub 0 works on it. */
