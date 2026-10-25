@@ -376,6 +376,15 @@ serial only, never HID. The QT Py streams one line of raw integers a second.
 `scripts/power_log.py --out <csv> --detach` timestamps them on the Mac and
 converts them, finding the QT Py by its USB ids (Adafruit `239a`).
 
+⚠️ **During a drain, run it as a LaunchAgent:** `scripts/power_log_agent.sh
+install [csv]` (`status`, `uninstall`; label `com.jdlien.ak820pro.powerlog`).
+A recorder started from a cmux shell dies when cmux restarts, even detached:
+at 14:11:47 10-24 the drain lost 4.9 h of rows that way. The agent restarts
+it within 10 s if it exits and again at login. Moving to it lost no row.
+Only one recorder may run: `power_log.py` locks the CSV and opens the port
+exclusive, so a second one refuses; two would each get some of the QT
+Py's lines and interleave them in one file.
+
 **In service since 10-15**, with the keyboard back in JD's daily use: the
 pack's lead comes out of the reassembled case to the harness, and the board
 runs as it always does. That makes three USB ports for a keyboard built to

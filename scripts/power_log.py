@@ -26,10 +26,17 @@ length is reported (once a minute), not dropped silently.
 Serial only, never HID: the QT Py's boot.py turns its HID off. The port is
 found by USB ids, so it survives a replug onto another port. With --detach
 it forks off (PPID 1), like trial_guard.py; its pid goes in <csv>.pid and
-its notes (start, H and E lines, reconnects) in <csv>.log.
+its notes (start, H and E lines, reconnects) in <csv>.log. During a drain
+run it as a LaunchAgent instead (scripts/power_log_agent.sh): a detached
+recorder started from a cmux shell still dies when cmux restarts.
+
+One recorder at a time: it takes a lock on <csv> and opens the port
+exclusive, since two would each read some of the QT Py's lines and
+interleave them. A second one refuses.
 """
 import argparse
 import csv
+import fcntl
 import os
 import re
 import sys
@@ -101,6 +108,12 @@ def main():
         if have != FIELDS:
             say(f"{out} has other columns ({have}); start a new file")
             sys.exit(1)
+    lock = open(out, "a")   # held for the process's life, across detach's forks
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        say(f"another recorder is writing {out} (pid in {base}.pid); not starting")
+        sys.exit(1)
     if a.detach:
         print(f"detaching; pid in {base}.pid, notes in {base}.log", flush=True)
         detach(base + ".log")
@@ -118,7 +131,7 @@ def main():
             time.sleep(2)
             continue
         try:
-            s = serial.Serial(dev, 115200, timeout=5)
+            s = serial.Serial(dev, 115200, timeout=5, exclusive=True)
             say(f"connected {dev}")
             header, bad, bad_said = None, 0, 0.0
             while True:
