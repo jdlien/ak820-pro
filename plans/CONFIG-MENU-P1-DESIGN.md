@@ -429,15 +429,17 @@ amendment is approved), every label, value, title, flash and the hint,
 About's lines, Reset counters' pages, and P1b-d's words. Nothing here is
 final until then.
 
-## P1b: Lighting, Screen and the edit transaction (draft 2, 10-24 night)
+## P1b: Lighting, Screen and the edit transaction (draft 3, 10-24 night)
 
 The mockup's previewing half of the menu, on P1a's machinery. Everything not
 said here is P1a's (the slot rules, the one-lit-row rule, the session
 identity, the latched model, the hint and the flash, the icons). **Draft 2
-answers codex's first round**
-([`review-codex-p1b-design-2026-10-24.md`](review-codex-p1b-design-2026-10-24.md)):
+answered codex's first round, draft 3 its second**
+([`review-codex-p1b-design-2026-10-24.md`](review-codex-p1b-design-2026-10-24.md),
+[`review-codex-p1b-design2-2026-10-24.md`](review-codex-p1b-design2-2026-10-24.md)):
 the writers it missed, the lit bit, the rollback's place, the hue bands'
-overlap, the RAM, the tests.
+overlap, the RAM, the tests; then the fast turn's clock, external changes as
+new targets, and the adapter the tests run.
 
 ### The tree, added
 
@@ -469,8 +471,11 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
   cells). Their headings carry them, as P1a's do.
 - **Fast turns:** an input carrying two or more detents, or one within 90 ms
   of the last, takes the fast step (the mockup's rule). `menu_input` has the
-  detents and `now`; the last turn's time is new state (2 B, 16-bit ms,
-  compared as a signed difference).
+  detents and `now`; the last turn's time is new state: **32-bit ms** (a
+  16-bit one aliases inside the 180 s backstop: a turn 65,556 ms after the
+  last would read as 20 ms), cleared when an editor opens, so its first turn
+  is never fast; a turn counts as fast only for an unsigned difference under
+  90 ms since a turn in the same editor.
 - **Diagnostics' place** on the top level is computed from its rows, not the
   `2` that `menu_return_from_diag()` pushes today (`menu.c:512`); new title
   ids follow P1a's table.
@@ -518,7 +523,15 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
   The adapter calls QMK's setters directly, never a hooked entry point, so no
   hook can fire inside `menu_input()`'s call tree; a host test counts the
   hooks across every input path.
-- **The RGB adapter** (`menu_glue.c`, behind `menu_env.h`):
+- **The RGB adapter's sequencing lives in a new pure module,
+  `menu/menu_edit.c`** (the transaction: open, preview, save, cancel,
+  rollback, the external cancel), which the host tests build as they build
+  `menu.c`. It reaches QMK only through narrow primitives in `menu_env.h`
+  (read the config; set mode, HSV, speed, flags, enable, each `_noeeprom` or
+  saving; the LCD level, RAM or saved), each a one-line call in
+  `menu_glue.c`. The host's fakes of those primitives copy QMK's semantics
+  (the early returns while disabled, the dirty flags), so the tests run the
+  production sequencing, not a second implementation. The rules it follows:
   - QMK's mode and HSV setters return early while the lights are off
     (`rgb_matrix.c:606, 658`); speed's doesn't. So preview, save and cancel
     each run with `enable` set inside the call and restore it last (C6).
@@ -532,8 +545,9 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
     (`eeconfig_flag` ORs it, `eeconfig.h:191`), so its pending write still
     happens, with the restored values.
   - Save always calls the saving setter, even when the preview already
-    equals the value (the dirty flag is the point). Mode is set only when it
-    changes, so an HSV or speed preview doesn't restart the effect.
+    equals the value (the dirty flag is the point); that includes Effect's
+    mode. In a *preview* or a *cancel*, mode is set only when it changes, so
+    an HSV or speed preview doesn't restart the effect.
   - Persistence follows QMK's flush once the hold lifts, not the instant
     "Saved" shows.
 - **The flush hold:** `rgb_matrix_eeprom_flush_allowed()` (the board's
@@ -575,7 +589,9 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
 - **Resets aren't writers to roll back:** `QK_CLEAR_EEPROM`, `QK_BOOT`, the
   raw-HID jump and every reboot discard RAM, and no shutdown path flushes the
   RGB config (`quantum.c:208-239`), so the flush hold has left EEPROM at the
-  saved values. (A rollback at shutdown would also undo the bootloader
+  last persisted values (a pending save may be lost, as it always could be;
+  `QK_CLEAR_EEPROM` deliberately brings back the defaults). (A rollback at
+  shutdown would also undo the bootloader
   splash's full brightness, `display.c:1331`.) VIA's `id_eeprom_reset`
   resets VIA's own storage only (`via.c:120`).
 - **Not writers** (C6): the power ladder's caps and scale (`power.c:119`
@@ -594,6 +610,20 @@ it returns. A value that changes between a slot's pieces changes its
 signature, and P1a's rule restarts that slot, so no copy is needed (and none
 is kept: RAM). An external change while a list shows repaints the rows whose
 signature it changes.
+
+**But a changed signature isn't a new target** (codex, round two):
+`menu_slots.c` repaints it (`:265`), yet only `new_target()` (`:100`)
+advances the target's generation, resets its settlement, supersedes a
+pending stop and marks interrupted timing; `note_settled()` (`:189`) ignores
+a later settlement while the old one stands; and `menu_tick()` (`menu.c:673`)
+notices only power, clock and the title. So **every external hook, with or
+without an open edit, sets a pending-change bit** (in an existing flags
+byte), and `menu_tick()`, which runs before the pump each pass, consumes it
+with `ms_retarget()`: after the write (the hook runs just before it, in the
+same main-loop step) and before any painting. The menu's own previews go
+through `menu_input()`, which already retargets. Tests: an external change
+after settlement and during a partial slot, with C10's accounting and a
+pending stop.
 
 ### Signatures for value rows (exact, still 16 bits)
 
@@ -658,13 +688,14 @@ New layouts beside `L_LIST` and `L_CONFIRM`; each slot one bounded op a pass
 ### RAM (from the linked builds, codex's point 5)
 
 The heap gaps of `541a8cbd`, every flavour (floor 128 B): **dev 160**,
-devfault 200, instrumented 1,312, daily and fpb 2,312. Dev binds. P1a and the
+devfault 200, instrumented 1,312, fpb 2,312 (daily 2,312 at `925f029b`).
+Dev binds. P1a and the
 icons took 72 B, not P1a's estimated ~30, so the C5 ledger stands at ~384 of
 420 B.
 
 | Item | Bytes | Dev gap after |
 |---|---|---|
-| P1b: `edit_t` (10) and the last turn's time (2), padded | +16 | ~144 |
+| P1b: `edit_t` (10) and the last turn's time (4) | +16 | ~144 |
 | P1b: the piece-timing instrumentation removed (dev and devfault: `mono_t_*`, `mono_send_sum`, `compose_max`, op 27 sub 12) | -14 | ~158 |
 | P1c (reserved) | +12 | ~146 |
 | P2/P3 (reserved) | +36 | **~110, under the floor** |
@@ -684,7 +715,8 @@ icons took 72 B, not P1a's estimated ~30, so the C5 ledger stands at ~384 of
 
 The host target excludes `menu_glue.c`, VIA, QMK's RGB core and the display
 glue (`menu_s0_test.c:9`), so the hooks' real placement is the board's to
-prove; the host proves the logic.
+prove; the host proves the logic, `menu_edit.c`'s production sequencing
+included, against fakes with QMK's semantics.
 
 - **Host:**
   - every row of Lighting and the top level against the face; each editor's
@@ -707,12 +739,18 @@ prove; the host proves the logic.
   - one lit row and one cursor a pass; no pass over `MB_PASS_BYTES`.
 - **On the board** (the plan's P1 exit gates, and C10's): every writer that
   can be driven without destroying JD's state, through its real path, with
-  an op 27 count of external cancels: VIA set, save, get and device
-  indication packets mid-edit (a script over raw HID, never enumerating);
+  an op 27 count of external cancels, and **the order observed, not only the
+  count**: a VIA get mid-preview returns the restored value; an increment
+  (`Fn`+arrow, its held repeat) lands on the restored value, not the
+  preview; a VIA set and a device indication still apply after the cancel;
+  a forced VIA save mid-preview persists the restored config across a
+  reboot. VIA set, save, get and device indication packets mid-edit (a
+  script over raw HID, never enumerating); dev ops 4 and 5 by script;
   `RM_*` keys by JD's `Fn`+arrows and `Fn`+`\` (on gremlin they replace the
   wake rig's remapped key, which is Buzz's); `SCR_*` by `Fn`+`PgUp`/`PgDn`.
-  The magic reset and `RM_FLG*` (they'd reset JD's EEPROM, or aren't bound)
-  rest on the host classification and inspection. A Save with RGB disabled,
+  The magic reset, `RM_FLG*`, `UG_*`, and any `RGBM_*` not bound in JD's
+  keymap (they'd reset his EEPROM, or no key sends them) rest on the host
+  classification and a named inspection, listed in the code review. A Save with RGB disabled,
   and Lights saved; visibility from Screen Off and from level 0; the session
   through Diagnostics; persistence across a reboot after a settled save and
   after a cancel; C10's LED rate, transitions, continuous-input progress and
@@ -720,7 +758,9 @@ prove; the host proves the logic.
   stacks' worst watermarks; JD's session.
 - **The pass limit:** JD's (b) accepts menu painting passes of ~16-17 ms, so
   the board scripts fail a pass over 17 ms and still count those over 15
-  (`menu_p1a_board.py:202` fails at 15 today).
+  (`menu_p1a_board.py:204` does since `51223f9`; `menu_s1_gate.py:435`
+  still fails at 15 ms and any pass over it: both assertions move to 17 ms,
+  keeping the count, when the gate runs on the editors).
 
 ## P1b, P1c, P1d
 
