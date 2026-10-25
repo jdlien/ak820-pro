@@ -64,7 +64,8 @@ section.cat h2 span { font-weight: 400; text-transform: none; letter-spacing: 0;
 .tile .wide { position: absolute; top: 3px; left: 5px; font-size: 9px; color: #7a7a7a; }
 .empty { color: var(--muted); padding: 40px 0; text-align: center; display: none; }
 
-aside { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 16px; }
+aside { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 16px; max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+.role-head { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 10px 0 0; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
 .card h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
 .card .sub { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
@@ -158,13 +159,31 @@ const CELL_BG = [18, 18, 18];
 const KIND_NOTE = ["", "  (double width: two cells)", "  (7 px wide on a 6 px advance: takes two cells)"];
 const KIND_SHORT = ["", " · two cells", " · 7 px, two cells"];
 
+// The defaults are JD's picks of 10-24 (the menu icon, the marks) and Warren's
+// proposals for the top-level icons.
+const LISTS = ["top", "power", "clock", "diag", "all", "all2"];
 const ROLES = [
-  { id: "title", name: "Menu icon", where: "before the title, “Configuration”", def: null },
-  { id: "back", name: "Back mark", where: "the “‹ Back” row", def: 0x2039 },
-  { id: "sub", name: "Submenu mark", where: "the right edge of rows that open a page", def: 0x3E },
-  { id: "choice", name: "Choice mark", where: "the saved option, cell 0", def: 0x2022 },
+  { id: "title", name: "Menu icon", where: "before the title, “Configuration”", def: 0x1F527, on: ["top", "all", "all2"] },
+  { id: "cursor", name: "Cursor", where: "x 0-2, left of the selected row", def: 0x1FB6C, on: LISTS },
+  { id: "back", name: "Back mark", where: "the Back row", def: 0x25C0, on: ["power", "clock", "diag"] },
+  { id: "sub", name: "Submenu mark", where: "the right edge of rows that open a page", def: 0x25B6, on: ["top", "diag", "all", "all2"] },
+  { id: "choice", name: "Choice mark", where: "the saved option, cells 0-1", def: 0xF058, on: ["power", "clock"] },
 ];
-const SCREENS = [["top", "Top"], ["power", "Power"], ["clock", "Clock"], ["diag", "Diagnostics"]];
+// The top level, built (P1a) and planned (the mockup's, plus Bootloader): the
+// label, the value at the right (a string, SUB for the submenu mark, or none),
+// and the proposed icon.
+const SUB = 1;
+const ITEMS = [
+  ["Lighting", SUB, 0xF834, true], ["Screen", SUB, 0xF108, true], ["Connection", SUB, 0xF293, true],
+  ["Power", "Balanced", 0xF0E7], ["Indicators", SUB, 0xF11C, true], ["Clock", "24h", 0xF017],
+  ["Battery", SUB, 0xF240, true], ["Diagnostics", SUB, 0xF2DB], ["Bootloader", SUB, 0xF498, true],
+  ["Help", SUB, 0xF059], ["About", SUB, 0xF05A], ["Exit", null, 0xF00D],
+];
+ITEMS.forEach(([l, , cp, planned]) => ROLES.push({
+  id: "i:" + l, group: "items", name: l + (planned ? " (planned)" : ""), where: "top-level icon", def: cp,
+  on: planned ? ["all", "all2"] : ["top", "all", "all2"],
+}));
+const SCREENS = [["top", "Top"], ["all", "Top, planned"], ["all2", "…scrolled"], ["power", "Power"], ["clock", "Clock"], ["diag", "Diagnostics"]];
 
 const KEY = "cozette-picker-v1";
 let state = { short: [], roles: {}, color: "lit", size: 3, cat: -1, screen: "top", oneCell: false };
@@ -304,32 +323,64 @@ function row(r, left, right, rgb) {
   text(0, y, left, rgb);
   if (right && right.length) text(20 - cellsOf(right), y, right, rgb);
 }
+// The cursor sits in the line's lead, x 0-2, with x 3 its 1 px gap: the
+// columns left of cell 0 that the menu leaves black today.
+function cursorAt(r, rgb) {
+  const cp = roleCp("cursor"), g = cp == null ? null : rowsOf(cp);
+  if (!g) return;
+  const y0 = 15 + 14 * r;
+  for (let y = 0; y < 14; y++) for (let x = 0; x < 3; x++) if ((g.rows[y] >> (g.w - 1 - x)) & 1) {
+    const i = ((y0 + y) * W + x) * 4; fb.data[i] = rgb[0]; fb.data[i + 1] = rgb[1]; fb.data[i + 2] = rgb[2];
+  }
+}
+function scrollbar(count, top) {
+  if (count <= 8) return;
+  const BAR_H = 112, th = Math.max(6, Math.floor((BAR_H * 8 + Math.floor(count / 2)) / count));
+  const ty = 15 + Math.floor(((BAR_H - th) * top + Math.floor((count - 8) / 2)) / (count - 8));
+  fill(125, 15, 125, 15 + BAR_H - 1, PAL.track);
+  fill(125, ty, 125, ty + th - 1, PAL.white);
+}
 function drawLcd() {
   fill(0, 0, W - 1, H - 1, [0, 0, 0]);
   const S = state.screen, sub = roleCp("sub"), back = roleCp("back"), choice = roleCp("choice"), icon = roleCp("title");
-  const title = { top: "Configuration", power: "Power", clock: "Clock", diag: "Diagnostics" }[S];
-  text(0, 0, (S === "top" && icon != null ? [icon, ...gap(icon)] : []).concat(toks(title)), PAL.white);
+  const title = { top: "Configuration", all: "Configuration", all2: "Configuration", power: "Power", clock: "Clock", diag: "Diagnostics" }[S];
+  const isTop = S === "top" || S === "all" || S === "all2";
+  text(0, 0, (isTop && icon != null ? [icon, ...gap(icon)] : []).concat(toks(title)), PAL.white);
   fill(4, 14, 123, 14, PAL.grey);
   const colour = (lit, leave) => lit ? PAL.lit : leave ? PAL.leave : PAL.dim;
-  if (S === "top") {
-    const items = [["Power", "Balanced"], ["Clock", "24h"], ["Diagnostics", sub], ["Help", sub], ["About", sub], ["Exit", null]];
-    items.forEach(([l, v], i) => row(i, toks(l), v == null ? [] : typeof v === "string" ? toks(v) : [v], colour(i === 0, l === "Exit")));
+  const backRow = (r, lit) => row(r, [back, ...gap(back), ...toks("Back")], [], colour(lit, true));
+  if (isTop) {
+    const list = ITEMS.filter(it => S !== "top" || !it[3]);
+    const top = S === "all2" ? list.length - 8 : 0, cur = S === "all2" ? list.length - 1 : S === "all" ? 5 : 0;
+    // Every label starts at one cell: 2, or past the widest icon and its gap.
+    const at = Math.max(2, ...list.map(it => { const c = roleCp("i:" + it[0]); return c == null ? 0 : cellsOf([c]) + gap(c).length; }));
+    list.slice(top, top + 8).forEach(([l, v], k) => {
+      const i = top + k, rgb = colour(i === cur, l === "Exit"), y = 15 + 14 * k, c = roleCp("i:" + l);
+      if (c != null) text(0, y, [c], rgb);
+      text(at, y, toks(l), rgb);
+      const right = v == null ? [] : v === SUB ? [sub] : toks(v);
+      if (right.length) text(20 - cellsOf(right), y, right, rgb);
+      if (i === cur) cursorAt(k, rgb);
+    });
+    scrollbar(list.length, top);
   } else if (S === "diag") {
-    row(0, [back, ...gap(back), ...toks("Back")], [], colour(false, true));
+    backRow(0, false);
     ["Health page", "Camera page", "Reset counters"].forEach((l, i) => row(i + 1, toks(l), [sub], colour(i === 0, false)));
+    cursorAt(1, PAL.lit);
   } else {
     const opts = S === "power" ? ["Always on", "Balanced", "Power saver", "Lights out"]
                                : [["24h", "13:45:01"], ["24h", "13:45"], ["12h", "1:45:01 PM"], ["12h", "1:45 PM"],
                                   ["Date", "Oct 24, 2026"], ["Off", ""]];   // MENU-TEXT.md, JD's rows
     const saved = S === "power" ? 1 : 0, cursor = saved;
     const at = Math.max(2, cellsOf([choice]) + gap(choice).length);   // the labels' cell: 2, unless the mark needs more
-    row(0, [back, ...gap(back), ...toks("Back")], [], colour(false, true));
+    backRow(0, false);
     opts.forEach((l, i) => {
       const y = 15 + 14 * (i + 1), rgb = colour(i === cursor, false);
       if (i === saved) text(0, y, [choice], rgb);
       const [name, ex] = Array.isArray(l) ? l : [l, ""];
       text(at, y, toks(name), rgb);
       if (ex) text(20 - ex.length, y, toks(ex), rgb);
+      if (i === cursor) cursorAt(i + 1, rgb);
     });
   }
   document.getElementById("lcd").getContext("2d").putImageData(fb, 0, 0);
@@ -343,7 +394,14 @@ function miniCanvas(cp, scale, rgb) {
 }
 function drawRoles() {
   const el = document.getElementById("roles"); el.innerHTML = "";
+  let group = null;
   ROLES.forEach(r => {
+    if ((r.group || "marks") !== group) {
+      group = r.group || "marks";
+      const h = document.createElement("div"); h.className = "role-head";
+      h.textContent = group === "items" ? "Top-level icons" : "Marks";
+      el.appendChild(h);
+    }
     const cp = roleCp(r.id), div = document.createElement("div");
     div.className = "role" + (armed === r.id ? " armed-role" : "");
     const g = document.createElement("div"); g.className = "g";
@@ -368,10 +426,7 @@ function arm(id) {
     const r = ROLES.find(x => x.id === id);
     a.innerHTML = `Picking the <b>${r.name}</b>: click any glyph (here or in the shortlist) to put it there. Esc cancels.`;
     a.classList.add("on");
-    if (state.screen !== "top" && id === "title") { state.screen = "top"; drawControls(); }
-    if (id === "choice" && !["power", "clock"].includes(state.screen)) { state.screen = "power"; drawControls(); }
-    if (id === "back" && state.screen === "top") { state.screen = "power"; drawControls(); }
-    if (id === "sub" && !["top", "diag"].includes(state.screen)) { state.screen = "top"; drawControls(); }
+    if (!r.on.includes(state.screen)) { state.screen = r.on[0]; save(); drawControls(); }
     drawLcd();
   } else a.classList.remove("on");
   drawRoles();
@@ -407,7 +462,7 @@ function onGlyphRemove(cp) { state.short = state.short.filter(c => c !== cp); sa
 function copyText() {
   const line = cp => { const d = byCp.get(cp); return `${ucp(cp)}${isPua(cp) || cp < 0x7F ? "" : " " + String.fromCodePoint(cp)}  ${label(cp) || "unnamed"}${d ? KIND_SHORT[d[5]].replace(" · ", "  (") + (d[5] ? ")" : "") : ""}`; };
   const out = ["Cozette picks for the AK820 menu", ""];
-  ROLES.forEach(r => { const cp = roleCp(r.id); out.push(`${r.name}: ${cp == null ? "none" : line(cp)}${r.id in state.roles ? "" : "  [unchanged]"}`); });
+  ROLES.forEach(r => { const cp = roleCp(r.id); out.push(`${r.name}: ${cp == null ? "none" : line(cp)}${r.id in state.roles ? "" : "  [page default]"}`); });
   if (state.short.length) { out.push("", "Shortlist:"); state.short.forEach(cp => out.push("  " + line(cp))); }
   return out.join("\n");
 }
