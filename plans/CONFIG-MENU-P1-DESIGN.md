@@ -330,6 +330,26 @@ Measured: dev `ffa80947` gap 232 B (104 over the floor), devfault
   Clock across a reboot after a settled save, and no write on a cancel (the
   flash write counters); a daily build's check; JD's session.
 
+## JD's first look at P1a (10-24, ~19:15)
+
+"a fantastic early version ... It appears to work flawlessly, as designed",
+with the prototype's other items still to come (P1b-d, P2-P4). His notes:
+1. **Back and Exit styled differently**, maybe light red ("not sure if that
+   would look wrong or cluttery"); icons are hard at this size. **Tried
+   (`22312b44`):** not selected, they're #E08080; selected, the usual lit
+   yellow. For his eye on the panel.
+2. **A page step should move the scrollbar first,** then the text flow in
+   (it moved only after all the text, "a second or two"). **Done
+   (`22312b44`):** the scrollbar's slot comes before the rows.
+3. **The choice's dot needs breathing room:** **done (`22312b44`):** a
+   whole cell, so options read "• Balanced", in line with "‹ Back".
+4. **A bootloader item, later** (the polish phase): a standalone item with
+   a little text and a click to confirm "Enter Bootloader", saying how to
+   leave without flashing (the slider to Bluetooth and back to USB, or
+   unplug and replug in wired mode), so `Fn`+`Esc` needn't stay bound. JD:
+   "maybe we don't need it at all"; the words wait for his text pass
+   ("LLM text is often overly verbose"). BACKLOG.
+
 ## Before P1 is accepted: JD's text review (pinned, 10-24)
 
 JD will review and edit **all** the menu's text by hand once P1 nears its

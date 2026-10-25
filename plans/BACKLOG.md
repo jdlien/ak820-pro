@@ -39,6 +39,18 @@ ever matters:
   the screen off after a long idle, even on USB; the panel's inversion
   setting. JD's board sleeps on battery, so it's less exposed.
 
+## A bootloader item in the menu (2026-10-24) -- JD's idea, the polish phase
+
+From JD's first look at P1a: a standalone item that says what it's for
+("Use this to update the firmware"), a click to confirm "Enter Bootloader",
+and how to leave without flashing (the slider to Bluetooth and back to USB,
+or unplug and replug in wired mode). Then `Fn`+`Esc` needn't stay bound.
+JD: "maybe we don't need it at all", and the words wait for his text pass.
+Notes: it's `reset_keyboard()` / the dev build's `HC_BOOTLOADER` path; the
+bootloader looks exactly like a dead board (CLAUDE.md), so the screen's
+last words before the jump matter; never on battery past the RGB cut
+(`flash.sh`'s reserve rule).
+
 ## The menu's text is tiny: a larger face (2026-10-24) -- JD's idea, a redesign, later
 
 JD on the panel (S1's F3, Cozette 6x14, 20 columns by 8 rows): "_tiny_
