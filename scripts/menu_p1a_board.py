@@ -114,9 +114,33 @@ def hold(h, what, *a, **k):
     return step(h, 3, b"", what, *a, **k)
 
 
+def ind_editors(h, ind_state):
+    """P2a: Indicators' two editors, each cancelled: sub 14 says the edit
+    closed, the level restored and the preview's force gone."""
+    click(h, "Indicators", SCR(IND), 1)
+    _, locks0, chg0, _ = ind_state()
+    click(h, "Lock lights", SCR(LOCKS))
+    check(ind_state()[3] == 1, f"Lock lights: the force bits {ind_state()[3]}, not 1")
+    turn(h, 1, "lock lights up", SCR(LOCKS))
+    turn(h, 3, "lock lights up, fast", SCR(LOCKS))
+    check(ind_state()[1] == min(100, locks0 + 25), f"Lock lights: {ind_state()[1]}, not {locks0} + 25")
+    hold(h, "Lock lights cancelled", SCR(IND), 1)
+    check(ind_state() == (0, locks0, chg0, 0), f"Lock lights: after the cancel {ind_state()}")
+    turn(h, 1, "to Charging light", SCR(IND), 2)
+    click(h, "Charging light", SCR(CHGL))
+    check(ind_state()[3] == 2, f"Charging light: the force bits {ind_state()[3]}, not 2")
+    turn(h, 2, "charging light up, fast", SCR(CHGL))
+    hold(h, "Charging light cancelled", SCR(IND), 2)
+    check(ind_state() == (0, locks0, chg0, 0), f"Charging light: after the cancel {ind_state()}")
+    hold(h, "Indicators back", SCR(TOP), R_IND)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="menu_p1a_board.json")
+    ap.add_argument("--no-ind", action="store_true",
+                    help="skip the indicator editors (they clear the bench's force bits): the timing run with "
+                         "the indicators forced by op 27 sub 15 (codex, P2a's code review)")
     a = ap.parse_args()
     h = open_device()
     meas = {}
@@ -246,22 +270,8 @@ def main():
         click(h, "Connection", SCR(CONN), 0)
         click(h, "Connection back", SCR(TOP), R_CONN)
         turn(h, R_IND - R_CONN, "to Indicators", SCR(TOP), R_IND)
-        click(h, "Indicators", SCR(IND), 1)
-        _, locks0, chg0, _ = ind_state()
-        click(h, "Lock lights", SCR(LOCKS))
-        check(ind_state()[3] == 1, f"Lock lights: the force bits {ind_state()[3]}, not 1")
-        turn(h, 1, "lock lights up", SCR(LOCKS))
-        turn(h, 3, "lock lights up, fast", SCR(LOCKS))
-        check(ind_state()[1] == min(100, locks0 + 25), f"Lock lights: {ind_state()[1]}, not {locks0} + 25")
-        hold(h, "Lock lights cancelled", SCR(IND), 1)
-        check(ind_state() == (0, locks0, chg0, 0), f"Lock lights: after the cancel {ind_state()}")
-        turn(h, 1, "to Charging light", SCR(IND), 2)
-        click(h, "Charging light", SCR(CHGL))
-        check(ind_state()[3] == 2, f"Charging light: the force bits {ind_state()[3]}, not 2")
-        turn(h, 2, "charging light up, fast", SCR(CHGL))
-        hold(h, "Charging light cancelled", SCR(IND), 2)
-        check(ind_state() == (0, locks0, chg0, 0), f"Charging light: after the cancel {ind_state()}")
-        hold(h, "Indicators back", SCR(TOP), R_IND)
+        if not a.no_ind:
+            ind_editors(h, ind_state)
 
         # The hint: 5 s idle on the top level (the session stays open: 24 s).
         time.sleep(5.0)
