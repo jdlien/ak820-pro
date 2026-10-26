@@ -1,0 +1,18 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A verify of plans/SETTINGS-PROFILES-PLAN.md, draft 3 (committed on main as a2e5e24), against your draft 2 review in plans/review-codex-settings-profiles-plan-2026-10-25.md. Draft 3's "Review history" section maps each of your findings to where it went. Nothing is built yet. The firmware is qmk_firmware-ak820pro, the same tree as before (branch gremlin/fx-speed: 30f1e0cf plus the RGB effects' speeds), with the board in keyboards/a_jazz/ak820pro and QMK's own code in quantum/, drivers/ and platforms/.
+
+1. Is each draft 2 finding resolved as the history says? Name any that aren't, or that are resolved in a way that's wrong.
+2. Is anything new in draft 3 wrong? In particular:
+   - the WAIT/CAPTURE/DRAIN rules: the tapping-buffer check, clearing the one-shots, the drain ending in housekeeping after a full scan, keymap_key_to_keycode on the default layer;
+   - the crc over bytes 1-25, with the state byte written last;
+   - HC_PROFILES' token, page mask, masked magic and 5 s timeout, and the menu refusing writes while a restore is open;
+   - sub 5's apply cancelling a preview, and sub 6's flush;
+   - flash.sh's one authoritative RGB restore;
+   - the order of the macro restore's validity byte;
+   - the stable effect ids;
+   - stack[4];
+   - a typed key restarting the menu's idle in CAPTURE.
+3. Are the facts draft 3 adds right? menu.c:1243, 1614, 1667 and 834; menu_edit.c:78; sleep.c:827; dynamic_keymap.h:51; the 27-byte payload.
+
+Say what must change before P5a starts, and what is fine as written. File and line where it's code. Under 600 words.

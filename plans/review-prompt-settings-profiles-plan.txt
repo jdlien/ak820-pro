@@ -1,0 +1,25 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A plan review, before anything is built: plans/SETTINGS-PROFILES-PLAN.md, draft 2 (uncommitted), settings profiles for the configuration menu. JD's decisions so far are in plans/CONFIG-MENU-P1-DESIGN.md, "Settings profiles". The firmware is qmk_firmware-ak820pro. Its working tree is branch gremlin/fx-speed: the merged 30f1e0cf plus the RGB effects' speeds, which don't touch anything here. The board is keyboards/a_jazz/ak820pro: menu/ (menu.c, menu_edit.c, menu_slots.c, menu_input.c, menu_ops.c, menu_glue.c, menu_env.h, panel_owner.c), kb_eeconfig.c, ak820pro.c (pre_process_record_kb), hid_protocol.c, sleep.c, power.c, config.h, rules.mk. QMK's own code is in quantum/ (nvm/eeprom/nvm_dynamic_keymap.c, dynamic_keymap.c, via.c, wear_leveling/, eeconfig.c, action.c) and platforms/chibios/drivers/wear_leveling/. The menu's build plan and contract are plans/CONFIG-MENU-BUILD-PLAN.md (C3, C4, C7, C8, C10) and plans/CONFIG-MENU-P1-DESIGN.md.
+
+Answer the plan's six "Questions for the review", and check its facts against the code:
+- the EEPROM map's addresses and sizes;
+- that DYNAMIC_KEYMAP_EEPROM_MAX_ADDR can be overridden this way and what it moves;
+- the wear-leveling RAM cache;
+- eeprom_read_block as a memcpy;
+- the claim that a menu session blocks deep sleep;
+- the pre-write hook draining a blit;
+- RK_ITEM's 64-node limit;
+- the `pg` union's 12 B;
+- menu_long_wait() and the idle rule;
+- the order in pre_process_record_kb, and where QMK resolves the keycode and its source-layer cache;
+- HC_PROFILES' code being free on channel 0x13.
+
+Also check:
+- the crc8 over a record with a torn multi-byte write in the wear-leveling log, and compaction mid-write;
+- the active byte's consistency with a Delete;
+- that "the * in a signature" is cheap and can't alias, given row_sig's ranges;
+- the live record restore's interplay with flash.sh's existing lighting restore (two writers of rgb_matrix's config);
+- anything a plan of this shape gets wrong for other AK820 Pro owners (VIA's definition, macros, an EEPROM reset from VIA or eeconfig_init).
+
+Say what must change in the plan, and what is fine as written. File and line where it's code. Under 700 words.
