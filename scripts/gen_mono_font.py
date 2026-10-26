@@ -66,6 +66,10 @@ ICONS = [
     ("I_FAIL", 0xF057, 2),         # P3: a slot failed, in red (JD: "red x in a circle"), nf-fa-times_circle
     ("I_BATT", 0xF57F, 1),         # P4: Battery, nf-mdi-battery_60 (vertical, the bolt's height; F240 is 7 x 5 px)
     ("I_PROF", 0xE5FE, 1),         # P5b: Profiles, nf-custom-folder_open (JD: "A place where you save stuff")
+    ("I_LOAD", 0x2190, 1),         # a profile's actions (JD, 10-26): <- Load ("pointing at the keyboard"),
+    ("I_SAVE", 0x2192, 1),         # -> Save current here (U+F432, his first pick, is 4 x 3 px),
+    ("I_RENAME", 0xF040, 1),       # Rename, nf-fa-pencil,
+    ("I_DELETE", 0xF48E, 2),       # Delete, nf-oct-trashcan
 ]
 
 

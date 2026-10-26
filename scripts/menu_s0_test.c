@@ -1830,7 +1830,8 @@ static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor
     return text_slot_bad2(y, cells, fg, cursor,
                           !strncmp(cells, FONT_MONO_CHECK_BOX, 2)                         ? 0x468Cu
                           : (c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1]) ||
-                                    c0 == (uint8_t)FONT_MONO_I_BATT[0] || c0 == (uint8_t)FONT_MONO_I_PROF[0]
+                                    c0 == (uint8_t)FONT_MONO_I_BATT[0] || c0 == (uint8_t)FONT_MONO_I_PROF[0] ||
+                                    (c0 >= (uint8_t)FONT_MONO_I_LOAD[0] && c0 <= (uint8_t)FONT_MONO_I_DELETE[1])
                               ? (cursor ? 0xFFB8u : MENU_WHITE)
                               : 0);
 }
@@ -3801,6 +3802,11 @@ enum { SC_PROF = 16 + 50, SC_PSLOT = 16 + 51, SC_PSAVE = 16 + 54, SC_PDEL = 16 +
 #define PROW(n)      cells2("  " n, FONT_MONO_TRI_R)
 #define PROW_ON(n)   cells2(FONT_MONO_CHECK_BOX n, FONT_MONO_TRI_R)
 #define PNEW         "+ Save new"
+/* A profile's actions, with JD's icons (10-26). */
+#define PACT_LOAD    FONT_MONO_I_LOAD " Load"
+#define PACT_SAVE    FONT_MONO_I_SAVE " Save current here"
+#define PACT_RENAME  FONT_MONO_I_RENAME " Rename"
+#define PACT_DELETE  FONT_MONO_I_DELETE "Delete"
 static uint8_t prpt[32];
 static uint8_t prof_sub(uint8_t sub, uint8_t a4, uint8_t a5) {
     memset(prpt, 0, sizeof prpt);
@@ -3874,14 +3880,14 @@ static void test_profiles(void) {
      * summary under them (Decided 10). The cursor reports the slot (P5d). */
     m_click();
     CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x01 && title_bad(FONT_MONO_I_PROF " Profile 1") == 0);
-    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, "Load", MENU_LIT) == 0 &&
-          row_bad(2, "Save current here", MENU_DIM) == 0 && row_bad(3, "Rename", MENU_DIM) == 0 &&
-          row_bad(4, "Delete", MENU_DIM) == 0);   /* P5c: Rename before Delete */
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, PACT_LOAD, MENU_LIT) == 0 &&
+          row_bad(2, PACT_SAVE, MENU_DIM) == 0 && row_bad(3, PACT_RENAME, MENU_DIM) == 0 &&
+          row_bad(4, PACT_DELETE, MENU_DIM) == 0);   /* P5c: Rename before Delete; JD's icons (10-26) */
     CHECK(row_bad(5, cells2(FONT_MONO_I_LIGHT " Cycle All", "50%"), MENU_WHITE) == 0 &&
           row_bad(6, "  H:180 S:100% B:80%", MENU_WHITE) == 0 &&
           row_bad(7, FONT_MONO_I_SCREEN "52%   " FONT_MONO_I_CLOCK "24h:ss", MENU_WHITE) == 0);
     m_turn(3);
-    CHECK(sub5_cursor() == 0x04 && row_bad(4, "Delete", MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 0x04 && row_bad(4, PACT_DELETE, MENU_LIT) == 0);
     m_turn(1);   /* the cursor wraps over the five actions, never the summary */
     CHECK(sub5_cursor() == 0x00 && row_bad(0, FONT_MONO_TRI_L " Back", MENU_LIT) == 0 && menu_max_lit <= 1);
     m_turn(1);
@@ -3944,7 +3950,7 @@ static void test_profiles(void) {
     fk_rgb.h = 64;   /* 90 degrees */
     m_click();
     m_turn(1);
-    CHECK(row_bad(2, "Save current here", MENU_LIT) == 0);
+    CHECK(row_bad(2, PACT_SAVE, MENU_LIT) == 0);
     m_click();
     CHECK(sub5_screen() == SC_PSAVE && sub5_cursor() == 0 && title_bad(FONT_MONO_I_PROF " Save profile") == 0);
     CHECK(text_slot_bad(22, "Replace Twelve chars", MENU_WHITE, false) == 0 &&
@@ -3957,7 +3963,7 @@ static void test_profiles(void) {
     m_click();
     m_click();
     CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x02 && title_bad("Saved") == 0 && fk_ee_writes == w + 3);
-    CHECK(row_bad(6, "  H:90 S:100% B:80%", MENU_WHITE) == 0 && row_bad(2, "Save current here", MENU_LIT) == 0);
+    CHECK(row_bad(6, "  H:90 S:100% B:80%", MENU_WHITE) == 0 && row_bad(2, PACT_SAVE, MENU_LIT) == 0);
     uint8_t rec[PROF_REC];
     CHECK(prof_slot(0, rec) && memcmp(&rec[PR_NAME], "Twelve chars", 12) == 0);   /* the name kept */
     m_unflash();
@@ -4189,7 +4195,7 @@ static void test_profiles(void) {
         memset(cells, ' ', 20);
         cells[20] = '\0';
         memcpy(cells + 2, want, strlen(want));
-        CHECK(row_bad(6, cells, MENU_WHITE) == 0 && row_bad(1, "Load", MENU_LIT) == 0);
+        CHECK(row_bad(6, cells, MENU_WHITE) == 0 && row_bad(1, PACT_LOAD, MENU_LIT) == 0);
     }
     CHECK(op27(11, 0, 0) == MI_OK);   /* closed */
     m_settle();
@@ -4500,7 +4506,7 @@ static void test_rename(void) {
      * until it's up; then QMK's tapping must be empty too. */
     CHECK(!m_key(MENU_KC_A, true));
     m_turn(2);
-    CHECK(sub5_cursor() == 0x03 && row_bad(3, "Rename", MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 0x03 && row_bad(3, PACT_RENAME, MENU_LIT) == 0);
     m_click();
     CHECK(sub5_screen() == SC_PRENAME && sub5_cursor() == 0x10 && menu_renaming() &&
           title_bad(FONT_MONO_I_PROF " Rename profile") == 0);
