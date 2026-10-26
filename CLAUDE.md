@@ -120,12 +120,17 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
   to Buzz, the new Mac, on 10-23 spoiled the first;
 - stripping the bench, the soak, and the release for other owners.
 
-**On the board since 22:02 10-24: `52acdffe99`** (dev, token `0xab194817`,
-`mac/wake-dark-frame`): the mainline plus the wake's dark-frame fix
-(`plans/BACKLOG.md`), flashed mid-drain on battery to try it; Warren merges
-it into the menu's build once it proves out. **Before it, from 23:48 10-23:
-the mainline, `b9555ff3e6`** (dev, token `0x3c117332`), flashed from Buzz. `ak820pro-jdlien` and `deps.lock` point
-at it. It is `36afff30e8` plus `ce229f87c6` and a credit comment, and it
+**On the board since 19:08 10-25: the mainline, `30f1e0cfde`** (dev, token
+`0x195cbf4c`; `ak820pro-jdlien` and `deps.lock` point at it): Warren's
+configuration menu (S0 through P4, the Clock options), the LED fix and the
+wake's dark-frame fix, flashed mid-drain on battery; the drain runs on to
+the cut. ⚠️ **On Buzz the daemon's lock-light channel sent nothing from
+10-23 to 19:28 10-25**, until Input Monitoring was granted
+(`plans/current-status.md`): a new Mac needs that grant before it works.
+**Before it, from 22:02 10-24: `52acdffe99`** (dev, token `0xab194817`,
+`mac/wake-dark-frame`): `b9555ff3e6` plus the wake's dark-frame fix
+(`plans/BACKLOG.md`). **Before it, from 23:48 10-23: the mainline until
+10-25, `b9555ff3e6`** (dev, token `0x3c117332`), flashed from Buzz. It is `36afff30e8` plus `ce229f87c6` and a credit comment, and it
 moves the glyph pump off the clock's seconds tick, the pass that hit 10 ms
 every second. On gremlin's board since 17:03 10-22, `count_ge_10ms` fell
 from 0.175 a second to 0.016. ⚠️ **The bench moved to Buzz on 10-23**: the

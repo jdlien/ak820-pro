@@ -4,7 +4,7 @@ Phase 2 (plans/PHASE2-BUILD-PLAN.md), replayed on recorded drains against
 the measured truth, beside the board's own level.
 
 The proposal, per 10-minute RAM-log entry:
-  count   falls by the modelled energy of the entry: P_model(led_pm, bkl) x
+  count   falls by the modelled energy of the entry: P_model(led_pm, duty) x
           600 s, over the energy per per-mille of the pack (E_CAP / 1000).
   band    the voltage's say: curve(V) +/- U, U = half the curve's change over
           V +/- SIGMA_MV, plus U_MIN. Above the band, the count is pulled
@@ -37,6 +37,9 @@ CURVE_MV = [3400, 3456, 3490, 3520, 3538, 3564, 3591, 3640, 3680, 3723, 3748, 37
 CURVE_PM = [0, 10, 20, 30, 40, 50, 60, 80, 100, 125, 150, 200, 250, 300, 350, 400, 450, 500,
             550, 600, 650, 700, 750, 800, 850, 900]
 BKL_DUTY = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 23, 26, 29, 33, 37, 42, 48]
+# Log v8 (the menu's P2b) records the LCD level 0-100 as "bkl100": its duty in
+# whole ticks of 48, rounded as display_backlight_duty() rounds it.
+LEVEL_TICKS = [(d + 128) >> 8 for d in __import__("gen_indicator_levels").table()]
 
 # The load model, pack power in mW, from R1 (history/power-bench-2026-10-15/
 # current-map-20261015-2210): mA x vcell, USB data attached as in R1 and the
@@ -59,8 +62,15 @@ def c5_to_mv(c5):
     return (c5 + 361.04) * 1000.0 / 114.22
 
 
-def p_model(led_pm, bkl, rgb_on):
-    p = P_BASE + P_BKL_FULL * BKL_DUTY[min(bkl, 23)] / 48
+def bkl_duty(r):
+    """A log row's backlight duty in ticks of 48: v8's bkl100, or bkl 0-23 before it."""
+    if r.get("bkl100"):
+        return LEVEL_TICKS[min(int(r["bkl100"]), 100)]
+    return BKL_DUTY[min(int(r["bkl"]), 23)]
+
+
+def p_model(led_pm, duty, rgb_on):
+    p = P_BASE + P_BKL_FULL * duty / 48
     if rgb_on:
         for (x0, y0), (x1, y1) in zip(P_RGB, P_RGB[1:]):
             if led_pm <= x1:
@@ -76,7 +86,7 @@ def load_log(paths, t_from, t_to):
             for r in csv.DictReader(f):
                 t = datetime.strptime(r["time"], "%Y-%m-%d %H:%M").timestamp()
                 if t_from < t <= t_to and r["on_batt"] == "1" and r["c5_mean"]:
-                    rows.append((t, float(r["c5_mean"]), int(r["led_pm"]), int(r["bkl"]), r["rgb_on"] == "1",
+                    rows.append((t, float(r["c5_mean"]), int(r["led_pm"]), bkl_duty(r), r["rgb_on"] == "1",
                                  float(r["level"]) if r["level"] else None))
     rows.sort()
     out = []
@@ -89,10 +99,10 @@ def load_log(paths, t_from, t_to):
 def replay(rows, t0, ecap, sigma, umin):
     e_pm = ecap * 3600 / 1000            # mW.s per per mille
     count, prev_t, out = 1000.0, t0, []
-    for t, c5, led, bkl, rgb, board in rows:
+    for t, c5, led, duty, rgb, board in rows:
         dt = t - prev_t
         prev_t = t
-        p = p_model(led, bkl, rgb)
+        p = p_model(led, duty, rgb)
         before = count
         count -= p * dt / e_pm
         if c5 >= 99.5:                    # the top clamp: at least 90%
