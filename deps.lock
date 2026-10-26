@@ -13,12 +13,13 @@
 # hardware. Do not edit a clone in place and leave this file behind -- that is
 # the silently-wrong-binary failure mode build.sh exists to catch.
 
-# The firmware. Carries keyboards/a_jazz/ak820pro/ plus eight core files
-# (drivers/led/sn32f2xx.c+.h, quantum/rgb_matrix/rgb_matrix.c+.h,
-# platforms/chibios/.../wear_leveling_efl.c, drivers/encoder/encoder_quadrature.c,
-# quantum/encoder.c+.h) -- all weak-hooked, no-op or additive for other boards.
+# The firmware. Carries keyboards/a_jazz/ak820pro/ plus ten core files
+# (drivers/led/sn32f2xx.c+.h, quantum/rgb_matrix/rgb_matrix.c+.h and the two
+# animations that call its speed hooks, platforms/chibios/.../wear_leveling_efl.c,
+# drivers/encoder/encoder_quadrature.c, quantum/encoder.c+.h) -- all
+# weak-hooked, no-op or additive for other boards.
 # Everything else in the tree is upstream QMK.
-qmk_firmware-ak820pro  https://github.com/jdlien/qmk_firmware.git  ak820pro-jdlien  5ecc9a32cc7bfd35502b2377ce2bb1fe893a764b
+qmk_firmware-ak820pro  https://github.com/jdlien/qmk_firmware.git  ak820pro-jdlien  57d5e9003071edc6747ed3b8b049b7d3cfc98dfa
 
 # ak820ctl (clock + flash provisioning) and the asset pipeline (mkraw.py,
 # mkanim.py). MUST be this fork's branch, not fpb/main: main has no --bias

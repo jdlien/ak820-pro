@@ -508,6 +508,10 @@ firmware.
 - **The `ak820pro_keycodes` enum is index-matched to via.json's
   `customKeycodes[]`. APPEND ONLY** — inserting shifts every later keycode and
   corrupts existing VIA keymaps (`scripts/check_via_sync.py` guards this).
+- **The Next and Previous settings-profile keys** (`PROF_NXT`, `PROF_PRV`;
+  "Prof+" and "Prof-" among VIA's custom keycodes) are unbound by default:
+  bind them in VIA. A press loads the next or previous saved profile and
+  names it in the dashboard's status band.
 - Keymap backup: `venv/bin/python hostagent/ak820keymap.py dump|restore|show`
   — raw dynamic-keymap buffer *and* encoders (a separate VIA command; skipping
   them silently drops the knob mapping).
@@ -523,7 +527,9 @@ Alphas/Mods) · `Fn`+`PgUp/PgDn` LCD brightness · `Fn`+`Home` LCD toggle ·
 (24h:ss / 24h / 12h:ss / 12h / date / off, persisted; the menu's Clock page
 sets the same) · `Fn` + a knob click opens and closes the configuration
 menu (the knob drives it; typing still works;
-[`plans/CONFIG-MENU-P1-DESIGN.md`](plans/CONFIG-MENU-P1-DESIGN.md)) ·
+[`plans/CONFIG-MENU-P1-DESIGN.md`](plans/CONFIG-MENU-P1-DESIGN.md); its
+Profiles row, page one's last, saves, loads and deletes four settings
+profiles, [`plans/SETTINGS-PROFILES-PLAN.md`](plans/SETTINGS-PROFILES-PLAN.md)) ·
 `Fn`+`D` debug page (tap
 cycles debug page → camera page (big volts and %) → dashboard, HOLD
 ~800 ms resets the health counters) · `Fn`+`B` power mode (Always on /

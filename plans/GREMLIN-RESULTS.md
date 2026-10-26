@@ -1424,11 +1424,19 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
     and its abort. Every step's screen and cursor right; nothing of 25 ms.
     The longest pass, 18.5 ms, was the click that saved: the save's writes
     and a paint piece in one pass (P5a's save alone: 14.6 at worst).
+- **JD's look (10-26):** "everything works really well so far. I'm
+  thrilled." **The power cycle passed** (P5a's durability check): the
+  slider to cable with the cable out, the cold power-off; "profiles come
+  back and load after power cycle."
+- **The keyboard on Buzz** has had `57d5e900` since 09:49 10-26 (the
+  session on Buzz's flash at JD's word, dev, token `0xde2973aa`; its
+  flash.sh from `30f1e0cf` had no profiles to back up, as expected).
+- **Merged (10-26, ~10:05):** `ak820pro-jdlien` fast-forwarded to
+  `57d5e900`; main pins it.
 - **Owed:**
-  - JD's look at the pages: the summary's content (Decided 6, "to be
-    worked out on the panel"), the greyed empty slots, the words (the
-    confirms, "Loaded w/o effect", "Busy, try again");
   - the keys bound in VIA and pressed, the name in the status band;
-  - the power cycle after a restore (P5a's durability check);
-  - P5c's Rename.
+  - JD's ideas (10-26): "Save new" in place of the four fixed slots
+    ("probably way more than 4") and a preview as the cursor rests on a
+    profile. Warren's answer and the pick JD owes are in WARREN-STATUS;
+  - P5c's Rename, with the list.
 

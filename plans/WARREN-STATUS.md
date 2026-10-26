@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~01:00.
+2026-10-26 ~10:05.
 
 ## Where things stand
 
@@ -278,8 +278,12 @@ This file is the thread; read it first after a context loss. Updated
        `ak820profiles.py`, the macro backup and flash.sh's profiles step.
        Codex cleared it in two rounds. GREMLIN-RESULTS §20m has the
        board's measure and the round trip.
-     - **P5b is on the keyboard on gremlin: `57d5e900`** on `gremlin/p5b`
-       (since ~00:48 10-26; not merged). The Profiles row and pages, Load,
+     - **P5b MERGED (10-26, ~10:05):** `ak820pro-jdlien` fast-forwarded
+       to `57d5e900`; main pins it. On the keyboard on gremlin since ~00:48
+       10-26, on the keyboard on Buzz since 09:49 (the session on Buzz's
+       flash, at JD's word). JD: "everything works really well so far. I'm
+       thrilled." The power cycle after a restore passed: "profiles come
+       back and load after power cycle." The Profiles row and pages, Load,
        Save and Delete with confirms, the summary, the `*`, the four-frame
        stack, PROF_NXT/PROF_PRV, the active slot deferred through
        kb_eeconfig's settle. Codex: six rounds
@@ -290,9 +294,37 @@ This file is the thread; read it first after a context loss. Updated
        frame 3, the pending active slot 1, the snapshot and its flags 2):
        alignment slack. P5c's Rename needs ~1 B and the name in the
        `pg` union.
-     - **Owed:** JD's look at P5b's pages and words, the keys bound in VIA
-       and pressed, the power cycle after a restore (P5a's durability
-       check); P5b to the mainline after JD's look; P5c (Rename).
+     - **Next: JD's ideas (10-26), waiting on his pick.** "I think maybe
+       just a 'Save New' makes more sense than finite grayed out unused
+       slots. We'd have to have a limit after some amount, but probably
+       way more than 4", and a preview of a profile from the list.
+       Warren's answer:
+       - **The store:** the EEPROM can't grow (wear-levelling keeps all
+         1 KB of it in RAM; the heap has 8 B over its floor). Eight fit in
+         it by taking 108 B of VIA's macro buffer (127 B to 19; JD uses
+         none). For more, the records move to two 1 KB pages of the MCU's
+         own flash (the dev build ends at 209 KB of 253; a page erase is
+         1-2 ms), A/B so a power loss mid-save keeps the rest, capped at
+         32, read in place with no RAM copy; the active byte stays in the
+         EEPROM, so the keys never erase a page; the macros get their
+         108 B back. A new flash writer, through the EFL driver the
+         wear-levelling uses, and a build check that the image ends below
+         the pages.
+       - **The list:** only the saved profiles, "Save new" last (greyed,
+         "Full", at the cap), new ones at the end and a delete closing the
+         gap, since each write rewrites the page. "Save new" opens P5c's
+         Rename with "Profile n" filled in.
+       - **The preview:** the summary under the list fits only four
+         (Back, four rows and three lines are the screen), so it stays on
+         the profile's page. Instead the lighting and the screen level of
+         the profile the cursor rests on, after ~0.3 s (an effect's
+         animation restarts at each change); RAM only; Back, the session's
+         timeout or an Fn lighting key restore; a click keeps it on the
+         profile's page and Load commits it; Save's confirm shows the live
+         lighting, what it would save.
+       - **Order:** the store, the list with Rename (P5c), the preview,
+         each through codex and a board pass before JD sees it.
+     - **Owed:** the keys bound in VIA and pressed.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
