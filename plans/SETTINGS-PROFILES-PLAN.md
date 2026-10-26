@@ -32,7 +32,7 @@ part of it.
 - the battery readout (percent or hours).
 
 **Not in v1:** the power mode (decided: it's easy to toggle on its own), the
-keymap, the BT slot (open, below), the RGB flags (the menu doesn't expose
+keymap, the BT slot (Decided 11), the RGB flags (the menu doesn't expose
 them), the RTC period and the battery level (the board's own state, never
 the user's).
 
@@ -59,22 +59,29 @@ the user's).
    13, `scripts/menu_tune.py`): const in dev as in daily. Its 14 B pay for
    this feature's state. JD: "I probably don't need live colour tuning
    anymore."
+9. **Page 1's last row.** Bootloader moves to the top of page 2, with
+   Diagnostics, Help, About and Exit: the settings stay together on page 1,
+   and the bootloader goes with the system items.
+10. **The summary goes below the actions** ("The slot page"), as the menu
+    places notes today. Its content is still to be worked out on the panel.
+11. **Profiles have nothing to do with Bluetooth.** A load never changes
+    the connection. If a load also selected a slot, a load meant only for
+    the look could drop the computer you're typing on. A slot that won't
+    connect would also leave a load half done (P3's failure cases).
+12. **Two keys, Next profile and Previous profile, not one per slot.**
+    They're custom keycodes, assignable in VIA and unbound by default ("Next
+    and previous profile keys", below). JD's Fn+1-4 are F1-F4 (the 65%
+    habit), and a key per slot would use four. He may later move the pair
+    onto his hue or speed hotkeys, since the menu now changes those.
 
-## Open, for JD
+## Later, not v1
 
-None of these blocks P5a, which has no UI. They're needed before P5b.
-
-- **Where on the top level.** Page 1's last row, which pushes Bootloader to
-  the top of page 2 with Diagnostics, Help, About and Exit (recommended: the
-  settings stay together on page 1, and the bootloader goes with the system
-  items), or page 2 right after Bootloader.
-- **Whether a profile carries the BT slot.** "Home" on BT 1 and "Work" on
-  BT 2 is a real use, and the menu can select slots (P3). It makes a load
-  also a reconnect, with P3's failure cases. Proposed: not in v1.
-- **A shortcut** such as Fn+1-4 to load a slot without the menu. Proposed:
-  not in v1; easy to add later.
-- **The summary rows' content and place** ("The slot page"). Below the
-  actions is what the menu does today. On top needs new cursor work.
+- **A look for each connection:** the reverse of putting the slot in the
+  profile. Each link (USB, 2.4G, BT 1-3) could name a profile to load when
+  the board switches to it. Then a different look on each computer becomes
+  a cue for which one you're typing on, and a load still never reconnects.
+  It costs 5 B of EEPROM, one row per link in Connection, and a rule for a
+  link whose profile was deleted. It needs JD's word before it's designed.
 
 ## Storage
 
@@ -193,10 +200,10 @@ from the right one. So:
 | Action | What it writes, in order |
 |---|---|
 | The first write to an unformatted block | the formatting (below), then the action |
-| Save (an empty slot, or Save current here) | state 0x00; the body and crc (bytes 1-26); state 0x01; the active byte |
+| Save (an empty slot, or Save current here) | state 0x00; the body and crc (bytes 1-26); state 0x01; the active byte, deferred |
 | Rename | state 0x00; the name and the crc (bytes 14-26); state 0x01 |
-| Delete | state 0x00; the active byte to 0xFF if it was active |
-| Load | the setters (below); the active byte |
+| Delete | state 0x00; the active byte to 0xFF if it was active, deferred |
+| Load (the menu, or a Next/Previous key) | the setters (below); the active byte, deferred |
 
 **Formatting:** a fresh flash leaves the block unformatted, and it reads as
 four empty slots. The first profile write formats it first, in order:
@@ -228,8 +235,9 @@ block.
 
 ### When
 
-**At the click, synchronously,** for every profile write the menu makes, on
-two conditions:
+**At the click, synchronously,** for every record write the menu makes
+(save, rename, delete), on two conditions. The active byte is the
+exception: it's always deferred ("Next and previous profile keys").
 1. **Never inside a deep sleep's recovery,** checked explicitly:
    `!sleep_recovering()`. A menu session blocks deep sleep
    (`menu/panel_owner.c:57`). But the display's wake can be released before
@@ -274,7 +282,7 @@ Load applies the record's fields through the setters the menu already uses
 3. **The menu's latched model** is set as a choice's commit sets it
    (`model_clock` and the rest). Otherwise `sync_model()` treats the load as
    an external change and retargets.
-4. **The active byte.**
+4. **The active byte,** deferred ("Next and previous profile keys", below).
 
 **What it doesn't touch:**
 - **the RGB flags;**
@@ -299,6 +307,51 @@ settings differ from that slot's record.
   `menu_invalidate()`, which repaints the names and summaries.
 - **Any change makes the `*`:** Fn+keys, VIA, the menu's editors. The
   ladder's caps don't, because they never touch the user's values.
+
+### Next and previous profile keys
+
+Two custom keycodes, `PROF_NXT` and `PROF_PRV`, **appended** after
+`PWR_MODE` in the `ak820pro_keycodes` enum, with matching entries at the end
+of `via.json`'s `customKeycodes[]`. Their titles are "Next settings profile"
+and "Previous settings profile", and their short names `Prof+` and `Prof-`.
+`check_via_sync.py` guards the pairing. **Unbound in the default keymap:**
+the owner assigns them in VIA.
+
+- **A press loads the next (or previous) saved slot** after the active one,
+  in slot order, skipping empty slots and wrapping round. From no active
+  slot, Next loads the first saved one and Previous the last. With one
+  saved slot, a press reloads it, which also clears its `*`: a quick way
+  back to the profile. With none saved, it loads nothing.
+- **The screen names it** in the dashboard's status overlay, the band Fn+B
+  and Fn+C post to (`display_set_param_status`). That band holds exactly 12
+  characters: a 10 px advance across the 128 px panel (`CONN_STATUS_MAX`,
+  `graphics/display.c`), and it truncates anything longer. So:
+  - **the overlay is the name alone,** with no "Profile:" before it. A name
+    is at most 12 characters, so it always fits whole. An unnamed slot's
+    `Profile 3` is 9;
+  - `No profiles` (11) when none is saved, `Busy` (4) when refused;
+  - **the 12-character cap on names is tied to this band.** Don't raise it
+    without a second line or a scroll here;
+  - **while the menu is open,** the band drops every post (C1,
+    `display.c:2708`), and the menu's rows show the change instead.
+- **The load is the menu's Load:** the same setters, the lighting's order
+  and the effect-id check. An effect the build lacks isn't mentioned in the
+  overlay, which has no room after the name; the slot's page shows it.
+- **On a press, not a release; no repeat.** It's handled on the board and
+  nothing goes to the host, over any link.
+- **While the menu is open,** the menu follows: its rows' signatures see the
+  change. An editor previewing is cancelled first, as for any external
+  write (`Cancelled`). Rename captures every key, these two included.
+- **Refused while a host restore is open, or inside a deep sleep's
+  recovery.** The overlay says `Busy`.
+- **The active byte is deferred,** so a run of presses costs one write. The
+  press sets a pending value. The 10 Hz housekeeping writes it once it has
+  been stable for a settle time, as `kb_eeconfig` does, never inside
+  `sleep_recovering()`, with the sleep waiting on it. The setters' own
+  writes are deferred already. The pending value is 1 B of the palette's
+  RAM. **The menu's own active-byte writes** (Load, Save, Delete) go
+  through the same pending value, so the active byte has one writer and
+  one rule.
 
 ## The menu
 
@@ -377,8 +430,8 @@ Delete
   only the listed rows (`cursor = (cursor + turns) % row_count`), and every
   listed row is selectable, so nothing in the cursor changes.
   - **Summary on top instead** needs a display offset in `row_at` (item i
-    at row i + 2) and its own tests (lit rows, the top, paging). JD's call;
-    v1 proposes below.
+    at row i + 2) and its own tests (lit rows, the top, paging). Decided:
+    below (Decided 10).
   - **Proposed content:** the effect's name and speed on the first row;
     hue (in degrees, as the Hue editor shows it), saturation and
     brightness on the second. A third row (the screen, the indicators, the
@@ -468,7 +521,8 @@ and `N_CONNINFO`. It never closes Rename.)
   whose default-layer keycode is a Shift. It isn't tracked, and since its
   presses are swallowed, QMK's mods never move.
 - **`Backspace`** deletes the last character. The cursor stays at the end.
-  Twelve characters at most.
+  Twelve characters at most: what the dashboard's overlay shows whole ("Next
+  and previous profile keys") and the record's `name[12]` holds.
 - **The mapping is US QWERTY's**, whatever the host's layout: the board
   sees keycodes, not characters. Worth a line in Help.
 
@@ -590,7 +644,7 @@ block:
 | | Cost | Room |
 |---|---|---|
 | EEPROM | 110 B | 237 B of macro space, so 127 B are left |
-| RAM, static | ~8 B: Rename's state 1, the transaction 3, the fourth stack frame 3 (4 allowed) | the palette's 14 B, made const in dev; dev's heap gap stays at its 128 B floor |
+| RAM, static | ~9 B: Rename's state 1, the transaction 3, the pending active byte 1, the fourth stack frame 3 (4 allowed) | the palette's 14 B, made const in dev; dev's heap gap stays at its 128 B floor |
 | RAM, stack | a 27 B record buffer at a save, a load or a host page (no VLA: the writes call `wear_leveling_write()`) | the stacks' margins (to check) |
 | RAM, union | Rename's `name[12]`, a third arm of `pg` | `pg`'s 12 B, unchanged |
 | Flash | ~4-6 KB (code, nodes, text, an icon, the effect ids) | dev 54.6 KB free, daily ~79 KB |
@@ -611,6 +665,11 @@ block:
   - the formatting: the first save on an unformatted block writes the
     states, the active byte and then the magic, and a stale record from
     before it never shows;
+  - the Next and Previous keys: slot order, skipping empties, wrapping,
+    from no active slot, with one saved slot and with none; refused
+    during a restore and a recovery; an editor's preview cancelled
+    first; four quick presses costing one active-byte write;
+    `check_via_sync.py` passing with the two appended keycodes;
   - Rename's states:
     - WAIT held by a held key and by a queued tap-hold
       (`action_tapping_idle()` false), and not by a one-shot, which the
@@ -660,9 +719,11 @@ block:
    live-settings restore to every flash at once.
    - **The palette first, on its own commit:** make `pal` const in dev and
      measure the dev heap gap before anything spends it. Only that measure
-     proves the ~7 B fit.
+     proves the ~9 B fit.
 2. **P5b, the menu:** the top-level row, the Profiles page, the slot page,
-   Load, Save, Delete, the summary, the `*`, the fourth frame.
+   Load, Save, Delete, the summary, the `*`, the fourth frame, the
+   deferred active byte, and the Next and Previous profile keys (appended
+   to the keycode enum and `via.json`).
 3. **P5c, Rename,** with `action_tapping_idle()` in
    `quantum/action_tapping.c` (a ninth core file with a local change) and
    the knob's Fn-up rule.
