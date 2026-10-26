@@ -26,6 +26,7 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hostagent"))
 from ak820health import read_acct  # noqa: E402
+import ak820profiles as ap  # noqa: E402
 from menu_s0_session import mutate, open_device, read_state, wait, xfer  # noqa: E402
 from menu_s0_accept import dash_done, to_dash  # noqa: E402
 from menu_s1_gate import decode_meas  # noqa: E402
@@ -37,7 +38,7 @@ LIGHT, SCREEN, EFFECT, BRIGHT, HUE = 24, 25, 26, 27, 28   # P1b's nodes
 IND, CONN, LOCKS, CHGL = 35, 36, 37, 38                   # P2a's
 CONNINFO, PAIRING = 39, 44                                 # P3's (Pair a device: the current slot's)
 BATT = 45                                                  # P4's Battery
-PROFILES, PSLOT0 = 50, 51                                  # P5b's Profiles page and slot pages
+PROFILES, PSLOT = 50, 51                                   # P5b's Profiles page and (P5d: one node) slot pages
 # P3's link byte (menu_env.h's ENV_LINK_*: transport bits 1-0, slot 3-2,
 # state 6-4) and the pairing facts, for op 27 sub 16's stand-in.
 L_USB, L_BT = 0, 1
@@ -296,12 +297,17 @@ def main():
 
         # Profiles (P5b): the page and each row, nothing written; a dwell on
         # the top level, whose row compares the live settings each scan.
+        # P5d: the rows are Back, the saved slots, then Save new.
+        gp = ap.geometry(h)
+        blk = ap.read_block(h, gp)
+        saved = sum(1 for s in range(gp.slots) if blk[0] == gp.magic and ap.rec_ok(blk[2 + s * 27:29 + s * 27]))
+        rows = 2 + saved
         turn(h, R_PROF - R_BATT, "to Profiles", SCR(TOP), R_PROF)
         dwell(h, "Profiles' row, its compare, 3 s", 3.0)
         s = click(h, "Profiles", SCR(PROFILES))
         c0 = s["cursor"]
-        for k in range(1, 6):
-            turn(h, 1, f"Profiles row {(c0 + k) % 5}", SCR(PROFILES), (c0 + k) % 5)
+        for k in range(1, rows + 1):
+            turn(h, 1, f"Profiles row {(c0 + k) % rows}", SCR(PROFILES), (c0 + k) % rows)
         hold(h, "Profiles back", SCR(TOP), R_PROF)
 
         # Help: each topic, paged to its end and back.

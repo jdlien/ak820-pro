@@ -176,26 +176,28 @@ static void test_format_and_save(void) {
     memcpy(&ee[PROF_BASE + PROF_REC_OFF(2)], r, PROF_REC);
     B(PROF_OFF_ACTIVE) = 2;
     CHECK(!prof_formatted() && prof_active() == 0xFF && !prof_slot(2, r));
-    /* The first save formats first: four states, the active byte, the magic last; then the save. */
+    /* The first save formats first: eight states (P5d), the active byte, the magic last; then the save. */
     bool c = true;
+    CHECK(prof_free_slot() == 0 && prof_valid_mask() == 0);
     CHECK(prof_save(0, &c) == PROF_OK && !c);
-    CHECK(nlog == 6 + 3);
-    for (int s = 0; s < 4; s++) CHECK(wlog[s].addr == PROF_BASE + PROF_REC_OFF(s) && wlog[s].first == PS_EMPTY);
-    CHECK(wlog[4].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[4].first == 0xFF);
-    CHECK(wlog[5].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[5].first == PROF_MAGIC_V1);
+    CHECK(nlog == 10 + 3);
+    for (int s = 0; s < 8; s++) CHECK(wlog[s].addr == PROF_BASE + PROF_REC_OFF(s) && wlog[s].first == PS_EMPTY);
+    CHECK(wlog[8].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[8].first == 0xFF);
+    CHECK(wlog[9].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[9].first == PROF_MAGIC_V2);
     /* The save: the state empty, the body (26 B), the state saved; the active
      * slot deferred (P5b): it counts at once, and is written only after
      * kb_eeconfig's settled write. */
-    CHECK(wlog[6].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[6].first == PS_EMPTY && wlog[6].n == 1);
-    CHECK(wlog[7].addr == PROF_BASE + PROF_REC_OFF(0) + 1 && wlog[7].n == 26);
-    CHECK(wlog[8].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[8].first == PS_SAVED_V1 && wlog[8].n == 1);
+    CHECK(wlog[10].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[10].first == PS_EMPTY && wlog[10].n == 1);
+    CHECK(wlog[11].addr == PROF_BASE + PROF_REC_OFF(0) + 1 && wlog[11].n == 26);
+    CHECK(wlog[12].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[12].first == PS_SAVED_V1 && wlog[12].n == 1);
     CHECK(B(PROF_OFF_ACTIVE) == 0xFF && prof_active() == 0 && fk_touches == 1 && fk_pending);
     prof_tick();
-    CHECK(nlog == 9);   /* kb_eeconfig's write still to come */
+    CHECK(nlog == 13);   /* kb_eeconfig's write still to come */
     settle();
-    CHECK(nlog == 10 && wlog[9].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[9].first == 0 && wlog[9].n == 1);
+    CHECK(nlog == 14 && wlog[13].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[13].first == 0 && wlog[13].n == 1);
     settle();
-    CHECK(nlog == 10);   /* once */
+    CHECK(nlog == 14);   /* once */
+    CHECK(prof_valid_mask() == 0x01 && prof_free_slot() == 1);
     CHECK(prof_formatted() && prof_active() == 0 && prof_slot(0, r) && !prof_slot(2, r));
     /* A consolidation is reported. */
     nlog = 0; consolidate_at = 1;
@@ -225,10 +227,10 @@ static void test_format_and_save(void) {
     prof_test_reset();   /* the reboot */
     /* A failed formatting (the magic, last): the latch, and the next write refused. */
     memset(&ee[PROF_BASE], 0, PROF_BLOCK_SIZE);
-    nlog = 0; fail_at = 5;
+    nlog = 0; fail_at = 9;
     CHECK(prof_save(0, NULL) == PROF_WRITE_FAILED && prof_write_failed());
     fail_at = -1;
-    CHECK(prof_save(0, NULL) == PROF_WRITE_FAILED && nlog == 6);
+    CHECK(prof_save(0, NULL) == PROF_WRITE_FAILED && nlog == 10);
     prof_test_reset();
     memset(&ee[PROF_BASE], 0, PROF_BLOCK_SIZE);
     CHECK(prof_save(0, NULL) == PROF_OK && prof_save(1, NULL) == PROF_OK && prof_active() == 1);
@@ -241,7 +243,14 @@ static void test_format_and_save(void) {
     for (int i = 0; i < 50; i++) prof_tick();
     CHECK(!prof_restore_open());
     CHECK(prof_save(2, NULL) == PROF_OK);   /* formats again: the Begin cleared the magic */
-    CHECK(prof_save(9, NULL) == PROF_BAD);
+    CHECK(prof_save(8, NULL) == PROF_BAD && prof_save(9, NULL) == PROF_BAD);
+    /* P5d: the eighth slot, and the free one the first without a valid record. */
+    CHECK(prof_save(7, NULL) == PROF_OK && prof_valid_mask() == 0x84 && prof_free_slot() == 0);
+    for (uint8_t s = 0; s < 8; s++) CHECK(prof_save(s, NULL) == PROF_OK);
+    CHECK(prof_valid_mask() == 0xFF && prof_free_slot() == 0xFF && prof_active() == 7);
+    CHECK(prof_delete(5) == PROF_OK && prof_free_slot() == 5 && prof_valid_mask() == 0xDF);
+    B(PROF_OFF_MAGIC) = 0;   /* unformatted: nothing valid, slot 0 free */
+    CHECK(prof_valid_mask() == 0 && prof_free_slot() == 0);
 }
 
 static void test_delete_and_load(void) {
@@ -308,6 +317,8 @@ static void make_image(uint8_t *img) {
     reset();
     fk_rgb.h = 11;
     prof_save(0, NULL);
+    fk_rgb.h = 77;
+    prof_save(7, NULL);   /* P5d: the eighth slot, across the last page */
     fk_rgb.h = 22;
     prof_save(3, NULL);
     settle();
@@ -320,25 +331,27 @@ static void send_pages(const uint8_t *img, uint8_t token, uint8_t skip_page) {
         uint8_t n = (uint8_t)(PROF_BLOCK_SIZE - p * PROF_PAGE < PROF_PAGE ? PROF_BLOCK_SIZE - p * PROF_PAGE : PROF_PAGE);
         memcpy(&rpt[6], &img[p * PROF_PAGE], n);
         if (p == 0) rpt[6] = 0x55;   /* the host's magic: ignored */
-        CHECK(prof_hid(rpt) && rpt[6] == PROF_OK);
+        CHECK(prof_hid(rpt) && rpt[6] == (p > skip_page ? PROF_BAD : PROF_OK));   /* P5d: in order, so not past a gap */
     }
 }
 
 static void test_hid_restore(void) {
     uint8_t img[PROF_BLOCK_SIZE], r[PROF_REC];
     make_image(img);
-    /* Read: five pages of 26 B, zero past the end. */
+    /* Read: nine pages of 26 B (P5d), zero past the end. */
     for (uint8_t p = 0; p < PROF_PAGES; p++) {
         CHECK(hid(0, p, 0) && rpt[5] == PROF_OK);
-        uint8_t n = (uint8_t)(p < 4 ? 26 : 6);
+        uint8_t n = (uint8_t)(p < 8 ? 26 : 10);
         CHECK(memcmp(&rpt[6], &img[p * 26], n) == 0);
-        if (p == 4) for (int i = 6 + 6; i < 32; i++) CHECK(rpt[i] == 0);
+        if (p == 8) for (int i = 6 + 10; i < 32; i++) CHECK(rpt[i] == 0);
     }
-    CHECK(hid(0, 5, 0) && rpt[5] == PROF_BAD);
+    CHECK(hid(0, 9, 0) && rpt[5] == PROF_BAD);
+    /* P5d: 7, the geometry. */
+    CHECK(hid(7, 0, 0) && rpt[4] == 8 && rpt[5] == 27 && rpt[6] == 9 && rpt[7] == 26 && rpt[8] == 0xA2 && rpt[9] == 0);
     /* P5b: a pending choice reads as the board will write it, so a backup
      * taken inside the settle has it. */
     CHECK(prof_load(0) == PROF_OK && B(PROF_OFF_ACTIVE) == 3);
-    CHECK(hid(0, 0, 0) && rpt[6 + PROF_OFF_ACTIVE] == 0 && rpt[6] == PROF_MAGIC_V1);
+    CHECK(hid(0, 0, 0) && rpt[6 + PROF_OFF_ACTIVE] == 0 && rpt[6] == PROF_MAGIC_V2);
     /* A Begin drops it: the restore's active byte wins, not a choice
      * written after the commit. */
     CHECK(hid(1, 0, 0x59) && rpt[6] == PROF_OK);
@@ -353,8 +366,23 @@ static void test_hid_restore(void) {
     CHECK(B(PROF_OFF_MAGIC) == 0);   /* the magic masked until the commit */
     nlog = 0;
     CHECK(hid(3, 0, 0x5A) && rpt[6] == PROF_OK && !prof_restore_open());
-    CHECK(wlog[nlog - 1].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[nlog - 1].first == PROF_MAGIC_V1);   /* the magic last */
+    CHECK(wlog[nlog - 1].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[nlog - 1].first == PROF_MAGIC_V2);   /* the magic last */
     CHECK(memcmp(&ee[PROF_BASE], img, PROF_BLOCK_SIZE) == 0 && prof_active() == 3 && prof_slot(0, r) && r[PR_HUE] == 11);
+    CHECK(prof_slot(7, r) && r[PR_HUE] == 77);   /* the eighth slot, in the last page */
+    /* P5d: the pages in order. One ahead of the count is refused; a page
+     * again (a lost reply's retry) is taken, the count unmoved. */
+    CHECK(hid(1, 0, 0x5C) && rpt[6] == PROF_OK);
+    CHECK(hid(2, 1, 0x5C) && rpt[6] == PROF_BAD);
+    CHECK(hid(2, 0, 0x5C) && rpt[6] == PROF_OK && hid(2, 0, 0x5C) && rpt[6] == PROF_OK);
+    CHECK(hid(2, 2, 0x5C) && rpt[6] == PROF_BAD);
+    CHECK(hid(3, 0, 0x5C) && rpt[6] == PROF_INCOMPLETE && !prof_formatted());
+    CHECK(hid(1, 0, 0x5D) && rpt[6] == PROF_OK);
+    send_pages(img, 0x5D, 0xFF);
+    CHECK(hid(2, 3, 0x5D) && rpt[6] == PROF_OK);   /* after all nine: any page again */
+    memcpy(&rpt[6], &img[3 * PROF_PAGE], PROF_PAGE);
+    rpt[3] = 2; rpt[4] = 3; rpt[5] = 0x5D;
+    CHECK(prof_hid(rpt) && rpt[6] == PROF_OK);
+    CHECK(hid(3, 0, 0x5D) && rpt[6] == PROF_OK && memcmp(&ee[PROF_BASE], img, PROF_BLOCK_SIZE) == 0);
     /* A missing page: refused, the block unformatted. */
     CHECK(hid(1, 0, 0x5B) && rpt[6] == PROF_OK);
     send_pages(img, 0x5B, 2);
@@ -402,7 +430,7 @@ static void test_hid_restore(void) {
     /* A failed page write aborts, and latches: a new Begin is refused. */
     CHECK(hid(1, 0, 0x08) && rpt[6] == PROF_OK);
     nlog = 0; fail_at = 0;
-    CHECK(hid(2, 1, 0x08) && rpt[6] == PROF_WRITE_FAILED && !prof_restore_open());
+    CHECK(hid(2, 0, 0x08) && rpt[6] == PROF_WRITE_FAILED && !prof_restore_open());   /* page 0: in order */
     fail_at = -1;
     CHECK(hid(1, 0, 0x09) && rpt[6] == PROF_WRITE_FAILED && !prof_restore_open());
 }
@@ -442,7 +470,7 @@ static void test_hid_live(void) {
     int ext = fk_external[ME_DOM_RGB];
     CHECK(hid(6, 0, 0) && rpt[4] == PROF_OK && fk_flushes == 1 && fk_external[ME_DOM_RGB] == ext + 1);
     /* An unknown sub: unhandled. Dev's 0x40 save and 0x41 delete. */
-    CHECK(!hid(7, 0, 0) && !hid(0x42, 0, 0));
+    CHECK(!hid(8, 0, 0) && !hid(0x42, 0, 0));
     CHECK(hid(0x40, 1, 0) && rpt[5] == PROF_OK && prof_active() == 1);
     CHECK(hid(0x41, 1, 0) && rpt[5] == PROF_OK && prof_active() == 0xFF);
     /* P5b: the flush writes the pending active slot too. */
@@ -476,6 +504,8 @@ static void test_p5b(void) {
     r[PR_FIELDS] &= (uint8_t)~PF_NAME;
     prof_name(2, r, nm);
     CHECK(strcmp(nm, "Profile 3") == 0);
+    prof_name(7, r, nm);
+    CHECK(strcmp(nm, "Profile 8") == 0);   /* P5d */
     /* The `*`: a compare of the record's fields. */
     CHECK(prof_active_rec(r) == 2 && !prof_differs(r));
     fk_lcd = 53;   CHECK(prof_differs(r));

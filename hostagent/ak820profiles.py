@@ -3,7 +3,7 @@
 across a flash, over raw HID (HC_PROFILES, P5a of
 plans/SETTINGS-PROFILES-PLAN.md).
 
-A flash erases the emulated EEPROM: the four profile slots, and with them the
+A flash erases the emulated EEPROM: the profile slots, and with them the
 settings every flash used to reset (the screen level, the clock format, the
 indicators, the battery readout, the power mode). This saves both before and
 writes both back after. flash.sh runs it beside the keymap's backup, and the
@@ -12,13 +12,20 @@ ak820lighting.py's.
 
 The command is [SET_VALUE 0x07, HEALTH_CHANNEL 0x13, HC_PROFILES 0x10, sub, ...]
 (menu/profiles.c has the framing):
-    0 read a 26 B page of the 110 B block (five pages)
+    0 read a 26 B page of the block
     1 begin a restore (a token; the board clears the block's magic)
-    2 write a page (the magic's byte is the board's, never the host's)
+    2 write a page, in order (the magic's byte is the board's, never the host's)
     3 commit (every page; each record valid; the board writes the magic last)
     4 read the live settings as a 27 B record
     5 apply a live record
     6 flush the deferred settings writes
+    7 the geometry (P5d): slots, record and page sizes, pages, the magic
+
+The block: the magic, the active slot, then the records. P5a and P5b had
+four slots (110 B, five pages, magic 0xA1) and answer 7 unhandled; P5d has
+eight (218 B, nine pages, magic 0xA2). A backup of either restores onto
+either: four into eight as the first four slots, eight into four only when
+slots 5-8 are empty.
 
 Usage:
     ak820profiles.py dump    [file]   # default ~/Documents/ak820pro-profiles.json
@@ -47,8 +54,9 @@ SET_VALUE, HEALTH_CHANNEL, HC_PROFILES = 0x07, 0x13, 0x10
 UNHANDLED = 0xFF                        # RTC_UNHANDLED, == VIA's id_unhandled
 DEFAULT = os.path.expanduser("~/Documents/ak820pro-profiles.json")
 
-BLOCK, PAGE, PAGES, REC, SLOTS, NAME = 110, 26, 5, 27, 4, 12
-MAGIC_V1 = 0xA1
+PAGE, REC, NAME = 26, 27, 12
+MAGIC_V1, MAGIC_V2 = 0xA1, 0xA2
+SLOTS_OF = {MAGIC_V1: 4, MAGIC_V2: 8}
 PF_LIGHTING, PF_LCD, PF_LOCKS, PF_CHARGING, PF_CLOCK, PF_BVIEW, PF_NAME, PF_POWER = (1 << i for i in range(8))
 STATUS = {0: "ok", 1: "bad request", 2: "no such restore (token)", 3: "busy (a deep sleep's recovery, or a restore)",
           4: "invalid", 5: "write failed", 6: "incomplete (a page missing)", 7: "unknown record format",
@@ -79,12 +87,53 @@ def rec_ok(r):
     return r[0] == 0x01 and r[26] == crc8(r[1:26])
 
 
+class Geometry:
+    """The board's block: P5d's answer to sub 7, or P5a's four slots."""
+    def __init__(self, slots, magic):
+        self.slots, self.magic = slots, magic
+        self.size = 2 + slots * REC
+        self.pages = (self.size + PAGE - 1) // PAGE
+
+
+def geometry(h):
+    try:
+        r = xfer(h, 7)
+    except Unhandled:
+        return Geometry(4, MAGIC_V1)    # P5a and P5b; a build without HC_PROFILES fails at the first read
+    if r[5] != REC or r[7] != PAGE or SLOTS_OF.get(r[8]) != r[4] or Geometry(r[4], r[8]).pages != r[6]:
+        raise SystemExit(f"the board's profile geometry is new to this tool: {r[4:9].hex()}")
+    return Geometry(r[4], r[8])
+
+
+def block_slots(block):
+    """A block's slot count, from its size (an unformatted one's magic is 0)."""
+    for n in SLOTS_OF.values():
+        if len(block) == 2 + n * REC:
+            return n
+    raise SystemExit(f"a profile block of {len(block)} B is no known size")
+
+
+def convert(block, g):
+    """A backup's block for this board's geometry: four slots into eight as
+    the first four; eight into four only when slots 5-8 are empty."""
+    n = block_slots(block)
+    recs = [block[2 + s * REC:2 + (s + 1) * REC] for s in range(n)]
+    if n > g.slots:
+        if any(r[0] != 0 for r in recs[g.slots:]):
+            raise SystemExit(f"the backup holds profiles in slots {g.slots + 1}-{n}, which this firmware lacks -- "
+                             "restore it onto a firmware with eight slots, or flash with --no-profiles")
+        recs = recs[:g.slots]
+    recs += [bytes(REC)] * (g.slots - len(recs))
+    magic = g.magic if block[0] in SLOTS_OF else block[0]
+    return bytes([magic, block[1]]) + b"".join(recs)
+
+
 def normalized(block):
     """The block as the board's commit leaves it: an active byte that points
     at an empty slot, or at none, reads 0xFF."""
     b = bytearray(block)
     a = b[1]
-    if a >= SLOTS or b[2 + a * REC] == 0:
+    if a >= block_slots(block) or b[2 + a * REC] == 0:
         b[1] = 0xFF
     return bytes(b)
 
@@ -121,13 +170,13 @@ def busy_retry(fn, what):
     raise SystemExit(f"{what}: the board stayed busy")
 
 
-def read_block(h):
+def read_block(h, g):
     out = bytearray()
-    for p in range(PAGES):
+    for p in range(g.pages):
         r = xfer(h, 0, [p], echo=(4,))
         if r[5] != 0:
             raise SystemExit(f"read of page {p} refused: {STATUS.get(r[5], r[5])}")
-        out += r[6:6 + min(PAGE, BLOCK - p * PAGE)]
+        out += r[6:6 + min(PAGE, g.size - p * PAGE)]
     return bytes(out)
 
 
@@ -141,12 +190,12 @@ def read_live(h):
     return live
 
 
-def write_block(h, block):
+def write_block(h, block, g):
     token = random.randint(1, 255)
     st = busy_retry(lambda: xfer(h, 1, [0, token], echo=(5,))[6], "begin")
     if st != 0:
         raise SystemExit(f"restore refused at begin: {STATUS.get(st, st)}")
-    for p in range(PAGES):
+    for p in range(g.pages):            # in order: P5d's board refuses a page past a gap
         data = block[p * PAGE:(p + 1) * PAGE]
         st = busy_retry(lambda: xfer(h, 2, bytes([p, token]) + data, echo=(4, 5))[6], f"page {p}")
         if st != 0:
@@ -192,10 +241,10 @@ def decode(r):
 
 
 def decode_block(b):
-    if b[0] != MAGIC_V1:
+    if SLOTS_OF.get(b[0]) != block_slots(b):
         return {"formatted": False}
     slots = []
-    for s in range(SLOTS):
+    for s in range(block_slots(b)):
         r = b[2 + s * REC:2 + (s + 1) * REC]
         if r[0] == 0:
             slots.append(None)
@@ -206,7 +255,7 @@ def decode_block(b):
             d["name"] = d.get("name") or f"Profile {s + 1}"
             slots.append(d)
     a = b[1]
-    return {"formatted": True, "active": a + 1 if a < SLOTS and isinstance(slots[a], dict) else None, "slots": slots}
+    return {"formatted": True, "active": a + 1 if a < len(slots) and isinstance(slots[a], dict) else None, "slots": slots}
 
 
 def describe(doc):
@@ -236,12 +285,13 @@ def describe(doc):
 
 
 def snapshot(h):
-    block, live = read_block(h), read_live(h)
+    g = geometry(h)
+    block, live = read_block(h, g), read_live(h)
     return {
-        "_comment": "AK820 Pro settings profiles (the EEPROM's top 110 B) and the live settings, "
-                    "as HC_PROFILES reads them. Restore with ak820profiles.py restore.",
+        "_comment": f"AK820 Pro settings profiles (the EEPROM's top {g.size} B, {g.slots} slots) and the live "
+                    "settings, as HC_PROFILES reads them. Restore with ak820profiles.py restore.",
         "saved": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "format": 1,
+        "format": 1 if g.slots == 4 else 2,   # 2: P5d's eight slots
         "block": block.hex(),
         "live": live.hex(),
         "decoded": {"block": decode_block(block), "live": decode(live)},
@@ -272,19 +322,23 @@ def cmd_restore(path, block_only, live_only):
         return 0
     with open(path, encoding="utf-8") as f:
         doc = json.load(f)
-    if doc.get("format") != 1:
-        raise SystemExit(f"{path} is format {doc.get('format')}; this tool reads 1")
+    fmt = doc.get("format")
+    if fmt not in (1, 2):
+        raise SystemExit(f"{path} is format {fmt}; this tool reads 1 and 2")
     block, live = bytes.fromhex(doc["block"]), bytes.fromhex(doc["live"])
-    if len(block) != BLOCK or len(live) != REC or not rec_ok(live):
+    if len(block) != 2 + (4 if fmt == 1 else 8) * REC or len(live) != REC or not rec_ok(live):
         raise SystemExit(f"{path} is malformed -- refusing")
     h = open_device()
     try:
+        g = geometry(h)
         if not live_only:
-            if block[0] == MAGIC_V1:
-                write_block(h, block)
-                if read_block(h) != normalized(block):
+            if SLOTS_OF.get(block[0]) == block_slots(block):
+                want = convert(block, g)
+                write_block(h, want, g)
+                if read_block(h, g) != normalized(want):
                     raise SystemExit("the profiles' read-back differs from the backup -- the restore did not land")
-                print("profiles restored and read back")
+                note = f" ({block_slots(block)} slots into {g.slots})" if block_slots(block) != g.slots else ""
+                print(f"profiles restored and read back{note}")
             else:
                 print("profiles: none in the backup, the board's left unformatted")
         if not block_only:
@@ -296,7 +350,7 @@ def cmd_restore(path, block_only, live_only):
                 print("  asked " + json.dumps(decode(live)))
                 print("  got   " + json.dumps(decode(back)))
             print(f"live settings restored and flushed{note}")
-        doc_now = {"decoded": {"block": decode_block(read_block(h)), "live": decode(read_live(h))}}
+        doc_now = {"decoded": {"block": decode_block(read_block(h, g)), "live": decode(read_live(h))}}
     finally:
         h.close()
     print(describe(doc_now))

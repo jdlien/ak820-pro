@@ -58,8 +58,9 @@ def main():
     h = open_device()
     out = []
     try:
-        b = ap.read_block(h)
-        if b[0] == ap.MAGIC_V1 and any(ap.rec_ok(b[2 + s * 27:29 + s * 27]) for s in range(4)):
+        gp = ap.geometry(h)
+        b = ap.read_block(h, gp)
+        if b[0] == gp.magic and any(ap.rec_ok(b[2 + s * 27:29 + s * 27]) for s in range(gp.slots)):
             raise SystemExit("refused: a slot is saved")
         to_dash(h)
         read_acct(h, "on")

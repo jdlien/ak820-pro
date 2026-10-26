@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""P5b on the board: the settings profiles' pages through the real menu,
-driven by op 27, with their writes, on a dev build; every pass timed
+"""P5b and P5d on the board: the settings profiles' pages through the real
+menu, driven by op 27, with their writes, on a dev build; every pass timed
 (plans/SETTINGS-PROFILES-PLAN.md, "Tests", the board's).
 
     venv-win/Scripts/python.exe scripts/menu_p5b_board.py [--out F] < /dev/null
@@ -8,10 +8,12 @@ driven by op 27, with their writes, on a dev build; every pass timed
 It refuses unless every slot is empty (the keyboard on gremlin's: nothing of
 JD's to lose), and leaves them empty and the live settings as they were.
 
-1. One measured interval (op 27 sub 10 armed): open; to Profiles; an empty
-   slot saved by a click; its page; the top level's `*` after a change made
-   over HC_PROFILES' live apply; Load; Save current here's confirm held, then
-   clicked; Delete's confirm clicked; a host restore's Begin popping a slot's
+1. One measured interval (op 27 sub 10 armed): open; to Profiles; Save new
+   (P5d: the list shows the saved slots and Save new); its page; the top
+   level's `*` after a change made over HC_PROFILES' live apply; Load; Save
+   current here's confirm held, then clicked; Delete's confirm clicked; all
+   eight saved by Save new, the list paged, a dwell on it and on the top
+   level, Save new's "Full" clicked; a host restore's Begin popping a slot's
    page; the close.
 2. Every step: the screen and cursor (menu_p1a_board's step()); the block
    read back over HC_PROFILES sub 0 where a step writes it; each pass over
@@ -36,18 +38,19 @@ from menu_s0_accept import to_dash  # noqa: E402
 from menu_s1_gate import decode_meas  # noqa: E402
 
 SCR = g.SCR
-TOP, PROFILES, PSLOT0, PSAVE, PDEL = 1, 50, 51, 56, 57
+TOP, PROFILES, PSLOT, PSAVE, PDEL = 1, 50, 51, 54, 55   # P5d: one slot node; its cursor is the slot << 4 | the row
 R_PROF, R_HELP = g.R_PROF, g.R_HELP
 PR_LCD = 8   # the record's screen level (profiles.h)
 
 
 def slots(h):
     """Each slot's record, or None, from the block as HC_PROFILES reads it."""
-    b = ap.read_block(h)
-    if b[0] != ap.MAGIC_V1:
-        return [None] * ap.SLOTS, 0xFF
+    gp = ap.geometry(h)
+    b = ap.read_block(h, gp)
+    if b[0] != gp.magic:
+        return [None] * gp.slots, 0xFF
     out = []
-    for s in range(ap.SLOTS):
+    for s in range(gp.slots):
         r = b[2 + s * ap.REC:2 + (s + 1) * ap.REC]
         out.append(r if ap.rec_ok(r) else None)
     return out, b[1]
@@ -72,13 +75,13 @@ def main():
         g.step(h, 11, b"", "open", SCR(TOP), 0)
         g.turn(h, R_PROF, "to Profiles", SCR(TOP), R_PROF)
         g.click(h, "Profiles", SCR(PROFILES), 1)
-        g.click(h, "save Profile 1 (empty)", SCR(PROFILES), 1)
+        g.click(h, "Save new: Profile 1", SCR(PROFILES), 1)
         recs, _ = slots(h)
-        g.check(recs[0] is not None and not any(recs[1:]), "the save: slot 1 isn't the one saved")
+        g.check(len(recs) == 8 and recs[0] is not None and not any(recs[1:]), "the save: slot 1 isn't the one saved")
         g.dwell(h, "the save's settle, the active slot's deferred write", 6.0)
         _, active = slots(h)
         g.check(active == 0, f"the active byte {active}, not 0 after the settle")
-        g.click(h, "Profile 1's page", SCR(PSLOT0), 1)
+        g.click(h, "Profile 1's page", SCR(PSLOT), 0x01)
         g.dwell(h, "its summary", 2.0)
         g.hold(h, "Profiles back", SCR(PROFILES), 1)
         g.hold(h, "the top level", SCR(TOP), R_PROF)
@@ -93,29 +96,56 @@ def main():
 
         # Load: the screen level back; Profiles, the check there.
         g.click(h, "Profiles", SCR(PROFILES), 1)
-        g.click(h, "Profile 1's page", SCR(PSLOT0), 1)
+        g.click(h, "Profile 1's page", SCR(PSLOT), 0x01)
         g.click(h, "Load", SCR(PROFILES), 1)
         g.check(ap.read_live(h)[PR_LCD] == live0[PR_LCD], "Load: the screen level not back")
 
         # Save current here: the confirm, a hold, then a click.
-        g.click(h, "Profile 1's page", SCR(PSLOT0), 1)
-        g.turn(h, 1, "to Save current here", SCR(PSLOT0), 2)
+        g.click(h, "Profile 1's page", SCR(PSLOT), 0x01)
+        g.turn(h, 1, "to Save current here", SCR(PSLOT), 0x02)
         g.click(h, "Save's confirm", SCR(PSAVE), 0)
-        g.hold(h, "cancelled", SCR(PSLOT0), 2)
+        g.hold(h, "cancelled", SCR(PSLOT), 0x02)
         g.click(h, "Save's confirm again", SCR(PSAVE), 0)
-        g.click(h, "saved", SCR(PSLOT0), 2)
+        g.click(h, "saved", SCR(PSLOT), 0x02)
 
-        # Delete: the confirm and a click, back to Profiles; the slot empty.
-        g.turn(h, 1, "to Delete", SCR(PSLOT0), 3)
+        # Delete: the confirm and a click, back to Profiles, the cursor's
+        # row now Save new; the slot empty.
+        g.turn(h, 1, "to Delete", SCR(PSLOT), 0x03)
         g.click(h, "Delete's confirm", SCR(PDEL), 0)
         g.click(h, "deleted", SCR(PROFILES), 1)
         recs, _ = slots(h)
         g.check(not any(recs), "Delete: a slot still saved")
 
+        # P5d: all eight by Save new, each on its new row; the list (ten
+        # rows, two pages) turned through; a dwell on it and on the top
+        # level, the snapshot reading eight records every 128 ms; Save new's
+        # "Full" clicked, nothing written; then the eight deleted (the dev
+        # hook: a host's write, which repaints).
+        for k in range(1, 9):
+            g.click(h, f"Save new: Profile {k}", SCR(PROFILES), k)
+            if k < 8:
+                g.turn(h, 1, "to Save new", SCR(PROFILES), k + 1)
+        recs, _ = slots(h)
+        g.check(all(recs), "eight: a slot not saved")
+        g.dwell(h, "the eight's settle", 6.0)
+        g.turn(h, 1, "to Save new, Full", SCR(PROFILES), 9)
+        before = slots(h)
+        g.click(h, "Full: nothing written", SCR(PROFILES), 9)
+        g.check(slots(h) == before, "Full: the block changed")
+        for k in range(10):
+            g.turn(h, 1, f"the list, row {k}", SCR(PROFILES), k)
+        g.dwell(h, "the list of eight, 3 s", 3.0)
+        g.hold(h, "the top level", SCR(TOP), R_PROF)
+        g.dwell(h, "the top level, Profile 8 active, 3 s", 3.0)
+        for s in range(8):
+            g.check(ap.xfer(h, 0x41, [s])[5] == 0, f"the dev delete of slot {s} refused")
+        g.settle(h, "the deletes' repaint")
+        g.click(h, "Profiles, nothing saved", SCR(PROFILES), 1)
+
         # A host restore's Begin pops a slot's page; its abort, 5 s on, leaves
         # the block unformatted, which the first save formats again.
-        g.click(h, "save Profile 1 again", SCR(PROFILES), 1)
-        g.click(h, "its page", SCR(PSLOT0), 1)
+        g.click(h, "Save new: Profile 1 again", SCR(PROFILES), 1)
+        g.click(h, "its page", SCR(PSLOT), 0x01)
         tok = random.randint(1, 255)
         r = ap.xfer(h, 1, [0, tok], echo=(5,))
         g.check(r[6] == 0, f"Begin refused ({r[6]})")
@@ -132,7 +162,7 @@ def main():
         meas = decode_meas(xfer(h, 10, bytes([0])))
         g.check(not meas["aliased"], "a pass of 340 ms or more in the interval")
         long = [x for x in g.slow if x["pass_ms"] >= 25]
-        cons = [x for x in long if "save" in x["step"] or "deleted" in x["step"] or "settle" in x["step"]]
+        cons = [x for x in long if any(w in x["step"].lower() for w in ("save", "deleted", "delete of", "settle"))]
         for x in long:
             if x not in cons:
                 g.check(False, f"a pass of {x['pass_ms']} ms at {x['step']}")

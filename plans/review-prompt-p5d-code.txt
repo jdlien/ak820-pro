@@ -1,0 +1,23 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A review before a flash: P5d of the settings profiles, eight slots and the list's Save new. JD (10-26): "I think maybe just a 'Save New' makes more sense than finite grayed out unused slots"; "Four is barely enough, 8 feels about right. I think we can go ahead and use eight in the existing storage."
+
+The firmware: qmk_firmware-ak820pro `git diff 57d5e900 830aa68d -- keyboards/a_jazz/ak820pro` (57d5e900 is P5b, which you cleared in plans/review-codex-p5b-code-2026-10-25.md; it is the mainline now). Files: config.h, menu/menu.c, menu/menu_glue.c, menu/profiles.c, menu/profiles.h.
+The host side (ak820-pro, uncommitted working tree): hostagent/ak820profiles.py; scripts/profiles_test.c; scripts/menu_s0_test.c's test_profiles(); scripts/menu_p5b_board.py, menu_p1a_board.py, menu_p5b_cost.py.
+
+What changed:
+- The block: 218 B at 806-1023 of the 1 KB emulated EEPROM (magic 0xA2, active byte, eight 27 B records; P5a/P5b had four, 110 B, magic 0xA1). VIA's macro buffer shrinks from 127 B to 19 B. QMK's nvm_dynamic_keymap.c refuses a buffer under 100 B when it derives the size from DYNAMIC_KEYMAP_EEPROM_MAX_ADDR, so config.h now sets DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE 19 directly and leaves the maximum at its default (1023); menu_glue.c recomputes the macros' start and asserts they end at PROF_BASE.
+- HC_PROFILES: nine pages; tx_state's five page bits are now a count of pages received in order (a page past the count is PROF_BAD; a page again is taken; the commit needs all nine). Sub 7 answers the geometry; P5a/P5b answer it unhandled, and the host takes them for four slots.
+- The menu: one node, N_PSLOT, for every slot row (its slot in row_t.val, so RK_ITEM's signature carries it) and every slot page (its slot in a new static, pslot); N_PNEW, Save new, the list's last row. Profiles' rows: Back, the saved slots in slot order, Save new (row_count()/row_node()). Save new saves into prof_free_slot() (the first slot without a valid record, so a delete's gap is filled first and "Profile n" keeps n = slot + 1), the cursor moving to its row; at eight it greys with "Full" and a click flashes "Full: delete one". pop() from a slot page puts the list's cursor back on that slot's row. pfs is 16 bits (bits 0-7 valid, 8-11 active, 12 the star), its valid bits from prof_valid_mask() (the magic read once). The node count is 56 of 63.
+- ak820profiles.py: the geometry (sub 7, unhandled = four slots); a backup's block converted to the board's geometry (four into eight as slots 1-4; eight into four only when slots 5-8 are empty); backups are "format" 1 (four) or 2 (eight).
+
+Host tests pass: profiles_test.c, menu_s0_test.c (both builds). The dev build's heap gap is 136 B. This flash goes onto the keyboard on gremlin from 57d5e900 through flash.sh (P5b's tool backs up with the old geometry; this tree's restores with the new).
+
+Check:
+1. Anything in QMK or VIA that reads or clears EEPROM up to DYNAMIC_KEYMAP_EEPROM_MAX_ADDR (now 1023) rather than to the macro size: a reset, an eeconfig init, VIA's buffer reads, dynamic_keymap's macro handling. Could anything clobber 806-1023, or read it as macros?
+2. The in-order page count: tx_state's bits after Begin, a retry, a write failure, a timeout; tx_state++ into TX_CHANGED; the commit.
+3. The menu's list: a cursor past the end after a host's delete; Delete's cursor; a slot page open while a host's write (the dev hooks 0x40/0x41, not a restore, which pops) changes the list under it; pslot's staleness anywhere it's read; the signatures (a row's slot in val's 4 bits; names not in them); paging at ten rows.
+4. ak820profiles.py's conversion and restore: the magic, the read-back's compare, normalized() on eight slots, a backup taken from P5b and restored onto P5d.
+5. Anything unsafe to flash on the keyboard on gremlin.
+
+Must anything change before flashing? File and line for each. Under 400 words.
