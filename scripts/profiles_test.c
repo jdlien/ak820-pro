@@ -387,6 +387,9 @@ static void test_hid_restore(void) {
     CHECK(hid(1, 0, 0x5B) && rpt[6] == PROF_OK);
     send_pages(img, 0x5B, 2);
     CHECK(hid(3, 0, 0x5B) && rpt[6] == PROF_INCOMPLETE && !prof_formatted() && !prof_restore_open());
+    CHECK(hid(1, 0, 0x5E) && rpt[6] == PROF_OK);   /* P5d: only the ninth missing */
+    send_pages(img, 0x5E, 8);
+    CHECK(hid(3, 0, 0x5E) && rpt[6] == PROF_INCOMPLETE && !prof_formatted() && !prof_restore_open());
     /* A page from another token; a commit with another token. */
     CHECK(hid(1, 0, 0x01) && rpt[6] == PROF_OK);
     CHECK(hid(2, 0, 0x02) && rpt[6] == PROF_TOKEN);

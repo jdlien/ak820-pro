@@ -1,0 +1,12 @@
+**Yes—fix one P2 menu regression before flashing.**
+
+- **[P2] A shrinking Profiles list leaves its cursor/page out of range.** [menu.c:1958](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1958) invalidates the display after host writes but never adjusts `cursor` or `top`. Reproduction: fill eight slots, select Save new (`cursor=9`, `top=8`), then delete slots through `0x41`. One deletion leaves no selected row; two leave a blank page despite six saved profiles. Clicking does nothing until a turn repairs the position. The same problem survives returning from a host-deleted slot because [pop():1554](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1554) repairs only valid slots. [Delete:1829](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1829) also retains the old parent position when host changes occurred under the slot/confirmation page. Normalize the list position after shrinkage and on these returns; recompute `top`. Add those cases to [test_profiles():3829](/C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_test.c:3829).
+
+No additional static blocker found:
+
+- **EEPROM:** macro reads, writes, playback and reset respect the explicit size, ending at address 805. No maximum-address consumer exposes profiles as macros. Full `eeconfig_init` still erases everything, as before.
+- **Transaction:** Begin clears the count; retries do not advance it; failures close and retain the latch; timeout closes; commit requires nine pages. `tx_state++` cannot carry into `TX_CHANGED`.
+- **Menu:** slot identity fits the signature, `pslot` remains tied to the open slot, host writes invalidate names, and ordinary ten-row paging works.
+- **Migration:** P5b’s unhandled geometry fallback, A1→A2 conversion, zero-filled slots 5–8, eight-slot normalization and converted readback comparison are consistent. Downgrade refuses occupied upper slots.
+
+The five firmware files match `830aa68d`; the host files now match `1f652e4a`. Artifact hashes and the 136 B heap gap check out. Process execution was denied: tests were inspected, not rerun; board timing and runtime stack margin remain unverified here.

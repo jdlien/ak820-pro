@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~10:05.
+2026-10-26 ~11:00.
 
 ## Where things stand
 
@@ -294,7 +294,29 @@ This file is the thread; read it first after a context loss. Updated
        frame 3, the pending active slot 1, the snapshot and its flags 2):
        alignment slack. P5c's Rename needs ~1 B and the name in the
        `pg` union.
-     - **Next: JD's ideas (10-26), waiting on his pick.** "I think maybe
+     - **P5d, JD's pick (10-26): eight in the existing storage, Save new,
+       a preview after a rest.** "Resting like after between 0.3s to a second or a second
+       probably makes sense so the board doesn't go crazy as you scroll"
+       and "Four is barely enough, 8 feels about right. I think we can go
+       ahead and use eight in the existing storage. That sounds like safer
+       and there's no need for 32." Order: P5d (eight, Save new), P5c
+       (Rename; Save new opens it), then the preview (0.6 s to start, one
+       number to tune).
+       - **Built: `94072f55`** on `gremlin/p5d` (dev, token `0xd1c65f0b`,
+         heap gap 136 B). The block 218 B at 806-1023, magic 0xA2; VIA's
+         macros 19 B, sized by DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE (QMK's
+         100 B check reads the maximum, which keeps its default);
+         HC_PROFILES nine pages in order, sub 7 the geometry; the menu one
+         node for the eight slots (pslot the open page's), Profiles = Back,
+         the saved slots, "+ Save new" (the first free slot, so a delete's
+         gap refills and "Profile n" keeps n = slot + 1; "Full" at eight).
+         ak820profiles.py converts four-slot backups.
+       - **Codex** (`review-codex-p5d-code-2026-10-26.md`): round 1's P2,
+         the list shrinking under the cursor, fixed by prof_list_fit().
+         70 mutants, 3 survive (accepted).
+       - **Waiting on JD's cable** (10-26 ~10:50): the keyboard on gremlin
+         was on the 2.4G dongle only, no USB, after his power cycle.
+     - **JD's ideas (10-26), as first answered.** "I think maybe
        just a 'Save New' makes more sense than finite grayed out unused
        slots. We'd have to have a limit after some amount, but probably
        way more than 4", and a preview of a profile from the list.

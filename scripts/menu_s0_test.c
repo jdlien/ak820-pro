@@ -4019,6 +4019,23 @@ static void test_profiles(void) {
     m_hold();
     CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 3);
     m_unflash();
+    /* A host's write moving the rows under a slot's page (the dev delete of
+     * Profile 1): Load, from a slot not the first, comes back on that slot's
+     * row, wherever it now is. Then Save new fills the gap, first in the list. */
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x21);
+    CHECK(prof_sub(0x41, 0, 0) == PROF_OK);
+    m_tick_settle();
+    fk_lcd = 11;
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 2 && prof_active() == 2 && fk_lcd == 52 &&
+          row_bad(1, PROW("Profile 2"), MENU_DIM) == 0 && row_bad(2, PROW_ON("Profile 3"), MENU_LIT) == 0);
+    m_unflash();
+    m_to_pnew();
+    m_click();
+    CHECK(sub5_cursor() == 1 && prof_active() == 0 && row_bad(1, PROW_ON("Profile 1"), MENU_LIT) == 0 &&
+          row_bad(4, PNEW, MENU_DIM) == 0);
+    m_unflash();
 
     /* Eight: the list pages (ten rows), and Save new greys with "Full"; a
      * click says so and writes nothing. */
@@ -4035,6 +4052,48 @@ static void test_profiles(void) {
     w = fk_ee_writes;
     m_click();
     CHECK(title_bad("Full: delete one") == 0 && fk_ee_writes == w && sub5_cursor() == 9);
+    /* The list shrinking under the cursor (codex, P5d's review): the host's
+     * deletes keep it on a row, and its page the cursor's. */
+    CHECK(prof_sub(0x41, 7, 0) == PROF_OK);
+    m_tick_settle();
+    CHECK(sub5_cursor() == 8 && row_bad(0, PNEW, MENU_LIT) == 0 && row_bad(1, "", 0) == 0);
+    CHECK(prof_sub(0x41, 6, 0) == PROF_OK);
+    m_tick_settle();
+    CHECK(sub5_cursor() == 7 && row_bad(7, PNEW, MENU_LIT) == 0 && row_bad(6, PROW("Profile 6"), MENU_DIM) == 0);
+    /* ... and under a slot's page: back in range. */
+    m_click();   /* Save new: Profile 7 */
+    m_unflash();
+    m_to_pnew();
+    m_click();   /* Profile 8 */
+    m_unflash();
+    m_click();   /* its page */
+    CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x71);
+    CHECK(prof_sub(0x41, 7, 0) == PROF_OK && prof_sub(0x41, 6, 0) == PROF_OK);
+    m_tick_settle();
+    m_hold();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 7 && row_bad(7, PNEW, MENU_LIT) == 0);
+    m_click();   /* Profile 7 again */
+    m_to_pnew();
+    m_click();   /* Profile 8 again */
+    /* ... and under Delete's confirm (codex's verify): two more host deletes,
+     * then the click; back in range, on Save new. */
+    m_unflash();
+    m_click();   /* Profile 8's page */
+    m_turn(2);
+    m_click();   /* Delete's confirm */
+    CHECK(sub5_screen() == SC_PDEL && sub5_cursor() == 7);
+    CHECK(prof_sub(0x41, 6, 0) == PROF_OK && prof_sub(0x41, 5, 0) == PROF_OK);
+    m_tick_settle();
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 6 && title_bad("Deleted") == 0 && row_bad(6, PNEW, MENU_LIT) == 0 &&
+          row_bad(5, PROW("Profile 5"), MENU_DIM) == 0 && row_bad(7, "", 0) == 0);
+    for (int k = 6; k <= 8; k++) {   /* Profiles 6-8 again */
+        m_to_pnew();
+        m_click();
+        CHECK(sub5_cursor() == k && prof_active() == k - 1);
+    }
+    m_to_pnew();
+    CHECK(sub5_cursor() == 9 && prof_active() == 7);
     m_turn(1);   /* wraps to Back, page one */
     CHECK(sub5_cursor() == 0 && row_bad(0, FONT_MONO_TRI_L " Back", MENU_LIT) == 0 &&
           row_bad(1, PROW("Profile 1"), MENU_DIM) == 0 && row_bad(7, PROW("Profile 7"), MENU_DIM) == 0);
