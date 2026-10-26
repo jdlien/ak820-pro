@@ -360,8 +360,9 @@ This file is the thread; read it first after a context loss. Updated
        (GREMLIN-RESULTS §20r-20t). JD: "I'm happy with it now." He runs it
        for a while. Rename's cursor editing: skipped (JD: unless the
        keyboard becomes a note-taking tool).
-     - **Owed (JD):** the Next and Previous keys bound in VIA and pressed;
-       his MENU-TEXT.md edits (pinned, 10-24), with the profile pages' new
+     - **The Next and Previous keys: done** (10-26; JD bound Fn+A and Fn+S
+       in VIA: "all works great!").
+     - **Owed (JD):** his MENU-TEXT.md edits (pinned, 10-24), with the profile pages' new
        words. Before a release for other owners: eight profiles leave VIA
        19 B of macros (a four-profile build would keep 127 B).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we

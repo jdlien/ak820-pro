@@ -1599,6 +1599,8 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
 - **JD (10-26):** "Looks pretty good... Much more clear it's not a menu
   option now. I'm happy with it now." **Merged:** `ak820pro-jdlien`
   fast-forwarded to `553108e5` (the icons, the rule, the 300 ms preview,
-  the summary); main pins it. JD runs it for a while; the VIA binds of the
-  Next and Previous keys come later.
+  the summary); main pins it. JD runs it for a while.
+- **The Next and Previous keys, by hand (10-26):** bound in VIA, Fn+A
+  Previous and Fn+S Next, on the keyboard on gremlin. JD: "all works
+  great!" (P5b's last owed check.)
 
