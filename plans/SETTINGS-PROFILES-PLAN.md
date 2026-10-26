@@ -68,8 +68,11 @@ the user's).
     the connection. If a load also selected a slot, a load meant only for
     the look could drop the computer you're typing on. A slot that won't
     connect would also leave a load half done (P3's failure cases).
-12. **No load shortcut in v1.** JD's Fn+1-4 are F1-F4 (the 65% habit), so
-    a later shortcut would go on other keys.
+12. **Two keys, Next profile and Previous profile, not one per slot.**
+    They're custom keycodes, assignable in VIA and unbound by default ("Next
+    and previous profile keys", below). JD's Fn+1-4 are F1-F4 (the 65%
+    habit), and a key per slot would use four. He may later move the pair
+    onto his hue or speed hotkeys, since the menu now changes those.
 
 ## Later, not v1
 
@@ -197,10 +200,10 @@ from the right one. So:
 | Action | What it writes, in order |
 |---|---|
 | The first write to an unformatted block | the formatting (below), then the action |
-| Save (an empty slot, or Save current here) | state 0x00; the body and crc (bytes 1-26); state 0x01; the active byte |
+| Save (an empty slot, or Save current here) | state 0x00; the body and crc (bytes 1-26); state 0x01; the active byte, deferred |
 | Rename | state 0x00; the name and the crc (bytes 14-26); state 0x01 |
-| Delete | state 0x00; the active byte to 0xFF if it was active |
-| Load | the setters (below); the active byte |
+| Delete | state 0x00; the active byte to 0xFF if it was active, deferred |
+| Load (the menu, or a Next/Previous key) | the setters (below); the active byte, deferred |
 
 **Formatting:** a fresh flash leaves the block unformatted, and it reads as
 four empty slots. The first profile write formats it first, in order:
@@ -232,8 +235,9 @@ block.
 
 ### When
 
-**At the click, synchronously,** for every profile write the menu makes, on
-two conditions:
+**At the click, synchronously,** for every record write the menu makes
+(save, rename, delete), on two conditions. The active byte is the
+exception: it's always deferred ("Next and previous profile keys").
 1. **Never inside a deep sleep's recovery,** checked explicitly:
    `!sleep_recovering()`. A menu session blocks deep sleep
    (`menu/panel_owner.c:57`). But the display's wake can be released before
@@ -278,7 +282,7 @@ Load applies the record's fields through the setters the menu already uses
 3. **The menu's latched model** is set as a choice's commit sets it
    (`model_clock` and the rest). Otherwise `sync_model()` treats the load as
    an external change and retargets.
-4. **The active byte.**
+4. **The active byte,** deferred ("Next and previous profile keys", below).
 
 **What it doesn't touch:**
 - **the RGB flags;**
@@ -303,6 +307,40 @@ settings differ from that slot's record.
   `menu_invalidate()`, which repaints the names and summaries.
 - **Any change makes the `*`:** Fn+keys, VIA, the menu's editors. The
   ladder's caps don't, because they never touch the user's values.
+
+### Next and previous profile keys
+
+Two custom keycodes, `PROF_NXT` and `PROF_PRV`, **appended** after
+`PWR_MODE` in the `ak820pro_keycodes` enum, with matching entries at the end
+of `via.json`'s `customKeycodes[]`. Their titles are "Next settings profile"
+and "Previous settings profile", and their short names `Prof+` and `Prof-`.
+`check_via_sync.py` guards the pairing. **Unbound in the default keymap:**
+the owner assigns them in VIA.
+
+- **A press loads the next (or previous) saved slot** after the active one,
+  in slot order, skipping empty slots and wrapping round. From no active
+  slot, Next loads the first saved one and Previous the last. With one
+  saved slot, a press reloads it, which also clears its `*`: a quick way
+  back to the profile. With none saved, it loads nothing.
+- **The screen names it** in a brief overlay, as Fn+B names the power mode:
+  `Profile: Work`, or `No profiles`.
+- **The load is the menu's Load:** the same setters, the lighting's order
+  and the effect-id check (`effect skipped` in the overlay).
+- **On a press, not a release; no repeat.** It's handled on the board and
+  nothing goes to the host, over any link.
+- **While the menu is open,** the menu follows: its rows' signatures see the
+  change. An editor previewing is cancelled first, as for any external
+  write (`Cancelled`). Rename captures every key, these two included.
+- **Refused while a host restore is open, or inside a deep sleep's
+  recovery.** The overlay says `Busy`.
+- **The active byte is deferred,** so a run of presses costs one write. The
+  press sets a pending value. The 10 Hz housekeeping writes it once it has
+  been stable for a settle time, as `kb_eeconfig` does, never inside
+  `sleep_recovering()`, with the sleep waiting on it. The setters' own
+  writes are deferred already. The pending value is 1 B of the palette's
+  RAM. **The menu's own active-byte writes** (Load, Save, Delete) go
+  through the same pending value, so the active byte has one writer and
+  one rule.
 
 ## The menu
 
@@ -594,7 +632,7 @@ block:
 | | Cost | Room |
 |---|---|---|
 | EEPROM | 110 B | 237 B of macro space, so 127 B are left |
-| RAM, static | ~8 B: Rename's state 1, the transaction 3, the fourth stack frame 3 (4 allowed) | the palette's 14 B, made const in dev; dev's heap gap stays at its 128 B floor |
+| RAM, static | ~9 B: Rename's state 1, the transaction 3, the pending active byte 1, the fourth stack frame 3 (4 allowed) | the palette's 14 B, made const in dev; dev's heap gap stays at its 128 B floor |
 | RAM, stack | a 27 B record buffer at a save, a load or a host page (no VLA: the writes call `wear_leveling_write()`) | the stacks' margins (to check) |
 | RAM, union | Rename's `name[12]`, a third arm of `pg` | `pg`'s 12 B, unchanged |
 | Flash | ~4-6 KB (code, nodes, text, an icon, the effect ids) | dev 54.6 KB free, daily ~79 KB |
@@ -615,6 +653,11 @@ block:
   - the formatting: the first save on an unformatted block writes the
     states, the active byte and then the magic, and a stale record from
     before it never shows;
+  - the Next and Previous keys: slot order, skipping empties, wrapping,
+    from no active slot, with one saved slot and with none; refused
+    during a restore and a recovery; an editor's preview cancelled
+    first; four quick presses costing one active-byte write;
+    `check_via_sync.py` passing with the two appended keycodes;
   - Rename's states:
     - WAIT held by a held key and by a queued tap-hold
       (`action_tapping_idle()` false), and not by a one-shot, which the
@@ -664,9 +707,11 @@ block:
    live-settings restore to every flash at once.
    - **The palette first, on its own commit:** make `pal` const in dev and
      measure the dev heap gap before anything spends it. Only that measure
-     proves the ~7 B fit.
+     proves the ~9 B fit.
 2. **P5b, the menu:** the top-level row, the Profiles page, the slot page,
-   Load, Save, Delete, the summary, the `*`, the fourth frame.
+   Load, Save, Delete, the summary, the `*`, the fourth frame, the
+   deferred active byte, and the Next and Previous profile keys (appended
+   to the keycode enum and `via.json`).
 3. **P5c, Rename,** with `action_tapping_idle()` in
    `quantum/action_tapping.c` (a ninth core file with a local change) and
    the knob's Fn-up rule.
