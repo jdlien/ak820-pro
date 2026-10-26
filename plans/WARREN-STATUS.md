@@ -11,6 +11,15 @@ This file is the thread; read it first after a context loss. Updated
 - **S0 is complete.** A1-A13 passed on the keyboard on gremlin, with recorded
   exceptions (GREMLIN-RESULTS §10). Firmware branch `gremlin/config-menu`
   (`4b899118`).
+  - **MERGED (10-25, 19:05), all fast-forwards:**
+    - `ak820pro-jdlien` to `30f1e0cf`;
+    - ChibiOS-Contrib's `ak820pro-patches` to `5a1674e905`;
+    - main to `7a679e9`, with deps.lock pinned, CLAUDE.md updated and
+      AGENTS.md added.
+
+    The session on Buzz flashes the keyboard on Buzz. The daily build on
+    gremlin waits for the release. Codex now reads AGENTS.md, so the review
+    prompts no longer say "there is no AGENTS.md". What came before:
   - **Not merged yet.** The agreement with the session on Buzz (the Mac; its
     session's bridge is listed as "Relay control and power monitoring
     status") was to wait for the keyboard on Buzz's drain on `b9555ff3e6` to
