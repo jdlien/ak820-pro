@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~11:45.
+2026-10-26 ~12:35.
 
 ## Where things stand
 
@@ -333,7 +333,22 @@ This file is the thread; read it first after a context loss. Updated
        3 survive. To flash with `scratchpad/p5e_flash_passes.sh` (5 quiet
        minutes, flash.sh, then the board passes with JD's profiles stashed
        and put back).
-     - **Then P5c, Rename**, with Save new opening it (a default name).
+       **On the keyboard on gremlin since 11:51** (GREMLIN-RESULTS §20p:
+         both board passes clean). JD asked to try the 0.6 s rest.
+     - **P5c, Rename: `13c5e910`** on `gremlin/p5c` (dev, token
+       `0x8f2239f1`, heap gap 136 B), the plan's design: a Rename row before
+       Delete; WAIT (the matrix idle, the knob masked, and
+       `action_tapping_idle()`, a new additive accessor in
+       quantum/action_tapping.c: an eleventh core file for CLAUDE.md's list
+       at the merge), CAPTURE (every key but the knob's swallowed in
+       menu_pre_process(), read by the default layer's keycode, Shift from
+       the matrix), DRAIN; the one-shots cleared at CAPTURE, an armed
+       one-shot layer turned off; Fn read as up for the knob; typing
+       restarts the idle timer (Rename takes the 180 s backstop); Save new
+       doesn't open it (Decided 4). Codex: three rounds
+       (`review-codex-p5c-code-2026-10-26.md`). 28 mutants, 1 survives.
+       Flashing with `scratchpad/p5c_flash_passes.sh` (the board pass drives
+       Rename by the knob; typing is JD's to try).
      - **JD's ideas (10-26), as first answered.** "I think maybe
        just a 'Save New' makes more sense than finite grayed out unused
        slots. We'd have to have a limit after some amount, but probably
