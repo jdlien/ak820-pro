@@ -1,0 +1,5 @@
+**Closed.** [menu.c:2156](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:2156) invalidates slot 2 before Enter/Esc. [menu_s0_test.c:4627](/C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_test.c:4627) queues edits and Enter without an intervening tick, then checks the retained page, busy title, and `da_` pixels.
+
+No commit/cancel regression found: [menu.c:1694](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1694) switches layouts; [menu_slots.c:121](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_slots.c:121) resets slot states and stages clearing. The extra retarget cannot resurrect Rename.
+
+**No new flash blocker for gremlin identified in this diff:** no added storage or blocking drawing. Static review only; process execution was denied, so passing tests and the 136 B heap gap remain your reported results.

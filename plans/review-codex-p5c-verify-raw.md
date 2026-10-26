@@ -1,0 +1,8 @@
+**1–2 are closed; 3 has one remaining case; 4 is acceptable.**
+
+- **P2 — 3 remains incomplete:** [menu.c:2156](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:2156). If `"cd"` → `"da"` edits and Enter arrive before one tick, `RN_ENTER` bypasses the invalidation and clears `RN_EDITED`. If saving returns `PROF_BUSY`, [menu.c:2024](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:2024) keeps Rename open; the identical signature leaves `"cd_"` displayed, although retrying saves `"da"`. Invalidate slot 2 whenever `k & RN_EDITED`, before handling Enter/Esc. Extend the collision test with Enter and recovery enabled.
+- **1 closed:** [menu_glue.c:391](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_glue.c:391) clears all fulfilment bits, turning the active one-shot layer off.
+- **2 closed:** [menu.c:1996](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1996) preserves DRAIN; [menu.c:675](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:675) rearms capture only when idle.
+- **4 acceptable:** [panel_owner.c:250](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/panel_owner.c:250) preserves the page and ownership. Retaining its capture through repaint introduces no identified harm.
+
+I’d finish 3 before flashing. No additional regression or hardware flash-safety issue found in this diff. Static review only: process execution was denied; tests and hardware behavior weren’t rerun.

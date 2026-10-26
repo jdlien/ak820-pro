@@ -4617,6 +4617,21 @@ static void test_rename(void) {
     m_typestr("da");
     m_ktick();
     CHECK(name_bad("da_") == 0);
+    /* ... and with Enter in the same pass, refused (a recovery): the page
+     * kept, showing the name it would save (codex's verify). */
+    m_type(MENU_KC_BSPC);
+    m_type(MENU_KC_BSPC);
+    m_typestr("cd");
+    m_ktick();
+    CHECK(name_bad("cd_") == 0);
+    m_type(MENU_KC_BSPC);
+    m_type(MENU_KC_BSPC);
+    m_typestr("da");
+    fk_recovering = true;
+    m_type(MENU_KC_ENTER);
+    m_ktick();
+    CHECK(sub5_screen() == SC_PRENAME && title_bad("Busy, try again") == 0 && name_bad("da_") == 0);
+    fk_recovering = false;
     m_hold();
     m_unflash();
     /* Refused in a recovery: "Busy, try again", the page and the name kept. */

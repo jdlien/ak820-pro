@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A verify before the flash: the case your second round left open (plans/review-codex-p5c-verify-raw.md, item 3: edits and Enter in one pass, the save refused). The fix: qmk_firmware-ak820pro `git diff f9b4035c 13c5e910 -- keyboards/a_jazz/ak820pro/menu/menu.c`: in menu_tick(), with Rename's page showing, an edit invalidates the name's line (slot 2) and retargets first, then Enter commits or Esc cancels. The test: scripts/menu_s0_test.c's test_rename(), "cd", then "da" and Enter in one pass with a recovery on: "Busy, try again", the page kept, showing "da_" (it fails without the fix). Host tests pass; heap gap 136 B.
+
+Check: closed? Anything it breaks (the invalidation before a commit's pop or a cancel's)? Anything unsafe to flash on the keyboard on gremlin? File and line. Under 120 words.
