@@ -50,20 +50,24 @@ the user's).
 6. **The summary uses the menu's icons**, along the lines of
    `[bulb] H:310 S:0% B:100%`. Its exact content is to be worked out on the
    panel.
-7. **The dev-only live colour palette goes** (`menu.c`'s `pal`, op 27 sub
+7. **The icon: a folder,** U+E5FE (`nf-custom-folder_open`). JD: "A place
+   where you save stuff." Its wide, tabbed shape is unlike the top level's
+   other twelve. The rejected ones: a floppy (anachronistic, and hard to
+   draw at 7 px), the bookmark (too like the upright battery), the palette
+   (it reads as Lighting) and the heart.
+8. **The dev-only live colour palette goes** (`menu.c`'s `pal`, op 27 sub
    13, `scripts/menu_tune.py`): const in dev as in daily. Its 14 B pay for
    this feature's state. JD: "I probably don't need live colour tuning
    anymore."
 
 ## Open, for JD
 
+None of these blocks P5a, which has no UI. They're needed before P5b.
+
 - **Where on the top level.** Page 1's last row, which pushes Bootloader to
   the top of page 2 with Diagnostics, Help, About and Exit (recommended: the
   settings stay together on page 1, and the bootloader goes with the system
   items), or page 2 right after Bootloader.
-- **The icon.** Proposed: a "layers" stack, then a bookmark. Warren's icon
-  gallery (`scripts/gen_icon_gallery.py`) can show candidates at the panel's
-  size.
 - **Whether a profile carries the BT slot.** "Home" on BT 1 and "Work" on
   BT 2 is a real use, and the menu can select slots (P3). It makes a load
   also a reconnect, with P3's failure cases. Proposed: not in v1.
