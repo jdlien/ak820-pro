@@ -3892,8 +3892,8 @@ static void test_profiles(void) {
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, PACT_LOAD, MENU_LIT) == 0 &&
           row_bad(2, PACT_SAVE, MENU_DIM) == 0 && row_bad(3, PACT_RENAME, MENU_DIM) == 0 &&
           row_bad(4, PACT_DELETE, MENU_DIM) == 0);   /* P5c: Rename before Delete; JD's icons (10-26) */
-    CHECK(psum0_bad(cells2(FONT_MONO_I_LIGHT " Cycle All", "50%")) == 0 && fb[84][60] == 0 &&
-          row_bad(6, "  H:180 S:100% B:80%", MENU_WHITE) == 0 &&
+    CHECK(psum0_bad(cells2("  Cycle All", "50%")) == 0 && fb[84][60] == 0 &&
+          row_bad(6, FONT_MONO_I_LIGHT " H:180 S:100% B:80%", MENU_WHITE) == 0 &&
           row_bad(7, FONT_MONO_I_SCREEN "52%   " FONT_MONO_I_CLOCK "24h:ss", MENU_WHITE) == 0);
     m_turn(3);
     CHECK(sub5_cursor() == 0x04 && row_bad(4, PACT_DELETE, MENU_LIT) == 0);
@@ -3968,11 +3968,11 @@ static void test_profiles(void) {
     int w = fk_ee_writes;
     m_hold();
     CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x02 && title_bad("Cancelled") == 0 && fk_ee_writes == w);
-    CHECK(row_bad(6, "  H:180 S:100% B:80%", MENU_WHITE) == 0);
+    CHECK(row_bad(6, FONT_MONO_I_LIGHT " H:180 S:100% B:80%", MENU_WHITE) == 0);
     m_click();
     m_click();
     CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x02 && title_bad("Saved") == 0 && fk_ee_writes == w + 3);
-    CHECK(row_bad(6, "  H:90 S:100% B:80%", MENU_WHITE) == 0 && row_bad(2, PACT_SAVE, MENU_LIT) == 0);
+    CHECK(row_bad(6, FONT_MONO_I_LIGHT " H:90 S:100% B:80%", MENU_WHITE) == 0 && row_bad(2, PACT_SAVE, MENU_LIT) == 0);
     uint8_t rec[PROF_REC];
     CHECK(prof_slot(0, rec) && memcmp(&rec[PR_NAME], "Twelve chars", 12) == 0);   /* the name kept */
     m_unflash();
@@ -4203,6 +4203,7 @@ static void test_profiles(void) {
         char cells[21];
         memset(cells, ' ', 20);
         cells[20] = '\0';
+        cells[0] = FONT_MONO_I_LIGHT[0];   /* the bulb by the LEDs' line (JD, 10-26) */
         memcpy(cells + 2, want, strlen(want));
         CHECK(row_bad(6, cells, MENU_WHITE) == 0 && row_bad(1, PACT_LOAD, MENU_LIT) == 0);
     }
