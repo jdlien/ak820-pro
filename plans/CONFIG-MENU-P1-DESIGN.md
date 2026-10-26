@@ -1527,6 +1527,58 @@ commit for each mode; the top level's values. The board: the menu pass's
 Clock steps over six rows, the passes while the list ticks; JD: the
 dashboard in each mode, Fn+C's cycle, the examples by eye.
 
+## Settings profiles (JD's first decisions, 10-25 ~19:15; not yet a build go)
+
+JD, through the session on Buzz: "really leaning towards doing this
+feature. I think it could be really useful and fun." This is a phase after
+the merge. The design draft comes first, then JD's word before building.
+
+**Decided (JD):**
+1. **Power mode is out of v1.0:** "It's easy enough to toggle those
+   separately."
+2. **Names only through an explicit Rename item:** "I'd probably not hijack
+   the keyboard unless a user specifically selects a 'Rename' option ...
+   don't prompt for a name by default." An empty slot saves at once as
+   "Profile n".
+3. **The slot page's summary in icons, very concise:** his example is
+   "[bulb icon] H:310 S:0% B:100%". He expects to workshop it.
+
+**Proposed by the session on Buzz, and JD called it "Good":**
+- four fixed slots, with an empty slot doubling as "save new";
+- a saved slot's page: the summary, Load, Save current here (confirm),
+  Rename, Delete (confirm);
+- the top level's row shows the loaded profile's name, with `*` when the
+  settings have changed since it was loaded, and a ✓ marks the loaded slot;
+- names typed on the keyboard itself, captured only while the Rename editor
+  is open;
+- flash.sh backs up and restores the profile block, as it does the keymap
+  and the lighting (a flash erases the emulated EEPROM).
+
+**Its place (JD, ~19:20):** a top-level row, "probably before Bootloader on
+the first page or right after that on the second page". Before Bootloader
+makes Profiles page 1's last row, with Bootloader at the top of page 2 beside
+Diagnostics, Help, About and Exit. The session on Buzz recommended that, to
+keep the settings together on page 1 and put the bootloader with the system
+items. JD's pick between the two is still open.
+
+**Still JD's:** whether a profile carries the BT slot; the icon (layers or a
+bookmark were suggested; the icon gallery could show candidates); a Fn+1-4
+shortcut; the row's place, above.
+
+**The budget (the session on Buzz's numbers):**
+- **Contents:** rgb_matrix's 8 B, the LCD level, the two indicator levels,
+  the clock mode, `batt_view`, and a version byte (~14 B), plus a
+  12-character name.
+- **EEPROM:** 237 B is free, all of it VIA's macro buffer now. Four slots
+  of ~27 B leave ~129 B for macros, and JD's keymap uses none (checked in
+  his backup).
+- **Program flash:** dev `30f1e0cf` is 206,332 B of 262,144.
+- **RAM:** load, save and the summary need only a stack buffer. The Rename
+  editor's ~12 B static has no room in dev (the heap gap is at its 128 B
+  floor). It could take an arm of `pg`, the page-scoped union in menu.c
+  that the Clock's time shares with About's snapshot, since an editor and
+  those pages never show together.
+
 ## P1b, P1c, P1d
 
 P1b's design is the section above (the earlier note asked it to cover the
