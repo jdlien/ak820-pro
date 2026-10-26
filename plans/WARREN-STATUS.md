@@ -251,6 +251,19 @@ This file is the thread; read it first after a context loss. Updated
      entire menu system ... Let's make a few bits of polish and we can
      consider merging."** P1c and P1d, and JD's text edits, wait on his
      polish list.
+  7. **The RGB effects' speeds (JD, 10-25 ~19:00), on the keyboard on
+     gremlin since ~19:25:** firmware `93e55f78` on `gremlin/fx-speed` (on
+     `30f1e0cf`; not merged).
+     - Each curve is geometric in speed: Cycle All 10 min to 10 s; L-R and
+       U-D 2 min to 2 s; Jellybean a drop every 2 s to 30 a second.
+     - Two weak hooks in quantum/rgb_matrix (four core files touched).
+     - Codex: no must-fix (`review-codex-fx-speed-2026-10-25.md`).
+     - Owed: JD's feel for the speeds (retune `rgb_speed.c`'s constants),
+       and his notes on the other effects. Then the merge, telling the
+       session on Buzz first.
+  8. **Settings profiles:** JD is leaning towards it, but it's not a build
+     go. His decisions are in CONFIG-MENU-P1-DESIGN.md, "Settings
+     profiles". Next is a design draft, then his word.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
