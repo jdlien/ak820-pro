@@ -387,7 +387,7 @@ def main():
         if not a.no_ind:
             ind_editors(h, ind_state)
 
-        # The hint: 5 s idle on the top level (the session stays open: 24 s).
+        # The hint: 5 s idle on the top level (the session stays open: 60 s).
         time.sleep(5.0)
         s, _ = settle(h, "after the hint")
         check(s["session"] == "open", "the session closed during the hint")

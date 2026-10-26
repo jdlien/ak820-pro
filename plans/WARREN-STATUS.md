@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~15:45.
+2026-10-26 ~17:50.
 
 ## Where things stand
 
@@ -362,9 +362,20 @@ This file is the thread; read it first after a context loss. Updated
        keyboard becomes a note-taking tool).
      - **The Next and Previous keys: done** (10-26; JD bound Fn+A and Fn+S
        in VIA: "all works great!").
-     - **Owed (JD):** his MENU-TEXT.md edits (pinned, 10-24), with the profile pages' new
-       words. Before a release for other owners: eight profiles leave VIA
-       19 B of macros (a four-profile build would keep 127 B).
+     - **The idle close at 60 s MERGED (10-26, ~17:50):** `ak820pro-jdlien`
+       at `1f3c79e9`, main pins it, on the keyboard on gremlin since ~17:30
+       (GREMLIN-RESULTS §20u; codex: no blocker). JD: "Let's increase to
+       60s." Editors, Pairing and Rename keep the 3-minute backstop.
+     - **MENU-TEXT.md corrected (10-26, JD: "You can make the
+       corrections"):** the glyphs (`◀`, `▶`, the check box), the top
+       level's thirteen rows, the Clock's option names, Battery as built, a
+       Profiles section with every profile page's words, the title flashes,
+       "60 seconds idle". JD's own text untouched.
+     - **Owed (JD):** a read of MENU-TEXT.md's new Profiles section, for
+       wording. Before a release for other owners: eight profiles leave VIA
+       19 B of macros (a four-profile build would keep 127 B); Rename types
+       as US QWERTY reads the keys (JD, 10-26: noted, no fix asked; a
+       layout option or a host-side rename if an owner needs one).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

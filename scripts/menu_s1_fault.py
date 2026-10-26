@@ -146,7 +146,7 @@ def main():
                 [("retry", m, 5) for m in (0, 1)] + \
                 [("mono", m, k) for m in (0, 1) for k in range(6)]   # retry: the original arm's five window sends pass; the retry's first fails
         for kind, mode, skip in cases:
-            # The fixture closes after 24 s idle: a selection change keeps it.
+            # The fixture closes after 60 s idle: a selection change keeps it.
             if read_state(h)["session"] != "open":
                 mut(h, 4)
                 settle(h)

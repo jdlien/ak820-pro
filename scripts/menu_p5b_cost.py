@@ -4,7 +4,7 @@ The `*` compare's cost on the board: the menu open and settled on the top
 level, page one (the Profiles row showing), with no active profile and with
 one, alternating, three windows each. Per pass: the menu's two scopes
 (unaccounted holds menu_task, the blit pump menu_pump) and the passes >= 10
-ms. A turn down and back before each window keeps the session open (24 s
+ms. A turn down and back before each window keeps the session open (60 s
 idle closes it). Leaves the slots empty and the menu closed."""
 import json
 import os

@@ -7,7 +7,7 @@ person can photograph each one at their own pace.
     A13: fixture-A; fixture-B-stop13; fixture-A-again; fixture-F2
     A2:  the Camera page settled (photo 1); after sub 8 and 30 s (photo 2)
 
-The fixture closes after 24 s with no input, so while a fixture frame is held
+The fixture closes after 60 s with no input (24 s until 10-26), so while a fixture frame is held
 the knob is turned one notch and back every 15 s (op 27 sub 1). That blinks
 the cursor's row and the next one for a moment; under the stop, the paint
 stays held. The state after each frame is logged, with the stop and

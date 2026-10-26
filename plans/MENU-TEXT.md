@@ -3,23 +3,28 @@
 Every piece of text the menu shows or will show, gathered 2026-10-24 so JD
 can review and edit it (pinned before P1's acceptance:
 [`CONFIG-MENU-P1-DESIGN.md`](CONFIG-MENU-P1-DESIGN.md)). **Edit this file
-freely**; Warren carries the changes into the code (`menu/menu.c`, and
-`scripts/gen_menu_text.py` for Help, which reads its topics from
-[`config-menu-mockup.html`](config-menu-mockup.html) today).
+freely**; Warren carries the changes into the code (`menu/menu.c`). Help's
+four topics go from this file to the firmware as they are:
+`scripts/gen_menu_text.py` reads their fenced blocks (since 10-24) and
+refuses a line over 20 characters, or a number (the idle close, Balanced's
+sleep) the firmware disagrees with.
 
-- **Built** = on the keyboard on gremlin now (P1a, `5527c898` / `22312b44`).
-- **Not built yet** = the mockup's words for later steps (P1b Lighting and
-  Screen, P1d the art, P2-P4 Indicators, Connection, Battery). Equally open
-  to edits.
+- **Built** = on the keyboard on gremlin now (P1a through P5, the settings
+  profiles; 10-26).
+- **Not built yet** = the mockup's words for P1d, the art: About's second
+  page and Help's QR code. Equally open to edits.
 
 ## The limits every line must fit
 
 - **20 characters a line**, the 6x14 Cozette face. A title is one line.
 - **A list row is label + value in 20 characters**, the value
-  right-aligned. A row that opens something ends in `>`.
-- **Characters:** plain ASCII, plus five extras the face has: `‹` (Back),
-  `›`, `•` (the saved choice), `▸`, `✓`. Anything else would need a glyph
-  added.
+  right-aligned. A row with an icon gives it the first two cells, leaving
+  18. A row that opens a page ends in `▶`.
+- **Characters:** plain ASCII, plus the face's extras: `◀` (Back), `▶`, the
+  green check box (`■` in the listings below: the saved choice), and the
+  icons (the top level's, a profile's actions', Bluetooth's states; the
+  listings below leave them out). Anything else would need a glyph added.
+  Help's topics and a profile's name are plain ASCII only.
 - **8 rows a screen** under the title; longer lists and pages scroll a page
   at a time.
 
@@ -27,7 +32,7 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 |....+....|....+....|   <- 20 columns
 ```
 
-## Built (P1a, P1b, the bootloader item, P2a and P3)
+## Built (P1a through P5)
 
 ### The title area
 
@@ -40,6 +45,12 @@ freely**; Warren carries the changes into the code (`menu/menu.c`, and
 | `Cancelled`         | 1.3 s after a choice is left without saving, or Reset counters cancelled |
 | `Counters reset`    | 1.3 s after Reset counters                                               |
 | `Now on BT 2`, `Already on BT 2`, `Pairing stopped` | 1.3 s after a slot click, or a stop (P3) |
+| `Try again`         | Bootloader's click, when a key's release couldn't reach the computer over the radio first |
+| `Loaded`, `Deleted`, `Renamed` | 1.3 s after a profile's action (P5); `Saved` after its save          |
+| `Loaded w/o effect` | a profile whose effect this firmware lacks: the rest loaded              |
+| `Full: delete one`  | `+ Save new` with all eight saved                                        |
+| `Busy, try again`   | a profile's action while the keyboard can't write (a recovery, or a computer restoring the profiles) |
+| `Save failed`       | a profile's write failed; no more writes until a restart                 |
 
 ### The top level (title: `Configuration`)
 
@@ -51,6 +62,7 @@ Power       Balanced
 Indicators         ▶
 Clock            24h
 Battery      Percent
+Profiles      Gaming
 Bootloader         ▶
 Diagnostics        ▶
 Help               ▶
@@ -60,25 +72,26 @@ Exit
 
 - Each row starts with its icon, its label at the third cell: Lighting the
   bulb, Screen a desktop, Connection the Bluetooth rune, Power the bolt,
-  Indicators the sun, Clock a clock, Diagnostics a chip, Bootloader a desktop
-  with a download arrow, Help `?`, About `i`, Exit `×`. A heading carries its
-  section's icon; the top level's, the wrench.
-- Twelve rows (P4, JD 10-25: Battery under Clock, Diagnostics under
-  Bootloader): Diagnostics, Help, About and Exit are on page two. Before P4,
-  eleven rows (P2a, 10-25, the mockup's order): Help, About and Exit were on
-  page two (the scrollbar shows).
+  Indicators the sun, Clock a clock, Battery a vertical battery, Profiles a
+  folder, Diagnostics a chip, Bootloader a desktop with a download arrow,
+  Help `?`, About `i`, Exit `×`. A heading carries its section's icon; the
+  top level's, the wrench.
+- Thirteen rows, eight a screen: page one ends at Profiles (P5, JD 10-25),
+  and Bootloader, Diagnostics, Help, About and Exit are on page two (the
+  scrollbar shows). Before P5, twelve (P4, JD 10-25: Battery under Clock,
+  Diagnostics under Bootloader).
 - `Exit` and `◀ Back` rows show in light red when not selected; `▶` marks a
   row that opens a page; the saved option has a squared check.
-- The full top level (P4): Lighting, Screen, Connection, Power, Indicators,
-  Clock, Battery, Bootloader, Diagnostics, Help, About, Exit. Battery's icon
-  is a vertical battery.
+- Profiles' value is the profile in use: its name (9 characters of it), or
+  8 and a `*` once the settings differ from it; `Prof. 3*` for an unnamed
+  one that differs; `None` when none is in use.
 
 ### Power (title: `Power`)
 
 ```
-‹ Back
+◀ Back
   Always on
-• Balanced
+■ Balanced
   Power saver
   Lights out
 ```
@@ -89,24 +102,26 @@ The top level's value uses short forms: `Always on`, `Balanced`, `Saver`,
 ### Clock (title: `Clock`)
 
 ```
-‹ Back
-• 24h       13:45:01
+◀ Back
+■ 24h:ss    13:45:01
   24h          13:45
-  12h    1:45:01 PM
+  12h:ss  1:45:01 PM
   12h        1:45 PM
   Date  Oct 24, 2026
   Off
 ```
 
-The top level's value: `24h`, `12h`, `Date`, `Off`.
+The options are named as `Fn`+`C` names them (P4, 10-25), and the top
+level's value is the option's name: `24h:ss`, `24h`, `12h:ss`, `12h`,
+`Date`, `Off`.
 
 ### Diagnostics (title: `Diagnostics`)
 
 ```
-‹ Back
-Health page        >
-Camera page        >
-Reset counters     >
+◀ Back
+Health page        ▶
+Camera page        ▶
+Reset counters     ▶
 ```
 
 Health page and Camera page open the existing Fn+D pages (their own text,
@@ -162,14 +177,14 @@ Click: back
 ### Help (title: `Help`)
 
 ```
-‹ Back
-Using the menu     >
-Customizing        >
-Shortcuts          >
-Pro tips           >
+◀ Back
+Using the menu     ▶
+Customizing        ▶
+Shortcuts          ▶
+Pro tips           ▶
 ```
 
-(The mockup adds `More info >`, the QR code: not built yet, P1d.)
+(The mockup adds `More info ▶`, the QR code: not built yet, P1d.)
 
 #### Using the menu
 
@@ -180,7 +195,7 @@ Hold: back, cancel
 Fn+click: close
 
 Auto-closes after
-24 seconds idle.
+60 seconds idle.
 ```
 
 #### Customizing
@@ -378,27 +393,7 @@ Click: back              Click or hold: stop
   when stopped: `Pairing stopped`. The page stays up to 3 minutes; closing
   the menu leaves pairing running, and the status band shows it.
 
-## Not built yet (the mockup's words)
-
-### About, page 2 (P1d: the bunny beside the first three lines)
-
-```
-[bunny] AJAZZ
-[bunny] Jackrabbit
-[bunny] by JD Lien
-
-github.com/jdlien
-  /ak820-pro
-
-QMK Port by fpb
-```
-
-### Help > More info (P1d)
-
-The QR code to `https://github.com/jdlien/ak820-pro` (no text in the mockup;
-it shows `github.com/jdlien` / `  /ak820-pro` when the QR isn't drawn).
-
-### Battery (P4; on the top level; title: `Battery`)
+### Battery (P4, 10-25; on the top level; title: `Battery`)
 
 A choice: `Percent`, `Hours of use`; the top level's value: `Percent`,
 `Hours`.
@@ -436,8 +431,115 @@ that all the time there"):
 - Either way: `USB`, `Charge`, `No Batt` and `Low` as before. The hours
   count awake time only, so they move with what the lights draw.
 
-### Ideas waiting for words
+### Profiles (P5, 10-25 and 10-26; on the top level; title: `Profiles`)
 
-- **A bootloader item** (BACKLOG, the polish phase): what it's for, a click
-  to confirm "Enter Bootloader", how to leave without flashing. Maybe not
-  needed at all.
+Up to eight saved sets of settings: the lighting, the screen's level, the
+lock and charging lights, the clock and the battery readout (not the power
+mode).
+
+```
+◀ Back
+■ Gaming           ▶
+  Profile 2        ▶
++ Save new
+```
+
+- The profile in use has the check box. One never named is `Profile n`, n
+  its slot.
+- **+ Save new** saves the settings as a new profile (`Profile n`, the first
+  free slot), which becomes the one in use. With all eight saved it reads
+  `Full` on the right, greyed, and a click flashes `Full: delete one`.
+- Resting on a profile for 0.3 s previews its lighting and screen level;
+  leaving the list puts the settings back.
+- A click opens the profile's page.
+
+**A profile's page** (title: its name):
+
+```
+◀ Back
+  Load
+  Save current here
+  Rename
+  Delete
+--------------------
+  Drift          100%
+  H:43 S:100% B:100%
+  52%     24h:ss
+```
+
+- Each action has its icon in the first two cells: Load a circled left
+  arrow, Save a circled right arrow, Rename a pencil, Delete a trashcan.
+- Under a grey rule, the summary: the effect and its speed (Alphas/Mods'
+  second colour as `+324`), `Lights off`, or `Unknown` for an effect this
+  firmware lacks; the bulb, then hue, saturation and brightness; the screen
+  icon and its level, the clock icon and its format. `--` for a setting the
+  profile doesn't hold.
+- **Load** flashes `Loaded` and goes back to the list, the check box moved.
+
+**Save current here** (title: `Save profile`):
+
+```
+Replace Gaming
+with these settings?
+
+
+Click: replace
+Hold: cancel
+```
+
+Then `Saved`, back on the profile's page with its new summary.
+
+**Delete** (title: `Delete profile`):
+
+```
+Delete Gaming?
+
+
+
+Click: delete
+Hold: cancel
+```
+
+Then `Deleted`, back on the list.
+
+**Rename** (title: `Rename profile`):
+
+```
+Gaming_
+Type a name
+
+
+Enter, click: save
+Esc, hold: cancel
+```
+
+- While it's open, typing goes to the name, not the computer: up to 12
+  characters, Backspace deleting, the cursor `_` at the end. Then
+  `Renamed`; an empty name is `Profile n` again.
+- The keys type as US QWERTY reads them, through the keyboard's own keymap
+  (VIA's remaps count); the keyboard can't know the computer's layout.
+
+**The Next and Previous keys** (`Prof+` and `Prof-` in VIA, unbound by
+default): the next or previous saved profile, its name shown in the
+dashboard's status band; `No profiles` with none saved, `Busy` when the
+keyboard can't load one.
+
+## Not built yet (the mockup's words)
+
+### About, page 2 (P1d: the bunny beside the first three lines)
+
+```
+[bunny] AJAZZ
+[bunny] Jackrabbit
+[bunny] by JD Lien
+
+github.com/jdlien
+  /ak820-pro
+
+QMK Port by fpb
+```
+
+### Help > More info (P1d)
+
+The QR code to `https://github.com/jdlien/ak820-pro` (no text in the mockup;
+it shows `github.com/jdlien` / `  /ak820-pro` when the QR isn't drawn).

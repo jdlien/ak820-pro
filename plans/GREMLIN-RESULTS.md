@@ -1604,3 +1604,34 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   Previous and Fn+S Next, on the keyboard on gremlin. JD: "all works
   great!" (P5b's last owed check.)
 
+### 20u. The menu's idle close at 60 s (10-26, 17:10-17:50)
+
+- **JD (10-26):** the menu "times out frequently when I'm testing and
+  inspecting it... like 60 seconds (or more) could be fine", then "Let's
+  increase to 60s. The wait for sleep is already a good case for not making
+  it much longer." Editors, Pairing and Rename keep the 3-minute backstop,
+  which cancels an open edit.
+- **`1f3c79e9`** on `gremlin/p5-timeout` (dev, token `0xe3fa251b`, heap gap
+  136 B): `MI_IDLE_MS` 60000; Help's "Using the menu" says "60 seconds
+  idle." (`gen_menu_text.py` checks it against the constant). Host tests
+  (both builds) and `profiles_test` pass. Codex: no blocker
+  (`plans/review-codex-p5-timeout-2026-10-26.md`); it noted Lights out
+  sleeps after a 1 min pause, so the longer close costs nothing there.
+- **On the board** (flashed ~17:30; JD's profiles and live settings kept
+  and put back, read back equal):
+  - **the idle close:** the top level, opened by op 27 and left alone,
+    closed at **60.1 s**; open at 55 s. The Hue editor, left alone, was
+    still open at 75 s (the backstop), then a hold cancelled it with the
+    live settings unchanged. (The script also read op 27 sub 5's bit 1 as
+    "an edit open": that bit is never set, "none in S0", so its two FAILs
+    are the script's, not the board's.)
+  - **the menu's pass:** the longest pass 17.1 ms (17.2 at §20t), but 59
+    over 15 ms against 33-35 on the last two flashes, though the change
+    paints nothing; FAILs only for settles of 1.0-1.1 s under Drift and the
+    17.1 ms against the 17.0 line (`board-1f3c79e9.json`).
+  - **the profiles' pass:** as at §20t but for one number: the post-flash
+    wear-leveling consolidation, on the second Save new, read **65535 us**,
+    the field's ceiling (57.0 ms at §20t, 59.4 ms at §20s), so its length
+    above 65.5 ms is unknown. Otherwise the longest 18.4 ms; FAILs only for
+    the settles (`p5timeout-board-1f3c79e9.json`).
+

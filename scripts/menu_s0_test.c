@@ -1731,7 +1731,7 @@ static void test_ops(void) {
     fw_pass(5);
     CHECK(po_session() == SESSION_OPEN && po_owner() == PANEL_MENU);
 
-    /* The 24 s idle timeout, from the last knob input. */
+    /* The idle timeout (60 s), from the last knob input. */
     fw_pass(MI_IDLE_MS - 10);
     CHECK(po_session() == SESSION_OPEN);
     fw_pass(20);
@@ -2090,7 +2090,7 @@ static void test_menu(void) {
     for (int i = 0; i < 50 && po_session() != SESSION_NONE; i++) fw_pass(5);
     CHECK(po_session() == SESSION_NONE);
 
-    /* The 24 s timeout closes the menu too. */
+    /* The idle timeout closes the menu too. */
     CHECK(op27(11, 0, 0) == MI_OK);
     m_settle();
     fw_pass(MI_IDLE_MS + 10);
@@ -2637,7 +2637,7 @@ static void test_p1b(void) {
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
     CHECK(fk_rgb.v == 86 && !me_active() && po_owner() != PANEL_MENU);
 
-    /* The backstop: an open edit outlasts 24 s idle, not 180 s. */
+    /* The backstop: an open edit outlasts the idle close, not 180 s. */
     m_open_top();
     m_click();
     m_turn(1);
@@ -3364,8 +3364,8 @@ static void test_p3(void) {
     CHECK(fk_bt_pairs == 7 && sub5_cursor() == (2 << 4 | PH_OPEN) && pairing_bad(2, PH_OPEN) == 0);
 
     /* The whole Pairing page has the backstop (codex: a page that turned
-     * connected after 24 s would otherwise close at once); a close never
-     * stops it. */
+     * connected after the idle close would otherwise close at once); a
+     * close never stops it. */
     fw_pass(MI_IDLE_MS + 10);
     CHECK(po_session() == SESSION_OPEN && sub5_screen() == SC_PAIRING);
     fk_bt_set(fk_link_of(2, ENV_LINK_LINKING), ENV_PF_RETRYING);
@@ -4195,7 +4195,7 @@ static void test_profiles(void) {
         fk_rgb.h = (uint8_t)(k * 37 + 1);
         fk_rgb.v = (uint8_t)(k * 11);
         CHECK(prof_save(1, NULL) == PROF_OK && prof_sub(0x41, 3, 0) == PROF_OK);   /* the host's: a repaint */
-        fw_pass(5);   /* a host's write reads the snapshot at once (130 ms steps would outlast the 24 s session) */
+        fw_pass(5);   /* a host's write reads the snapshot at once (130 ms steps would outlast the idle close) */
         m_settle();
         char want[24];
         snprintf(want, sizeof want, "H:%u S:100%% B:%u%%", (unsigned)(fk_rgb.h * 360u / 256u),
@@ -4388,7 +4388,7 @@ static void test_preview(void) {
  * preview's (a profile without an LCD field, with an effect this build
  * lacks); its Load saves the live settings' effect; a Load then an
  * external change, and the loaded profile previews again; and a preview
- * keeps the menu no longer than the 24 s idle close. */
+ * keeps the menu no longer than the idle close. */
 static void test_preview_codex(void) {
     fw_reset();
     fk_power = 1; fk_clock = 0;
@@ -4451,11 +4451,11 @@ static void test_preview_codex(void) {
     CHECK(sub5_screen() == SC_PSLOT && title_bad("Busy, try again") == 0 && fk_rgb.h == 77 && fk_rgb_ee.h == 5);
     fk_recovering = false;
     m_unflash();
-    /* Back on the list, its preview kept: 24 s without input closes the
-     * menu, the live settings back. */
+    /* Back on the list, its preview kept: the idle close without input
+     * closes the menu, the live settings back. */
     m_hold();
     CHECK(sub5_screen() == SC_PROF && fk_rgb.h == 77);
-    for (int i = 0; i < 25000 / 5; i++) fw_pass(5);
+    for (uint32_t i = 0; i < (MI_IDLE_MS + 1000u) / 5u; i++) fw_pass(5);
     CHECK(po_session() == SESSION_NONE && fk_rgb.mode == 9 && fk_rgb.h == 5 && fk_lcd == 50);
     CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
     for (int i = 0; i < 400; i++) fw_pass(5);   /* the dashboard's restore */

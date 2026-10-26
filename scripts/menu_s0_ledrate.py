@@ -94,7 +94,7 @@ def main():
         to_dash(h)
         time.sleep(1.0)
         out += [window(h, "dash"), window(h, "dash")]
-        st, seq = mutate(h, 4)                     # open the fixture (24 s idle)
+        st, seq = mutate(h, 4)                     # open the fixture (60 s idle)
         wait(h, seq)
         end = time.monotonic() + 3.0
         while not read_state(h)["pixels_done"] and time.monotonic() < end:
