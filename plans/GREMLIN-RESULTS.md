@@ -1568,3 +1568,18 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   last four builds 17.3 (P5b), 16.7, 17.6, 17.9, on screens the profile
   work doesn't touch: run-to-run spread under Drift.
 
+### 20s. The profile page, JD's second look (10-26, 14:00-14:35)
+
+- **JD (10-26):** the plain arrows "a little similar to the back arrow
+  while being under it": the circled ones; the summary's first line "sits
+  under delete and looks like an option": "just another horizontal divider
+  line above it"; the preview "about half what it is now".
+- **`76d66f6c`** on `gremlin/p5-icons` (dev, token `0x5f294fcc`): the
+  circled arrows (U+F0A8, U+F0A9), a grey rule over the summary (a fill
+  chunk after its first line's text), MENU_PREVIEW_MS 300. Codex: no
+  blocker (the summary's slot 10 paint passes, not 9).
+- **Flashed 14:12**, JD's profiles and live settings kept and put back. The
+  profiles' pass: every check passed; longest 59.4 ms (the post-flash
+  consolidation, as each run's), then 18 ms. The menu's pass: longest
+  17.7 ms (Clock's cancel), 35 over 15 ms.
+
