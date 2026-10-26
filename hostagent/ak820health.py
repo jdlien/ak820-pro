@@ -70,6 +70,8 @@ LINK_FIELDS = ["sent", "timeouts", "queue_full", "giveups", "replaced",
 # HC_FLASHW: write sessions/programs/erases by writer (flash_stats.h).
 WRITERS = ["other", "kb", "rgb", "via"]
 KB_FIELDS = ["bt", "rtc_period", "lcd_brightness", "clock_mode", "batt_level", "power_mode"]
+KB_FIELDS3 = ["ind_locks", "ind_charging", "batt_view"]   # page 3 (the menu's P2a and P4, 2026-10-25); None before P2a, batt_view 0 before P4
+RTC_UNHANDLED = 0xFF   # the board's byte 0 for a command or page it doesn't know (VIA's id_unhandled)
 RTC_PATHS = {0: "-", 1: "sof", 2: "pcf"}
 # HC_ACCT: scope order is loop_acct.h's enum acct_scope, unaccounted last.
 SCOPES = ["ch582", "battery", "display_hk", "blit_pump", "rtc_task", "rtc_fast",
@@ -250,6 +252,19 @@ def _txn_page(h, cmd, page, arg=0, timeout_ms=500):
     return rep
 
 
+def _txn_page_optional(h, cmd, page, timeout_ms=500):
+    """As _txn_page, for a page older firmware may not have: its answer to
+    THIS command and page with byte 0 RTC_UNHANDLED (hid_protocol.c) is None,
+    not an error; no answer at all still is."""
+    h.write(bytes([0x00, SET_VALUE, HEALTH_CHANNEL, cmd, page, 0] + [0x00] * 27))
+    rep = _read_reply(h, lambda r: r[0] in (SET_VALUE, RTC_UNHANDLED) and r[1] == HEALTH_CHANNEL and r[2] == cmd
+                      and r[3] == page, timeout_ms)
+    if rep is None:
+        raise SystemExit(f"no reply to health command {cmd:#04x} page {page} "
+                         "(protocol 8 firmware needed)")
+    return None if rep[0] == RTC_UNHANDLED else rep
+
+
 def read_link(h):
     # Page 0: the reply echoes the protocol VERSION in [3], so take only a
     # version (< 0x21), never a profile page (0x21-0x2A) another reader asked
@@ -310,14 +325,16 @@ def read_flashw(h):
     p0 = _txn_page(h, HC_FLASHW, 0)
     p1 = _txn_page(h, HC_FLASHW, 1)
     p2 = _txn_page(h, HC_FLASHW, 2)
+    p3 = _txn_page_optional(h, HC_FLASHW, 3)   # the indicator levels' fields; None before P2a
     v0 = struct.unpack_from("<4I4H2H", p0, 4)
     v1 = struct.unpack_from("<4I6H", p1, 4)   # the 6th: power_mode (was reserved, 0)
     v2 = struct.unpack_from("<HBBH4IIH", p2, 4)
+    v3 = struct.unpack_from(f"<{len(KB_FIELDS3)}H", p3, 4) if p3 else (None,) * len(KB_FIELDS3)
     return {
         "sessions": dict(zip(WRITERS, v0[0:4])),
         "erases": dict(zip(WRITERS, v0[4:8])),
         "programs": dict(zip(WRITERS, v1[0:4])),
-        "kb_field_sessions": dict(zip(KB_FIELDS, v1[4:10])),
+        "kb_field_sessions": {**dict(zip(KB_FIELDS, v1[4:10])), **dict(zip(KB_FIELDS3, v3))},
         "kb_mixed": v0[8], "kb_unknown": v0[9],
         "rtc_last_proposed": v2[0], "rtc_last_proposed_path": RTC_PATHS.get(v2[1], v2[1]),
         "rtc_last_stored_path": RTC_PATHS.get(v2[2], v2[2]), "rtc_last_stored": v2[3],
@@ -389,7 +406,7 @@ def print_phase1b(d):
         for w in WRITERS:
             print(f"  {w:6} {fw['sessions'][w]:7} {fw['programs'][w]:8} {fw['erases'][w]:6}")
         kf = fw["kb_field_sessions"]
-        print("  kb sessions by field: " + "  ".join(f"{k} {v}" for k, v in kf.items()) +
+        print("  kb sessions by field: " + "  ".join(f"{k} {'-' if v is None else v}" for k, v in kf.items()) +
               f"  mixed {fw['kb_mixed']}  unknown {fw['kb_unknown']}")
         print(f"  rtc period: last proposed {fw['rtc_last_proposed']} ({fw['rtc_last_proposed_path']}), "
               f"last stored {fw['rtc_last_stored']} ({fw['rtc_last_stored_path']}); "

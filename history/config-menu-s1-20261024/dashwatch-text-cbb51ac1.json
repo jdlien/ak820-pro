@@ -1,0 +1,55 @@
+{
+ "summary": {
+  "piece_us": 0,
+  "op_us": 0,
+  "pass_max_us": 19600,
+  "over15": 1,
+  "repaint_ms": 0,
+  "tgen": 237,
+  "settled": 38,
+  "superseded": 199,
+  "band_ms": 0,
+  "page": 0,
+  "dbg_gen": 75,
+  "dbg_done_gen": 75,
+  "committed": 46,
+  "passes": 14038,
+  "token": 3,
+  "health_gen": 0,
+  "dbg_sec": 32,
+  "rtc_sec": 21,
+  "aliased": false
+ },
+ "slow": [
+  {
+   "uptime_ms": 1156574,
+   "pass_ms": 19,
+   "long": false,
+   "scopes_ms": {
+    "ch582": 1,
+    "battery": 1,
+    "display_hk": 13,
+    "blit_pump": 0,
+    "rtc_task": 0,
+    "rtc_fast": 0,
+    "leds": 0,
+    "health": 0,
+    "eeconfig": 0,
+    "second_edge": 0,
+    "anim": 0,
+    "hk_other": 0,
+    "unaccounted": 4
+   },
+   "t": 30.48,
+   "owner": "dash",
+   "track": "none  ",
+   "top": {
+    "ch582": 1,
+    "battery": 1,
+    "display_hk": 13,
+    "unaccounted": 4
+   }
+  }
+ ],
+ "tracks": []
+}

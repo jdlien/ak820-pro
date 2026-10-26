@@ -242,6 +242,7 @@ static void profile(void) {
     dump_pages();
 }
 
+#ifndef HARNESS_NO_MAIN   /* btui.c includes this file for its world, with a main of its own */
 int main(int argc, char **argv) {
     if (argc < 2) { fprintf(stderr, "usage: harness CASE\n"); return 2; }
     const char *c = argv[1];
@@ -256,3 +257,4 @@ int main(int argc, char **argv) {
     printf("%s %s\n", failures ? "FAIL" : "ok  ", c);
     return failures ? 1 : 0;
 }
+#endif

@@ -1,0 +1,9 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+Your verification of revision 11 of plans/CONFIG-MENU-BUILD-PLAN.md left one must-fix: the Camera completion procedure could credit an earlier clock update (plans/review-codex-config-menu-build-plan-rev11-2026-10-24.md, with its disposition). Revision 12 answers it in C10: op 27 sub 10 bytes 29 (`dbg_sec`, the second a composition shows) and 30 (the RTC's current second), the completion predicate counting an elapsed but uncomposed second as pending, and the procedure naming the expected second and requiring the tagged generation's completion. `git diff HEAD~1 HEAD -- plans/CONFIG-MENU-BUILD-PLAN.md` shows the change.
+
+Please:
+1. Check that revision 12 meets that must-fix fully and introduces no new inconsistency, against display.c's draw_debug_page() and the second-edge path at qmk_firmware-ak820pro's 4b899118.
+2. Say plainly whether revision 12 is ready for S1 to be built from. If not, list only what must change before S1's code.
+
+For each finding: severity (must-fix before S1's code / should-fix / note), where, and the fix.

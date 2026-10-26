@@ -1,0 +1,11 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: JD's status icons on Connection's current slot (qmk_firmware-ak820pro `git diff d6483b2b 2d8512ae -- keyboards/a_jazz/ak820pro`: menu/menu.c, menu/menu_text.c/.h, graphics/res/font_small_mono.h from scripts/gen_mono_font.py). The current slot's check box cells show an icon by its link's state, in a colour of its own; to paint that colour, such a row's cells 0-1 become a fourth chunk (one piece) between the lead and cells 2-9. Tests: this repo's 3cf6224 (scripts/menu_s0_test.c: text_slot_bad2 and conn_bad).
+
+Check only:
+1. menu_slots.c's contract for a layout (plans/CONFIG-MENU-BUILD-PLAN.md, C3/C4: a slot's chunks and pieces together paint its whole footprint once, background included; one piece within MB_PASS_BYTES; rev 13's resume when a slot's signature is unchanged; one lit row at most): does a chunk count that depends on the row's content (row_split()) keep it, including a row whose state changes mid-op (the signature changes: does the scheduler restart it with the new chunk count?), and do the split chunks [4,16), [16,64), [64,125) tile the row exactly as [4,64), [64,125) did?
+2. text_piece()'s new arithmetic and the icon chunk's single piece (12 x 14 pixels, its bits in BITS_MAX).
+3. The font: two glyphs appended at 0x9e-0xa1, the count assert, any other user of the codes or of FONT_MONO_N.
+4. Anything unsafe for the flash on the keyboard on gremlin (dev, slider on BT). Dev heap gap 136 B, floor 128.
+
+Must anything change before flashing? File and line. Under 400 words.

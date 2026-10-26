@@ -1,0 +1,11 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: qmk_firmware-ak820pro `git diff 1de9df2f 1ff3d405 -- keyboards/a_jazz/ak820pro` (menu/menu.c only). The board's menu pass on 1de9df2f (history/config-menu-p3-20261025/board-1de9df2f.json against board-2d8512ae.json) showed every top-level repaint ~100 ms slower: the white icons' 8 split rows added 8 pieces, and a piece costs ~12 ms whatever its size. The fix: a split row's chunk 2 (cells 2-9, x 16-63, SPLIT_W 48 px) uses rows_per_split() = MB_PASS_BYTES / (48 * 2) = 5 pixel rows a piece (3 pieces: 5, 5, 4) instead of 4 (4 pieces), in both l_pieces() and text_piece().
+
+Check only:
+1. That l_pieces() and text_piece() agree on every chunk's piece count and each piece's rows (r0, rows), for split and unsplit rows, lit and not, so every pixel of the footprint is painted exactly once (the contract in plans/CONFIG-MENU-BUILD-PLAN.md, C3/C4), including a row whose split changes mid-op (the signature restarts it).
+2. Each piece's bytes (48 x 5 x 2 = 480 within MB_PASS_BYTES 512) and its bits (6 B x 5 rows within BITS_MAX 64); the new static assert.
+3. Anything else in menu_slots.c or menu_ops.c that assumes a piece is at most 4 pixel rows, or a fixed piece count per chunk (the stop-after-n ops, C10's measures, the meas ring).
+4. Anything unsafe for the flash on the keyboard on gremlin (dev, slider on BT).
+
+Must anything change before flashing? File and line. Under 300 words.

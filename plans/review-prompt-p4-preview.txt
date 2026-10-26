@@ -1,0 +1,13 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: qmk_firmware-ak820pro `git diff d56980c9 e0f9a21f -- keyboards/a_jazz/ak820pro` (menu/menu.c, menu/menu_env.h, menu/menu_glue.c, graphics/batt_text.c/.h, graphics/display.c). The Battery choice now previews each readout live and, while the hours can't show, a note under the list (design: plans/CONFIG-MENU-P1-DESIGN.md, P4, "Its preview"). Tests, uncommitted in this repo: scripts/menu_s0_test.c (test_p4: each state, changed live with nothing pressed), scripts/batt_text_test.c (the 999h cap). Both pass, the S0 and MENU_ENABLE builds too.
+
+Check only:
+1. The live rows' signatures (row_sig's new first branch): a hash of the row's text in 0x1000-0x1FFF with the bullet and lit bits. Is that range free of every other row kind's signature (RK_ITEM 0x4000-0x7FFF, RK_TEXT, RK_ABOUT, RK_VALUE, RK_BLANK 0)? Does menu_slots.c's scheduler really compare every committed slot's signature each pass (so a text change repaints without a retarget), and does anything else read a row signature's bits (the lit bit for maybe_lit; op 27's reports; the board scripts) that the hash form could break?
+2. The cost: row_sig now formats text (snprintf) for up to five rows, and the scheduler and ms_settled() evaluate signatures several times a pass while the Battery page shows. Is that a pass-time risk? (The board pass measures passes over 15 ms.)
+3. RK_NOTE rows: row_at() returns them for rows 4-6 of N_BATT whatever the frame's top and count; that they can never be the cursor, never lit, and that paging, the scrollbar (three rows: none) and pops are unaffected; their colour.
+4. batt_preview()/batt_note(): the states (unknown level, the cut's Low, the warm-up's minutes, off battery), buffer sizes (row_text's 24-byte buf; batt_level_text's 8), and that the preview matches what draw_battery() shows.
+5. RAM: no new statics (the dev heap gap stays 128 B, the floor); draw_battery()'s three statics in a byte each, and their casts.
+6. Anything unsafe for the flash on the keyboard on gremlin (dev, slider on BT).
+
+Must anything change before flashing? File and line. Under 400 words.

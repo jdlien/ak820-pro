@@ -104,7 +104,7 @@ SLEEP_WAKES = ["none", "key", "backstop", "strays", "blocked", "knob", "charge"]
 SLEEP_V = ["pcf", "acq_done", "usb_sof", "reattach", "usb_20s", "pll_ceiling", "slept", "bound"]   # SLEEP_V_*
 SLEEP_RC = ["input", "clock", "gauge", "radio", "supply", "usb", "display"]   # SLEEP_RC_*
 SLEEP_DSB = ["key", "usb", "tx", "display", "flash", "rtc", "pins", "wdt", "lit", "rgb", "pairing",
-             "recovery", "knob", "charge"]   # DSB_* in sleep.c
+             "recovery", "knob", "charge", "menu"]   # DSB_* in sleep.c
 
 
 def sleep_page(h):
@@ -268,8 +268,10 @@ def decode_entry(e, ver):
     row.update({
            "c5_mean": "" if mean is None else f"{mean:.2f}", "c5_n": c5_n,
            "c5_min": "" if not c5_n else c5_min, "c5_max": "" if not c5_n else c5_max,
-           "pack_mv": pack, "level": level,
-           "led_pm": u16(e, 12), "bkl": e[14]})
+           "pack_mv": pack, "level": level, "led_pm": u16(e, 12)})
+    # v8 (the menu's P2b): the LCD level is 0-100, so its column has its own
+    # name; "bkl" is always the old 0-23 scale (scripts/battery_sim reads both).
+    row["bkl100" if ver >= 8 else "bkl"] = e[14]
     row.update({name: (e[9] >> i) & 1 for i, name in enumerate(FLAGS_V3)})
     row["flags_any"] = flags_str(e[10], FLAGS_V3)
     if ver >= 5:
@@ -302,7 +304,7 @@ def dump_v3(h):
             time.sleep(0.1)
             first = xfer(h, HC_BATTLOG, [0, 0])
             ver, count, _, since, period, written, _ = parse_reply(first)
-        if ver not in (3, 4, 5, 6, 7):
+        if ver not in (3, 4, 5, 6, 7, 8):
             sys.exit(f"unexpected log format {ver}")
         if period is None:
             # v5+: the firmware's period, from HC_BATTCFG [10..11] -- never assumed.

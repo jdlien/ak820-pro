@@ -529,7 +529,7 @@ static void l_forced_ceiling(void) {
     expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 255, "Saver on USB, released");
     expect_one_repaint(r0, "Saver's held ACTIVE released on USB");
     power_force_stage(POWER_STAGE_LIGHTS_OFF); ltick();
-    expect_stage(POWER_STAGE_LIGHTS_OFF, 0, 4, 255, "LIGHTS_OFF held: still reachable by the bench");
+    expect_stage(POWER_STAGE_LIGHTS_OFF, 0, SIM_DIM_CAP, 255, "LIGHTS_OFF held: still reachable by the bench");
     power_force_stage(0xFF); ltick();
 }
 

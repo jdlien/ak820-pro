@@ -1,0 +1,108 @@
+{
+ "summary": {
+  "piece_us": 0,
+  "op_us": 0,
+  "pass_max_us": 16170,
+  "over15": 1,
+  "repaint_ms": 0,
+  "tgen": 237,
+  "settled": 38,
+  "superseded": 199,
+  "band_ms": 0,
+  "page": 0,
+  "dbg_gen": 75,
+  "dbg_done_gen": 75,
+  "committed": 46,
+  "passes": 61343,
+  "token": 3,
+  "health_gen": 0,
+  "dbg_sec": 21,
+  "rtc_sec": 0,
+  "aliased": false
+ },
+ "slow": [
+  {
+   "uptime_ms": 1297033,
+   "pass_ms": 16,
+   "long": false,
+   "scopes_ms": {
+    "ch582": 2,
+    "battery": 1,
+    "display_hk": 1,
+    "blit_pump": 0,
+    "rtc_task": 0,
+    "rtc_fast": 0,
+    "leds": 0,
+    "health": 0,
+    "eeconfig": 0,
+    "second_edge": 0,
+    "anim": 0,
+    "hk_other": 0,
+    "unaccounted": 12
+   },
+   "t": 196.55,
+   "owner": "dash",
+   "track": "play  Cosmic Cadet \u2014 Europa - Living Relics",
+   "top": {
+    "ch582": 2,
+    "battery": 1,
+    "display_hk": 1,
+    "unaccounted": 12
+   }
+  }
+ ],
+ "tracks": [
+  {
+   "t": 4.13,
+   "track": "play  Cosmic Cadet \u2014 Europa - The Adventure"
+  },
+  {
+   "t": 75.6,
+   "track": "play  Cosmic Cadet \u2014 Europa - Europa Calls Us"
+  },
+  {
+   "t": 157.59,
+   "track": "play  Cosmic Cadet \u2014 Europa - Adagio for Sol"
+  },
+  {
+   "t": 162.73,
+   "track": "play  Cosmic Cadet \u2014 Europa - An Eternity Has Passed"
+  },
+  {
+   "t": 194.86,
+   "track": "play  Cosmic Cadet \u2014 Europa - Living Relics"
+  },
+  {
+   "t": 235.1,
+   "track": "pause Cosmic Cadet \u2014 Europa - Living Relics"
+  },
+  {
+   "t": 236.64,
+   "track": "play  Cosmic Cadet \u2014 Europa - Living Relics"
+  },
+  {
+   "t": 238.18,
+   "track": "pause Cosmic Cadet \u2014 Europa - Living Relics"
+  },
+  {
+   "t": 239.21,
+   "track": "play  Cosmic Cadet \u2014 Europa - Living Relics"
+  },
+  {
+   "t": 239.98,
+   "track": "pause Cosmic Cadet \u2014 Europa - Living Relics"
+  },
+  {
+   "t": 242.54,
+   "track": "play  Cosmic Cadet \u2014 Europa - Living Relics"
+  },
+  {
+   "t": 244.6,
+   "track": "pause Cosmic Cadet \u2014 Europa - Living Relics"
+  },
+  {
+   "t": 245.12,
+   "track": "play  Cosmic Cadet \u2014 Europa - Living Relics"
+  }
+ ]
+}

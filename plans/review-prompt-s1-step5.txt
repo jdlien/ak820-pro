@@ -1,0 +1,10 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A small code review before a flash to the test board (the keyboard on gremlin): qmk_firmware-ak820pro gremlin/s1 commit after b245bd84 (`git -C qmk_firmware-ak820pro show HEAD -- keyboards/a_jazz/ak820pro/graphics/display.c`). The gate's third run (b245bd84) failed only on timing: two passes over 15,000 us, the longest 17,525. HC_ACCT's worst passes on the Fn+D and Camera pages paired the page's composition (display_hk or second_edge, 5-9 ms) with a glyph's DMA arm in blit_pump (~3 ms) in one pass. The change copies the existing clock_ticked_this_pass rule: draw_debug_page() sets dbg_composed_this_pass when it composes, display_blit_pump() returns at once while it's set, and display_pass_end() clears it.
+
+Please check, adversarially:
+1. Is every caller of draw_debug_page() before display_blit_pump() in the same pass, so the flag means what it says, and is it cleared every pass (display_pass_end's placement)?
+2. The pump's early return skips its loss take (lcd_blit_lost_take/display_loss) and every owner's step for that pass, exactly as the clock's rule does: can that starve anything (the Fn+D page's own painting while composition runs every second; the debug page's completion, debug_done and C10's deadlines; a loss's handling; the menu or the restore, which can't be on screen while the debug page composes)? draw_debug_page runs only under PANEL_DEBUG; check that.
+3. Anything else that makes flashing this unsafe.
+
+For each finding: severity (blocker / should-fix / note), file and line, the failure scenario, and the fix. Say plainly whether it's safe to flash to the test board.

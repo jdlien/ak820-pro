@@ -1,0 +1,8 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A short review before a flash to the test board: JD's three requests after his first look at P1a (plans/CONFIG-MENU-P1-DESIGN.md; your reviews in plans/review-codex-p1a-code-2026-10-24.md). Commit 22312b44 on qmk_firmware-ak820pro gremlin/s1 (`git -C qmk_firmware-ak820pro show 22312b44`), menu/menu.c and menu.h only:
+1. The list geometry's slots reordered: 0 the title, 1 the separator, 2 the scrollbar, 3-10 the rows (row0 = 3 in L_LIST), so a page step paints the scrollbar before the text.
+2. A choice's option rows: the bullet (or a space) in cell 0, a space in cell 1, the label from cell 2.
+3. "‹ Back" and Exit rows, not selected, painted in a new colour (MENU_LEAVE, light red); selected they stay the lit yellow.
+
+Check: every use of the slot indices (S_TITLE/S_SEP/S_BAR/S_ROW0, the confirm geometry reusing l_paint for slots 0 and 1, ms_invalidate_rows(S_ROW0, ...), the one-lit-row range), that the row signature still covers what the painter draws now that the colour depends on the node (it does through the node field -- confirm), the 20-cell bounds with the label at cell 2 (the longest option, "Power saver", and any label truncation), and anything else. The host tests (scripts/menu_s0_test.c) pass, including a new check that a page step moves the thumb before the first row changes. Must anything be fixed before the flash?

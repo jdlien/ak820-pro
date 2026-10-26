@@ -1,0 +1,11 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: JD's simplification of P3 (plans/CONFIG-MENU-P1-DESIGN.md, P3's "Draft 3" paragraph at the top of the section): "Pair a device" now pairs the current slot directly, with no list. qmk_firmware-ak820pro `git diff 560689ea d6483b2b -- keyboards/a_jazz/ak820pro/menu/menu.c` (the menu only; the driver and bt_ui.c are unchanged from 560689ea, which your fourth verify cleared: plans/review-codex-p3-verify4-2026-10-25.md). Tests: this repo's 93a1a50 (scripts/menu_s0_test.c's test_p3; scripts/menu_p1a_board.py's connection()).
+
+Check only:
+1. The removed nodes and title (N_PAIRLIST, N_PAIR0-2, T_PAIRLIST): any switch, predicate, row table, signature or op 27 report left pointing at them, or a node number another file relies on (screen ids are 16 + node).
+2. N_PAIRNOW: its row (the value from the latch, the signature's val), its activation (env_bt_pair() with the latched current slot, the re-sync, Connection's cursor moved to the slot's row, the push to N_PAIRING at depth 3, the layout change), and leaving the page back to Connection; follow-the-slider and the backstop with the page one push deep.
+3. Could the latched slot differ from the driver's current slot at the click (bt_ui_pair_slot() would then select another slot first): is that safe, given your verifies?
+4. Anything unsafe for the flash on the keyboard on gremlin (dev, slider now on BT). Dev heap gap 136 B, floor 128.
+
+Must anything change before flashing? File and line. Under 400 words.

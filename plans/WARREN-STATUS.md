@@ -1,0 +1,319 @@
+# Warren's status: the configuration menu (resume here)
+
+Warren is gremlin's session (the Windows test PC). It owns the configuration
+menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
+(revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
+This file is the thread; read it first after a context loss. Updated
+2026-10-25 ~18:30.
+
+## Where things stand
+
+- **S0 is complete.** A1-A13 passed on the keyboard on gremlin, with recorded
+  exceptions (GREMLIN-RESULTS §10). Firmware branch `gremlin/config-menu`
+  (`4b899118`).
+  - **Not merged yet.** The agreement with the session on Buzz (the Mac; its
+    session's bridge is listed as "Relay control and power monitoring
+    status") was to wait for the keyboard on Buzz's drain on `b9555ff3e6` to
+    reach its RGB cut. **JD released that (10-25, ~18:15):** "I'm not too
+    worried about finishing the drain at this point. I might as well just
+    start it over again given how far away it still is." The merge now
+    waits on JD's polish ("a few bits of polish and we can consider merging
+    this into the daily build and the version running on Buzz"). Its order
+    stands:
+    1. a daily build runs on the keyboard on gremlin (needs JD's Fn+Esc to
+       get back to dev);
+    2. the session on Buzz flashes the menu onto the keyboard on Buzz;
+    3. then the merges into `ak820pro-jdlien`, `deps.lock` and main.
+
+    Don't touch `ak820pro-jdlien`, `deps.lock` or main until JD calls the
+    merge, and tell the session on Buzz first.
+- **S1 is in progress** on firmware branch `gremlin/s1` (qmk_firmware), on top
+  of `gremlin/fill-poll` (the LED fix) on top of `gremlin/config-menu`. The
+  chibios-contrib submodule is pinned at branch `gremlin/s1-fifo-ie`
+  (`5a1674e905`, the FIFO dispatch respecting IE).
+- **The S1 gate PASSES on `a8b98bc0`** (GREMLIN-RESULTS §16): the longest
+  pass 13.8 ms, every LED window 0.998-1.000, every completion inside
+  1,000 ms. **The failure paths pass, 24 of 24** (§17, devfault).
+- **JD's real spin on `a8b98bc0`** (`history/config-menu-s1-20261024/spin-a8b98bc0.json`):
+  6 passes over 15 ms, the worst 15.6, nothing dropped, none >= 25. The
+  synthetic gate can't see this: op 27's turns bypass `quantum/encoder.c`,
+  whose drain waits ENCODER_MAP_KEY_DELAY (1 ms) after each half of every
+  detent, captured or not.
+- **The encoder fix, `cbcf93b6`** (in every later build): a weak hook,
+  `encoder_map_delay_wanted_kb()`, skips `quantum/encoder.c`'s 1 ms waits
+  for detents the menu swallowed (`menu/menu_glue.c`). Codex cleared it
+  (`review-codex-s1-encoder-2026-10-24.md`); its finding 3 (the knob is
+  polled once a pass, so no backlog forms) removed the bounded drain I'd
+  added. quantum/encoder.c is now a seventh core file with a local change:
+  CLAUDE.md's list needs it at the merge.
+- **The mono text, dev `cbb51ac1`** (token
+  `0xc10209a3`, gap 240 B). `lcd_blit_mono` through the stream (a halfword
+  a pixel), the face `graphics/res/font_small_mono.h` from
+  `scripts/gen_mono_font.py`, `menu/menu_text.c` (a cell at a time), and
+  the fixture's **F3** (op 27 sub 0 patterns 16-19: lit/half, lit/full,
+  inverted/half, inverted/full; a click on rows 0-5 cycles; row 6 F2, row 7
+  Diagnostics). Codex: `review-codex-s1-mono-2026-10-24.md` (three rounds).
+  GREMLIN-RESULTS §19, §19b:
+  - every style keeps every pass under 15 ms (13.1-14.5); a mono piece
+    5.1-5.4 ms; a move ~165 ms; failure paths 36 of 36 on devfault;
+  - **JD settled: lit text** (plan "Open" 1); **half rows** by efficiency
+    ("Open" 2); the face is tiny, kept for now (BACKLOG: a larger face).
+- **ON THE KEYBOARD ON GREMLIN NOW: dev `ffa80947`** (token `0x73928d54`,
+  gap 232 B): the mono text above plus the dashboard's text slot staged,
+  one heavy step a main-loop pass (codex twice,
+  `review-codex-s1-textslot-2026-10-24.md`). A track change between two
+  lines and one made the gate's 19.6-20.3 ms passes (§19c); now the slot's
+  worst is 4.0 ms. **The gate PASSES** (§19d): the longest pass 14.8 ms.
+  **JD checked real track changes on the panel: "titles looked clean"**
+- **Scripts made today:** `menu_s1_spin.py STOP OUT [--style N]` (arms the
+  opener; sub 10 from the menu's opening; the ring for passes over 15 ms),
+  `menu_s1_styles.py` (each style's cost, no hands), `menu_s1_dashwatch.py`,
+  and `menu_s1_fault.py`'s 12 mono cases.
+- ⚠️ **With JD looking at the panel:** put the screen up and LEAVE it
+  there (a held session; switch only when asked). An automated demo that
+  moves on by itself frustrated JD (10-24).
+- **P1a, the real menu, ON THE KEYBOARD ON GREMLIN NOW: dev `5527c898`**
+  (token `0x69ff475f`, gap 192 B). Fn+knob opens it in every flavour.
+  Design: `CONFIG-MENU-P1-DESIGN.md` draft 3.1 (codex three rounds); code:
+  codex two rounds (`review-codex-p1a-code-2026-10-24.md`). Host tests: the
+  S0 suite plus `test_menu`, `test_menu_stress`, and a `-DMENU_ENABLE`
+  build's `test_menu_enable`. On the board (GREMLIN-RESULTS §20,
+  `scripts/menu_p1a_board.py`): every screen right in 9 runs; **timing
+  misses C10 marginally** (one pass of 15.1-16.8 ms in about two runs of
+  three): a text piece is ~5.6 ms. Since then (all in GREMLIN-RESULTS
+  §20-20c and the design doc's "JD's first look" and "JD's decisions"):
+  JD's first look ("flawless, as designed"), his tweaks (`22312b44`,
+  `62bb64f9`: the scrollbar first, #FF9A9A for Back and Exit, the dot's
+  space), the piece's time measured (§20b; JD chose (b), ~16-17 ms
+  accepted), the hint pair and the `report_kind` fix (`1e84bf17`, on the
+  board from ~20:00, dev token `0xd0254b00`).
+- **Icons (10-24 evening):** the icon picker
+  (https://claude.ai/artifact/CQcZf9LUWnyvUQyMaCa8PM, made by
+  `scripts/gen_icon_gallery.py`); JD's picks built in `925f029b` (dev token
+  `0x58ddeb40`): the wrench, ◀ ▶, the circled check, the cursor in x 0-2,
+  top-level icons. After JD's look ("looking quite good"): **`541a8cbd` ON
+  THE KEYBOARD ON GREMLIN NOW** (dev token `0xbe41a355`, flashed at JD's
+  word before codex finished; codex then: no must-fix): the squared check,
+  each section's icon on its headings, the cursor in its own grey
+  (`MENU_CURSOR` #A5A2A5, its own chunk). The selected row's yellow stays
+  (white, #FFF7C6, #FFFF00 tried live). Design doc: "JD's icons".
+  Scratchpad helpers: `setcolor.py NAME RRGGBB` (op 27 sub 13, live).
+- 📌 **PINNED, JD (10-24): a manual review of ALL the menu's text before P1
+  is accepted** -- Help's topics (`gen_menu_text.py`, its one amendment "3
+  min mid-edit" approved), the labels, values, titles, flashes, the hint,
+  About's lines, Reset counters' pages. JD will edit them himself.
+  **JD is editing `plans/MENU-TEXT.md` now (uncommitted, his): don't touch
+  it.** When he's done: carry his edits into the code in one batch, and
+  bring the file's glyphs up to date (◀ ▶, the check, the icons; it still
+  shows ‹ > •). One of his lines is cut off: "JD: I wonder if we can".
+- **Next:**
+  1. **P1b and the bootloader item are ON THE KEYBOARD ON GREMLIN:
+     `781d071f`** (dev, token `0x6b34941c`; GREMLIN-RESULTS §20e-g). P1b:
+     design draft 3 (codex three rounds), code (codex: the queued-click race
+     fixed; the bands fill rows: the longest pass 16.2 ms), the board pass
+     PASS (98 steps), the exit gates PASS (`menu_p1b_gates.py`, 31 of 31),
+     the owed host tests in. JD's wake-dark-frame fix (`52acdffe99`) merged
+     at his ask. The bootloader item: built, codex-reviewed twice, entered
+     from the menu on the board and flashed back. The cursor is the thin bar
+     (U+1FB70, JD). Help's text comes from `plans/MENU-TEXT.md` (committed,
+     JD's), its quoted numbers checked against the firmware.
+     **Owed before P1b is accepted:** a power cycle to prove a save survives
+     a reboot; C10's gates on the editors (`menu_s1_gate.py`'s 15 ms to 17).
+     JD tried Lighting 10-25 ~01:30: "The UI looks excellent", small effect
+     quirks "not worth chasing"; he asked for fine steps (done, P2a).
+  2. **ON THE KEYBOARD ON GREMLIN NOW: `a9f750ff`** (dev, token
+     `0xa3282d1c`, 10-25 02:55; GREMLIN-RESULTS §20h). On top of P1b:
+     - **P2a** (`8b4aec16`): Indicators (Lock lights, Charging: 0-100, 1% a
+       detent, 8 fast, the preview lights the LEDs; a sigma-delta tick,
+       `indicator_levels.h` from `scripts/gen_indicator_levels.py`;
+       kb_eeconfig v5 bytes 7-8; flash counters' page 3), the Connection
+       stub (the link frozen at open, the shortcuts), eleven top-level rows,
+       the editors' fine steps (JD: "micro-adjustments by one
+       value/percent": the next percentage a detent, hue 1 unit; fast 8%/12).
+     - **P2b** (JD: the Screen "way too coarse"): the backlight 0-100 on the
+       same table and sigma-delta; `Fn`+`PgUp`/`PgDn` 1% a press with the
+       lights' repeat (JD's ask); dim cap 37, default 42 (the old duties);
+       kb_eeconfig v6; the battery log v8 (`bkl100`); `battery_sim` follows
+       the scale (`sim_bkl.h`).
+     - Board: the menu pass right; the gates 30/30; page 3's attribution;
+       the A/B vs `781d071f` (the Hue editor's ~18.5 ms is both builds'
+       tonight). **The cost of lit indicators:** at 82% on all three LEDs
+       -15% main-loop passes (the menu's longest pass 20.3 ms); at 1% or one
+       LED, the old firmware's cost. The backlight's toggles are free (it
+       writes every tick); the indicators' per-change writes and their two
+       groups' arithmetic are the cost (§20h). **Proposed, not built:** write
+       the three pins every tick while any is lit, and skip a group's
+       arithmetic at 0 and full duty (the charging light at Off while
+       charging steps every tick now). Keeps the sigma-delta; no flicker
+       trade-off. (A hybrid with period PWM above ~8 ticks was considered
+       and dropped: it trades flicker for CPU.)
+     - **JD's power cycle passed (10-25 ~08:30):** "settings gets saved and
+       persists after I unplug" (the lock lights). Codex's test gaps are in
+       (`fcf4552`). **Still owed:** JD's look at the Screen's 1% steps.
+     - **At the merge:** `power_model.py` (parses `bkl_duty`, 24),
+       `current_map.py` (sweeps 0-23), `gauge_replay.py` (reads `bkl`): the
+       session on Buzz's tools; CLAUDE.md's core-file list and docs.
+  3. **P3, Connection (JD, 10-25 ~07:00: "can we do the BT channel
+     selection now? ... also pairing"):** firmware `c66e6eaf` on
+     `gremlin/s1`, tests `4ef7c41`. Design draft 2 (codex's design review:
+     four must-fixes, all taken: the pair never sent mid-bounce or after a
+     lost select, a driver fact for the select's outcome, an unsure phase,
+     the stand-in cut off from the radio). The top level shows the link;
+     off BT, JD's page ("Switch to BT mode to change Bluetooth settings.");
+     on BT the slots with the current one's word, and Pair a device with a
+     live Pairing page. Host tests pass (`test_p3`); `scripts/ch582_sim/`
+     runs `bt_ui.c` and the driver verbatim (`btui.c`, twelve cases, two
+     mutants caught). Dev gap 136 B.
+     - **Codex's code review** (`review-codex-p3-code-2026-10-25.md`): five
+       must-fixes, all taken in `47567935` (a key's hold superseded by menu
+       actions; "Already" superseding a pending pair; the select's ACK as
+       the boundary, `select_unsent`, **assuming the module ACKs before it
+       answers: to check on the wire with the RX tap, slider on BT**; the
+       bounce's end resetting the link; the last tries' windows). Six more
+       `btui.c` cases, each with a mutant caught (18 cases).
+     - **The knob (JD, 10-25 ~08:20):** "the first click in any direction
+       doesn't move ... If I reverse direction, the same thing", gone after
+       his reboot. Cause: the knob rests where its pins agree (00, 11), so
+       the count's parity at rest is fixed at init; pins read mid-change
+       there leave it half a detent off for the session. Fix `44d11c28`:
+       `ENCODER_REST_PINS_EQUAL` (a local change to
+       `drivers/encoder/encoder_quadrature.c`, CLAUDE.md's core-file list at
+       the merge) zeroes the count at every rest. `scripts/encoder_sim/`
+       runs the decoder verbatim: the rule passes every case; without it, a
+       half-detent start shows exactly JD's symptom. **The rests (00/11)
+       are inferred, not measured:** op 27 sub 14 byte 17 reads the
+       decoder's state; read it right after the flash with the knob at rest
+       (0 or 3 confirms; 1 or 2 means reflash without the rule: with 01/10
+       rests a reversal's first detent is lost and turns fire mid-detent).
+     - **Codex's verify** (`review-codex-p3-verify-2026-10-25.md`): two more
+       holes in the ACK boundary, and the boundary itself could restart a
+       legitimate attempt. **Backed out** (`a7c19f85`): the driver's rules are
+       `a9f750ff`'s; the wrong-slot safety comes from order (never during a
+       bounce or select retry; the pair queues behind the target's select);
+       the pair is sent even if the link already reads advertising.
+     - **Then (10-25, 09:00-13:10), all cleared by codex before each flash
+       (`review-codex-p3-verify2..4`, `-pairnow`, `-icons`, `-green`,
+       `-white`, `-split5`):** the select's outcome failing closed
+       (`ea91b3d0`, `560689ea`); the knob's rests read 00 and 11, as the
+       rule assumes; JD's power cycle of the lock lights passed. JD's
+       changes on the board: Pair a device pairs the current slot, "On the
+       device, add" (`d6483b2b`); the current slot's status icon, coloured
+       (`2d8512ae`); the check box green on every page and `Pair device to
+       BT 1` (`eb00c2ee`); the top level's icons white, lit or not
+       (`1de9df2f`), whose 8 extra pieces cost ~100 ms a top-level repaint
+       until a split row's cells 2-9 went to 5-row pieces (`1ff3d405`); the
+       selected row's icon #FFF7C6 (`b99d5405`, on the board since 13:36).
+       GREMLIN-RESULTS §20i-20j.
+     - **Owed (JD):** a slot switch on the real radio (BT 2 and back), a
+       pairing on a slot he doesn't mind losing (and a stop), the knob by
+       hand; his look at the icons and colours. Possible next: colours for
+       the top level's icons (JD, 10-25: "not right away"; green and red
+       stay status colours, Connection's would be the rune's blue).
+  4. **P4, Battery (JD, 10-25 ~13:35: "The only feature remaining is the
+     battery indicator toggle between hours of use and percent"):** firmware
+     `d56980c9` on `gremlin/s1`, on the board since 13:53 (GREMLIN-RESULTS
+     §20k; codex: no must-fix). A top-level Battery row under Clock, and
+     Diagnostics under Bootloader on page two (JD); Percent / Hours of use;
+     `kb_eeconfig` byte 9 (version 7); the dashboard's `160h` through
+     `graphics/batt_text.c`. **The dev heap gap is 128 B, the floor:** any
+     more dev RAM needs savings first (codex's candidate: `draw_battery()`'s
+     `last_fw`, `last_txt_x`, `last_txt_w` as `uint8_t`).
+     - **Its preview (JD: "preview the percent and hours of use ... and also
+       show a warning if it's not going to display yet"):** each choice's row
+       shows its readout, and rows 4-6 a note while the hours aren't ready
+       (`e0f9a21f`; codex's P3 on the note fixed in `ab03ab38`, on the board
+       14:31; its signatures keyed by `batt_key()`, not formatted text, in
+       `8ce81e5d`: the text cost 19 ms passes).
+     - **Owed (JD):** the hours with the cable out, after an hour awake on
+       battery; the preview by eye.
+     - **Asked (JD's call):** a faster average for the hours readout (1-2 h,
+       the gauge keeping its 12 h), so a lighting change shows within an
+       afternoon; it needs the RAM above.
+  5. **The Clock options (JD, 10-25), done:** 24h and 12h without seconds
+     (`DISPLAY_CLOCK_24H_HM` 4, `_12H_HM` 5), Fn+C over all six, live
+     examples on the menu's rows, a tick repainting only the right half
+     (`ms_layout_t.first_chunk`, C3 rule 6's exception): `8ce81e5d`, JD by
+     eye: "New clock modes look great ... looks flawless". The rows named as
+     Fn+C names them, `24h:ss` and `12h:ss` (JD), and an unset clock's
+     signatures apart (codex's P2): `22ec0d3d`. One RTC read a second, its
+     sample sharing About's 12 B (the scans' `rtc_get_time()`, through
+     newlib's `localtime_r`, made 23 ms passes): `c374004b`.
+  6. **JD (10-25, ~14:50): "I think this means we're basically done the
+     entire menu system ... Let's make a few bits of polish and we can
+     consider merging."** P1c and P1d, and JD's text edits, wait on his
+     polish list.
+- **The gate procedure (each run):**
+  1. flash the build (`./flash.sh` in MSYS2);
+  2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
+  3. `venv-win/Scripts/python.exe scripts/menu_s1_gate.py --out
+     history/config-menu-s1-20261024/gate-<build>.json < /dev/null`;
+  4. record the result in GREMLIN-RESULTS.
+
+## What S1 has done so far (all codex-reviewed before each flash)
+
+- **The LED flicker fix:** colour fills held off the RGB row ISR (-18%).
+  Bulk SPI0 sends are polled with SPI0's IE cleared (`spi0_poll_send`); since
+  revision 14 their window is polled too (`lcd_window_polled`), and since
+  revision 15 the DMA arm's. The row ISR now keeps ~99.4-100% of its rate
+  during menu activity. JD by eye: "no flicker", "feels responsive, not
+  instant".
+- **`MB_PASS_BYTES` (512):** a slot's op is sent in pieces, one a pass.
+  - `end_op()` counts an op and latches a reached stop together. That closed
+    a real S0 race: navigation could cancel a just-reached stop.
+  - A failed piece ends its op.
+  - Revision 13: a PARTIAL slot resumes while its own signature is
+    unchanged. Revision 8's "same generation" starved spins. An op cut by a
+    retarget is counted when it ends, untimed, and a glyph in flight is kept.
+- **C10's instrumentation:** op 27 sub 10, read by `scripts/menu_s1_gate.py`:
+  - **timing:** piece, op and repaint latency, the longest pass in an armed
+    interval, the count over 15 ms, the clear bands;
+  - **targets:** `tgen`, settled, superseded, committed;
+  - **the debug page:** its generations, `dbg_sec`, the RTC's second, and
+    `debug_done` (sub 5 byte 31);
+  - **the session:** a boot-cleared token and the health-reset generation,
+    with byte 31 flagging an aliased interval;
+  - **where it lives:** `menu/menu_meas.c` holds the extended tick and the
+    pass timing, which `menu_pass_begin()` takes first in the pass. DMA ends
+    are timed at CS release (`lcd_blit_end_tick16`).
+- **Dashboard timing fixes found by the gate (affect every build):**
+  - after the restore's clear, the text lines' and clock's shadows are marked
+    blank (`shadow_mark_all_blank`); the text slot stage went from 16 ms to
+    0.5;
+  - the restore's battery outline is one edge a pass, and the connection row
+    and clock come in two passes;
+  - the debug page composes only the page showing;
+  - the pump yields in a pass where the debug page composed, and the 10 Hz
+    composition defers in a pass where the pump painted.
+- **The entry check and hardening:**
+  - `spi0_poll_send` refuses unless DMA is idle, `SPID0` is READY, BUSY is
+    clear and RX is empty;
+  - HC_POLLFAULT (0x75, devfault) takes `n, mode, skip` to fault a window
+    send or the payload; `scripts/menu_s1_fault.py` runs the 24 cases.
+- **Findings recorded for later:**
+  - the Fn timing miss inside a tap-hold's tapping term, settled as
+    documented (plan "Open" 5);
+  - the "100%" ghost on gremlin's LCD (BACKLOG);
+  - the housekeeping text slot can reach 16 ms on a track change: a
+    dashboard path, not yet staged.
+
+## Working rules (from JD and the handoff)
+
+- **Codex before every flash.** `codex exec -m gpt-6-astra -c
+  model_reasoning_effort=xhigh -s read-only -C <repo> -o <out> "$(cat
+  prompt)" < /dev/null`. Save each review verbatim with dispositions as
+  `plans/review-codex-*.md`, and keep its prompt as `plans/review-prompt-*`.
+- **Flash only the keyboard on gremlin.** JD has given a standing go. Never
+  flash or touch the keyboard on Buzz. Name the keyboards "the keyboard on
+  gremlin" and "the keyboard on Buzz": both are JD's.
+- **One hands-on action per message to JD.**
+- **Never enumerate HID.** Never use `python -` (stdin); write scripts to
+  files and run them with `< /dev/null`. Use the Edit tool for C with `\n`:
+  heredocs collapse the backslashes.
+- **Builds:** MSYS2 for build and flash
+  (`/c/msys64/msys2_shell.cmd -mingw64 -defterm -no-start -here -c "..."`).
+  Git Bash for git. Never `find /`.
+- **Host tests:** `gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu
+  scripts/menu_s0_test.c $D/menu/{panel_owner,menu_input,menu_slots,
+  menu_fixture,menu_ops}.c`, with mingw64's gcc first on `PATH`.
+- **Scrub family words before pushing.** Push freely; tags and releases need
+  JD.

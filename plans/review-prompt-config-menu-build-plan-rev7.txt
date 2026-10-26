@@ -1,0 +1,20 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+You have reviewed this plan six times (plans/review-codex-config-menu-build-plan*-2026-10-23.md), and S0's code four times (plans/review-codex-config-menu-s0-code-2026-10-23.md); S0 is built and has passed its board cases on the test board (plans/GREMLIN-RESULTS.md section 10) but for A4. Today you also reviewed a prototype fix for an LED finding (plans/review-codex-spi0-poll-2026-10-24.md, firmware a03fc9d3, fixed as f2b107be on qmk_firmware-ak820pro's gremlin/fill-poll).
+
+plans/CONFIG-MENU-BUILD-PLAN.md is now at revision 7, which folds in what S0's board cases found, for S1. `git diff 98b6d3b -- plans/CONFIG-MENU-BUILD-PLAN.md` shows revision 7's changes; the diff from 2e244df shows everything since you cleared revision 6. The changes:
+- C4: bulk SPI0 sends polled with the FIFO interrupt masked (the prototype's rule), and a per-pass byte bound, MENU_PASS_BYTES, with the worst pass held at 15 ms or less. The prototype's worst pass reached 24 ms during A11's workload (25 ms is the line at which a key press can be lost).
+- S1's stage: first, the polled sends merged with your two hardening items, and MENU_PASS_BYTES applied to the fixture's ops; then C2's Fn decided; then the mono paint as before; and a row-ISR gate (within 2% of the dashboard's rate during menu activity).
+- "Open" 1 and 2: the cursor's cost is its area, not its style, since the mono blit paints every pixel of a cell.
+- "Open" 3: a menu keycode JD wants, placed in P1, if C2's amendment for it passes review.
+- "Open" 5: C2 judges Fn by layer_state, which lags a Fn press still held in QMK's tapping buffer behind an undecided tap-hold key; within the tapping term Fn+knob is forwarded instead of opening (seen on the board, harmless). Options named, the decision in S1.
+- Testing: the LED gate.
+
+Please:
+1. Check revision 7 against the code (S0 at 4b899118 on gremlin/config-menu, the prototype at f2b107be) and the board results: is anything stated wrongly, and is anything S1 now needs missing?
+2. MENU_PASS_BYTES: is splitting every paint op into pieces of at most N bytes, each with its own window and stream within one pass, compatible with C3's slots and signatures, the stop (ms_stop_after), op counting on completion, and the restore's bands? What does the 15 ms target need to account for (the row ISR at ~74% of the CPU, radio traffic, the clock edge)? Is 15 ms the right target, or should it be framed differently?
+3. "Open" 5: which option would you choose, and why? For the physical-Fn option, what about Fn remapped in VIA, the Mac layers (MACFN), and a Fn key that is itself tap-hold? For the tapping-buffer option, what QMK internals would it read, and how fragile is that?
+4. "Open" 3, the menu keycode: what does C2 need for it (its release, the session states, a press while the knob is held, VIA remaps of the keycode itself, the Fn question above)? Is P1 the right stage?
+5. The LED gate: is "within 2% of the dashboard's row ISR rate during menu activity, every repaint completed" a sound gate? What should it include (the encoder drain's spins, the restore's paints, the Fn+D page) and exclude?
+
+For each finding: severity (must-fix before S1's code / should-fix / note), where, and the fix you'd make. Say plainly whether revision 7 is ready for S1 to be built from.

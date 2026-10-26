@@ -1,0 +1,10 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+This is the verification of your verification of the configuration menu's build plan, revision 9. plans/review-codex-config-menu-build-plan-rev9-2026-10-24.md holds it verbatim with its dispositions: all four must-fixes were accepted and folded into revision 10 of plans/CONFIG-MENU-BUILD-PLAN.md. `git diff d440c8f HEAD -- plans/CONFIG-MENU-BUILD-PLAN.md` shows exactly what changed: C10 rewritten: an armed measurement interval under every owner, the debug page's composition generations, per-field counter rules with sampling brackets and a boot id, a transition rule separate from the sustained one, and committed slots as a spin's progress.
+
+Please:
+1. Check each disposition against revision 9's text and the code it cites (qmk_firmware-ak820pro's gremlin/config-menu at 4b899118, menu/menu_slots.c in particular): is each must-fix fully met, and is anything now inconsistent with the rest of the plan?
+2. Check C10's numbers and rules for soundness: can each be implemented and checked from what op 27 and the health pages expose? Is any number unreachable or meaningless given the board's measured behaviour (plans/GREMLIN-RESULTS.md section 10: full fixture repaints at ~12-14 per 5 s on the polled build, transitions measured in 1 s windows)?
+3. Say plainly whether revision 9 is ready for S1 to be built from. If not, list only what must change before S1's code.
+
+For each finding: severity (must-fix before S1's code / should-fix / note), where, and the fix.

@@ -1,0 +1,686 @@
+[
+ {
+  "kind": "fill",
+  "mode": 0,
+  "skip": 0,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   0,
+   1
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 0,
+  "skip": 1,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   1,
+   2
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 0,
+  "skip": 2,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   2,
+   3
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 0,
+  "skip": 3,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   3,
+   4
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 0,
+  "skip": 4,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   4,
+   5
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 0,
+  "skip": 5,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   5,
+   6
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 1,
+  "skip": 0,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   6,
+   7
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 1,
+  "skip": 1,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   7,
+   8
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 1,
+  "skip": 2,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   8,
+   9
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 1,
+  "skip": 3,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   9,
+   10
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 1,
+  "skip": 4,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   10,
+   11
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "fill",
+  "mode": 1,
+  "skip": 5,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   11,
+   12
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 0,
+  "skip": 0,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   12,
+   13
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 0,
+  "skip": 1,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   13,
+   14
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 0,
+  "skip": 2,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   14,
+   15
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 0,
+  "skip": 3,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   15,
+   16
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 0,
+  "skip": 4,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   16,
+   17
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 1,
+  "skip": 0,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   17,
+   18
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 1,
+  "skip": 1,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   18,
+   19
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 1,
+  "skip": 2,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   19,
+   20
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 1,
+  "skip": 3,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   20,
+   21
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "dma",
+  "mode": 1,
+  "skip": 4,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   21,
+   22
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "retry",
+  "mode": 0,
+  "skip": 5,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   22,
+   23
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 1,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "retry",
+  "mode": 1,
+  "skip": 5,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   23,
+   24
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 1,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 0,
+  "skip": 0,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   24,
+   25
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 0,
+  "skip": 1,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   25,
+   26
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 0,
+  "skip": 2,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   26,
+   27
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 0,
+  "skip": 3,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   27,
+   28
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 0,
+  "skip": 4,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   28,
+   29
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 0,
+  "skip": 5,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   29,
+   30
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 1,
+  "skip": 0,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   30,
+   31
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 1,
+  "skip": 1,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   31,
+   32
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 1,
+  "skip": 2,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   32,
+   33
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 1,
+  "skip": 3,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   33,
+   34
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 1,
+  "skip": 4,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   34,
+   35
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ },
+ {
+  "kind": "mono",
+  "mode": 1,
+  "skip": 5,
+  "lost": true,
+  "repainted": true,
+  "losses": [
+   35,
+   36
+  ],
+  "left_armed": 0,
+  "blit_timeouts": 0,
+  "after_dma": true,
+  "after_fill": true,
+  "timeouts_after": 0,
+  "invariant_fail": 32,
+  "owner": "menu",
+  "pass": true
+ }
+]

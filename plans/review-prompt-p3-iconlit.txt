@@ -1,0 +1,10 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: qmk_firmware-ak820pro `git diff 1ff3d405 b99d5405 -- keyboards/a_jazz/ak820pro` (menu/menu.c, menu/menu.h; two commits, the second taking back a palette slot the first added, so the net diff is what matters). JD asked for the selected row's top-level icon tinted a whiter yellow than its text: row_icon_colour() returns MENU_ICON_LIT (0xFFB8, #FFF7C6, a constant) for an icon row that is lit, pal[MP_WHITE] otherwise. Tests: scripts/menu_s0_test.c (uncommitted: text_slot_bad expects 0xFFB8 for a lit row's top-level icon).
+
+Check only:
+1. That the icon's colour change on a cursor move is repainted: the lit bit is in both signatures (RK_ITEM's bit 0, RK_VALUE's bit 0), so a row whose lit state changes restarts with the new colour; and the one-lit-row-at-most rule (menu_slots.c's maybe_lit) still holds for the icon chunk.
+2. That the net diff leaves the palette (MP_* order and size, menu_set_color, op 27 sub 13) as 1ff3d405 had it.
+3. Anything unsafe for the flash on the keyboard on gremlin (dev, slider on BT). The build reports the dev heap gap at 136 B (floor 128), as before.
+
+Must anything change before flashing? File and line. Under 200 words.

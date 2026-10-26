@@ -1,5 +1,5 @@
 #!/bin/zsh
-# build.sh [daily|dev|instrumented|fpb] — build the AK820 Pro VIA firmware with provenance.
+# build.sh [daily|dev|devfault|instrumented|fpb] — build the AK820 Pro VIA firmware with provenance.
 #
 # daily        (default): console off, probes compiled out — what releases ship.
 # dev:          daily plus the raw-HID bootloader jump (HC_BOOTLOADER), so
@@ -8,6 +8,10 @@
 #               development lasts; never released (release-firmware.sh takes
 #               daily and fpb only, and the check below keeps the jump out of
 #               both).
+# devfault:     dev plus WDT_TEST_HOOKS, whose HC_BLITFAULT drops a real DMA
+#               completion: the configuration menu's S0 proves its loss
+#               recovery with it (plans/CONFIG-MENU-BUILD-PLAN.md). Gremlin's
+#               board only; checked as a dev build.
 # instrumented: console on + LOOPGAP_INSTRUMENT — for soak runs and debugging.
 # fpb:          daily, but for the OTHER LCD panel revision — the one that comes
 #               up upside down and colour-inverted on the default build. Shipped
@@ -18,15 +22,19 @@
 # that path is shared and whoever compiles last owns it (see CLAUDE.md).
 set -euo pipefail
 
-if (( $# > 1 )); then echo "usage: build.sh [daily|dev|instrumented|fpb]" >&2; exit 2; fi
+if (( $# > 1 )); then echo "usage: build.sh [daily|dev|devfault|instrumented|fpb]" >&2; exit 2; fi
 FLAVOR="${1:-daily}"
 case "$FLAVOR" in
   daily)        FLAGS=();                        EXTRA="" ;;
   dev)          FLAGS=();                        EXTRA="-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS" ;;
+  devfault)     FLAGS=();                        EXTRA="-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS -DWDT_TEST_HOOKS -DAK820_DEVFAULT" ;;
   instrumented) FLAGS=(-e CONSOLE_ENABLE=yes);   EXTRA="-DLOOPGAP_INSTRUMENT -DWDT_TEST_HOOKS" ;;
   fpb)          FLAGS=();                        EXTRA="-DAK820PRO_LCD_VARIANT_FPB" ;;
-  *) echo "usage: build.sh [daily|dev|instrumented|fpb]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [daily|dev|devfault|instrumented|fpb]" >&2; exit 2 ;;
 esac
+# The structural checks below treat devfault as the dev build it extends.
+CHECK_AS="$FLAVOR"
+[[ "$FLAVOR" == devfault ]] && CHECK_AS=dev
 command -v xxd >/dev/null || { echo "ERROR: xxd not found" >&2; exit 1; }
 
 # The build token (health page 6) names THIS build, so a fault PC the board
@@ -39,7 +47,7 @@ while (( token == 0 )); do token=$(( 0x$(od -An -N4 -tx4 /dev/urandom | tr -d ' 
 token_hex=$(printf '0x%08x' "$token")
 # -g: line info for the archived ELF. Debug info only; GCC's code generation
 # does not depend on it (crash-hunt implementation review, finding 8).
-FLAGS+=(-e "EXTRAFLAGS=$EXTRA -g -DAK820_BUILD_TOKEN=${token_hex}u")
+EXTRA_CC="$EXTRA -g -DAK820_BUILD_TOKEN=${token_hex}u"   # into FLAGS below, with the source's identity
 
 WORK="$(cd "$(dirname "$0")" && pwd)"
 source "$WORK/env.sh"
@@ -68,6 +76,10 @@ pre_state=$(state)
 hash=$(git -C "$REPO" rev-parse --short HEAD)
 dirty=""
 [[ -n "$(git -C "$REPO" status --porcelain --untracked-files=no)" ]] && dirty="-dirty"
+# The configuration menu's About shows the source: eight hex digits as a
+# number (no string through make's quoting), and whether it was dirty.
+hash8=$(git -C "$REPO" rev-parse --short=8 HEAD | cut -c1-8)
+FLAGS+=(-e "EXTRAFLAGS=$EXTRA_CC -DAK820_BUILD_HASH=0x${hash8}u -DAK820_BUILD_DIRTY=$([[ -n $dirty ]] && echo 1 || echo 0)")
 
 # qmk compile writes ONE shared output path; a lock serialises compile+copy so
 # two invocations cannot interleave and mislabel each other's binary.
@@ -126,7 +138,7 @@ hf_line=$(arm-none-eabi-addr2line -e "$s_elf" "0x${hf%% *}")
 # so a released build (daily, fpb) must not carry it, and a dev build must.
 jump=$(awk '$3 == "ak820_raw_bootloader"' <<<"$nm_out")
 hooks=$(awk '$3 == "ak820_dev_hooks"' <<<"$nm_out")
-case "$FLAVOR" in
+case "$CHECK_AS" in
   daily|fpb) [[ -z "$jump" ]] || { echo "FAIL: a $FLAVOR build carries the raw-HID bootloader jump" >&2; fail=1; }
              [[ -z "$hooks" ]] || { echo "FAIL: a $FLAVOR build carries the dev hooks" >&2; fail=1; } ;;
   dev)       [[ -n "$jump" ]] || { echo "FAIL: the dev build lacks the raw-HID bootloader jump" >&2; fail=1; }
@@ -144,8 +156,9 @@ for sym in sleep_task power_sleep_wanted rtc_sleep_prepare battery_sleep_enter b
   [[ -n "$(awk -v s=$sym '$3 == s' <<<"$nm_out")" ]] || { echo "FAIL: the deep sleep's $sym is missing" >&2; fail=1; }
 done
 if [[ "$FLAVOR" == (daily|fpb) ]]; then
+  # power_set_mode left this list at the menu's P1a: its Power item calls it.
   for sym in sleep_deep_arm sleep_deep_cancel sleep_light_set power_set_bench_sleep_ms power_force_stage \
-             power_set_mode rtc_dev_delay_full_once; do
+             rtc_dev_delay_full_once; do
     [[ -z "$(awk -v s=$sym '$3 == s' <<<"$nm_out")" ]] || { echo "FAIL: a $FLAVOR build carries $sym" >&2; fail=1; }
   done
 fi
@@ -162,7 +175,7 @@ for fn in i2c_write_byte i2c_read_byte; do
   [[ -n "$body" ]] || { echo "FAIL: $fn not found (inlined? the preemption check needs it)" >&2; fail=1; continue; }
   if grep -q "cpsie" <<<"$body" && grep -q "cpsid" <<<"$body"; then rel=1; else rel=0; fi
   if grep -q "cpsie\|cpsid" <<<"$body"; then any=1; else any=0; fi
-  case "$FLAVOR" in
+  case "$CHECK_AS" in
     dev)       (( rel )) || { echo "FAIL: the dev build's $fn lacks the switchable byte release" >&2; fail=1; } ;;
     daily|fpb) (( ! any )) || { echo "FAIL: a $FLAVOR build's $fn touches the lock between bytes" >&2; fail=1; } ;;
   esac
@@ -175,11 +188,26 @@ done
 od_syms=(od_mask_begin od_uart_oe od_fill_summary rtc_burst_start sleep_wake_ring_fill od_tick od_set_uart_priority)
 for sym in "${od_syms[@]}"; do
   have=$(awk -v s="$sym" '$3 == s' <<<"$nm_out")
-  case "$FLAVOR" in
+  case "$CHECK_AS" in
     dev)       [[ -n "$have" ]] || { echo "FAIL: the dev build lacks $sym" >&2; fail=1; } ;;
     daily|fpb) [[ -z "$have" ]] || { echo "FAIL: a $FLAVOR build carries $sym" >&2; fail=1; } ;;
   esac
 done
+# The RAM floor (plans/CONFIG-MENU-BUILD-PLAN.md, C5): what's left between the
+# static RAM and the stacks. The linker gives the whole remainder to a NOLOAD
+# .heap (rules_memory.ld), so size's totals can't be subtracted from 32 KB;
+# the gap is the heap's own bounds. Every flavour, before anything is
+# published. The menu and every later stage together get at most 400 B of new
+# static RAM; this floor is what keeps that honest.
+heap_base=$(awk '$3 == "__heap_base__" {print $1}' <<<"$nm_out")
+heap_end=$(awk '$3 == "__heap_end__" {print $1}' <<<"$nm_out")
+if [[ -z "$heap_base" || -z "$heap_end" ]]; then
+  echo "FAIL: __heap_base__ or __heap_end__ is missing from the ELF" >&2; fail=1
+else
+  heap_gap=$(( 0x$heap_end - 0x$heap_base ))
+  echo "RAM: heap gap $heap_gap B (floor 128)"
+  (( heap_gap >= 128 )) || { echo "FAIL: the heap gap is $heap_gap B, under the 128 B floor (C5)" >&2; fail=1; }
+fi
 if (( fail )); then echo "Structural checks FAILED; nothing published." >&2; exit 1; fi
 
 # The manifest scripts/symbolize.sh resolves a board-reported token through.

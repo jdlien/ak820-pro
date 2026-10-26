@@ -16,6 +16,13 @@ cp "$kb/battery.c" "$kb/battery.h" "$kb/power.c" "$kb/power.h" "$build/"
 [ -f "$kb/rgb_matrix_kb.inc" ] && cp "$kb/rgb_matrix_kb.inc" "$build/"   # the colour build's effects
 qroot="$(cd "$kb/../../.." && pwd)"   # the tree $kb is in: QMK's quantum/color.c for the colour build
 [ -f "$kb/battery_tail.h" ] && cp "$kb/battery_tail.h" "$build/"   # flash 2's generated tail table
+# The menu's P2b (10-25): the backlight 0-100 on indicator_levels.h's table,
+# once display.c has no 24-entry bkl_duty[] (sim.c's SIM_BKL_100). The pinned
+# builds below have no sim_bkl.h: the 24 levels, as their firmware has.
+if [ -f "$kb/indicator_levels.h" ] && ! grep -q 'static const uint8_t bkl_duty\[\]' "$kb/graphics/display.c"; then
+    cp "$kb/indicator_levels.h" "$build/"
+    echo '#define SIM_BKL_100 1' > "$build/sim_bkl.h"
+fi
 cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -I"$build" \
    -o "$build/sim" "$here/sim.c" "$build/battery.c" "$build/power.c" -lm
 fail=0
@@ -26,7 +33,7 @@ phase2="l_normal l_modes l_usb l_low_cap l_val_cap l_lights_cut l_announce l_per
         c_stale c_excursion c_bias c_clamp_cross c_reboot
         c_band_top c_band_top_edge c_floor_boot c_cut_reseat c_hold_stale c_handover_stays c_floor_entry c_clamp_marker"
 # Deep sleep (sleeps.c): only against a battery.c with the hand-over.
-grep -q "BATTERY_P_SLEEP_UW" "$build/battery.h" && phase2="$phase2 s_energy s_time_left s_floor_cut s_unknown s_band_hold s_remainder s_relax s_log_within s_log_across s_log_long s_log_pending s_log_recovery_boundary s_usb s_no_wake s_replay_v7 s_log_floor s_replay_mixed s_log_late_cut s_usb_relax_banked"
+grep -q "BATTERY_P_SLEEP_UW" "$build/battery.h" && phase2="$phase2 s_energy s_time_left s_floor_cut s_unknown s_band_hold s_remainder s_relax s_log_within s_log_across s_log_long s_log_wrap_order s_log_pending s_log_recovery_boundary s_usb s_no_wake s_replay_v7 s_log_floor s_replay_mixed s_log_late_cut s_usb_relax_banked"
 r3="$hist/battery-2026-10-15-drain-2f/log-20261018-0205-rgbcut.csv"
 e2="$hist/battery-2026-10-12-drain-2e/log-20261014-0950-preswap.csv"
 for s in boot_battery boot_battery_clamp boot_usb_full discharge charge_log transitions \
@@ -104,6 +111,18 @@ if grep -q '^#define POWER_HAS_MODES' "$build/power.h"; then
         san=0
         for s in $devonly; do "$build/sim_dev_san" "$s" > /dev/null 2>&1 || { echo "FAIL $s under the sanitizers"; san=1; }; done
         [ $san = 0 ] && echo "ok   the dev-hooks scenarios under ASan and UBSan" || fail=1
+    fi
+    # The devfault build (AK820_DEVFAULT, build.sh) keeps 8 log entries fewer
+    # for the configuration menu's RAM (plans/CONFIG-MENU-P1-DESIGN.md): the
+    # log's scenarios again against 712, wrap and oldest-first included. The
+    # 720 runs above stay.
+    if grep -q 'AK820_DEVFAULT' "$build/battery.c"; then
+        cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -DAK820_DEV_HOOKS -DWDT_TEST_HOOKS -DAK820_DEVFAULT \
+           -DSIM_LOG_LEN=712u -I"$build" -o "$build/sim_fault" "$here/sim.c" "$build/battery.c" "$build/power.c" -lm
+        for s in s_log_within s_log_across s_log_long s_log_wrap_order s_log_pending s_log_recovery_boundary s_log_floor s_log_late_cut; do
+            "$build/sim_fault" "$s" || fail=1
+        done
+        for s in log_cadence ring_restart; do "$build/sim_fault" "$s" "$log" || fail=1; done
     fi
 
     # The colour path (colour.c): QMK's own conversion and CIE table in place

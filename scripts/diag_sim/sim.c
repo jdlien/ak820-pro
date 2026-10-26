@@ -11,6 +11,7 @@
 #include "ch.h"
 #include "loop_acct.h"
 #include "flash_stats.h"
+#include "nvm_eeprom_eeconfig_internal.h"   /* the kb datablock's size */
 #if __has_include("rtc_persist.h")
 #include "rtc_persist.h"   /* C2 (flash 2) */
 #define HAVE_RTC_PERSIST 1
@@ -173,34 +174,99 @@ static void write(uint32_t addr, const uint8_t *b, size_t len, int programs, boo
     if (erase) flash_stats_op(true);
 }
 
-static void flash(void) {
-    uint8_t blk[6] = {0x31, 0x40, 0x82, 10, 1, 101};
-    write(KB, blk, 6, 2, false);                       /* first write: every field (mixed) */
+/* The workload of the fields before P2a's (bytes 0-6), in whole-block writes
+ * whose later bytes stay zero: an older flash_stats.c (-DEECONFIG_KB_DATA_SIZE=7)
+ * and this one must fill pages 0-2 identically ("golden", run.sh). */
+#define KBN EECONFIG_KB_DATA_SIZE
+static uint8_t blk[KBN];
+static void old_workload(void) {
+    static const uint8_t first[6] = {0x31, 0x40, 0x82, 10, 1, 101};
+    memcpy(blk, first, sizeof first);
+    write(KB, blk, KBN, 2, false);                     /* first write: every field (mixed) */
     blk[1] = 0x80;                                     /* the RTC period alone, x5 */
-    for (int i = 0; i < 5; i++) { blk[1]++; write(KB, blk, 6, 1, false); }
-    blk[5] = 100; write(KB, blk, 6, 1, false);         /* the battery level alone */
-    write(KB, blk, 6, 1, false);                       /* unchanged: no session */
+    for (int i = 0; i < 5; i++) { blk[1]++; write(KB, blk, KBN, 1, false); }
+    blk[5] = 100; write(KB, blk, KBN, 1, false);       /* the battery level alone */
+    write(KB, blk, KBN, 1, false);                     /* unchanged: no session */
     uint8_t rgb[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     write(23, rgb, 8, 3, true);                        /* RGB, with a consolidation erase */
     uint8_t via[2] = {0x12, 0x34};
     write(500, via, 2, 1, false);                      /* VIA's dynamic keymap */
-    uint8_t same[6]; memcpy(same, &eeprom[KB], 6);
-    eeprom_wear_leveling_write_hook(KB, same, 6);     /* an unchanged kb write: no session... */
+    uint8_t same[KBN]; memcpy(same, &eeprom[KB], KBN);
+    eeprom_wear_leveling_write_hook(KB, same, KBN);    /* an unchanged kb write: no session... */
     flash_stats_pass();                                /* ...and the pass ends */
     flash_stats_session(); flash_stats_op(false);      /* a session with no EEPROM write: other */
     flash_stats_rtc_proposal(33216, FLASH_RTC_PATH_SOF, false);
     flash_stats_rtc_proposal(33300, FLASH_RTC_PATH_PCF, true);
+}
 
+static void golden(void) {
+    old_workload();
+    for (uint8_t pg = 0; pg <= 2; pg++) dump("FLASHW", pg, flash_stats_fill);
+}
+
+static void flash(void) {
+    old_workload();
     uint8_t p[28];
+#ifdef KBF_LOCKS
+    /* P2a's fields: each alone, an unchanged write, both at once (mixed). */
+    blk[7] = 12; write(KB, blk, KBN, 1, false);        /* the lock lights alone, x2 */
+    blk[7] = 13; write(KB, blk, KBN, 1, false);
+    blk[8] = 38; write(KB, blk, KBN, 1, false);        /* the charging light alone */
+    write(KB, blk, KBN, 1, false);                     /* unchanged: no session */
+    blk[7] = 14; blk[8] = 39; write(KB, blk, KBN, 1, false);   /* both: mixed */
+#ifdef KBF_BVIEW
+    /* P4's: the battery readout alone, then with the lock lights (mixed). */
+    blk[9] = 2; write(KB, blk, KBN, 1, false);
+    blk[9] = 1; blk[7] = 15; write(KB, blk, KBN, 1, false);
+#endif
+    flash_stats_fill(3, p);
+    CHECK(p[0] == 2 && p[2] == 1, "locks-alone %u charging-alone %u", p[0], p[2]);
+#ifdef KBF_BVIEW
+    CHECK(p[4] == 1 && p[5] == 0, "batt-view-alone %u", p[4]);
+    const int used3 = 6;
+#else
+    const int used3 = 4;
+#endif
+    bool rest0 = true;
+    for (int i = used3; i < 28; i++) rest0 = rest0 && p[i] == 0;
+    CHECK(rest0, "page 3's reserved bytes are zero");
+    CHECK(!flash_stats_fill(4, p), "page 4: unknown");
+#endif
     flash_stats_fill(0, p);
     uint32_t s_other = p[0], s_kb = p[4], s_rgb = p[8], s_via = p[12];
+#if defined(KBF_BVIEW)
+    CHECK(s_kb == 13 && s_rgb == 1 && s_via == 1 && s_other == 1, "sessions o%u kb%u rgb%u via%u", s_other, s_kb,
+          s_rgb, s_via);
+    CHECK(p[24] == 3 && p[26] == 0, "kb mixed %u unknown %u", p[24], p[26]);
+#elif defined(KBF_LOCKS)
+    CHECK(s_kb == 11 && s_rgb == 1 && s_via == 1 && s_other == 1, "sessions o%u kb%u rgb%u via%u", s_other, s_kb,
+          s_rgb, s_via);
+    CHECK(p[24] == 2 && p[26] == 0, "kb mixed %u unknown %u", p[24], p[26]);
+#else
     CHECK(s_kb == 7 && s_rgb == 1 && s_via == 1 && s_other == 1, "sessions o%u kb%u rgb%u via%u", s_other, s_kb,
           s_rgb, s_via);
-    CHECK(p[16 + 2 * FW_RGB] == 1, "the RGB session's erase");
     CHECK(p[24] == 1 && p[26] == 0, "kb mixed %u unknown %u", p[24], p[26]);
+#endif
+    CHECK(p[16 + 2 * FW_RGB] == 1, "the RGB session's erase");
     flash_stats_fill(1, p);
     CHECK(p[16 + 2 * 1] == 5 && p[16 + 2 * 4] == 1, "rtc-alone %u batt-alone %u", p[18], p[24]);
-    for (uint8_t pg = 0; pg <= 2; pg++) dump("FLASHW", pg, flash_stats_fill);
+    for (uint8_t pg = 0; pg <= 3; pg++) dump("FLASHW", pg, flash_stats_fill);
+#ifdef KBF_LOCKS
+    /* Past 255 and to saturation (codex, P2a's code review): the counters are
+     * u16, so 300 reads as 300 and 70,000 as 65,535; then the reset clears the
+     * whole page. */
+    for (int i = 0; i < 300; i++) { blk[7] = (uint8_t)(blk[7] == 20 ? 21 : 20); write(KB, blk, KBN, 1, false); }
+    flash_stats_fill(3, p);
+    CHECK((p[0] | p[1] << 8) == 302, "locks-alone past 255: %u", p[0] | p[1] << 8);
+    for (int i = 0; i < 70000; i++) { blk[8] = (uint8_t)(blk[8] == 40 ? 41 : 40); write(KB, blk, KBN, 1, false); }
+    flash_stats_fill(3, p);
+    CHECK((p[2] | p[3] << 8) == 65535, "charging-alone saturates: %u", p[2] | p[3] << 8);
+    flash_stats_reset();   /* the reset clears page 3 too */
+    flash_stats_fill(3, p);
+    bool zero = true;
+    for (int i = 0; i < 28; i++) zero = zero && p[i] == 0;
+    CHECK(zero, "page 3 after the reset: all 28 bytes zero");
+#endif
 }
 
 #ifdef HAVE_RTC_PERSIST
@@ -255,6 +321,7 @@ int main(int argc, char **argv) {
     if (argc < 2) return 2;
     if (!strcmp(argv[1], "acct")) acct();
     else if (!strcmp(argv[1], "flash")) flash();
+    else if (!strcmp(argv[1], "golden")) golden();
 #ifdef HAVE_RTC_PERSIST
     else if (!strcmp(argv[1], "persist")) persist();
 #endif

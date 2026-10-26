@@ -1,0 +1,12 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A design review, narrow and quick: the section "P2b: the Screen in 1% steps (draft 2, 10-25)" in plans/CONFIG-MENU-P1-DESIGN.md. It moves the LCD backlight from 24 levels (graphics/display.c's bkl_duty[], a 48-tick phase compare on the 20 kHz CT16B3 tick) to 0-100 on P2a's table and sigma-delta (indicator_levels.h, built for the indicators and reviewed: plans/review-codex-p2a-design-2026-10-25.md, plans/review-codex-p2a-code-2026-10-25.md). Firmware: qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ at 8b4aec16 (gremlin/s1).
+
+Check it against the code:
+1. Every reader and writer of the backlight level and duty (display.c, power.c's SCREEN_DIM_LEVEL and caps, sleep.c, battery.c's model and log, param_overlay.c and the SCR_UP/SCR_DN repeat, hid_protocol.c's dev ops 4/5 and the HC_DEVHOOK state, kb_eeconfig.c's saved level, the menu's Screen editor and C7 override, the splash, config.h's default): is any missed, or mishandled by the plan?
+2. The tick: the sigma-delta in display_backlight_tick() with bkl_effective()'s level, full and zero duty, display_set_power()'s immediate write, the stop/start of pwm_tick (sleep.c) and the wake hold.
+3. Keeping display_backlight_duty() in 0-48 rounded ticks so battery.c, scripts/battery_sim and scripts/power_oracle.c don't change; the battery log's bkl byte changing scale; scripts/power_model.py parsing bkl_duty. Is "noted for the merge" acceptable, or does something break now?
+4. The mapping of the old default and the dim cap (5 -> 42, 4 -> 37), kb_eeconfig version 6 and the +1 encoding up to 101.
+5. Anything the tests must cover that the section omits.
+
+Name each problem with the file and line, say what to change, and separate what must change before code from what can wait. Must anything change before the code is written?

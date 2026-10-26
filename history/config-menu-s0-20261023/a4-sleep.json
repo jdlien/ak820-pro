@@ -1,0 +1,1 @@
+{"wake": "key", "valid": ["pcf", "acq_done", "reattach", "usb_20s", "slept"], "flags": 91, "open": [], "sleeps": 1, "slept_total_s": 339, "pcf_s": 339, "counted_s": 304, "acq_step_ms": 749, "pll_loops": 85, "strays": 0, "blocked": [], "timed_out": []}

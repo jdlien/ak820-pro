@@ -1,0 +1,11 @@
+{
+ "a1": {
+  "verdict": "PASS",
+  "evidence": {
+   "unknown_sub_byte0": 255,
+   "sub5_byte0": 7,
+   "sub5_status": 0,
+   "short_report": "source inspection: raw_hid_task() always passes 32 bytes"
+  }
+ }
+}

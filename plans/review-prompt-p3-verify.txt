@@ -1,0 +1,12 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A verify review before the flash, narrow. Your code review of P3 (plans/review-codex-p3-code-2026-10-25.md, with my dispositions at the top) found five must-fixes; they're in qmk_firmware-ak820pro `git diff c66e6eaf 47567935 -- keyboards/a_jazz/ak820pro` (bluetooth/ch582f_ajazz.c/.h, bt_ui.c/.h, menu/menu.c, menu/menu_env.h, menu/menu_glue.c). A new change rides the same flash: `git diff 47567935 44d11c28` (drivers/encoder/encoder_quadrature.c's ENCODER_REST_PINS_EQUAL, set in the board's config.h): JD saw the knob lose the first detent after every reversal until a reboot; the reasoning is in the commit message and the comments. Tests: this repo's commit 3039938 (scripts/ch582_sim/btui.c's new cases, scripts/menu_s0_test.c's test_p3, scripts/encoder_sim/ new).
+
+Check:
+1. Each disposition against the code: is the must-fix actually fixed, and does the fix break anything the driver relied on before? In particular select_unsent: every path that sets and clears it (set_profile and its bounce, the pump's bounce-to-select, the select retry and the 5B 23 re-issue, the cold-boot retry, the ACK, the TX give-up, cancel_connect), the gated retirement of PA_SELECT against docs/wireless.md's rules (the select backstop must stop once the module attempts; the bounce must survive), and the stated assumption that the module ACKs before it answers: what breaks, and how badly, if that's false?
+2. The bounce's end now resetting conn_state, is_module_connected and connected_slot: anything that read those (the band, bluetooth_is_connected(), the lock channel, the 5A promotion's linking_since) and now misbehaves.
+3. The last-try windows for PA_SELECT and PA_PAIR: any caller or test that relied on the old timing.
+4. The encoder rule: is "the knob rests where its pins agree" consistent with everything in the repo (keyboard.json's resolution 2, sleep.c's knob checks, docs, the deep-sleep plan's knob test)? Any sequence where it drops or adds a detent compared with before (fast spins, the wake from deep sleep, bounce), and does encoder_sim's model cover them? If the rest states were in fact 01 and 10, what would JD see?
+5. Anything else unsafe for the flash on the keyboard on gremlin (dev, slider on the cable). The dev heap gap is 136 B against a 128 B floor.
+
+Name each problem with the file and line, and separate what must change before the flash from what can wait. Must anything change before flashing? Keep it under 800 words.

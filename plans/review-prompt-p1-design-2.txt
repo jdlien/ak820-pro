@@ -1,0 +1,14 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+The second round on P1's design: plans/CONFIG-MENU-P1-DESIGN.md, now draft 2, which answers your review of draft 1 (plans/review-codex-p1-design-2026-10-24.md, with my dispositions). Same references as before: plans/CONFIG-MENU-BUILD-PLAN.md, plans/config-menu-mockup.html, the code under qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/ and graphics/, build.sh.
+
+Please check, adversarially, that each of your findings is actually resolved, and look for new problems the changes introduce, in particular:
+- the session identity and the opener table (the armed opener routing to the fixture now that MENU_ENABLE makes menu_enabled() always true; sub 11's semantics "as sub 4's"; sub 0 refused unless kind FIXTURE; sub 5's ids);
+- the exact signatures (a list row as one slot of two chunks; the title id covering screens, flashes and the hint; the scrollbar's fields fitting 16 bits; uniqueness only within a layout's life -- is every navigation within one list a retarget, and every change of list a layout change?);
+- un-highlight first: the scheduler rule against rev 13's resume rule, the stop/end_op machinery, C10's progress and accounting, and whether "lowest first" among several shown-lit slots is right;
+- About's snapshot (12 B of facts, formatted per piece) and AK820_BUILD_HASH from build.sh (does build.sh know the hash, dirty included?);
+- the RAM table and the devfault-only log_buf trim (any tooling or test that assumes 720 entries on devfault: ak820battery.py, the dump in flash.sh, the simulator);
+- Reset counters' pages and the C10 interval;
+- anything else that still blocks P1a's code.
+
+Say what must still change before P1a's code, and what can wait. Be concrete.

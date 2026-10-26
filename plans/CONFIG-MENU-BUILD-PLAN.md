@@ -1,7 +1,118 @@
-# The configuration menu: how to build it (revision 6, 2026-10-23)
+# The configuration menu: how to build it (revision 15, 2026-10-24)
 
-Status: **cleared for S0 (codex, round 6); nothing built yet.** Owned by Warren (gremlin's session) from
-10-23.
+**Resume from [`WARREN-STATUS.md`](WARREN-STATUS.md)** (the thread: what is on the board, the next step, the rules).
+
+Status: **S0 built and accepted on the keyboard on gremlin**: A1-A13 pass,
+with recorded exceptions (`GREMLIN-RESULTS.md` §10). A7's animation case
+wasn't run, and A9 can't tell a refusal from an empty slot, since gremlin's
+animation slot is empty. A11's first runs missed the media gate on a slow
+SMTC. **Revision 12 was cleared for S1** (codex, 10-24: "ready for S1 to be
+built from"); revisions 13 to 15 amend rules from S1's gate runs. Owned by Warren
+(gremlin's session) from 10-23.
+- **Revision 15** (10-24, from the gate's fourth run, `GREMLIN-RESULTS.md`
+  §15: Fn+D entry passed 1,000 ms once, at ~135 glyphs, one per pass):
+  **the DMA arm's window is polled too.** `spiSN32FlashDmaPrepare()` runs
+  with the panel's CS high (it rewrites SPI0's CTRL0 and toggles SPIEN).
+  `lcd_blit_flash()` then asserts CS and sends the window with
+  `lcd_window_polled()`, and the pixels follow with no further
+  reconfiguration. The window goes before `blit_done` falls, so the entry
+  check passes; the arm's counters and saved parameters advance only after
+  it succeeds. A window that gives up hands SPID1's vector back
+  (`dma_unprepare`, as Abort would after Fire) and `lcd_blit_flash()`
+  returns false; the clear and the retry use that.
+- **Revision 14** (10-24, from S1's second gate run, `GREMLIN-RESULTS.md`
+  §13): **a polled bulk send's window is polled too** (C4). Through `tx8()`
+  each of its 11 bytes was a whole `spiSend()`, ~0.2 ms of wall time at
+  this ISR load, ~1.8 ms a window: a third of a 512 B piece's 5.4 ms, and
+  most of the battery outline's 9.6 ms. The menu's passes run 10-14 ms and
+  the gate's longest was 17 ms (four over 15); whether this is enough is
+  for the next C10 run to show. The DMA arm keeps its `spiSend()` window:
+  `lcd_blit_flash()` has cleared `blit_done` for its own transfer by then,
+  so a polled send's entry check would refuse (codex corrected the first
+  reason given here).
+- **Revision 13** (10-24, from S1's first gate run on the keyboard on
+  gremlin, `GREMLIN-RESULTS.md` §12): **a `PARTIAL` slot resumes while its
+  own signature is unchanged,** whatever the generation did (C3 rule 2, C4).
+  Under revision 8's "same generation and signature", every detent of a spin
+  restarted every partial slot. With ops of several pieces (a half row is 4,
+  ~40 ms), nothing committed during a 10 s burst of a detent every 50 ms:
+  C10's progress rule failed. The signature is the slot's whole target, so
+  the pieces sent stay right; a layout change and a loss still invalidate
+  every slot. Host test: a detent every 4 passes commits 8 slots in 100
+  passes, against 0 under the old rule.
+- **Revision 12** folds in codex's verification of revision 11
+  ([`review-codex-config-menu-build-plan-rev11-2026-10-24.md`](review-codex-config-menu-build-plan-rev11-2026-10-24.md)),
+  its one remaining must-fix: a debug composition is tagged with the
+  second it shows, and a second that has elapsed but isn't composed yet
+  counts as pending.
+- **Revision 11** folds in codex's verification of revision 10
+  ([`review-codex-config-menu-build-plan-rev10-2026-10-24.md`](review-codex-config-menu-build-plan-rev10-2026-10-24.md)):
+  - the interval's reset names the right bytes, and validation counts come
+    from health page 2;
+  - the debug page's completion takes the generation before the cause, and
+    a loss or page reset makes a new generation;
+  - a boot-cleared session token and a health-reset generation replace
+    `boot_id`.
+- **Revision 10** folds in codex's verification of revision 9
+  ([`review-codex-config-menu-build-plan-rev9-2026-10-24.md`](review-codex-config-menu-build-plan-rev9-2026-10-24.md)),
+  rewriting C10:
+  - the timing is measured over an armed interval, under every owner;
+  - the debug page's completion is bound to a composition generation;
+  - the counters are validated per field, with sampling brackets and a
+    boot id;
+  - transitions have their own rule, measured until they complete;
+  - a spin's progress counts committed slots, not settled targets.
+- **Revision 9** folds in codex's verification of revision 8
+  ([`review-codex-config-menu-build-plan-rev8-2026-10-24.md`](review-codex-config-menu-build-plan-rev8-2026-10-24.md)):
+  - the op and stop lifecycle: an op is counted and a reached stop latched
+    the moment the op ends, before navigation can discard either. That
+    closes a real ordering hole in S0's scheduler;
+  - "op" and "piece" kept apart throughout;
+  - the timing fields and their retained maxima (sub 10);
+  - a completion flag for the debug pages, and target counters for spins;
+  - every deadline and window of the LED gate given a number (C10).
+
+**The S0 merge waits for the drain (agreed with Buzz's session, 10-24).**
+The keyboard on Buzz stays on `b9555ff3e6`, with no flash, until its RGB cut
+(about 10-31 to 11-02). Then:
+1. a daily build of S0 runs on the keyboard on gremlin before `deps.lock`
+   moves. Probably S0 plus the LED fix, if revision 8 has cleared it, so
+   one hands-on flash covers both: a daily build has no HC_BOOTLOADER, so
+   the flash after it needs JD's Fn+Esc;
+2. the keyboard on Buzz takes S0 and the LED fix in one flash, with a soak;
+3. then `gremlin/config-menu` (a fast-forward from `b9555ff3e6`) merges into
+   `ak820pro-jdlien`, `deps.lock` moves, and `warren/config-menu` merges
+   into main.
+
+Until then, S1 is built on branches off `gremlin/config-menu` and runs on
+the keyboard on gremlin only.
+- **Revision 8** folds in codex's review of revision 7
+  ([`review-codex-config-menu-build-plan-rev7-2026-10-24.md`](review-codex-config-menu-build-plan-rev7-2026-10-24.md)):
+  - `MENU_PASS_BYTES` splits a logical paint op into resumable pieces under
+    it, so C9's 27 ops, the stop and the op count stay logical (C4);
+  - the budget covers the menu's CPU-fed pixels; DMA clears keep their own
+    measured bound;
+  - 15 ms is a measured whole-pass target under a named workload, and a
+    bounded encoder drain is required if spins break it;
+  - the LED gate is executable: a matched-baseline ratio, transition
+    windows, and two completion rules;
+  - both polling hardening items are taken, with a polling-failure fault
+    hook;
+  - "Open" 5 is settled (documented, not fixed), and "Open" 3, the menu
+    keycode, gets its rule table for P1.
+- **Revision 7** folds in what S0's board cases found (10-23/24), for S1:
+  - **Colour paints held off the RGB row ISR** (-18% of its refreshes, a
+    visible flicker per knob turn). The fix, bulk SPI0 sends polled with the
+    FIFO interrupt masked, is prototyped (`gremlin/fill-poll` `f2b107be`,
+    -1.3%, JD: "no flicker"). It becomes C4's send rule and S1's first step.
+  - **A per-pass byte bound** on every paint, since a polled send runs
+    longer in wall time (the worst pass went from 20 to 23 ms).
+  - **A row-ISR gate** beside the stall counters.
+  - **The cursor's cost is its area, not its style:** the mono blit paints
+    every pixel of a cell either way.
+  - **C2's Fn judged by `layer_state`** misses inside an undecided tap-hold's
+    tapping term; S1 decides.
+  - **A menu keycode,** which JD wants, goes to P1.
 - **Revision 2** folded in codex's first review
   ([`review-codex-config-menu-build-plan-2026-10-23.md`](review-codex-config-menu-build-plan-2026-10-23.md)).
 - **Revision 3** folded in its verification of revision 2
@@ -494,9 +605,9 @@ the code is raised before working around it.
 - **The rules:**
   1. Before a slot's first write, it becomes `PARTIAL` with the target's
      generation.
-  2. A `PARTIAL` slot whose target is unchanged (same generation and
-     signature) resumes from its chunk cursor. A changed target restarts
-     it from chunk 0.
+  2. A `PARTIAL` slot whose own signature is unchanged resumes from its
+     chunk cursor, even across a retarget that moved other slots (revision
+     13). A changed signature restarts it from chunk 0.
   3. It becomes `COMMITTED`, with the new signature, only after its last
      chunk, with `!lcd_blit_busy()` and no loss. A slot that isn't
      `COMMITTED` is repainted even if the new target's signature equals its
@@ -506,6 +617,12 @@ the code is raised before working around it.
   6. **A repaint covers the slot's whole footprint,** background included:
      an absent row paints black, an absent scrollbar paints its track
      black, and a row paints its pad pixel at x 3 in either colour.
+     **One exception (10-25, the Clock's live examples):** a layout's
+     optional `first_chunk(slot, was, now)` may start a `COMMITTED` slot's
+     repaint at chunk c > 0, and only when the two signatures' targets agree
+     on chunks 0 .. c-1, so those pixels are already the new target's. A
+     `PARTIAL` or `INVALID` slot always starts at 0. Skipped chunks are no
+     operations: C10's counts and stops see only the chunks sent.
 - **One chunk cursor:** the slot and the chunk in progress. Only the slot
   it names may be `PARTIAL` and resume. When the cursor moves to another
   slot, a `PARTIAL` slot it leaves becomes `INVALID` and restarts from
@@ -543,12 +660,118 @@ the code is raised before working around it.
   nothing.
 - **Its rules:**
   - acquired, filled and released only on the main thread, never
-    reentrantly, and never from a callback or an ISR. SPI's FIFO ISR does
-    **read** it during `spiSend()` (`hal_spi_v2_lld.c:96-125`), so the
-    caller holds it until `spiSend()` completes;
-  - interrupts stay enabled;
+    reentrantly, and never from a callback or an ISR. The bulk send reads
+    it, so the caller holds it until the send returns;
+  - interrupts stay enabled; only SPI0's own sources are masked during a
+    bulk send (below). `IE = 0` masks all of them, DMA completion included,
+    which is safe only because the bus is quiesced and serialized;
   - no pointer to it is kept.
   A debug build asserts acquire and release.
+- **Bulk sends are polled (revision 7).** `spiSend()` takes SPI0's RX-FIFO
+  interrupt every ~3 us (8 bytes at 24 MHz) at priority 3, beside the RGB
+  row ISR, which re-arms at its end: every late start is a longer dark gap
+  for every row. S0's fixture repaints cost the LEDs 18% of their row
+  refreshes, and JD saw each knob turn flicker the keyboard (A10, A11).
+  `spi0_poll_send()` feeds the FIFO from the main thread instead:
+  - `SN_SPI0->IE` cleared for the send, at most 8 bytes outstanding;
+  - RX drained and RXFIFOTHIC cleared (a literal write) before IE is set
+    back, or the idle driver's handler would run its completion code;
+  - a bounded spin counted in polling work, so time in the row ISR costs
+    none of it;
+  - one failure path for a stuck shift or BUSY: the FIFOs reset, a count,
+    `PO_FAIL_SPI0_POLL` (0x20) on dev builds, `blit_lost` set so the owner
+    repaints, and the operation stopped.
+
+  `lcd_fill_rect`, `tx_pixels` and the stream use it, and since revision 14
+  their window too (`lcd_window_polled`: each command byte and its
+  parameters a polled send, DC changed only after one returns). Since
+  revision 15 the DMA arm's window as well, between `Prepare()` and
+  `blit_done` falling. The panel's init and MADCTL stay on `spiSend()`. A
+  test build's HC_POLLFAULT takes a skip count, so a fault can land on each
+  of a fill's five window sends or on its payload. Callers have quiesced the bus, so no
+  DMA is in flight and none can start
+  ([`review-codex-spi0-poll-2026-10-24.md`](review-codex-spi0-poll-2026-10-24.md)).
+  Prototyped as `gremlin/fill-poll` `f2b107be`: the repaint cost fell from
+  -18% to -1.3%.
+- **A per-pass byte budget (revisions 7 and 8).** Polled, a send runs longer
+  in wall time, because the row ISR now preempts it. The worst pass reached
+  24 ms in A11's workload on the prototype (23 ms in the LED test before
+  it); the fixture's ops send up to 2,048 bytes (an F2 tile) in one pass.
+  - **What it covers:** `MENU_PASS_BYTES` is the menu's synchronous,
+    CPU-fed pixel payload per pass: fills, the mono blit and the stream.
+    It's the sum of every piece sent in the pass, not a size per piece.
+  - **What it doesn't cover:** clears and glyphs stay on flash DMA (a
+    128x16 band is 4,096 bytes, followed by a wait). Each gets its own
+    measured wall-time bound in S1. If a band ever needs splitting, it gets
+    a band sub-cursor: `clear_band` or `po_restore_advance()` moves only
+    after every piece of the band succeeded, a failed piece is retried
+    without skipping pixels, navigation still finishes a running
+    layout-clear sweep, and `PO_CLEAR_BANDS`, `DBG_CLEAR_BANDS`, `MB_BANDS`
+    and the probe's indexing stay consistent. The restore's and the
+    dashboard's own RAM tiles and fills are audited against the whole-pass
+    target too.
+  - **Logical ops and their pieces.** C9's 27 logical ops and their stop
+    positions stay as they are, so `FX_F1_OPS`, pattern 2's range and the
+    reference frames don't change. A piece cursor sits under the slot's op
+    cursor:
+    - **each piece** is a whole-pixel RGB565 rectangle (rows, or explicit
+      horizontal sub-rectangles, respecting a source's stride) that opens
+      its window and stream, completes them, releases the scratch and CS,
+      and then yields to the main loop;
+    - **the slot stays `PARTIAL`** through all its pieces, with its
+      signature describing the whole target, style included;
+    - **a resume** happens while the slot's own signature is unchanged
+      (revision 13; revision 8 also required the same generation, which
+      starved a spin). A changed signature, an invalidation (a layout change,
+      a loss) or an abandoned cursor discards the piece progress, and the
+      slot restarts from its first piece. An op cut by a retarget and
+      resumed is counted when it ends, but not timed (its latency's start
+      was abandoned);
+    - **an op counts once,** when it ends: its last piece returns, or its
+      last DMA completes or is given up, or it fails. Pieces, busy retries
+      and waiting passes don't count;
+    - **the end's bookkeeping comes first** (revision 9). One helper counts
+      the op and, in the same step, latches `stopped` if `stop_n` is reached
+      with no transfer outstanding. It runs at the op's end, and again at
+      the top of `new_target()` and of any loss invalidation, before either
+      resets the op state. In S0 a synchronous op bumped `ops` but `stopped`
+      latched only on the next `ms_step()`, and navigation in between ran
+      `new_target()`, which cancelled the stop that had just been reached
+      (`menu_slots.c:48-56,88-93,110-115`);
+    - **a stop not yet reached** is superseded by a retarget (its sequence
+      ends, `ms_stop_cancelled_take`). **A reached stop** survives
+      navigation and losses, and holds a newly requested clear paused. It
+      is released by the next sub 0 (`ms_stop_release`), and separately by
+      a fresh opening or a return from another owner (`fresh`), which is a
+      new screen;
+    - **slot progress and clear progress are kept apart:** navigation keeps
+      the PARTIAL slot's op and piece cursors while its signature is
+      unchanged (revision 13), and discards them only when its signature
+      changes, it's invalidated, or its cursor is abandoned. It never
+      restarts a clear sweep in progress;
+    - **an op cut by a retarget** counts once when it ends, untimed, and a
+      glyph still in flight is kept and counted at its DMA's end, untimed
+      (revision 13, codex's review). A new op starts a fresh timing origin;
+    - **a failed piece** stops the op and leaves the loss to the owner's
+      handler (C1). No slot commits over a pending loss.
+  - **Not by returning halfway.** No existing synchronous draw function
+    returns partway through its rectangle: their callers advance shadows
+    and restore state on return. Yielding belongs to the slot scheduler,
+    whose completion contract knows about partial work.
+  - **Host cases at every piece boundary:** partial B to A, a changed
+    selection, a loss, a layout change, a close and reopen, and a stop's
+    completion. The existing tests interrupt only between logical ops.
+    **And at the final piece's end, just before and just after it:** with
+    a failure, with navigation in the same pass, and with a stopped clear.
+    C9's 27 ops, its reference frames and its stop positions don't change.
+  - **The target, measured, not implied.** N is chosen from measured piece
+    costs, so that whole main-loop passes stay at or under 15 ms through
+    the named normal-operation workload, including its encoder backlog and
+    radio traffic. Zero passes of 25 ms or more. The record keeps the op
+    maxima, the whole-pass maxima and the repaint-completion latency.
+    Injected faults and their recovery are measured separately. A byte
+    count alone guarantees none of this, and neither a byte limit nor a
+    pass counter proves lossless input: the physical typing test stays.
 - **The panel-order stream:** `lcd_stream_begin(x, y, w, h)`,
   `lcd_stream_bytes(const uint8_t *panel_order, n)` and `lcd_stream_end()`.
   - **`begin`** validates the rectangle, quiesces the bus, acquires the
@@ -558,12 +781,15 @@ the code is raised before working around it.
   - **`bytes`:** `n` is in bytes, sent synchronously; the stream knows the
     total it expects (`w * h * 2`).
   - **`end`** completes the sends, deasserts CS and releases the scratch.
-  - **Every chunk opens and ends its stream within one pass.** No stream
-    stays open across passes, so no other painter can move the window
-    under it.
-  - Generated pixels (the mono glyphs, the strip, the QR code, a clear)
-    are written into the scratch already in panel byte order, through
-    `lcd_bus.c`'s own primitives, and sent through the stream.
+  - **Every piece opens and ends its stream within one pass** (revision 9's
+    words: a logical **op**, a slot's chunk, may span passes; a **piece**
+    never does). No stream stays open across passes, so no other painter
+    can move the window under it.
+  - Generated pixels (the mono glyphs, the strip, the QR code) are written
+    into the scratch already in panel byte order, through `lcd_bus.c`'s own
+    primitives, and sent through the stream. Clears aren't generated: the
+    layout's, the restore's and the debug page's clear bands, and the flash
+    glyphs, stay on flash DMA (the budget's exemption, above).
   - They're never passed back through `tx_pixels()`, which byte-swaps into
     the same scratch.
 - **`lcd_blit_mono(bits, cols, x, y, fg, bg)`:**
@@ -736,6 +962,134 @@ that's S1.
 - **The expected frames** come from the same tables: the host tests compute
   each slot's pixels, and the board's photos are compared with them.
 
+### C10. S1's measurement contract (revisions 9 to 12)
+
+What S1's scripts read, and the numbers they pass or fail on. **Every value
+is fixed here, before the measurement**; a value changes only in a plan
+revision, never during a run.
+
+- **Op 27 sub 10, timing and targets (dev builds).** Request `[.., 27, 10,
+  arm]`; it replies at once (no sequence; byte 5 status). **`arm` 1 starts a
+  measurement interval:** it zeroes bytes 6-15, 19 and 24-25 after the
+  reply, and issues a new session token (bytes 26-27). Every main-loop pass from then on counts, under **any** owner: the
+  dashboard's own work, the restore through DONE after a close or a Fn+D
+  exit, the transitions, and everything else. `arm` 0 only reads. Nothing
+  else is reset: health's counters, ge10, ge25 and HC_ACCT are never reset
+  inside a measured span, and the scripts never call `health_reset()`.
+  | Bytes | Field |
+  |---|---|
+  | 6, 7 | the largest single piece's cost: wall time in µs within its pass, from window to CS release |
+  | 8, 9 | the largest logical op latency (bytes 26-27's measure) |
+  | 10, 11 | the longest whole main-loop pass in the interval, in µs, any owner |
+  | 12, 13 | passes in the interval **over 15,000 µs** |
+  | 14, 15 | the longest repaint latency, in ms: a MENU target's creation (`tgen` moved) to `pixels_done` with that target |
+  | 16 | `tgen`, the MENU target generation (u8, wrapping) |
+  | 17 | MENU targets settled (u8, wrapping): `pixels_done` becoming true for a new `tgen` |
+  | 18 | MENU targets superseded (u8, wrapping): a `tgen` that moved on before it settled |
+  | 19 | the largest clear band's wall time, in ms: the layout's, the restore's and the debug page's bands |
+  | 20 | the debug page showing: 0 none, 1 Health, 2 Camera |
+  | 21 | `dbg_gen` (u8, wrapping): it moves each time the page's composition produces a target that differs from the last one composed, the first composition after a page reset included |
+  | 22 | `dbg_done_gen` (u8): the last `dbg_gen` whose every cell has been painted, with its final transfer complete and no loss pending |
+  | 23 | MENU slots committed (u8, wrapping) |
+  | 24, 25 | the passes in the interval (u16, **wrapping**): a summary only. Validation uses health page 2's u32 `passes`, `count_ge_10ms` and `count_ge_25ms`, which `health.c` snapshots together |
+  | 26, 27 | the session token (u16): 0 at boot (in RAM cleared at reset); each `arm` 1 sets it to the next value of a boot-cleared counter, skipping 0. It reads 0 after any reboot, so a token that changed, or reads 0, ends the session: the run fails |
+  | 28 | the health-reset generation (u8, wrapping): every `health_reset()` moves it. It must not change across a measured interval |
+  | 29 | `dbg_sec`: the RTC second (0-59) that the composition `dbg_gen` shows, taken from the same `rtc_get_time()` sample that composes the clock text (not `rtc_get_seconds()`, the free-running edge counter, whose value mod 60 isn't the calendar second); 0xFF before the first composition |
+  | 30 | the RTC's current second (0-59), read in the same reply |
+
+  **A1's "unknown sub" check moves from 10 to 31.**
+- **The debug page's completion** (`debug_done`, sub 5's byte 31, bit 0)
+  holds when all of these are true:
+  - the owner is DEBUG;
+  - a composition has happened since the page was entered;
+  - the page's clear has finished;
+  - the grid is clean (`dbg_dirty`, or `cam_dirty` on Camera, is 0);
+  - no composition is pending: `dbg_force_recompose` is false, **and** the
+    RTC's current second equals `dbg_sec`. A second that has elapsed but
+    hasn't been composed is pending, since `draw_debug_page()` finds a new
+    second by comparing `sec` with `last_sec`, not through the flag
+    (`display.c:840-845`);
+  - `dbg_done_gen == dbg_gen`;
+  - no transfer is in flight, and no loss is waiting.
+
+  **A page reset and a loss's invalidation each move `dbg_gen`**
+  (`display.c:837-845,1216,1232`). So a page being repaired is a new
+  generation, and completion is false until the repair is painted, even
+  when the composed text didn't change.
+
+  **A script ties a tested update to its completion like this:**
+  1. it reads `dbg_gen` **before** the cause;
+  2. it makes the cause: an op 1, or a clock second on Camera, whose time
+     line changes every second. For a second, it names the expected second
+     `S` as byte 30's value plus one (mod 60), and the second's arrival is
+     byte 30 reading `S`. A cause that leaves the composed target unchanged
+     isn't a tested update;
+  3. it waits for `dbg_gen` to move past the value it read, **and, for a
+     clock second, for `dbg_sec` to equal `S`**. The composition is tagged
+     with the second it shows, so an earlier second's generation can't
+     stand in for it;
+  4. it waits for `dbg_done_gen` to equal that generation, with
+     `debug_done` set and `dbg_sec` still `S`. If the clock moves on to
+     `S + 1` first, that sample is discarded and the case retried; three
+     discards fail the run.
+
+  A boolean read alone proves nothing. MENU's `pixels_done` keeps its
+  current-target meaning.
+- **Sampling.** Every read is bracketed by host timestamps, request sent to
+  reply matched. A bracket over **25 ms** is discarded and the read retried,
+  at most three times; a fourth fails the run. A sample's time is the
+  bracket's midpoint, and its uncertainty half the bracket. u8 counters are
+  read at least every **100 ms** during activity, which no counter can wrap
+  in (the fastest, `tgen`, moves at most once a pass, ~220 a second, so
+  fewer than 25 a read).
+- **Counters, per field** (the delta across a window is modular: mod 2^32
+  for u32, mod 2^16 for u16, mod 2^8 for u8):
+  - **`uptime_ms`** (u32, ms): its delta agrees with the host's
+    midpoint-to-midpoint time within **2% plus the two samples' half
+    brackets**. Otherwise the timebase has failed, and so has the run;
+  - **the row ISR's entries** (u32, a count): the rate, entries over the
+    board's elapsed seconds, lies between **1,000 and 10,000 a second**;
+  - **ge10, ge25 and passes:** a ge delta is no more than the passes'
+    delta, and the passes' delta no more than **500 a second** of the
+    board's elapsed time;
+  - **a reboot** shows as the session token reading 0 or changing; **a
+    health reset** shows as the health-reset generation (byte 28) moving.
+    Either one fails the run. The plausibility bounds above stay as checks
+    of their own, not as the way resets are found.
+- **Sustained activity** (5 s windows while an activity runs on, the
+  menu's open-and-close excluded): each window's row ISR rate is at least
+  **0.98** of the matched baseline. The baseline is three 5 s dashboard
+  windows just before, with the same lighting, transport load and
+  instrumentation. A ratio over 1.01 fails as a configuration error.
+- **Transitions** are exempt from the sustained rule and have their own:
+  Fn+D in, Camera, Fn+D out, the menu's open and close, and a layout
+  change.
+  - **Ten repeats** of each kind.
+  - **Each repeat** is measured in successive **500 ms windows** from the
+    transition until its observed completion: the restore's DONE with a
+    new generation, `debug_done` for the new `dbg_gen`, or `pixels_done`
+    for the new `tgen`. Then **one window more**.
+  - **The thresholds:** every window is at least **0.95** of a matched
+    500 ms baseline, and the mean of all the windows of one kind, across
+    its ten repeats, at least **0.98**.
+  - **Completion** comes within **1,000 ms** of the transition, else the
+    run fails.
+- **Paced repaints:** every requested target settles within **1,000 ms**,
+  else the run fails.
+- **Continuous input** (op 27 sub 1, one detent every 50 ms for 10 s, read
+  every 100 ms; the encoder's own backlog is measured separately in S1):
+  - **progress:** the committed-slot count (byte 23) rises in every
+    500 ms of the burst. Settled whole targets aren't required during the
+    burst, since each lives only ~50 ms;
+  - **the end:** the final cursor is the sum of the detents, modulo the
+    rows; the final target settles within **500 ms** of the last detent;
+  - **the books:** targets created (`tgen`'s delta) equal the settled plus
+    the superseded, plus at most the one outstanding.
+- **Timing:** over the armed interval of the supported workload, byte 10-11
+  is at most **15,000 µs**, byte 12-13 is 0, and ge25 doesn't move.
+- **Every timeout fails the run,** logged or not. A run that fails any
+  check isn't a measurement and isn't reported as one.
+
 ## The settings
 
 | Item | Firmware value | Preview | Save | Cancel |
@@ -887,7 +1241,8 @@ saved Off (`level + 1`).
     old signature counts as not settled. Byte 21 and pattern 2's "A settled
     first" use the same test. It's
     false under every other owner. DASH's completion is read from
-    `restore_phase` and `restore_gen`; the debug pages have none in S0.
+    `restore_phase` and `restore_gen`. The debug pages had none in S0; S1
+    adds `debug_done` (byte 31, C10).
 - **The subs:**
 
   | Sub | Args | Effect |
@@ -901,6 +1256,8 @@ saved Off (`level + 1`).
   | 6 | [5] 0 or 1 | disarm or arm the physical test mode (C2) |
   | 7 | | request a dashboard restore, as the startup callback does |
   | 8 | | mark a blit lost, as an exhausted recovery does |
+  | 9 | | the handoff probe (the board's A3, `CONFIG-MENU-S0-BOARD-TESTS.md`): under a DONE dashboard, queue three glyphs and a lock label, then hand the panel to the Fn+D page in the same call. Bytes 7-10 of the reply: gq and lq before, then after. Refused (state 5) unless the dashboard is DONE |
+  | 10 | [5] 0 or 1: arm | S1: timing and targets, read at once with no sequence (C10). Bytes 6-30; `arm` 1 starts a measurement interval, zeroing its maxima and counts after the reply and issuing a new session token |
 
 - **Sub 5's reply,** from byte 5 (byte 5 is the status, 0):
 
@@ -919,11 +1276,11 @@ saved Off (`level + 1`).
   | 22 | losses seen (u8, saturating) |
   | 23 | the capture bits: bit 0 the press, 1 clockwise, 2 counter-clockwise |
   | 24, 25 | `invariant_fail`, u16 LE: bit 0 an early `COMMITTED`, 1 an early `DONE`, 2 a wake while OPEN, the rest reserved |
-  | 26, 27 | the last paint operation's time, u16 LE in µs, saturating at 65535; 0 until S1 |
+  | 26, 27 | the last **ended** logical op's latency (revision 9): wall time in µs from its first piece's start to its end (the last piece's return, or its last DMA's completion or give-up), passes between included; u16 LE, saturating at 65535. A failed op updates it; an op abandoned by a retarget doesn't. 0 until S1 |
   | 28 | the pairing phase; 0 until P3 |
   | 29 | the fixture's completed paint operations since its last target (saturating) |
   | 30 | bit 0: the fixture is stopped (pattern 2) |
-  | 31 | zero, reserved |
+  | 31 | bit 0 (revision 9): `debug_done`, the debug page's completion (C10); the rest zero, reserved |
 
 - **The daily and fpb builds** don't compile HC_DEVHOOK at all. `build.sh`
   already enforces that.
@@ -1005,22 +1362,83 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
      drain's backlog are S1's. The general test list below ("The stall
      counters") is P1's gate, not S0's.
 2. **S1, the mono paint, measured:**
+   - **First, the polled bulk sends** (C4) merged from `gremlin/fill-poll`,
+     with both hardening items:
+     - **an entry check** that SPI0 is idle (READY, no DMA, RX empty). It
+       never blindly resets a live transaction and strands its owner: it
+       takes the established bounded quiesce or abort path, or refuses
+       safely as a give-up;
+     - **the driver's FIFO dispatch** respects IE and transfer ownership,
+       while keeping the DMA dispatch: a chibios-contrib patch, recorded in
+       `PATCHES.md`.
+
+     **Proof of the failure path:** a dev or `devfault` hook that fails a
+     poll in a middle piece and at the BUSY tail. The loss is latched, the
+     bus cleaned up, the owner repaints, and `PO_FAIL_SPI0_POLL` is set.
+     HC_BLITFAULT covers DMA completions only.
+
+     **And `MENU_PASS_BYTES`** (C4), applied to the fixture's ops before the
+     mono paint builds on them.
+   - **C2's Fn stays `layer_state`** ("Open" 5, settled): documented, with
+     the A10 tap-hold case recorded as the known miss.
    - `lcd_blit_mono` and the generated font, with op 27 sub 0's mono
      patterns (16 up) painting on the fixture, under its panel ownership,
      never a second painter over the live dashboard.
-   - **The encoder drain:** real spins and a backlog measured; the
-     supported workload is named, and a bounded drain (a change to
-     `quantum/encoder.c`) decided on those numbers.
-   - **Measured separately with HC_ACCT's ticks:** the CPU time of a glyph,
-     a half row and a full row, and whole passes during real knob spins,
-     clock edges and radio traffic.
-   - **The bounds:** the renderer's per-pass budget, and the whole pass's
-     bound. If spins exceed it through the encoder drain, a bounded drain
-     (a change to `quantum/encoder.c`) is weighed then.
+   - **The encoder drain:** real spins and a backlog are measured, and the
+     supported burst and backlog are named. The drain spends its two
+     configured 1 ms waits on every detent it dequeues, even when the menu
+     captures them, so a backlog can pass 25 ms before any painting. If the
+     named workload breaks the whole-pass target, **a bounded drain (a
+     change to `quantum/encoder.c`) is required**, or the claim is narrowed
+     explicitly.
+   - **Measured with HC_ACCT** (wall time, preemption included, not CPU
+     time; not scaled again by the row ISR's share): a glyph, a half row, a
+     full row, each piece size, and whole passes during real knob spins,
+     clock edges and radio traffic. Maxima are kept over the run, since op
+     27's last paint duration can miss a slow one between reads.
+   - **The clock edge:** MENU suppresses the dashboard's drawing, and the
+     pump already skips a pass when the dashboard's clock work ran. Those
+     guards stay, and edges are exercised during entry, PENDING, DEBUG and
+     the restore.
+   - **The bounds:** `MENU_PASS_BYTES` and the DMA clears' bound (C4), and
+     the whole pass's target.
    - **Settled on the panel:** the cursor style (Open, 1), and the generated
      glyphs against the flash atlas.
+   - **The LEDs, an executable gate:** `scripts/menu_s0_ledrate.py`,
+     extended.
+     - **The ratio:** activity rate at least 0.98 of a matched baseline,
+       taken just before with the same lighting, transport load and
+       instrumentation. A rate higher than the baseline sends you to check
+       the configuration and the timebase.
+     - **Covered:** sustained mono repainting, F2, selection changes, real
+       spins with their backlog draining, layout clears, open and close,
+       the restore through DONE, and Health and Camera's entry, updates and
+       exit.
+     - **Transitions measured on their own,** repeated, in short windows,
+       or as row-start gaps: a 50 ms stall spread over 5 s is only 1%, so
+       the ratio alone can't rule out a flicker. The ISR's duration maximum
+       doesn't measure a late start. JD's spin check by eye stays.
+     - **The script fails a run** on any of C10's checks: the ratio, the
+       transition windows, a settlement or progress miss, ge25, sub 10's
+       15 ms count, unusable counters, or a timebase mismatch. Every
+       number is C10's.
+     - **Completion, two rules:**
+       - **for paced repaints,** every requested target settles within its
+         deadline;
+       - **during continuous spins,** C3 may supersede intermediate
+         targets. The input's outcomes are right, the supersessions are
+         accounted for, and the final target settles within a bound after
+         the input stops. A fine ISR rate with the painting barely moving
+         fails the responsiveness gate.
+     - **Excluded from the matched comparison:** boot and reset, counter
+       resets, intended sleeps and lighting-mode changes, and injected bus
+       faults, whose recovery is recorded separately. Ordinary restores,
+       Fn+D painting and the encoder's waits stay in.
 3. **P1, the menu:** `menu.c` with host tests; Lighting, Screen, Power,
-   Clock, Diagnostics, Help, About and Exit; C6 to C8.
+   Clock, Diagnostics, Help, About and Exit; C6 to C8. **The menu keycode**
+   ("Open" 3): its C2 amendment, reviewed before code, then appended to the
+   enum and `via.json`. Tests: duplicate bindings, held-key remaps, both
+   platforms, every session state, and both kinds of held knob.
    **Exit gates:**
    - real VIA Set and Save packets mid-edit;
    - real `RM_*` keys: the wake rig's key remapped to `RM_VALU` for the
@@ -1074,6 +1492,9 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
   - **Fit:** every label, value and Help line within 20 columns.
 - **On the board, on gremlin's first, driven by op 27 plus the hands-on
   session:**
+  - **The LEDs (revisions 7 and 8):** S1's executable gate (the ratio of
+    at least 0.98, the transition windows, the two completion rules), and
+    JD's eye on a knob spin.
   - **The stall counters:** no pass of 25 ms or more over a scripted
     500-input session, including the strip, the QR code, a restore with a
     track playing, a wake and real spins. Counter resets are kept out of
@@ -1100,5 +1521,89 @@ finding dispositioned. Each goes onto gremlin's board before JD's.
 
 ## Open
 
-1. **The cursor: lit text or inverted.** Settled on the panel in S1.
-2. **Half rows or full rows:** S1's measurements decide.
+1. **The cursor: SETTLED, lit text** (JD on the panel, 10-24, the
+   fixture's F3: "I'd lean the 'lit' rows instead of inverted"; both
+   "decent"). The rows a little dimmer than white (#C8C8C8, RGB565
+   `0xCE59`), the selected row pale yellow (#FFF2A0, `0xFF94`). For the
+   same footprint its cost doesn't depend on the style: the opaque mono
+   blit sends every pixel of a cell either way (measured: GREMLIN-RESULTS
+   §19). JD also found the 6x14 face small ("tiny"), and chose to go on
+   with it: a larger face is a redesign, in BACKLOG.
+2. **Half rows or full rows: SETTLED, half rows**, by measurement (JD, 10-24:
+   no visible difference, "do whatever is more efficient"). On `cbb51ac1`
+   both keep every pass under 15 ms; half rows have the more headroom
+   (the longest pass 13.1-13.5 ms against 13.5-14.5) and repaint only the
+   changed half when a value on the right changes; full rows finish a
+   cursor move ~10% sooner (158 ms against 165-182), with one window fewer
+   a row. They don't halve the total area of a cursor move, which still
+   repaints two whole rows.
+3. **A menu keycode (JD, 10-24): wanted.** An opener JD can place anywhere in
+   VIA, beside Fn+knob, which stays. JD first thought of Fn+C (the clock
+   format today), then kept everything on the knob; JD wants the keycode as
+   well. **In P1** (codex, revision 7: that's when the real menu exists).
+   The C2 amendment, reviewed before code:
+   - **The enum:** appended to `ak820pro_keycodes` and via.json's
+     `customKeycodes[]` (append only).
+   - **Matched by its resolved keycode on the press;** the release goes by
+     the event's physical identity. VIA can bind it to several keys, so
+     owed releases are per key (a small matrix-position bitmap), not one
+     capture bit.
+   - **Its press, by state:**
+
+     | State | A menu-key press |
+     |---|---|
+     | DASH/NONE | opens, or enters PENDING during the wake hold |
+     | DEBUG/NONE | hands off to MENU/OPEN |
+     | PENDING | cancels the pending request |
+     | MENU/OPEN or DEBUG/OPEN | closes the whole session |
+     | ANIM | refused, its press and release still captured |
+
+   - **Its release** does nothing: no click, no Back, no second toggle. Owed
+     releases are routed before the session, the enable state or the
+     current keycode are checked, even after a disarm or a VIA rewrite.
+   - **A press while the knob is held** keeps the knob's release ownership:
+     a forwarded knob press has its release forwarded, a captured one
+     consumed. The open or close clears old gestures and pending input, so
+     that release can't click into the new session or fire a late Back.
+   - **The knob's identity routing stays authoritative** during a session.
+     If the keycode is mapped onto the knob or a detent, the behaviour is
+     documented, and one event never takes both routes.
+   - **The Fn question ("Open" 5):** a menu keycode on a base layer needs
+     no Fn test, and is captured before an unrelated tap-hold resolves. One
+     reachable only on the buffered Fn layer can still be missed, because
+     the early lookup sees the mapping underneath.
+4. **The fixture's fills dim the RGB ~19% while they repaint** (A11,
+   `GREMLIN-RESULTS.md` §10). `lcd_fill_rect` runs through SPI0's FIFO
+   interrupt, which delays the row ISR. **JD, A10 (10-24): every knob turn
+   visibly flickered the keyboard's LEDs** (one cursor move repaints two
+   rows). The restore's and the Fn+D page's clears were never part of it:
+   they're DMA'd from flash and measured ~0.3%. **Settled:** bulk sends are
+   polled (C4), prototyped as `gremlin/fill-poll` `f2b107be` (-18% to
+   -1.3%, JD: "no flicker"). Repaints take ~15% longer in wall time for it,
+   so the per-pass budget (C4) and S1's LED gate carry it from here.
+5. **Fn is judged by `layer_state`, which lags a buffered Fn press** (A10,
+   10-24). Within the tapping term of an undecided tap-hold on another key,
+   QMK's tapping buffer still holds Fn's press, while C2's capture in
+   `pre_process_record_kb` sees the knob at once. Fn+knob then reads as a
+   plain knob: its mapped input is forwarded and replayed, and the menu
+   doesn't open. On the board that was safe, but under another VIA mapping
+   the forwarded press would do whatever that mapping does.
+
+   **Settled (codex, revision 7): accepted and documented.** Fn means an
+   active `WINFN` or `MACFN` layer at the early hook, and an unresolved
+   layer-tap isn't Fn yet. That keeps QMK's own decision and C2's
+   contract. The alternatives were rejected:
+   - **A fixed physical Fn position:** the default maps already have
+     several Fn keys, and VIA can move or remove them. It would also take a
+     tap-hold key as Fn before QMK decides.
+   - **Tracking early presses that resolve to `MO(WINFN)` or `MO(MACFN)`:**
+     it handles moved keys and both platforms, but needs held-key tracking
+     and a policy for other layer actions, and still can't see an
+     unresolved `LT`'s hold.
+   - **Reading QMK's tapping buffer:** a core patch over a static
+     `waiting_buffer`, its indices and `tapping_key`, tied to the tapping
+     internals and configuration. A queued Fn press may already be
+     released, too.
+
+   The window is the tapping term after a tap-hold key. Neither keyboard's
+   keymap has a tap-hold key today.

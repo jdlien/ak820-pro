@@ -1,0 +1,1065 @@
+{
+ "steps": [
+  {
+   "what": "open (reset pass)",
+   "ms": 993,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "to Diagnostics",
+   "ms": 231,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "Diagnostics",
+   "ms": 893,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "to Reset counters",
+   "ms": 226,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "Reset counters",
+   "ms": 550,
+   "owner": "menu",
+   "screen": 26,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "reset",
+   "ms": 441,
+   "owner": "menu",
+   "screen": 26,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "back to Diagnostics",
+   "ms": 992,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "Reset counters again",
+   "ms": 553,
+   "owner": "menu",
+   "screen": 26,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "cancel it",
+   "ms": 771,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "close (reset pass)",
+   "ms": 427,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0
+  },
+  {
+   "what": "open",
+   "ms": 995,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 12922
+  },
+  {
+   "what": "down 1",
+   "ms": 235,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14032
+  },
+  {
+   "what": "down 2",
+   "ms": 226,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14032
+  },
+  {
+   "what": "down 3",
+   "ms": 234,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14272
+  },
+  {
+   "what": "down 4",
+   "ms": 233,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14272
+  },
+  {
+   "what": "down 5",
+   "ms": 235,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "down 6",
+   "ms": 235,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "down 7",
+   "ms": 230,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "down 8",
+   "ms": 771,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "wrap down",
+   "ms": 762,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "wrap up",
+   "ms": 766,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "back to the top",
+   "ms": 763,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "to Power",
+   "ms": 233,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "Power",
+   "ms": 879,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "to another mode",
+   "ms": 234,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14330
+  },
+  {
+   "what": "commit it",
+   "ms": 894,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14805
+  },
+  {
+   "what": "Power again",
+   "ms": 887,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14805
+  },
+  {
+   "what": "to the original",
+   "ms": 234,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14805
+  },
+  {
+   "what": "commit the original",
+   "ms": 886,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14805
+  },
+  {
+   "what": "to Clock",
+   "ms": 224,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14805
+  },
+  {
+   "what": "Clock",
+   "ms": 881,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14805
+  },
+  {
+   "what": "to another clock",
+   "ms": 228,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14805
+  },
+  {
+   "what": "commit it",
+   "ms": 884,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Clock again",
+   "ms": 889,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to the original",
+   "ms": 230,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "commit the original",
+   "ms": 890,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Clock to cancel",
+   "ms": 886,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "move",
+   "ms": 229,
+   "owner": "menu",
+   "screen": 19,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "cancelled",
+   "ms": 788,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to Help",
+   "ms": 227,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Help",
+   "ms": 900,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 0",
+   "ms": 776,
+   "owner": "menu",
+   "screen": 27,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 0 page 2",
+   "ms": 7,
+   "owner": "menu",
+   "screen": 27,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 0 page 1",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 27,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 0 back",
+   "ms": 783,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to topic 1",
+   "ms": 232,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 1",
+   "ms": 876,
+   "owner": "menu",
+   "screen": 28,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 1 page 2",
+   "ms": 7,
+   "owner": "menu",
+   "screen": 28,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 1 page 1",
+   "ms": 7,
+   "owner": "menu",
+   "screen": 28,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 1 back",
+   "ms": 895,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to topic 2",
+   "ms": 226,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 2",
+   "ms": 892,
+   "owner": "menu",
+   "screen": 29,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 2 page 2",
+   "ms": 773,
+   "owner": "menu",
+   "screen": 29,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 2 page 1",
+   "ms": 773,
+   "owner": "menu",
+   "screen": 29,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 2 back",
+   "ms": 896,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to topic 3",
+   "ms": 234,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 3",
+   "ms": 891,
+   "owner": "menu",
+   "screen": 30,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 3 page 2",
+   "ms": 770,
+   "owner": "menu",
+   "screen": 30,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 3 page 1",
+   "ms": 765,
+   "owner": "menu",
+   "screen": 30,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "topic 3 back",
+   "ms": 891,
+   "owner": "menu",
+   "screen": 21,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Help back",
+   "ms": 884,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to About",
+   "ms": 226,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "About",
+   "ms": 856,
+   "owner": "menu",
+   "screen": 22,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "About back",
+   "ms": 882,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to Diagnostics",
+   "ms": 235,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Diagnostics",
+   "ms": 881,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Health page",
+   "ms": 761,
+   "owner": "debug",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "back from Health",
+   "ms": 1000,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to Camera",
+   "ms": 232,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Camera page",
+   "ms": 326,
+   "owner": "debug",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "back from Camera",
+   "ms": 999,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Diagnostics back",
+   "ms": 874,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to Lighting",
+   "ms": 226,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Lighting",
+   "ms": 873,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Effect",
+   "ms": 861,
+   "owner": "menu",
+   "screen": 42,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "preview the next effect",
+   "ms": 242,
+   "owner": "menu",
+   "screen": 42,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Effect cancelled",
+   "ms": 669,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to Brightness",
+   "ms": 230,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Brightness",
+   "ms": 664,
+   "owner": "menu",
+   "screen": 43,
+   "cursor": 24,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "brightness up",
+   "ms": 116,
+   "owner": "menu",
+   "screen": 43,
+   "cursor": 29,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "brightness down",
+   "ms": 117,
+   "owner": "menu",
+   "screen": 43,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Brightness cancelled",
+   "ms": 892,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Brightness again",
+   "ms": 661,
+   "owner": "menu",
+   "screen": 43,
+   "cursor": 24,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Brightness cancelled again",
+   "ms": 889,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "to Hue",
+   "ms": 229,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "Hue",
+   "ms": 769,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 237,
+   "inv": 0,
+   "over15": 3,
+   "pass_max_us": 15525
+  },
+  {
+   "what": "hue up 1",
+   "ms": 121,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 240,
+   "inv": 0,
+   "over15": 4,
+   "pass_max_us": 15893
+  },
+  {
+   "what": "hue up 2",
+   "ms": 120,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 243,
+   "inv": 0,
+   "over15": 5,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "hue up 3",
+   "ms": 120,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 246,
+   "inv": 0,
+   "over15": 6,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "hue up 4",
+   "ms": 118,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 249,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "hue down, fast",
+   "ms": 227,
+   "owner": "menu",
+   "screen": 44,
+   "cursor": 177,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "Hue cancelled",
+   "ms": 889,
+   "owner": "menu",
+   "screen": 40,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "Lighting back",
+   "ms": 783,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "to Screen",
+   "ms": 225,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "Screen",
+   "ms": 662,
+   "owner": "menu",
+   "screen": 41,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "screen up",
+   "ms": 114,
+   "owner": "menu",
+   "screen": 41,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "Screen cancelled",
+   "ms": 761,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  },
+  {
+   "what": "close",
+   "ms": 441,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 17024
+  }
+ ],
+ "meas": {
+  "piece_us": 5600,
+  "op_us": 41845,
+  "pass_max_us": 17024,
+  "over15": 7,
+  "repaint_ms": 935,
+  "tgen": 53,
+  "settled": 26,
+  "superseded": 27,
+  "band_ms": 2,
+  "page": 0,
+  "dbg_gen": 14,
+  "dbg_done_gen": 14,
+  "committed": 88,
+  "passes": 8120,
+  "token": 3,
+  "health_gen": 3,
+  "dbg_sec": 33,
+  "rtc_sec": 0,
+  "aliased": false
+ },
+ "fails": [
+  "the longest pass 17024 us"
+ ],
+ "slow": [
+  {
+   "step": "commit it",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 4,
+    "blit_pump": 5,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "to Help",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 4,
+    "battery": 1,
+    "blit_pump": 5,
+    "unaccounted": 5
+   }
+  },
+  {
+   "step": "Diagnostics back",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 5,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "Diagnostics back",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 5,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "hue up 1",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "hue up 2",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "hue up 3",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "hue up 4",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  }
+ ]
+}
