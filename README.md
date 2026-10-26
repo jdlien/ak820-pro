@@ -50,6 +50,10 @@ Recovery is **re-running the flash**, not a power cycle.
 **stock**, the first time only, you must short the 2-pin header under the
 spacebar — put the mode slider in `cable`, cold-boot with the pins shorted
 (it is sampled only at power-on). fpb's repo has the photo and the procedure.
+On macOS there is a way that needs no opening at all: stock V1.13 jumps to
+the ROM bootloader on its own HFD reboot command, and a SonixFlasherC with
+`--usage-page` can send it and flash in one run — see
+[docs/hardware.md](docs/hardware.md), "From stock without opening the board".
 
 **4. Flashing erases the emulated EEPROM** — VIA keymap and macros, RGB
 settings, LCD brightness, the clock format, the power mode, the settings

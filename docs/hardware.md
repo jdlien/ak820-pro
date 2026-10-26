@@ -161,7 +161,8 @@ old they are.
   an unplug plus 30 min ([battery.md](battery.md), "The level after a flash").
 - Rollback to stock: `StockFWBinaries/AJAZZ_AK820PRO_PID_8009_V1.13_...bin`
   — **never v1.14** (it changes the PID to 8099 and AJAZZ's own drivers stop
-  seeing the board). Requires the pin short; `Fn`+`Esc` disappears with QMK.
+  seeing the board). Requires the pin short; `Fn`+`Esc` disappears with QMK
+  (coming back to QMK from stock can use the HFD path below instead).
   The shipped v1.10 is gone permanently. **There is no way to dump firmware
   off the board.**
 - `SonixFlasherC` MUST be built `make USE_LIBUSB=1` (`nm sonixflasher |
@@ -170,6 +171,45 @@ old they are.
   it is not a permissions problem; sudo/Input Monitoring don't help. The
   clone must stay on fpb's `fix_for_macos_tahoe` branch, and the branch
   alone is not sufficient — the flag is.
+
+## From stock without opening the board (macOS)
+
+Measured 2026-10-21 on an AK820 Pro on stock V1.13 (`0C45:8009`, SN32F290,
+code security CS1), macOS 27 on Apple Silicon. Not by JD; contributed.
+
+**What stock does.** Stock answers SonixFlasherC's `-r hfd` magic
+(`0x5A8942AA, 0xCC6271FF`, a 64-byte feature report) on its vendor
+collection `0xFF13` (interface 3). The check is at `0x21b8` in the V1.13
+image (both words also at `0x22b4`/`0x2468`); on a match it masks
+interrupts, stops its peripherals and calls `0x14c`, which writes one
+register and does `bx 0x1FFF0301` — the **ROM bootloader**, in place. USB
+does not re-enumerate: the board stays `0C45:8009`, stops typing, the LCD
+freezes, and the same HID handle now answers the bootloader's protocol
+(`GET_FW_VERSION` → SN32F290, CS1, code option `0xFFFF`). The ROM does the
+erase and the write, so erasing flash cannot cut the ground from under it.
+
+**Why the stock flasher cannot use it on a Mac.** `hid_open` takes the first
+collection, which is the keyboard (interface 0); the libusb build tries to
+claim interface 0, which macOS owns, and fails before sending anything.
+SonixFlasherC needs to open the `0xFF13` collection instead: `--usage-page`
+([fpb/SonixFlasherC#1](https://github.com/fpb/SonixFlasherC/pull/1)), in a
+**plain hidapi build** (`make`, not `USE_LIBUSB=1`: here the device keeps its
+HID nodes, unlike the Tahoe bootloader at `0x7140`).
+
+```sh
+# keyboard on stock, slider on cable, cable straight into the Mac
+SonixFlasherC/sonixflasher --vidpid 0c45/8009 -r hfd -u 0xFF13 \
+  --file ak820pro-builds/out/<the artifact>.bin
+# reboot magic -> GET_FW_VERSION -> CS1 to CS0 -> erase -> write -> checksum OK -> reboot
+```
+
+- A probe that stops before the erase is easy to add and worth running first.
+  Each reboot without a flash leaves the board frozen in the ROM until a
+  cold power-off (`cable`, unplug ~10 s), which brings stock back unharmed.
+- **After this first flash the board may look dead** (no keys, LCD white,
+  no lights) even though raw HID answers: a cold power-off brought it up.
+  Then provision the assets and, if the LCD is upside down, the other panel.
+- Recovery is unchanged: the ROM is untouched, so the pin short still works.
 
 ## Building and flashing on Windows (MSYS2)
 
