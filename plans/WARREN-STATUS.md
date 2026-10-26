@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~12:35.
+2026-10-26 ~13:05.
 
 ## Where things stand
 
@@ -347,8 +347,19 @@ This file is the thread; read it first after a context loss. Updated
        restarts the idle timer (Rename takes the 180 s backstop); Save new
        doesn't open it (Decided 4). Codex: three rounds
        (`review-codex-p5c-code-2026-10-26.md`). 28 mutants, 1 survives.
-       Flashing with `scratchpad/p5c_flash_passes.sh` (the board pass drives
-       Rename by the knob; typing is JD's to try).
+       On the keyboard on gremlin since 12:38 (GREMLIN-RESULTS §20q). JD:
+       "Typing to save a name seems to work perfectly ... Perfect."
+     - **P5d, P5e and P5c MERGED (10-26, ~13:05):** `ak820pro-jdlien` at
+       `13c5e910`, main pins it. The session on Buzz told; its first flash
+       converts the keyboard on Buzz's four profiles into the eight.
+     - **Next: icons for the slot page's actions** (JD: "Let's see if we
+       can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
+       from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
+       (U+F006F) or the inbox tray (U+1F4E5); Save the floppy (U+1F4BE),
+       its outline (U+1F5AB) or the outbox tray (U+1F4E4); Rename the
+       pencil (U+F040) or the tag (U+F02B); Delete the trash (U+F1F8) or
+       Octicons' trashcan (U+F48E). The floppies and trays are 11 px tall,
+       the pencil 6, the trash 9. Waiting on JD's pick.
      - **JD's ideas (10-26), as first answered.** "I think maybe
        just a 'Save New' makes more sense than finite grayed out unused
        slots. We'd have to have a limit after some amount, but probably

@@ -1539,5 +1539,13 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   turn after Save new's second click (a wear-leveling consolidation, as in
   P5e's run at the same place: the flash's restore fills the log), then
   19 ms and 18 ms on Profiles' list. The fails are Drift's settles.
-- **Owed:** JD types a name (the host can't type).
+- **JD (10-26):** "Typing to save a name seems to work perfectly. It
+  truncates on the screen reasonably, length limits, exits with esc and
+  saves with enter. Perfect." And of P5e's preview: "the preview feels good,
+  0.6s is about right."
+- **Merged (10-26, ~13:05):** `ak820pro-jdlien` fast-forwarded to
+  `13c5e910` (P5d, P5e and P5c on P5b); main pins it, with twelve core
+  files (quantum/action_tapping.c and .h added) and VIA's 19 B macro buffer
+  in CLAUDE.md.
+- **Next:** icons for Load, Save, Rename and Delete (JD asked, 10-26).
 

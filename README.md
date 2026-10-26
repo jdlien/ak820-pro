@@ -55,7 +55,8 @@ spacebar — put the mode slider in `cable`, cold-boot with the pins shorted
 settings, LCD brightness, the clock format, the power mode, the settings
 profiles, BT slot, and the persisted RTC trim. `flash.sh` backs up and
 restores **the VIA keymap, the settings profiles and the live settings**
-for you (the lighting with them). BT slot and the RTC trim re-converge on
+for you (the lighting with them; a backup of the first builds' four profiles
+restores into the eight slots). BT slot and the RTC trim re-converge on
 their own (the clock takes a few minutes with a host attached). A firmware
 from before the profiles has no live settings to back up, so the first
 flash from one restores the keymap and the lighting only.
