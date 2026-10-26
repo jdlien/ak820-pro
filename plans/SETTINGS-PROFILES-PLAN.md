@@ -32,7 +32,7 @@ part of it.
 - the battery readout (percent or hours).
 
 **Not in v1:** the power mode (decided: it's easy to toggle on its own), the
-keymap, the BT slot (open, below), the RGB flags (the menu doesn't expose
+keymap, the BT slot (Decided 11), the RGB flags (the menu doesn't expose
 them), the RTC period and the battery level (the board's own state, never
 the user's).
 
@@ -59,22 +59,26 @@ the user's).
    13, `scripts/menu_tune.py`): const in dev as in daily. Its 14 B pay for
    this feature's state. JD: "I probably don't need live colour tuning
    anymore."
+9. **Page 1's last row.** Bootloader moves to the top of page 2, with
+   Diagnostics, Help, About and Exit: the settings stay together on page 1,
+   and the bootloader goes with the system items.
+10. **The summary goes below the actions** ("The slot page"), as the menu
+    places notes today. Its content is still to be worked out on the panel.
+11. **Profiles have nothing to do with Bluetooth.** A load never changes
+    the connection. If a load also selected a slot, a load meant only for
+    the look could drop the computer you're typing on. A slot that won't
+    connect would also leave a load half done (P3's failure cases).
+12. **No load shortcut in v1.** JD's Fn+1-4 are F1-F4 (the 65% habit), so
+    a later shortcut would go on other keys.
 
-## Open, for JD
+## Later, not v1
 
-None of these blocks P5a, which has no UI. They're needed before P5b.
-
-- **Where on the top level.** Page 1's last row, which pushes Bootloader to
-  the top of page 2 with Diagnostics, Help, About and Exit (recommended: the
-  settings stay together on page 1, and the bootloader goes with the system
-  items), or page 2 right after Bootloader.
-- **Whether a profile carries the BT slot.** "Home" on BT 1 and "Work" on
-  BT 2 is a real use, and the menu can select slots (P3). It makes a load
-  also a reconnect, with P3's failure cases. Proposed: not in v1.
-- **A shortcut** such as Fn+1-4 to load a slot without the menu. Proposed:
-  not in v1; easy to add later.
-- **The summary rows' content and place** ("The slot page"). Below the
-  actions is what the menu does today. On top needs new cursor work.
+- **A look for each connection:** the reverse of putting the slot in the
+  profile. Each link (USB, 2.4G, BT 1-3) could name a profile to load when
+  the board switches to it. Then a different look on each computer becomes
+  a cue for which one you're typing on, and a load still never reconnects.
+  It costs 5 B of EEPROM, one row per link in Connection, and a rule for a
+  link whose profile was deleted. It needs JD's word before it's designed.
 
 ## Storage
 
@@ -377,8 +381,8 @@ Delete
   only the listed rows (`cursor = (cursor + turns) % row_count`), and every
   listed row is selectable, so nothing in the cursor changes.
   - **Summary on top instead** needs a display offset in `row_at` (item i
-    at row i + 2) and its own tests (lit rows, the top, paging). JD's call;
-    v1 proposes below.
+    at row i + 2) and its own tests (lit rows, the top, paging). Decided:
+    below (Decided 10).
   - **Proposed content:** the effect's name and speed on the first row;
     hue (in degrees, as the Hue editor shows it), saturation and
     brightness on the second. A third row (the screen, the indicators, the
