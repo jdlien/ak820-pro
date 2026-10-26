@@ -1,5 +1,6 @@
 /* Host test for keyboards/a_jazz/ak820pro/menu/profiles.c, the settings
- * profiles' store and HC_PROFILES (P5a, plans/SETTINGS-PROFILES-PLAN.md).
+ * profiles' store and HC_PROFILES (P5a, plans/SETTINGS-PROFILES-PLAN.md), and
+ * what P5b adds: the deferred active slot, names, the `*`, the keys' step.
  * Build and run, mingw64's gcc first on PATH:
  *   D=qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro
  *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/profiles_test.c $D/menu/profiles.c -o pt && ./pt */
@@ -35,8 +36,11 @@ uint8_t env_prof_write(uint16_t addr, const void *src, uint8_t n) {
 }
 static bool fk_recovering;
 bool        env_recovering(void) { return fk_recovering; }
-static int  fk_flushes;
-void        env_settings_flush(void) { fk_flushes++; }
+static int  fk_flushes, fk_touches;
+static bool fk_pending;   /* kb_eeconfig's write still to come */
+void        env_settings_flush(void) { fk_flushes++; fk_pending = false; }
+void        env_settings_touch(void) { fk_touches++; fk_pending = true; }
+bool        env_settings_pending(void) { return fk_pending; }
 
 /* The live settings, and the setters' calls in order. */
 static env_rgb_t fk_rgb = {2, 240, 215, 86, 127, 1, 0xFF};
@@ -81,6 +85,7 @@ static void reset(void) {
     memset(ee, 0, sizeof ee);
     nlog = 0; fail_at = consolidate_at = -1;
     fk_recovering = false;
+    fk_pending = false; fk_touches = 0;
     fk_rgb = (env_rgb_t){2, 240, 215, 86, 127, 1, 0xFF};
     fk_lcd = 52; fk_ind[0] = 30; fk_ind[1] = 60; fk_clock = 4; fk_power = 1; fk_hours = false;
     calls[0] = '\0';
@@ -88,6 +93,11 @@ static void reset(void) {
     prof_test_reset();
 }
 #define B(off) ee[PROF_BASE + (off)]
+/* kb_eeconfig's settled write done, then the 10 Hz tick: the pending active slot's write. */
+static void settle(void) {
+    fk_pending = false;
+    prof_tick();
+}
 static uint8_t rpt[32];
 static uint8_t hid(uint8_t sub, uint8_t a4, uint8_t a5) {
     memset(rpt, 0, sizeof rpt);
@@ -151,15 +161,23 @@ static void test_format_and_save(void) {
     /* The first save formats first: four states, the active byte, the magic last; then the save. */
     bool c = true;
     CHECK(prof_save(0, &c) == PROF_OK && !c);
-    CHECK(nlog == 6 + 4);
+    CHECK(nlog == 6 + 3);
     for (int s = 0; s < 4; s++) CHECK(wlog[s].addr == PROF_BASE + PROF_REC_OFF(s) && wlog[s].first == PS_EMPTY);
     CHECK(wlog[4].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[4].first == 0xFF);
     CHECK(wlog[5].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[5].first == PROF_MAGIC_V1);
-    /* The save: the state empty, the body (26 B), the state saved, the active byte. */
+    /* The save: the state empty, the body (26 B), the state saved; the active
+     * slot deferred (P5b): it counts at once, and is written only after
+     * kb_eeconfig's settled write. */
     CHECK(wlog[6].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[6].first == PS_EMPTY && wlog[6].n == 1);
     CHECK(wlog[7].addr == PROF_BASE + PROF_REC_OFF(0) + 1 && wlog[7].n == 26);
     CHECK(wlog[8].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[8].first == PS_SAVED_V1 && wlog[8].n == 1);
-    CHECK(wlog[9].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[9].first == 0);
+    CHECK(B(PROF_OFF_ACTIVE) == 0xFF && prof_active() == 0 && fk_touches == 1 && fk_pending);
+    prof_tick();
+    CHECK(nlog == 9);   /* kb_eeconfig's write still to come */
+    settle();
+    CHECK(nlog == 10 && wlog[9].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[9].first == 0 && wlog[9].n == 1);
+    settle();
+    CHECK(nlog == 10);   /* once */
     CHECK(prof_formatted() && prof_active() == 0 && prof_slot(0, r) && !prof_slot(2, r));
     /* A consolidation is reported. */
     nlog = 0; consolidate_at = 1;
@@ -215,10 +233,13 @@ static void test_delete_and_load(void) {
     CHECK(prof_save(0, NULL) == PROF_OK);
     fk_rgb.h = 200; fk_lcd = 10; fk_clock = 1; fk_hours = true;
     CHECK(prof_save(1, NULL) == PROF_OK && prof_active() == 1);
-    /* Delete: the state alone (its crc still good), and the active byte to none if it was active. */
+    /* Delete: the state alone (its crc still good), and the active slot to
+     * none, deferred, if it was active. */
     nlog = 0;
-    CHECK(prof_delete(1) == PROF_OK && nlog == 2 && !prof_slot(1, r) && prof_active() == 0xFF);
-    CHECK(prof_delete(0) == PROF_OK && nlog == 3 && prof_active() == 0xFF);
+    CHECK(prof_delete(1) == PROF_OK && nlog == 1 && !prof_slot(1, r) && prof_active() == 0xFF);
+    CHECK(prof_delete(0) == PROF_OK && nlog == 2 && prof_active() == 0xFF);
+    settle();
+    CHECK(nlog == 3 && B(PROF_OFF_ACTIVE) == 0xFF);
     /* The active byte pointing at an empty slot reads as none. */
     CHECK(prof_save(0, NULL) == PROF_OK && prof_active() == 0);
     B(PROF_REC_OFF(0)) = 0x07;
@@ -271,6 +292,7 @@ static void make_image(uint8_t *img) {
     prof_save(0, NULL);
     fk_rgb.h = 22;
     prof_save(3, NULL);
+    settle();
     memcpy(img, &ee[PROF_BASE], PROF_BLOCK_SIZE);
 }
 static void send_pages(const uint8_t *img, uint8_t token, uint8_t skip_page) {
@@ -295,6 +317,17 @@ static void test_hid_restore(void) {
         if (p == 4) for (int i = 6 + 6; i < 32; i++) CHECK(rpt[i] == 0);
     }
     CHECK(hid(0, 5, 0) && rpt[5] == PROF_BAD);
+    /* P5b: a pending choice reads as the board will write it, so a backup
+     * taken inside the settle has it. */
+    CHECK(prof_load(0) == PROF_OK && B(PROF_OFF_ACTIVE) == 3);
+    CHECK(hid(0, 0, 0) && rpt[6 + PROF_OFF_ACTIVE] == 0 && rpt[6] == PROF_MAGIC_V1);
+    /* A Begin drops it: the restore's active byte wins, not a choice
+     * written after the commit. */
+    CHECK(hid(1, 0, 0x59) && rpt[6] == PROF_OK);
+    send_pages(img, 0x59, 0xFF);
+    CHECK(hid(3, 0, 0x59) && rpt[6] == PROF_OK);
+    settle();
+    CHECK(!prof_restore_open() && B(PROF_OFF_ACTIVE) == 3 && prof_active() == 3);
     /* A good restore onto a wiped block. */
     memset(&ee[PROF_BASE], 0, PROF_BLOCK_SIZE);
     CHECK(hid(1, 0, 0x5A) && rpt[6] == PROF_OK && B(PROF_OFF_MAGIC) == 0);
@@ -394,6 +427,157 @@ static void test_hid_live(void) {
     CHECK(!hid(7, 0, 0) && !hid(0x42, 0, 0));
     CHECK(hid(0x40, 1, 0) && rpt[5] == PROF_OK && prof_active() == 1);
     CHECK(hid(0x41, 1, 0) && rpt[5] == PROF_OK && prof_active() == 0xFF);
+    /* P5b: the flush writes the pending active slot too. */
+    CHECK(hid(0x40, 2, 0) && rpt[5] == PROF_OK && B(PROF_OFF_ACTIVE) != 2 && prof_active() == 2);
+    CHECK(hid(6, 0, 0) && rpt[4] == PROF_OK && B(PROF_OFF_ACTIVE) == 2);
+    int n = nlog;
+    settle();
+    CHECK(nlog == n);   /* nothing left to write */
+}
+
+/* P5b: names, the `*`, the keys' step, the coalesced active slot, the menu's repaint flag. */
+static void test_p5b(void) {
+    reset();
+    uint8_t r[PROF_REC], s = 9;
+    char    nm[PROF_NAME + 1];
+    /* Nothing saved: the keys load nothing, and touch nothing. */
+    CHECK(prof_step(true, &s) == PROF_INVALID && prof_step(false, &s) == PROF_INVALID && s == 9);
+    CHECK(calls[0] == 0 && fk_external[ME_DOM_RGB] == 0 && nlog == 0 && fk_touches == 0);
+    /* Names: "Profile n" without one; the name, all 12, with one. */
+    fk_rgb.h = 1;
+    CHECK(prof_save(0, NULL) == PROF_OK);
+    fk_rgb.h = 3;
+    CHECK(prof_save(2, NULL) == PROF_OK);
+    settle();
+    CHECK(prof_slot(2, r));
+    prof_name(2, r, nm);
+    CHECK(strcmp(nm, "Profile 3") == 0);
+    memcpy(&r[PR_NAME], "Twelve chars", 12);
+    prof_name(2, r, nm);
+    CHECK(strcmp(nm, "Twelve chars") == 0);
+    r[PR_FIELDS] &= (uint8_t)~PF_NAME;
+    prof_name(2, r, nm);
+    CHECK(strcmp(nm, "Profile 3") == 0);
+    /* The `*`: a compare of the record's fields. */
+    CHECK(prof_active_rec(r) == 2 && !prof_differs(r));
+    fk_lcd = 53;   CHECK(prof_differs(r));
+    fk_lcd = 52;   CHECK(!prof_differs(r));
+    fk_power = 3;  CHECK(!prof_differs(r));   /* not a profile's (Decided 2) */
+    fk_rgb.mode = 1; CHECK(prof_differs(r));
+    fk_rgb.mode = 2; fk_rgb.speed = 1; CHECK(prof_differs(r));
+    fk_rgb.speed = 127; fk_hours = true; CHECK(prof_differs(r));
+    fk_hours = false; fk_ind[1] = 61; CHECK(prof_differs(r));
+    r[PR_FIELDS] &= (uint8_t)~PF_CHARGING; CHECK(!prof_differs(r));   /* a field it doesn't hold */
+    fk_ind[1] = 60; fk_clock = 0; CHECK(prof_differs(r));
+    fk_clock = 4; fk_rgb.enable = 0; CHECK(prof_differs(r));
+    fk_rgb.enable = 1;
+    /* Next and Previous from slot 2, slots 0 and 2 saved: wrapping, skipping
+     * empties; a preview cancelled first; the load applied. */
+    calls[0] = 0;
+    CHECK(prof_step(true, &s) == PROF_OK && s == 0 && fk_rgb.h == 1 && fk_external[ME_DOM_RGB] == 1 &&
+          fk_external[ME_DOM_LCD] == 1 && fk_external[ME_DOM_IND] == 1 && calls[0] == 'e');
+    CHECK(prof_step(true, &s) == PROF_OK && s == 2 && fk_rgb.h == 3);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 0);
+    CHECK(prof_step(false, &s) == PROF_OK && s == 2);
+    CHECK(prof_step(false, &s) == PROF_OK && s == 0 && prof_active() == 0);
+    /* Four presses: one active-byte write, after kb_eeconfig's. */
+    int n = nlog;
+    for (int i = 0; i < 4; i++) CHECK(prof_step(true, &s) == PROF_OK);
+    CHECK(s == 0 && nlog == n && prof_active() == 0);
+    prof_tick();
+    CHECK(nlog == n);
+    settle();
+    CHECK(nlog == n + 1 && wlog[n].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[n].first == 0);
+    /* Three saved, so the two directions differ: from slot 2, Next wraps to
+     * 0, then Previous walks back 2, 1, 0. */
+    CHECK(prof_save(1, NULL) == PROF_OK && prof_save(2, NULL) == PROF_OK && prof_active() == 2);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 0);
+    CHECK(prof_step(false, &s) == PROF_OK && s == 2);
+    CHECK(prof_step(false, &s) == PROF_OK && s == 1);
+    CHECK(prof_step(false, &s) == PROF_OK && s == 0);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 1);
+    /* From none, slots 0 and 2 saved: Previous the last, Next the first. */
+    CHECK(prof_delete(1) == PROF_OK && prof_active() == 0xFF);
+    CHECK(prof_step(false, &s) == PROF_OK && s == 2);
+    CHECK(prof_save(1, NULL) == PROF_OK && prof_delete(1) == PROF_OK && prof_active() == 0xFF);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 0);
+    /* Deleting another slot leaves the active one. */
+    CHECK(prof_save(3, NULL) == PROF_OK && prof_step(true, &s) == PROF_OK && s == 0);
+    CHECK(prof_delete(3) == PROF_OK && prof_active() == 0);
+    /* From no active slot: Next the first saved, Previous the last. */
+    CHECK(prof_delete(0) == PROF_OK && prof_active() == 0xFF);
+    CHECK(prof_step(false, &s) == PROF_OK && s == 2);
+    CHECK(prof_delete(2) == PROF_OK && prof_save(1, NULL) == PROF_OK && prof_save(3, NULL) == PROF_OK);
+    CHECK(prof_delete(3) == PROF_OK && prof_active() == 0xFF);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 1);
+    /* One saved slot: a press reloads it, clearing its `*`. */
+    fk_lcd = 7;
+    CHECK(prof_active_rec(r) == 1 && prof_differs(r));
+    CHECK(prof_step(true, &s) == PROF_OK && s == 1 && fk_lcd == 52 && !prof_differs(r));
+    CHECK(prof_step(false, &s) == PROF_OK && s == 1);
+    /* Refused in a recovery and during a restore: nothing applied, nothing cancelled. */
+    int ext = fk_external[ME_DOM_RGB];
+    fk_recovering = true;
+    fk_lcd = 7; calls[0] = 0;
+    CHECK(prof_step(true, &s) == PROF_BUSY && fk_lcd == 7 && calls[0] == 0 && fk_external[ME_DOM_RGB] == ext);
+    /* ... and the pending byte waits out the recovery. */
+    CHECK(prof_delete(1) == PROF_BUSY);
+    fk_recovering = false;
+    CHECK(prof_load(1) == PROF_OK);
+    n = nlog;
+    fk_recovering = true;
+    settle();
+    CHECK(nlog == n);
+    fk_recovering = false;
+    settle();
+    CHECK(nlog == n + 1);
+    CHECK(!prof_take_changed());   /* the menu's own writes: no repaint flag */
+    CHECK(hid(1, 0, 0x22) && rpt[6] == PROF_OK);
+    fk_lcd = 7;
+    CHECK(prof_step(true, &s) == PROF_BUSY && fk_lcd == 7);
+    CHECK(prof_take_changed() && !prof_take_changed());   /* the host's Begin: a repaint, once */
+    for (int i = 0; i < 50; i++) prof_tick();
+    CHECK(!prof_restore_open() && !prof_formatted() && !prof_take_changed());
+    /* A pending byte on a block the abort left unformatted: dropped, not written. */
+    CHECK(prof_save(0, NULL) == PROF_OK && prof_formatted());
+    B(PROF_OFF_MAGIC) = 0;
+    n = nlog;
+    settle();
+    CHECK(nlog == n && prof_active() == 0xFF);
+    /* The deferred byte's failure (codex, P5b's review): latched, so every
+     * later profile write is refused, and the flush reports it, whether its
+     * own write fails or the latch already holds the choice. */
+    reset();
+    CHECK(prof_save(0, NULL) == PROF_OK && prof_save(1, NULL) == PROF_OK);
+    settle();
+    CHECK(prof_load(0) == PROF_OK);
+    fail_at = nlog;
+    settle();
+    CHECK(prof_write_failed() && prof_save(2, NULL) == PROF_WRITE_FAILED);
+    /* Nothing pending now (the tick's write took it), and still the flush
+     * says so, every time (codex's verify). */
+    CHECK(hid(6, 0, 0) && rpt[4] == PROF_WRITE_FAILED);
+    CHECK(hid(6, 0, 0) && rpt[4] == PROF_WRITE_FAILED);
+    prof_test_reset();
+    CHECK(prof_load(1) == PROF_OK);
+    fail_at = nlog;
+    CHECK(hid(6, 0, 0) && rpt[4] == PROF_WRITE_FAILED && prof_write_failed());
+    CHECK(hid(6, 0, 0) && rpt[4] == PROF_WRITE_FAILED);   /* the repeat too */
+    prof_test_reset();
+    fail_at = -1;
+    CHECK(prof_load(0) == PROF_OK);
+    fail_at = nlog;
+    CHECK(prof_save(2, NULL) == PROF_WRITE_FAILED);   /* the latch, the choice still pending */
+    fail_at = -1;
+    n = nlog;
+    CHECK(hid(6, 0, 0) && rpt[4] == PROF_WRITE_FAILED && nlog == n);
+    prof_test_reset();
+    CHECK(hid(6, 0, 0) && rpt[4] == PROF_OK);   /* nothing pending: the flush's own */
+    CHECK(prof_save(0, NULL) == PROF_OK && prof_formatted());
+    /* Every HC write sub sets it: a commit, the dev save and delete. */
+    CHECK(hid(0x40, 0, 0) && prof_take_changed());
+    CHECK(hid(0x41, 0, 0) && prof_take_changed());
+    CHECK(hid(3, 0, 0x22) && rpt[6] == PROF_TOKEN && !prof_take_changed());   /* no restore open: nothing written */
 }
 
 int main(void) {
@@ -402,6 +586,7 @@ int main(void) {
     test_delete_and_load();
     test_hid_restore();
     test_hid_live();
+    test_p5b();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

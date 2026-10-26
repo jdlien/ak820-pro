@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A last check of P5b's code (plans/review-codex-p5b-code-verify2-raw.md: your non-blocking note on param_force_kc). The change: qmk_firmware-ak820pro `git diff 9ca4ed6a 417c50c1`, keyboards/a_jazz/ak820pro/param_overlay.c: param_status_rebase_rgb() clears param_force_kc first, before its early return. Nothing else changed. The dev build: heap gap 136 B.
+
+Does it close the note, and is anything in it unsafe to flash on the keyboard on gremlin? Under 100 words.

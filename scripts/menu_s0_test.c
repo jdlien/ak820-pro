@@ -10,7 +10,7 @@
  *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/menu_s0_test.c \
  *       $D/menu/panel_owner.c $D/menu/menu_input.c $D/menu/menu_slots.c \
  *       $D/menu/menu_fixture.c $D/menu/menu_ops.c $D/menu/menu_text.c $D/menu/menu.c \
- *       $D/menu/menu_edit.c $D/graphics/batt_text.c -o ms0 && ./ms0
+ *       $D/menu/menu_edit.c $D/menu/profiles.c $D/graphics/batt_text.c -o ms0 && ./ms0
  *
  * and again with -DMENU_ENABLE (the production opener, P1a): that build runs
  * test_menu_enable() only, since the S0 suite expects the opener off unarmed.
@@ -34,6 +34,7 @@
 #include "menu_text.h"
 #include "menu.h"
 #include "menu_edit.h"
+#include "profiles.h"                          /* P5b: the settings profiles' store, under the menu's pages */
 #include "../graphics/res/font_small_mono.h"   /* through -I $D/menu */
 #include "../graphics/batt_text.h"           /* P4: the previews as the dashboard composes them */
 #include "../indicator_levels.h"               /* P2a: the indicators' levels and tick */
@@ -1401,6 +1402,30 @@ static const char *const fk_effect_names[9] = {"Solid", "Alphas/Mods", "Cycle Al
                                                "Jellybean", "Heatmap", "Rainfall", "Drift"};
 uint8_t     env_effects(void) { return 9; }
 uint8_t     env_effect_mode(uint8_t i) { return (uint8_t)(i + 1u); }   /* modes 1-9 */
+static const uint8_t fk_effect_ids[9] = {1, 2, 4, 5, 6, 9, 10, 11, 12};   /* rgb_effects.c's for these */
+uint8_t     env_effect_id(uint8_t i) { return i < 9 ? fk_effect_ids[i] : 0xFF; }
+/* P5b: the settings profiles' EEPROM (profiles.c's own code runs on it), a
+ * write's failure to inject, the recovery, kb_eeconfig's settle. */
+static uint8_t fk_ee[1024];
+static int     fk_ee_writes, fk_ee_fail_at = -1, fk_settle_touches, fk_flushes;
+static bool    fk_recovering, fk_settle_pending;
+void    env_prof_read(uint16_t addr, void *dst, uint8_t n) { memcpy(dst, &fk_ee[addr], n); }
+uint8_t env_prof_write(uint16_t addr, const void *src, uint8_t n) {
+    memcpy(&fk_ee[addr], src, n);   /* the cache first, as wear_leveling.c's */
+    return fk_ee_writes++ == fk_ee_fail_at ? ENV_WR_FAILED : ENV_WR_OK;
+}
+bool env_recovering(void) { return fk_recovering; }
+void env_settings_flush(void) { fk_flushes++; fk_settle_pending = false; }
+void env_settings_touch(void) { fk_settle_touches++; fk_settle_pending = true; }
+bool env_settings_pending(void) { return fk_settle_pending; }
+void prof_test_reset(void);   /* profiles.c, MENU_HOST_TEST: the reboot */
+static void fk_prof_reset(void) {
+    memset(fk_ee, 0, sizeof fk_ee);
+    fk_ee_writes = fk_settle_touches = fk_flushes = 0;
+    fk_ee_fail_at = -1;
+    fk_recovering = fk_settle_pending = false;
+    prof_test_reset();
+}
 const char *env_effect_name(uint8_t i) { return i < 9 ? fk_effect_names[i] : ""; }
 bool        env_effect_two_tone(uint8_t mode) { return mode == 2; }   /* Alphas/Mods */
 static int  fk_boots;
@@ -1524,6 +1549,7 @@ static mi_state_t wait_terminal(uint8_t seq, int max_passes) {
 }
 static void fw_reset(void) {
     fake_reset();
+    fk_prof_reset();
     po_init();
     mi_init();
     ms_init();
@@ -1796,7 +1822,7 @@ static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor
     return text_slot_bad2(y, cells, fg, cursor,
                           !strncmp(cells, FONT_MONO_CHECK_BOX, 2)                         ? 0x468Cu
                           : (c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1]) ||
-                                    c0 == (uint8_t)FONT_MONO_I_BATT[0]
+                                    c0 == (uint8_t)FONT_MONO_I_BATT[0] || c0 == (uint8_t)FONT_MONO_I_PROF[0]
                               ? (cursor ? 0xFFB8u : MENU_WHITE)
                               : 0);
 }
@@ -1860,12 +1886,14 @@ static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
 /* The top level's rows (P4, JD 10-25: Battery under Clock, Diagnostics
  * under Bootloader on page two): their indices, and each row's cells with
  * the defaults' values. */
-enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_BOOT, T_DIAG, T_HELP, T_ABOUT, T_EXIT, T_ROWS };
+enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_PROF, T_BOOT, T_DIAG, T_HELP, T_ABOUT, T_EXIT,
+       T_ROWS };   /* P5b: Profiles page one's last, Bootloader to page two */
 static const char *const top_rows_want[T_ROWS][2] = {
     {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 52 of 100 */
     {FONT_MONO_I_CONN "Connection", "BT 1"}, {FONT_MONO_I_POWER " Power", "Balanced"},   /* P3: the link */
     {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h:ss"},
-    {FONT_MONO_I_BATT " Battery", "Percent"}, {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
+    {FONT_MONO_I_BATT " Battery", "Percent"}, {FONT_MONO_I_PROF " Profiles", "None"},
+    {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
     {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R},
     {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
 };
@@ -1894,8 +1922,8 @@ static void test_menu(void) {
     m_turn(-2);
     CHECK(sub5_cursor() == T_EXIT);
     top_frame_ok(T_EXIT);   /* page two */
-    /* Its thumb at the track's end: 75 px of 112 for twelve rows (P4), y 52-126 (codex: it was drawn off the panel). */
-    CHECK(fb[51][125] == MENU_TRACK && fb[52][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
+    /* Its thumb at the track's end: 69 px of 112 for thirteen rows (P5b), y 58-126 (codex: it was drawn off the panel). */
+    CHECK(fb[57][125] == MENU_TRACK && fb[58][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
     m_turn(1);
     CHECK(sub5_cursor() == 0);
 
@@ -2184,8 +2212,12 @@ static void top_frame_ok(int cursor) {
     for (int r = 0; r < 8; r++) {
         int i = page * 8 + r;
         if (i >= T_ROWS) CHECK(row_bad(r, "", 0) == 0);
-        else CHECK(row_bad(r, cells2(top_rows_want[i][0], top_rows_want[i][1]),
-                           i == cursor ? MENU_LIT : i == T_EXIT ? MENU_LEAVE : MENU_DIM) == 0);
+        else {
+            int bad = row_bad(r, cells2(top_rows_want[i][0], top_rows_want[i][1]),
+                              i == cursor ? MENU_LIT : i == T_EXIT ? MENU_LEAVE : MENU_DIM);
+            if (bad) printf("  top_frame_ok(%d): row %d, item %d, %d px\n", cursor, r, i, bad);
+            CHECK(bad == 0);
+        }
     }
 }
 static void test_menu_stress(void) {
@@ -2674,8 +2706,8 @@ static void test_p1b(void) {
      * click enters it (Fn+Esc's path), except on the battery's reserve. */
     fk_boots = 0; fk_reserve = false;
     m_open_top();
-    m_turn(T_BOOT);   /* P2a: page one's last row */
-    CHECK(sub5_cursor() == T_BOOT && row_bad(T_BOOT, cells2(FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_turn(T_BOOT);   /* P5b: page two's first row */
+    CHECK(sub5_cursor() == T_BOOT && row_bad(T_BOOT % 8, cells2(FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_click();
     CHECK(sub5_screen() == 16 + 34 && sub5_cursor() == 0 && title_bad(FONT_MONO_I_BOOT "Bootloader") == 0);
     CHECK(text_slot_bad(22, "For a firmware", MENU_WHITE, false) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE, false) == 0);
@@ -3753,6 +3785,278 @@ static void test_clock(void) {
     fk_clock   = 0;
 }
 
+/* P5b: the settings profiles' pages (plans/SETTINGS-PROFILES-PLAN.md, "The
+ * menu"), on profiles.c's own store over the fake EEPROM. */
+enum { SC_PROF = 16 + 50, SC_PSLOT0 = 16 + 51, SC_PSAVE = 16 + 56, SC_PDEL = 16 + 57 };
+#define PROF_TOP(v) cells2(FONT_MONO_I_PROF " Profiles", v)
+static uint8_t prpt[32];
+static uint8_t prof_sub(uint8_t sub, uint8_t a4, uint8_t a5) {
+    memset(prpt, 0, sizeof prpt);
+    prpt[0] = 0x07; prpt[1] = 0x13; prpt[2] = 0x10; prpt[3] = sub; prpt[4] = a4; prpt[5] = a5;
+    CHECK(prof_hid(prpt));
+    return prpt[sub >= 0x40 ? 5 : 6];
+}
+static void fk_name(uint8_t slot, const char *name) {
+    uint8_t *r = &fk_ee[PROF_BASE + PROF_REC_OFF(slot)];
+    memset(&r[PR_NAME], 0, PROF_NAME);
+    memcpy(&r[PR_NAME], name, strlen(name));
+    r[PR_CRC] = prof_crc8(&r[PR_FIELDS], PR_CRC - PR_FIELDS);
+}
+/* kb_eeconfig's settled write, then the 10 Hz block's prof_tick(). */
+static void fk_prof_settle(void) {
+    fk_settle_pending = false;
+    prof_tick();
+}
+/* A flash outlasts navigation (MENU_FLASH_MS): out of the way of a title's check. */
+static void m_unflash(void) {
+    fw_pass(MENU_FLASH_MS);
+    m_settle();
+}
+/* A pass first: menu_tick() takes a host's write (m_settle() runs none when settled). */
+static void m_tick_settle(void) {
+    fw_pass(5);
+    m_settle();
+}
+
+static void test_p5b(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_lcd = fk_lcd_saved = 52;
+    fk_ind[0] = fk_ind[1] = 40;
+    fk_batt_hours = false;
+    fk_rgb = (env_rgb_t){3, 128, 255, 204, 128, 1, 0xFF};   /* Cycle All, 180 degrees, 100%, 80%, speed 50% */
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+
+    /* The top level's row, page one's last: None, nothing saved. */
+    m_turn(T_PROF);
+    CHECK(sub5_cursor() == T_PROF && row_bad(T_PROF, PROF_TOP("None"), MENU_LIT) == 0);
+    top_frame_ok(T_PROF);
+
+    /* The Profiles page: four empty slots, greyed; the cursor on the first. */
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 1 && title_bad(FONT_MONO_I_PROF " Profiles") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, cells2("  Profile 1", "empty"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  Profile 2", "empty"), MENU_GREY) == 0 &&
+          row_bad(4, cells2("  Profile 4", "empty"), MENU_GREY) == 0 && row_bad(5, "", 0) == 0);
+    CHECK(fb[20][125] == 0);   /* five rows: no scrollbar */
+
+    /* A click on an empty slot saves at once as Profile n (Decided 3):
+     * "Saved", the check there, this page staying. The block formats first;
+     * the active slot is deferred to kb_eeconfig's settle. */
+    CHECK(fk_ee_writes == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 1 && title_bad("Saved") == 0);
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Profile 1", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    CHECK(prof_active() == 0 && fk_ee_writes == 6 + 3 && fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0xFF && fk_settle_pending);
+    fk_prof_settle();
+    CHECK(fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0 && fk_ee_writes == 10);
+    m_unflash();
+
+    /* Its page: the name in the title; Load, Save current here, Delete; the
+     * summary under them (Decided 10). */
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT0 && sub5_cursor() == 1 && title_bad(FONT_MONO_I_PROF " Profile 1") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, "Load", MENU_LIT) == 0 &&
+          row_bad(2, "Save current here", MENU_DIM) == 0 && row_bad(3, "Delete", MENU_DIM) == 0 && row_bad(4, "", 0) == 0);
+    CHECK(row_bad(5, cells2(FONT_MONO_I_LIGHT " Cycle All", "50%"), MENU_WHITE) == 0 &&
+          row_bad(6, "  H:180 S:100% B:80%", MENU_WHITE) == 0 &&
+          row_bad(7, FONT_MONO_I_SCREEN "52%   " FONT_MONO_I_CLOCK "24h:ss", MENU_WHITE) == 0);
+    m_turn(2);
+    CHECK(sub5_cursor() == 3 && row_bad(3, "Delete", MENU_LIT) == 0);
+    m_turn(1);   /* the cursor wraps over the four actions, never the summary */
+    CHECK(sub5_cursor() == 0 && row_bad(0, FONT_MONO_TRI_L " Back", MENU_LIT) == 0 && menu_max_lit <= 1);
+    m_turn(1);
+
+    /* The `*` on the top level: any change to a field the slot holds. */
+    m_hold();
+    m_hold();
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_PROF && row_bad(T_PROF, PROF_TOP("Profile 1"), MENU_LIT) == 0);
+    fk_lcd = 60;
+    m_settle();
+    CHECK(row_bad(T_PROF, PROF_TOP("Prof. 1*"), MENU_LIT) == 0);   /* the digit kept */
+    fk_lcd = 52;
+    fk_power = 3;   /* not a profile's (Decided 2) */
+    m_settle();
+    CHECK(row_bad(T_PROF, PROF_TOP("Profile 1"), MENU_LIT) == 0);
+    fk_power = 1;
+    m_settle();
+
+    /* A name from the host: not in the row's signature, so the host's write
+     * repaints it (prof_take_changed()). */
+    fk_name(0, "Home");
+    m_settle();
+    CHECK(row_bad(T_PROF, PROF_TOP("Profile 1"), MENU_LIT) == 0);
+    CHECK(prof_sub(0x41, 3, 0) == PROF_OK);
+    m_tick_settle();
+    CHECK(row_bad(T_PROF, PROF_TOP("Home"), MENU_LIT) == 0);
+    fk_rgb.speed = 0;
+    m_settle();
+    CHECK(row_bad(T_PROF, PROF_TOP("Home*"), MENU_LIT) == 0);
+    fk_rgb.speed = 128;
+    /* Twelve characters: 9 shown, or 8 and the `*`. */
+    fk_name(0, "Twelve chars");
+    CHECK(prof_sub(0x41, 3, 0) == PROF_OK);
+    m_tick_settle();
+    CHECK(row_bad(T_PROF, PROF_TOP("Twelve ch"), MENU_LIT) == 0);
+    fk_clock = 4;
+    m_settle();
+    CHECK(row_bad(T_PROF, PROF_TOP("Twelve c*"), MENU_LIT) == 0);
+
+    /* Load: the slot's settings back; "Loaded"; Profiles, where the check is. */
+    fk_lcd = 10; fk_rgb.h = 0; fk_ind[1] = 0;
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 1 &&
+          row_bad(1, cells2(FONT_MONO_CHECK_BOX "Twelve chars", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT0 && title_bad(FONT_MONO_I_PROF " Twelve chars") == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 1 && title_bad("Loaded") == 0);
+    CHECK(fk_lcd == 52 && fk_clock == 0 && fk_rgb.h == 128 && fk_ind[1] == 40 && fk_power == 1);
+    m_unflash();
+
+    /* Save current here: a confirm, four frames deep; a hold cancels; a
+     * click saves, back on the slot's page with the new summary. */
+    fk_rgb.h = 64;   /* 90 degrees */
+    m_click();
+    m_turn(1);
+    CHECK(row_bad(2, "Save current here", MENU_LIT) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_PSAVE && sub5_cursor() == 0 && title_bad(FONT_MONO_I_PROF " Save profile") == 0);
+    CHECK(text_slot_bad(22, "Replace Twelve chars", MENU_WHITE, false) == 0 &&
+          text_slot_bad(36, "with these settings?", MENU_WHITE, false) == 0 &&
+          text_slot_bad(72, "Click: replace", MENU_WHITE, false) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE, false) == 0);
+    int w = fk_ee_writes;
+    m_hold();
+    CHECK(sub5_screen() == SC_PSLOT0 && sub5_cursor() == 2 && title_bad("Cancelled") == 0 && fk_ee_writes == w);
+    CHECK(row_bad(6, "  H:180 S:100% B:80%", MENU_WHITE) == 0);
+    m_click();
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT0 && sub5_cursor() == 2 && title_bad("Saved") == 0 && fk_ee_writes == w + 3);
+    CHECK(row_bad(6, "  H:90 S:100% B:80%", MENU_WHITE) == 0 && row_bad(2, "Save current here", MENU_LIT) == 0);
+    uint8_t rec[PROF_REC];
+    CHECK(prof_slot(0, rec) && memcmp(&rec[PR_NAME], "Twelve chars", 12) == 0);   /* the name kept */
+    m_unflash();
+
+    /* Delete: a confirm, then Profiles past the slot's page, nothing active. */
+    m_turn(1);
+    m_click();
+    CHECK(sub5_screen() == SC_PDEL && sub5_cursor() == 0 && title_bad(FONT_MONO_I_PROF " Delete profile") == 0 &&
+          text_slot_bad(22, "Delete Twelve chars?", MENU_WHITE, false) == 0 &&
+          text_slot_bad(72, "Click: delete", MENU_WHITE, false) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 1 && title_bad("Deleted") == 0 && prof_active() == 0xFF);
+    CHECK(row_bad(1, cells2("  Profile 1", "empty"), MENU_LIT) == 0);   /* its deleted bytes' name doesn't show */
+    m_hold();
+    CHECK(row_bad(T_PROF, PROF_TOP("None"), MENU_LIT) == 0);
+
+    /* Refused in a deep sleep's recovery: "Busy, try again", nothing written. */
+    m_click();
+    fk_recovering = true;
+    w = fk_ee_writes;
+    m_click();
+    CHECK(title_bad("Busy, try again") == 0 && fk_ee_writes == w && prof_active() == 0xFF);
+    fk_recovering = false;
+
+    /* A failed write: "Save failed", the slot still empty, and every profile
+     * write refused until a reboot. */
+    m_turn(1);
+    fk_ee_fail_at = fk_ee_writes + 1;   /* the body's */
+    m_click();
+    CHECK(title_bad("Save failed") == 0 && prof_write_failed() && row_bad(2, cells2("  Profile 2", "empty"), MENU_LIT) == 0);
+    fk_ee_fail_at = -1;
+    w = fk_ee_writes;
+    m_click();
+    CHECK(title_bad("Save failed") == 0 && fk_ee_writes == w);
+    prof_test_reset();   /* the reboot */
+    m_click();
+    CHECK(title_bad("Saved") == 0 && prof_active() == 1 &&
+          row_bad(2, cells2(FONT_MONO_CHECK_BOX "Profile 2", FONT_MONO_TRI_R), MENU_LIT) == 0);
+
+    /* A host restore pops the profile pages, from a slot's page and from a
+     * confirm, the cursor on Profiles; entering is refused while it's open. */
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT0 + 1);
+    CHECK(prof_sub(1, 0, 0x42) == PROF_OK && prof_restore_open());
+    m_tick_settle();
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_PROF && row_bad(T_PROF, PROF_TOP("None"), MENU_LIT) == 0);
+    m_click();
+    CHECK(sub5_screen() == 16 + 1 && title_bad("Busy, try again") == 0);
+    for (int i = 0; i < 50; i++) prof_tick();   /* 5 s without a page: aborted, the block unformatted */
+    CHECK(!prof_restore_open());
+    m_click();
+    m_click();   /* Profile 1, saved afresh (formats again) */
+    m_click();   /* its page */
+    m_turn(2);
+    m_click();   /* Delete's confirm */
+    CHECK(sub5_screen() == SC_PDEL);
+    CHECK(prof_sub(1, 0, 0x43) == PROF_OK);
+    m_tick_settle();
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_PROF);
+    top_frame_ok(T_PROF);   /* back in the list's layout, whole */
+    for (int i = 0; i < 50; i++) prof_tick();
+
+    /* The Next key with the menu open (prof_step(), menu_prof_key()'s): the
+     * rows follow, and an editor's preview is cancelled first. */
+    m_click();
+    m_click();   /* Profile 1 */
+    m_turn(1);
+    fk_rgb.h = 32;
+    m_click();   /* Profile 2, at 45 degrees */
+    m_hold();
+    m_turn(T_SCREEN - T_PROF);
+    m_click();
+    CHECK(sub5_screen() == 16 + 25);
+    m_turn(1);
+    CHECK(fk_lcd == 53);
+    uint8_t s = 9;
+    CHECK(prof_step(true, &s) == PROF_OK && s == 0);
+    m_tick_settle();
+    CHECK(sub5_screen() == 16 + 1 && title_bad("Cancelled") == 0 && fk_lcd == 52 && fk_rgb.h == 64);
+    m_turn(T_PROF - T_SCREEN);
+    CHECK(row_bad(T_PROF, PROF_TOP("Profile 1"), MENU_LIT) == 0);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 1);
+    m_tick_settle();
+    CHECK(row_bad(T_PROF, PROF_TOP("Profile 2"), MENU_LIT) == 0 && fk_rgb.h == 32);
+    /* That key's choice is written after kb_eeconfig's settle; a failure
+     * there says "Save failed" (codex, P5b's review: it was silent). */
+    fk_ee_fail_at = fk_ee_writes;
+    fk_prof_settle();
+    CHECK(prof_write_failed());
+    m_tick_settle();
+    CHECK(title_bad("Save failed") == 0);
+    fk_ee_fail_at = -1;
+    prof_test_reset();   /* the reboot */
+    m_unflash();
+    m_click();
+    CHECK(row_bad(1, cells2("  Profile 1", FONT_MONO_TRI_R), MENU_DIM) == 0 &&
+          row_bad(2, cells2(FONT_MONO_CHECK_BOX "Profile 2", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
+
+    /* The summary's signature over many records: its bit 0 is a row's lit
+     * bit, which a crc's low bit once set, and the row then waited forever
+     * behind the cursor's (the first build of P5b). Every record must
+     * settle, its text right. */
+    m_click();   /* Profile 2's page */
+    for (int k = 0; k < 40; k++) {
+        fk_rgb.h = (uint8_t)(k * 37 + 1);
+        fk_rgb.v = (uint8_t)(k * 11);
+        CHECK(prof_save(1, NULL) == PROF_OK && prof_sub(0x41, 3, 0) == PROF_OK);   /* the host's: a repaint */
+        m_tick_settle();
+        char want[24];
+        snprintf(want, sizeof want, "H:%u S:100%% B:%u%%", (unsigned)(fk_rgb.h * 360u / 256u),
+                 (unsigned)((fk_rgb.v * 100u + 127u) / 255u));
+        char cells[21];
+        memset(cells, ' ', 20);
+        cells[20] = '\0';
+        memcpy(cells + 2, want, strlen(want));
+        CHECK(row_bad(6, cells, MENU_WHITE) == 0 && row_bad(1, "Load", MENU_LIT) == 0);
+    }
+    CHECK(op27(11, 0, 0) == MI_OK);   /* closed */
+    m_settle();
+}
+
 int main(int argc, char **argv) {
 #ifdef MENU_ENABLE
     (void)argc; (void)argv;
@@ -3784,6 +4088,7 @@ int main(int argc, char **argv) {
     test_p3();
     test_p4();
     test_clock();
+    test_p5b();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

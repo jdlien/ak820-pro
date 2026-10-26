@@ -1,0 +1,13 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A verify of your review of P5b's code (plans/review-codex-p5b-code-raw.md, your two P2 findings). The fix: qmk_firmware-ak820pro `git diff 761f4cdb 28fac431`, in keyboards/a_jazz/ak820pro:
+- menu/profiles.c: write_active() returns its status (PROF_OK when the block is unformatted and the choice is dropped); HC_PROFILES sub 6 reports PROF_WRITE_FAILED when the pending choice's write fails or the latch already holds it (writable()'s status otherwise), PROF_OK with nothing pending; prof_tick() still writes it silently, the latch set by wr().
+- menu/menu.c: menu_tick() flashes "Save failed" when prof_write_failed() rises (was_failed, 1 B), so a deferred failure shows in the menu, or at its next open.
+- menu/menu_glue.c: menu_prof_key() calls param_status_reprime() after a load, before posting the name; param_overlay.c's comment says so.
+Host tests, uncommitted: scripts/profiles_test.c (the deferred byte's failure injected: the latch, the flush's status both ways) and scripts/menu_s0_test.c (a key's deferred failure flashing "Save failed"). Both pass; 39 mutants, 37 caught (the two survivors: the slot pages' entry invalidation, redundant while every name change is a host write that repaints the menu; and Load's latched clock, whose absence costs one retarget). The dev build: heap gap 136 B.
+
+Check:
+1. Do the fixes close both findings? Anything they break: the flush's other callers (hostagent/ak820profiles.py's apply_live treats a non-zero flush as a failure, so flash.sh's restore would now fail on a latched board; is that right?); "Save failed" at the next open when the failure came with the menu closed; the reprime losing an NKRO toggle's overlay in the same 100 ms.
+2. Anything else in 761f4cdb..28fac431 that must change before flashing on the keyboard on gremlin.
+
+Must anything change before flashing? File and line. Under 300 words.

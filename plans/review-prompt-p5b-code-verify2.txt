@@ -1,0 +1,8 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A second verify of P5b's code (plans/review-codex-p5b-code-verify-raw.md: your P2, the flush answering OK after a deferred failure, and the non-blocking NKRO note). The fix: qmk_firmware-ak820pro `git diff 28fac431 9ca4ed6a`, in keyboards/a_jazz/ak820pro:
+- menu/profiles.c: HC_PROFILES sub 6 writes a pending choice if it can, then answers WRITE_FAILED whenever prof_write_failed() holds, else OK; write_active() is void again (its failure latches in wr()).
+- param_overlay.c/.h: param_status_rebase_rgb(), the poll's RGB baseline taken now (the statics moved to file scope; nothing if not yet primed); menu_glue.c's menu_prof_key() calls it in place of param_status_reprime().
+Host tests, uncommitted: scripts/profiles_test.c asserts the flush after a failed tick write, and repeated. Both host tests pass; 38 mutants, 36 caught (the same two accepted survivors). The dev build: heap gap 136 B.
+
+Is anything left that must change before flashing on the keyboard on gremlin? File and line. Under 200 words.

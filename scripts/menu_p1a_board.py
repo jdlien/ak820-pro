@@ -37,6 +37,7 @@ LIGHT, SCREEN, EFFECT, BRIGHT, HUE = 24, 25, 26, 27, 28   # P1b's nodes
 IND, CONN, LOCKS, CHGL = 35, 36, 37, 38                   # P2a's
 CONNINFO, PAIRING = 39, 44                                 # P3's (Pair a device: the current slot's)
 BATT = 45                                                  # P4's Battery
+PROFILES, PSLOT0 = 50, 51                                  # P5b's Profiles page and slot pages
 # P3's link byte (menu_env.h's ENV_LINK_*: transport bits 1-0, slot 3-2,
 # state 6-4) and the pairing facts, for op 27 sub 16's stand-in.
 L_USB, L_BT = 0, 1
@@ -44,10 +45,10 @@ S_IDLE, S_LINKING, S_PAIRING, S_CONNECTED, S_REJECTED = range(5)
 PF_WAITING, PF_RETRYING, PF_CONFIRMED, PF_SEL_LOST = 1, 2, 4, 8
 P_START, P_OPEN, P_DONE, P_ENDED, P_FAILED, P_UNSURE = range(6)
 LINK = lambda slot, st: L_BT | slot << 2 | st << 4  # noqa: E731
-# The top level since P4 (JD, 10-25): Lighting, Screen, Connection, Power,
-# Indicators, Clock, Battery, Bootloader; Diagnostics, Help, About, Exit on
-# page two.
-R_CONN, R_POWER, R_IND, R_CLOCK, R_BATT, R_BOOT, R_DIAG, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+# The top level since P5b (JD, 10-25): Lighting, Screen, Connection, Power,
+# Indicators, Clock, Battery, Profiles; Bootloader, Diagnostics, Help, About,
+# Exit on page two.
+R_CONN, R_POWER, R_IND, R_CLOCK, R_BATT, R_PROF, R_BOOT, R_DIAG, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 SCR = lambda n: 16 + n  # noqa: E731
 SETTLE_S = 1.0
 
@@ -293,8 +294,18 @@ def main():
         turn(h, orig_b - nxt, "to the original", SCR(BATT), orig_b)
         click(h, "commit the original", SCR(TOP), R_BATT)
 
+        # Profiles (P5b): the page and each row, nothing written; a dwell on
+        # the top level, whose row compares the live settings each scan.
+        turn(h, R_PROF - R_BATT, "to Profiles", SCR(TOP), R_PROF)
+        dwell(h, "Profiles' row, its compare, 3 s", 3.0)
+        s = click(h, "Profiles", SCR(PROFILES))
+        c0 = s["cursor"]
+        for k in range(1, 6):
+            turn(h, 1, f"Profiles row {(c0 + k) % 5}", SCR(PROFILES), (c0 + k) % 5)
+        hold(h, "Profiles back", SCR(TOP), R_PROF)
+
         # Help: each topic, paged to its end and back.
-        turn(h, R_HELP - R_BATT, "to Help", SCR(TOP), R_HELP)
+        turn(h, R_HELP - R_PROF, "to Help", SCR(TOP), R_HELP)
         click(h, "Help", SCR(HELP), 1)
         for t in range(4):
             if t:
