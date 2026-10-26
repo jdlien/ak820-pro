@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-25 ~18:30.
+2026-10-26 ~01:00.
 
 ## Where things stand
 
@@ -273,16 +273,26 @@ This file is the thread; read it first after a context loss. Updated
   8. **Settings profiles** (`plans/SETTINGS-PROFILES-PLAN.md`, written on
      Buzz; JD's go to build, 10-25 ~20:30, relayed by the session on Buzz:
      "Seems like [Warren] is probably ready to take over at this point").
-     - **P5a is on the keyboard on gremlin:** `5ecc9a32` on `gremlin/p5a`,
-       on `93e55f78`. It has the store, HC_PROFILES, the stable effect ids,
+     - **P5a is on the mainline** (`5ecc9a32`, merged 10-25 22:50; see the
+       top). It has the store, HC_PROFILES, the stable effect ids,
        `ak820profiles.py`, the macro backup and flash.sh's profiles step.
        Codex cleared it in two rounds. GREMLIN-RESULTS §20m has the
        board's measure and the round trip.
-     - **The dev heap gap is 136 B**, 8 B over its floor, for P5b and
-       P5c's ~5 B.
-     - **Owed:** a power cycle after a restore (JD's hands); P5a onto the
-       keyboard on Buzz, through the session on Buzz; then P5b (the menu,
-       Decided 9-12, the Next/Previous keys) and P5c (Rename).
+     - **P5b is on the keyboard on gremlin: `57d5e900`** on `gremlin/p5b`
+       (since ~00:48 10-26; not merged). The Profiles row and pages, Load,
+       Save and Delete with confirms, the summary, the `*`, the four-frame
+       stack, PROF_NXT/PROF_PRV, the active slot deferred through
+       kb_eeconfig's settle. Codex: six rounds
+       (`review-codex-p5b-code-2026-10-25.md`). GREMLIN-RESULTS §20n has
+       the board's passes and the `*`'s cost, found on the board and fixed
+       (the profiles' snapshot read every 128 ms; crc8 from a table).
+     - **The dev heap gap is still 136 B** after P5b's 6 B (the fourth
+       frame 3, the pending active slot 1, the snapshot and its flags 2):
+       alignment slack. P5c's Rename needs ~1 B and the name in the
+       `pg` union.
+     - **Owed:** JD's look at P5b's pages and words, the keys bound in VIA
+       and pressed, the power cycle after a restore (P5a's durability
+       check); P5b to the mainline after JD's look; P5c (Rename).
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;

@@ -1369,3 +1369,66 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   - P5a on the keyboard on Buzz (the session on Buzz; it brings the
     effects' speeds with it);
   - P5b's menu and P5c's Rename.
+
+### 20n. P5b of the settings profiles: the menu and the Next/Previous keys (10-25 22:50 to 10-26 00:55)
+
+- **P5a merged first** (22:50): `ak820pro-jdlien` fast-forwarded to
+  `5ecc9a32`, the effects' speeds under it (JD: "I can take the effect
+  speeds on faith"); main `a5c6274` pins it. The keyboard on Buzz is the
+  session on Buzz's to flash.
+- **P5b** (branch `gremlin/p5b`, on `5ecc9a32`; codex's six rounds in
+  `review-codex-p5b-code-2026-10-25.md`):
+  - **`761f4cdb`:** the Profiles row as page one's last (Bootloader to
+    page two; the folder icon at 0xA3), the Profiles page, a slot's page
+    with Load, Save current here and Delete (both confirmed), the summary
+    under the actions, the `*`, the stack's fourth frame; PROF_NXT and
+    PROF_PRV appended (unbound; VIA), their name in the status band; the
+    active slot deferred through kb_eeconfig's settle (one write for a
+    run of presses; the sleep waits on it).
+  - **The host test caught one bug first:** a summary row's signature had
+    a crc bit in bit 0, a row's lit bit, and the scheduler held the row
+    forever behind the cursor's.
+  - **`28fac431`, `9ca4ed6a`, `417c50c1`:** codex's findings: a deferred
+    write's failure now shows ("Save failed", and the flush reports the
+    latch); the key's name kept from the RGB poll's readout.
+  - **`b4d29a29`, `57d5e900`:** the board's measures (below).
+- **Flashed `417c50c1`** (dev, token `0x3fe4c79e`, 23:52) through P5a's
+  flash.sh: the keymap, the four empty slots and the live settings
+  restored (the lighting once, as the live record).
+- **The board pass** (`board-417c50c1.json`, Drift at full brightness):
+  like the pre-P5b `30f1e0cf` on Drift (17.3 against 17.1 ms longest,
+  the same settles just over a second).
+- **The `*`'s cost** (`p5b-cost-417c50c1.txt`, `scripts/menu_p5b_cost.py`):
+  with a profile active, the settled top level's mean pass went 6.6 to
+  8.4 ms (the pump's scope 1.31 to 3.10 ms a pass), and passes of 10 ms or
+  more 20 to 110 in 8 s. The screen did settle; each scan's signature
+  repeated the row's crcs.
+  - `b4d29a29` (a once-a-pass snapshot, crc8 from a table) cut the
+    active case to 2.27 but raised the empty one 1.31 to 1.87. An A/B of
+    the same procedure (page two the equal control, 1.12 on both builds)
+    showed the snapshot's own ten reads cost ~0.55 ms a pass: this core's
+    main loop has a few effective MHz under the row ISR.
+  - `57d5e900` reads it every 128 ms, and at once after a click or a
+    host's write: page one 1.28 ms empty, 1.32 active; page two 1.12;
+    passes of 10 ms or more back to ~20 in 8 s.
+- **On the board since ~00:48 10-26: `57d5e900`** (dev, token
+  `0x4e1d2924`).
+  - **The board pass** (`board-57d5e900.json`): 46 passes over 15 ms (46
+    on `30f1e0cf`, 10 fewer steps), the longest 17.3 ms, one of 17 or
+    more (two on `30f1e0cf`), the same Drift settles.
+  - **P5b's pass with its writes** (`p5b-board-57d5e900.json`,
+    `scripts/menu_p5b_board.py`): an empty slot saved by a click, the
+    active slot written after the settle, its page and summary, the `*`
+    over a live change, Load (the screen level back), Save's confirm held
+    then clicked, Delete, and a host restore's Begin popping a slot's page
+    and its abort. Every step's screen and cursor right; nothing of 25 ms.
+    The longest pass, 18.5 ms, was the click that saved: the save's writes
+    and a paint piece in one pass (P5a's save alone: 14.6 at worst).
+- **Owed:**
+  - JD's look at the pages: the summary's content (Decided 6, "to be
+    worked out on the panel"), the greyed empty slots, the words (the
+    confirms, "Loaded w/o effect", "Busy, try again");
+  - the keys bound in VIA and pressed, the name in the status band;
+  - the power cycle after a restore (P5a's durability check);
+  - P5c's Rename.
+

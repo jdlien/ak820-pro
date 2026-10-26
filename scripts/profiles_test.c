@@ -110,6 +110,24 @@ static uint8_t hid(uint8_t sub, uint8_t a4, uint8_t a5) {
 static void test_codec(void) {
     /* CRC-8 0x07, initial 0xFF: "123456789" is 0xFB. */
     CHECK(prof_crc8((const uint8_t *)"123456789", 9) == 0xFB);
+    /* P5b's table against a bit at a time: every entry (a byte from the
+     * initial 0xFF reaches each index once), then pseudo-random strings. */
+    for (int b = 0; b < 256; b++) {
+        uint8_t x = (uint8_t)b, c = (uint8_t)(0xFFu ^ x);
+        for (int i = 0; i < 8; i++) c = (uint8_t)((c & 0x80u) ? (unsigned)(c << 1) ^ 0x07u : (unsigned)(c << 1));
+        CHECK(prof_crc8(&x, 1) == c);
+    }
+    uint32_t seed = 7u;
+    for (int k = 0; k < 200; k++) {
+        uint8_t buf[40], n = (uint8_t)(k % 40), c = 0xFFu;
+        for (int i = 0; i < n; i++) {
+            seed   = seed * 1103515245u + 12345u;
+            buf[i] = (uint8_t)(seed >> 16);
+            c ^= buf[i];
+            for (int j = 0; j < 8; j++) c = (uint8_t)((c & 0x80u) ? (unsigned)(c << 1) ^ 0x07u : (unsigned)(c << 1));
+        }
+        CHECK(prof_crc8(buf, n) == c);
+    }
     reset();
     uint8_t r[PROF_REC];
     prof_capture(r, PF_PROFILE);

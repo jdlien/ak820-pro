@@ -1,0 +1,18 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A review before the flash: P5b's cost fix, qmk_firmware-ak820pro `git diff 417c50c1 b4d29a29` (branch gremlin/p5b; 417c50c1 is the build codex cleared, plans/review-codex-p5b-code-2026-10-25.md), in keyboards/a_jazz/ak820pro/menu.
+
+The measure on the board (417c50c1, the menu open and settled on the top level, Drift lighting): with a profile active, the mean pass went from 6.6 ms to 8.4 ms (the blit pump's scope, which runs menu_pump's signature scans, from 1.31 to 3.10 ms a pass), and passes of 10 ms or more from ~20 to ~110 in 8 s. The screen did settle (op 27 sub 10's commit counts idle): the cost was the Profiles row's signature itself, prof_active_rec() and prof_differs() at every scan, each with a bit-at-a-time crc8, under the row ISR's ~73% of the CPU.
+
+The fix:
+- menu.c: a snapshot, pfs (bits 0-3 the valid slots, 4-6 the active one, 7 its `*`), with pfs_stale; menu_tick() marks it stale each pass (menu_ops_task() runs menu_input() before menu_tick(), then the pump), and menu_input() at its top; pfs_get() reads it afresh at its first need after that. row_at()'s Profiles row and slot rows, RK_PNOTE's signature (the crc byte read raw once the snapshot vouches for the slot) and the Profiles page's entry cursor read it. Paint paths (row_text, the title, the confirms) still read the store.
+- profiles.c: crc8 from a 256 B table (the same polynomial, initial value and order; profiles_test.c checks every entry and 200 strings against a bit-at-a-time reference); prof_differs() compares a capture without its crc (capture_body()).
+Host tests pass; a new check bounds the store's reads per settled pass on the top level (10; a snapshot read at every call would be ~40). 43 mutants, 40 caught: the three survivors are the slot pages' entry invalidation, Load's latched clock, and menu_input()'s stale mark (menu_tick() marks it stale before the pump in the same pass; the input's only keeps a retarget inside the input from reading a snapshot from before its own write). The dev heap gap stays 136 B.
+
+Check:
+1. Can a row's signature and its paint now disagree for longer than a pass, or a change (a key's load, a host write, VIA, an Fn key, a deep sleep's recovery) fail to repaint? Anything that reads the snapshot outside a pass's tick?
+2. RK_PNOTE's raw crc byte read: safe when the snapshot is a pass old?
+3. The table's correctness and placement (const, flash).
+4. Anything unsafe to flash on the keyboard on gremlin.
+
+Must anything change before flashing? File and line. Under 300 words.

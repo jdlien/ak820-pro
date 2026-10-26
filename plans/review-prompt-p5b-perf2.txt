@@ -1,0 +1,14 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A review before the flash: P5b's second cost fix, qmk_firmware-ak820pro `git diff b4d29a29 57d5e900`, keyboards/a_jazz/ak820pro/menu/menu.c only (b4d29a29 is the build you cleared in plans/review-codex-p5b-perf-raw.md).
+
+The board's A/B (history/config-menu-p3-20261025/, the same procedure on both builds, the menu settled; the blit pump's scope a pass, which runs menu_pump's scans): page two, no profile row, 1.12 ms on both; page one, no profile active, 1.31 ms on 417c50c1 and 1.87 on b4d29a29; page one, a profile active, 3.10 and 2.27. So the once-a-pass snapshot itself cost ~0.55 ms a pass with every slot empty: ten eeprom_read_block() calls (wear_leveling_read(), a memcpy from its cache) and the slot loop, on a main loop with a few effective MHz under the row ISR.
+
+The fix: the snapshot is read at most every 128 ms. menu_tick() marks it stale when (now >> 7)'s low six bits change (kept in pfs_flags bits 2-7), and at once after a host's write (prof_take_changed()); menu_input() still marks it stale at its top. A key's load (prof_step() outside the menu), an Fn key, VIA or a recovery's change shows within 128 ms. pfs_stale and was_failed became bits of one byte, pfs_flags (PFS_STALE, PFS_FAILED, PFS_TICKS). Host tests pass (m_tick_settle() now steps 130 ms; the read guard: 100 ms of settled passes read the store once at most). 45 mutants, 42 caught; the survivors: the entry invalidation, Load's latched clock, and the host write's stale mark (without it, a second repaint within 128 ms). The dev heap gap stays 136 B.
+
+Check:
+1. Can a signature and its paint now disagree longer than 128 ms, or a change never repaint? The tick's wrap (six bits of 128 ms: every 8.2 s, so an equal value after exactly a wrap with no tick between, e.g. a menu closed and reopened, or a pass gap of 8.2 s)?
+2. The flags' read-modify-writes, and PFS_FAILED's rise at the next open as before.
+3. Anything unsafe to flash on the keyboard on gremlin.
+
+Must anything change before flashing? File and line. Under 250 words.

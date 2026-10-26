@@ -1,0 +1,9 @@
+**No required changes before flashing `57d5e900` on gremlin.** I found no static blocker in the requested `menu.c` diff.
+
+- **Wrap and gaps:** [menu.c:1911](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1911) handles ordinary wrap correctly. An exact 8192 ms gap can alias the stored tick, including after reopening: that first tick may retain the old snapshot. With normal passes resumed, the next bucket invalidates it within 128 ms, plus scheduling latency. It does **not** wait another 8.2 seconds. The 128 ms bound excludes time without ticks and completion of the staged repaint.
+
+- **Signature/paint:** [menu.c:573](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:573) supplies the shared snapshot; input marks it stale at line 1804, and host writes invalidate both rows and snapshot at [line 1907](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1907). I found no introduced path that permanently accepts mismatched paint or loses a persistent change.
+
+- **Flags/failure:** [menu.c:1917](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1917) preserves stale/tick bits; the other updates preserve `PFS_FAILED`. These accesses run serially in the main loop. A previously unseen failure while closed still flashes at the next open’s tick.
+
+I verified the exact Git blobs and exhaustively checked the flag masks and single-wrap alias arithmetic. I inspected the host tests but could not rerun them because process execution was denied.

@@ -1407,9 +1407,9 @@ uint8_t     env_effect_id(uint8_t i) { return i < 9 ? fk_effect_ids[i] : 0xFF; }
 /* P5b: the settings profiles' EEPROM (profiles.c's own code runs on it), a
  * write's failure to inject, the recovery, kb_eeconfig's settle. */
 static uint8_t fk_ee[1024];
-static int     fk_ee_writes, fk_ee_fail_at = -1, fk_settle_touches, fk_flushes;
+static int     fk_ee_writes, fk_ee_fail_at = -1, fk_settle_touches, fk_flushes, fk_ee_reads;
 static bool    fk_recovering, fk_settle_pending;
-void    env_prof_read(uint16_t addr, void *dst, uint8_t n) { memcpy(dst, &fk_ee[addr], n); }
+void    env_prof_read(uint16_t addr, void *dst, uint8_t n) { memcpy(dst, &fk_ee[addr], n); fk_ee_reads++; }
 uint8_t env_prof_write(uint16_t addr, const void *src, uint8_t n) {
     memcpy(&fk_ee[addr], src, n);   /* the cache first, as wear_leveling.c's */
     return fk_ee_writes++ == fk_ee_fail_at ? ENV_WR_FAILED : ENV_WR_OK;
@@ -3812,9 +3812,11 @@ static void m_unflash(void) {
     fw_pass(MENU_FLASH_MS);
     m_settle();
 }
-/* A pass first: menu_tick() takes a host's write (m_settle() runs none when settled). */
+/* A pass first, 130 ms on: menu_tick() takes a host's write, and the
+ * profiles' snapshot (read every 128 ms) a live change (m_settle() runs no
+ * pass when the screen already looks settled). */
 static void m_tick_settle(void) {
-    fw_pass(5);
+    fw_pass(130);
     m_settle();
 }
 
@@ -3874,25 +3876,25 @@ static void test_p5b(void) {
     m_hold();
     CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_PROF && row_bad(T_PROF, PROF_TOP("Profile 1"), MENU_LIT) == 0);
     fk_lcd = 60;
-    m_settle();
+    m_tick_settle();   /* the snapshot: once a pass */
     CHECK(row_bad(T_PROF, PROF_TOP("Prof. 1*"), MENU_LIT) == 0);   /* the digit kept */
     fk_lcd = 52;
     fk_power = 3;   /* not a profile's (Decided 2) */
-    m_settle();
+    m_tick_settle();   /* the snapshot: once a pass */
     CHECK(row_bad(T_PROF, PROF_TOP("Profile 1"), MENU_LIT) == 0);
     fk_power = 1;
-    m_settle();
+    m_tick_settle();   /* the snapshot: once a pass */
 
     /* A name from the host: not in the row's signature, so the host's write
      * repaints it (prof_take_changed()). */
     fk_name(0, "Home");
-    m_settle();
+    m_tick_settle();   /* the snapshot: once a pass */
     CHECK(row_bad(T_PROF, PROF_TOP("Profile 1"), MENU_LIT) == 0);
     CHECK(prof_sub(0x41, 3, 0) == PROF_OK);
     m_tick_settle();
     CHECK(row_bad(T_PROF, PROF_TOP("Home"), MENU_LIT) == 0);
     fk_rgb.speed = 0;
-    m_settle();
+    m_tick_settle();   /* the snapshot: once a pass */
     CHECK(row_bad(T_PROF, PROF_TOP("Home*"), MENU_LIT) == 0);
     fk_rgb.speed = 128;
     /* Twelve characters: 9 shown, or 8 and the `*`. */
@@ -3901,8 +3903,14 @@ static void test_p5b(void) {
     m_tick_settle();
     CHECK(row_bad(T_PROF, PROF_TOP("Twelve ch"), MENU_LIT) == 0);
     fk_clock = 4;
-    m_settle();
+    m_tick_settle();   /* the snapshot: once a pass */
     CHECK(row_bad(T_PROF, PROF_TOP("Twelve c*"), MENU_LIT) == 0);
+    /* The store read every 128 ms at most, settled (the snapshot): a read
+     * per row and scan cost the top level 1.8 ms a pass on the board, and
+     * once a pass still 0.55 ms. 100 ms of passes: one read at most. */
+    fk_ee_reads = 0;
+    for (int i = 0; i < 20; i++) fw_pass(5);
+    CHECK(fk_ee_reads <= 12);   /* one snapshot: 10 */
 
     /* Load: the slot's settings back; "Loaded"; Profiles, where the check is. */
     fk_lcd = 10; fk_rgb.h = 0; fk_ind[1] = 0;
@@ -4043,7 +4051,8 @@ static void test_p5b(void) {
         fk_rgb.h = (uint8_t)(k * 37 + 1);
         fk_rgb.v = (uint8_t)(k * 11);
         CHECK(prof_save(1, NULL) == PROF_OK && prof_sub(0x41, 3, 0) == PROF_OK);   /* the host's: a repaint */
-        m_tick_settle();
+        fw_pass(5);   /* a host's write reads the snapshot at once (130 ms steps would outlast the 24 s session) */
+        m_settle();
         char want[24];
         snprintf(want, sizeof want, "H:%u S:100%% B:%u%%", (unsigned)(fk_rgb.h * 360u / 256u),
                  (unsigned)((fk_rgb.v * 100u + 127u) / 255u));
