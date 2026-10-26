@@ -1583,3 +1583,17 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   consolidation, as each run's), then 18 ms. The menu's pass: longest
   17.7 ms (Clock's cancel), 35 over 15 ms.
 
+### 20t. A profile's summary rearranged (10-26, 15:00-15:35)
+
+- **JD (10-26):** "move the lightbulb to the next line so it shows by the
+  LED settings, instead of the effect settings". Asked for a call on moving
+  the effect's name to the left edge: kept at cell 2 (every name fits; one
+  column with the lines under it). "Unknown" for an effect this build
+  lacks. Cursor editing in Rename: skipped (JD: unless the keyboard becomes
+  a note-taking tool).
+- **`553108e5`** on `gremlin/p5-icons` (dev, token `0x1c096235`). Codex: no
+  blocker. Flashed ~15:14; JD's profiles and live settings kept and put
+  back. The profiles' pass: every check passed, the longest 57.0 ms (the
+  post-flash consolidation), then 18 ms. The menu's: longest 17.2 ms, 33
+  over 15 ms.
+
