@@ -10,6 +10,8 @@
 #include "menu_env.h"
 #include "profiles.h"
 
+void prof_test_reset(void);   /* profiles.c, MENU_HOST_TEST only: the reboot */
+
 static int fails;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d %s\n", __FILE__, __LINE__, #c); fails++; } } while (0)
 
@@ -21,12 +23,14 @@ typedef struct { uint16_t addr; uint8_t n; uint8_t first; } wlog_t;
 static wlog_t   wlog[64];
 static int      nlog, fail_at = -1, consolidate_at = -1;
 void env_prof_read(uint16_t addr, void *dst, uint8_t n) { memcpy(dst, &ee[addr], n); }
+/* As the real layer does (wear_leveling.c): the cache is updated BEFORE the
+ * flash is programmed, so a failed write leaves the new bytes in the cache. */
 uint8_t env_prof_write(uint16_t addr, const void *src, uint8_t n) {
     int i = nlog;
     if (nlog < 64) wlog[nlog] = (wlog_t){addr, n, *(const uint8_t *)src};
     nlog++;
-    if (i == fail_at) return ENV_WR_FAILED;
     memcpy(&ee[addr], src, n);
+    if (i == fail_at) return ENV_WR_FAILED;
     return i == consolidate_at ? ENV_WR_CONSOLIDATED : ENV_WR_OK;
 }
 static bool fk_recovering;
@@ -42,7 +46,7 @@ static char      calls[256];
 static void      call(const char *s) { strncat(calls, s, sizeof calls - strlen(calls) - 1); }
 void env_rgb_get(env_rgb_t *c) { *c = fk_rgb; }
 void env_rgb_mode(uint8_t m, bool save) {
-    if (fk_rgb.enable) fk_rgb.mode = m;   /* QMK's: early return while off */
+    if (fk_rgb.enable) fk_rgb.mode = m < 1 ? 1 : m;   /* QMK's: early return while off; mode 0 clamped to 1 */
     call(save ? "M" : "m");
 }
 void env_rgb_hsv(uint8_t h, uint8_t s, uint8_t v, bool save) {
@@ -81,7 +85,7 @@ static void reset(void) {
     fk_lcd = 52; fk_ind[0] = 30; fk_ind[1] = 60; fk_clock = 4; fk_power = 1; fk_hours = false;
     calls[0] = '\0';
     memset(fk_external, 0, sizeof fk_external);
-    for (int i = 0; i < 60; i++) prof_tick();   /* any restore left open times out */
+    prof_test_reset();
 }
 #define B(off) ee[PROF_BASE + (off)]
 static uint8_t rpt[32];
@@ -168,10 +172,30 @@ static void test_format_and_save(void) {
     CHECK(prof_slot(1, r));
     fk_rgb.h = 20;
     CHECK(prof_save(1, NULL) == PROF_OK && prof_slot(1, r) && memcmp(&r[PR_NAME], "Work", 5) == 0 && r[PR_HUE] == 20);
-    /* A write that fails mid-save: the slot reads empty (its state was written empty first). */
+    /* A write that fails mid-save: the slot reads empty (its state was written
+     * empty first), though the cache holds the body. A retry of the same
+     * settings is refused, not skipped as unchanged and committed (codex), and
+     * so is every other profile write until a reboot. */
     nlog = 0; fail_at = 1;   /* the body's write */
-    CHECK(prof_save(3, NULL) == PROF_WRITE_FAILED && !prof_slot(3, r) && prof_active() == 1);
+    CHECK(prof_save(3, NULL) == PROF_WRITE_FAILED && !prof_slot(3, r) && prof_active() == 1 && prof_write_failed());
     fail_at = -1;
+    nlog    = 0;
+    CHECK(prof_save(3, NULL) == PROF_WRITE_FAILED && nlog == 0 && !prof_slot(3, r));
+    calls[0] = '\0';
+    CHECK(prof_delete(1) == PROF_WRITE_FAILED && prof_load(1) == PROF_WRITE_FAILED && nlog == 0);
+    CHECK(calls[0] == '\0');   /* a refused load applies nothing */
+    CHECK(hid(1, 0, 0x33) && rpt[6] == PROF_WRITE_FAILED && !prof_restore_open());
+    CHECK(hid(0x40, 0, 0) && rpt[5] == PROF_WRITE_FAILED);
+    prof_test_reset();   /* the reboot */
+    /* A failed formatting (the magic, last): the latch, and the next write refused. */
+    memset(&ee[PROF_BASE], 0, PROF_BLOCK_SIZE);
+    nlog = 0; fail_at = 5;
+    CHECK(prof_save(0, NULL) == PROF_WRITE_FAILED && prof_write_failed());
+    fail_at = -1;
+    CHECK(prof_save(0, NULL) == PROF_WRITE_FAILED && nlog == 6);
+    prof_test_reset();
+    memset(&ee[PROF_BASE], 0, PROF_BLOCK_SIZE);
+    CHECK(prof_save(0, NULL) == PROF_OK && prof_save(1, NULL) == PROF_OK && prof_active() == 1);
     /* Busy: in a recovery, and with a restore open. */
     fk_recovering = true;
     CHECK(prof_save(2, NULL) == PROF_BUSY && prof_delete(1) == PROF_BUSY && prof_load(1) == PROF_BUSY);
@@ -220,10 +244,16 @@ static void test_delete_and_load(void) {
     fk_rgb.mode = 1; fk_rgb.h = 0;
     calls[0] = '\0';
     CHECK(prof_load(2) == PROF_OK_EFFECT_SKIPPED && fk_rgb.mode == 1 && fk_rgb.h == 200 && strcmp(calls, "eHSELIICB") == 0);
-    /* Id 4 is mode 3 in this build; id 0 is RGB_MATRIX_NONE. */
+    /* Id 4 is mode 3 in this build. Id 0 is never assigned: QMK clamps mode 0
+     * to 1, so a record holding it loads without its effect (codex). */
     rec[PR_EFFECT] = 4;
     rec[PR_CRC]    = prof_crc8(&rec[PR_FIELDS], PR_CRC - PR_FIELDS);
     CHECK(prof_load(2) == PROF_OK && fk_rgb.mode == 3);
+    rec[PR_EFFECT] = 0;
+    rec[PR_CRC]    = prof_crc8(&rec[PR_FIELDS], PR_CRC - PR_FIELDS);
+    CHECK(prof_load(2) == PROF_OK_EFFECT_SKIPPED && fk_rgb.mode == 3);
+    rec[PR_EFFECT] = 4;
+    rec[PR_CRC]    = prof_crc8(&rec[PR_FIELDS], PR_CRC - PR_FIELDS);
     CHECK(prof_load(1) == PROF_INVALID);
     /* A stored record that carries the power mode (a restored one, say): a
      * load never applies it (Decided 2); only the live record's apply does. */
@@ -318,11 +348,12 @@ static void test_hid_restore(void) {
     CHECK(hid(3, 0, 0x07) && rpt[6] == PROF_BUSY && prof_restore_open());
     fk_recovering = false;
     CHECK(hid(3, 0, 0x07) && rpt[6] == PROF_OK);
-    /* A failed page write aborts. */
+    /* A failed page write aborts, and latches: a new Begin is refused. */
     CHECK(hid(1, 0, 0x08) && rpt[6] == PROF_OK);
     nlog = 0; fail_at = 0;
     CHECK(hid(2, 1, 0x08) && rpt[6] == PROF_WRITE_FAILED && !prof_restore_open());
     fail_at = -1;
+    CHECK(hid(1, 0, 0x09) && rpt[6] == PROF_WRITE_FAILED && !prof_restore_open());
 }
 
 static void test_hid_live(void) {

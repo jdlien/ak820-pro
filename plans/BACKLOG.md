@@ -25,6 +25,34 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## A wear-leveling consolidation blocks one pass ~58 ms (2026-10-25) -- measured, not profiles'; every settings write can trigger one
+
+P5a's first board measure (`history/config-menu-p3-20261025/p5a-measure-5ecc9a32.json`,
+`scripts/p5a_measure.py`; plans/SETTINGS-PROFILES-PLAN.md, "When"), on the
+keyboard on gremlin with JD's Drift at full brightness and speed:
+
+| Pass | Median | Worst |
+|---|---|---|
+| No write (baseline, 20) | 6.4 ms | 8.4 ms |
+| One profile save (26 B body and 3 single bytes; 23 saves) | 10.7 ms | 14.6 ms |
+| A save that consolidated (2) | 58.4 ms | 58.9 ms |
+
+- **Ordinary saves are inside C10's 15 ms ceiling,** so the plan's rule
+  stands: profile writes happen at the click.
+- **A consolidation came about every 16 saves:** wear_leveling.c:303 erases
+  the 2 KB backing store and rewrites the 1 KB cache. That pass is over the
+  25 ms bound where a key can be lost.
+- **It isn't the profiles' doing.** Every writer of the emulated EEPROM can
+  land on one: kb_eeconfig's settled write, VIA's keymap and lighting saves,
+  the RGB flush. Profiles only make writes a little more frequent when
+  someone saves a lot.
+- **Today's exposure:** a consolidation is rare (the log fills after ~1 KB
+  of writes), and the profile saves come from a knob click in the menu, not
+  mid-typing.
+- **If it matters:** split the consolidation across passes (erase a page a
+  pass, then program it in pieces). That's a change to quantum/wear_leveling
+  or the EFL backing store, both core files.
+
 ## The key lights flash at a deep-sleep wake (2026-10-24) -- cause found: the sleep starts before the dark frame is committed; fixed in `52acdffe99`, on JD's board since 22:02 10-24, proven at 22:19 10-24
 
 JD saw it twice on `b9555ff3e6`, on the pack, at his daily setting

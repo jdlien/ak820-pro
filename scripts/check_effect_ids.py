@@ -6,8 +6,9 @@ QMK's mode number, because enabling or disabling an effect at build time
 renumbers the modes after it (plans/SETTINGS-PROFILES-PLAN.md, "The effect's
 stable id"). So the ids are APPEND-ONLY, like the ak820pro_keycodes enum
 that check_via_sync.py guards: an existing effect keeps its id, no id is
-reused, and 0 is RGB_MATRIX_NONE's. A new effect takes the next id, and a
-line here. Called from build.sh; runnable standalone.
+reused, and 0 is never assigned (QMK clamps mode 0 to 1). A new effect
+takes the next id, and a line here. Called from build.sh; runnable
+standalone.
 """
 import os
 import re
@@ -46,7 +47,7 @@ def main():
     errors, seen = [], {}
     for name, i in rows:
         if i == 0:
-            errors.append(f"{name} has id 0, which is RGB_MATRIX_NONE's")
+            errors.append(f"{name} has id 0, which is never assigned")
         if i in seen:
             errors.append(f"id {i} is both {seen[i]}'s and {name}'s")
         seen[i] = name

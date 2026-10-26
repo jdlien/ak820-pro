@@ -1,0 +1,16 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A verify, narrow: qmk_firmware-ak820pro `git diff d5a3a4aa 5ecc9a32` (keyboards/a_jazz/ak820pro: menu/profiles.c, menu/profiles.h, rgb_effects.c), and your two findings in plans/review-codex-p5a-code-raw.md.
+- P1, the cache updated before the flash: the first failed write now latches (TX_FAILED, bit 6 of tx_state). wr() refuses once it's set. writable() refuses saves, deletes and loads, and a load applies nothing. HC_PROFILES' Begin refuses. An abort (tx_close) keeps the latch; only a reboot clears it, by reloading the cache from the flash.
+- P2: id 0 is never assigned; mode_of_id(0) is false, so the effect is skipped.
+
+Tests, uncommitted: scripts/profiles_test.c's fake now updates its cache before failing, as wear_leveling.c does, and its mode setter clamps 0 to 1, as QMK's does. New checks:
+- a retry after a failed body write is refused, with nothing written;
+- a delete or a load after it is refused, and the load applies nothing;
+- Begin is refused, and the dev save too;
+- a failed formatting (the magic) latches;
+- a failed page write latches, and a new Begin is refused;
+- an id 0 loads without its effect.
+Twenty mutants each fail the test, the new ones included: the latch never set; an abort clearing it; writable() not checking it; id 0 mapped to a mode. Both builds pass; the dev heap gap stays 136 B.
+
+Are both findings resolved? Can the latch leave anything wrong: a write in flight when it trips, a consolidation that reported failure, the menu's reads of the cache until a reboot, HC_PROFILES' reads (sub 0 serves the cache)? Anything new wrong, or unsafe to flash on the keyboard on gremlin (dev, BT)? File and line. Under 250 words.

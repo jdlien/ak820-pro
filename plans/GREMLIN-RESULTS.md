@@ -1319,3 +1319,53 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
     BACKLOG's two sides both kept, plus deps.lock's pin, CLAUDE.md's Fn+C,
     the menu's opener, eight core files and AGENTS.md.
   - The session on Buzz builds and flashes the keyboard on Buzz.
+
+### 20m. The effects' speeds, and P5a of the settings profiles (10-25, 19:25-21:20)
+
+- **`93e55f78`** (token `0x7a73d9a7`, ~19:25; branch `gremlin/fx-speed`,
+  not merged): the RGB effects' speeds, each geometric in speed, through
+  two weak hooks in quantum/rgb_matrix. Cycle All runs 10 min to 10 s; L-R
+  and U-D 2 min to 2 s; Jellybean a drop every 2 s to 30 a second.
+  `scripts/rgb_speed_test.c`; codex: no must-fix
+  (`review-codex-fx-speed-2026-10-25.md`). Owed: JD's feel for them.
+- **P5a** (plans/SETTINGS-PROFILES-PLAN.md; branch `gremlin/p5a`, on
+  `93e55f78`):
+  - **`d557d2ae`:** the palette const in dev (op 27 sub 13 and
+    menu_tune.py retired), which took the dev heap gap from 128 B to 144.
+  - **`d5a3a4aa`:** the store (menu/profiles.c, the EEPROM's top 110 B,
+    VIA's macros 237 B to 127) and HC_PROFILES, with the effects' stable
+    ids. Three bytes of RAM: the gap goes to 136 B.
+  - **`5ecc9a32`:** codex's P1 (a failed write latches until a reboot,
+    since the wear-leveling cache is written before the flash) and P2
+    (effect id 0 never assigned). Codex cleared it
+    (`review-codex-p5a-code-2026-10-25.md`).
+  - Host: `scripts/profiles_test.c` (twenty mutants each fail it),
+    `hostagent/ak820profiles.py`, the macros in ak820keymap.py's backup,
+    flash.sh's profiles step, `scripts/check_effect_ids.py` in build.sh.
+- **Flashed `5ecc9a32`** (dev, token `0x8bfea199`, ~21:13). flash.sh's
+  first run met the old firmware: "no HC_PROFILES: profiles skipped", and
+  the lighting restored the old way. That flash reset the screen, clock,
+  indicators and power mode one last time.
+- **The board's measure** (`p5a-measure-5ecc9a32.json`):
+  - a pass with one save: median 10.7 ms, the worst 14.6, inside 15;
+  - with no save: median 6.4 ms, the worst 8.4;
+  - a save that consolidated (2 of 25): 57.9 and 58.9 ms.
+  The consolidation is the wear-leveling layer's, not the profiles'.
+  BACKLOG has it.
+- **flash.sh's round trip:**
+  - Set up first: a test slot saved (slot 3), then the live screen set to
+    70%, the clock to 24h and the power mode to Always on, through sub 5.
+  - Then the same build reflashed. flash.sh dumped the block and the live
+    record. After the flash it restored the block (read back exact) and
+    the live record (applied, flushed, read back), and skipped
+    ak820lighting.py's restore.
+  - The slot, 70%, 24h and Always on all came back across a flash that
+    used to reset them.
+  - Then the test slot was deleted, and the live settings put back to
+    their values before the test.
+- **Owed:**
+  - a power cycle after a restore, the durability check (dev has no
+    software reset; JD's hands);
+  - P5a on the keyboard on Buzz (the session on Buzz; it brings the
+    effects' speeds with it);
+  - P5b's menu and P5c's Rename.

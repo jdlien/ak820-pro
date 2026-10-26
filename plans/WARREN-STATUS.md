@@ -262,11 +262,19 @@ This file is the thread; read it first after a context loss. Updated
      - Owed: JD's feel for the speeds (retune `rgb_speed.c`'s constants),
        and his notes on the other effects. Then the merge, telling the
        session on Buzz first.
-  8. **Settings profiles:** JD is leaning towards it, but it's not a build
-     go. His decisions are in CONFIG-MENU-P1-DESIGN.md, "Settings
-     profiles". **The session on Buzz is drafting
-     `plans/SETTINGS-PROFILES-PLAN.md` (JD, ~19:30)**. Warren checks its
-     menu internals before codex does. Nothing gets built before JD's word.
+  8. **Settings profiles** (`plans/SETTINGS-PROFILES-PLAN.md`, written on
+     Buzz; JD's go to build, 10-25 ~20:30, relayed by the session on Buzz:
+     "Seems like [Warren] is probably ready to take over at this point").
+     - **P5a is on the keyboard on gremlin:** `5ecc9a32` on `gremlin/p5a`,
+       on `93e55f78`. It has the store, HC_PROFILES, the stable effect ids,
+       `ak820profiles.py`, the macro backup and flash.sh's profiles step.
+       Codex cleared it in two rounds. GREMLIN-RESULTS §20m has the
+       board's measure and the round trip.
+     - **The dev heap gap is 136 B**, 8 B over its floor, for P5b and
+       P5c's ~5 B.
+     - **Owed:** a power cycle after a restore (JD's hands); P5a onto the
+       keyboard on Buzz, through the session on Buzz; then P5b (the menu,
+       Decided 9-12, the Next/Previous keys) and P5c (Rename).
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
