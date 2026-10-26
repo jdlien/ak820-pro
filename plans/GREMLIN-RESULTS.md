@@ -1440,3 +1440,45 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
     profile. Warren's answer and the pick JD owes are in WARREN-STATUS;
   - P5c's Rename, with the list.
 
+### 20o. P5d: eight settings profiles and Save new (10-26, 10:00-11:40)
+
+- **JD's call (10-26):** "I think maybe just a 'Save New' makes more sense
+  than finite grayed out unused slots"; then "Four is barely enough, 8 feels
+  about right. I think we can go ahead and use eight in the existing
+  storage." The EEPROM can't grow (wear-levelling mirrors all of it in RAM),
+  so the eight take 108 B of VIA's macro buffer: 127 B to 19 B, sized by
+  DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE because QMK's 100 B check reads the
+  maximum (left at its default). JD uses no macros.
+- **`94072f55`** on `gremlin/p5d` (dev, token `0xd1c65f0b`, heap gap 136 B):
+  the block 218 B at 806-1023, magic 0xA2; HC_PROFILES nine pages, written in
+  order, sub 7 the geometry; one menu node for the eight slots; Profiles =
+  Back, the saved slots, "+ Save new" (the first free slot; "Full" at
+  eight). Codex: two rounds (`review-codex-p5d-code-2026-10-26.md`), one P2
+  fixed (the list shrinking under the cursor). 70 mutants, 3 survive.
+- **Flashed 11:04** through flash.sh from `57d5e900`, with JD's two profiles
+  on the board (he'd tried P5b's pages on it): ak820profiles.py backed them
+  up with P5b's geometry (sub 7 unhandled: four slots, format 1) and
+  restored them into the eight ("4 slots into 8"), read back; the keymap
+  and the live settings too.
+- **JD tried it (10-26 ~11:10):** "Testing the + New Profile, seems to work
+  great." He saved a third profile.
+- **The board passes** (`scratchpad p5d_passes.sh`: 10 quiet minutes, JD's
+  profiles and live settings stashed, Drift h43 at full brightness and the
+  slots emptied, the passes, then his put back and read back the same):
+  - **P5d's** (`p5d-board-94072f55.json`, `menu_p5b_board.py`): every step's
+    screen and cursor right, the eight saved by Save new, "Full" writing
+    nothing, the list's ten rows turned through, a dwell on it and on the
+    top level, the deletes, the restore's pop. Four "settled in ~1.0-1.1 s"
+    fails, Drift's at full brightness (P5b's run had seven). Longest passes:
+    **22.2 ms at Save new's first click** (its three writes, the snapshot's
+    reads, a paint piece; P5b's save click was 18.5), and **60 ms with
+    `eeconfig` 47 ms** at "Save's confirm again", a wear-leveling
+    consolidation under kb_eeconfig's settled write (BACKLOG's known
+    exception). Nothing else of 18 ms or more.
+  - **The menu's** (`board-94072f55.json`): partial. It crashed at Profiles,
+    a script bug (the profiles module imported as `ap`, which the script's
+    argparse reuses); fixed, rerun on P5e's build.
+- **Save new's click trimmed** (on P5e's branch): the free slot from the
+  snapshot already read that pass, and the snapshot set on success, not
+  read again (22 reads fewer).
+

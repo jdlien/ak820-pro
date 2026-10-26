@@ -1,0 +1,16 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A review before a flash: P5e, the settings profiles' preview. JD (10-26): "Might be fun to have a way to preview the profile ... or just preload the profile as the user scrolls over it to preview it"; "Resting like after between 0.3s to a second or a second probably makes sense so the board doesn't go crazy as you scroll."
+
+The firmware: qmk_firmware-ak820pro `git diff 94072f55 953e9258 -- keyboards/a_jazz/ak820pro` (94072f55 is P5d, which you cleared in plans/review-codex-p5d-code-2026-10-26.md). Files: menu/menu.c, menu/menu.h, menu/menu_edit.c, menu/menu_edit.h, menu/profiles.c, menu/profiles.h. The host test: scripts/menu_s0_test.c's test_preview() (ak820-pro working tree).
+
+The design: on the Profiles list, once the knob has rested MENU_PREVIEW_MS (600 ms; menu_tick()'s idle_ms is the time since the last knob input), the saved profile under the cursor shows: its lighting (on/off, effect, HSV, speed) and the LCD's level, set unsaved. It runs as a new edit field, ME_PROFILE, of P1b's edit transaction (menu_edit.c): me_open() snapshots the RGB config and the LCD level in the edit's existing 9 B; restore() puts both back; the RGB flush stays held while it's open (menu_edit_rgb_open()); an RGB or an LCD external writer rolls it back (in_domain()). prof_preview() sets only the fields that differ (a mode set restarts its animation). menu.c's pv (1 B) says what shows: a slot, PV_LIVE, or PV_HELD (an external write rolled it back: the live settings until the next knob input). A click on a slot previews at once and its page keeps it; Load (prof_load(), the saving setters) then me_keep() closes the edit without the snapshot back; Save current here's confirm shows the live settings and the return to the page shows the profile again; Save new, the rows Back and Save new, leaving Profiles, a delete, the menu's close (panel_owner's rollback) and a host restore's pop show the live settings. The dev hook 0x40 now cancels previews before it captures. The heap gap is 136 B; host tests pass.
+
+Check:
+1. Can a preview ever be saved: the RGB matrix's eeconfig flush, kb_eeconfig's LCD level, a profile save's capture (Save new, Save current here, the dev hook, HC_PROFILES 4's backup), prof_differs' `*`?
+2. Can the live settings fail to come back: every exit from Profiles and its pages, the 24 s idle close, a deep sleep, the diag pages, a restore's pop, Load's failure paths, the Next/Previous keys during a preview?
+3. Load over a preview: do the saving setters persist values the preview already set (QMK's rgb_matrix_*_eeprom_helper, kb_eeconfig_set_lcd_brightness's compare)?
+4. pv's states, and ME_PEND_CANCELLED's handling in menu_tick() (an editor's cancellation must still pop it with "Cancelled").
+5. Anything unsafe to flash on the keyboard on gremlin.
+
+Must anything change before flashing? File and line. Under 350 words.

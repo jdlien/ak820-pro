@@ -26,7 +26,7 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "hostagent"))
 from ak820health import read_acct  # noqa: E402
-import ak820profiles as ap  # noqa: E402
+import ak820profiles as aprof  # noqa: E402
 from menu_s0_session import mutate, open_device, read_state, wait, xfer  # noqa: E402
 from menu_s0_accept import dash_done, to_dash  # noqa: E402
 from menu_s1_gate import decode_meas  # noqa: E402
@@ -298,9 +298,9 @@ def main():
         # Profiles (P5b): the page and each row, nothing written; a dwell on
         # the top level, whose row compares the live settings each scan.
         # P5d: the rows are Back, the saved slots, then Save new.
-        gp = ap.geometry(h)
-        blk = ap.read_block(h, gp)
-        saved = sum(1 for s in range(gp.slots) if blk[0] == gp.magic and ap.rec_ok(blk[2 + s * 27:29 + s * 27]))
+        gp = aprof.geometry(h)
+        blk = aprof.read_block(h, gp)
+        saved = sum(1 for s in range(gp.slots) if blk[0] == gp.magic and aprof.rec_ok(blk[2 + s * 27:29 + s * 27]))
         rows = 2 + saved
         turn(h, R_PROF - R_BATT, "to Profiles", SCR(TOP), R_PROF)
         dwell(h, "Profiles' row, its compare, 3 s", 3.0)

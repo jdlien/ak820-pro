@@ -1,0 +1,13 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A verify before the flash: your three P2s in plans/review-codex-p5e-code-raw.md. The fixes: qmk_firmware-ak820pro `git diff 953e9258 651d23f9 -- keyboards/a_jazz/ak820pro` (menu/menu.c, menu_edit.c/.h, menu_ops.c, profiles.c/.h).
+
+1. prof_preview(slot, base, base_lcd): the target is the ME_PROFILE edit's snapshot (me_base()) with the record's fields over it, set where it differs from what shows; Load now calls pv_show(PV_LIVE) (the snapshot back, the edit closed) before prof_load(), and a refused Load previews again; me_keep() is gone.
+2. menu_ops.c: a profile's preview takes the 24 s idle close, not the editors' 180 s backstop.
+3. menu_tick(): any pending external change (ME_PEND_CHANGED or CANCELLED) while pv names a slot and no ME_PROFILE edit is open sets PV_HELD.
+
+Also in the diff, unreviewed: Save new's click now takes the free slot from the snapshot (pfs_get(), read afresh that pass since menu_input() marked it stale) and on success sets pfs itself (the slot valid, active, no `*`) instead of reading the store again; the board's pass for that click was 22 ms (history/config-menu-p3-20261025/p5d-board-94072f55.json and GREMLIN-RESULTS §20o).
+
+Tests: scripts/menu_s0_test.c's test_preview() and test_preview_codex() (your three cases, and a refused Load mid-preview). Host tests pass; 32 mutants of the preview, 3 survive (pv_show()'s stale mark, which every input sets anyway; the hold's me_field() guard; a mode set when unchanged, which the fakes can't see). Heap gap 136 B.
+
+Check: are the three closed? Anything the fixes or the Save new change break (a slot-0 profile, an unformatted block, a failed save, the `*` after a save from the live settings)? Anything unsafe to flash on the keyboard on gremlin? File and line. Under 250 words.

@@ -4186,6 +4186,247 @@ static void test_profiles(void) {
     m_settle();
 }
 
+/* P5e: the profiles' preview (JD, 10-26: "preload the profile as the user
+ * scrolls over it"; "Resting ... between 0.3s to a second"): the lighting
+ * and LCD level of the profile under Profiles' cursor once the knob has
+ * rested MENU_PREVIEW_MS, never saved; the live settings back on Back, Save
+ * new, leaving, a close, Save's confirm, and an external write (which holds
+ * them until the knob moves). */
+static void m_input_only(uint8_t sub, int n) {   /* an input, the screen not waited for: a rest is timed from here */
+    CHECK(op27(sub, n, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
+}
+static void m_rest(uint32_t ms) {
+    for (uint32_t t = 0; t < ms; t += 5) fw_pass(5);
+}
+static bool rgb_is(const env_rgb_t *a, const env_rgb_t *b) {
+    return a->mode == b->mode && a->h == b->h && a->s == b->s && a->v == b->v && a->speed == b->speed &&
+           a->enable == b->enable && a->flags == b->flags;
+}
+
+static void test_preview(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_ind[0] = fk_ind[1] = 40;
+    fk_batt_hours = false;
+    const env_rgb_t A = {1, 10, 255, 200, 100, 1, 0xFF};   /* Profile 1: Solid, the screen 30% */
+    const env_rgb_t B = {9, 200, 180, 150, 60, 1, 0xFF};   /* Profile 2: Drift, 70% */
+    const env_rgb_t C = {3, 99, 255, 255, 128, 1, 0xFF};   /* the live settings: Cycle All, 50% */
+    fk_rgb = A; fk_lcd = 30;
+    CHECK(prof_save(0, NULL) == PROF_OK);
+    fk_rgb = B; fk_lcd = 70;
+    CHECK(prof_save(1, NULL) == PROF_OK);
+    fk_prof_settle();
+    fk_rgb = fk_rgb_ee = C; fk_rgb_dirty = false;
+    fk_lcd = fk_lcd_saved = 50;
+    int saves0 = fk_lcd_saves;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_PROF);
+
+    /* Profiles opens on the active one's row: its preview after the rest,
+     * not before; nothing saved. */
+    m_input_only(2, 0);
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 2 && rgb_is(&fk_rgb, &C) && fk_lcd == 50);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(rgb_is(&fk_rgb, &B) && fk_lcd == 70);
+    fk_flush();
+    CHECK(rgb_is(&fk_rgb_ee, &C) && !fk_rgb_dirty && fk_lcd_saved == 50 && fk_lcd_saves == saves0);
+    /* A turn: the old preview holds through the rest, then the new one. */
+    m_input_only(1, -1);
+    m_rest(300);
+    CHECK(sub5_cursor() == 1 && rgb_is(&fk_rgb, &B));
+    m_rest(MENU_PREVIEW_MS);
+    CHECK(rgb_is(&fk_rgb, &A) && fk_lcd == 30 && rgb_is(&fk_rgb_ee, &C) && fk_lcd_saved == 50);
+    /* Save new's row: the live settings. */
+    m_input_only(1, 2);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(sub5_cursor() == 3 && rgb_is(&fk_rgb, &C) && fk_lcd == 50);
+    /* Leaving Profiles: the live settings at once. */
+    m_input_only(1, -2);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(rgb_is(&fk_rgb, &A));
+    m_hold();
+    CHECK(sub5_screen() == 16 + 1 && rgb_is(&fk_rgb, &C) && fk_lcd == 50);
+
+    /* A click on a profile previews it at once, on its page; Save's confirm
+     * shows the live settings, what it would save; cancelled, the profile's
+     * again. */
+    m_input_only(2, 0);
+    m_input_only(2, 0);
+    CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x11 && rgb_is(&fk_rgb, &B) && fk_lcd == 70);
+    m_settle();
+    m_turn(1);
+    m_click();
+    CHECK(sub5_screen() == SC_PSAVE && rgb_is(&fk_rgb, &C) && fk_lcd == 50);
+    m_hold();
+    CHECK(sub5_screen() == SC_PSLOT && rgb_is(&fk_rgb, &B) && fk_lcd == 70);
+    /* Load: the preview's values saved, and leaving Profiles keeps them. */
+    m_turn(-1);
+    m_click();
+    m_unflash();
+    fk_flush();   /* the Load's RGB write, the preview's edit closed (me_keep()) */
+    CHECK(sub5_screen() == SC_PROF && prof_active() == 1 && rgb_is(&fk_rgb, &B) && rgb_is(&fk_rgb_ee, &B) &&
+          !fk_rgb_dirty && fk_lcd_saved == 70);
+    m_hold();
+    CHECK(sub5_screen() == 16 + 1 && rgb_is(&fk_rgb, &B) && fk_lcd == 70);
+
+    /* An external write (an Fn key's hook, then its change) rolls the
+     * preview back, and the rest doesn't show it again until the knob moves. */
+    m_click();
+    m_input_only(1, -1);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(sub5_cursor() == 1 && rgb_is(&fk_rgb, &A));
+    menu_edit_external(ME_DOM_RGB);
+    CHECK(rgb_is(&fk_rgb, &B));
+    fk_rgb.h = 201; fk_rgb_ee = fk_rgb;   /* the key's own write */
+    m_rest(2 * MENU_PREVIEW_MS);
+    CHECK(fk_rgb.h == 201 && fk_rgb.mode == 9);
+    m_input_only(1, 1);
+    m_input_only(1, -1);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(rgb_is(&fk_rgb, &A));
+    /* Save new clicked before the rest moves the preview off: it saves the
+     * live settings, never the preview's. */
+    m_input_only(1, 2);
+    CHECK(sub5_cursor() == 3 && rgb_is(&fk_rgb, &A));
+    m_input_only(2, 0);
+    uint8_t rec[PROF_REC];
+    CHECK(prof_slot(2, rec) && rec[PR_HUE] == 201 && rec[PR_EFFECT] == 12 && rec[PR_LCD] == 70 && fk_rgb.h == 201);
+    m_settle();
+    m_unflash();
+    /* The LCD's own writer rolls it back too. */
+    m_input_only(1, -2);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(sub5_cursor() == 1 && rgb_is(&fk_rgb, &A) && fk_lcd == 30);
+    menu_edit_external(ME_DOM_LCD);
+    CHECK(fk_lcd == 70 && fk_rgb.h == 201);
+    m_input_only(1, 1);
+    m_input_only(1, -1);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(rgb_is(&fk_rgb, &A));
+    /* A close mid-preview: the live settings back. */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    CHECK(fk_rgb.h == 201 && fk_rgb.mode == 9 && fk_lcd == 70 && fk_lcd_saved == 70);
+    /* A host restore's pop mid-preview: the same. */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_PROF);
+    m_click();   /* on Profile 3, Save new's, the active one */
+    m_input_only(1, -2);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 1 && rgb_is(&fk_rgb, &A));
+    CHECK(prof_sub(1, 0, 0x44) == PROF_OK);
+    m_tick_settle();
+    CHECK(sub5_screen() == 16 + 1 && fk_rgb.h == 201 && fk_rgb.mode == 9 && fk_lcd == 70);
+    for (int i = 0; i < 50; i++) prof_tick();
+    CHECK(fk_lcd_saved == 70 && fk_lcd_saves >= 1);
+
+    /* A profile saved with its lights off previews them off, and the live
+     * settings come back on. */
+    const env_rgb_t L = fk_rgb;   /* the live settings now: Profile 3's */
+    const env_rgb_t D = {4, 50, 255, 255, 128, 0, 0xFF};
+    fk_rgb = D; fk_lcd = 20;
+    CHECK(prof_save(3, NULL) == PROF_OK);   /* the restore's abort left none: it's the only one, and active */
+    fk_prof_settle();
+    fk_rgb = L; fk_lcd = 70;
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_PROF);   /* where the restore's pop left it */
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 1);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(fk_rgb.enable == 0 && fk_rgb.mode == 4 && fk_rgb.h == 50 && fk_lcd == 20);
+    /* The dev hook's save mid-preview saves the live settings, rolling the
+     * preview back. */
+    CHECK(prof_sub(0x40, 4, 0) == PROF_OK);
+    uint8_t r4[PROF_REC];
+    CHECK(prof_slot(4, r4) && r4[PR_RGB_ON] == 1 && r4[PR_HUE] == 201 && r4[PR_LCD] == 70 && rgb_is(&fk_rgb, &L));
+    m_tick_settle();
+    /* A delete mid-preview: the live settings at once. Its page by a click
+     * (the hold ended by the knob's input): the profile at once. */
+    CHECK(sub5_cursor() == 1 && rgb_is(&fk_rgb, &L));
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT && fk_rgb.enable == 0 && fk_rgb.mode == 4 && fk_lcd == 20);
+    m_turn(2);
+    m_click();
+    CHECK(sub5_screen() == SC_PDEL && fk_rgb.enable == 0 && fk_rgb.mode == 4);   /* Delete's confirm keeps it showing */
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && !prof_slot(3, r4) && rgb_is(&fk_rgb, &L) && fk_lcd == 70);
+    CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    CHECK(rgb_is(&fk_rgb, &L) && fk_lcd == 70);
+}
+
+/* P5e, codex's review: a preview over the live settings, never an earlier
+ * preview's (a profile without an LCD field, with an effect this build
+ * lacks); its Load saves the live settings' effect; a Load then an
+ * external change, and the loaded profile previews again; and a preview
+ * keeps the menu no longer than the 24 s idle close. */
+static void test_preview_codex(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_ind[0] = fk_ind[1] = 40;
+    fk_batt_hours = false;
+    const env_rgb_t A = {1, 10, 255, 200, 100, 1, 0xFF};
+    const env_rgb_t C = {3, 99, 255, 255, 128, 1, 0xFF};
+    fk_rgb = A; fk_lcd = 30;
+    CHECK(prof_save(0, NULL) == PROF_OK);   /* Profile 1: A, 30% */
+    fk_rgb = (env_rgb_t){5, 77, 120, 130, 140, 1, 0xFF}; fk_lcd = 80;
+    CHECK(prof_save(1, NULL) == PROF_OK);   /* Profile 2: Breathing's id (3), which this build lacks; no LCD field */
+    uint8_t *r = &fk_ee[PROF_BASE + PROF_REC_OFF(1)];
+    r[PR_EFFECT] = 3;
+    r[PR_FIELDS] &= (uint8_t)~PF_LCD;
+    r[PR_CRC] = prof_crc8(&r[PR_FIELDS], PR_CRC - PR_FIELDS);
+    fk_prof_settle();
+    fk_rgb = fk_rgb_ee = C; fk_rgb_dirty = false;
+    fk_lcd = fk_lcd_saved = 50;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_PROF);
+    m_click();
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 2);
+    m_input_only(1, -1);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(rgb_is(&fk_rgb, &A) && fk_lcd == 30);
+    /* Profile 2 after Profile 1: its HSV and speed over the live settings'
+     * effect and screen level, not Profile 1's. */
+    m_input_only(1, 1);
+    m_rest(MENU_PREVIEW_MS + 50);
+    CHECK(fk_rgb.mode == 3 && fk_rgb.h == 77 && fk_rgb.s == 120 && fk_rgb.speed == 140 && fk_lcd == 50);
+    /* Its Load saves the live settings' effect, never a preview's. */
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x11);
+    m_click();
+    fk_flush();
+    CHECK(sub5_screen() == SC_PROF && prof_active() == 1 && fk_rgb_ee.mode == 3 && fk_rgb_ee.h == 77 &&
+          fk_rgb.mode == 3 && fk_lcd == 50 && fk_lcd_saved == 50);
+    m_unflash();
+    /* A Load, then an external change with no preview open (the Next key's
+     * load elsewhere): a click on the loaded profile shows it again. */
+    menu_edit_external(ME_DOM_RGB);
+    fk_rgb.mode = 9; fk_rgb.h = 5; fk_rgb_ee = fk_rgb;
+    m_rest(200);
+    m_click();   /* its HSV over the live settings' effect, Drift now (it lacks its own) */
+    CHECK(sub5_screen() == SC_PSLOT && fk_rgb.mode == 9 && fk_rgb.h == 77 && fk_rgb.speed == 140);
+    /* A Load refused (a deep sleep's recovery): its preview still shows. */
+    fk_recovering = true;
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT && title_bad("Busy, try again") == 0 && fk_rgb.h == 77 && fk_rgb_ee.h == 5);
+    fk_recovering = false;
+    m_unflash();
+    /* Back on the list, its preview kept: 24 s without input closes the
+     * menu, the live settings back. */
+    m_hold();
+    CHECK(sub5_screen() == SC_PROF && fk_rgb.h == 77);
+    for (int i = 0; i < 25000 / 5; i++) fw_pass(5);
+    CHECK(po_session() == SESSION_NONE && fk_rgb.mode == 9 && fk_rgb.h == 5 && fk_lcd == 50);
+    CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
+    for (int i = 0; i < 400; i++) fw_pass(5);   /* the dashboard's restore */
+}
+
 int main(int argc, char **argv) {
 #ifdef MENU_ENABLE
     (void)argc; (void)argv;
@@ -4218,6 +4459,8 @@ int main(int argc, char **argv) {
     test_p4();
     test_clock();
     test_profiles();
+    test_preview();
+    test_preview_codex();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;
