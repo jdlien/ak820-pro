@@ -32,6 +32,9 @@ GET_BUFFER        = 0x12
 SET_BUFFER        = 0x13
 GET_ENCODER       = 0x14
 SET_ENCODER       = 0x15
+GET_MACRO_SIZE    = 0x0D
+GET_MACRO_BUFFER  = 0x0E
+SET_MACRO_BUFFER  = 0x0F
 
 ROWS, COLS = 6, 15                        # keyboard.json matrix_pins
 ENCODERS   = 1
@@ -137,6 +140,45 @@ def write_encoders(h, enc):
                 xfer(h, [SET_ENCODER, layer, idx, cw, (kc >> 8) & 0xFF, kc & 0xFF])
 
 
+def macro_size(h):
+    r = xfer(h, [GET_MACRO_SIZE])
+    return (r[1] << 8) | r[2]
+
+
+def read_macros(h):
+    """VIA's macro buffer, whole. Since the settings profiles (P5a,
+    plans/SETTINGS-PROFILES-PLAN.md, "Macros") it's 127 B, not 237: the
+    profiles took the EEPROM's top 110 B. So the backup carries it."""
+    size, buf, off = macro_size(h), bytearray(), 0
+    while off < size:
+        n = min(CHUNK, size - off)
+        r = xfer(h, [GET_MACRO_BUFFER, (off >> 8) & 0xFF, off & 0xFF, n])
+        buf += r[4:4 + n]
+        off += n
+    return bytes(buf)
+
+
+def macros_used(buf):
+    """The bytes the macros use: to the last non-zero one, and its NUL. The
+    buffer's last byte is QMK's validity flag (dynamic_keymap.h), not a macro."""
+    n = len(buf[:-1].rstrip(b"\0")) if buf else 0
+    return buf[:n + 1] if n else b""
+
+
+def write_macros(h, used, size):
+    """QMK's rule (dynamic_keymap.h): the last byte non-zero first, so a cut
+    transfer leaves the macros disabled, then the contents, then the last
+    byte zero. The rest of the buffer is written empty."""
+    last = size - 1
+    xfer(h, [SET_MACRO_BUFFER, (last >> 8) & 0xFF, last & 0xFF, 1, 0xFF])
+    data, off = used + bytes(last - len(used)), 0
+    while off < last:
+        n = min(CHUNK, last - off)
+        xfer(h, [SET_MACRO_BUFFER, (off >> 8) & 0xFF, off & 0xFF, n] + list(data[off:off + n]))
+        off += n
+    xfer(h, [SET_MACRO_BUFFER, (last >> 8) & 0xFF, last & 0xFF, 1, 0x00])
+
+
 def cmd_dump(path):
     h = open_device()
     try:
@@ -144,6 +186,7 @@ def cmd_dump(path):
         layers = xfer(h, [GET_LAYER_COUNT])[1]
         km     = read_keymap(h, layers)
         enc    = read_encoders(h, layers)
+        macros = read_macros(h)
     finally:
         h.close()
 
@@ -161,13 +204,15 @@ def cmd_dump(path):
         "cols":             COLS,
         "keymap":           km.hex(),
         "encoders":         enc,
+        "macros":           macros.hex(),
     }
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
         json.dump(doc, f, indent=2)
         f.write("\n")
     os.replace(tmp, path)                 # never truncate a good backup on failure
-    print(f"saved {len(km)} bytes, {layers} layers, {len(enc[0]) if enc else 0} encoder(s) -> {path}")
+    print(f"saved {len(km)} bytes, {layers} layers, {len(enc[0]) if enc else 0} encoder(s), "
+          f"{len(macros_used(macros))} of {len(macros)} macro bytes used -> {path}")
 
 
 def cmd_restore(path):
@@ -185,6 +230,14 @@ def cmd_restore(path):
         layers = xfer(h, [GET_LAYER_COUNT])[1]
         if layers != doc["layers"]:
             raise SystemExit(f"board has {layers} layers, file has {doc['layers']} -- refusing")
+        # The macros, checked before anything is written: a backup whose
+        # macros don't fit this firmware's buffer (127 B since the profiles)
+        # is refused whole, and the file kept for its owner to trim.
+        used = macros_used(bytes.fromhex(doc["macros"])) if doc.get("macros") else b""
+        msize = macro_size(h) if used else 0
+        if used and len(used) > msize - 1:
+            raise SystemExit(f"the backup's macros use {len(used)} bytes, and this firmware's macro buffer holds "
+                             f"{msize - 1} -- refusing; trim them in {path} or in VIA, then restore")
         write_keymap(h, km)
         if doc.get("encoders"):
             write_encoders(h, doc["encoders"])
@@ -196,9 +249,15 @@ def cmd_restore(path):
             raise SystemExit(f"read-back differs from {path} at keycode {bad} -- the restore did not land")
         if doc.get("encoders") and read_encoders(h, layers) != doc["encoders"]:
             raise SystemExit(f"encoder read-back differs from {path} -- the restore did not land")
+        if used:
+            write_macros(h, used, msize)
+            back = read_macros(h)
+            if back[:len(used)] != used or back[-1] != 0:
+                raise SystemExit(f"macro read-back differs from {path} -- the restore did not land")
     finally:
         h.close()
-    print(f"restored {len(km)} bytes across {doc['layers']} layers from {path}, read back and verified")
+    print(f"restored {len(km)} bytes across {doc['layers']} layers"
+          f"{f', and {len(used)} macro bytes' if used else ''} from {path}, read back and verified")
     print("(VIA reads the keymap at connect -- reload the tab to see it)")
 
 
@@ -217,6 +276,11 @@ def cmd_show(path):
     for l, row in enumerate(doc.get("encoders", [])):
         for i, pair in enumerate(row):
             print(f"  layer {l} encoder {i}: ccw=0x{pair[0]:04X} cw=0x{pair[1]:04X}")
+    if "macros" in doc:
+        m = bytes.fromhex(doc["macros"])
+        print(f"macros   : {len(macros_used(m))} of {len(m)} bytes used")
+    else:
+        print("macros   : not in this backup (saved before the profiles' P5a)")
 
 
 def main():

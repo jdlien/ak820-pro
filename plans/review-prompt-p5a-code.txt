@@ -1,0 +1,29 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A code review before the flash: P5a of the settings profiles, the store and HC_PROFILES, against plans/SETTINGS-PROFILES-PLAN.md (draft 4 plus Decided 9-12 on main; P5b's menu, Rename and the Next/Previous keys are not in this change). Firmware: qmk_firmware-ak820pro `git diff 93e55f78 d5a3a4aa` (branch gremlin/p5a; d557d2ae, the palette made const in dev, is the commit before it), in keyboards/a_jazz/ak820pro:
+- menu/profiles.c and menu/profiles.h (new);
+- menu/menu_env.h and menu/menu_glue.c (the env calls, the static asserts);
+- rgb_effects.c/.h (the stable ids);
+- kb_eeconfig.c/.h (kb_eeconfig_flush);
+- config.h (DYNAMIC_KEYMAP_EEPROM_MAX_ADDR 913);
+- hid_protocol.c (HC_PROFILES 0x10);
+- ak820pro.c (prof_tick in the 10 Hz housekeeping);
+- rules.mk.
+Host test, uncommitted in this repo: scripts/profiles_test.c. It passes, and sixteen mutants each fail it. New check: scripts/check_effect_ids.py, called from build.sh. Both builds pass: the dev heap gap is 136 B against a floor of 128, daily's 2,256 B. profiles.o calls no divide.
+
+Check:
+1. The plan's rules: the block's place and nothing else moving; the crc over bytes 1-25; the state byte last in its own write for a save; formatting before the first write (states, active, magic last); the active byte normalized everywhere it's read; writes through wear_leveling_write() with their status; the !sleep_recovering() gate; refusal while a restore is open.
+2. HC_PROFILES: the framing and each sub's reply bytes against the plan's table; the token, the page mask and the masked magic; the commit's validation and the magic last; the 5 s countdown; subs 4-6 cancelling a preview first; sub 5's validation and the power mode only there; the dev subs 0x40/0x41 compiled out of daily.
+3. Anything wrong in the C:
+   - reading wear_leveling's cache through eeprom_read_block;
+   - the write status mapping;
+   - prof_hid's in-place reply and the caller's length check;
+   - via_custom_value_command_kb's path to health_command;
+   - kb_eeconfig_flush;
+   - eeconfig_force_flush_rgb_matrix during an RGB edit;
+   - the effect id mapping with RGB_MATRIX_NONE as 0;
+   - stack use on the raw HID path.
+4. flash_stats: profile writes skip eeprom_wear_leveling_write_hook() and count as FW_OTHER. Is that safe for its session accounting?
+5. Anything unsafe to flash on the keyboard on gremlin (dev, BT). An unformatted block stays unwritten until the first profile write, and the first flash erases the EEPROM anyway.
+
+Must anything change before flashing? File and line. Under 500 words.

@@ -13,12 +13,19 @@
 # is a rule a human has to remember; this is the version the script does.
 #
 # Usage:
-#   ./flash.sh [firmware.bin] [--no-backup] [--no-lighting] [--no-battlog] [--on-reserve]
+#   ./flash.sh [firmware.bin] [--no-backup] [--no-lighting] [--no-profiles] [--no-battlog] [--on-reserve]
 #
-# Defaults to $QMK_HOME/a_jazz_ak820pro_via.bin. A failed backup of either the
-# keymap or the lighting refuses to flash: --no-backup skips both (and both
-# restores), --no-lighting only the lighting. Each backup prints its file's
-# time and size, so "is this backup from just now?" reads off the output.
+# Defaults to $QMK_HOME/a_jazz_ak820pro_via.bin. A failed backup of the
+# keymap, the lighting or the settings profiles refuses to flash: --no-backup
+# skips them all (and their restores), --no-lighting only the lighting,
+# --no-profiles only the profiles. Each backup prints its file's time and
+# size, so "is this backup from just now?" reads off the output.
+#
+# The profiles (P5a, plans/SETTINGS-PROFILES-PLAN.md) carry the live settings
+# too: the screen level, the clock format, the indicators, the battery
+# readout, the power mode, and the lighting. Where both firmwares have
+# HC_PROFILES, that live record is the one RGB restore, in place of
+# ak820lighting.py's, so two snapshots never overwrite each other.
 #
 # ⚠️ That path is SHARED: `qmk compile` always writes it, so a concurrent build
 # in another session silently replaces your binary. The timestamp is printed
@@ -34,14 +41,15 @@ source ./env.sh                          # must be sourced from the repo root
 PY="${PY:-$AK820_VENV/bin/python}"
 [ -x "$PY" ] || PY=python3
 
-FW="" ; BACKUP=1 ; LIGHTS=1 ; DUMPLOG=1 ; RESERVE_OK=0
+FW="" ; BACKUP=1 ; LIGHTS=1 ; PROFS=1 ; PROF_HAVE=0 ; DUMPLOG=1 ; RESERVE_OK=0
 for a in "$@"; do
     case "$a" in
         --no-backup) BACKUP=0 ;;
         --no-lighting) LIGHTS=0 ;;
+        --no-profiles) PROFS=0 ;;
         --no-battlog) DUMPLOG=0 ;;
         --on-reserve) RESERVE_OK=1 ;;
-        -h|--help)   sed -n '2,21p' "$0"; exit 0 ;;
+        -h|--help)   sed -n '2,28p' "$0"; exit 0 ;;
         *)           FW="$a" ;;
     esac
 done
@@ -114,6 +122,7 @@ case "$(uname -s)" in
 esac
 KEYMAP="${KEYMAP:-$DOCS/ak820pro-keymap.json}"
 LIGHTING="${LIGHTING:-$DOCS/ak820pro-lighting.json}"
+PROFILES="${PROFILES:-$DOCS/ak820pro-profiles.json}"
 if [ "$BACKUP" = 1 ]; then
     if usb "$BOOTLOADER"; then
         # Already in the bootloader: QMK is gone, so there is nothing to read.
@@ -164,6 +173,35 @@ if [ "$BACKUP" = 1 ]; then
             echo
         elif [ -f "$LIGHTING" ]; then
             echo "   lighting: using existing backup from $(fstat "$LIGHTING")"
+            echo
+        fi
+    fi
+
+    # The settings profiles and the live settings, fatal the same way where
+    # the firmware has HC_PROFILES. A firmware from before P5a answers
+    # unhandled (exit 2): then nothing is saved this run, an older file is
+    # NOT used, and the lighting is restored the old way. --no-profiles is
+    # the deliberate way past a failure.
+    if [ "$PROFS" = 1 ]; then
+        if ! usb "$BOOTLOADER"; then
+            echo "== backing up the settings profiles and the live settings =="
+            "$PY" hostagent/ak820profiles.py dump "$PROFILES"; rc=$?
+            if [ "$rc" = 0 ]; then
+                PROF_HAVE=1
+                echo "   saved: $PROFILES  $(fstat "$PROFILES")"
+            elif [ "$rc" = 2 ]; then
+                echo "   (this firmware predates them: the lighting is restored the old way)"
+            else
+                echo
+                echo "Profiles backup FAILED -- not flashing."
+                echo "  Re-run with --no-profiles to flash anyway; the profiles, and the screen, clock,"
+                echo "  indicator, readout and power settings, then come back as the firmware's defaults."
+                exit 1
+            fi
+            echo
+        elif [ -f "$PROFILES" ]; then
+            PROF_HAVE=1
+            echo "   profiles: using existing backup from $(fstat "$PROFILES")"
             echo
         fi
     fi
@@ -248,11 +286,30 @@ if [ "$BACKUP" = 1 ]; then
         sleep 4
     done
 
+    # The profiles and the live settings next, and with them the one
+    # authoritative RGB restore: the live record where the new firmware has
+    # HC_PROFILES and this run has its backup. Otherwise, or if it fails,
+    # ak820lighting.py's restore as before.
+    LIGHT_DONE=0
+    if [ "$PROF_HAVE" = 1 ]; then
+        echo "== restoring the settings profiles and the live settings =="
+        for try in 1 2 3; do
+            "$PY" hostagent/ak820profiles.py restore "$PROFILES"; rc=$?
+            [ "$rc" = 0 ] && { LIGHT_DONE=1; break; }
+            [ "$rc" = 2 ] && { echo "   (the new firmware has no HC_PROFILES: the lighting the old way)"; break; }
+            [ "$try" = 3 ] && {
+                echo "  profiles restore failed -- run it by hand once the board settles:"
+                echo "    $PY hostagent/ak820profiles.py restore"
+            }
+            sleep 4
+        done
+    fi
+
     # After the keymap, because the keymap is the one worth failing over. A
     # lighting restore that does not take leaves the LEDs on the firmware
     # default, which is visible and fixable by hand.
-    [ "$LIGHTS" = 1 ] && echo "== restoring the RGB lighting =="
-    [ "$LIGHTS" = 1 ] && for try in 1 2 3; do
+    [ "$LIGHTS" = 1 ] && [ "$LIGHT_DONE" = 0 ] && echo "== restoring the RGB lighting =="
+    [ "$LIGHTS" = 1 ] && [ "$LIGHT_DONE" = 0 ] && for try in 1 2 3; do
         "$PY" hostagent/ak820lighting.py restore "$LIGHTING" && break
         [ "$try" = 3 ] && {
             echo "  lighting restore failed -- run it by hand once the board settles:"
