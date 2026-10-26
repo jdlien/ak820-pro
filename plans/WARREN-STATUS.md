@@ -263,7 +263,9 @@ This file is the thread; read it first after a context loss. Updated
        session on Buzz first.
   8. **Settings profiles:** JD is leaning towards it, but it's not a build
      go. His decisions are in CONFIG-MENU-P1-DESIGN.md, "Settings
-     profiles". Next is a design draft, then his word.
+     profiles". **The session on Buzz is drafting
+     `plans/SETTINGS-PROFILES-PLAN.md` (JD, ~19:30)**. Warren checks its
+     menu internals before codex does. Nothing gets built before JD's word.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;
