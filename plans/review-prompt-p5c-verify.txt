@@ -1,0 +1,12 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A verify before the flash: your findings in plans/review-codex-p5c-code-raw.md. The fixes: qmk_firmware-ak820pro `git diff 740555b2 f9b4035c -- keyboards/a_jazz/ak820pro` (menu/menu.c, menu/menu_glue.c).
+
+1. One-shot layers: env_clear_oneshots() now calls clear_oneshot_layer_state(ONESHOT_START | ONESHOT_TOGGLED) when is_oneshot_layer_active(), which turns the layer off, then reset_oneshot_layer().
+2. Reopening during a DRAIN: rename_open() keeps RN_DRAIN when one is running (else WAIT); menu_rename_task() moves a DRAIN to CAPTURE when Rename's page shows and the keys are idle (clearing the one-shots), to off otherwise.
+3. The name's signature: an edit, taken in menu_tick(), also invalidates the confirm layout's slot 2 (the name's line).
+4. Losses: no change. A loss under the menu (po_loss(), PO_ACT_RESET_BUFFERS, menu_screen_invalidate()) repaints the page, which stays the menu's showing one, so the capture goes on with it; the capture ends whenever Rename's page isn't the one showing, which a MENU_CLEAR (screen_open() -> menu_open()) and every close do. Say if you see harm in a capture that survives a repaint.
+
+Tests: scripts/menu_s0_test.c's test_rename(): a reopen while a captured key is still down (the DRAIN reported, the release swallowed, then CAPTURE), and "cd" then "da" with no pass between (the line shows "da_"). The one-shot fix has no host test (the fakes have no layer_state). Host tests pass; 28 mutants, 1 survives (an empty slot's rename check, which prof_rec_valid()'s state check also makes). Heap gap 136 B.
+
+Check: are 1-3 closed, and is 4 acceptable? Anything the fixes break? Anything unsafe to flash on the keyboard on gremlin? File and line. Under 200 words.

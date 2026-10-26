@@ -1,0 +1,13 @@
+**Yes—changes are needed before flashing `740555b2`.**
+
+- **P2 — one-shot layers remain enabled.** [menu_glue.c:387](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_glue.c:387): `reset_oneshot_layer()` clears bookkeeping, **not `layer_state`** ([action_util.c:200](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/quantum/action_util.c:200)). Enter Rename with an armed `OSL(WINFN)` and Fn remains enabled after exit; subsequent Esc can invoke the bootloader. Clear the active one-shot layer as well, using the full fulfilment mask or explicitly disabling its saved layer before resetting. The plan’s prescribed API is insufficient.
+
+- **P2 — reopening breaks DRAIN.** [menu.c:1995](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1995): hold a captured key, cancel, then click Rename again before releasing it. Assigning `RN_WAIT` forwards its orphan release into QMK. Contrary to the comment, releases can act: VIA-mapped `RM_*` controls execute on release. Preserve swallowing until the previous drain completes, then arm capture.
+
+- **P2 — name signatures can suppress repaint indefinitely.** [menu.c:2003](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:2003): `"cd"` and `"da"` both produce `0x52AB`. If edits coalesce before repaint, the scheduler can retain the old displayed name while saving the new one. Explicitly invalidate the name slot when consuming `RN_EDITED`; the hash alone cannot establish pixel equality.
+
+- **The planned loss cancellation is missing.** [menu.c:1659](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1659): the actual loss path calls `menu_screen_invalidate()` → `menu_invalidate()`, which only invalidates pixels. It never takes the assumed `MENU_CLEAR`/`screen_open()` path, so Rename and CAPTURE survive. Add cancellation and draining for Rename losses.
+
+Otherwise, the built configuration’s matrix events reach the gate before tapping; USB and BT share that path. Combos and key overrides are disabled. VIA/default-layer lookup, Mac/Win selection, physical Shift, ignored transparent/non-basic codes, the additive tapping accessor—including `NO_ACTION_TAPPING`—and profile write ordering look sound. Ordinary exits and sleep admission show no additional blocker.
+
+The ELF confirms **`pg` 12 B, `rn` 1 B, heap gap 136 B**. Add regressions for the findings; the current one-shot fake merely counts calls. Static review only: process execution was denied, so tests and hardware timing were not rerun.

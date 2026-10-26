@@ -631,6 +631,46 @@ static void test_p5b(void) {
     CHECK(hid(3, 0, 0x22) && rpt[6] == PROF_TOKEN && !prof_take_changed());   /* no restore open: nothing written */
 }
 
+/* P5c: Rename's write: the state empty, the name and the crc (the fields too
+ * when they lacked the name bit), the state saved; the active slot kept. */
+static void test_rename(void) {
+    reset();
+    uint8_t r[PROF_REC];
+    CHECK(prof_save(0, NULL) == PROF_OK && prof_save(1, NULL) == PROF_OK);
+    settle();
+    nlog = 0;
+    CHECK(prof_rename(0, "Home") == PROF_OK && nlog == 3);
+    CHECK(wlog[0].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[0].first == PS_EMPTY && wlog[0].n == 1);
+    CHECK(wlog[1].addr == PROF_BASE + PROF_REC_OFF(0) + PR_NAME && wlog[1].first == 'H' && wlog[1].n == 13);
+    CHECK(wlog[2].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[2].first == PS_SAVED_V1 && wlog[2].n == 1);
+    CHECK(prof_slot(0, r) && memcmp(&r[PR_NAME], "Home\0\0\0\0\0\0\0\0", 12) == 0 && prof_active() == 1);
+    /* Twelve, then empty ("Profile n" again); the bit stays. */
+    CHECK(prof_rename(0, "Twelve chars") == PROF_OK && prof_slot(0, r) && memcmp(&r[PR_NAME], "Twelve chars", 12) == 0);
+    CHECK(prof_rename(0, "") == PROF_OK && prof_slot(0, r) && r[PR_NAME] == 0 && (r[PR_FIELDS] & PF_NAME));
+    /* A record without the name bit (a host's): the fields written too. */
+    uint8_t *rec = &ee[PROF_BASE + PROF_REC_OFF(1)];
+    rec[PR_FIELDS] &= (uint8_t)~PF_NAME;
+    rec[PR_CRC] = prof_crc8(&rec[PR_FIELDS], PR_CRC - PR_FIELDS);
+    nlog = 0;
+    CHECK(prof_rename(1, "Work") == PROF_OK && nlog == 3 && wlog[1].addr == PROF_BASE + PROF_REC_OFF(1) + PR_FIELDS &&
+          wlog[1].n == 26);
+    CHECK(prof_slot(1, r) && (r[PR_FIELDS] & PF_NAME) && memcmp(&r[PR_NAME], "Work", 5) == 0);
+    /* Refused: no slot, an empty slot, a character outside 0x20-0x7E, a
+     * recovery; nothing written. */
+    nlog = 0;
+    CHECK(prof_rename(8, "x") == PROF_BAD && prof_rename(5, "x") == PROF_INVALID && prof_rename(0, "a\x7f") == PROF_INVALID);
+    fk_recovering = true;
+    CHECK(prof_rename(0, "x") == PROF_BUSY);
+    fk_recovering = false;
+    CHECK(nlog == 0 && prof_slot(0, r) && r[PR_NAME] == 0);
+    /* A failed write: the slot reads empty, and the latch refuses the rest. */
+    fail_at = 1;
+    CHECK(prof_rename(0, "Fail") == PROF_WRITE_FAILED && !prof_slot(0, r) && prof_write_failed());
+    fail_at = -1;
+    CHECK(prof_rename(1, "x") == PROF_WRITE_FAILED);
+    prof_test_reset();
+}
+
 int main(void) {
     test_codec();
     test_format_and_save();
@@ -638,6 +678,7 @@ int main(void) {
     test_hid_restore();
     test_hid_live();
     test_p5b();
+    test_rename();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

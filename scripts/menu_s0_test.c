@@ -1418,6 +1418,14 @@ bool env_recovering(void) { return fk_recovering; }
 void env_settings_flush(void) { fk_flushes++; fk_settle_pending = false; }
 void env_settings_touch(void) { fk_settle_touches++; fk_settle_pending = true; }
 bool env_settings_pending(void) { return fk_settle_pending; }
+/* P5c: Rename's keys. Row 1's keycode is its column (the tests type by
+ * keycode); the keys down, QMK's tapping, the one-shots' clears, Shift. */
+static int  fk_keys_down, fk_oneshot_clears;
+static bool fk_tapping_busy, fk_shift;
+bool        env_keys_idle(void) { return fk_keys_down == 0 && !fk_tapping_busy; }
+void        env_clear_oneshots(void) { fk_oneshot_clears++; }
+uint16_t    env_default_keycode(uint8_t row, uint8_t col) { return row == 1u ? col : 0u; }
+bool        env_shift_held(void) { return fk_shift; }
 void prof_test_reset(void);   /* profiles.c, MENU_HOST_TEST: the reboot */
 static void fk_prof_reset(void) {
     memset(fk_ee, 0, sizeof fk_ee);
@@ -3867,13 +3875,14 @@ static void test_profiles(void) {
     m_click();
     CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x01 && title_bad(FONT_MONO_I_PROF " Profile 1") == 0);
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, "Load", MENU_LIT) == 0 &&
-          row_bad(2, "Save current here", MENU_DIM) == 0 && row_bad(3, "Delete", MENU_DIM) == 0 && row_bad(4, "", 0) == 0);
+          row_bad(2, "Save current here", MENU_DIM) == 0 && row_bad(3, "Rename", MENU_DIM) == 0 &&
+          row_bad(4, "Delete", MENU_DIM) == 0);   /* P5c: Rename before Delete */
     CHECK(row_bad(5, cells2(FONT_MONO_I_LIGHT " Cycle All", "50%"), MENU_WHITE) == 0 &&
           row_bad(6, "  H:180 S:100% B:80%", MENU_WHITE) == 0 &&
           row_bad(7, FONT_MONO_I_SCREEN "52%   " FONT_MONO_I_CLOCK "24h:ss", MENU_WHITE) == 0);
-    m_turn(2);
-    CHECK(sub5_cursor() == 0x03 && row_bad(3, "Delete", MENU_LIT) == 0);
-    m_turn(1);   /* the cursor wraps over the four actions, never the summary */
+    m_turn(3);
+    CHECK(sub5_cursor() == 0x04 && row_bad(4, "Delete", MENU_LIT) == 0);
+    m_turn(1);   /* the cursor wraps over the five actions, never the summary */
     CHECK(sub5_cursor() == 0x00 && row_bad(0, FONT_MONO_TRI_L " Back", MENU_LIT) == 0 && menu_max_lit <= 1);
     m_turn(1);
 
@@ -3955,7 +3964,7 @@ static void test_profiles(void) {
 
     /* Delete: a confirm, then Profiles past the slot's page, nothing saved,
      * the cursor's row now Save new (its deleted bytes' name never shows). */
-    m_turn(1);
+    m_turn(2);
     m_click();
     CHECK(sub5_screen() == SC_PDEL && sub5_cursor() == 0 && title_bad(FONT_MONO_I_PROF " Delete profile") == 0 &&
           text_slot_bad(22, "Delete Twelve chars?", MENU_WHITE, false) == 0 &&
@@ -4002,7 +4011,7 @@ static void test_profiles(void) {
     m_turn(-1);
     m_click();
     CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x11 && title_bad(FONT_MONO_I_PROF " Profile 2") == 0);
-    m_turn(2);
+    m_turn(3);
     m_click();
     CHECK(sub5_screen() == SC_PDEL && sub5_cursor() == 1);
     m_click();
@@ -4079,7 +4088,7 @@ static void test_profiles(void) {
      * then the click; back in range, on Save new. */
     m_unflash();
     m_click();   /* Profile 8's page */
-    m_turn(2);
+    m_turn(3);
     m_click();   /* Delete's confirm */
     CHECK(sub5_screen() == SC_PDEL && sub5_cursor() == 7);
     CHECK(prof_sub(0x41, 6, 0) == PROF_OK && prof_sub(0x41, 5, 0) == PROF_OK);
@@ -4116,7 +4125,7 @@ static void test_profiles(void) {
     CHECK(sub5_screen() == SC_PROF && row_bad(1, PNEW, MENU_LIT) == 0);   /* nothing listed: unformatted */
     m_click();   /* Profile 1, saved afresh (formats again) */
     m_click();   /* its page */
-    m_turn(2);
+    m_turn(3);
     m_click();   /* Delete's confirm */
     CHECK(sub5_screen() == SC_PDEL);
     CHECK(prof_sub(1, 0, 0x43) == PROF_OK);
@@ -4348,7 +4357,7 @@ static void test_preview(void) {
     CHECK(sub5_cursor() == 1 && rgb_is(&fk_rgb, &L));
     m_click();
     CHECK(sub5_screen() == SC_PSLOT && fk_rgb.enable == 0 && fk_rgb.mode == 4 && fk_lcd == 20);
-    m_turn(2);
+    m_turn(3);
     m_click();
     CHECK(sub5_screen() == SC_PDEL && fk_rgb.enable == 0 && fk_rgb.mode == 4);   /* Delete's confirm keeps it showing */
     m_click();
@@ -4436,6 +4445,223 @@ static void test_preview_codex(void) {
     for (int i = 0; i < 400; i++) fw_pass(5);   /* the dashboard's restore */
 }
 
+/* P5c, Rename (plans/SETTINGS-PROFILES-PLAN.md, "Rename"): the one page that
+ * takes typing. WAIT until the keys are up and QMK's tapping is empty, the
+ * one-shots cleared then; CAPTURE every key (by the default layer's
+ * keycode, Shift from the matrix); DRAIN after, until the keys are up. */
+enum { SC_PRENAME = 16 + 56 };
+static bool m_key(uint8_t kc, bool down) {
+    fk_keys_down += down ? 1 : -1;
+    return menu_key(1, kc, down, fk_now);
+}
+static void m_type(uint8_t kc) {
+    CHECK(m_key(kc, true));
+    CHECK(m_key(kc, false));
+}
+static void m_typestr(const char *s) {
+    for (; *s; s++) {
+        char    c  = *s;
+        uint8_t kc = c >= 'a' && c <= 'z' ? (uint8_t)(MENU_KC_A + (c - 'a'))
+                   : c >= 'A' && c <= 'Z' ? (uint8_t)(MENU_KC_A + (c - 'A'))
+                   : c == '0'             ? (uint8_t)(MENU_KC_1 + 9u)
+                   : c >= '1' && c <= '9' ? (uint8_t)(MENU_KC_1 + (c - '1'))
+                                          : (uint8_t)MENU_KC_SPACE;
+        fk_shift = c >= 'A' && c <= 'Z';
+        m_type(kc);
+        fk_shift = false;
+    }
+}
+static int name_bad(const char *n) { return text_slot_bad(22, n, MENU_WHITE, false); }
+/* After keys: a pass (menu_tick() takes them; m_settle() runs none on a
+ * screen that looks settled), then the screen settled. */
+static void m_ktick(void) {
+    fw_pass(5);
+    m_settle();
+}
+
+static void test_rename(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_lcd = fk_lcd_saved = 52;
+    fk_ind[0] = fk_ind[1] = 40;
+    fk_batt_hours = false;
+    fk_keys_down = 0; fk_tapping_busy = false; fk_shift = false;
+    CHECK(prof_save(0, NULL) == PROF_OK);
+    fk_prof_settle();
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_PROF);
+    m_click();
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x01);
+
+    /* Its page: a key held at the click goes on to QMK, and holds WAIT
+     * until it's up; then QMK's tapping must be empty too. */
+    CHECK(!m_key(MENU_KC_A, true));
+    m_turn(2);
+    CHECK(sub5_cursor() == 0x03 && row_bad(3, "Rename", MENU_LIT) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_PRENAME && sub5_cursor() == 0x10 && menu_renaming() &&
+          title_bad(FONT_MONO_I_PROF " Rename profile") == 0);
+    CHECK(name_bad("_") == 0 && text_slot_bad(36, "Type a name", MENU_WHITE, false) == 0 &&
+          text_slot_bad(72, "Enter, click: save", MENU_WHITE, false) == 0 &&
+          text_slot_bad(86, "Esc, hold: cancel", MENU_WHITE, false) == 0);
+    CHECK(!m_key(MENU_KC_A, false));   /* WAIT: on to QMK */
+    int oc = fk_oneshot_clears;
+    fk_tapping_busy = true;
+    fw_pass(5);
+    CHECK(sub5_cursor() == 0x10 && fk_oneshot_clears == oc);
+    fk_tapping_busy = false;
+    fw_pass(5);
+    CHECK(sub5_cursor() == 0x20 && fk_oneshot_clears == oc + 1);   /* CAPTURE, the one-shots cleared */
+
+    /* Typing: Shift from the matrix, Backspace, a key that isn't a
+     * character swallowed and ignored. */
+    m_typestr("Hoem");
+    m_type(MENU_KC_BSPC);
+    m_type(MENU_KC_BSPC);
+    m_typestr("me 2");
+    fk_shift = true;
+    m_type(MENU_KC_1);   /* ! */
+    fk_shift = false;
+    m_type(0x3A);        /* F1 */
+    m_ktick();
+    CHECK(name_bad("Home 2!_") == 0 && sub5_screen() == SC_PRENAME);
+    /* The idle close waits (Rename's is the backstop's, and typing is input). */
+    m_rest(170000);
+    m_typestr("x");
+    m_type(MENU_KC_BSPC);
+    m_rest(170000);   /* 340 s since the page opened: the 180 s backstop counts from the last key */
+    CHECK(po_session() == SESSION_OPEN && sub5_screen() == SC_PRENAME);
+
+    /* Enter commits: "Renamed", back on the slot's page; Enter's release,
+     * after, is drained, then the keys go on to QMK again. */
+    CHECK(m_key(MENU_KC_ENTER, true));
+    m_ktick();
+    CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x03 && title_bad("Renamed") == 0 && !menu_renaming());
+    CHECK(m_key(MENU_KC_ENTER, false));
+    fw_pass(5);
+    CHECK(!m_key(MENU_KC_A, true) && !m_key(MENU_KC_A, false));
+    uint8_t rec[PROF_REC];
+    CHECK(prof_slot(0, rec) && memcmp(&rec[PR_NAME], "Home 2!\0\0\0\0\0", 12) == 0 && prof_active() == 0);
+    m_unflash();
+    CHECK(title_bad(FONT_MONO_I_PROF " Home 2!") == 0);
+
+    /* Esc cancels: "Cancelled", the name as it was. */
+    m_click();
+    CHECK(sub5_cursor() == 0x20 && name_bad("Home 2!_") == 0);
+    m_typestr("x");
+    m_type(MENU_KC_ESCAPE);
+    m_ktick();
+    CHECK(sub5_screen() == SC_PSLOT && title_bad("Cancelled") == 0 && prof_slot(0, rec) && rec[PR_NAME] == 'H' &&
+          rec[PR_NAME + 7] == 0);
+    m_unflash();
+
+    /* Twelve at most; the knob's click commits. */
+    m_click();
+    for (int i = 0; i < 7; i++) m_type(MENU_KC_BSPC);
+    m_typestr("abcdefghijklmn");
+    m_ktick();
+    CHECK(name_bad("abcdefghijkl_") == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT && prof_slot(0, rec) && memcmp(&rec[PR_NAME], "abcdefghijkl", 12) == 0);
+    m_unflash();
+    /* Trailing spaces dropped. */
+    m_click();
+    for (int i = 0; i < 12; i++) m_type(MENU_KC_BSPC);
+    m_typestr("Hi  ");
+    m_click();
+    CHECK(prof_slot(0, rec) && memcmp(&rec[PR_NAME], "Hi\0\0", 4) == 0);
+    m_unflash();
+    /* An empty name: "Profile 1" again. */
+    m_click();
+    m_type(MENU_KC_BSPC);
+    m_type(MENU_KC_BSPC);
+    m_click();
+    CHECK(prof_slot(0, rec) && rec[PR_NAME] == 0 && (rec[PR_FIELDS] & PF_NAME));
+    m_unflash();
+    CHECK(title_bad(FONT_MONO_I_PROF " Profile 1") == 0);
+    /* The knob's hold cancels. */
+    m_click();
+    m_typestr("zz");
+    m_hold();
+    CHECK(sub5_screen() == SC_PSLOT && title_bad("Cancelled") == 0 && prof_slot(0, rec) && rec[PR_NAME] == 0);
+    m_unflash();
+    /* Left in WAIT: nothing was taken, so nothing drains, and the held
+     * key's release goes on to QMK. */
+    CHECK(!m_key(MENU_KC_A, true));
+    m_click();
+    CHECK(sub5_screen() == SC_PRENAME && sub5_cursor() == 0x10);
+    m_hold();
+    CHECK(sub5_screen() == SC_PSLOT && !menu_renaming() && !m_key(MENU_KC_A, false));
+    m_unflash();
+    /* Reopened while a key typed in the last capture is still down (codex,
+     * P5c's review): that DRAIN runs on, swallowing its release, and the
+     * capture starts after it. */
+    m_click();
+    CHECK(sub5_cursor() == 0x20 && m_key(MENU_KC_A, true));
+    m_hold();
+    CHECK(sub5_screen() == SC_PSLOT && !menu_renaming());
+    m_click();
+    CHECK(sub5_screen() == SC_PRENAME && sub5_cursor() == 0x30 && name_bad("_") == 0);
+    CHECK(m_key(MENU_KC_A, false));
+    m_ktick();
+    CHECK(sub5_cursor() == 0x20);
+    /* Two names of one signature ("cd", "da"): the line repaints anyway. */
+    m_typestr("cd");
+    m_ktick();
+    CHECK(name_bad("cd_") == 0);
+    m_type(MENU_KC_BSPC);
+    m_type(MENU_KC_BSPC);
+    m_typestr("da");
+    m_ktick();
+    CHECK(name_bad("da_") == 0);
+    m_hold();
+    m_unflash();
+    /* Refused in a recovery: "Busy, try again", the page and the name kept. */
+    m_click();
+    m_typestr("Ok");
+    fk_recovering = true;
+    m_click();
+    CHECK(sub5_screen() == SC_PRENAME && title_bad("Busy, try again") == 0 && name_bad("Ok_") == 0);
+    fk_recovering = false;
+    m_unflash();
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT && prof_slot(0, rec) && memcmp(&rec[PR_NAME], "Ok\0", 3) == 0);
+    m_unflash();
+
+    /* A close mid-capture ends it: a key held then drains, its release
+     * swallowed; then the keys go on to QMK. */
+    m_click();
+    CHECK(sub5_cursor() == 0x20);
+    CHECK(m_key(MENU_KC_A, true));
+    CHECK(op27(11, 0, 0) == MI_OK);
+    fw_pass(5);
+    CHECK(!menu_renaming() && m_key(MENU_KC_A, false));
+    fw_pass(5);
+    CHECK(!m_key(MENU_KC_A + 1u, true) && !m_key(MENU_KC_A + 1u, false));
+    CHECK(prof_slot(0, rec) && memcmp(&rec[PR_NAME], "Ok\0", 3) == 0);
+    for (int i = 0; i < 400; i++) fw_pass(5);   /* the dashboard's restore */
+
+    /* A host restore pops it. */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_PROF);
+    m_click();
+    m_click();
+    m_turn(2);
+    m_click();
+    CHECK(sub5_screen() == SC_PRENAME && sub5_cursor() == 0x20);
+    CHECK(prof_sub(1, 0, 0x45) == PROF_OK);
+    m_tick_settle();
+    CHECK(sub5_screen() == 16 + 1 && !menu_renaming());
+    for (int i = 0; i < 50; i++) prof_tick();
+    CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+}
+
 int main(int argc, char **argv) {
 #ifdef MENU_ENABLE
     (void)argc; (void)argv;
@@ -4470,6 +4696,7 @@ int main(int argc, char **argv) {
     test_profiles();
     test_preview();
     test_preview_codex();
+    test_rename();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

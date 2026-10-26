@@ -39,6 +39,7 @@ from menu_s1_gate import decode_meas  # noqa: E402
 
 SCR = g.SCR
 TOP, PROFILES, PSLOT, PSAVE, PDEL = 1, 50, 51, 54, 55   # P5d: one slot node; its cursor is the slot << 4 | the row
+PRENAME = 56   # P5c: its cursor is the capture's state << 4 | the slot (2: CAPTURE)
 R_PROF, R_HELP = g.R_PROF, g.R_HELP
 PR_LCD = 8   # the record's screen level (profiles.h)
 ME_PROFILE = 10   # menu_edit.h: P5e's preview edit
@@ -128,7 +129,7 @@ def main():
 
         # Delete: the confirm and a click, back to Profiles, the cursor's
         # row now Save new; the slot empty.
-        g.turn(h, 1, "to Delete", SCR(PSLOT), 0x03)
+        g.turn(h, 2, "to Delete", SCR(PSLOT), 0x04)   # P5c: past Rename
         g.click(h, "Delete's confirm", SCR(PDEL), 0)
         g.click(h, "deleted", SCR(PROFILES), 1)
         recs, _ = slots(h)
@@ -187,6 +188,18 @@ def main():
         g.check(edit(h) == (0, 0), "Load: the preview's edit still open")
         lv = ap.read_live(h)
         g.check(lv[3] == LOOKS[2][0] and lv[PR_LCD] == LOOKS[2][1], f"Load: live effect {lv[3]} screen {lv[PR_LCD]}")
+        # P5c: Rename by the knob alone (typing needs hands): Profile 3's
+        # page, Rename (the capture on, no key down), a click saves the name
+        # as it is; again, and a hold cancels.
+        g.click(h, "Profile 3's page again", SCR(PSLOT), 0x21)
+        g.turn(h, 2, "to Rename", SCR(PSLOT), 0x23)
+        g.click(h, "Rename, capturing", SCR(PRENAME), 0x22)
+        g.click(h, "the name saved as it was", SCR(PSLOT), 0x23)
+        recs, _ = slots(h)
+        g.check(recs[2] is not None, "Rename: Profile 3 not saved")
+        g.click(h, "Rename again", SCR(PRENAME), 0x22)
+        g.hold(h, "cancelled", SCR(PSLOT), 0x23)
+        g.hold(h, "Profiles", SCR(PROFILES), 3)
         g.hold(h, "the top level", SCR(TOP), R_PROF)
         for s in range(8):
             g.check(ap.xfer(h, 0x41, [s])[5] == 0, f"the dev delete of slot {s} refused")
