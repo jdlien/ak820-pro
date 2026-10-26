@@ -46,7 +46,9 @@ int main(void) {
     want("1h", 2, true, 60, true, true);
     want("<1h", 2, true, 59, true, true);
     want("<1h", 1, true, 0, true, true);
-    want("1092h", 100, true, 0xFFFEu, true, true);  /* the estimate's ceiling: five cells */
+    want("999h", 100, true, 0xFFFEu, true, true);   /* the estimate's ceiling, 1092 h, shown as three digits */
+    want("999h", 100, true, 60000u, true, true);
+    want("998h", 100, true, 59880u, true, true);
     /* Hours, no estimate yet: the percent. */
     want("85%", 85, true, 9600, false, true);       /* the first hour after a boot */
     want("85%", 85, true, NONE, true, true);

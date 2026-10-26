@@ -617,6 +617,12 @@ the code is raised before working around it.
   6. **A repaint covers the slot's whole footprint,** background included:
      an absent row paints black, an absent scrollbar paints its track
      black, and a row paints its pad pixel at x 3 in either colour.
+     **One exception (10-25, the Clock's live examples):** a layout's
+     optional `first_chunk(slot, was, now)` may start a `COMMITTED` slot's
+     repaint at chunk c > 0, and only when the two signatures' targets agree
+     on chunks 0 .. c-1, so those pixels are already the new target's. A
+     `PARTIAL` or `INVALID` slot always starts at 0. Skipped chunks are no
+     operations: C10's counts and stops see only the chunks sent.
 - **One chunk cursor:** the slot and the chunk in progress. Only the slot
   it names may be `PARTIAL` and resume. When the cursor moves to another
   slot, a `PARTIAL` slot it leaves becomes `INVALID` and restarts from

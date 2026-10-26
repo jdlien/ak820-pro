@@ -4,23 +4,29 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-25 ~13:15.
+2026-10-25 ~18:30.
 
 ## Where things stand
 
 - **S0 is complete.** A1-A13 passed on the keyboard on gremlin, with recorded
   exceptions (GREMLIN-RESULTS §10). Firmware branch `gremlin/config-menu`
   (`4b899118`).
-  - **Not merged, by agreement with the session on Buzz** (the Mac; its
+  - **Not merged yet.** The agreement with the session on Buzz (the Mac; its
     session's bridge is listed as "Relay control and power monitoring
-    status"). The keyboard on Buzz is mid-drain on `b9555ff3e6` until its RGB
-    cut, ~10-31 to 11-02. Then:
+    status") was to wait for the keyboard on Buzz's drain on `b9555ff3e6` to
+    reach its RGB cut. **JD released that (10-25, ~18:15):** "I'm not too
+    worried about finishing the drain at this point. I might as well just
+    start it over again given how far away it still is." The merge now
+    waits on JD's polish ("a few bits of polish and we can consider merging
+    this into the daily build and the version running on Buzz"). Its order
+    stands:
     1. a daily build runs on the keyboard on gremlin (needs JD's Fn+Esc to
        get back to dev);
-    2. one flash of S0 plus the LED fix goes onto the keyboard on Buzz;
+    2. the session on Buzz flashes the menu onto the keyboard on Buzz;
     3. then the merges into `ak820pro-jdlien`, `deps.lock` and main.
 
-    Don't touch `ak820pro-jdlien`, `deps.lock` or main before then.
+    Don't touch `ak820pro-jdlien`, `deps.lock` or main until JD calls the
+    merge, and tell the session on Buzz first.
 - **S1 is in progress** on firmware branch `gremlin/s1` (qmk_firmware), on top
   of `gremlin/fill-poll` (the LED fix) on top of `gremlin/config-menu`. The
   chibios-contrib submodule is pinned at branch `gremlin/s1-fifo-ie`
@@ -212,14 +218,30 @@ This file is the thread; read it first after a context loss. Updated
      `graphics/batt_text.c`. **The dev heap gap is 128 B, the floor:** any
      more dev RAM needs savings first (codex's candidate: `draw_battery()`'s
      `last_fw`, `last_txt_x`, `last_txt_w` as `uint8_t`).
-     - **Owed (JD):** the menu by eye; the hours with the cable out, after an
-       hour awake on battery.
+     - **Its preview (JD: "preview the percent and hours of use ... and also
+       show a warning if it's not going to display yet"):** each choice's row
+       shows its readout, and rows 4-6 a note while the hours aren't ready
+       (`e0f9a21f`; codex's P3 on the note fixed in `ab03ab38`, on the board
+       14:31; its signatures keyed by `batt_key()`, not formatted text, in
+       `8ce81e5d`: the text cost 19 ms passes).
+     - **Owed (JD):** the hours with the cable out, after an hour awake on
+       battery; the preview by eye.
      - **Asked (JD's call):** a faster average for the hours readout (1-2 h,
        the gauge keeping its 12 h), so a lighting change shows within an
        afternoon; it needs the RAM above.
-  5. The Clock options (the design doc's "JD's decisions"), with half-row
-     slots for the live examples.
-  6. JD's text edits; then P1c and P1d.
+  5. **The Clock options (JD, 10-25), done:** 24h and 12h without seconds
+     (`DISPLAY_CLOCK_24H_HM` 4, `_12H_HM` 5), Fn+C over all six, live
+     examples on the menu's rows, a tick repainting only the right half
+     (`ms_layout_t.first_chunk`, C3 rule 6's exception): `8ce81e5d`, JD by
+     eye: "New clock modes look great ... looks flawless". The rows named as
+     Fn+C names them, `24h:ss` and `12h:ss` (JD), and an unset clock's
+     signatures apart (codex's P2): `22ec0d3d`. One RTC read a second, its
+     sample sharing About's 12 B (the scans' `rtc_get_time()`, through
+     newlib's `localtime_r`, made 23 ms passes): `c374004b`.
+  6. **JD (10-25, ~14:50): "I think this means we're basically done the
+     entire menu system ... Let's make a few bits of polish and we can
+     consider merging."** P1c and P1d, and JD's text edits, wait on his
+     polish list.
 - **The gate procedure (each run):**
   1. flash the build (`./flash.sh` in MSYS2);
   2. `venv-win/Scripts/python.exe scripts/devhook.py reset < /dev/null`;

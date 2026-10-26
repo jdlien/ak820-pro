@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A verify, narrow: qmk_firmware-ak820pro `git diff e0f9a21f ab03ab38 -- keyboards/a_jazz/ak820pro` (menu/menu.c, batt_note() only), your P3 from plans/review-codex-p4-preview-raw.md's review ("Misleading note at the cut"). The fix: no note on battery at the cut or with no level; "Hours show only / on battery." only off battery. scripts/menu_s0_test.c's test_p4 (uncommitted) now checks the cut's state, the cut during a warm-up, and an unknown level off battery; it passes.
+
+Is the finding resolved, and is anything new wrong in the diff? File and line. Under 150 words.

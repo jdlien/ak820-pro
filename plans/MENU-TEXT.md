@@ -405,16 +405,33 @@ A choice: `Percent`, `Hours of use`; the top level's value: `Percent`,
 
 ```
 ◀ Back
-■ Percent
-  Hours of use
+■ Percent          85%
+  Hours of use    160h
 ```
+
+Each option shows what the dashboard would show on battery now (JD, 10-25:
+"preview the percent and hours of use"), live. While the hours can't show,
+their row reads `--` and a note under the list says why (JD: "a warning if
+it's not going to display yet"):
+
+```
+◀ Back
+■ Percent          85%
+  Hours of use      --
+
+Hours show after an
+hour on battery:
+40 min to go.
+```
+
+Warmed up but plugged in: `Hours show only` / `on battery.`
 
 What the dashboard's battery shows (JD, 10-25: "a '160 h' or something like
 that all the time there"):
 
 - **Percent:** `85%`; under 10 h of use left, the hours beside it, `18% 6h`
   (`<1h` under an hour).
-- **Hours of use:** `160h`, `<1h` under an hour. Until there's an estimate
+- **Hours of use:** `160h` (at most `999h`), `<1h` under an hour. Until there's an estimate
   (the first hour on battery after a boot or a flash) it shows the percent.
 - Either way: `USB`, `Charge`, `No Batt` and `Low` as before. The hours
   count awake time only, so they move with what the lights draw.

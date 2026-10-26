@@ -86,6 +86,34 @@ def step(h, sub, args, what, screen=None, cursor=None, owner="menu"):
     s, ms = settle(h, what)
     e = {"what": what, "ms": round(ms), "owner": s["owner"], "screen": s["screen"], "cursor": s["cursor"],
          "inv": s["invariant_fail"]}
+    note_meas(h, what, e)
+    log.append(e)
+    print(json.dumps(e), flush=True)
+    check(s["owner"] == owner, f"{what}: owner {s['owner']}, not {owner}")
+    if screen is not None:
+        check(s["screen"] == screen, f"{what}: screen {s['screen']}, not {screen}")
+    if cursor is not None:
+        check(s["cursor"] == cursor, f"{what}: cursor {s['cursor']}, not {cursor}")
+    check(ms <= SETTLE_S * 1000 or sub == 3 or owner == "dash", f"{what}: settled in {ms:.0f} ms")
+    check(s["invariant_fail"] & ~0x20 == 0, f"{what}: invariant_fail {s['invariant_fail']:#x}")
+    return s
+
+
+def dwell(h, what, secs):
+    """Stay on the screen, touching nothing, then the interval's passes (the
+    Clock's live examples tick meanwhile)."""
+    time.sleep(secs)
+    s, _ = settle(h, what)
+    e = {"what": what, "ms": 0, "owner": s["owner"], "screen": s["screen"], "cursor": s["cursor"],
+         "inv": s["invariant_fail"]}
+    note_meas(h, what, e)
+    log.append(e)
+    print(json.dumps(e), flush=True)
+    check(s["invariant_fail"] & ~0x20 == 0, f"{what}: invariant_fail {s['invariant_fail']:#x}")
+    return s
+
+
+def note_meas(h, what, e):
     if meas_on["on"]:
         m = decode_meas(xfer(h, 10, bytes([0])))
         e["over15"], e["pass_max_us"] = m["over15"], m["pass_max_us"]
@@ -99,16 +127,6 @@ def step(h, sub, args, what, screen=None, cursor=None, owner="menu"):
                     top = {k: v for k, v in r["scopes_ms"].items() if v}
                     slow.append({"step": what, "pass_ms": r["pass_ms"], "scopes": top})
                     print(f"    {r['pass_ms']} ms: {top}", flush=True)
-    log.append(e)
-    print(json.dumps(e), flush=True)
-    check(s["owner"] == owner, f"{what}: owner {s['owner']}, not {owner}")
-    if screen is not None:
-        check(s["screen"] == screen, f"{what}: screen {s['screen']}, not {screen}")
-    if cursor is not None:
-        check(s["cursor"] == cursor, f"{what}: cursor {s['cursor']}, not {cursor}")
-    check(ms <= SETTLE_S * 1000 or sub == 3 or owner == "dash", f"{what}: settled in {ms:.0f} ms")
-    check(s["invariant_fail"] & ~0x20 == 0, f"{what}: invariant_fail {s['invariant_fail']:#x}")
-    return s
 
 
 def turn(h, n, what, *a, **k):
@@ -246,11 +264,13 @@ def main():
         turn(h, orig_p - nxt, "to the original", SCR(POWER), orig_p)
         click(h, "commit the original", SCR(TOP), R_POWER)
 
-        # Clock: the same, then a cancel.
+        # Clock: the same over its six rows (10-25), a dwell while its examples
+        # tick, then a cancel.
         turn(h, R_CLOCK - R_POWER, "to Clock", SCR(TOP), R_CLOCK)
         s = click(h, "Clock", SCR(CLOCK))
         orig_c = s["cursor"]
-        nxt = 1 + (orig_c % 4)
+        dwell(h, "Clock ticking, 5 s", 5.0)
+        nxt = 1 + (orig_c % 6)
         turn(h, nxt - orig_c, "to another clock", SCR(CLOCK), nxt)
         click(h, "commit it", SCR(TOP), R_CLOCK)
         click(h, "Clock again", SCR(CLOCK), nxt)
@@ -260,10 +280,12 @@ def main():
         turn(h, 1, "move", SCR(CLOCK))
         hold(h, "cancelled", SCR(TOP), R_CLOCK)
 
-        # Battery (P4): the other readout, then the original again.
+        # Battery (P4): the other readout, then the original again; a dwell on
+        # its live preview.
         turn(h, R_BATT - R_CLOCK, "to Battery", SCR(TOP), R_BATT)
         s = click(h, "Battery", SCR(BATT))
         orig_b = s["cursor"]
+        dwell(h, "Battery's preview, 3 s", 3.0)
         nxt = 3 - orig_b
         turn(h, nxt - orig_b, "to the other readout", SCR(BATT), nxt)
         click(h, "commit it", SCR(TOP), R_BATT)

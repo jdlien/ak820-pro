@@ -1,0 +1,11 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+A code review before the flash, narrow: qmk_firmware-ak820pro `git diff 22ec0d3d c374004b -- keyboards/a_jazz/ak820pro` (menu/menu.c, menu/menu_env.h, menu/menu_glue.c). The board pass on 22ec0d3d (history/config-menu-p3-20261025/board-22ec0d3d.json) showed passes to 23.3 ms and Clock settles of 1.18-1.29 s while the Clock list shows: clock_sig() and clock_example() called rtc_get_time() (rtcGetTime -> rtc_lld_get_time -> rtc_decode -> newlib localtime_r, lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.c) for every example row on every scan. The fix: clock_now() reads it once per change of rtc_get_seconds() (rtc/rtc.c; rtc_seconds_count moves in rtc_second_cb, called from the LLD's ISR right after rtc_time++), keeping the sample in a union with About's 12 B snapshot (the dev heap gap is at its 128 B floor). The Clock page sets pg.clk.have = false as it opens; the flags are uint8_t. Tests, uncommitted: scripts/menu_s0_test.c's test_clock now counts the fake RTC reads (one per second's edge, none in 200 passes between edges) and opens the Clock after About with About's bytes aimed at the current tick; mutants dropping the cache and dropping the entry's reset each fail it. Both builds pass; the heap gap stays 128 B.
+
+Check:
+1. Can About's snapshot and the Clock's sample ever be live together: every path that shows Clock rows (push sites, pop back, a menu reopen, a loss's repaint, op 27's screen or stand-in ops, the flash's T_SAVED, a page cut), and every path that reads pg.snap?
+2. Staleness: a host set, a deep sleep's credit (rtc_seconds_count += in rtc.c), the clock becoming valid or invalid between edges, the 16-bit tick's wrap. Is anything worse than up to a second late, and could a signature now stay equal while the panel's text is wrong?
+3. clock_sig() and clock_example() reading one sample: any case where a row's committed signature and its painted text come from different samples, worse than before?
+4. Anything else wrong, or unsafe for the flash on the keyboard on gremlin (dev, slider on BT)?
+
+Must anything change before flashing? File and line. Under 300 words.

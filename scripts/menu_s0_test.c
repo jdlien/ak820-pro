@@ -10,7 +10,7 @@
  *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/menu_s0_test.c \
  *       $D/menu/panel_owner.c $D/menu/menu_input.c $D/menu/menu_slots.c \
  *       $D/menu/menu_fixture.c $D/menu/menu_ops.c $D/menu/menu_text.c $D/menu/menu.c \
- *       $D/menu/menu_edit.c -o ms0 && ./ms0
+ *       $D/menu/menu_edit.c $D/graphics/batt_text.c -o ms0 && ./ms0
  *
  * and again with -DMENU_ENABLE (the production opener, P1a): that build runs
  * test_menu_enable() only, since the S0 suite expects the opener off unarmed.
@@ -35,6 +35,7 @@
 #include "menu.h"
 #include "menu_edit.h"
 #include "../graphics/res/font_small_mono.h"   /* through -I $D/menu */
+#include "../graphics/batt_text.h"           /* P4: the previews as the dashboard composes them */
 #include "../indicator_levels.h"               /* P2a: the indicators' levels and tick */
 
 static int fails;
@@ -160,9 +161,11 @@ bool mb_rows(uint16_t x, uint16_t y, uint16_t w, uint16_t h, mb_row_fn fn, const
     fake_ticks += 300;
     return ok;
 }
-static int mono_ops;
+static int      mono_ops;
+static uint16_t mono_min_x = 0xFFFFu;   /* the Clock's ticks: the leftmost column a mono blit painted */
 bool mb_mono(const uint8_t *bits, uint8_t stride, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t fg, uint16_t bg) {
     dma_settle();   /* the stream quiesces */
+    if (x < mono_min_x) mono_min_x = x;
     pass_bytes += (uint32_t)w * h * 2u;
     uint16_t rows = h;
     bool     ok   = true;
@@ -1319,11 +1322,25 @@ void    env_power_set(uint8_t m) { fk_power = m; fk_power_writes++; }
 uint8_t env_clock_mode(void) { return fk_clock; }
 void    env_clock_set(uint8_t m) { fk_clock = m; fk_clock_writes++; }
 void    env_health_reset(void) { fk_resets++; }
+/* The Clock's examples: the RTC's time, 13:45:01 on Oct 24, 2026. */
+static env_time_t fk_time    = {13, 45, 1, 24, 10, 2026};
+static bool       fk_time_ok = true;
+static uint16_t   fk_tick;         /* rtc_get_seconds(): an RTC second's edge moves it */
+static int        fk_time_reads;   /* rtc_get_time()'s, which cost ms on the board */
+bool env_clock_now(env_time_t *t) {
+    fk_time_reads++;
+    *t = fk_time;
+    return fk_time_ok;
+}
+uint16_t env_rtc_tick(void) { return fk_tick; }
 /* P4: the battery readout. */
 static bool fk_batt_hours;
 static int  fk_batt_writes;
 bool env_batt_hours(void) { return fk_batt_hours; }
 void env_batt_hours_set(bool h) { fk_batt_hours = h; fk_batt_writes++; }
+/* What the readout is made of: 85% on battery, 160 h left, the average mature. */
+static env_batt_t fk_batt = {85, true, 9600, 120};
+void env_batt_facts(env_batt_t *b) { *b = fk_batt; }
 
 /* P1b's primitives over a fake RGB core with QMK's semantics: the mode and
  * HSV setters do nothing while the lights are off; a saving setter raises
@@ -1847,7 +1864,7 @@ enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_BOOT, T
 static const char *const top_rows_want[T_ROWS][2] = {
     {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 52 of 100 */
     {FONT_MONO_I_CONN "Connection", "BT 1"}, {FONT_MONO_I_POWER " Power", "Balanced"},   /* P3: the link */
-    {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h"},
+    {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h:ss"},
     {FONT_MONO_I_BATT " Battery", "Percent"}, {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
     {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R},
     {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
@@ -1902,13 +1919,14 @@ static void test_menu(void) {
     /* Clock: a cancel by Back writes nothing, and says so. */
     m_turn(T_CLOCK - T_POWER);
     m_click();
-    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 && row_bad(1, FONT_MONO_CHECK_BOX "24 hour", MENU_LIT) == 0 &&
+    CHECK(sub5_screen() == 16 + 3 && sub5_cursor() == 1 &&
+          row_bad(1, cells2(FONT_MONO_CHECK_BOX "24h:ss", "13:45:01"), MENU_LIT) == 0 &&
           title_bad(FONT_MONO_I_CLOCK "Clock") == 0);
-    m_turn(2);   /* Date: the enum's 3 */
+    m_turn(4);   /* Date (row 5): the enum's 3 */
     m_hold();
     CHECK(fk_clock == 0 && fk_clock_writes == 0 && title_bad("Cancelled") == 0 && sub5_screen() == 16 + 1);
     m_click();
-    m_turn(2);
+    m_turn(4);
     m_click();   /* Date */
     CHECK(fk_clock == 3 && fk_clock_writes == 1 && row_bad(T_CLOCK, cells2(FONT_MONO_I_CLOCK "Clock", "Date"), MENU_LIT) == 0);
 
@@ -3362,6 +3380,7 @@ static void test_p4(void) {
     fk_power = 1; fk_clock = 0;
     fk_lcd = fk_lcd_saved = 52;
     fk_batt_hours = false; fk_batt_writes = 0;
+    fk_batt = (env_batt_t){85, true, 9600, 120};
     menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
     CHECK(op27(11, 0, 0) == MI_OK);
     m_settle();
@@ -3371,11 +3390,99 @@ static void test_p4(void) {
     CHECK(sub5_cursor() == T_BATT && row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Percent"), MENU_LIT) == 0);
     top_frame_ok(T_BATT);
 
-    /* The choice opens on the saved option, its box green. */
+    /* The choice opens on the saved option, its box green; each option
+     * previews its readout (JD, 10-25), and with the hours ready, no note. */
     m_click();
     CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 1 && title_bad(FONT_MONO_I_BATT " Battery") == 0);
-    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, FONT_MONO_CHECK_BOX "Percent", MENU_LIT) == 0 &&
-          row_bad(2, "  Hours of use", MENU_DIM) == 0 && row_bad(3, "", 0) == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 &&
+          row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "85%"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  Hours of use", "160h"), MENU_DIM) == 0);
+    for (int r = 3; r < 8; r++) CHECK(row_bad(r, "", 0) == 0);
+
+    /* Live, with nothing pressed: the warm-up (20 of the 60 minutes), the
+     * hours "--" and the note; then a minute later; then on USB, warmed up;
+     * then the cut's Low; then ready again. Under 10 h, Percent shows both. */
+    fk_batt.avg_minutes = 20;
+    m_settle();
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "85%"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  Hours of use", "--"), MENU_DIM) == 0 && row_bad(3, "", 0) == 0 &&
+          row_bad(4, "Hours show after an", MENU_WHITE) == 0 && row_bad(5, "hour on battery:", MENU_WHITE) == 0 &&
+          row_bad(6, "40 min to go.", MENU_WHITE) == 0 && row_bad(7, "", 0) == 0);
+    fk_batt.avg_minutes = 59;
+    m_settle();
+    CHECK(row_bad(6, "1 min to go.", MENU_WHITE) == 0);
+    fk_batt = (env_batt_t){100, false, 0xFFFFu, 120};
+    m_settle();
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "100%"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  Hours of use", "--"), MENU_DIM) == 0 && row_bad(4, "Hours show only", MENU_WHITE) == 0 &&
+          row_bad(5, "on battery.", MENU_WHITE) == 0 && row_bad(6, "", 0) == 0);
+    fk_batt = (env_batt_t){0, true, 0xFFFFu, 120};
+    m_settle();
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "Low"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  Hours of use", "Low"), MENU_DIM) == 0 &&
+          row_bad(4, "", 0) == 0 && row_bad(5, "", 0) == 0);   /* no note at the cut (codex) */
+    fk_batt = (env_batt_t){0, true, 0xFFFFu, 20};
+    m_settle();
+    CHECK(row_bad(4, "", 0) == 0 && row_bad(6, "", 0) == 0);   /* nor a warm-up's: no wait brings the hours */
+    fk_batt = (env_batt_t){0xFF, false, 0xFFFFu, 120};
+    m_settle();
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "--"), MENU_LIT) == 0 &&
+          row_bad(4, "Hours show only", MENU_WHITE) == 0);   /* charging, the level unknown */
+    fk_batt = (env_batt_t){18, true, 380, 120};
+    m_settle();
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "18% 6h"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  Hours of use", "6h"), MENU_DIM) == 0 && row_bad(4, "", 0) == 0 && row_bad(5, "", 0) == 0);
+    fk_batt = (env_batt_t){85, true, 9600, 120};
+    m_settle();
+    CHECK(menu_max_lit <= 1 && sub5_cursor() == 1);   /* the note rows are never the cursor's */
+
+    /* A sweep: the rows' signatures are keyed by the text's inputs, not the
+     * text (batt_key()), so every change of text must still repaint. Each
+     * state from the last, the previews as the dashboard composes them. */
+    {
+        unsigned seed = 12345u, bad_before = (unsigned)fails;
+        for (int k = 0; k < 120; k++) {
+            seed = seed * 1103515245u + 12345u;
+            unsigned r = seed >> 8;
+            env_batt_t b;
+            b.pct         = (uint8_t)(r % 9u == 0u ? 0u : r % 13u == 0u ? 0xFFu : r % 101u);
+            b.on_battery  = (r >> 3) % 4u != 0u;
+            b.left_min    = (r >> 5) % 7u == 0u ? 0xFFFFu : (uint16_t)((r >> 7) % 61000u);
+            b.avg_minutes = (uint16_t)((r >> 11) % 3u == 0u ? (r >> 13) % 60u : 60u + (r >> 13) % 600u);
+            fk_batt       = b;
+            m_settle();
+            bool ready = b.on_battery && b.avg_minutes >= 60u && b.left_min != 0xFFFFu;
+            char pv[2][BATT_TEXT_MAX + 1];
+            for (int h = 0; h < 2; h++) {
+                if (b.pct > 100u) strcpy(pv[h], "--");
+                else if (b.pct == 0u && b.on_battery) strcpy(pv[h], "Low");
+                else if (h && !ready) strcpy(pv[h], "--");
+                else batt_level_text(pv[h], b.pct, b.on_battery, b.left_min, b.avg_minutes >= 60u, h == 1);
+            }
+            const char *n0 = "", *n1 = "";
+            char        n2[24] = "";
+            if (!ready && !(b.on_battery && (b.pct == 0u || b.pct > 100u))) {
+                if (b.avg_minutes < 60u) {
+                    n0 = "Hours show after an";
+                    n1 = "hour on battery:";
+                    snprintf(n2, sizeof n2, "%u min to go.", 60u - b.avg_minutes);
+                } else if (!b.on_battery) {
+                    n0 = "Hours show only";
+                    n1 = "on battery.";
+                }
+            }
+            CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", pv[0]), MENU_LIT) == 0 &&
+                  row_bad(2, cells2("  Hours of use", pv[1]), MENU_DIM) == 0 && row_bad(4, n0, MENU_WHITE) == 0 &&
+                  row_bad(5, n1, MENU_WHITE) == 0 && row_bad(6, n2, MENU_WHITE) == 0);
+            if ((unsigned)fails != bad_before) {
+                printf("  the sweep's state %d: pct %u batt %d left %u avg %u\n", k, b.pct, b.on_battery, b.left_min,
+                       b.avg_minutes);
+                break;
+            }
+        }
+        fk_batt = (env_batt_t){85, true, 9600, 120};
+        m_settle();
+    }
 
     /* A hold cancels: nothing written, and it says so. */
     m_turn(1);
@@ -3394,9 +3501,12 @@ static void test_p4(void) {
 
     /* Reopened, on Hours of use; then Percent again. */
     m_click();
-    CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 2 && row_bad(2, FONT_MONO_CHECK_BOX "Hours of use", MENU_LIT) == 0 &&
-          row_bad(1, "  Percent", MENU_DIM) == 0);
-    m_turn(-1);
+    CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 2 &&
+          row_bad(2, cells2(FONT_MONO_CHECK_BOX "Hours of use", "160h"), MENU_LIT) == 0 &&
+          row_bad(1, cells2("  Percent", "85%"), MENU_DIM) == 0);
+    m_turn(1);   /* a wrap to Back: the note rows aren't stops */
+    CHECK(sub5_cursor() == 0);
+    m_turn(1);   /* Percent */
     m_click();
     CHECK(!fk_batt_hours && fk_batt_writes == 2 && row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Percent"), MENU_LIT) == 0);
     for (int i = 0; i < 400; i++) fw_pass(5);
@@ -3416,6 +3526,240 @@ static void test_p4(void) {
     CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
     CHECK(po_invariant_fail() == 0);
     menu_watch = false;
+}
+
+/* --- The Clock options (10-25; plans/CONFIG-MENU-P1-DESIGN.md, "The Clock
+ * options"): six rows with live examples; a tick repaints the right half. */
+enum { SC_CLOCK = 16 + 3 };
+static int clock_rows_bad(int cursor, int saved) {
+    static const char *const labels[6] = {"24h:ss", "24h", "12h:ss", "12h", "Date", "Off"};   /* JD: as Fn+C's */
+    char ex[6][24];
+    unsigned h12 = fk_time.hours % 12u ? fk_time.hours % 12u : 12u;
+    const char *ap = fk_time.hours >= 12u ? "PM" : "AM";
+    static const char *const months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    snprintf(ex[0], 24, "%02u:%02u:%02u", fk_time.hours, fk_time.minutes, fk_time.seconds);
+    snprintf(ex[1], 24, "%02u:%02u", fk_time.hours, fk_time.minutes);
+    snprintf(ex[2], 24, "%u:%02u:%02u %s", h12, fk_time.minutes, fk_time.seconds, ap);
+    snprintf(ex[3], 24, "%u:%02u %s", h12, fk_time.minutes, ap);
+    snprintf(ex[4], 24, "%s %u, %u", months[fk_time.month - 1], fk_time.day, fk_time.year);
+    ex[5][0] = '\0';
+    int bad = row_bad(0, FONT_MONO_TRI_L " Back", cursor == 0 ? MENU_LIT : MENU_LEAVE);
+    for (int k = 0; k < 6; k++) {
+        char label[16];
+        snprintf(label, sizeof label, "%s%s", k == saved ? FONT_MONO_CHECK_BOX : "  ", labels[k]);
+        bad += row_bad(1 + k, cells2(label, ex[k]), cursor == 1 + k ? MENU_LIT : MENU_DIM);
+    }
+    return bad + row_bad(7, "", 0);
+}
+/* The time moves on, at an RTC second's edge; the page settles, having read
+ * the RTC once; the blits since, and their leftmost x. A time set before it
+ * (sec 0, or a changed fk_time) is a jump, as a host's set. */
+static int clock_tick(int sec) {
+    unsigned t = fk_time.hours * 3600u + fk_time.minutes * 60u + fk_time.seconds + (unsigned)sec;
+    if (t >= 86400u) fk_time.day++;   /* the tests' days stay inside a month */
+    fk_time.hours   = (uint8_t)(t / 3600u % 24u);
+    fk_time.minutes = (uint8_t)(t / 60u % 60u);
+    fk_time.seconds = (uint8_t)(t % 60u);
+    fk_tick++;
+    fk_time_reads   = 0;
+    mono_ops        = 0;
+    mono_min_x      = 0xFFFFu;
+    m_settle();
+    CHECK(fk_time_reads == 1);
+    return mono_ops;
+}
+static void test_clock(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_time = (env_time_t){13, 45, 1, 24, 10, 2026};
+    fk_time_ok = true;
+    fk_clock_writes = 0;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_CLOCK);
+    m_click();
+    CHECK(sub5_screen() == SC_CLOCK && sub5_cursor() == 1 && clock_rows_bad(1, 0) == 0);
+    /* Between the RTC's seconds the scans read nothing (rtc_get_time()'s
+     * decode, per row per scan, made 23 ms passes on the board, 22ec0d3d). */
+    fk_time_reads = 0;
+    for (int i = 0; i < 200; i++) fw_pass(5);
+    CHECK(fk_time_reads == 0 && clock_rows_bad(1, 0) == 0);
+
+    /* A second: the two rows with seconds, their right halves only: 4
+     * pieces each, nothing left of x 64 (the lit, split row's chunk 3; the
+     * other's chunk 2). */
+    int n = clock_tick(1);
+    CHECK(n == 8 && mono_min_x >= 64 && clock_rows_bad(1, 0) == 0);
+    /* A jump (a set to 13:45:58): every example row whole; the next second
+     * an ordinary one. */
+    fk_time.seconds = 58;
+    n = clock_tick(0);
+    CHECK(n == 45 && clock_rows_bad(1, 0) == 0);
+    n = clock_tick(1);
+    CHECK(n == 8 && mono_min_x >= 64 && clock_rows_bad(1, 0) == 0);
+    /* A minute's turn: the four time rows' right halves. */
+    n = clock_tick(1);
+    CHECK(n == 16 && mono_min_x >= 64 && clock_rows_bad(1, 0) == 0 && fk_time.minutes == 46 && fk_time.seconds == 0);
+    /* 9:59:59 to 10:00:00: 12h:ss's time reaches cell 9, the left half, so its
+     * row repaints whole; the others' right halves. */
+    fk_time = (env_time_t){9, 59, 58, 24, 10, 2026};
+    (void)clock_tick(0);
+    (void)clock_tick(1);
+    CHECK(clock_rows_bad(1, 0) == 0);
+    n = clock_tick(1);
+    CHECK(n == 9 + 3 * 4 && mono_min_x < 64 && clock_rows_bad(1, 0) == 0);
+    /* Midnight: Date's row whole (its text crosses the halves), the time
+     * rows' right halves (12h:ss's 11 PM and 12 AM are both wide). */
+    fk_time = (env_time_t){23, 59, 58, 24, 10, 2026};
+    (void)clock_tick(0);
+    (void)clock_tick(1);
+    n = clock_tick(1);
+    CHECK(n == 9 + 4 * 4 && mono_min_x < 64 && clock_rows_bad(1, 0) == 0 && fk_time.day == 25);
+    /* Codex (c374004b): 02:07:59, a set to 04:14:59 between the seconds, then
+     * 04:15:00, whose minute's tick (255) is 02:07's (127) in 7 bits. */
+    fk_time = (env_time_t){2, 7, 58, 25, 10, 2026};
+    (void)clock_tick(0);
+    (void)clock_tick(1);
+    CHECK(clock_rows_bad(1, 0) == 0);
+    fk_time.hours   = 4;
+    fk_time.minutes = 14;
+    n = clock_tick(1);
+    CHECK(n == 45 && clock_rows_bad(1, 0) == 0 && fk_time.minutes == 15);
+    /* The same jump read by a scan, not menu_tick() (an edge between them),
+     * then an ordinary second read by a scan too: the jump holds until
+     * menu_tick() repaints the examples. */
+    fk_time = (env_time_t){2, 7, 58, 25, 10, 2026};
+    (void)clock_tick(0);
+    (void)clock_tick(1);
+    fk_time = (env_time_t){4, 15, 0, 25, 10, 2026};
+    fk_tick++;
+    menu_pump();
+    fk_time.seconds = 1;
+    fk_tick++;
+    menu_pump();
+    m_settle();
+    CHECK(clock_rows_bad(1, 0) == 0);
+    /* Two jumps in a row: the second's signatures differ from the first's. */
+    fk_time.hours = 6;
+    n = clock_tick(1);
+    CHECK(n == 45 && clock_rows_bad(1, 0) == 0);
+    (void)clock_tick(1);
+    CHECK(clock_rows_bad(1, 0) == 0);
+    /* Codex (c70e2c21): at 23:59:59, a set to the day before a year on;
+     * midnight then shows a date that isn't the next day's: a jump. */
+    fk_time = (env_time_t){23, 59, 58, 25, 10, 2026};
+    (void)clock_tick(0);
+    (void)clock_tick(1);
+    fk_time.day  = 24;
+    fk_time.year = 2027;
+    n = clock_tick(1);
+    CHECK(n == 45 && clock_rows_bad(1, 0) == 0 && fk_time.day == 25);
+    /* Ordinary midnights: the month's end, the year's, February's in a leap
+     * year and not: Date whole, the time rows' right halves. */
+    static const env_time_t eves[5][2] = {
+        {{23, 59, 59, 31, 10, 2026}, {0, 0, 0, 1, 11, 2026}},
+        {{23, 59, 59, 31, 12, 2026}, {0, 0, 0, 1, 1, 2027}},
+        {{23, 59, 59, 28, 2, 2028}, {0, 0, 0, 29, 2, 2028}},
+        {{23, 59, 59, 29, 2, 2028}, {0, 0, 0, 1, 3, 2028}},
+        {{23, 59, 59, 28, 2, 2027}, {0, 0, 0, 1, 3, 2027}},
+    };
+    for (int k = 0; k < 5; k++) {
+        fk_time = eves[k][0];
+        (void)clock_tick(0);
+        CHECK(clock_rows_bad(1, 0) == 0);
+        fk_time = eves[k][1];
+        n = clock_tick(0);   /* the next second, as the RTC counts it */
+        CHECK(n == 9 + 4 * 4 && clock_rows_bad(1, 0) == 0);
+    }
+    fk_time = (env_time_t){6, 15, 2, 25, 10, 2026};
+    (void)clock_tick(0);
+    /* A set of the year alone: Date's tick (month * 32 + day) is the same,
+     * but a date that changes without midnight is a jump. */
+    fk_time.year = 2027;
+    n = clock_tick(1);
+    CHECK(n == 45 && clock_rows_bad(1, 0) == 0);
+    (void)clock_tick(1);
+    fk_time.year = 2026;
+    (void)clock_tick(1);
+    CHECK(clock_rows_bad(1, 0) == 0);
+    /* Unset: dashes, and back. */
+    fk_time_ok = false;
+    (void)clock_tick(0);
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "24h:ss", "--:--:--"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  24h", "--:--"), MENU_DIM) == 0 && row_bad(5, cells2("  Date", "--- --, ----"), MENU_DIM) == 0);
+    fk_time_ok = true;
+    (void)clock_tick(0);
+    CHECK(clock_rows_bad(1, 0) == 0);
+    /* Unset, then valid at the moment every example's tick is 127 (02:07:59
+     * on March 31; codex: a fixed unset tick of 127 kept the dashes). */
+    fk_time_ok = false;
+    (void)clock_tick(0);
+    fk_time    = (env_time_t){2, 7, 59, 31, 3, 2026};
+    fk_time_ok = true;
+    (void)clock_tick(0);
+    CHECK(clock_rows_bad(1, 0) == 0);
+    fk_time = (env_time_t){9, 59, 59, 25, 10, 2026};
+    (void)clock_tick(0);
+    CHECK(clock_rows_bad(1, 0) == 0);
+    /* A cursor move: the old row and the new whole (the lit bit). */
+    m_turn(1);
+    CHECK(sub5_cursor() == 2 && clock_rows_bad(2, 0) == 0);
+
+    /* Each mode commits its enum value, and the top level shows it. */
+    static const uint8_t enums[6] = {0, 4, 1, 5, 3, 2};
+    static const char *const tops[6] = {"24h:ss", "24h", "12h:ss", "12h", "Date", "Off"};
+    for (int k = 0; k < 6; k++) {
+        m_turn(1 + k - (int)sub5_cursor());
+        m_click();
+        CHECK(fk_clock == enums[k] && sub5_screen() == 16 + 1 && sub5_cursor() == T_CLOCK &&
+              row_bad(T_CLOCK, cells2(FONT_MONO_I_CLOCK "Clock", tops[k]), MENU_LIT) == 0);
+        for (int i = 0; i < 400; i++) fw_pass(5);
+        m_settle();
+        m_click();   /* reopened on the saved row */
+        CHECK(sub5_screen() == SC_CLOCK && sub5_cursor() == 1 + k && clock_rows_bad(1 + k, k) == 0);
+    }
+    CHECK(fk_clock_writes == 6);
+
+    /* A quick re-entry (codex, c70e2c21): Back, and into the Clock again
+     * before the top level's rows have painted, 128 s on, when the seconds
+     * rows' committed signatures are the new time's: they repaint. */
+    m_turn(-(int)sub5_cursor());
+    fk_time = (env_time_t){6, 15, 2, 25, 10, 2026};
+    (void)clock_tick(0);
+    CHECK(clock_rows_bad(0, 5) == 0);
+    CHECK(op27(2, 0, 0) == MI_OK && wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    CHECK(sub5_screen() == 16 + 1);
+    fk_time.minutes = 17;
+    fk_time.seconds = 10;
+    CHECK(op27(2, 0, 0) == MI_OK && wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    m_settle();
+    CHECK(sub5_screen() == SC_CLOCK && clock_rows_bad(6, 5) == 0);
+
+    /* About's snapshot shares the Clock's time (12 B): the Clock reads afresh
+     * as it opens, even with About's bytes saying it has, at this tick. */
+    m_turn(-(int)sub5_cursor());
+    m_click();
+    m_turn(T_ABOUT - T_CLOCK);
+    m_click();
+    m_settle();
+    m_click();
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_ABOUT);
+    union { env_about_t a; struct { env_time_t t; uint16_t tick; uint8_t have, st; } c; } u = {.a = fk_about};
+    CHECK(u.c.have && (u.c.st & 1u));
+    fk_tick       = u.c.tick;
+    fk_time_reads = 0;
+    m_turn(T_CLOCK - T_ABOUT);
+    m_click();
+    m_settle();
+    CHECK(sub5_screen() == SC_CLOCK && fk_time_reads == 1 && clock_rows_bad(6, 5) == 0);
+
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    CHECK(menu_max_lit <= 1 && menu_max_cursor == 1 && max_pass_bytes <= MB_PASS_BYTES);
+    CHECK(po_invariant_fail() == 0);
+    menu_watch = false;
+    fk_clock   = 0;
 }
 
 int main(int argc, char **argv) {
@@ -3448,6 +3792,7 @@ int main(int argc, char **argv) {
     test_p2a();
     test_p3();
     test_p4();
+    test_clock();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

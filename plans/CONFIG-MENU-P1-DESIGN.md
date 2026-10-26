@@ -1396,8 +1396,20 @@ average (`18% 6h`).
   the picker's proposal) are 7 × 5 px, half the height of their neighbours.
 - A choice, title `Battery` with the icon: `◀ Back`, `Percent`, `Hours of
   use`; the saved one's check box (green). A click commits, flashes
-  `Saved` and goes back, as Power and Clock do. No preview: the dashboard
-  isn't on the panel while the menu is.
+  `Saved` and goes back, as Power and Clock do.
+- **Its preview (JD, 10-25, after the first flash: "preview the percent and
+  hours of use on the screen ... and also show a warning if it's not going
+  to display yet"):** each option's value is what the dashboard would show
+  on battery now (`batt_level_text()`, the dashboard's own; `--` for hours
+  not ready, `Low` at the cut); while the hours aren't ready, rows 4-6
+  carry a note, `RK_NOTE`, not selectable: the warm-up's `Hours show after
+  an` / `hour on battery:` / `N min to go.`, or, warmed up off battery,
+  `Hours show only` / `on battery.`. Live with no stored state: these rows'
+  signatures are a hash of their text (0x1000-0x1FFF, no other kind's), and
+  the scheduler compares every slot's signature each pass, so a change
+  repaints the row. `env_batt_facts()` reads the level, the supply, the time
+  left and the average's minutes. The hours show three digits at most
+  (`999h`; the estimate's ceiling is 1092 h).
 - Nodes appended, so no screen id moves: `N_BATT` 45, `N_BV0`-`N_BV1`
   46-47 (`N_COUNT` 48, at most 63). Title `T_BATT` 44. The row's value is
   read from `env_batt_view()` where it's built: nothing else changes the
@@ -1446,6 +1458,74 @@ choice and its commit (the env call, the flash, the value), the green box;
 `batt_text()` over the table above. The diag simulator with the 10-byte
 block and the ninth field's attribution. The board: the menu pass with the
 new row and indices, and JD's look at the readout on battery after an hour.
+
+## The Clock options (draft 1, 10-25)
+
+JD (10-25): "I wanted to do 12 and 24 hour variants without seconds showing
+a live preview"; "you're clear to continue with the changes and land the new
+clock settings. I suppose the Fn+C shortcut should also cycle through those
+new modes as well"; and if live is too costly, "loaded once when the page
+loads and frozen". The decisions of 10-24 ("JD's decisions, later on
+10-24") and MENU-TEXT's Clock section hold, with Fn+C kept and cycling all
+six.
+
+**The modes.** `enum display_clock_mode` appends two (persisted, append
+only): `DISPLAY_CLOCK_24H_HM` 4 and `DISPLAY_CLOCK_12H_HM` 5, hours and
+minutes. The dashboard's renderer shows seconds for 24H and 12H only
+(`DISPLAY_CLOCK_SHOW_SECONDS`, a compile-time switch until now, stays as a
+veto); 12H_HM keeps the AM/PM glyph. A change of run width (8 cells to 5)
+goes through `queue_line()`'s moved path, as 24h to 12h does today.
+`kb_eeconfig`'s clock byte takes the new values as is (its check is against
+the count).
+
+**Fn+C** cycles in the menu's order: 24h:ss, 24h, 12h:ss, 12h, Date, Off,
+and around. Its overlay names, 12 characters at most: `Clock 24h:ss`,
+`Clock 24h`, `Clock 12h:ss`, `Clock 12h`, `Clock date`, `Clock off`.
+
+**The menu.** The Clock choice's rows, MENU-TEXT's: `24h 13:45:01`,
+`24h 13:45`, `12h 1:45:01 PM`, `12h 1:45 PM`, `Date Oct 24, 2026`, `Off`
+(the label at cell 2, the example right-aligned). Nodes: `N_CLK0`-`N_CLK3`
+and two appended, `N_CLK4`-`N_CLK5` (48-49); a table maps each row to its
+enum value (0, 4, 1, 5, 3, 2). The top level's value stays short:
+`24h`, `12h`, `Date`, `Off` (both 24h variants read `24h`, as MENU-TEXT
+has it).
+
+**Live examples, at a half row's cost.** An example's signature is
+`0x2000 | row << 10 | wide << 9 | tick << 2 | bullet << 1 | lit`: the row
+(0-4; Off has none and keeps RK_ITEM's), `wide` for a 12h:ss time of 11
+characters (10-12 o'clock: it reaches cell 9, the left half), and a 7-bit
+tick: the second of the day for the rows with seconds, the minute for the
+others, the day for Date, each mod 128. The scheduler already compares every
+committed slot's signature each pass, so a tick repaints the row with no
+stored state; consecutive ticks always differ, and a slot that left the
+page holds another kind's signature, so no stale match.
+
+To repaint only the right half: `ms_layout_t` gains an optional
+`first_chunk(slot, was, now)`; when a slot that was COMMITTED is picked
+again, its op starts at that chunk instead of 0 (a PARTIAL or invalidated
+slot still starts at 0). The contract: a layout returns c > 0 only when the
+two signatures' targets agree on chunks 0..c-1. `L_LIST`'s returns the
+right half's chunk (2, or 3 for a split row) when both signatures are
+examples' and differ only in the tick, and not for Date (its text crosses
+the halves). So a second's tick is 4 pieces a row with seconds: ~8 pieces a
+second while the list shows, ~16 at a minute's turn.
+
+The time comes from `rtc_get_time()` (`env_clock_now()`): a register read
+and three 32-bit divisions, a few times a pass while the Clock list shows.
+Invalid, the examples read `--:--:--` with a fixed tick.
+
+**If it's too costly** (the board's passes, or the knob's feel while the
+list ticks): the examples are taken once when the page opens (the tick
+frozen at its value then), JD's fallback.
+
+**RAM:** none (`MS_MAX_SLOTS` is 24 already; no statics).
+
+**Tests.** The host: the six rows and their examples from a fake clock;
+a second's tick repaints the right half only (the pieces counted), a 12h:ss
+hour reaching two digits the whole row, the Date's day the whole row; the
+commit for each mode; the top level's values. The board: the menu pass's
+Clock steps over six rows, the passes while the list ticks; JD: the
+dashboard in each mode, Fn+C's cycle, the examples by eye.
 
 ## P1b, P1c, P1d
 
