@@ -1250,3 +1250,72 @@ the dashboard's readout through `graphics/batt_text.c`.
   out (with it in, the board is on external supply and shows `USB` or
   `Charge`) and an hour awake on battery after the flash (the average
   restarts at boot).
+
+### 20l. The Battery preview, the Clock options, one RTC read a second; the merge (10-25, 14:31-19:05)
+
+Codex reviewed every build before its flash, except `8ce81e5d` (JD: "Just
+flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
+`-clock-code-` and `-clock-cache-` (three rounds).
+
+- **`ab03ab38`** (token `0x34d94d36`, 14:31): P4's preview. Each Battery
+  choice shows its readout, and rows 4-6 hold a note while the hours aren't
+  ready (`e0f9a21f`, never flashed, plus codex's P3 on the note). **The menu
+  pass** (`board-ab03ab38.json`) failed on Battery 1,045 ms, Battery again
+  1,028 ms and the longest pass 19,013 us: the rows' signatures formatted
+  their text on every scan. JD (~19:00): "The battery screen's display is
+  good."
+- **`8ce81e5d`** (token `0x89fa57d3`, 14:44): the Clock options, plus the
+  preview's signatures keyed by `batt_key()`, not formatted text.
+  - It adds 24h and 12h without seconds, and Fn+C cycles all six.
+  - The examples are live, and a tick repaints only the right half (`first_chunk`).
+  - JD: "New clock modes look great ... looks flawless".
+- **`22ec0d3d`** (token `0x6c4f46a9`, 14:54): the rows named as Fn+C names
+  them (`24h:ss`, `12h:ss`; JD), and an unset clock's signatures kept apart
+  (codex's P2). **The menu pass** (`board-22ec0d3d.json`): the Battery dwell
+  is clean.
+  - The Clock page failed: 1,177, 1,290 and 1,179 ms; passes to 23,306 us;
+    107 over 15 ms.
+  - The slow passes were 21-22 ms, 14-15 of them unaccounted. The cause:
+    `clock_sig()` and `clock_example()` called `rtc_get_time()`, which
+    decodes through newlib's `localtime_r`, for every example row on every
+    scan.
+- **`30f1e0cf`** (token `0x89306967`, ~18:48; `c374004b` and `c70e2c21`
+  never flashed): the Clock list reads the RTC once a second, at the
+  seconds count's edge.
+  - The sample shares About's 12 B snapshot in a union. The two never show
+    together, the Clock reads afresh as it opens, and the dev heap gap stays
+    128 B.
+  - A read that doesn't follow the last one is a jump: a host's set, or a
+    date that isn't the calendar's next at midnight. `menu_tick()`, outside
+    the scans, then invalidates the five example rows. The Clock's entry
+    invalidates them too.
+  - Twelve mutants each fail `test_clock`.
+- **The menu passes on `30f1e0cf`:**
+  - **`board-30f1e0cf.json`** (18:57) ran on JD's lighting as he left it
+    (Drift, val 255, speed 255): 20 fails, 46 passes over 15 ms, the longest
+    17,120 us. Nearly every page settled at 1,000-1,100 ms.
+  - **`board-30f1e0cf-dim.json`** (19:01) ran on the lighting of every
+    earlier pass (Alphas/Mods, val 24, set with `ak820lighting.py restore`;
+    JD's Drift put back after). 9 fails:
+    - the Clock steps 992, 996 and 990 ms (they were 1,177, 1,290, 1,179);
+    - 22 passes over 15 ms, against 107;
+    - the longest pass 17,338 us, the Hue editor's, as before;
+    - back to Diagnostics 1,092 ms, as before;
+    - six steps at 1,003-1,018 ms, each one poll quantum (~110 ms) over
+      its usual figure.
+  - Step by step against `22ec0d3d`, most steps match within ±25 ms. The
+    others move by one quantum both ways, scattered across the menu, and
+    the same steps cross back between runs of this build (`Lock lights
+    cancelled` 879/881/994, `Brightness cancelled` 904/979/1,100). That's
+    the 100 ms poll, not the build.
+  - **Drift** at full brightness and speed doubles the passes over 15 ms
+    (22 to 46), and settles run ~10% slower. That's for the effects work,
+    next.
+- **The merge (JD's go, through the session on Buzz, ~19:00; then JD: "You
+  have my go ahead to test"):** all three were fast-forwards.
+  - The firmware's `ak820pro-jdlien` went `b9555ff3e6` to `30f1e0cf`.
+  - ChibiOS-Contrib's `ak820pro-patches` went `327092d999` to `5a1674e905`.
+  - ak820-pro's main went `fa74583` to `7a679e9`: the merge `9241aff`, with
+    BACKLOG's two sides both kept, plus deps.lock's pin, CLAUDE.md's Fn+C,
+    the menu's opener, eight core files and AGENTS.md.
+  - The session on Buzz builds and flashes the keyboard on Buzz.
