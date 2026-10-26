@@ -533,8 +533,9 @@ sets the same) · `Fn` + a knob click opens and closes the configuration
 menu (the knob drives it; typing still works;
 [`plans/CONFIG-MENU-P1-DESIGN.md`](plans/CONFIG-MENU-P1-DESIGN.md); its
 Profiles row, page one's last, holds up to eight settings profiles: Save
-new, Load, Save, Rename and Delete, and a 0.6 s rest on one previews its
-lighting and screen level; Rename alone takes the keyboard's typing,
+new, Load, Save, Rename and Delete, each with its icon, and a 0.3 s rest
+on one previews its lighting and screen level; Rename alone takes the
+keyboard's typing,
 [`plans/SETTINGS-PROFILES-PLAN.md`](plans/SETTINGS-PROFILES-PLAN.md)) ·
 `Fn`+`D` debug page (tap
 cycles debug page → camera page (big volts and %) → dashboard, HOLD

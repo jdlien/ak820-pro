@@ -1596,4 +1596,9 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   back. The profiles' pass: every check passed, the longest 57.0 ms (the
   post-flash consolidation), then 18 ms. The menu's: longest 17.2 ms, 33
   over 15 ms.
+- **JD (10-26):** "Looks pretty good... Much more clear it's not a menu
+  option now. I'm happy with it now." **Merged:** `ak820pro-jdlien`
+  fast-forwarded to `553108e5` (the icons, the rule, the 300 ms preview,
+  the summary); main pins it. JD runs it for a while; the VIA binds of the
+  Next and Previous keys come later.
 

@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~13:05.
+2026-10-26 ~15:45.
 
 ## Where things stand
 
@@ -352,7 +352,19 @@ This file is the thread; read it first after a context loss. Updated
      - **P5d, P5e and P5c MERGED (10-26, ~13:05):** `ak820pro-jdlien` at
        `13c5e910`, main pins it. The session on Buzz told; its first flash
        converts the keyboard on Buzz's four profiles into the eight.
-     - **Next: icons for the slot page's actions** (JD: "Let's see if we
+     - **The profile page's polish MERGED (10-26, ~15:45):**
+       `ak820pro-jdlien` at `553108e5`, main pins it, on the keyboard on
+       gremlin since ~15:14: the action icons (the circled arrows for Load
+       and Save, the pencil, Octicons' trashcan), a grey rule over the
+       summary, the bulb on the LEDs' line, the preview at 300 ms
+       (GREMLIN-RESULTS §20r-20t). JD: "I'm happy with it now." He runs it
+       for a while. Rename's cursor editing: skipped (JD: unless the
+       keyboard becomes a note-taking tool).
+     - **Owed (JD):** the Next and Previous keys bound in VIA and pressed;
+       his MENU-TEXT.md edits (pinned, 10-24), with the profile pages' new
+       words. Before a release for other owners: eight profiles leave VIA
+       19 B of macros (a four-profile build would keep 127 B).
+     - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
        (U+F006F) or the inbox tray (U+1F4E5); Save the floppy (U+1F4BE),
