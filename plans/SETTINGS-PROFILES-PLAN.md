@@ -322,10 +322,21 @@ the owner assigns them in VIA.
   slot, Next loads the first saved one and Previous the last. With one
   saved slot, a press reloads it, which also clears its `*`: a quick way
   back to the profile. With none saved, it loads nothing.
-- **The screen names it** in a brief overlay, as Fn+B names the power mode:
-  `Profile: Work`, or `No profiles`.
+- **The screen names it** in the dashboard's status overlay, the band Fn+B
+  and Fn+C post to (`display_set_param_status`). That band holds exactly 12
+  characters: a 10 px advance across the 128 px panel (`CONN_STATUS_MAX`,
+  `graphics/display.c`), and it truncates anything longer. So:
+  - **the overlay is the name alone,** with no "Profile:" before it. A name
+    is at most 12 characters, so it always fits whole. An unnamed slot's
+    `Profile 3` is 9;
+  - `No profiles` (11) when none is saved, `Busy` (4) when refused;
+  - **the 12-character cap on names is tied to this band.** Don't raise it
+    without a second line or a scroll here;
+  - **while the menu is open,** the band drops every post (C1,
+    `display.c:2708`), and the menu's rows show the change instead.
 - **The load is the menu's Load:** the same setters, the lighting's order
-  and the effect-id check (`effect skipped` in the overlay).
+  and the effect-id check. An effect the build lacks isn't mentioned in the
+  overlay, which has no room after the name; the slot's page shows it.
 - **On a press, not a release; no repeat.** It's handled on the board and
   nothing goes to the host, over any link.
 - **While the menu is open,** the menu follows: its rows' signatures see the
@@ -510,7 +521,8 @@ and `N_CONNINFO`. It never closes Rename.)
   whose default-layer keycode is a Shift. It isn't tracked, and since its
   presses are swallowed, QMK's mods never move.
 - **`Backspace`** deletes the last character. The cursor stays at the end.
-  Twelve characters at most.
+  Twelve characters at most: what the dashboard's overlay shows whole ("Next
+  and previous profile keys") and the record's `name[12]` holds.
 - **The mapping is US QWERTY's**, whatever the host's layout: the board
   sees keycodes, not characters. Worth a line in Help.
 
