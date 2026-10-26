@@ -1835,6 +1835,7 @@ static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor
                               ? (cursor ? 0xFFB8u : MENU_WHITE)
                               : 0);
 }
+static uint16_t ts_rule_y;   /* a pixel row the text's check expects the grey rule on (x 4-123), 0 none */
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg) {
     int            bad = 0;
     size_t         len = strlen(cells);
@@ -1851,6 +1852,7 @@ static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool curso
                                  : code >= 0x20 && code < 0x7F ? font_small_mono[code - 0x20]
                                                                : font_small_mono['?' - 0x20];
                 if (g[r] & (0x80 >> ((x - 4) % 6))) want = icon_fg && cell < 2 ? icon_fg : fg;
+                if (ts_rule_y && y + r == ts_rule_y) want = MENU_GREY;
             }
             if (fb[y + r][x] != want) bad++;
         }
@@ -1870,6 +1872,13 @@ static int row_bad(int r, const char *cells, uint16_t fg) {
     return text_slot_bad((uint16_t)(15 + 14 * r), cells, fg, fg == MENU_LIT);
 }
 static int title_bad(const char *t) { return text_slot_bad(0, t, MENU_WHITE, false); }
+/* A profile's summary, its first line (row 5) under the rule (JD, 10-26). */
+static int psum0_bad(const char *cells) {
+    ts_rule_y = 15 + 14 * 5;
+    int bad   = text_slot_bad(ts_rule_y, cells, MENU_WHITE, false);
+    ts_rule_y = 0;
+    return bad;
+}
 static void m_settle(void) {
     for (int i = 0; i < 3000 && !(ms_settled() && !mb_busy()); i++) fw_pass(5);
     CHECK(ms_settled());
@@ -3803,8 +3812,8 @@ enum { SC_PROF = 16 + 50, SC_PSLOT = 16 + 51, SC_PSAVE = 16 + 54, SC_PDEL = 16 +
 #define PROW_ON(n)   cells2(FONT_MONO_CHECK_BOX n, FONT_MONO_TRI_R)
 #define PNEW         "+ Save new"
 /* A profile's actions, with JD's icons (10-26). */
-#define PACT_LOAD    FONT_MONO_I_LOAD " Load"
-#define PACT_SAVE    FONT_MONO_I_SAVE " Save current here"
+#define PACT_LOAD    FONT_MONO_I_LOAD "Load"
+#define PACT_SAVE    FONT_MONO_I_SAVE "Save current here"
 #define PACT_RENAME  FONT_MONO_I_RENAME " Rename"
 #define PACT_DELETE  FONT_MONO_I_DELETE "Delete"
 static uint8_t prpt[32];
@@ -3883,7 +3892,7 @@ static void test_profiles(void) {
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, PACT_LOAD, MENU_LIT) == 0 &&
           row_bad(2, PACT_SAVE, MENU_DIM) == 0 && row_bad(3, PACT_RENAME, MENU_DIM) == 0 &&
           row_bad(4, PACT_DELETE, MENU_DIM) == 0);   /* P5c: Rename before Delete; JD's icons (10-26) */
-    CHECK(row_bad(5, cells2(FONT_MONO_I_LIGHT " Cycle All", "50%"), MENU_WHITE) == 0 &&
+    CHECK(psum0_bad(cells2(FONT_MONO_I_LIGHT " Cycle All", "50%")) == 0 && fb[84][60] == 0 &&
           row_bad(6, "  H:180 S:100% B:80%", MENU_WHITE) == 0 &&
           row_bad(7, FONT_MONO_I_SCREEN "52%   " FONT_MONO_I_CLOCK "24h:ss", MENU_WHITE) == 0);
     m_turn(3);
@@ -4250,7 +4259,7 @@ static void test_preview(void) {
     CHECK(rgb_is(&fk_rgb_ee, &C) && !fk_rgb_dirty && fk_lcd_saved == 50 && fk_lcd_saves == saves0);
     /* A turn: the old preview holds through the rest, then the new one. */
     m_input_only(1, -1);
-    m_rest(300);
+    m_rest(MENU_PREVIEW_MS / 2u);
     CHECK(sub5_cursor() == 1 && rgb_is(&fk_rgb, &B));
     m_rest(MENU_PREVIEW_MS);
     CHECK(rgb_is(&fk_rgb, &A) && fk_lcd == 30 && rgb_is(&fk_rgb_ee, &C) && fk_lcd_saved == 50);
