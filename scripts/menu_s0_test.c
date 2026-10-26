@@ -4408,8 +4408,17 @@ static void test_preview_codex(void) {
      * load elsewhere): a click on the loaded profile shows it again. */
     menu_edit_external(ME_DOM_RGB);
     fk_rgb.mode = 9; fk_rgb.h = 5; fk_rgb_ee = fk_rgb;
+    m_click();   /* at once, before a tick takes the change (codex's verify: input runs first) */
+    CHECK(sub5_screen() == SC_PSLOT && fk_rgb.mode == 9 && fk_rgb.h == 77 && fk_rgb.speed == 140);
+    /* ... and after a tick has taken it: Load again (its effect the live
+     * one's, Drift), the change, a rest, the click. */
+    m_click();
+    m_unflash();
+    CHECK(sub5_screen() == SC_PROF && fk_rgb.mode == 9 && fk_rgb.h == 77);
+    menu_edit_external(ME_DOM_RGB);
+    fk_rgb.h = 5; fk_rgb_ee = fk_rgb;
     m_rest(200);
-    m_click();   /* its HSV over the live settings' effect, Drift now (it lacks its own) */
+    m_click();   /* its HSV over the live settings' effect, Drift (it lacks its own) */
     CHECK(sub5_screen() == SC_PSLOT && fk_rgb.mode == 9 && fk_rgb.h == 77 && fk_rgb.speed == 140);
     /* A Load refused (a deep sleep's recovery): its preview still shows. */
     fk_recovering = true;

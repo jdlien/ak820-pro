@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A verify before the flash: the P2 your second round left open (plans/review-codex-p5e-verify-raw.md: an external change and a click queued before menu_tick() takes it). The fix: qmk_firmware-ak820pro `git diff 651d23f9 2ce410e7 -- keyboards/a_jazz/ak820pro`: me_pending() reads menu_edit.c's pending bits without clearing them, and menu_input() sets pv to PV_LIVE when pv is PV_HELD, or names a slot with no ME_PROFILE edit open while a change is pending; menu_tick() still takes and clears them after. The test: scripts/menu_s0_test.c's test_preview_codex(), the click at once after the external change (it fails without the fix), then the case after a tick. Host tests pass; heap gap 136 B.
+
+Check: is it closed? Does reading the pending bits in menu_input() disturb menu_tick()'s use of them (an editor's "Cancelled" pop, the retarget)? Anything unsafe to flash on the keyboard on gremlin? File and line. Under 150 words.

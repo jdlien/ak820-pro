@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~11:00.
+2026-10-26 ~11:45.
 
 ## Where things stand
 
@@ -314,8 +314,26 @@ This file is the thread; read it first after a context loss. Updated
        - **Codex** (`review-codex-p5d-code-2026-10-26.md`): round 1's P2,
          the list shrinking under the cursor, fixed by prof_list_fit().
          70 mutants, 3 survive (accepted).
-       - **Waiting on JD's cable** (10-26 ~10:50): the keyboard on gremlin
-         was on the 2.4G dongle only, no USB, after his power cycle.
+       - **On the keyboard on gremlin since 11:04 10-26** (flash.sh
+         converted JD's two profiles into the eight). JD: "Testing the +
+         New Profile, seems to work great." P5d's board pass: GREMLIN-RESULTS
+         §20o (22 ms at Save new's click, trimmed on P5e's branch).
+     - **P5e, the preview** (JD: "No Profile 'sneak peek preview' feature
+       yet, but that'll be really useful when it lands"; done before
+       Rename): `651d23f9` on `gremlin/p5e` (dev, token `0x34f92556`, heap
+       gap 136 B). On Profiles, a 600 ms rest on a saved profile shows its
+       lighting and LCD level, unsaved, as an ME_PROFILE edit (menu_edit.c
+       snapshots and restores both, holds the RGB flush); the target is the
+       live settings with the record's fields over them; a click shows it at
+       once; Load restores then applies; Save's confirm, Save new, Back's
+       and Save new's rows, leaving, a delete, the close and a restore's pop
+       show the live settings; an external change holds them until the knob
+       moves; the idle close stays 24 s. Codex round 1: three P2s, fixed
+       (`review-codex-p5e-code-2026-10-26.md`); round 2 pending. 32 mutants,
+       3 survive. To flash with `scratchpad/p5e_flash_passes.sh` (5 quiet
+       minutes, flash.sh, then the board passes with JD's profiles stashed
+       and put back).
+     - **Then P5c, Rename**, with Save new opening it (a default name).
      - **JD's ideas (10-26), as first answered.** "I think maybe
        just a 'Save New' makes more sense than finite grayed out unused
        slots. We'd have to have a limit after some amount, but probably
