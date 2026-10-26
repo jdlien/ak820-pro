@@ -106,7 +106,8 @@ This file is the thread; read it first after a context loss. Updated
   each section's icon on its headings, the cursor in its own grey
   (`MENU_CURSOR` #A5A2A5, its own chunk). The selected row's yellow stays
   (white, #FFF7C6, #FFFF00 tried live). Design doc: "JD's icons".
-  Scratchpad helpers: `setcolor.py NAME RRGGBB` (op 27 sub 13, live).
+  (Live tuning, op 27 sub 13 and `menu_tune.py`, retired 10-25: the
+  palette is const, its 14 B the settings profiles'.)
 - 📌 **PINNED, JD (10-24): a manual review of ALL the menu's text before P1
   is accepted** -- Help's topics (`gen_menu_text.py`, its one amendment "3
   min mid-edit" approved), the labels, values, titles, flashes, the hint,

@@ -2139,24 +2139,15 @@ static void test_menu(void) {
     m_hold();
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
 
-    /* sub 13: a colour changed live repaints the menu in it (JD tunes shades
-     * on the panel); a bad index is refused; sub 12 reads the piece timing. */
+    /* sub 13, the live palette, is retired (10-25, the settings profiles'
+     * RAM): unhandled, and the menu keeps its colours. */
     CHECK(op27(11, 0, 0) == MI_OK);
     m_settle();
     m_click();    /* Lighting: Back unselected, light red, under Effect lit */
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
-    memset(rpt, 0, sizeof rpt);   /* [5] the index, [6..7] the colour: op27() takes only two args */
-    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 13;
-    rpt[5] = MP_LEAVE; rpt[6] = 0x00; rpt[7] = 0xF8;   /* pure red, 0xF800 */
-    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
+    CHECK(op27(13, MP_LEAVE, 0) == 0xFF);
     m_settle();
-    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", 0xF800u) == 0 && row_bad(1, cells2("Effect", "Alphas/Mods"), MENU_LIT) == 0);
-    CHECK(op27(13, MP_N, 0) == MI_BAD);
-    rpt[5] = MP_LEAVE; rpt[6] = (uint8_t)MENU_LEAVE; rpt[7] = (uint8_t)(MENU_LEAVE >> 8);
-    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x76; rpt[3] = 27; rpt[4] = 13;
-    CHECK(menu_ops_op27(rpt, fk_now) && rpt[5] == MI_OK);
-    m_settle();
-    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, cells2("Effect", "Alphas/Mods"), MENU_LIT) == 0);
     m_hold();     /* the top, on Lighting */
     /* JD, 10-24: the squared check on the saved option (the cursor's on
      * entry), Power's icon on its heading, ◀ on Back. */

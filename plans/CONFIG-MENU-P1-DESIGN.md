@@ -413,8 +413,8 @@ After JD's look at `925f029b` ("looking quite good"), in `541a8cbd`:
   flashes and the hints are messages, not headings: no icon.
 - **The cursor in its own colour**, `MENU_CURSOR` #A5A2A5, a neutral grey a
   shade under the dim rows (JD: in the lit colour it "kinda blends into" the
-  icon beside it); tunable live on dev (op 27 sub 13, `menu_tune.py`'s
-  `cursor`). A mono piece has one colour, so a row's lead is its own chunk,
+  icon beside it); it was tuned live on dev (op 27 sub 13, `menu_tune.py`,
+  both retired 10-25 for the settings profiles' RAM). A mono piece has one colour, so a row's lead is its own chunk,
   first and one piece (112 B); the text's chunks are back to 60 and 61 px.
 - **The selected row's colour stays `0xFF94`** (#FFF3A5 on the panel). Tried
   live on `541a8cbd`: pure white ("a tint still helps differentiate it"),
