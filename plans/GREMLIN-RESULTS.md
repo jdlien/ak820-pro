@@ -1549,3 +1549,22 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   in CLAUDE.md.
 - **Next:** icons for Load, Save, Rename and Delete (JD asked, 10-26).
 
+### 20r. The profile page's action icons (10-26, 13:00-13:55)
+
+- **JD's picks (10-26):** the pencil (nf-fa-pencil) for Rename and
+  Octicons' trashcan for Delete; for Save and Load, arrows ("-> Save
+  current here, <- Load (pointing at the keyboard, I suppose)"). His
+  nf-oct-arrow_right (U+F432) is 4 x 3 px in Cozette, so U+2190 and U+2192
+  (5 x 5, one cell). The large icons fit the 14 px row (the floppies and
+  trays are 11 px) but would look a size heavier.
+- **`04ce7093`** on `gremlin/p5-icons`, on the mainline (dev, token
+  `0xf224acbc`, heap gap 136 B): the four glyphs at 0xA4-0xA8, white on
+  the rows as the top level's. Codex: no blocker (the action rows split, 4
+  chunks, still nine paint passes).
+- **Flashed 13:37**, JD's profiles and live settings kept and put back.
+  The profiles' pass: every check passed, the longest 58.4 ms (the
+  consolidation after the flash, as before), then 18 ms. The menu's pass:
+  longest 17.9 ms at Connection's off-BT page, 36 over 15 ms; across the
+  last four builds 17.3 (P5b), 16.7, 17.6, 17.9, on screens the profile
+  work doesn't touch: run-to-run spread under Drift.
+
