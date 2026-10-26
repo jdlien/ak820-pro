@@ -11,6 +11,14 @@ This file is the thread; read it first after a context loss. Updated
 - **S0 is complete.** A1-A13 passed on the keyboard on gremlin, with recorded
   exceptions (GREMLIN-RESULTS §10). Firmware branch `gremlin/config-menu`
   (`4b899118`).
+  - **P5a MERGED (10-25, 22:50):** `ak820pro-jdlien` fast-forwarded to
+    `5ecc9a32`, which carries the effects' speeds (`93e55f78`) under it.
+    JD: "I can take the effect speeds on faith, they aren't mission
+    critical. I can play with them later." main has deps.lock pinned, the
+    flash notes (CLAUDE.md, README, docs/hardware.md: flash.sh keeps the
+    profiles and the live settings) and ten core files (the two animations
+    with the speed hooks). The keyboard on Buzz is the session on Buzz's to
+    flash; its first flash from `30f1e0cf` resets the settings one last time.
   - **MERGED (10-25, 19:05), all fast-forwards:**
     - `ak820pro-jdlien` to `30f1e0cf`;
     - ChibiOS-Contrib's `ak820pro-patches` to `5a1674e905`;

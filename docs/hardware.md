@@ -115,10 +115,13 @@ YOUR build. Flash the per-build artifact from `ak820pro-builds/out/`, never the
 shared `$QMK_HOME/a_jazz_ak820pro_via.bin` path. With the board running, in
 order:
 
-1. **Backs up the VIA keymap and the RGB lighting** (flashing erases the
-   emulated EEPROM) and prints each file's time and size. **Either backup
-   failing refuses the flash** (`--no-lighting` skips the lighting,
-   `--no-backup` both; the lighting failure only warned before 2026-10-05).
+1. **Backs up the VIA keymap (with the macros), the RGB lighting and the
+   settings profiles with the live settings** (flashing erases the emulated
+   EEPROM) and prints each file's time and size. **Any backup failing
+   refuses the flash** (`--no-lighting` skips the lighting, `--no-profiles`
+   the profiles, `--no-backup` all; the lighting failure only warned before
+   2026-10-05). A firmware without `HC_PROFILES` (before P5a) answers
+   "unhandled", and the profiles are skipped, an older backup file unused.
 2. **Refuses on battery once the RGB cut has fired**: the last ~5 h, the
    reserve. A pack that dies mid-write leaves the app half-erased.
    `--on-reserve` overrides.
@@ -131,8 +134,12 @@ order:
    s of any key activity, or if it could not deliver every key release over
    BT; the tool retries for a minute. A daily or fpb build answers "unhandled",
    and the script falls back to **"press Fn+Esc"**, waiting up to 10 min.
-5. Flashes, waits for `0x8009`, restores the keymap and the lighting, and
-   syncs the clock.
+5. Flashes, waits for `0x8009`, restores the keymap, then the profiles and
+   the live settings (`hostagent/ak820profiles.py restore`: the block, then
+   the live record applied, flushed and read back), and syncs the clock.
+   The live record carries the lighting, so the lighting's own restore runs
+   only when there is no live record or its restore fails: two snapshots
+   never overwrite each other.
 
 Proven hands-free 15:40 10-11: from the jump to the restore in ~25 s. Already
 in the bootloader, it skips the dumps and restores the last backups, saying how

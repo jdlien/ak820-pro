@@ -51,14 +51,18 @@ Recovery is **re-running the flash**, not a power cycle.
 spacebar — put the mode slider in `cable`, cold-boot with the pins shorted
 (it is sampled only at power-on). fpb's repo has the photo and the procedure.
 
-**4. Flashing erases the emulated EEPROM** — VIA keymap, RGB settings, LCD
-brightness, BT slot, and the persisted RTC trim. `flash.sh` backs up and
-restores **both the VIA keymap and the RGB lighting** for you. BT slot, LCD
-brightness and the RTC trim re-converge on their own (the clock takes a few
-minutes with a host attached).
+**4. Flashing erases the emulated EEPROM** — VIA keymap and macros, RGB
+settings, LCD brightness, the clock format, the power mode, the settings
+profiles, BT slot, and the persisted RTC trim. `flash.sh` backs up and
+restores **the VIA keymap, the settings profiles and the live settings**
+for you (the lighting with them). BT slot and the RTC trim re-converge on
+their own (the clock takes a few minutes with a host attached). A firmware
+from before the profiles has no live settings to back up, so the first
+flash from one restores the keymap and the lighting only.
 
-The lighting backup lands in `~/Documents/ak820pro-lighting.json`, and you can
-drive it by hand:
+The profiles' backup lands in `~/Documents/ak820pro-profiles.json`
+(`hostagent/ak820profiles.py show|dump|restore`) and the lighting's in
+`~/Documents/ak820pro-lighting.json`, and you can drive the lighting by hand:
 
 ```sh
 hostagent/ak820lighting.py show      # board vs backup
