@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-24, 21:20. The block below is where things stand, written to
+Updated 2026-10-25, 19:30. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -17,15 +17,39 @@ and on the board:
 - Gremlin's PCF writer fixes;
 - the RGB model over 81 LEDs.
 
-What is left is real use and a soak, the config menu's S0 after the drain
-("After the drain", below), and the polish and release for other owners.
-The once-a-second slow pass's fix is on JD's board since 23:48 10-23.
+**The configuration menu is on the mainline and on JD's board since
+19:08 10-25** (Warren's S0 through P4 and the Clock options; Fn + the
+knob's click opens it). It went on mid-drain at JD's word instead of after
+the drain. What is left is real use and a soak, and the polish and release
+for other owners.
 
 ### What is running
 
-- **Firmware on JD's board since 22:02:56 10-24: `52acdffe99`** (dev,
-  token `0xab194817`), on `mac/wake-dark-frame`. It is `b9555ff3e6` plus
-  the wake's dark-frame fix (`plans/BACKLOG.md`, "The key lights flash at a
+- **Firmware on JD's board since 19:08:05 10-25: `30f1e0cfde`, the
+  mainline** (dev, token `0x195cbf4c`, 206,326 B, heap gap 128 B, the
+  floor). `ak820pro-jdlien` and `deps.lock` point at it, and ChibiOS-Contrib
+  at `5a1674e905` (main `7a679e9`, Warren's merge). It is `b9555ff3e6` plus
+  Warren's `gremlin/s1`: the configuration menu (S0, S1, P1a-P4, the Clock
+  options), the LED fix (`gremlin/fill-poll`) and the wake fix below.
+  - **Flashed mid-drain, on battery** (relay 2 off throughout), with JD's
+    go: data on at 19:06:57, the jump took at once, and `flash.sh` restored
+    and verified the keymap and the lighting.
+  - **The flash reset what the EEPROM holds**: the power mode back to
+    Balanced, and the screen, indicator, clock and battery readout settings
+    to their defaults.
+  - **The clock:** the first sync found +4556.0 ms (21 h untethered with no
+    lock-light frames, below). The RTC period re-learnt as before: -1559.3,
+    then -19.8 to -26.9 ms a 5 min sync with the loop still moving (the
+    chip warming awake on USB), past the first period save at 10 min. Data
+    off at 19:24:44.
+  - **Not yet run on JD's board:** Warren's polish items for JD's ruling
+    (the Hue editor's 17-19 ms passes, Diagnostics' ~1.08 s settle, the lit
+    indicators' cost) and JD's own checks (hours on battery, a BT slot
+    switch, a pairing). Warren's effects speed change (`gremlin/fx-speed`)
+    comes as a later flash.
+- **Before it: `52acdffe99`** (dev, token `0xab194817`), from 22:02:56
+  10-24, on `mac/wake-dark-frame`. It is `b9555ff3e6` plus the wake's
+  dark-frame fix (`plans/BACKLOG.md`, "The key lights flash at a
   deep-sleep wake"):
   - the sleep waits for the committed frame to be dark;
   - the wake restages the ladder at once.
@@ -43,26 +67,32 @@ The once-a-second slow pass's fix is on JD's board since 23:48 10-23.
     from a real deep sleep (asleep at 22:18:25, 2.7 mA). The keys went dark
     to his colour in one frame, with no dim frame and no gap, and the ladder
     still sleeps.
-  - **Handed to Warren that evening** for the menu's build. It merges clean
-    into `gremlin/config-menu` and `gremlin/fill-poll` (git merge-tree). The
-    end-of-drain flash becomes S0 + fill-poll + this.
-- **Before it: `b9555ff3e6`** (dev, token `0x3c117332`), from 23:48:26
-  10-23, built and flashed from Buzz, the new Mac.
+  - **Handed to Warren that evening;** it went into the menu's build
+    (`88057ba7f1`) and so into the mainline.
+- **Before it: `b9555ff3e6`**, the mainline until 10-25 (dev, token
+  `0x3c117332`), from 23:48:26 10-23, built and flashed from Buzz, the new
+  Mac. It is `36afff30e8` plus the once-a-second slow pass's fix
+  (`ce229f87c6`, below) and a comment crediting quill4gen7 in `lockchan.c`
+  (the same code). Gremlin's board ran it from 17:03 10-22 (token
+  `0x32d3502c`).
 - **Before it: `36afff30e8`** (dev, token `0xef38330e`), from
   14:22 10-21. It is Gremlin's frame trim (`01abfe0ecf`, codex cleared after
   four rounds) merged with `36330d5ec8` (the 81-LED model).
-- **The mainline: `b9555ff3e6`, on JD's board until 22:02 10-24.** `ak820pro-jdlien` and
-  `deps.lock` point at it. It is `36afff30e8` plus the once-a-second slow
-  pass's fix (`ce229f87c6`, below) and a comment crediting quill4gen7 in
-  `lockchan.c` (the same code). Gremlin's board runs it since 17:03 10-22 (token
-  `0x32d3502c`), and JD's since 23:48 10-23.
 - **The Mac's daemon, on Buzz: `v0.1.1-839-g17e77d5`** (`--clock --radio
   --lockchan`, signed with the Developer ID), installed 23:49:13 10-23. Its
   first syncs after the flash, 3 min apart, found the board -1649.5, then
   -704.8, then -8.8 ms off: the RTC period the flash erased, re-learning. By
   23:55 it had converged and was slewing, with the interval back to 300 s.
-  With the data cut it runs the clock and now-playing over the lock-light
-  channel.
+  - ⚠️ **Its lock-light channel has never sent a frame on Buzz**
+    (found 19:25 10-25): `lockchan_frames_sent=0`, 752 failures, the last
+    error "Input Monitoring has not been granted to this program yet". So
+    with the data cut, the board has had no clock and no now-playing from
+    the Mac since the move, and the drain so far has none of the lock-light
+    frames' draw into a sleeping board (~1.6 mA while music plays).
+  - **Fixed at 19:28 10-25:** JD granted `ak820-agent` Input Monitoring,
+    and the daemon restarted at 19:28:43. Its first frames went at once (a
+    title at 19:28:59, the transport, a clock at 19:29:12 with latency -14
+    ms), with no failures. The drain has the lock-light frames from here.
   - Elysium's `21e8fe8` (from 14:23 10-21) still runs, but without the
     board. Elysium will be wiped once everything has moved over.
 - **The bench:**
@@ -74,8 +104,9 @@ The once-a-second slow pass's fix is on JD's board since 23:48 10-23.
     under launchd since 21:14:45 10-24 (`com.jdlien.ak820pro.powerlog`;
     `scripts/power_log_agent.sh status`);
   - JD's daily setting (effect 2, hue 185, sat 227, val 115, speed 231;
-    screen 5), in Balanced, the slider on BT. The drain from FULL runs
-    since 04:44:26 10-24.
+    the screen at the new default, 42 of 100), the slider on BT, Balanced
+    again since the flash of 19:08 10-25. The drain from FULL runs since
+    04:44:26 10-24.
 - **The clock's 30 min cut passed** on this build: the replug found -20.0 ms,
   against +1106.3 ms the morning before without the trim
   ([`../history/lockchan-clock-mac-cut-trim-20261021/`](../history/lockchan-clock-mac-cut-trim-20261021/README.md)).
@@ -125,6 +156,31 @@ The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
 - **Power saver from ~22:15 10-24** (JD, `Fn`+`B`). The flash had reset
   the mode to Balanced. From the logger: dimmed 1 min and asleep 3 min
   after his input, against Balanced's 10 and 20.
+- **The results to 18:24 10-25** (37.7 h, 340.9 mAh since FULL, 8.5%):
+  - **The gauge from FULL to the flash (17 h, Balanced):** the board's
+    level within ~0.5 point of the logger's, and its modelled energy 864.0
+    mWh at 21:48 against ~864 measured. After the flash it restarted at
+    95.0% (truth 94.6%), and JD read 92% at ~18:20 against ~91.2% by
+    energy.
+  - **Balanced** (04:44-21:51 10-24, 17.1 h): 12.24 mA on average, asleep
+    65% of the time at 2.98 mA and awake 35% at 31.5 mA.
+  - **Power saver** (22:15 10-24 to 18:24 10-25, 20.2 h): 5.89 mA, asleep
+    91% at 3.18 mA and awake 9% at 32.2 mA, half the charge in that 9%.
+  - **Awake, the board drew 28-36 mA**, none above 44: at val 115 the keys
+    add 3-8 mA to the 27.3 mA dark base. The sleep timeout sets the
+    runtime, not the brightness.
+  - **Modelled from FULL to the cut** (15,579 mWh, constant power): ~13
+    days at Balanced's average, ~27 at Power saver's. One day each, and the
+    two days were a Saturday and a Sunday.
+- **The flash of `30f1e0cfde`, the menu, mid-drain:** data on
+  19:06:57-19:24:44, 10.48 mAh in those 17.8 min, none charged; 365.5 mAh
+  since FULL at 19:24:47. The pre-flash battery log (v7) is
+  `~/Documents/ak820pro-battlogs/log-20261025-190706-preflash.csv`. The
+  board's gauge restarted from the voltage again, so its check runs FULL to
+  22:02 10-24, 22:03 10-24 to 19:06 10-25, and from 19:08 10-25 on. The
+  drain runs on to the RGB cut on the menu's build. The new build's log is
+  v8, whose LCD column is `bkl100` (0-100; `scripts/gauge_replay.py` reads
+  both).
 
 ### Stopped 23:46:52 10-23: the untethered drain at real use, restarted from FULL
 
@@ -322,21 +378,14 @@ on the pack and ~1.1 awake and dark with the data on.
 ### After the drain
 
 1. Dump the RAM battery log, then charge to FULL.
-2. Flash the config menu's S0, agreed with Warren on 10-24. `b9555ff3e6`
-   is on the board already. Until then, nobody moves `ak820pro-jdlien`,
-   `deps.lock` or main for it.
-   1. **On gremlin first:** a daily build of S0 (`gremlin/config-menu`
-      `4b899118`, four commits fast-forward on `b9555ff3e6`). It is likely
-      the combined S0 + `gremlin/fill-poll` daily, so one flash covers both.
-      Warren runs it while JD is at gremlin, because the flash back to dev
-      needs `Fn`+`Esc`.
-   2. **Then JD's board, in one flash with a soak:** S0, plus the LED fix
-      (`gremlin/fill-poll` `f2b107be`, `docs/leds.md`) if codex's
-      revision-8 verification clears it.
-   3. **Then the merges:** `gremlin/config-menu` into `ak820pro-jdlien`,
-      `deps.lock` moved, and `warren/config-menu` into main.
+2. **Done early, mid-drain (19:08 10-25, JD's call):** the menu, the LED
+   fix and the wake fix are merged and on JD's board (`30f1e0cfde`). The
+   daily build on gremlin is deferred to before the release (Warren). Next
+   from Warren, each through codex and its own flash: the effects speed
+   change (`gremlin/fx-speed`), then settings profiles if JD gives the go
+   (`CONFIG-MENU-P1-DESIGN.md`, "Settings profiles").
 
-   Candidates for the same flash, each through codex (`BACKLOG.md`):
+   Candidates for a later flash, each through codex (`BACKLOG.md`):
    - the hours left in the "Battery low" alert, if the drain shows the
      estimate right near the bottom;
    - the long-sleep wake's time left as ~5 s of the whole battery row, at
