@@ -1,13 +1,17 @@
 # Settings profiles: plan
 
-Draft 3, 2026-10-25. Written on Buzz from JD's decisions so far.
+Draft 4, 2026-10-25. Written on Buzz from JD's decisions so far.
 - Draft 2 took in Warren's check of the menu's internals against `30f1e0cf`
   (eight corrections).
-- Draft 3 takes in codex's review of draft 2
+- Draft 3 took in codex's review of draft 2
   ([`review-codex-settings-profiles-plan-2026-10-25.md`](review-codex-settings-profiles-plan-2026-10-25.md)):
   "needs revision before building; JD's scope and UX decisions are fine".
-  Every finding is taken; "Review history", at the end, lists where each
-  went.
+- Draft 4 takes in codex's verify of draft 3
+  ([`review-codex-settings-profiles-plan-verify-2026-10-25.md`](review-codex-settings-profiles-plan-verify-2026-10-25.md)):
+  Q1, Q5 and the signature resolved, and Q3, Q4 and Q6 partly not.
+
+Every finding is taken; "Review history", at the end, lists where each
+went.
 
 Nothing is built. JD's decisions are also recorded in
 [`CONFIG-MENU-P1-DESIGN.md`](CONFIG-MENU-P1-DESIGN.md), "Settings profiles".
@@ -184,18 +188,36 @@ from the right one. So:
 
 | Action | What it writes, in order |
 |---|---|
+| The first write to an unformatted block | the formatting (below), then the action |
 | Save (an empty slot, or Save current here) | state 0x00; the body and crc (bytes 1-26); state 0x01; the active byte |
-| Rename | the name and the crc (bytes 14-26) |
+| Rename | state 0x00; the name and the crc (bytes 14-26); state 0x01 |
 | Delete | state 0x00; the active byte to 0xFF if it was active |
 | Load | the setters (below); the active byte |
 
-- **Every write is a small `eeprom_update_block`** on exactly those bytes.
-  `eeprom_update_block` writes its whole range when any byte in it differs,
-  not only the changed bytes (`drivers/eeprom/eeprom_driver.c:52`), and its
-  VLA puts a range-sized copy on the stack. So the calls stay per-field.
-- **A save's state byte goes last,** in its own call, so the wear-leveling
-  log holds the body before the commit. A save cut off between them leaves
-  the slot empty, never a valid-looking mix of old and new.
+**Formatting:** a fresh flash leaves the block unformatted, and it reads as
+four empty slots. The first profile write formats it first, in order:
+1. the four state bytes to 0x00;
+2. the active byte to 0xFF;
+3. the magic, 0xA1, last.
+
+Only then does the action run. So the first save is visible, and a stale
+byte from before the flash can't show as a record. It happens once a flash,
+at the first save. A board whose owner never uses profiles never writes the
+block.
+
+- **Every write is small, on exactly those bytes, through
+  `wear_leveling_write()` itself,** not the EEPROM wrapper. The wrapper
+  discards the write's status (`drivers/eeprom/eeprom_wear_leveling.c:38`),
+  and the profile code needs it: a failed write flashes `Save failed` in the
+  menu and returns an error over `HC_PROFILES`. `wear_leveling_write()`
+  compares against its cache and skips an unchanged range
+  (`wear_leveling.c:688`). It writes the whole range when any byte in it
+  differs, so the calls stay per-field. (`eeprom_update_block` would also
+  put a range-sized VLA copy on the stack, `drivers/eeprom/eeprom_driver.c:52`.)
+- **The state byte goes last, in its own call, for a save and a rename
+  alike,** after the slot is invalidated first. The wear-leveling log holds
+  the body before the commit. A write cut off between them leaves the slot
+  empty, never a mix of old and new that a crc8 could pass.
 - **The pre-write hook** (`backing_store_pre_write_hook()`, `ak820pro.c:705`)
   drains an in-flight LCD blit first, the historical hang. Each write blinks
   the LEDs dark for a few ms, like every internal-flash write.
@@ -239,9 +261,10 @@ Load applies the record's fields through the setters the menu already uses
 (`menu/menu_glue.c`), with `save` true.
 
 1. **The lighting, in the restore's order** (`menu/menu_edit.c:78`). While
-   the matrix is disabled, the mode, HSV and speed setters return early. So:
-   enable without saving, then the mode (from the stable id), HSV and speed,
-   then the enable last at the record's value, saving.
+   the matrix is disabled, the mode and HSV setters return early (speed
+   doesn't, `quantum/rgb_matrix/rgb_matrix.c:758`). So: enable without
+   saving, then the mode (from the stable id), HSV and speed, then the
+   enable last at the record's value, saving.
 2. **The rest:** `env_lcd_set`, `env_ind_set` for each group,
    `env_clock_set`, `env_batt_hours_set` (`kb_eeconfig`'s deferred write).
 3. **The menu's latched model** is set as a choice's commit sets it
@@ -292,8 +315,9 @@ different name repaints. Text is 20 cells a row in the mono face, and a
 split row's cells 0-1 are its icon.
 
 **The page stack grows from 3 frames to 4.** Top, then Profiles, then a
-slot's page, then Rename or a confirm, is four deep. `stack[3]` today
-(`menu.c:1243`). A frame is 3 B, 4 aligned, paid from the palette.
+slot's page, then Rename or a confirm, is four deep. `stack[3]` today: the
+array at `menu.c:212`, its depth guard at `menu.c:1243`. A frame is 3 B;
+the budget allows 4, paid from the palette.
 - The alternative is for Rename and the confirms to replace the slot page's
   frame (pop, then push). That needs the slot remembered elsewhere and the
   slot page rebuilt on the way back.
@@ -385,18 +409,30 @@ palette's RAM.
   It moves to CAPTURE at the end of a complete scan in which:
   - the debounced matrix is idle (`matrix_get_row` over the 6 rows, the
     knob's (0,14) masked);
-  - QMK's tapping state holds no key and no queued event.
+  - QMK's tapping state holds no key and no queued event. That state is
+    private (`quantum/action_tapping.c:130`), so P5c adds an accessor,
+    `action_tapping_idle()`: the tapping key empty and the waiting buffer's
+    head equal to its tail. It's a ninth core file with a local change,
+    additive, for CLAUDE.md's list.
 
-  Then it clears the one-shots (`clear_oneshot_mods`,
-  `clear_oneshot_layer_state`). A one-shot set before Rename would
-  otherwise land on the first key after it.
+  At that move it clears the one-shots: `clear_oneshot_mods()` and
+  `reset_oneshot_layer()`. (`clear_oneshot_layer_state()` takes a
+  fulfilment mask, `quantum/action_util.c:211`, and isn't the full reset.)
+  A one-shot set before Rename doesn't hold WAIT: it's cleared at the move,
+  so it can't land on the first key after Rename.
 - **CAPTURE:** every key press and release is swallowed in
   `pre_process_record_kb`. The gate sits after `menu_pre_process()`, which
   takes only the knob's (0,14) and the encoder's halves by physical
   identity, and before `pre_process_record_user`. So the knob keeps driving
-  the menu. Fn's press is swallowed, so its layer never turns on, and a
-  knob click inside Rename is a plain click (commit), never Fn+click's
-  close.
+  the menu. Fn's press is swallowed, so a momentary Fn layer never turns
+  on.
+- **The knob's handler treats Fn as up throughout Rename,** whatever
+  `layer_state` says. `menu_glue.c:288` passes the Fn layer's state to the
+  knob's handler, and a keymap that toggles or latches a layer (TG, TO, a
+  one-shot layer) can leave it on from before Rename. Without the rule, a
+  knob click there would read as Fn+click, the menu's close. It's one rule
+  in `menu_physical`'s call, keyed on the Rename node. JD's layout has only
+  `MO(1)` and `MO(3)` (checked), but other owners' may toggle.
 - **DRAIN:** after the capture ends, for any reason, events are still
   swallowed until the end of a complete scan with the matrix idle. It's
   checked in the housekeeping, after the scan's events, not inside the
@@ -412,8 +448,8 @@ Rename's while the menu owns the panel. That covers:
 - a loss's `MENU_CLEAR` (`screen_open`);
 - the bootloader item.
 
-(The slider's Connection follow, `menu.c:1614`, pops only BT screens. It
-never closes Rename.)
+(The slider's Connection follow, `menu.c:1614`, pops only the BT screens
+and `N_CONNINFO`. It never closes Rename.)
 
 ### Input
 
@@ -455,9 +491,22 @@ the keymap and the lighting.
 
 ### `HC_PROFILES`, 0x10 on the health channel 0x13
 
-0x10 is free (`hid_protocol.c:490`). A request is the channel, the
-command, a sub and a page byte, which leaves **27 bytes of payload. So the
-110 B block is five pages.**
+0x10 is free (`hid_protocol.c:490`). The 32-byte report's framing follows
+the existing commands (`hid_protocol.c:403`):
+
+| Bytes | Block pages (subs 0-3) | The live record (subs 4-6) |
+|---|---|---|
+| 0 | `SET_VALUE` | `SET_VALUE` |
+| 1 | the channel, 0x13 | the channel, 0x13 |
+| 2 | the command, 0x10 | the command, 0x10 |
+| 3 | the sub | the sub |
+| 4 | the page, 0-4 | the record's first byte, the state (its format) |
+| 5 | the token | the record, continued |
+| 6-31 | **26 bytes** of the block | to byte 30: **27 bytes**, the whole record |
+
+**So the 110 B block is five pages of 26 B** (4 x 26 + 6). Sub 0, a read,
+has no token, and its page carries 26 B too, to keep one page size. The
+live record needs no page or token and fits whole.
 
 | Sub | What |
 |---|---|
@@ -465,12 +514,22 @@ command, a sub and a page byte, which leaves **27 bytes of payload. So the
 | 1 | **Begin a restore**, with a host token. It aborts any open restore, writes the magic to 0x00 at once (so a torn restore reads as four empty slots), and opens the transaction |
 | 2 | **Write page p**, with the token, straight into the block. The magic's byte (offset 0) is masked: the host never writes it. The page is marked received |
 | 3 | **Commit**, with the token. It requires all five pages from this transaction, validates the whole image from the RAM cache (each record's state, crc, ranges; the active byte normalized), writes the active byte, then **writes the magic last, in its own call**. Otherwise it refuses, and the block stays unformatted |
-| 4 | Read the **live record**: the current settings as a record, power mode included (`fields` 0xBF). Byte 0, the state, carries the format (0x01, v1), and the record is exactly 27 B |
+| 4 | Read the **live record**: the current settings as a record, power mode included (`fields` 0xBF). Byte 0, the state, carries the format (0x01, v1), and the record is exactly 27 B. **It cancels an open editor's preview first**, as VIA's lighting reads do (`hid_protocol.c:1392`), so a backup never saves an uncommitted preview |
 | 5 | **Apply a live record**, as a Load does. It cancels an open editor's preview first (as an external write does: `Cancelled`) |
-| 6 | **Flush:** the deferred `kb_eeconfig` and RGB writes now, outside a recovery, so the host can read back sub 4 and know the settings are durable |
+| 6 | **Flush:** the deferred `kb_eeconfig` and RGB writes now, outside a recovery. **It cancels an open preview first too:** RGB's forced flush bypasses the normal gate (`quantum/rgb_matrix/rgb_matrix.c:102`) and would otherwise write the preview |
 
-**The transaction's state:** the token, a five-bit page mask and an open
-bit, 2 B of the palette's RAM.
+**What the readback proves:** sub 4's readback after a flush confirms the
+board's RAM, not the flash. The settings' own writes go through QMK's EEPROM
+wrapper, which discards a write's status
+(`drivers/eeprom/eeprom_wear_leveling.c:38`). The profile block's writes
+report theirs (`wear_leveling_write()`, "Writes", above). For the settings,
+the board pass's power cycle after a restore is the durability check.
+
+**The transaction's state, 3 B of the palette's RAM:**
+- the token;
+- a five-bit page mask and an open bit, in one byte;
+- the timeout, a countdown in 10 Hz ticks (50 is 5 s), decremented by the
+  housekeeping.
 - **While a restore is open,** the menu's profile writes are refused and
   its profile pages pop.
 - **A new Begin, or 5 s without a page,** aborts it, and the block stays
@@ -527,8 +586,8 @@ block:
 | | Cost | Room |
 |---|---|---|
 | EEPROM | 110 B | 237 B of macro space, so 127 B are left |
-| RAM, static | ~7 B: Rename's state 1, the transaction 2, the fourth stack frame 4 | the palette's 14 B, made const in dev; dev's heap gap stays at its 128 B floor |
-| RAM, stack | a 27 B record buffer plus `eeprom_update_block`'s same-size VLA at a save, a load or a host page | the stacks' margins (to check) |
+| RAM, static | ~8 B: Rename's state 1, the transaction 3, the fourth stack frame 3 (4 allowed) | the palette's 14 B, made const in dev; dev's heap gap stays at its 128 B floor |
+| RAM, stack | a 27 B record buffer at a save, a load or a host page (no VLA: the writes call `wear_leveling_write()`) | the stacks' margins (to check) |
 | RAM, union | Rename's `name[12]`, a third arm of `pg` | `pg`'s 12 B, unchanged |
 | Flash | ~4-6 KB (code, nodes, text, an icon, the effect ids) | dev 54.6 KB free, daily ~79 KB |
 
@@ -545,10 +604,16 @@ block:
     paths, the empty-slot save, the `*` and its invalidation, the 13-row
     top level's scrollbar, the 8-character truncation, the four-frame
     stack, `Busy` during a recovery and during a restore;
+  - the formatting: the first save on an unformatted block writes the
+    states, the active byte and then the magic, and a stale record from
+    before it never shows;
   - Rename's states:
-    - WAIT held by a queued tap-hold and by a one-shot;
+    - WAIT held by a held key and by a queued tap-hold
+      (`action_tapping_idle()` false), and not by a one-shot, which the
+      move to CAPTURE clears;
     - CAPTURE's swallowing, with characters from the default layer while a
       layer is toggled, and Shift from the matrix;
+    - with a toggled Fn layer, a knob click commits and never closes;
     - DRAIN after every kind of close, ending only after a complete scan,
       with two keys released in the same scan;
     - Backspace, the 12-character limit, the 180 s idle, and typing
@@ -558,6 +623,12 @@ block:
       the 5 s timeout and a second Begin all leave the block unformatted;
     - the host's magic byte is ignored;
     - a bad crc is refused whole;
+    - the framing: five pages of 26 B with the token, and the live record's
+      27 B without;
+    - subs 4 and 6 with an editor previewing: the preview is cancelled
+      first, and neither the backup nor the flush holds it;
+    - a failed `wear_leveling_write()` (injected) reports `Save failed` in
+      the menu and an error over the command;
     - firmware without the command is skipped;
   - the macro backup and restore: the validity byte, and an oversized
     restore refused.
@@ -571,8 +642,11 @@ block:
     the lighting was restored once;
   - Rename over BT and USB: a key held at the open and at the close, and
     closed by the idle timer, by a loss and by the bootloader item.
-- **Failure:** a power cut between a save's writes (the watchdog test
-  hook's reset-during-write) leaves that slot empty, and the others intact.
+- **Failure:** a power cut between a save's or a rename's writes (the
+  watchdog test hook's reset-during-write) leaves that slot empty, and the
+  others intact. A power cycle after a host restore keeps the live
+  settings: the durability check for the writes QMK's wrapper doesn't
+  report.
 
 ## Phases
 
@@ -585,7 +659,9 @@ block:
      proves the ~7 B fit.
 2. **P5b, the menu:** the top-level row, the Profiles page, the slot page,
    Load, Save, Delete, the summary, the `*`, the fourth frame.
-3. **P5c, Rename.**
+3. **P5c, Rename,** with `action_tapping_idle()` in
+   `quantum/action_tapping.c` (a ninth core file with a local change) and
+   the knob's Fn-up rule.
 
 Each phase gets codex before its flash, as the menu's phases have.
 
@@ -639,6 +715,32 @@ Every finding is taken:
 The current assertion permits 13 additions. The `*` goes in spare bit 2 and
 the active slot in `val`, with explicit invalidation for names and
 summaries, and the compare benchmarked.
+
+**Codex's verify of draft 3** (2026-10-25,
+[`review-codex-settings-profiles-plan-verify-2026-10-25.md`](review-codex-settings-profiles-plan-verify-2026-10-25.md)).
+Q1, Q5 and the signature were resolved; Q2 was right to stay conditional on
+the measure. Every finding is taken:
+- **Q6, Rename protected too:** invalidate, then the name and crc, then the
+  state last ("Writes").
+- **The formatting** of an unformatted block at the first write: states,
+  active byte, then the magic.
+- **`HC_PROFILES`' wire layout:** the explicit framing table, five pages of
+  26 B with the token, and the live record's 27 B without. The timeout is a
+  1 B countdown, so the transaction takes 3 B.
+- **Q4:**
+  - sub 4's backup and sub 6's flush both cancel a preview first;
+  - the readback proves RAM only;
+  - the profile writes go through `wear_leveling_write()` for its status,
+    and the settings' durability is the board pass's power cycle.
+- **Q3:** the tapping accessor `action_tapping_idle()`, a new local core
+  change; the one-shots cleared with `clear_oneshot_mods()` and
+  `reset_oneshot_layer()`; the test reconciled (a one-shot doesn't hold
+  WAIT).
+- **The toggled Fn layer:** the knob's handler treats Fn as up throughout
+  Rename.
+- **Corrections:** `menu.c:212` is the stack's array and 1243 its guard, and
+  a frame is 3 B with 4 allowed; the Connection follow also pops
+  `N_CONNINFO`; speed doesn't return early while the matrix is disabled.
 
 **Warren's check of draft 1** gave draft 2:
 - the node limit;
