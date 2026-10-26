@@ -1517,3 +1517,27 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   P5d's was 22.2), then 18 ms. 77 passes over 15 ms in 12,229, through the
   effect switches.
 
+### 20q. P5c: Rename (10-26, 12:00-12:50)
+
+- **`13c5e910`** on `gremlin/p5c` (dev, token `0x8f2239f1`, heap gap 136 B):
+  the plan's Rename (WAIT, CAPTURE, DRAIN in one byte; a new additive
+  accessor, `action_tapping_idle()`, in quantum/action_tapping.c). Codex:
+  three rounds (`review-codex-p5c-code-2026-10-26.md`): an armed one-shot
+  layer left on, a reopen under a DRAIN letting a release through, and the
+  name's signature collisions, all fixed. 28 mutants, 1 survives.
+- **Flashed 12:38** (`scratchpad p5c_flash_passes.sh`): JD's three profiles
+  and live settings backed up, restored, stashed for the passes and put
+  back, read back the same.
+- **The menu's pass** (`board-13c5e910.json`): 142 steps, longest 17.6 ms at
+  the Clock choice's cancel (the top level's repaint under Drift; P5e's run
+  16.7, P5b's 17.3), 44 over 15 ms. Its fails: that 17 ms line and Drift's
+  ~1.0-1.1 s settles. Rename adds no work while it's off (menu_key() and
+  menu_rename_task() return on the state byte).
+- **The profiles' pass** (`p5c-board-13c5e910.json`): every check passed,
+  Rename by the knob included (the capture on with no key down, a click
+  saving the name as it was, a hold cancelling). Longest: 57.5 ms in the
+  turn after Save new's second click (a wear-leveling consolidation, as in
+  P5e's run at the same place: the flash's restore fills the log), then
+  19 ms and 18 ms on Profiles' list. The fails are Drift's settles.
+- **Owed:** JD types a name (the host can't type).
+
