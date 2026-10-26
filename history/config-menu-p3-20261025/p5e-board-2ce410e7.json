@@ -1,0 +1,1070 @@
+{
+ "steps": [
+  {
+   "what": "open",
+   "ms": 999,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 13024
+  },
+  {
+   "what": "to Profiles",
+   "ms": 238,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 13925
+  },
+  {
+   "what": "Profiles",
+   "ms": 900,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 0,
+   "pass_max_us": 14277
+  },
+  {
+   "what": "Save new: Profile 1",
+   "ms": 338,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "the save's settle, the active slot's deferred write",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 1,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Profile 1's page",
+   "ms": 782,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "its summary",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Profiles back",
+   "ms": 557,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 2,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "the top level",
+   "ms": 890,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 4,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "the top level with its `*`, 3 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 4,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Profiles",
+   "ms": 972,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 4,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Profile 1's page",
+   "ms": 773,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 5,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Load",
+   "ms": 793,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 6,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Profile 1's page",
+   "ms": 888,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "to Save current here",
+   "ms": 232,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Save's confirm",
+   "ms": 549,
+   "owner": "menu",
+   "screen": 70,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 7,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "cancelled",
+   "ms": 890,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 8,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Save's confirm again",
+   "ms": 654,
+   "owner": "menu",
+   "screen": 70,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 8,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "saved",
+   "ms": 1100,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 8,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "to Delete",
+   "ms": 345,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 10,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Delete's confirm",
+   "ms": 542,
+   "owner": "menu",
+   "screen": 71,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 10,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "deleted",
+   "ms": 1007,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 10,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Save new: Profile 1",
+   "ms": 344,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 11,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "to Save new",
+   "ms": 228,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 11,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Save new: Profile 2",
+   "ms": 355,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 12,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "to Save new",
+   "ms": 241,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 13,
+   "pass_max_us": 20629
+  },
+  {
+   "what": "Save new: Profile 3",
+   "ms": 345,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 16,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Save new",
+   "ms": 237,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 16,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Save new: Profile 4",
+   "ms": 330,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 17,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Save new",
+   "ms": 232,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 17,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Save new: Profile 5",
+   "ms": 358,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 19,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Save new",
+   "ms": 237,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 20,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Save new: Profile 6",
+   "ms": 353,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 22,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Save new",
+   "ms": 231,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 23,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Save new: Profile 7",
+   "ms": 229,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 24,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Save new",
+   "ms": 1010,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 25,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Save new: Profile 8",
+   "ms": 443,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 28,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the eight's settle",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 29,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Save new, Full",
+   "ms": 237,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 9,
+   "inv": 0,
+   "over15": 29,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Full: nothing written",
+   "ms": 122,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 9,
+   "inv": 0,
+   "over15": 30,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 0",
+   "ms": 1112,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 37,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 0, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 0,
+   "inv": 0,
+   "over15": 37,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 1",
+   "ms": 234,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 37,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 1, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 37,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 2",
+   "ms": 240,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 37,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 2, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 2,
+   "inv": 0,
+   "over15": 37,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 3",
+   "ms": 230,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 38,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 3, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 38,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 4",
+   "ms": 237,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 39,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 4, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 4,
+   "inv": 0,
+   "over15": 39,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 5",
+   "ms": 236,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 39,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 5, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 5,
+   "inv": 0,
+   "over15": 39,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 6",
+   "ms": 241,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 43,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 6, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 43,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 7",
+   "ms": 237,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 46,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 7, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 46,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 8",
+   "ms": 893,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 46,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 8, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 46,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list, row 9",
+   "ms": 225,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 9,
+   "inv": 0,
+   "over15": 46,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "a rest on row 9, 1.2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 9,
+   "inv": 0,
+   "over15": 46,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Profile 7, a fast turn",
+   "ms": 1014,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 49,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list of eight, Profile 7 previewed, 3 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 49,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Profile 7's page",
+   "ms": 881,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 97,
+   "inv": 0,
+   "over15": 49,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Save current here",
+   "ms": 231,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 98,
+   "inv": 0,
+   "over15": 50,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Save's confirm, the live settings",
+   "ms": 665,
+   "owner": "menu",
+   "screen": 70,
+   "cursor": 6,
+   "inv": 0,
+   "over15": 50,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "cancelled, Profile 7's again",
+   "ms": 881,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 98,
+   "inv": 0,
+   "over15": 50,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the list",
+   "ms": 782,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 51,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the top level",
+   "ms": 914,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 55,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the top level, Profile 8 active, 3 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 55,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Profiles",
+   "ms": 1022,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 8,
+   "inv": 0,
+   "over15": 59,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "to Profile 3",
+   "ms": 999,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 66,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Profile 3 previewed",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 66,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Profile 3's page",
+   "ms": 907,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 33,
+   "inv": 0,
+   "over15": 67,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Load",
+   "ms": 898,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 3,
+   "inv": 0,
+   "over15": 69,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the top level",
+   "ms": 898,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 72,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Profiles, nothing saved",
+   "ms": 1011,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 73,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Save new: Profile 1 again",
+   "ms": 345,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 74,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "its page",
+   "ms": 889,
+   "owner": "menu",
+   "screen": 67,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 76,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "Profiles after the abort",
+   "ms": 996,
+   "owner": "menu",
+   "screen": 66,
+   "cursor": 1,
+   "inv": 0,
+   "over15": 77,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "the top level",
+   "ms": 888,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 7,
+   "inv": 0,
+   "over15": 77,
+   "pass_max_us": 57701
+  },
+  {
+   "what": "close",
+   "ms": 434,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0,
+   "over15": 77,
+   "pass_max_us": 57701
+  }
+ ],
+ "meas": {
+  "piece_us": 5968,
+  "op_us": 48064,
+  "pass_max_us": 57701,
+  "over15": 77,
+  "repaint_ms": 1019,
+  "tgen": 28,
+  "settled": 0,
+  "superseded": 28,
+  "band_ms": 2,
+  "page": 0,
+  "dbg_gen": 4,
+  "dbg_done_gen": 4,
+  "committed": 49,
+  "passes": 12229,
+  "token": 2,
+  "health_gen": 1,
+  "dbg_sec": 10,
+  "rtc_sec": 38,
+  "aliased": false
+ },
+ "fails": [
+  "saved: settled in 1100 ms",
+  "deleted: settled in 1007 ms",
+  "to Save new: settled in 1010 ms",
+  "the list, row 0: settled in 1112 ms",
+  "to Profile 7, a fast turn: settled in 1014 ms",
+  "Profiles: settled in 1022 ms",
+  "Profiles, nothing saved: settled in 1011 ms"
+ ],
+ "slow": [
+  {
+   "step": "the top level",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 3,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "cancelled",
+   "pass_ms": 17,
+   "scopes": {
+    "ch582": 4,
+    "blit_pump": 6,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "to Delete",
+   "pass_ms": 17,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 5,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "to Delete",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 5,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "to Save new",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "Save new: Profile 5",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 8,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "to Save new",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "Save new: Profile 8",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 7,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "Save new: Profile 8",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "Save new: Profile 8",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 8,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "the eight's settle",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 5,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "Full: nothing written",
+   "pass_ms": 18,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 11
+   }
+  },
+  {
+   "step": "the list, row 3",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 4,
+    "unaccounted": 9
+   }
+  },
+  {
+   "step": "the list, row 6",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "the list, row 6",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 2,
+    "blit_pump": 8,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "the list, row 6",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 4,
+    "battery": 1,
+    "blit_pump": 4,
+    "unaccounted": 5
+   }
+  },
+  {
+   "step": "the list, row 7",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "the list, row 7",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 8,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "to Save current here",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "to Save current here",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 5,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "the top level",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 8,
+    "unaccounted": 6
+   }
+  },
+  {
+   "step": "to Profile 3",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 8
+   }
+  },
+  {
+   "step": "to Profile 3",
+   "pass_ms": 16,
+   "scopes": {
+    "ch582": 1,
+    "battery": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  },
+  {
+   "step": "Profile 3's page",
+   "pass_ms": 15,
+   "scopes": {
+    "ch582": 1,
+    "blit_pump": 6,
+    "unaccounted": 7
+   }
+  }
+ ]
+}

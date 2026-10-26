@@ -1482,3 +1482,38 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   snapshot already read that pass, and the snapshot set on success, not
   read again (22 reads fewer).
 
+### 20p. P5e: the profiles' preview (10-26, 11:10-12:20)
+
+- **JD (10-26):** "No Profile 'sneak peek preview' feature yet, but that'll
+  be really useful when it lands." Done before Rename.
+- **`2ce410e7`** on `gremlin/p5e` (dev, token `0x6612d479`, heap gap 136 B):
+  on Profiles, a 600 ms rest on a saved profile shows its lighting and LCD
+  level, unsaved (an ME_PROFILE edit: the snapshot, the restore, the RGB
+  flush held), over the live settings; a click shows it at once; Load
+  restores, then applies; the live settings back on Back, Save new, leaving,
+  a delete, Save's confirm, the close and a restore's pop; an external
+  change holds them until the knob moves; the idle close stays 24 s. Save
+  new's click reads 22 fewer records. Codex: three rounds
+  (`review-codex-p5e-code-2026-10-26.md`), four P2s fixed. 32 mutants, 3
+  survive.
+- **Flashed 11:51** (`scratchpad p5e_flash_passes.sh`: 5 quiet minutes,
+  flash.sh, then the passes): JD's three profiles and live settings backed
+  up and restored by flash.sh; then stashed, the slots emptied and Drift h43
+  at full brightness for the passes, and put back after, read back the same.
+- **The menu's pass** (`board-2ce410e7.json`, complete this time): 142
+  steps, longest pass 16.7 ms, 28 over 15 ms (P5b's `57d5e900`: 17.3 ms,
+  46). The fails are Drift's ~1.0-1.1 s settles only.
+- **The profiles' pass** (`p5e-board-2ce410e7.json`): each of the eight
+  saved from its own effect and screen level (over HC_PROFILES' live
+  apply); each row rested 1.2 s with op 27 sub 14 reading the edit: an
+  ME_PROFILE preview on every profile's row, none on Back's or Save new's;
+  Profile 7's page keeping it, Save's confirm closing it, the cancel
+  reopening it, leaving closing it with the live effect back; Load over a
+  preview leaving the live settings Profile 3's and no edit open. Every
+  check passed; the fails are Drift's settles. Longest passes: 57.7 ms in
+  the step whose live apply and flush preceded Save new's third click (a
+  wear-leveling consolidation, the known exception; its scope wasn't
+  caught), 20.6 ms at the first Save new (the block's format, 13 writes;
+  P5d's was 22.2), then 18 ms. 77 passes over 15 ms in 12,229, through the
+  effect switches.
+
