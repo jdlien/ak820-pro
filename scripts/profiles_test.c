@@ -45,7 +45,7 @@ bool        env_settings_pending(void) { return fk_pending; }
 /* The live settings, and the setters' calls in order. */
 static env_rgb_t fk_rgb = {2, 240, 215, 86, 127, 1, 0xFF};
 static uint8_t   fk_lcd = 52, fk_ind[2] = {30, 60}, fk_clock = 4, fk_power = 1;
-static bool      fk_hours;
+static uint8_t   fk_view = 1;   /* the battery readout, BATT_VIEW_* */
 static char      calls[256];
 static void      call(const char *s) { strncat(calls, s, sizeof calls - strlen(calls) - 1); }
 void env_rgb_get(env_rgb_t *c) { *c = fk_rgb; }
@@ -65,8 +65,8 @@ uint8_t env_ind_level(uint8_t w) { return fk_ind[w]; }
 void    env_ind_set(uint8_t w, uint8_t l, bool save) { fk_ind[w] = l; (void)save; call("I"); }
 uint8_t env_clock_mode(void) { return fk_clock; }
 void    env_clock_set(uint8_t m) { fk_clock = m; call("C"); }
-bool    env_batt_hours(void) { return fk_hours; }
-void    env_batt_hours_set(bool h) { fk_hours = h; call("B"); }
+uint8_t env_batt_view(void) { return fk_view; }
+void    env_batt_view_set(uint8_t v) { fk_view = v; call("B"); }
 uint8_t env_power_mode(void) { return fk_power; }
 void    env_power_set(uint8_t m) { fk_power = m; call("P"); }
 /* The effects: modes 1, 2, 4 with stable ids 1, 2, 4 (a build with Breathing,
@@ -87,7 +87,7 @@ static void reset(void) {
     fk_recovering = false;
     fk_pending = false; fk_touches = 0;
     fk_rgb = (env_rgb_t){2, 240, 215, 86, 127, 1, 0xFF};
-    fk_lcd = 52; fk_ind[0] = 30; fk_ind[1] = 60; fk_clock = 4; fk_power = 1; fk_hours = false;
+    fk_lcd = 52; fk_ind[0] = 30; fk_ind[1] = 60; fk_clock = 4; fk_power = 1; fk_view = 1;
     calls[0] = '\0';
     memset(fk_external, 0, sizeof fk_external);
     prof_test_reset();
@@ -142,7 +142,7 @@ static void test_codec(void) {
     r[PR_HUE]--;
     /* Ranges, each with its crc made good. */
     static const struct { uint8_t at, v; } bad[] = {
-        {PR_RGB_ON, 2}, {PR_LCD, 101}, {PR_LOCKS, 101}, {PR_CHARGING, 101}, {PR_CLOCK, 6}, {PR_BVIEW, 0}, {PR_BVIEW, 3},
+        {PR_RGB_ON, 2}, {PR_LCD, 101}, {PR_LOCKS, 101}, {PR_CHARGING, 101}, {PR_CLOCK, 6}, {PR_BVIEW, 0}, {PR_BVIEW, 4},
         {PR_NAME, 0x7F}, {PR_NAME, 0x1F},
     };
     for (unsigned i = 0; i < sizeof bad / sizeof bad[0]; i++) {
@@ -258,7 +258,7 @@ static void test_delete_and_load(void) {
     uint8_t r[PROF_REC];
     fk_rgb.h = 100;
     CHECK(prof_save(0, NULL) == PROF_OK);
-    fk_rgb.h = 200; fk_lcd = 10; fk_clock = 1; fk_hours = true;
+    fk_rgb.h = 200; fk_lcd = 10; fk_clock = 1; fk_view = 3;
     CHECK(prof_save(1, NULL) == PROF_OK && prof_active() == 1);
     /* Delete: the state alone (its crc still good), and the active slot to
      * none, deferred, if it was active. */
@@ -273,12 +273,12 @@ static void test_delete_and_load(void) {
     CHECK(prof_active() == 0xFF);
     B(PROF_REC_OFF(0)) = PS_SAVED_V1;
     /* Load, with the lights off: on unsaved first, then the mode, HSV, speed, the enable last at the record's value. */
-    CHECK(prof_save(2, NULL) == PROF_OK);   /* h 200, lcd 10, clock 1, hours */
-    fk_rgb.enable = 0; fk_rgb.h = 5; fk_lcd = 90; fk_clock = 0; fk_hours = false; fk_power = 3;
+    CHECK(prof_save(2, NULL) == PROF_OK);   /* h 200, lcd 10, clock 1, both (JD, 10-26) */
+    fk_rgb.enable = 0; fk_rgb.h = 5; fk_lcd = 90; fk_clock = 0; fk_view = 1; fk_power = 3;
     calls[0] = '\0';
     CHECK(prof_load(2) == PROF_OK);
     CHECK(strcmp(calls, "eMHSELIICB") == 0 && fk_rgb.enable == 1 && fk_rgb.h == 200 && fk_lcd == 10 && fk_clock == 1 &&
-          fk_hours && fk_power == 3 && prof_active() == 2);
+          fk_view == 3 && fk_power == 3 && prof_active() == 2);
     /* A record saved off stays off: the enable last, saved, at its value. */
     fk_rgb.enable = 0;
     CHECK(prof_save(3, NULL) == PROF_OK);
@@ -516,8 +516,8 @@ static void test_p5b(void) {
     fk_power = 3;  CHECK(!prof_differs(r));   /* not a profile's (Decided 2) */
     fk_rgb.mode = 1; CHECK(prof_differs(r));
     fk_rgb.mode = 2; fk_rgb.speed = 1; CHECK(prof_differs(r));
-    fk_rgb.speed = 127; fk_hours = true; CHECK(prof_differs(r));
-    fk_hours = false; fk_ind[1] = 61; CHECK(prof_differs(r));
+    fk_rgb.speed = 127; fk_view = 2; CHECK(prof_differs(r));
+    fk_view = 1; fk_ind[1] = 61; CHECK(prof_differs(r));
     r[PR_FIELDS] &= (uint8_t)~PF_CHARGING; CHECK(!prof_differs(r));   /* a field it doesn't hold */
     fk_ind[1] = 60; fk_clock = 0; CHECK(prof_differs(r));
     fk_clock = 4; fk_rgb.enable = 0; CHECK(prof_differs(r));

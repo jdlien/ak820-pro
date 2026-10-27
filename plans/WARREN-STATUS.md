@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~17:50.
+2026-10-26 ~22:45.
 
 ## Where things stand
 
@@ -388,6 +388,16 @@ This file is the thread; read it first after a context loss. Updated
        kept; `553108e5f2` from 16:01), from Buzz's session. JD there: "This
        config menu is just awesome." The one thing raised: the menu's text
        is small. Noted only; no change asked.
+     - **Both, the battery readout's third option (10-26, ~22:45): on the
+       keyboard on gremlin, NOT merged** (`gremlin/batt-both` at
+       `0ada282c`, GREMLIN-RESULTS §20v; codex: no blocker, two findings
+       fixed). JD: "an option to show hours & percent". `85% 160h`; 8 cells
+       close the space to 4 px; `100%` alone where it would be 9. The
+       readout is set to Both there. **Owed (JD):** the dashboard's text,
+       after an hour awake on battery (the slider to BT or 2.4G first: it
+       was on the cable's position); then merge. **Next after it (JD):** an
+       experimental fork with a bigger menu font ("might be interesting to
+       see you do an experimental fork to try").
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

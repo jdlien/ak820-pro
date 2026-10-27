@@ -124,13 +124,13 @@ int main(void) {
           "bytes 0-6 kept, the pending save written: %d, %u %u", writes, stored[7], stored[8]);
 
     /* P4: the battery readout (byte 9), its frozen encoding: 0 unset, 1
-     * percent, 2 hours; unset and garbage read percent. */
-    static const struct { uint8_t b; bool hours; } bv[] = {{0, false}, {1, false}, {2, true}, {3, false}, {255, false}};
+     * percent, 2 hours, 3 both (JD, 10-26); unset and garbage read percent. */
+    static const struct { uint8_t b, view; } bv[] = {{0, 1}, {1, 1}, {2, 2}, {3, 3}, {4, 1}, {255, 1}};
     for (size_t i = 0; i < sizeof bv / sizeof bv[0]; i++) {
         memset(stored, 0, sizeof stored);
         stored[9] = bv[i].b;
         boot();
-        CHECK(kb_eeconfig_get_batt_hours() == bv[i].hours, "batt_view byte %u", bv[i].b);
+        CHECK(kb_eeconfig_get_batt_view() == bv[i].view, "batt_view byte %u", bv[i].b);
     }
     /* Saved through the deferred write, the other bytes kept; an unchanged
      * save writes nothing; percent is stored as 1, not as unset. */
@@ -139,18 +139,28 @@ int main(void) {
     memcpy(stored, old9, sizeof old9);
     boot();
     writes = 0;
-    kb_eeconfig_set_batt_hours(true);
-    CHECK(kb_eeconfig_get_batt_hours() && kb_eeconfig_write_pending() && writes == 0, "hours: deferred");
+    kb_eeconfig_set_batt_view(KB_BATT_VIEW_HOURS);
+    CHECK(kb_eeconfig_get_batt_view() == KB_BATT_VIEW_HOURS && kb_eeconfig_write_pending() && writes == 0,
+          "hours: deferred");
     settle();
     CHECK(writes == 1 && stored[9] == 2 && memcmp(stored, old9, sizeof old9) == 0, "hours stored as 2, bytes 0-8 kept");
-    kb_eeconfig_set_batt_hours(true);
+    kb_eeconfig_set_batt_view(KB_BATT_VIEW_HOURS);
     settle();
     CHECK(writes == 1, "unchanged: nothing written");
-    kb_eeconfig_set_batt_hours(false);
+    kb_eeconfig_set_batt_view(KB_BATT_VIEW_BOTH);
     settle();
-    CHECK(writes == 2 && stored[9] == 1, "percent stored as 1: %u", stored[9]);
+    CHECK(writes == 2 && stored[9] == 3, "both stored as 3: %u", stored[9]);
     boot();
-    CHECK(!kb_eeconfig_get_batt_hours(), "percent after a reboot");
+    CHECK(kb_eeconfig_get_batt_view() == KB_BATT_VIEW_BOTH, "both after a reboot");
+    kb_eeconfig_set_batt_view(0);
+    kb_eeconfig_set_batt_view(4);
+    settle();
+    CHECK(writes == 2 && stored[9] == 3, "out of range: ignored, nothing written");
+    kb_eeconfig_set_batt_view(KB_BATT_VIEW_PERCENT);
+    settle();
+    CHECK(writes == 3 && stored[9] == 1, "percent stored as 1: %u", stored[9]);
+    boot();
+    CHECK(kb_eeconfig_get_batt_view() == KB_BATT_VIEW_PERCENT, "percent after a reboot");
 
     printf("%s kbee: the settings block's indicator and battery-readout bytes\n", failures ? "FAIL" : "ok  ");
     return failures ? 1 : 0;

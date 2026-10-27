@@ -282,13 +282,13 @@ def main():
         turn(h, 1, "move", SCR(CLOCK))
         hold(h, "cancelled", SCR(TOP), R_CLOCK)
 
-        # Battery (P4): the other readout, then the original again; a dwell on
-        # its live preview.
+        # Battery (P4): another readout, Both (JD, 10-26) unless that's the
+        # saved one, then the original again; a dwell on its live preview.
         turn(h, R_BATT - R_CLOCK, "to Battery", SCR(TOP), R_BATT)
         s = click(h, "Battery", SCR(BATT))
         orig_b = s["cursor"]
         dwell(h, "Battery's preview, 3 s", 3.0)
-        nxt = 3 - orig_b
+        nxt = 3 if orig_b != 3 else 1
         turn(h, nxt - orig_b, "to the other readout", SCR(BATT), nxt)
         click(h, "commit it", SCR(TOP), R_BATT)
         click(h, "Battery again", SCR(BATT), nxt)

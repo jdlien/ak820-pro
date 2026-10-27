@@ -1,5 +1,6 @@
-/* The battery readout's text (P4, plans/CONFIG-MENU-P1-DESIGN.md): the
- * firmware's graphics/batt_text.c, verbatim, over the design's table.
+/* The battery readout's text (P4, plans/CONFIG-MENU-P1-DESIGN.md; Both, JD
+ * 10-26): the firmware's graphics/batt_text.c, verbatim, over the design's
+ * table.
  *
  *   D=qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro
  *   gcc -std=c11 -Wall -Wextra -I $D/graphics scripts/batt_text_test.c $D/graphics/batt_text.c -o bt && ./bt
@@ -11,12 +12,14 @@
 
 static int fails;
 
-static void want(const char *exp, uint8_t pct, bool on_batt, uint16_t left, bool ready, bool hours) {
+enum { P = BATT_VIEW_PERCENT, H = BATT_VIEW_HOURS, B = BATT_VIEW_BOTH };
+
+static void want(const char *exp, uint8_t pct, bool on_batt, uint16_t left, bool ready, uint8_t view) {
     char out[BATT_TEXT_MAX + 1];
     memset(out, 'x', sizeof out);
-    batt_level_text(out, pct, on_batt, left, ready, hours);
+    batt_level_text(out, pct, on_batt, left, ready, view);
     if (strcmp(out, exp) != 0 || strlen(out) > BATT_TEXT_MAX) {
-        printf("FAIL pct %u batt %d left %u ready %d hours %d: \"%s\", wanted \"%s\"\n", pct, on_batt, left, ready, hours,
+        printf("FAIL pct %u batt %d left %u ready %d view %u: \"%s\", wanted \"%s\"\n", pct, on_batt, left, ready, view,
                out, exp);
         fails++;
     }
@@ -25,34 +28,51 @@ static void want(const char *exp, uint8_t pct, bool on_batt, uint16_t left, bool
 int main(void) {
     const uint16_t NONE = 0xFFFFu;
     /* Percent: today's rules. */
-    want("85%", 85, true, 9600, true, false);    /* 160 h: the percent alone */
-    want("85%", 85, true, 600, true, false);     /* 10 h: not under 10 */
-    want("18% 9h", 18, true, 599, true, false);  /* under 10 h: rounded down */
-    want("18% 6h", 18, true, 380, true, false);
-    want("2% 1h", 2, true, 60, true, false);
-    want("2% <1h", 2, true, 59, true, false);
-    want("2% <1h", 2, true, 0, true, false);
-    want("18%", 18, true, 380, false, false);    /* no mature average */
-    want("18%", 18, false, 380, true, false);    /* not on battery */
-    want("18%", 18, true, NONE, true, false);    /* no estimate */
-    want("100%", 100, true, NONE, false, false);
-    want("100% 9h", 100, true, 540, true, false);   /* seven cells, the slot's most */
-    want("100% <1", 100, true, 30, true, false);    /* eight cut to seven, as before P4 */
+    want("85%", 85, true, 9600, true, P);    /* 160 h: the percent alone */
+    want("85%", 85, true, 600, true, P);     /* 10 h: not under 10 */
+    want("18% 9h", 18, true, 599, true, P);  /* under 10 h: rounded down */
+    want("18% 6h", 18, true, 380, true, P);
+    want("2% 1h", 2, true, 60, true, P);
+    want("2% <1h", 2, true, 59, true, P);
+    want("2% <1h", 2, true, 0, true, P);
+    want("18%", 18, true, 380, false, P);    /* no mature average */
+    want("18%", 18, false, 380, true, P);    /* not on battery */
+    want("18%", 18, true, NONE, true, P);    /* no estimate */
+    want("100%", 100, true, NONE, false, P);
+    want("100% 9h", 100, true, 540, true, P);   /* seven cells, the slot's most at full spacing */
+    want("100% <1h", 100, true, 30, true, P);   /* eight, its space closed up (it was cut to "100% <1" before Both) */
+    want("85%", 85, true, 9600, true, 0);       /* unset or garbage: percent */
+    want("18% 6h", 18, true, 380, true, 7);
     /* Hours (JD, 10-25): "160h" all the time on battery. */
-    want("160h", 85, true, 9600, true, true);
-    want("160h", 85, true, 9659, true, true);       /* rounded down */
-    want("10h", 40, true, 600, true, true);
-    want("6h", 18, true, 380, true, true);          /* under 10 h: the hours alone */
-    want("1h", 2, true, 60, true, true);
-    want("<1h", 2, true, 59, true, true);
-    want("<1h", 1, true, 0, true, true);
-    want("999h", 100, true, 0xFFFEu, true, true);   /* the estimate's ceiling, 1092 h, shown as three digits */
-    want("999h", 100, true, 60000u, true, true);
-    want("998h", 100, true, 59880u, true, true);
+    want("160h", 85, true, 9600, true, H);
+    want("160h", 85, true, 9659, true, H);       /* rounded down */
+    want("10h", 40, true, 600, true, H);
+    want("6h", 18, true, 380, true, H);          /* under 10 h: the hours alone */
+    want("1h", 2, true, 60, true, H);
+    want("<1h", 2, true, 59, true, H);
+    want("<1h", 1, true, 0, true, H);
+    want("999h", 100, true, 0xFFFEu, true, H);   /* the estimate's ceiling, 1092 h, shown as three digits */
+    want("999h", 100, true, 60000u, true, H);
+    want("998h", 100, true, 59880u, true, H);
     /* Hours, no estimate yet: the percent. */
-    want("85%", 85, true, 9600, false, true);       /* the first hour after a boot */
-    want("85%", 85, true, NONE, true, true);
-    want("85%", 85, false, 9600, true, true);       /* USB: draw_battery() shows "USB" before this */
+    want("85%", 85, true, 9600, false, H);       /* the first hour after a boot */
+    want("85%", 85, true, NONE, true, H);
+    want("85%", 85, false, 9600, true, H);       /* USB: draw_battery() shows "USB" before this */
+    /* Both (JD, 10-26): the level and the hours, all the time on battery. */
+    want("85% 160h", 85, true, 9600, true, B);   /* eight cells: draw_battery() closes the space */
+    want("99% 160h", 99, true, 9659, true, B);
+    want("62% 31h", 62, true, 1860, true, B);
+    want("18% 6h", 18, true, 380, true, B);
+    want("2% <1h", 2, true, 59, true, B);
+    want("100% 51h", 100, true, 3060, true, B);
+    want("100% 99h", 100, true, 5999, true, B);
+    want("100%", 100, true, 6000, true, B);      /* "100% 100h" is nine: the level alone (JD) */
+    want("100%", 100, true, 9600, true, B);
+    want("99% 999h", 99, true, 0xFFFEu, true, B);
+    want("5% 999h", 5, true, 60000u, true, B);
+    want("85%", 85, true, 9600, false, B);       /* no estimate yet: the percent */
+    want("85%", 85, true, NONE, true, B);
+    want("85%", 85, false, 9600, true, B);
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

@@ -395,13 +395,14 @@ Click: back              Click or hold: stop
 
 ### Battery (P4, 10-25; on the top level; title: `Battery`)
 
-A choice: `Percent`, `Hours of use`; the top level's value: `Percent`,
-`Hours`.
+A choice: `Percent`, `Hours of use`, `Both` (10-26); the top level's
+value: `Percent`, `Hours`, `Both`.
 
 ```
 ◀ Back
 ■ Percent          85%
   Hours of use    160h
+  Both        85% 160h
 ```
 
 Each option shows what the dashboard would show on battery now (JD, 10-25:
@@ -413,6 +414,7 @@ it's not going to display yet"):
 ◀ Back
 ■ Percent          85%
   Hours of use      --
+  Both          85% --
 
 Hours show after an
 hour on battery:
@@ -428,6 +430,11 @@ that all the time there"):
   (`<1h` under an hour).
 - **Hours of use:** `160h` (at most `999h`), `<1h` under an hour. Until there's an estimate
   (the first hour on battery after a boot or a flash) it shows the percent.
+- **Both** (JD, 10-26: "an option to show hours & percent"): `85% 160h`,
+  `18% <1h`. Seven cells fit beside the bulb; eight (`99% 160h`,
+  `100% 51h`) close the space up to fit. Nine won't: at `100%` with 100 h
+  or more it shows `100%` alone (JD: "only ever show time if we're under
+  99% if it gets too tight"). Until there's an estimate, the percent.
 - Either way: `USB`, `Charge`, `No Batt` and `Low` as before. The hours
   count awake time only, so they move with what the lights draw.
 

@@ -232,7 +232,7 @@ def decode(r):
     if f & PF_CLOCK:
         d["clock"] = CLOCKS[r[11]] if r[11] < len(CLOCKS) else r[11]
     if f & PF_BVIEW:
-        d["battery"] = {1: "percent", 2: "hours"}.get(r[12], r[12])
+        d["battery"] = {1: "percent", 2: "hours", 3: "both"}.get(r[12], r[12])
     if f & PF_POWER:
         d["power"] = POWER[r[13]] if r[13] < len(POWER) else r[13]
     if f & PF_NAME:

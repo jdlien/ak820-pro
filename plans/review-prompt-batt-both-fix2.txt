@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A second check of a fix before a flash. Your check of Both's fix (plans/review-codex-batt-both-fix-raw.md) found the quick re-entry still open. qmk_firmware-ak820pro `git diff 295e359c 0ada282c` (menu/menu.c only): as the Battery page opens, its rows S_ROW0 + 1 to the page's end are invalidated, as the Clock's examples are. scripts/menu_s0_test.c's test_p4 now has your case (on Battery at "80% --", Back, the average 59 to 60, reopened before the top level painted), which failed on 295e359c and passes on 0ada282c; both host builds pass. Dev build OK, heap gap 136 B.
+
+Check: the finding is closed; the invalidation's order against push() and show() matches the Clock's; anything unsafe to flash on the keyboard on gremlin. File and line. Under 80 words.

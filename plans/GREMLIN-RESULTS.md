@@ -1635,3 +1635,47 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
     above 65.5 ms is unknown. Otherwise the longest 18.4 ms; FAILs only for
     the settles (`p5timeout-board-1f3c79e9.json`).
 
+### 20v. The battery readout's Both (10-26, 21:00-22:45)
+
+- **JD (10-26):** "could we add an option to show hours & percent on the
+  battery for the battery options? I think I'd prefer that. But does it
+  fit? ... do the math, see if it fits with the battery + power/charge
+  icon."
+- **The math** (the shipped 10x23 status face;
+  `history/config-menu-p3-20261025/batt_both_mock.py`, its sheets
+  `batt-both-fit-candidates.png` and `batt-both-as-built.png`): the text
+  slot is 76 px, the icon slot's right edge (x 47) to the bezel
+  margin (x 123): 7 cells at 10 px. `62% 31h` and `18% <1h` are 7 and fit
+  as `18% 6h` always has; `99% 160h` and `100% 51h` are 8, 80 px, and fit
+  with the space closed to 4 px (74 px, the first digit 3 px clear of the
+  bulb); `100% 160h` is 9 (84 px even closed) and shows `100%` alone (JD:
+  "only ever show time if we're under 99% if it gets too tight"). The
+  estimate needs an hour on battery, so 100% with it showing is rare.
+- **`0ada282c`** on `gremlin/batt-both` (dev, token `0x96be043a`, heap gap
+  136 B, unchanged): `18faf312` the option (batt_text.c's rule,
+  draw_battery()'s closed space glyph by glyph, kb_eeconfig's byte 3,
+  profiles' range, the menu's fourth row `Both` with its preview `85% --`
+  until ready, the note to rows 5-7), `295e359c` and `0ada282c` codex's two
+  findings (Both's preview stale across the hours turning ready, its
+  signature colliding; and the same on a quick re-entry), each reproduced
+  in `menu_s0_test.c` first. Codex: no blocker in any of the three
+  (`plans/review-codex-batt-both-2026-10-26.md`). Host tests: batt_text,
+  the menu (both builds), profiles, diag_sim's kbee.
+- **On the board** (flashed ~22:20; JD's profiles and live settings kept and
+  put back, read back equal):
+  - **Both:** the page's fourth row, a turn past it wraps to Back (the note
+    is no stop), a commit stores 3 (the live record's byte 12), the page
+    reopens on it, and the original (2, Hours) goes back.
+  - **the menu's pass:** the longest pass 17.4 ms, on Power's commit, not
+    Battery's (17.1 at §20u); 65 over 15 ms (59 at §20u, 33-35 before);
+    Battery's own steps 15-17 ms, the page's whole repaint on entry among
+    them; FAILs only for settles of 1.0-1.2 s under Drift and the 17.4 ms
+    against the 17.0 line (`board-0ada282c.json`).
+  - **the profiles' pass:** the post-flash consolidation on the second Save
+    new at the field's ceiling again (65535 us), otherwise the longest 18 ms
+    as at §20u; FAILs only for the settles (`bboth-p5-board-0ada282c.json`).
+- **Then** the readout set to Both through the menu (JD: "I think I'd prefer
+  that"): read back 3. **Owed (JD):** the dashboard's text on the panel, which
+  needs an hour awake on battery; the keyboard's slider was on the cable's
+  position (ak820battery.py: `slider_usb`).
+

@@ -1,0 +1,5 @@
+**P3 — quick re-entry remains:** [menu.c:1838](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1838) resets readiness without invalidation. Back → readiness flips → reopen before Both’s slot repaints can preserve colliding `80% --`. Invalidate on entry too; add that regression.
+
+The original open-page case is fixed. [menu.c:2297](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:2297) correctly invalidates slots 4–10 outside scheduler scans. [menu.c:259](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:259): union users remain confined to their pages and initialized on entry; size stays 12 B.
+
+No flash-safety blocker found in this diff. Native tests weren’t rerun: execution denied.

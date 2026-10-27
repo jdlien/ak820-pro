@@ -1335,10 +1335,10 @@ bool env_clock_now(env_time_t *t) {
 }
 uint16_t env_rtc_tick(void) { return fk_tick; }
 /* P4: the battery readout. */
-static bool fk_batt_hours;
+static uint8_t fk_batt_view = 1;   /* BATT_VIEW_* */
 static int  fk_batt_writes;
-bool env_batt_hours(void) { return fk_batt_hours; }
-void env_batt_hours_set(bool h) { fk_batt_hours = h; fk_batt_writes++; }
+uint8_t env_batt_view(void) { return fk_batt_view; }
+void env_batt_view_set(uint8_t v) { fk_batt_view = v; fk_batt_writes++; }
 /* What the readout is made of: 85% on battery, 160 h left, the average mature. */
 static env_batt_t fk_batt = {85, true, 9600, 120};
 void env_batt_facts(env_batt_t *b) { *b = fk_batt; }
@@ -3413,14 +3413,15 @@ static void test_p3(void) {
     fk_pf         = 0;
 }
 
-/* --- P4: Battery, the readout in percent or hours ----------------------------
- * (plans/CONFIG-MENU-P1-DESIGN.md, "P4"). Its screen id: 16 + N_BATT (45). */
+/* --- P4: Battery, the readout in percent, hours or both ----------------------
+ * (plans/CONFIG-MENU-P1-DESIGN.md, "P4"; Both, JD 10-26). Its screen id:
+ * 16 + N_BATT (45). */
 enum { SC_BATT = 16 + 45 };
 static void test_p4(void) {
     fw_reset();
     fk_power = 1; fk_clock = 0;
     fk_lcd = fk_lcd_saved = 52;
-    fk_batt_hours = false; fk_batt_writes = 0;
+    fk_batt_view = BATT_VIEW_PERCENT; fk_batt_writes = 0;
     fk_batt = (env_batt_t){85, true, 9600, 120};
     menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
     CHECK(op27(11, 0, 0) == MI_OK);
@@ -3437,8 +3438,9 @@ static void test_p4(void) {
     CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 1 && title_bad(FONT_MONO_I_BATT " Battery") == 0);
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 &&
           row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "85%"), MENU_LIT) == 0 &&
-          row_bad(2, cells2("  Hours of use", "160h"), MENU_DIM) == 0);
-    for (int r = 3; r < 8; r++) CHECK(row_bad(r, "", 0) == 0);
+          row_bad(2, cells2("  Hours of use", "160h"), MENU_DIM) == 0 &&
+          row_bad(3, cells2("  Both", "85% 160h"), MENU_DIM) == 0);
+    for (int r = 4; r < 8; r++) CHECK(row_bad(r, "", 0) == 0);
 
     /* Live, with nothing pressed: the warm-up (20 of the 60 minutes), the
      * hours "--" and the note; then a minute later; then on USB, warmed up;
@@ -3446,33 +3448,72 @@ static void test_p4(void) {
     fk_batt.avg_minutes = 20;
     m_settle();
     CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "85%"), MENU_LIT) == 0 &&
-          row_bad(2, cells2("  Hours of use", "--"), MENU_DIM) == 0 && row_bad(3, "", 0) == 0 &&
-          row_bad(4, "Hours show after an", MENU_WHITE) == 0 && row_bad(5, "hour on battery:", MENU_WHITE) == 0 &&
-          row_bad(6, "40 min to go.", MENU_WHITE) == 0 && row_bad(7, "", 0) == 0);
+          row_bad(2, cells2("  Hours of use", "--"), MENU_DIM) == 0 &&
+          row_bad(3, cells2("  Both", "85% --"), MENU_DIM) == 0 && row_bad(4, "", 0) == 0 &&
+          row_bad(5, "Hours show after an", MENU_WHITE) == 0 && row_bad(6, "hour on battery:", MENU_WHITE) == 0 &&
+          row_bad(7, "40 min to go.", MENU_WHITE) == 0);
     fk_batt.avg_minutes = 59;
     m_settle();
-    CHECK(row_bad(6, "1 min to go.", MENU_WHITE) == 0);
+    CHECK(row_bad(7, "1 min to go.", MENU_WHITE) == 0);
     fk_batt = (env_batt_t){100, false, 0xFFFFu, 120};
     m_settle();
     CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "100%"), MENU_LIT) == 0 &&
-          row_bad(2, cells2("  Hours of use", "--"), MENU_DIM) == 0 && row_bad(4, "Hours show only", MENU_WHITE) == 0 &&
-          row_bad(5, "on battery.", MENU_WHITE) == 0 && row_bad(6, "", 0) == 0);
+          row_bad(2, cells2("  Hours of use", "--"), MENU_DIM) == 0 &&
+          row_bad(3, cells2("  Both", "100% --"), MENU_DIM) == 0 && row_bad(5, "Hours show only", MENU_WHITE) == 0 &&
+          row_bad(6, "on battery.", MENU_WHITE) == 0 && row_bad(7, "", 0) == 0);
     fk_batt = (env_batt_t){0, true, 0xFFFFu, 120};
     m_settle();
     CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "Low"), MENU_LIT) == 0 &&
-          row_bad(2, cells2("  Hours of use", "Low"), MENU_DIM) == 0 &&
-          row_bad(4, "", 0) == 0 && row_bad(5, "", 0) == 0);   /* no note at the cut (codex) */
+          row_bad(2, cells2("  Hours of use", "Low"), MENU_DIM) == 0 && row_bad(3, cells2("  Both", "Low"), MENU_DIM) == 0 &&
+          row_bad(5, "", 0) == 0 && row_bad(6, "", 0) == 0);   /* no note at the cut (codex) */
     fk_batt = (env_batt_t){0, true, 0xFFFFu, 20};
     m_settle();
-    CHECK(row_bad(4, "", 0) == 0 && row_bad(6, "", 0) == 0);   /* nor a warm-up's: no wait brings the hours */
+    CHECK(row_bad(5, "", 0) == 0 && row_bad(7, "", 0) == 0);   /* nor a warm-up's: no wait brings the hours */
     fk_batt = (env_batt_t){0xFF, false, 0xFFFFu, 120};
     m_settle();
     CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "--"), MENU_LIT) == 0 &&
-          row_bad(4, "Hours show only", MENU_WHITE) == 0);   /* charging, the level unknown */
+          row_bad(3, cells2("  Both", "--"), MENU_DIM) == 0 &&
+          row_bad(5, "Hours show only", MENU_WHITE) == 0);   /* charging, the level unknown */
     fk_batt = (env_batt_t){18, true, 380, 120};
     m_settle();
     CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", "18% 6h"), MENU_LIT) == 0 &&
-          row_bad(2, cells2("  Hours of use", "6h"), MENU_DIM) == 0 && row_bad(4, "", 0) == 0 && row_bad(5, "", 0) == 0);
+          row_bad(2, cells2("  Hours of use", "6h"), MENU_DIM) == 0 && row_bad(3, cells2("  Both", "18% 6h"), MENU_DIM) == 0 &&
+          row_bad(5, "", 0) == 0 && row_bad(6, "", 0) == 0);
+    /* Both's widest, 8 cells, and the 9 that fall back to the level (JD,
+     * 10-26); under an hour. */
+    fk_batt = (env_batt_t){99, true, 9600, 120};
+    m_settle();
+    CHECK(row_bad(3, cells2("  Both", "99% 160h"), MENU_DIM) == 0);
+    fk_batt = (env_batt_t){100, true, 3060, 120};
+    m_settle();
+    CHECK(row_bad(3, cells2("  Both", "100% 51h"), MENU_DIM) == 0);
+    fk_batt = (env_batt_t){100, true, 9600, 120};
+    m_settle();
+    CHECK(row_bad(2, cells2("  Hours of use", "160h"), MENU_DIM) == 0 && row_bad(3, cells2("  Both", "100%"), MENU_DIM) == 0);
+    fk_batt = (env_batt_t){3, true, 42, 120};
+    m_settle();
+    CHECK(row_bad(3, cells2("  Both", "3% <1h"), MENU_DIM) == 0);
+    /* The hours turning ready repaints Both whatever its signature: "80% --"
+     * and "80% 57h" hash alike there (codex, Both's review). */
+    fk_batt = (env_batt_t){80, true, 3420, 59};
+    m_settle();
+    CHECK(row_bad(3, cells2("  Both", "80% --"), MENU_DIM) == 0);
+    fk_batt.avg_minutes = 60;
+    m_settle();
+    CHECK(row_bad(3, cells2("  Both", "80% 57h"), MENU_DIM) == 0 && row_bad(5, "", 0) == 0);
+    /* A quick re-entry (codex, the fix's check): Back, the hours turning
+     * ready, and into Battery again before the top level's rows have
+     * painted: Both repaints. */
+    fk_batt.avg_minutes = 59;
+    m_settle();
+    CHECK(row_bad(3, cells2("  Both", "80% --"), MENU_DIM) == 0);
+    m_turn(-(int)sub5_cursor());
+    CHECK(op27(2, 0, 0) == MI_OK && wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    CHECK(sub5_screen() == 16 + 1);
+    fk_batt.avg_minutes = 60;
+    CHECK(op27(2, 0, 0) == MI_OK && wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    m_settle();
+    CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 1 && row_bad(3, cells2("  Both", "80% 57h"), MENU_DIM) == 0);
     fk_batt = (env_batt_t){85, true, 9600, 120};
     m_settle();
     CHECK(menu_max_lit <= 1 && sub5_cursor() == 1);   /* the note rows are never the cursor's */
@@ -3493,12 +3534,13 @@ static void test_p4(void) {
             fk_batt       = b;
             m_settle();
             bool ready = b.on_battery && b.avg_minutes >= 60u && b.left_min != 0xFFFFu;
-            char pv[2][BATT_TEXT_MAX + 1];
-            for (int h = 0; h < 2; h++) {
+            char pv[3][BATT_TEXT_MAX + 1];
+            for (int h = 0; h < 3; h++) {
                 if (b.pct > 100u) strcpy(pv[h], "--");
                 else if (b.pct == 0u && b.on_battery) strcpy(pv[h], "Low");
-                else if (h && !ready) strcpy(pv[h], "--");
-                else batt_level_text(pv[h], b.pct, b.on_battery, b.left_min, b.avg_minutes >= 60u, h == 1);
+                else if (h == 1 && !ready) strcpy(pv[h], "--");
+                else if (h == 2 && !ready) snprintf(pv[h], sizeof pv[h], "%u%% --", b.pct);
+                else batt_level_text(pv[h], b.pct, b.on_battery, b.left_min, b.avg_minutes >= 60u, (uint8_t)(h + 1));
             }
             const char *n0 = "", *n1 = "";
             char        n2[24] = "";
@@ -3513,8 +3555,9 @@ static void test_p4(void) {
                 }
             }
             CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Percent", pv[0]), MENU_LIT) == 0 &&
-                  row_bad(2, cells2("  Hours of use", pv[1]), MENU_DIM) == 0 && row_bad(4, n0, MENU_WHITE) == 0 &&
-                  row_bad(5, n1, MENU_WHITE) == 0 && row_bad(6, n2, MENU_WHITE) == 0);
+                  row_bad(2, cells2("  Hours of use", pv[1]), MENU_DIM) == 0 &&
+                  row_bad(3, cells2("  Both", pv[2]), MENU_DIM) == 0 && row_bad(5, n0, MENU_WHITE) == 0 &&
+                  row_bad(6, n1, MENU_WHITE) == 0 && row_bad(7, n2, MENU_WHITE) == 0);
             if ((unsigned)fails != bad_before) {
                 printf("  the sweep's state %d: pct %u batt %d left %u avg %u\n", k, b.pct, b.on_battery, b.left_min,
                        b.avg_minutes);
@@ -3528,28 +3571,39 @@ static void test_p4(void) {
     /* A hold cancels: nothing written, and it says so. */
     m_turn(1);
     m_hold();
-    CHECK(fk_batt_writes == 0 && !fk_batt_hours && title_bad("Cancelled") == 0);
+    CHECK(fk_batt_writes == 0 && fk_batt_view == BATT_VIEW_PERCENT && title_bad("Cancelled") == 0);
     CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_BATT);
 
     /* Hours of use: a click commits, flashes Saved, and the top level shows it. */
     m_click();
     m_turn(1);
     m_click();
-    CHECK(fk_batt_hours && fk_batt_writes == 1 && sub5_screen() == 16 + 1 && sub5_cursor() == T_BATT);
+    CHECK(fk_batt_view == BATT_VIEW_HOURS && fk_batt_writes == 1 && sub5_screen() == 16 + 1 && sub5_cursor() == T_BATT);
     CHECK(title_bad("Saved") == 0 && row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Hours"), MENU_LIT) == 0);
     for (int i = 0; i < 400; i++) fw_pass(5);   /* the flash's 1.3 s */
     m_settle();
 
-    /* Reopened, on Hours of use; then Percent again. */
+    /* Reopened, on Hours of use; then Both (JD, 10-26); then Percent again. */
     m_click();
     CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 2 &&
           row_bad(2, cells2(FONT_MONO_CHECK_BOX "Hours of use", "160h"), MENU_LIT) == 0 &&
           row_bad(1, cells2("  Percent", "85%"), MENU_DIM) == 0);
+    m_turn(1);   /* Both */
+    m_click();
+    CHECK(fk_batt_view == BATT_VIEW_BOTH && fk_batt_writes == 2 && title_bad("Saved") == 0 &&
+          row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Both"), MENU_LIT) == 0);
+    for (int i = 0; i < 400; i++) fw_pass(5);
+    m_settle();
+    m_click();
+    CHECK(sub5_screen() == SC_BATT && sub5_cursor() == 3 &&
+          row_bad(3, cells2(FONT_MONO_CHECK_BOX "Both", "85% 160h"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  Hours of use", "160h"), MENU_DIM) == 0);
     m_turn(1);   /* a wrap to Back: the note rows aren't stops */
     CHECK(sub5_cursor() == 0);
     m_turn(1);   /* Percent */
     m_click();
-    CHECK(!fk_batt_hours && fk_batt_writes == 2 && row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Percent"), MENU_LIT) == 0);
+    CHECK(fk_batt_view == BATT_VIEW_PERCENT && fk_batt_writes == 3 &&
+          row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Percent"), MENU_LIT) == 0);
     for (int i = 0; i < 400; i++) fw_pass(5);
     m_settle();
 
@@ -3854,7 +3908,7 @@ static void test_profiles(void) {
     fk_power = 1; fk_clock = 0;
     fk_lcd = fk_lcd_saved = 52;
     fk_ind[0] = fk_ind[1] = 40;
-    fk_batt_hours = false;
+    fk_batt_view = BATT_VIEW_PERCENT;
     fk_rgb = (env_rgb_t){3, 128, 255, 204, 128, 1, 0xFF};   /* Cycle All, 180 degrees, 100%, 80%, speed 50% */
     menu_watch = true; menu_max_lit = menu_max_cursor = 0;
     CHECK(op27(11, 0, 0) == MI_OK);
@@ -4233,7 +4287,7 @@ static void test_preview(void) {
     fw_reset();
     fk_power = 1; fk_clock = 0;
     fk_ind[0] = fk_ind[1] = 40;
-    fk_batt_hours = false;
+    fk_batt_view = BATT_VIEW_PERCENT;
     const env_rgb_t A = {1, 10, 255, 200, 100, 1, 0xFF};   /* Profile 1: Solid, the screen 30% */
     const env_rgb_t B = {9, 200, 180, 150, 60, 1, 0xFF};   /* Profile 2: Drift, 70% */
     const env_rgb_t C = {3, 99, 255, 255, 128, 1, 0xFF};   /* the live settings: Cycle All, 50% */
@@ -4393,7 +4447,7 @@ static void test_preview_codex(void) {
     fw_reset();
     fk_power = 1; fk_clock = 0;
     fk_ind[0] = fk_ind[1] = 40;
-    fk_batt_hours = false;
+    fk_batt_view = BATT_VIEW_PERCENT;
     const env_rgb_t A = {1, 10, 255, 200, 100, 1, 0xFF};
     const env_rgb_t C = {3, 99, 255, 255, 128, 1, 0xFF};
     fk_rgb = A; fk_lcd = 30;
@@ -4500,7 +4554,7 @@ static void test_rename(void) {
     fk_power = 1; fk_clock = 0;
     fk_lcd = fk_lcd_saved = 52;
     fk_ind[0] = fk_ind[1] = 40;
-    fk_batt_hours = false;
+    fk_batt_view = BATT_VIEW_PERCENT;
     fk_keys_down = 0; fk_tapping_busy = false; fk_shift = false;
     CHECK(prof_save(0, NULL) == PROF_OK);
     fk_prof_settle();

@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A check of a fix before a flash. Your review of the Both readout (plans/review-codex-batt-both-raw.md) found Both's preview stale when the hours turn ready ("80% --" and "80% 57h" hash alike). qmk_firmware-ak820pro `git diff 18faf312 295e359c` (menu/menu.c only): the page-scoped union `pg` gains `batt_ready`, set as the Battery page opens; menu_tick() compares it each pass on that page and, on a flip, invalidates rows S_ROW0 + 1 to the page's end, as the Clock's jump does. scripts/menu_s0_test.c's test_p4 now has your case (80%, 3420 min, average 59 then 60), which failed before the fix and passes after; both host builds pass. Dev build OK, heap gap 136 B.
+
+Check: the fix closes your finding; the union's sharing (About's snapshot, the Clock's time, Rename's name) can't be disturbed by or disturb it; the invalidation's range and timing (outside the scheduler's scans); anything unsafe to flash on the keyboard on gremlin. File and line. Under 100 words.
