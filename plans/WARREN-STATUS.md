@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-27 ~11:20.
+2026-10-27 ~11:30.
 
 ## Where things stand
 
@@ -389,7 +389,7 @@ This file is the thread; read it first after a context loss. Updated
        config menu is just awesome." The one thing raised: the menu's text
        is small. Noted only; no change asked.
      - **Both, the battery readout's third option (10-26, ~22:45): on the
-       keyboard on gremlin, NOT merged** (`gremlin/batt-both` at
+       keyboard on gremlin, merged 10-27** (`gremlin/batt-both` at
        `0ada282c`, GREMLIN-RESULTS §20v; codex: no blocker, two findings
        fixed). JD: "an option to show hours & percent". `85% 160h`; 8 cells
        close the space to 4 px; `100%` alone where it would be 9. The
@@ -401,7 +401,7 @@ This file is the thread; read it first after a context loss. Updated
        JD's call on the Both order (hours first or percent first) is open:
        kept percent first, offered the flip.
      - **The Win/Mac switch loads each side's last profile (10-27, ~09:40):
-       on the keyboard on gremlin, NOT merged** (`gremlin/os-profiles` at
+       on the keyboard on gremlin, merged 10-27** (`gremlin/os-profiles` at
        `bf29a081`, branched from `gremlin/batt-both`, so merge Both first;
        GREMLIN-RESULTS §20w; codex: no blocker). JD: "implement the profile
        association with win/Mac switch", always on (BACKLOG.md's entry of
@@ -420,11 +420,16 @@ This file is the thread; read it first after a context loss. Updated
        icons that we show on the battery row, right aligned"; the mock-up
        `history/config-menu-p3-20261025/power-bulbs-mock.png`, as built
        `power-bulbs-as-built.png`): on the keyboard on gremlin since ~11:15 (`ce3f842d`, GREMLIN-RESULTS §20y; codex: no blocker; the Power page's longest pass 16.8 ms).
-       **Owed (JD), all three at once:** a real flip, to the Mac's side and
-       back (Cyan-Magenta, then RGB Cycle as left); a look at the Power
-       page; Reset settings only if he wants his settings reset. Then merge
-       `gremlin/batt-both` and `gremlin/os-profiles`, pin deps.lock, and
-       CLAUDE.md's Fn line ("up to eight" profiles: seven; Reset settings).
+     - **MERGED (10-27, ~11:30):** JD flipped the real switch and looked at
+       the Power page: "Yeah, looks good. Shows the effect name when
+       switching. Lightbulb icons look great". `ak820pro-jdlien`
+       fast-forwarded to `ce3f842d` (Both, the switch's profiles, each side
+       kept as left, the defaults, Reset settings, the bulbs), pushed;
+       deps.lock pins it; main fast-forwarded to warren/config-menu;
+       CLAUDE.md's Fn line and flash.sh's refusal. The keyboard on gremlin
+       runs exactly that commit (dev, token `0x59b75946`). **Still owed
+       (JD):** Both's dashboard text after an hour awake on battery.
+       **Next (JD):** the experimental bigger menu font.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

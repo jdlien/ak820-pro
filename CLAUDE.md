@@ -458,7 +458,8 @@ enum sync; it refuses a dirty or off-pin tree. `flash.sh`, in order:
 - backs up the VIA keymap (with the macros since P5a), **the RGB
   lighting** and, where the firmware has `HC_PROFILES`, **the settings
   profiles and the live settings**, and refuses if any backup fails
-  (`--no-lighting`, `--no-profiles`, `--no-backup` to override);
+  (`--no-lighting`, `--no-profiles`, `--no-backup` to override), or if
+  the board holds eight profiles (a firmware since 10-27 keeps seven);
 - **refuses on battery once the RGB cut has fired** (the reserve; a pack that
   dies mid-write leaves the board half-erased; `--on-reserve` overrides);
 - **dumps the battery log** to `~/Documents/ak820pro-battlogs/`, fatal unless
@@ -512,8 +513,9 @@ firmware.
   "Prof+" and "Prof-" among VIA's custom keycodes) are unbound by default:
   bind them in VIA. A press loads the next or previous saved profile and
   names it in the dashboard's status band.
-- ⚠️ **VIA's macro buffer is 19 B since P5d** (10-26): the eight profiles
-  take the EEPROM's top 218 B, and QMK's 100 B minimum is sidestepped by
+- ⚠️ **VIA's macro buffer is 19 B since P5d** (10-26): the profiles' block
+  (seven profiles and the Win/Mac switch's last record since 10-27) takes
+  the EEPROM's top 218 B, and QMK's 100 B minimum is sidestepped by
   sizing the buffer directly (`config.h`). Sixteen empty macros fill 16 of
   those bytes: in practice, no macros.
 - Keymap backup: `venv/bin/python hostagent/ak820keymap.py dump|restore|show`
@@ -532,11 +534,15 @@ Alphas/Mods) · `Fn`+`PgUp/PgDn` LCD brightness · `Fn`+`Home` LCD toggle ·
 sets the same) · `Fn` + a knob click opens and closes the configuration
 menu (the knob drives it; typing still works;
 [`plans/CONFIG-MENU-P1-DESIGN.md`](plans/CONFIG-MENU-P1-DESIGN.md); its
-Profiles row, page one's last, holds up to eight settings profiles: Save
+Profiles row, page one's last, holds up to seven settings profiles: Save
 new, Load, Save, Rename and Delete, each with its icon, and a 0.3 s rest
 on one previews its lighting and screen level; Rename alone takes the
 keyboard's typing,
-[`plans/SETTINGS-PROFILES-PLAN.md`](plans/SETTINGS-PROFILES-PLAN.md)) ·
+[`plans/SETTINGS-PROFILES-PLAN.md`](plans/SETTINGS-PROFILES-PLAN.md); each
+side of the Win/Mac switch remembers its profile, and a flip brings the
+other side back as it was left (10-27); Reset settings, under Bootloader,
+puts the defaults back and keeps the profiles; the Power page shows each
+mode's bulb) ·
 `Fn`+`D` debug page (tap
 cycles debug page → camera page (big volts and %) → dashboard, HOLD
 ~800 ms resets the health counters) · `Fn`+`B` power mode (Always on /
