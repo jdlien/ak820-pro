@@ -78,6 +78,10 @@ uint8_t env_effect_id(uint8_t i) { return i < 3 ? fx_id[i] : 0xFF; }
 /* An open preview's rollback, by domain. */
 static int fk_external[4];
 void       menu_edit_external(uint8_t d) { if (d < 4) fk_external[d]++; }
+/* A flip's load, named (10-27). */
+static int     fk_switched;
+static uint8_t fk_sw_slot, fk_sw_st;
+void           env_prof_switched(uint8_t slot, uint8_t st) { fk_switched++; fk_sw_slot = slot; fk_sw_st = st; }
 
 /* --- Helpers -------------------------------------------------------------------- */
 
@@ -90,6 +94,7 @@ static void reset(void) {
     fk_lcd = 52; fk_ind[0] = 30; fk_ind[1] = 60; fk_clock = 4; fk_power = 1; fk_view = 1;
     calls[0] = '\0';
     memset(fk_external, 0, sizeof fk_external);
+    fk_switched = 0; fk_sw_slot = fk_sw_st = 0xEE;
     prof_test_reset();
 }
 #define B(off) ee[PROF_BASE + (off)]
@@ -183,7 +188,7 @@ static void test_format_and_save(void) {
     CHECK(nlog == 10 + 3);
     for (int s = 0; s < 8; s++) CHECK(wlog[s].addr == PROF_BASE + PROF_REC_OFF(s) && wlog[s].first == PS_EMPTY);
     CHECK(wlog[8].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[8].first == 0xFF);
-    CHECK(wlog[9].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[9].first == PROF_MAGIC_V2);
+    CHECK(wlog[9].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[9].first == PROF_MAGIC_V3);
     /* The save: the state empty, the body (26 B), the state saved; the active
      * slot deferred (P5b): it counts at once, and is written only after
      * kb_eeconfig's settled write. */
@@ -194,7 +199,7 @@ static void test_format_and_save(void) {
     prof_tick();
     CHECK(nlog == 13);   /* kb_eeconfig's write still to come */
     settle();
-    CHECK(nlog == 14 && wlog[13].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[13].first == 0 && wlog[13].n == 1);
+    CHECK(nlog == 14 && wlog[13].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[13].first == 0xF0 && wlog[13].n == 1);   /* Windows's, the Mac none (10-27) */
     settle();
     CHECK(nlog == 14);   /* once */
     CHECK(prof_valid_mask() == 0x01 && prof_free_slot() == 1);
@@ -347,18 +352,18 @@ static void test_hid_restore(void) {
     }
     CHECK(hid(0, 9, 0) && rpt[5] == PROF_BAD);
     /* P5d: 7, the geometry. */
-    CHECK(hid(7, 0, 0) && rpt[4] == 8 && rpt[5] == 27 && rpt[6] == 9 && rpt[7] == 26 && rpt[8] == 0xA2 && rpt[9] == 0);
+    CHECK(hid(7, 0, 0) && rpt[4] == 8 && rpt[5] == 27 && rpt[6] == 9 && rpt[7] == 26 && rpt[8] == 0xA3 && rpt[9] == 0);
     /* P5b: a pending choice reads as the board will write it, so a backup
      * taken inside the settle has it. */
-    CHECK(prof_load(0) == PROF_OK && B(PROF_OFF_ACTIVE) == 3);
-    CHECK(hid(0, 0, 0) && rpt[6 + PROF_OFF_ACTIVE] == 0 && rpt[6] == PROF_MAGIC_V2);
+    CHECK(prof_load(0) == PROF_OK && B(PROF_OFF_ACTIVE) == 0xF3);
+    CHECK(hid(0, 0, 0) && rpt[6 + PROF_OFF_ACTIVE] == 0xF0 && rpt[6] == PROF_MAGIC_V3);
     /* A Begin drops it: the restore's active byte wins, not a choice
      * written after the commit. */
     CHECK(hid(1, 0, 0x59) && rpt[6] == PROF_OK);
     send_pages(img, 0x59, 0xFF);
     CHECK(hid(3, 0, 0x59) && rpt[6] == PROF_OK);
     settle();
-    CHECK(!prof_restore_open() && B(PROF_OFF_ACTIVE) == 3 && prof_active() == 3);
+    CHECK(!prof_restore_open() && B(PROF_OFF_ACTIVE) == 0xF3 && prof_active() == 3);
     /* A good restore onto a wiped block. */
     memset(&ee[PROF_BASE], 0, PROF_BLOCK_SIZE);
     CHECK(hid(1, 0, 0x5A) && rpt[6] == PROF_OK && B(PROF_OFF_MAGIC) == 0);
@@ -366,7 +371,7 @@ static void test_hid_restore(void) {
     CHECK(B(PROF_OFF_MAGIC) == 0);   /* the magic masked until the commit */
     nlog = 0;
     CHECK(hid(3, 0, 0x5A) && rpt[6] == PROF_OK && !prof_restore_open());
-    CHECK(wlog[nlog - 1].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[nlog - 1].first == PROF_MAGIC_V2);   /* the magic last */
+    CHECK(wlog[nlog - 1].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[nlog - 1].first == PROF_MAGIC_V3);   /* the magic last */
     CHECK(memcmp(&ee[PROF_BASE], img, PROF_BLOCK_SIZE) == 0 && prof_active() == 3 && prof_slot(0, r) && r[PR_HUE] == 11);
     CHECK(prof_slot(7, r) && r[PR_HUE] == 77);   /* the eighth slot, in the last page */
     /* P5d: the pages in order. One ahead of the count is refused; a page
@@ -413,13 +418,18 @@ static void test_hid_restore(void) {
     CHECK(hid(1, 0, 0x05) && rpt[6] == PROF_OK);
     send_pages(bad, 0x05, 0xFF);
     CHECK(hid(3, 0, 0x05) && rpt[6] == PROF_INVALID && !prof_formatted() && prof_active() == 0xFF);
-    /* An active byte pointing at an empty slot: normalized to none at the commit. */
+    /* An active byte pointing at an empty slot: normalized to none at the
+     * commit, each side's (10-27): slots 0, 3 and 7 are saved; a nibble
+     * past the slots (8-E) is none too. */
+    static const uint8_t norm_in[5] = {0xF1, 0x1A, 0x03, 0x7E, 0x9C}, norm_out[5] = {0xFF, 0xFF, 0x03, 0x7F, 0xFF};
     uint8_t norm[PROF_BLOCK_SIZE];
     memcpy(norm, img, sizeof norm);
-    norm[PROF_OFF_ACTIVE] = 1;
-    CHECK(hid(1, 0, 0x06) && rpt[6] == PROF_OK);
-    send_pages(norm, 0x06, 0xFF);
-    CHECK(hid(3, 0, 0x06) && rpt[6] == PROF_OK && B(PROF_OFF_ACTIVE) == 0xFF && prof_formatted());
+    for (int i = 0; i < 5; i++) {
+        norm[PROF_OFF_ACTIVE] = norm_in[i];
+        CHECK(hid(1, 0, 0x06) && rpt[6] == PROF_OK);
+        send_pages(norm, 0x06, 0xFF);
+        CHECK(hid(3, 0, 0x06) && rpt[6] == PROF_OK && B(PROF_OFF_ACTIVE) == norm_out[i] && prof_formatted());
+    }
     /* Busy in a recovery: Begin refused; a commit keeps the transaction for a retry. */
     fk_recovering = true;
     CHECK(hid(1, 0, 0x07) && rpt[6] == PROF_BUSY && !prof_restore_open());
@@ -473,12 +483,12 @@ static void test_hid_live(void) {
     int ext = fk_external[ME_DOM_RGB];
     CHECK(hid(6, 0, 0) && rpt[4] == PROF_OK && fk_flushes == 1 && fk_external[ME_DOM_RGB] == ext + 1);
     /* An unknown sub: unhandled. Dev's 0x40 save and 0x41 delete. */
-    CHECK(!hid(8, 0, 0) && !hid(0x42, 0, 0));
+    CHECK(!hid(8, 0, 0) && !hid(0x43, 0, 0));
     CHECK(hid(0x40, 1, 0) && rpt[5] == PROF_OK && prof_active() == 1);
     CHECK(hid(0x41, 1, 0) && rpt[5] == PROF_OK && prof_active() == 0xFF);
     /* P5b: the flush writes the pending active slot too. */
     CHECK(hid(0x40, 2, 0) && rpt[5] == PROF_OK && B(PROF_OFF_ACTIVE) != 2 && prof_active() == 2);
-    CHECK(hid(6, 0, 0) && rpt[4] == PROF_OK && B(PROF_OFF_ACTIVE) == 2);
+    CHECK(hid(6, 0, 0) && rpt[4] == PROF_OK && B(PROF_OFF_ACTIVE) == 0xF2);
     int n = nlog;
     settle();
     CHECK(nlog == n);   /* nothing left to write */
@@ -538,7 +548,7 @@ static void test_p5b(void) {
     prof_tick();
     CHECK(nlog == n);
     settle();
-    CHECK(nlog == n + 1 && wlog[n].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[n].first == 0);
+    CHECK(nlog == n + 1 && wlog[n].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[n].first == 0xF0);
     /* Three saved, so the two directions differ: from slot 2, Next wraps to
      * 0, then Previous walks back 2, 1, 0. */
     CHECK(prof_save(1, NULL) == PROF_OK && prof_save(2, NULL) == PROF_OK && prof_active() == 2);
@@ -671,6 +681,141 @@ static void test_rename(void) {
     prof_test_reset();
 }
 
+/* 10-27 (JD: "the current profile is remembered for windows and Mac
+ * layers"): each side of the Win/Mac switch remembers its slot in its
+ * nibble of the active byte; a flip, once the switch has rested three
+ * ticks, loads the new side's. */
+static void ticks(int n) { for (int i = 0; i < n; i++) prof_tick(); }
+static uint8_t pair_now(void) {   /* the active byte as the board will write it */
+    hid(0, 0, 0);
+    return rpt[6 + PROF_OFF_ACTIVE];
+}
+static void test_switch(void) {
+    reset();
+    uint8_t s = 9;
+    /* The boot's reading, the Mac's: nothing loaded, no countdown. */
+    prof_switch(true);
+    ticks(5);
+    CHECK(calls[0] == 0 && fk_switched == 0 && hid(7, 0, 0) && rpt[9] == 2);
+    /* Saved on the Mac: its nibble, Windows' none. */
+    fk_rgb.h = 50; fk_lcd = 20;
+    CHECK(prof_save(0, NULL) == PROF_OK && prof_active() == 0);
+    settle();
+    CHECK(B(PROF_OFF_ACTIVE) == 0x0F);
+    /* To Windows, which remembers none: the side the profiles go by moves
+     * at the countdown's end, and nothing is loaded. */
+    prof_switch(false);
+    calls[0] = 0;
+    ticks(2);
+    CHECK(prof_active() == 0 && hid(7, 0, 0) && rpt[9] == 2);
+    ticks(1);
+    CHECK(prof_active() == 0xFF && hid(7, 0, 0) && rpt[9] == 1 && calls[0] == 0 && fk_switched == 0 && fk_lcd == 20);
+    /* Saved on Windows: its nibble. */
+    fk_rgb.h = 150; fk_lcd = 80;
+    CHECK(prof_save(1, NULL) == PROF_OK && prof_active() == 1);
+    settle();
+    CHECK(B(PROF_OFF_ACTIVE) == 0x01);
+    /* To the Mac: slot 0 loaded at the third tick, a preview cancelled
+     * first, named; once. */
+    int ext = fk_external[ME_DOM_RGB];
+    prof_switch(true);
+    ticks(2);
+    CHECK(fk_switched == 0 && fk_lcd == 80);
+    ticks(1);
+    CHECK(fk_switched == 1 && fk_sw_slot == 0 && fk_sw_st == PROF_OK && fk_lcd == 20 && fk_rgb.h == 50 &&
+          prof_active() == 0 && fk_external[ME_DOM_RGB] == ext + 1);
+    ticks(10);
+    CHECK(fk_switched == 1);
+    /* And back: slot 1; the pair unchanged. */
+    prof_switch(false);
+    ticks(3);
+    CHECK(fk_switched == 2 && fk_sw_slot == 1 && fk_lcd == 80 && prof_active() == 1);
+    settle();
+    CHECK(B(PROF_OFF_ACTIVE) == 0x01);
+    /* A bounce back before the rest loads nothing. A contact bouncing on
+     * its way over loads once, the rest counted from its last edge. */
+    fk_lcd = 33;
+    prof_switch(true); ticks(1); prof_switch(false); ticks(5);
+    CHECK(fk_switched == 2 && fk_lcd == 33 && prof_active() == 1);
+    prof_switch(true); prof_switch(false); prof_switch(true); ticks(2);
+    prof_switch(false); ticks(1); prof_switch(true); ticks(2);
+    CHECK(fk_switched == 2);
+    ticks(1);
+    CHECK(fk_switched == 3 && fk_sw_slot == 0 && fk_lcd == 20);
+    /* A change since the load (the `*`) doesn't survive a flip there and
+     * back (accepted, 10-27: no room for a live copy a side). */
+    fk_lcd = 44;
+    prof_switch(false); ticks(3); prof_switch(true); ticks(3);
+    CHECK(fk_switched == 5 && fk_lcd == 20);
+    /* A reading of the side it's on (a wake's, say): nothing, and in a
+     * countdown, no restart: the rest counts from the last edge. */
+    fk_lcd = 44;
+    prof_switch(true); ticks(5);
+    CHECK(fk_switched == 5 && fk_lcd == 44);
+    prof_switch(false); ticks(2); prof_switch(false); ticks(1);
+    CHECK(fk_switched == 6 && fk_lcd == 80);
+    prof_switch(true); ticks(3);
+    CHECK(fk_switched == 7 && fk_lcd == 20);
+    /* The load waits out a recovery at the countdown's end, then goes. */
+    prof_switch(false); ticks(2);
+    fk_recovering = true;
+    ticks(5);
+    CHECK(fk_switched == 7 && prof_active() == 0);
+    fk_recovering = false;
+    ticks(1);
+    CHECK(fk_switched == 8 && fk_sw_slot == 1 && fk_lcd == 80);
+    /* Save, the keys and Load record on the side the profiles go by. */
+    fk_rgb.h = 99;
+    CHECK(prof_save(2, NULL) == PROF_OK && pair_now() == 0x02);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 0 && pair_now() == 0x00);
+    CHECK(prof_load(2) == PROF_OK && pair_now() == 0x02);
+    /* ... and in a flip's countdown, on the side it was on. */
+    prof_switch(true); ticks(1);
+    CHECK(prof_save(1, NULL) == PROF_OK && pair_now() == 0x01);
+    ticks(2);
+    CHECK(fk_switched == 9 && fk_sw_slot == 0 && prof_active() == 0);
+    /* Delete: either side's. Both on slot 1, then none on both. */
+    CHECK(prof_load(1) == PROF_OK && pair_now() == 0x11);
+    CHECK(prof_delete(1) == PROF_OK && pair_now() == 0xFF && prof_active() == 0xFF);
+    /* The other side's slot deleted: this side's kept. */
+    CHECK(prof_load(0) == PROF_OK && pair_now() == 0x0F);
+    prof_switch(false); ticks(3);
+    CHECK(fk_switched == 9);   /* Windows': none */
+    CHECK(prof_load(2) == PROF_OK && pair_now() == 0x02);
+    CHECK(prof_delete(0) == PROF_OK && pair_now() == 0xF2 && prof_active() == 2);
+    /* A flip's load refused by the latch: nothing applied; the side moves. */
+    prof_switch(true); ticks(3);
+    CHECK(fk_switched == 9 && prof_active() == 0xFF);
+    CHECK(prof_save(3, NULL) == PROF_OK && pair_now() == 0x32);
+    fail_at = nlog;
+    settle();
+    CHECK(prof_write_failed() && B(PROF_OFF_ACTIVE) == 0x32);
+    fail_at = -1;
+    calls[0] = 0;
+    prof_switch(false); ticks(3);
+    CHECK(fk_switched == 10 && fk_sw_slot == 2 && fk_sw_st == PROF_WRITE_FAILED && calls[0] == 0 && prof_active() == 2);
+    /* The reboot, on the Mac's side: its slot, nothing loaded. */
+    prof_test_reset();
+    prof_switch(true);
+    ticks(5);
+    CHECK(fk_switched == 10 && prof_active() == 3 && hid(7, 0, 0) && rpt[9] == 2);
+    /* Dev's 0x42: the switch read as [4], as a flip. */
+    CHECK(hid(0x42, 0, 0) && rpt[5] == PROF_OK);
+    ticks(3);
+    CHECK(fk_switched == 11 && fk_sw_slot == 2 && fk_sw_st == PROF_OK);
+    CHECK(hid(0x42, 1, 0) && rpt[5] == PROF_OK);
+    ticks(3);
+    CHECK(fk_switched == 12 && fk_sw_slot == 3);
+    /* A flip while a restore is open waits for it; the abort leaves the block
+     * unformatted, so nothing loads. */
+    CHECK(hid(1, 0, 0x31) && rpt[6] == PROF_OK);
+    prof_switch(false);
+    ticks(49);
+    CHECK(prof_restore_open() && fk_switched == 12 && hid(7, 0, 0) && rpt[9] == 2);
+    ticks(1);
+    CHECK(!prof_restore_open() && fk_switched == 12 && hid(7, 0, 0) && rpt[9] == 1);
+}
+
 int main(void) {
     test_codec();
     test_format_and_save();
@@ -679,6 +824,7 @@ int main(void) {
     test_hid_live();
     test_p5b();
     test_rename();
+    test_switch();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

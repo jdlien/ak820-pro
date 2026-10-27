@@ -63,7 +63,8 @@ def edit(h):
 
 
 def slots(h):
-    """Each slot's record, or None, from the block as HC_PROFILES reads it."""
+    """Each slot's record, or None, from the block as HC_PROFILES reads it;
+    the active slot, the switch's side's since 10-27 (0xFF none)."""
     gp = ap.geometry(h)
     b = ap.read_block(h, gp)
     if b[0] != gp.magic:
@@ -72,7 +73,11 @@ def slots(h):
     for s in range(gp.slots):
         r = b[2 + s * ap.REC:2 + (s + 1) * ap.REC]
         out.append(r if ap.rec_ok(r) else None)
-    return out, b[1]
+    a = b[1]
+    if gp.magic == ap.MAGIC_V3:
+        a = (a >> 4 if gp.side == "mac" else a) & 0xF
+        a = 0xFF if a == 0xF else a
+    return out, a
 
 
 def main():

@@ -531,6 +531,11 @@ default): the next or previous saved profile, its name shown in the
 dashboard's status band; `No profiles` with none saved, `Busy` when the
 keyboard can't load one.
 
+**The Win/Mac switch** (10-27, no words of its own): each side remembers
+the last profile loaded or saved on it, and a flip loads the other side's,
+its name in the status band as the keys show theirs. A side that has none
+yet changes nothing.
+
 ## Not built yet (the mockup's words)
 
 ### About, page 2 (P1d: the bunny beside the first three lines)

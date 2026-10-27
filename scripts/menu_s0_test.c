@@ -1418,6 +1418,7 @@ bool env_recovering(void) { return fk_recovering; }
 void env_settings_flush(void) { fk_flushes++; fk_settle_pending = false; }
 void env_settings_touch(void) { fk_settle_touches++; fk_settle_pending = true; }
 bool env_settings_pending(void) { return fk_settle_pending; }
+void env_prof_switched(uint8_t slot, uint8_t st) { (void)slot; (void)st; }   /* the Win/Mac switch: profiles_test.c */
 /* P5c: Rename's keys. Row 1's keycode is its column (the tests type by
  * keycode); the keys down, QMK's tapping, the one-shots' clears, Shift. */
 static int  fk_keys_down, fk_oneshot_clears;
@@ -3936,7 +3937,7 @@ static void test_profiles(void) {
     CHECK(row_bad(1, PROW_ON("Profile 1"), MENU_LIT) == 0 && row_bad(2, PNEW, MENU_DIM) == 0 && row_bad(3, "", 0) == 0);
     CHECK(prof_active() == 0 && fk_ee_writes == 10 + 3 && fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0xFF && fk_settle_pending);
     fk_prof_settle();
-    CHECK(fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0 && fk_ee_writes == 14);
+    CHECK(fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0xF0 && fk_ee_writes == 14);   /* Windows's, the Mac none (10-27) */
     m_unflash();
 
     /* Its page: the name in the title; Load, Save current here, Delete; the

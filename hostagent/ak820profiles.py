@@ -19,13 +19,17 @@ The command is [SET_VALUE 0x07, HEALTH_CHANNEL 0x13, HC_PROFILES 0x10, sub, ...]
     4 read the live settings as a 27 B record
     5 apply a live record
     6 flush the deferred settings writes
-    7 the geometry (P5d): slots, record and page sizes, pages, the magic
+    7 the geometry (P5d): slots, record and page sizes, pages, the magic, and
+      (10-27) the side of the Win/Mac switch the profiles go by
 
 The block: the magic, the active slot, then the records. P5a and P5b had
 four slots (110 B, five pages, magic 0xA1) and answer 7 unhandled; P5d has
-eight (218 B, nine pages, magic 0xA2). A backup of either restores onto
-either: four into eight as the first four slots, eight into four only when
-slots 5-8 are empty.
+eight (218 B, nine pages, magic 0xA2). Since 10-27 (magic 0xA3, eight slots)
+the active byte holds a slot for each side of the Win/Mac switch: bits 0-3
+Windows', 4-7 the Mac's, 0xF none. A backup of any restores onto any: four
+into eight as the first four slots, eight into four only when slots 5-8 are
+empty; one active slot into the pair as both sides', the pair into one as
+Windows' (else the Mac's).
 
 Usage:
     ak820profiles.py dump    [file]   # default ~/Documents/ak820pro-profiles.json
@@ -55,8 +59,10 @@ UNHANDLED = 0xFF                        # RTC_UNHANDLED, == VIA's id_unhandled
 DEFAULT = os.path.expanduser("~/Documents/ak820pro-profiles.json")
 
 PAGE, REC, NAME = 26, 27, 12
-MAGIC_V1, MAGIC_V2 = 0xA1, 0xA2
-SLOTS_OF = {MAGIC_V1: 4, MAGIC_V2: 8}
+MAGIC_V1, MAGIC_V2, MAGIC_V3 = 0xA1, 0xA2, 0xA3
+SLOTS_OF = {MAGIC_V1: 4, MAGIC_V2: 8, MAGIC_V3: 8}
+FORMAT_OF = {MAGIC_V1: 1, MAGIC_V2: 2, MAGIC_V3: 3}   # a backup's "format"
+SIDES = {0: None, 1: "windows", 2: "mac"}            # sub 7's [9]
 PF_LIGHTING, PF_LCD, PF_LOCKS, PF_CHARGING, PF_CLOCK, PF_BVIEW, PF_NAME, PF_POWER = (1 << i for i in range(8))
 STATUS = {0: "ok", 1: "bad request", 2: "no such restore (token)", 3: "busy (a deep sleep's recovery, or a restore)",
           4: "invalid", 5: "write failed", 6: "incomplete (a page missing)", 7: "unknown record format",
@@ -88,9 +94,10 @@ def rec_ok(r):
 
 
 class Geometry:
-    """The board's block: P5d's answer to sub 7, or P5a's four slots."""
-    def __init__(self, slots, magic):
-        self.slots, self.magic = slots, magic
+    """The board's block: P5d's answer to sub 7, or P5a's four slots; the
+    switch's side (10-27; None before, or before its first reading)."""
+    def __init__(self, slots, magic, side=None):
+        self.slots, self.magic, self.side = slots, magic, side
         self.size = 2 + slots * REC
         self.pages = (self.size + PAGE - 1) // PAGE
 
@@ -102,7 +109,7 @@ def geometry(h):
         return Geometry(4, MAGIC_V1)    # P5a and P5b; a build without HC_PROFILES fails at the first read
     if r[5] != REC or r[7] != PAGE or SLOTS_OF.get(r[8]) != r[4] or Geometry(r[4], r[8]).pages != r[6]:
         raise SystemExit(f"the board's profile geometry is new to this tool: {r[4:9].hex()}")
-    return Geometry(r[4], r[8])
+    return Geometry(r[4], r[8], SIDES.get(r[9]))
 
 
 def block_slots(block):
@@ -113,9 +120,26 @@ def block_slots(block):
     raise SystemExit(f"a profile block of {len(block)} B is no known size")
 
 
+def active_as(a, src, dst):
+    """The active byte from magic src's encoding to dst's: one slot (0xA1,
+    0xA2; 0xFF none) or the pair (0xA3, 10-27: bits 0-3 Windows', 4-7 the
+    Mac's, 0xF none). One slot becomes both sides'; the pair, Windows' slot,
+    else the Mac's."""
+    if (src == MAGIC_V3) == (dst == MAGIC_V3):
+        return a
+    if dst == MAGIC_V3:
+        s = a if a < 0xF else 0xF
+        return s | s << 4
+    for s in (a & 0xF, a >> 4):
+        if s != 0xF:
+            return s
+    return 0xFF
+
+
 def convert(block, g):
     """A backup's block for this board's geometry: four slots into eight as
-    the first four; eight into four only when slots 5-8 are empty."""
+    the first four; eight into four only when slots 5-8 are empty; the
+    active byte in the board's encoding (active_as())."""
     n = block_slots(block)
     recs = [block[2 + s * REC:2 + (s + 1) * REC] for s in range(n)]
     if n > g.slots:
@@ -124,16 +148,24 @@ def convert(block, g):
                              "restore it onto a firmware with eight slots, or flash with --no-profiles")
         recs = recs[:g.slots]
     recs += [bytes(REC)] * (g.slots - len(recs))
-    magic = g.magic if block[0] in SLOTS_OF else block[0]
-    return bytes([magic, block[1]]) + b"".join(recs)
+    if block[0] not in SLOTS_OF:
+        return bytes([block[0], block[1]]) + b"".join(recs)
+    return bytes([g.magic, active_as(block[1], block[0], g.magic)]) + b"".join(recs)
 
 
 def normalized(block):
-    """The block as the board's commit leaves it: an active byte that points
-    at an empty slot, or at none, reads 0xFF."""
+    """The block as the board's commit leaves it: an active slot that points
+    at an empty slot, or past the slots, reads none (0xFF; since 10-27 each
+    side's nibble, 0xF)."""
     b = bytearray(block)
-    a = b[1]
-    if a >= block_slots(block) or b[2 + a * REC] == 0:
+    n = block_slots(block)
+
+    def saved(s):
+        return s < n and b[2 + s * REC] != 0
+
+    if b[0] == MAGIC_V3:
+        b[1] = sum((s if saved(s) else 0xF) << sh for sh in (0, 4) for s in [b[1] >> sh & 0xF])
+    elif not saved(b[1]):
         b[1] = 0xFF
     return bytes(b)
 
@@ -254,18 +286,31 @@ def decode_block(b):
             d = decode(r)
             d["name"] = d.get("name") or f"Profile {s + 1}"
             slots.append(d)
+    def active(s):
+        return s + 1 if s < len(slots) and isinstance(slots[s], dict) else None
+
     a = b[1]
-    return {"formatted": True, "active": a + 1 if a < len(slots) and isinstance(slots[a], dict) else None, "slots": slots}
+    if b[0] == MAGIC_V3:   # 10-27: a slot a side of the Win/Mac switch
+        return {"formatted": True, "active": {"windows": active(a & 0xF), "mac": active(a >> 4)}, "slots": slots}
+    return {"formatted": True, "active": active(a), "slots": slots}
 
 
 def describe(doc):
     lines = []
     blk = doc.get("decoded", {}).get("block", {})
+    act = blk.get("active")
     if not blk.get("formatted"):
         lines.append("profiles: none saved")
     else:
+        if isinstance(act, dict):
+            side = {"windows": "Windows", "mac": "the Mac"}.get(doc.get("switch"))
+            lines.append("profiles (W, M: the slot each side of the Win/Mac switch loads"
+                         + (f"; the switch on {side}" if side else "") + "):")
         for i, s in enumerate(blk["slots"]):
-            mark = "*" if blk.get("active") == i + 1 else " "
+            if isinstance(act, dict):
+                mark = ("W" if act.get("windows") == i + 1 else " ") + ("M" if act.get("mac") == i + 1 else " ")
+            else:
+                mark = "* " if act == i + 1 else "  "
             if s is None:
                 lines.append(f" {mark} slot {i + 1}: empty")
             elif s == "damaged":
@@ -291,7 +336,8 @@ def snapshot(h):
         "_comment": f"AK820 Pro settings profiles (the EEPROM's top {g.size} B, {g.slots} slots) and the live "
                     "settings, as HC_PROFILES reads them. Restore with ak820profiles.py restore.",
         "saved": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "format": 1 if g.slots == 4 else 2,   # 2: P5d's eight slots
+        "format": FORMAT_OF[g.magic],   # 2: P5d's eight slots; 3: the active byte a side's (10-27)
+        "switch": g.side,
         "block": block.hex(),
         "live": live.hex(),
         "decoded": {"block": decode_block(block), "live": decode(live)},
@@ -323,8 +369,8 @@ def cmd_restore(path, block_only, live_only):
     with open(path, encoding="utf-8") as f:
         doc = json.load(f)
     fmt = doc.get("format")
-    if fmt not in (1, 2):
-        raise SystemExit(f"{path} is format {fmt}; this tool reads 1 and 2")
+    if fmt not in (1, 2, 3):
+        raise SystemExit(f"{path} is format {fmt}; this tool reads 1 to 3")
     block, live = bytes.fromhex(doc["block"]), bytes.fromhex(doc["live"])
     if len(block) != 2 + (4 if fmt == 1 else 8) * REC or len(live) != REC or not rec_ok(live):
         raise SystemExit(f"{path} is malformed -- refusing")
@@ -350,7 +396,7 @@ def cmd_restore(path, block_only, live_only):
                 print("  asked " + json.dumps(decode(live)))
                 print("  got   " + json.dumps(decode(back)))
             print(f"live settings restored and flushed{note}")
-        doc_now = {"decoded": {"block": decode_block(read_block(h, g)), "live": decode(read_live(h))}}
+        doc_now = {"switch": g.side, "decoded": {"block": decode_block(read_block(h, g)), "live": decode(read_live(h))}}
     finally:
         h.close()
     print(describe(doc_now))
