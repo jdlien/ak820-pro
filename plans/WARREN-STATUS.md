@@ -383,6 +383,11 @@ This file is the thread; read it first after a context loss. Updated
        JD keeps the dev build on the keyboard on gremlin for now. Nothing
        left unmerged: the outer repo's one other branch,
        `power-modes-revision`, is the pre-rebase copy of commits main has.
+     - **The keyboard on Buzz runs `1f3c79e904` since 20:29 10-26** (dev,
+       token `0x60a8fe4b`, flashed mid-drain on battery with every setting
+       kept; `553108e5f2` from 16:01), from Buzz's session. JD there: "This
+       config menu is just awesome." The one thing raised: the menu's text
+       is small. Noted only; no change asked.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
