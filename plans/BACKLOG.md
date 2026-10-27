@@ -66,6 +66,22 @@ rainbow cycling on Mac mode". Then: "I think always on makes sense here
   below) every few. What would fit: a byte of QMK's key options a
   profile (swap Alt and GUI, Caps as Ctrl), if a record's byte is found.
 
+## The default keymap as AJazz ships the board (2026-10-27) -- JD's call, the polish phase
+
+JD (10-27): "the default keymap should probably reflect how AJazz ships
+these boards, because my layout doesn't even match the keys and most
+people probably wouldn't expect the Fn layer that I have (mostly inspired
+by the Vortex Pok3r's defaults)". Today `keymaps/via/keymap.c` and
+`keymaps/default` are JD's VIA layout (`scripts/keymap_to_c.py`); the base
+layers and the Fn layers should be the stock firmware's, from AJazz's
+manual and the stock images (fpb/ajazz-ak820-pro has them), with this
+firmware's own keys (the menu's knob click, the profile keys, Fn+D, Fn+B,
+Fn+C) placed where the stock Fn layer leaves room. JD keeps his layout in
+VIA, as now. A menu item to put the keymap back to that default (QMK's
+`dynamic_keymap_reset()`) is a separate feature, after it, with its own
+confirm: the keymap is the hardest thing to lose and `flash.sh`'s backup
+is the only copy off the board.
+
 ## A wear-leveling consolidation blocks one pass ~58 ms (2026-10-25) -- measured, not profiles'; every settings write can trigger one
 
 P5a's first board measure (`history/config-menu-p3-20261025/p5a-measure-5ecc9a32.json`,
