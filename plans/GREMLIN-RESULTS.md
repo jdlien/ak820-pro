@@ -1771,3 +1771,32 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   writer: a flip now saves the settings and the last record, ~40 B, so a
   run of flips meets a consolidation sooner; nonflash 0).
 - **JD's profiles and live settings** stashed and put back, read back equal.
+
+### 20y. The Power page's bulbs (10-27, 10:35-11:20)
+
+- **JD (10-27):** "In the power modes, if they fit ... I'd like to use the
+  power mode icons that we show on the battery row, right aligned on the
+  right edge ... we could mock it up first." The mock-up, the host build's
+  own frame with the bulbs laid on (`power-bulbs-mock.png`): they fit at
+  their 13 x 14 px, x 111-123 (the labels end at x 80). JD: "your mockup
+  looks great, this would look nice and help anchor the icons to the modes".
+- **`a5d9171c`** (dev, token `0x894fb5c1`): the bulbs' art and colours
+  moved to `graphics/power_bulb.c` (the battery row draws from it, all 728
+  pixels the same: codex); each Power option's row a last chunk, the bulb,
+  one 14 x 14 piece. Codex: no blocker. **On the board:** the bulb's piece
+  9.7 ms (a text piece 6.0), the Power page's longest pass 18.7 ms with 26
+  over 15 ms in a minute of browsing, a move between two bulbs' rows ~340 ms
+  against ~230 (`bulb-look-a5d9171c.json`).
+- **`ce3f842d`** (dev, token `0x59b75946`, heap gap 136 B): a bulb's row
+  filled in one loop, its colours looked up once; the bulb its row's first
+  chunk, which l_first() skips while the row stays the same option, so a
+  move or a commit never repaints a bulb (the host test counts four on
+  entry, none on a move; it fails on `a5d9171c`). Codex: no blocker.
+  **On the board:** the Power page's moves ~230 ms like any page's, its
+  longest pass 16.8 ms, 5 over 15 ms (`bulb-look-ce3f842d.json`); the
+  longest piece 6.3 ms. The menu's pass: the longest 18.2 ms, at the Hue
+  editor's fast turn, not Power (17.4 and 16.8 at earlier flashes, the same
+  steps varying), 64 over 15 ms; FAILs only for settles and that line
+  (`board-ce3f842d.json`; `board-a5d9171c.json` before it).
+- **JD's profiles and live settings** stashed and put back each time, read
+  back equal.

@@ -140,8 +140,10 @@ bool mb_glyph_big(char c, uint16_t x, uint16_t y) {
 /* P1b: generated rows, a polled stream as mb_mono's (its faults too); the
  * rows come in panel order, the frame keeps RGB565. */
 static int pixel_ops;
+static int fk_bulb_paints;   /* 10-27: the Power page's bulbs sent (x 111, 14 wide) */
 bool mb_rows(uint16_t x, uint16_t y, uint16_t w, uint16_t h, mb_row_fn fn, const void *ctx) {
     dma_settle();
+    if (x == 111 && w == 14) fk_bulb_paints++;
     pass_bytes += (uint32_t)w * h * 2u;
     uint16_t rows = h;
     bool     ok   = true;
@@ -1966,6 +1968,7 @@ static void test_menu(void) {
 
     /* Power: the choice opens on the saved option, its bullet in cell 0. */
     m_turn(T_POWER);
+    int bulbs0 = fk_bulb_paints;
     m_click();
     CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad(FONT_MONO_I_POWER " Power") == 0);
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
@@ -1975,6 +1978,15 @@ static void test_menu(void) {
     CHECK(pow_bad(4, "  Lights out", MENU_DIM) == 0);   /* 10-27: each with its mode's bulb */
     CHECK(fb[15 + 14 * 1][117] == 0xFFFFu && fb[15 + 14 * 3 + 6][114] == 0x8410u &&
           fb[15 + 14 * 4 + 2][112] == 0xDEFBu && fb[15 + 14 * 2][124] == 0);   /* a ray, Saver's glass, the slash; the trail */
+    /* Four bulbs sent, once each; a move repaints two rows' text, never a
+     * bulb (the bulb the row's first chunk, l_first() past it). */
+    CHECK(fk_bulb_paints == bulbs0 + 4);
+    m_turn(1);
+    CHECK(sub5_cursor() == 3 && pow_bad(2, FONT_MONO_CHECK_BOX "Balanced", MENU_DIM) == 0 &&
+          pow_bad(3, "  Power saver", MENU_LIT) == 0 && fk_bulb_paints == bulbs0 + 4);
+    m_turn(-1);
+    CHECK(sub5_cursor() == 2 && pow_bad(2, FONT_MONO_CHECK_BOX "Balanced", MENU_LIT) == 0 &&
+          pow_bad(3, "  Power saver", MENU_DIM) == 0 && fk_bulb_paints == bulbs0 + 4);
     m_turn(2);   /* Lights out */
     m_click();   /* commits */
     CHECK(fk_power == 3 && fk_power_writes == 1);

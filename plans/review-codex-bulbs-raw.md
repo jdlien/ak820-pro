@@ -1,0 +1,5 @@
+No new flash blocker found in static review.
+
+[Battery rendering](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/graphics/display.c:1829) preserves all 728 bulb pixels, colours and geometry. [Chunk handling](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1292) correctly uses four chunks, five when split; `l_pieces`/`l_paint` agree and `RULE_CHUNK` remains distinct. Signatures cover mode/split changes; [l_first](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1428) remains Clock-only.
+
+The [bulb transfer](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:1405) is synchronous, uses existing scratch, and sends 392/512 budgeted bytes; text stops at x110. Artifact hashes and 136 B heap gap verified. [Pixel checks](/C:/Users/jdlien/code/ak820-pro/scripts/menu_s0_test.c:1972) reviewed; tests/build weren’t rerun because process execution was denied. Hardware pass timing remains unmeasured.

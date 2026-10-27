@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-27 ~10:55.
+2026-10-27 ~11:20.
 
 ## Where things stand
 
@@ -416,10 +416,10 @@ This file is the thread; read it first after a context loss. Updated
        place (warm white Solid 75%, screen 60, both lights 5, 24h:ss,
        Percent, Balanced); Reset settings under Bootloader (↺). On the
        keyboard on gremlin since ~10:40, every board check passed.
-     - **Then the Power page's bulbs** (`a5d9171c`, JD: "use the power mode
+     - **Then the Power page's bulbs** (`a5d9171c`, then `ce3f842d`, JD: "use the power mode
        icons that we show on the battery row, right aligned"; the mock-up
        `history/config-menu-p3-20261025/power-bulbs-mock.png`, as built
-       `power-bulbs-as-built.png`): codex's review running at ~10:55.
+       `power-bulbs-as-built.png`): on the keyboard on gremlin since ~11:15 (`ce3f842d`, GREMLIN-RESULTS §20y; codex: no blocker; the Power page's longest pass 16.8 ms).
        **Owed (JD), all three at once:** a real flip, to the Mac's side and
        back (Cyan-Magenta, then RGB Cycle as left); a look at the Power
        page; Reset settings only if he wants his settings reset. Then merge

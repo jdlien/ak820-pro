@@ -1,0 +1,238 @@
+{
+ "steps": [
+  {
+   "what": "open",
+   "ms": 1098,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "to Power",
+   "ms": 228,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "Power",
+   "ms": 1001,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "the page, its four bulbs, 2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "row 2",
+   "ms": 346,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "row 3",
+   "ms": 341,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "row 4",
+   "ms": 347,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "row 0",
+   "ms": 235,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "row 1",
+   "ms": 225,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "row 2",
+   "ms": 343,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "row 3",
+   "ms": 345,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "row 4",
+   "ms": 340,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "row 0",
+   "ms": 237,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "row 1",
+   "ms": 233,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 18,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "Power back, nothing committed",
+   "ms": 980,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 3,
+   "inv": 0
+  },
+  {
+   "what": "close",
+   "ms": 539,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0
+  }
+ ],
+ "meas": {
+  "piece_us": 9701,
+  "op_us": 43397,
+  "pass_max_us": 18709,
+  "over15": 26,
+  "repaint_ms": 1046,
+  "tgen": 188,
+  "settled": 172,
+  "superseded": 16,
+  "band_ms": 2,
+  "page": 0,
+  "dbg_gen": 5,
+  "dbg_done_gen": 5,
+  "committed": 239,
+  "passes": 3663,
+  "token": 2,
+  "health_gen": 1,
+  "dbg_sec": 58,
+  "rtc_sec": 20,
+  "aliased": false
+ },
+ "fails": [
+  "open: settled in 1098 ms",
+  "Power: settled in 1001 ms"
+ ],
+ "slow": []
+}
