@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+Your review of the early cleanup (e0769d16, plans/review-codex-flash-tidy-raw.md) found: P2 the commit count moves only on a changed frame, so Dim + cleanup can wait forever on Solid; P2 the stored activity time's low 16 bits alias; and the risk that every consolidation erases the only copy (power loss), the quarter threshold allowing four times as many. The fixes: qmk_firmware-ak820pro `git diff e0769d16 4e04a28f`: sn32f2xx_flush() counts every call (only rgb_matrix's render loop calls it, once a render, rgb_matrix.c:441); flash_tidy blocks a retry only after a failure and clears it when a pass sees input (idle < 30 s), which a log left at or over the threshold makes it read every pass; the threshold half the log; the risk written into flash_tidy.h. scripts/flash_tidy_test/test.c adds the aliasing cases; four mutants caught. Dev build OK, heap gap 128 B.
+
+Check each fix closes its finding, and anything new. File and line. Under 100 words.

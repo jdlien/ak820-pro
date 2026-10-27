@@ -20,6 +20,14 @@ no POR) — the rail sags during switchover.
 | BT → cable | yes, every time |
 | 2.4G ↔ anything | yes, both directions, as a rule: one fast 2.4G → BT flip with USB attached rode through (2026-10-19, 18:10; the sleep count since boot and the RAM kept) |
 
+JD (2026-10-27), on the keyboard on gremlin: "flipping the switch from
+bt->usb and usb->2.4 causes a reset. Going physically in the other direction
+does not." So moving the slider one way physically resets and the other
+doesn't: for him 2.4G → cable rides through, against the table's "as a rule".
+Changing computers usually flips this slider and the Win/Mac switch
+together, which is why a Win/Mac flip saves its settings at once
+(menu/profiles.c, settle_side()).
+
 Consequences:
 
 - **Every RAM state dies on a rebooting flip**: health counters, WDT

@@ -1,0 +1,3 @@
+P2 closed: [flash_tidy.c:38](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/flash_tidy.c:38) now rearms before the log threshold, so input after a failure empties the log is observed. [test.c:178](C:/Users/jdlien/code/ak820-pro/scripts/flash_tidy_test/test.c:178) covers the failure → key → delayed refill sequence.
+
+No new findings in `4e04a28f..dc8e6d0c`. Tests/build weren’t rerun: process execution was denied.

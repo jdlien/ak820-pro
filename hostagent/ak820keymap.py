@@ -158,10 +158,24 @@ def read_macros(h):
     return bytes(buf)
 
 
+MACRO_COUNT = 16   # QMK's DYNAMIC_KEYMAP_MACRO_COUNT, which the board leaves at its default
+
+
 def macros_used(buf):
     """The bytes the macros use: to the last non-zero one, and its NUL. The
-    buffer's last byte is QMK's validity flag (dynamic_keymap.h), not a macro."""
-    n = len(buf[:-1].rstrip(b"\0")) if buf else 0
+    buffer's last byte is QMK's validity flag (dynamic_keymap.h), not a macro,
+    and QMK reads MACRO_COUNT NUL-terminated macros and nothing past the last
+    one's NUL: a byte there is no macro's. A dev build's Write test toggles
+    one (10-27), which made a flash refuse the keymap's restore."""
+    body = buf[:-1]
+    end, nuls = len(body), 0
+    for i, b in enumerate(body):
+        if b == 0:
+            nuls += 1
+            if nuls == MACRO_COUNT:
+                end = i + 1
+                break
+    n = len(body[:end].rstrip(b"\0"))
     return buf[:n + 1] if n else b""
 
 

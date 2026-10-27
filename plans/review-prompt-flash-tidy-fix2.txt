@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+Your re-check of the early cleanup (4e04a28f, plans/review-codex-flash-tidy-fix-raw.md) found a new P2: a failed program empties the log, so the rearm below the threshold never saw the next key. The fix: qmk_firmware-ak820pro `git diff 4e04a28f dc8e6d0c`: while blocked, flash_tidy_task() reads the idle time first, before the threshold, and clears the block on input. scripts/flash_tidy_test/test.c adds the case (a failure that empties the log, a key, then a refill 5 min into the next pause with no key since): it fails on 4e04a28f's flash_tidy.c and passes on dc8e6d0c's. Dev build OK, heap gap 128 B.
+
+Check the fix closes it, and anything new. File and line. Under 80 words.

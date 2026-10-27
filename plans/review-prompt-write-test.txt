@@ -1,0 +1,10 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+A review before a flash: a dev-only Write test page, to compare the LED blink at an internal-flash write by eye (JD, 10-27). Background: plans/BACKLOG.md, "The LED blink at an internal-flash write", and docs/leds.md, "What an internal-flash write does to the LEDs". qmk_firmware-ak820pro `git diff ce3f842d 3a661db1` (ce3f842d you cleared in plans/review-codex-bulbs-fix-raw.md):
+- drivers/led/sn32f2xx.c: `sn32f2xx_pgm_scan` (default false): when true the row ISR calls update_pwm_channels() (and the scan-only key scan) while EFLD1.state == FLASH_PGM instead of de-selecting every mux row;
+- quantum/wear_leveling: a public wear_leveling_consolidate() wrapping the static consolidate_force();
+- menu/menu_glue.c (AK820_DEV_HOOKS): env_wt_* — the flag; a one-byte write to the last byte of VIA's macro buffer, refused unless the sixteen macros' terminators all lie before it; the consolidation; power_force_stage(DIM) and its release;
+- menu/menu.c (MENU_WTEST: dev and host tests): Diagnostics' fifth row, the page's rows (N_WTEST, N_WROW with the index in val, state in row_sig's line bit), the timers in the page-scoped union, wt_leave() in pop(), menu_wtest_closed() from menu_ops_task() when no session is open, releasing only a dim the page forced (wt_dimmed).
+Host tests pass (both builds; scripts/menu_s0_test.c's test_wtest, three mutants of the release and the dim's timing caught). Dev build OK, heap gap 136 B.
+
+Check above all: is scanning through FLASH_PGM safe on this MCU (the ISR's code and the const data it reads live in flash; the per-line masked windows in hal_efl_lld.c; the erase path; anything the 09-01 guard protected that this exposes), and the consolidation run from the menu's click (its length, the watchdog, a deep sleep's DSB_FLASH, the LCD's DMA drain). Then the macro byte's safety, the dim's release paths, and that the daily build carries none of it but the false flag. File and line. Under 160 words.

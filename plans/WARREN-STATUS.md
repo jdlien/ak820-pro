@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-27 ~11:30.
+2026-10-27 ~16:45.
 
 ## Where things stand
 
@@ -430,6 +430,22 @@ This file is the thread; read it first after a context loss. Updated
        runs exactly that commit (dev, token `0x59b75946`). **Still owed
        (JD):** Both's dashboard text after an hour awake on battery.
        **Next (JD):** the experimental bigger menu font.
+     - **Then the LED blink at a flash write (10-27, afternoon), branch
+       `gremlin/write-test`, not merged** (BACKLOG.md, "The LED blink at an
+       internal-flash write"; GREMLIN-RESULTS §20z). The dev Write test
+       (`920ad3f2`, Diagnostics' last row): JD's eye found an ordinary write
+       invisible and the consolidation the blink. Then, JD: "build 1-3 and
+       the Dim + cleanup test": the scan through writes the default, the
+       early cleanup (`flash_tidy.c`: half the log, dark and 30 s idle, or
+       10 min idle on USB / Always on), Dim + cleanup. Codex: three rounds,
+       every finding fixed (`plans/review-codex-flash-tidy-2026-10-27.md`).
+       On the keyboard on gremlin since ~16:35: `dc8e6d0c` (dev, token
+       `0x42b3bf75`, heap gap 128 B, the floor). ⚠️ The Write test's spare
+       byte broke that flash's keymap restore (the tool read it as a macro):
+       restored from a copy without it; `ak820keymap.py` now stops at the
+       16th macro's NUL. **Owed:** JD's eye on Dim + cleanup and on the
+       board day to day; then merge (CLAUDE.md's core-file list gains
+       `quantum/wear_leveling/wear_leveling.c` + `.h`).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

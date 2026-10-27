@@ -208,6 +208,38 @@ C2 the board makes ~3 a day outside the battery level's milestones
 during a write (10-01) has a hypothesis, a page erase freezing the backlight
 PWM in its last state, which is untested; no guard is built.
 
+### The blink is the consolidation, and the board now scans through writes (2026-10-27)
+
+A dev build's Diagnostics → **Write test** page compared the two strategies
+by eye on JD's Solid near-white
+([plans/BACKLOG.md](../plans/BACKLOG.md), "The LED blink at an
+internal-flash write"):
+
+| | Blank (item 3's guard) | Scan (straight through) |
+|---|---|---|
+| One write, Ten writes | nothing | nothing |
+| Cleanup (a consolidation) | "a very noticeable flicker" | "a more subtle flicker" |
+
+- **An ordinary write never showed.** The blink JD sees is the
+  wear-levelling **consolidation**: the 2 KB backing store erased and the
+  1 KB cache programmed back, ~58 ms in one pass, when a write fills the log.
+- **The scan through a program is the default since `4ee668eb`**
+  (`sn32f2xx_pgm_scan`, `drivers/led/sn32f2xx.h`). Item 3's guard stays
+  only for the test page to compare. The scan's row is at most a masked
+  window late, 10-20 µs.
+- **What scanning leaves is the erase.** Two pages, 1-2 ms each, stall the
+  CPU and the row ISR with it ([sn32f299.md](sn32f299.md), p. 251), so
+  the selected row holds while the rest go dark. Neither strategy touches it.
+- **So the board cleans up early, where nobody sees it**
+  (`flash_tidy.c`, since `4ee668eb`). Once the log is half full, it
+  consolidates when the committed frame is dark and nothing has been
+  pressed for 30 s, or after 10 min without a key on USB or in Always on.
+  A full log still consolidates where it fills, now only after half a log
+  of writes without a pause. HC_FLASHW page 4 reads the log's fill and the
+  cleanups. ⚠️ Every consolidation erases the only copy before writing it
+  back, so a power loss inside one loses the settings and the keymap. Half,
+  not a quarter, holds the early ones to at most twice the count (codex).
+
 ## The rainbow is a GEOMETRY problem, not flicker
 
 R, B, G light in separate time slots (`ROW_CHANNELS 3`), so saccades separate

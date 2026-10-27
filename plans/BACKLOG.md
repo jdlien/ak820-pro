@@ -88,7 +88,7 @@ a percent at a time."
   **The icon keeps its colours** (JD: "Apple would just keep it monochrome
   white, but I'm okay to retain that").
 
-## The LED blink at an internal-flash write (2026-10-27) -- JD's bug; a dev test page proposed, awaiting his go
+## The LED blink at an internal-flash write (2026-10-27) -- JD's bug; the consolidation is the blink; the scan through writes and the early cleanup built (`dc8e6d0c`, on the keyboard on gremlin, not merged)
 
 JD (10-27): "the board flickers once in a while. Hard to replicate, somewhat
 sporadic, and subtle. But it does look glitchy when it happens"; "I mainly
@@ -116,6 +116,36 @@ notice the lights ... I haven't noticed screen blinking."
   dark only with a deadline (Always on, or typing for hours, never goes
   dark), and it trades against the change-of-computers brownout that today's
   flip fix guards.
+- **JD's eyes on the page (10-27, Solid near-white):** One write and Ten
+  writes show nothing on either strategy ("zero flicker"). Cleanup on Blank
+  is "a very noticeable flicker"; on Scan, "a more subtle flicker". So the
+  ordinary write is not the blink JD sees: the consolidation is. What Scan
+  leaves is most likely the erase: two 1 KB pages, 1-2 ms each, stall the
+  CPU and the row ISR (sn32f299.md, p. 251), so one row holds while the
+  rest go dark. Not yet tried: Dim + write.
+- **How often a consolidation comes:** when the log fills, never on a timer.
+  The log is 127 lines; a write takes a line per 5 bytes of its block. A
+  settled kb_eeconfig change (10 B) or an RGB save (8 B) costs 2, a profile
+  save ~8, a Win/Mac flip with profiles ~10 (the 27 B last record, RGB, kb).
+  So one every ~60 ordinary changes, ~16 saves or ~12 flips; the background
+  writers alone (the clock's period nightly, the level's milestones on
+  battery) every few weeks. The daemon's week can't count JD's own: the
+  test passes reset the counters many times a day.
+- **JD's direction (10-27):** "on dimming, using the scan strategy and doing
+  the cleanup on dimming could help ... we just have to do it on a timer
+  with 'always on' or plugged in configurations."; then "build 1-3 and the
+  Dim + cleanup test ... Someone who hasn't typed for ten minutes is
+  probably not looking closely at their keyboard."
+- **Built (`gremlin/write-test`, `4ee668eb`..`dc8e6d0c`; codex three
+  rounds, `plans/review-codex-flash-tidy-2026-10-27.md`):** the scan through
+  a flash program by default (`sn32f2xx_pgm_scan`); `flash_tidy.c`, a
+  consolidation once the log is half full, when the committed frame is dark
+  and 30 s pass without input, or after 10 min without input on USB or in
+  Always on (on battery the other modes go dark first); the Write test's
+  Dim + cleanup, waiting for two rendered frames after the cap. Docs:
+  docs/leds.md, "The blink is the consolidation". GREMLIN-RESULTS §20z.
+- **Owed:** JD's eye on Dim + cleanup (does a cleanup at the dim show?), and
+  on the board day to day; then the merge.
 
 ## The default keymap as AJazz ships the board (2026-10-27) -- JD's call, the polish phase
 

@@ -1,0 +1,5 @@
+- **New P2:** [flash_tidy.c:32](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/flash_tidy.c:32) skips rearming below threshold. Program/checksum failures reset usage ([wear_leveling.c:320](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/quantum/wear_leveling/wear_leveling.c:320)), so subsequent input can be missed and an idle refill remain blocked. Rearm before the threshold check; [test.c:35](C:/Users/jdlien/code/ak820-pro/scripts/flash_tidy_test/test.c:35) masks this by preserving usage on failure.
+- Solid closes at [sn32f2xx.c:972](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/drivers/led/sn32f2xx.c:972); timestamp aliasing is removed.
+- [Half-full threshold](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/flash_tidy.c:17) reduces consolidation amplification to approximately twice. Power-loss risk remains, explicitly documented at [flash_tidy.h:34](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/flash_tidy.h:34).
+
+Tests/build not rerun: process execution unavailable.

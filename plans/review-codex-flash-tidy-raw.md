@@ -1,0 +1,5 @@
+- **P2:** [menu.c:2001](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu.c:2001) can wait forever on Solid. [sn32f2xx.c:998](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/drivers/led/sn32f2xx.c:998) counts only changed buffers: dimming produces at most one commit; identical subsequent frames produce none. Count completed renders instead.
+- **P2:** [flash_tidy.c:43](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/flash_tidy.c:43) aliases activity timestamps every 65.536 seconds. A later pause with matching low bits skips cleanup entirely. Rearm on observed activity.
+- **Risk:** [flash_tidy.c:49](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/flash_tidy.c:49) automatically erases the sole persistent copy on battery. Power loss before the checksum commits can lose all settings; reserve gating cannot prevent slider brownouts. The quarter-full threshold increases erase frequency up to approximately fourfold.
+
+No new masking, LCD-drain, sleep, or watchdog blocker found; UART erase stalls remain. Host tests weren’t rerun: process execution was unavailable.

@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+Your review of the write test (3a661db1, plans/review-codex-write-test-raw.md) held the flash: P1 the consolidation from FLASH_STOP without the unlock (the LCD's drain); P2 the macro buffer's last byte, QMK's sentinel; P2 Dim + write before the dimmed frame's flush; P3 the strings in daily. The fixes: qmk_firmware-ak820pro `git diff 3a661db1 920ad3f2`: wear_leveling_consolidate() takes wear_leveling_unlock()/lock() as wear_leveling_write() does; env_wt_write() writes the second-to-last byte, refused unless the sixteen terminators lie before it; the dim's write waits 50 ms after the cap (a two-phase pg.wt.dim); the label and titles under MENU_WTEST. scripts/menu_s0_test.c checks the dim's write comes >= 50 ms after the cap (a mutant without the wait fails). Host tests pass; dev build OK, heap gap 136 B.
+
+Check each fix closes its finding, and anything new. File and line. Under 100 words.

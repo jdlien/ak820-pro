@@ -1,0 +1,138 @@
+{
+ "steps": [
+  {
+   "what": "open",
+   "ms": 988,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "to Diagnostics",
+   "ms": 988,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 10,
+   "inv": 0
+  },
+  {
+   "what": "Diagnostics",
+   "ms": 772,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "to Write test",
+   "ms": 230,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "Write test",
+   "ms": 675,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "Strategy: Scan",
+   "ms": 120,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "on Scan, 1 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "Strategy: Blank",
+   "ms": 122,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "to One write",
+   "ms": 233,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write",
+   "ms": 119,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "its flash, 1.5 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "Diagnostics back",
+   "ms": 436,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "the top level",
+   "ms": 662,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 10,
+   "inv": 0
+  },
+  {
+   "what": "close",
+   "ms": 326,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0
+  }
+ ],
+ "meas": {
+  "piece_us": 5616,
+  "op_us": 63648,
+  "pass_max_us": 14720,
+  "over15": 0,
+  "repaint_ms": 987,
+  "tgen": 11,
+  "settled": 10,
+  "superseded": 1,
+  "band_ms": 2,
+  "page": 0,
+  "dbg_gen": 0,
+  "dbg_done_gen": 0,
+  "committed": 56,
+  "passes": 1595,
+  "token": 1,
+  "health_gen": 0,
+  "dbg_sec": 255,
+  "rtc_sec": 58,
+  "aliased": false
+ },
+ "fails": []
+}

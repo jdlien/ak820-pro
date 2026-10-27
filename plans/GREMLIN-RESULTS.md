@@ -1800,3 +1800,38 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   (`board-ce3f842d.json`; `board-a5d9171c.json` before it).
 - **JD's profiles and live settings** stashed and put back each time, read
   back equal.
+
+### 20z. The LED blink: the write test, the scan through writes, the early cleanup (10-27, 12:30-17:00)
+
+- **`920ad3f2`** (dev, token `0x2f5477a5`): the dev Write test in
+  Diagnostics (codex: a P1 and three findings fixed first,
+  `plans/review-codex-write-test-2026-10-27.md`). Smoke test: Strategy both
+  ways, One write one flash write, the menu's longest pass 14.7 ms
+  (`wt-smoke-920ad3f2.json`). **JD's eye** (Solid near-white): One write
+  and Ten writes "zero flicker" under either strategy; Cleanup under Blank
+  "a very noticeable flicker", under Scan "a more subtle flicker".
+- **`dc8e6d0c`** (dev, token `0x42b3bf75`, heap gap 128 B: the floor, after
+  `flash_tidy`'s state was packed): the scan through writes by default, the
+  early cleanup (`flash_tidy.c`), Dim + cleanup. Codex: three rounds, every
+  finding fixed (`plans/review-codex-flash-tidy-2026-10-27.md`).
+  - ⚠️ **The flash's keymap restore refused:** the Write test's spare byte
+    (0x55, the macro buffer's byte before the last) read as a 17th macro to
+    `ak820keymap.py`, "19 bytes" in a buffer that holds 18. The keymap was
+    restored from a copy of the backup with that byte zeroed (JD's file
+    untouched), then the profiles and the live settings by hand, all read
+    back. The tool now stops counting at the 16th macro's NUL, as QMK reads
+    them. The block's side byte was 0xFF in the backup: both sides
+    unlinked since 13:28, most likely by a Reset settings (the live
+    settings were the defaults but the colour), not a fault.
+  - **The dark path** (`tidy-board-dc8e6d0c.json`): the restore left the
+    log at 744 of 1016 B; four One writes to 776 with no cleanup while the
+    menu was open; the lights held dark (op 14, stage 2), the cleanup came
+    at the first read, 2 s on, kind 1, the log 0, once. The 30 s rule
+    couldn't be timed here: op 27's menu input isn't input, and no key had
+    been pressed for longer. The script's FAILs: that timing check, and the
+    menu's first open settling in 1,001 ms. The menu's longest pass 14.7 ms.
+  - **The lit path** (`tidy-lit-board-dc8e6d0c.json`): 68 One writes to
+    544 B, the lights on, on USB; no key pressed; the cleanup came 340-360 s
+    after the fill (10 min after the last key), kind 2, the log 0. PASS.
+  - **Health after both:** two stalls >= 25 ms, both the cleanups (the
+    longest flash gap 62 ms), none not flash's.

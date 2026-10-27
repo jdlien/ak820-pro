@@ -1422,6 +1422,40 @@ void env_settings_flush(void) { fk_flushes++; fk_settle_pending = false; }
 void env_settings_touch(void) { fk_settle_touches++; fk_settle_pending = true; }
 bool env_settings_pending(void) { return fk_settle_pending; }
 void env_prof_switched(uint8_t slot, uint8_t st) { (void)slot; (void)st; }   /* the Win/Mac switch: profiles_test.c */
+/* 10-27, dev's write test: the strategy, the writes and cleanups made, the
+ * spare byte's absence, the dim forced, when its cap is in force (20 passes
+ * of 5 ms after the force), and the LED frames committed (one each 17 ms, or
+ * none while fk_wt_frames_hold: a pass blocked). */
+static bool    fk_wt_scan, fk_wt_none, fk_wt_dim, fk_wt_early;   /* early: a cleanup before the cap was in force */
+static bool    fk_wt_frames_hold;
+static uint8_t fk_wt_frames_held;
+static int     fk_wt_writes, fk_wt_cleans, fk_wt_dim_sets, fk_wt_dim_passes;
+static uint32_t fk_wt_applied_at, fk_wt_dim_gap;   /* when the cap was first on, the dim's write after it (ms) */
+bool           env_wt_scan(void) { return fk_wt_scan; }
+void           env_wt_set_scan(bool on) { fk_wt_scan = on; }
+uint8_t        env_wt_write(void) {
+    if (fk_wt_none) return ENV_WT_NONE;
+    fk_wt_writes++;
+    return ENV_WR_OK;
+}
+bool env_wt_cleanup(void) {
+    if (fk_wt_dim && fk_wt_dim_passes <= 20) fk_wt_early = true;
+    if (fk_wt_dim) fk_wt_dim_gap = fk_now - fk_wt_applied_at;
+    fk_wt_cleans++;
+    return true;
+}
+uint8_t env_wt_frames(void) { return fk_wt_frames_hold ? fk_wt_frames_held : (uint8_t)(fk_now / 17u); }
+void env_wt_dim(bool on) {
+    fk_wt_dim = on;
+    fk_wt_dim_sets++;
+    fk_wt_dim_passes = 0;
+}
+bool env_wt_dimmed(void) { return fk_wt_dim; }
+bool env_wt_dim_applied(void) {   /* the ladder's next tick, ~100 ms */
+    if (!fk_wt_dim || ++fk_wt_dim_passes <= 20) return false;
+    if (fk_wt_dim_passes == 21) fk_wt_applied_at = fk_now;
+    return true;
+}
 static int  fk_defaults_reads;
 void        env_defaults(env_defaults_t *d) {   /* Reset settings (10-27): mode 1 is Solid (fk_effect_names) */
     fk_defaults_reads++;
@@ -4858,6 +4892,121 @@ static void test_defaults(void) {
     menu_watch = false;
 }
 
+/* 10-27: dev builds' Write test (JD: "a dev-only option in the menu that
+ * lets you do a write strategy test"): Diagnostics' fifth row; the strategy
+ * toggled; one write; ten, a second apart, a click again stopping them;
+ * the cleanup; Dim + cleanup stopping the ten and waiting for the cap and
+ * then two committed frames, a click releasing it;
+ * leaving the page or closing the session releasing a dim the page forced,
+ * and never a bench's. */
+enum { SC_WTEST = 16 + 59 };
+static void test_wtest(void) {
+    fw_reset();
+    fk_wt_scan = fk_wt_none = fk_wt_dim = fk_wt_early = false;
+    fk_wt_writes = fk_wt_cleans = fk_wt_dim_sets = 0;
+    fk_wt_scan = true;   /* the driver's default since 10-27 */
+    fk_wt_frames_hold = false;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_DIAG);
+    m_click();
+    CHECK(sub5_screen() == 16 + 4 && row_bad(4, cells2("Write test", FONT_MONO_TRI_R), MENU_DIM) == 0);
+    m_turn(3);
+    m_click();
+    CHECK(sub5_screen() == SC_WTEST && sub5_cursor() == 1 && title_bad(FONT_MONO_I_DIAG " Write test") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, cells2("Strategy", "Scan"), MENU_LIT) == 0 &&
+          row_bad(2, "One write", MENU_DIM) == 0 && row_bad(3, "Ten writes", MENU_DIM) == 0 &&
+          row_bad(4, "Cleanup", MENU_DIM) == 0 && row_bad(5, "Dim + cleanup", MENU_DIM) == 0 && row_bad(6, "", 0) == 0);
+    /* The strategy, both ways. */
+    m_click();
+    CHECK(!fk_wt_scan && row_bad(1, cells2("Strategy", "Blank"), MENU_LIT) == 0);
+    m_click();
+    CHECK(fk_wt_scan && row_bad(1, cells2("Strategy", "Scan"), MENU_LIT) == 0);
+    /* One write, "Written"; with no spare byte, said so. */
+    m_turn(1);
+    m_click();
+    CHECK(fk_wt_writes == 1 && title_bad("Written") == 0);
+    m_unflash();
+    fk_wt_none = true;
+    m_click();
+    CHECK(fk_wt_writes == 1 && title_bad("No spare byte") == 0);
+    fk_wt_none = false;
+    m_unflash();
+    /* Ten, a second apart; a click again stops them. */
+    m_turn(1);
+    m_click();
+    CHECK(fk_wt_writes == 2 && row_bad(3, cells2("Ten writes", "Writing"), MENU_LIT) == 0);
+    for (int i = 0; i < 200; i++) fw_pass(5);   /* a second */
+    m_settle();
+    CHECK(fk_wt_writes == 3);
+    for (int i = 0; i < 1800; i++) fw_pass(5);   /* nine more seconds: the ten */
+    m_settle();
+    CHECK(fk_wt_writes == 11 && row_bad(3, "Ten writes", MENU_LIT) == 0);
+    m_click();
+    for (int i = 0; i < 400; i++) fw_pass(5);
+    m_settle();
+    CHECK(fk_wt_writes == 14);
+    m_click();   /* stopped */
+    for (int i = 0; i < 400; i++) fw_pass(5);
+    m_settle();
+    CHECK(fk_wt_writes == 14 && row_bad(3, "Ten writes", MENU_LIT) == 0);
+    /* The cleanup. */
+    m_turn(1);
+    m_click();
+    CHECK(fk_wt_cleans == 1 && title_bad("Cleaned up") == 0);
+    m_unflash();
+    /* Dim + cleanup: it stops the ten; the cleanup waits for the cap, then
+     * for two frames committed, however long a blocked pass keeps them;
+     * a click again releases. */
+    m_turn(-1);
+    m_click();
+    CHECK(fk_wt_writes == 15 && row_bad(3, cells2("Ten writes", "Writing"), MENU_LIT) == 0);
+    m_turn(2);
+    fk_wt_frames_held = (uint8_t)(fk_now / 17u);
+    fk_wt_frames_hold = true;
+    m_click();
+    CHECK(fk_wt_dim && fk_wt_dim_sets == 1);
+    for (int i = 0; i < 400; i++) fw_pass(5);   /* two seconds, no frame */
+    m_settle();
+    CHECK(fk_wt_cleans == 1 && fk_wt_writes == 15 && row_bad(3, "Ten writes", MENU_DIM) == 0);
+    fk_wt_frames_hold = false;
+    for (int i = 0; i < 4; i++) fw_pass(5);
+    m_settle();
+    CHECK(fk_wt_cleans == 2 && !fk_wt_early && fk_wt_dim_gap >= 50 && title_bad("Cleaned up") == 0 &&
+          row_bad(5, cells2("Dim + cleanup", "On"), MENU_LIT) == 0);
+    m_unflash();
+    /* ... and with the frames coming, it waits 50 ms at least. */
+    m_click();
+    CHECK(!fk_wt_dim && fk_wt_dim_sets == 2 && row_bad(5, "Dim + cleanup", MENU_LIT) == 0);
+    m_click();
+    for (int i = 0; i < 40; i++) fw_pass(5);
+    m_settle();
+    CHECK(fk_wt_cleans == 3 && !fk_wt_early && fk_wt_dim_gap >= 50 && fk_wt_writes == 15);
+    m_unflash();
+    m_click();
+    CHECK(!fk_wt_dim && fk_wt_dim_sets == 4);
+    /* Leaving the page releases the page's dim; ... */
+    m_click();
+    CHECK(fk_wt_dim);
+    m_hold();
+    CHECK(sub5_screen() == 16 + 4 && !fk_wt_dim);
+    /* ... closing the session does too; a bench's forced dim stays. */
+    m_click();
+    m_turn(4);
+    m_click();
+    CHECK(fk_wt_dim);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    fw_pass(5);
+    CHECK(!fk_wt_dim);
+    fk_wt_dim = true;   /* a bench's (op 14 sub 2) */
+    for (int i = 0; i < 20; i++) fw_pass(5);
+    CHECK(fk_wt_dim);
+    fk_wt_dim = false;
+    CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
+    menu_watch = false;
+}
+
 int main(int argc, char **argv) {
 #ifdef MENU_ENABLE
     (void)argc; (void)argv;
@@ -4894,6 +5043,7 @@ int main(int argc, char **argv) {
     test_preview_codex();
     test_rename();
     test_defaults();
+    test_wtest();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

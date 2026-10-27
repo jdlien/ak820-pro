@@ -1,0 +1,195 @@
+{
+ "steps": [
+  {
+   "what": "open",
+   "ms": 1001,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "to Diagnostics",
+   "ms": 896,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 10,
+   "inv": 0
+  },
+  {
+   "what": "Diagnostics",
+   "ms": 800,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "to Write test",
+   "ms": 227,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "Write test",
+   "ms": 678,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "Strategy: Blank (from Scan)",
+   "ms": 123,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "Strategy: Scan",
+   "ms": 122,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "to One write",
+   "ms": 231,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 1/4",
+   "ms": 119,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 2/4",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 3/4",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 4/4",
+   "ms": 10,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "the last write, 1 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "Diagnostics back",
+   "ms": 454,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "the top level",
+   "ms": 675,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 10,
+   "inv": 0
+  },
+  {
+   "what": "close",
+   "ms": 433,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0
+  }
+ ],
+ "rec": {
+  "before": {
+   "tidy": {
+    "used": 744,
+    "size": 1016,
+    "threshold": 508,
+    "tidies": 0,
+    "failures": 0,
+    "kind": 0
+   },
+   "flash_writes": 837,
+   "ge25": 0,
+   "ge25_nonflash": 0
+  },
+  "filled": {
+   "used": 776,
+   "size": 1016,
+   "threshold": 508,
+   "tidies": 0,
+   "failures": 0,
+   "kind": 0
+  },
+  "meas": {
+   "piece_us": 5397,
+   "op_us": 43557,
+   "pass_max_us": 14656,
+   "over15": 0,
+   "repaint_ms": 987,
+   "tgen": 11,
+   "settled": 10,
+   "superseded": 1,
+   "band_ms": 2,
+   "page": 0,
+   "dbg_gen": 0,
+   "dbg_done_gen": 0,
+   "committed": 56,
+   "passes": 1404,
+   "token": 1,
+   "health_gen": 0,
+   "dbg_sec": 255,
+   "rtc_sec": 52,
+   "aliased": false
+  },
+  "after": {
+   "used": 0,
+   "size": 1016,
+   "threshold": 508,
+   "tidies": 1,
+   "failures": 0,
+   "kind": 1
+  },
+  "waited_s": 2.0,
+  "end": {
+   "flash_writes": 842,
+   "ge25": 1,
+   "ge25_nonflash": 0,
+   "flash_gap_max_ms": 61
+  }
+ },
+ "fails": [
+  "open: settled in 1001 ms",
+  "not before ~30 s idle: 2.0 s"
+ ]
+}

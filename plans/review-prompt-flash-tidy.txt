@@ -1,0 +1,10 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+Review before flashing: qmk_firmware-ak820pro `git diff 920ad3f2 e0769d16` (branch gremlin/write-test). Context: plans/BACKLOG.md, "The LED blink at an internal-flash write" (JD's eye on the dev Write test: an ordinary write invisible under either strategy; a consolidation "a very noticeable flicker" with rows blanked, "more subtle" scanning). The change:
+1. drivers/led/sn32f2xx.c: sn32f2xx_pgm_scan true by default: the row ISR (and the sleep's scan-only path) runs through EFLD1 FLASH_PGM instead of de-selecting rows; sn32f2xx_led_commits(), a u8 count of committed frames.
+2. quantum/wear_leveling: wear_leveling_log_used().
+3. keyboards/a_jazz/ak820pro/flash_tidy.c (new), called in housekeeping_task_kb after watchdog_kick() and just before sleep_task(): consolidates once the log is a quarter full, when the committed frame is dark and 30 s pass without input, or after 10 min without input on USB or in Always on; one try per pause (the activity time's low 16 bits); not with the menu open, in a wake's recovery, or with the lights cut. HC_FLASHW page 4 reads it (hid_protocol.c).
+4. The dev Write test: Dim + cleanup waits for the cap, then two committed frames and 50 ms; it stops Ten writes.
+Host tests pass (scripts/flash_tidy_test/run.sh, new; scripts/menu_s0_test.c, three mutants caught). Dev build OK, heap gap 128 B (the floor).
+
+Look hardest at: scanning through programs by default (masking, flash fetches between windows, the matrix); a 58 ms consolidation at that point in the pass and right before a deep sleep (the LCD drain, the PCF/I2C, UART2, DSB_FLASH, the watchdog); a power loss mid-consolidation on battery; the conditions' edge cases; erase wear. File and line. Under 150 words.

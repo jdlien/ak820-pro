@@ -1,0 +1,851 @@
+{
+ "steps": [
+  {
+   "what": "open",
+   "ms": 999,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "to Diagnostics",
+   "ms": 898,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 10,
+   "inv": 0
+  },
+  {
+   "what": "Diagnostics",
+   "ms": 768,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "to Write test",
+   "ms": 229,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "Write test",
+   "ms": 671,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "to One write",
+   "ms": 226,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 1/68",
+   "ms": 122,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 2/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 3/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 4/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 5/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 6/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 7/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 8/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 9/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 10/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 11/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 12/68",
+   "ms": 10,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 13/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 14/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 15/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 16/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 17/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 18/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 19/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 20/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 21/68",
+   "ms": 11,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 22/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 23/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 24/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 25/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 26/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 27/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 28/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 29/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 30/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 31/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 32/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 33/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 34/68",
+   "ms": 11,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 35/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 36/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 37/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 38/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 39/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 40/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 41/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 42/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 43/68",
+   "ms": 10,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 44/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 45/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 46/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 47/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 48/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 49/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 50/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 51/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 52/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 53/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 54/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 55/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 56/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 57/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 58/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 59/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 60/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 61/68",
+   "ms": 11,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 62/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 63/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 64/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 65/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 66/68",
+   "ms": 8,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 67/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "One write 68/68",
+   "ms": 9,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "the last write, 1 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 75,
+   "cursor": 2,
+   "inv": 0
+  },
+  {
+   "what": "Diagnostics back",
+   "ms": 450,
+   "owner": "menu",
+   "screen": 20,
+   "cursor": 4,
+   "inv": 0
+  },
+  {
+   "what": "the top level",
+   "ms": 670,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 10,
+   "inv": 0
+  },
+  {
+   "what": "close",
+   "ms": 434,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0
+  }
+ ],
+ "rec": {
+  "polls": [
+   {
+    "s": 20,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 40,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 60,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 80,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 100,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 120,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 140,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 160,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 180,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 200,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 220,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 240,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 260,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 280,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 300,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 320,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 340,
+    "tidy": {
+     "used": 544,
+     "threshold": 508,
+     "tidies": 1,
+     "failures": 0,
+     "kind": 1
+    },
+    "keys": 0
+   },
+   {
+    "s": 360,
+    "tidy": {
+     "used": 0,
+     "threshold": 508,
+     "tidies": 2,
+     "failures": 0,
+     "kind": 2
+    },
+    "keys": 0
+   }
+  ],
+  "filled": {
+   "used": 544,
+   "threshold": 508,
+   "tidies": 1,
+   "failures": 0,
+   "kind": 1
+  },
+  "after": {
+   "used": 0,
+   "threshold": 508,
+   "tidies": 2,
+   "failures": 0,
+   "kind": 2
+  },
+  "end": {
+   "flash_writes": 911,
+   "ge25": 2,
+   "ge25_nonflash": 0,
+   "flash_gap_max_ms": 62
+  }
+ },
+ "fails": []
+}
