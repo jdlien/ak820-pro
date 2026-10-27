@@ -66,6 +66,26 @@ rainbow cycling on Mac mode". Then: "I think always on makes sense here
   below) every few. What would fit: a byte of QMK's key options a
   profile (swap Alt and GUI, Caps as Ctrl), if a record's byte is found.
 
+## A "None" battery readout: the icon alone (2026-10-27) -- JD's idea, pinned for later
+
+JD (10-27): "maybe we could have a 'None' option under the battery menu.
+Pin that for later... for someone that wants a more minimal screen ...
+Users still get the battery icon gauge so there's still an indication of
+life but maybe some people don't like the stress of seeing the percent drop
+a percent at a time."
+- **The shape:** a fourth readout after Both (the Clock's Off is last too);
+  kb_eeconfig's byte 4, profiles' range 1-4 (a record holding 4 reads as
+  invalid on a firmware before it, so a downgrade drops that profile), the
+  dashboard's text slot left clear. The icon, the bolt and the bulb stay,
+  and so does the low warning: the icon's colour and the status band's
+  "Battery low" (3550 mV) don't use the text.
+- **The page:** Back, Percent, Hours of use, Both, the new row in row 4 (the
+  blank one), the note under it at rows 5-7 with the profile summary's grey
+  rule on its first line (`RULE_CHUNK`, `row_ruled()`) in place of the gap.
+  Its preview blank.
+- **The name, JD's call:** "None" as asked, or "Icon only", which says what
+  stays; "Off" could read as the icon going too.
+
 ## The default keymap as AJazz ships the board (2026-10-27) -- JD's call, the polish phase
 
 JD (10-27): "the default keymap should probably reflect how AJazz ships
