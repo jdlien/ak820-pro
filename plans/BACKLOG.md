@@ -66,7 +66,7 @@ rainbow cycling on Mac mode". Then: "I think always on makes sense here
   below) every few. What would fit: a byte of QMK's key options a
   profile (swap Alt and GUI, Caps as Ctrl), if a record's byte is found.
 
-## A "None" battery readout: the icon alone (2026-10-27) -- JD's idea, pinned for later
+## "Icon only": a battery readout of the icon alone (2026-10-27) -- JD's idea, pinned for later
 
 JD (10-27): "maybe we could have a 'None' option under the battery menu.
 Pin that for later... for someone that wants a more minimal screen ...
@@ -83,8 +83,39 @@ a percent at a time."
   blank one), the note under it at rows 5-7 with the profile summary's grey
   rule on its first line (`RULE_CHUNK`, `row_ruled()`) in place of the gap.
   Its preview blank.
-- **The name, JD's call:** "None" as asked, or "Icon only", which says what
-  stays; "Off" could read as the icon going too.
+- **The name: "Icon only"** (JD: "None sounds like we just keep the whole
+  region blank, which I don't think we should do"; "the calmer choice").
+  **The icon keeps its colours** (JD: "Apple would just keep it monochrome
+  white, but I'm okay to retain that").
+
+## The LED blink at an internal-flash write (2026-10-27) -- JD's bug; a dev test page proposed, awaiting his go
+
+JD (10-27): "the board flickers once in a while. Hard to replicate, somewhat
+sporadic, and subtle. But it does look glitchy when it happens"; "I mainly
+notice the lights ... I haven't noticed screen blinking."
+- **The mechanism** (docs/leds.md, "What an internal-flash write does"):
+  while EFLD1 is in FLASH_PGM the row ISR de-selects every mux row
+  (`drivers/led/sn32f2xx.c`), so the board is dark for each program call;
+  a consolidation (~every 16 saves) rewrites 1 KB in chunks, a run of
+  blanks over tens of ms. The deferred writes (RGB ~1 s, kb_eeconfig 5 s,
+  the profiles' pair after kb's) put the blink seconds after its cause.
+- **Who writes, unprompted** (the daemon's `ak820-health.csv`, a week): in
+  quiet stretches ~1 a night, the clock's period (rtc_persist, ~04:30);
+  on battery the level's milestones; the rest JD's own changes.
+- **The idea:** the guard went in 09-01 on the belief that masked program
+  windows froze a row for milliseconds; 10-04 corrected it (masked 10-20 us
+  a line, the ISR runs between). The bright row came from the old code
+  SKIPPING the scan in FLASH_PGM. So scanning straight through a write may
+  show nothing (a row a few us late), and keep the key scan going too. The
+  cost: writes slower (the ISR takes ~73% of the CPU), the consolidation's
+  ~58 ms pause longer.
+- **The test (JD: "a dev-only option in the menu that lets you do a write
+  strategy test"):** a dev-only Diagnostics page: a write, a burst, a
+  consolidation, and the guard's strategy as a choice switched at run time,
+  so the same writes compare by eye. Deferring writes to when the board is
+  dark only with a deadline (Always on, or typing for hours, never goes
+  dark), and it trades against the change-of-computers brownout that today's
+  flip fix guards.
 
 ## The default keymap as AJazz ships the board (2026-10-27) -- JD's call, the polish phase
 
