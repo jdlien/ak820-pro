@@ -25,6 +25,47 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## The Win/Mac switch loads each side's last profile (2026-10-27) -- JD's idea, to build; always on
+
+JD (10-27): "can we make it so that the current profile is remembered for
+windows and Mac layers so when a user flicks the switch, it changes to the
+last profile used with that layer? ... blue keys on windows mode and
+rainbow cycling on Mac mode". Then: "I think always on makes sense here
+... Cheap feature to built that might actually be legitimately useful."
+
+- **How:** each side remembers one slot. The menu's Load, Save and Save
+  new and the Prof+/Prof- keys record theirs as the current side's; a
+  Delete clears it from either side; Rename moves nothing. A flip (the
+  dip switch's index 0, `dip_switch_update_kb()`) loads the other side's
+  as the Prof keys do (`prof_step()`: `cancel_previews()`, then
+  `prof_load()`, the name in the status band). A side with none changes
+  nothing. No menu row (JD: always on).
+- **Storage:** the profile block is full (218 B: the magic, the active
+  byte, 8 x 27). The active byte splits into a nibble a side (0-7, 0xF
+  none), the active slot being the switch's side's: a new magic (0xA3),
+  and `hostagent/ak820profiles.py` converting 0xA2 (both sides the old
+  active), so `flash.sh`'s backup carries the pair. No macro bytes.
+- **Rules:** load once the switch has rested ~250 ms (a bouncing contact
+  loads once); the boot's own reading isn't a flip (`dip_switch_init()`
+  runs before the EEPROM is read); never reload at a boot, since the
+  slider's flips reboot the board and would wipe unsaved changes each
+  time. So a change since the load (the `*`) is lost on a flip there and
+  back, accepted: there are no 27 B for a live copy a side. A switch
+  moved while the board is off keeps the old side's settings until the
+  next flip.
+- **Cost:** a Prof key press's (tried on the board, P5b) and the deferred
+  active byte; QMK already writes the default layer at every flip.
+- **Keymaps in profiles (asked the same day): not whole ones.** The two
+  sides already have their own base and Fn layers, so with this a flip
+  changes the keys and the lighting together. A layer is 180 B (6 x 15 x
+  2) of a 1 KB emulated EEPROM that's full, and wear_leveling.c keeps all
+  of it in RAM (`cache[WEAR_LEVELING_LOGICAL_SIZE]`), where the dev
+  build's heap gap is 136 B against a 128 B floor; the flash has room
+  (220 KB of 256), the RAM doesn't. Keymaps on the asset flash would
+  rewrite ~360 B of the EEPROM at every load, a consolidation (~58 ms,
+  below) every few. What would fit: a byte of QMK's key options a
+  profile (swap Alt and GUI, Caps as Ctrl), if a record's byte is found.
+
 ## A wear-leveling consolidation blocks one pass ~58 ms (2026-10-25) -- measured, not profiles'; every settings write can trigger one
 
 P5a's first board measure (`history/config-menu-p3-20261025/p5a-measure-5ecc9a32.json`,

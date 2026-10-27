@@ -398,6 +398,12 @@ This file is the thread; read it first after a context loss. Updated
        was on the cable's position); then merge. **Next after it (JD):** an
        experimental fork with a bigger menu font ("might be interesting to
        see you do an experimental fork to try").
+       **On the todo list (10-27, JD: "Maybe add it to our todo list"):**
+       the Win/Mac switch loading each side's last profile, always on
+       (BACKLOG.md, its entry of 10-27, with the design and why whole
+       keymaps in profiles don't fit). JD's call on the Both order (hours
+       first or percent first) is open: kept percent first, offered the
+       flip.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
