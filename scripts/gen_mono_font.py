@@ -71,6 +71,8 @@ ICONS = [
     ("I_SAVE", 0xF0A9, 2),         # Save current here, nf-fa-arrow_circle_right,
     ("I_RENAME", 0xF040, 1),       # Rename, nf-fa-pencil,
     ("I_DELETE", 0xF48E, 2),       # Delete, nf-oct-trashcan
+    ("I_RESET", 0x21BA, 1),        # Reset settings (JD, 10-27: "circular arrow like fontawesome's arrow-rotate-left"),
+                                   # the anticlockwise open circle arrow, 5 x 6 px
 ]
 
 

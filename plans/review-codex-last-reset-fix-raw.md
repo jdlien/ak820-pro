@@ -1,0 +1,7 @@
+All four P2s close: [preview cancellation](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:539), [ordered persistence](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:547), [independent BUSY check](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:635), and [preflight](/C:/Users/jdlien/code/ak820-pro/flash.sh:210) with [exit-4 handling](/C:/Users/jdlien/code/ak820-pro/flash.sh:310).
+
+Flush runs once per settled switch in [10 Hz housekeeping](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ak820pro.c:651), adding synchronous kb/RGB writes and possible consolidation stalls; latency remains unmeasured. Bypassing the RGB guard is safe here: previews cancelled, recovery excluded, [DMA drained](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ak820pro.c:716). [DSB_FLASH](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:253) covers pending kb writes; sleep follows completion.
+
+**New P3:** [ak820profiles.py:451](/C:/Users/jdlien/code/ak820-pro/hostagent/ak820profiles.py:451) claims live settings restored/returns 4 after `--block-only` conversion refusal, although live application was skipped. Return 1 there.
+
+No new flash blocker found. Tests/build weren’t rerun: process execution denied.

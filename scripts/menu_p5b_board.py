@@ -12,7 +12,7 @@ JD's to lose), and leaves them empty and the live settings as they were.
    (P5d: the list shows the saved slots and Save new); its page; the top
    level's `*` after a change made over HC_PROFILES' live apply; Load; Save
    current here's confirm held, then clicked; Delete's confirm clicked; all
-   eight saved by Save new, the list paged, a dwell on it and on the top
+   seven (10-27; eight before) saved by Save new, the list paged, a dwell on it and on the top
    level, Save new's "Full" clicked; a host restore's Begin popping a slot's
    page; the close.
 2. Every step: the screen and cursor (menu_p1a_board's step()); the block
@@ -43,9 +43,10 @@ PRENAME = 56   # P5c: its cursor is the capture's state << 4 | the slot (2: CAPT
 R_PROF, R_HELP = g.R_PROF, g.R_HELP
 PR_LCD = 8   # the record's screen level (profiles.h)
 ME_PROFILE = 10   # menu_edit.h: P5e's preview edit
-# P5e: each of the eight saved from its own look: an effect id (rgb_effects.c)
+# P5e: each of the seven saved from its own look: an effect id (rgb_effects.c)
 # and a screen level, so every preview switches both.
-LOOKS = [(1, 20), (4, 90), (12, 40), (9, 100), (5, 30), (11, 70), (2, 50), (10, 60)]
+LOOKS = [(1, 20), (4, 90), (12, 40), (9, 100), (5, 30), (11, 70), (2, 50)]
+NUSER = len(LOOKS)   # 10-27: seven profiles, the eighth record the other side's settings as left
 
 
 def live_with(live, effect, lcd):
@@ -67,14 +68,15 @@ def slots(h):
     the active slot, the switch's side's since 10-27 (0xFF none)."""
     gp = ap.geometry(h)
     b = ap.read_block(h, gp)
+    n = ap.USER_OF.get(gp.magic, gp.slots)
     if b[0] != gp.magic:
-        return [None] * gp.slots, 0xFF
+        return [None] * n, 0xFF
     out = []
-    for s in range(gp.slots):
+    for s in range(n):
         r = b[2 + s * ap.REC:2 + (s + 1) * ap.REC]
         out.append(r if ap.rec_ok(r) else None)
     a = b[1]
-    if gp.magic == ap.MAGIC_V3:
+    if gp.magic in ap.PAIRED:
         a = (a >> 4 if gp.side == "mac" else a) & 0xF
         a = 0xFF if a == 0xF else a
     return out, a
@@ -101,7 +103,7 @@ def main():
         g.click(h, "Profiles", SCR(PROFILES), 1)
         g.click(h, "Save new: Profile 1", SCR(PROFILES), 1)
         recs, _ = slots(h)
-        g.check(len(recs) == 8 and recs[0] is not None and not any(recs[1:]), "the save: slot 1 isn't the one saved")
+        g.check(len(recs) == NUSER and recs[0] is not None and not any(recs[1:]), "the save: slot 1 isn't the one saved")
         g.dwell(h, "the save's settle, the active slot's deferred write", 6.0)
         _, active = slots(h)
         g.check(active == 0, f"the active byte {active}, not 0 after the settle")
@@ -140,53 +142,53 @@ def main():
         recs, _ = slots(h)
         g.check(not any(recs), "Delete: a slot still saved")
 
-        # P5d: all eight by Save new, each on its new row, each from other
-        # live settings (P5e: an effect and a screen level of its own, set
-        # over HC_PROFILES' live apply, so each preview switches both); the
-        # list (ten rows, two pages) turned through; a dwell on it and on the
-        # top level, the snapshot reading eight records every 128 ms; Save
-        # new's "Full" clicked, nothing written.
-        for k in range(1, 9):
+        # P5d: all seven (10-27) by Save new, each on its new row, each from
+        # other live settings (P5e: an effect and a screen level of its own,
+        # set over HC_PROFILES' live apply, so each preview switches both);
+        # the list (nine rows, two pages) turned through; a dwell on it and on
+        # the top level, the snapshot reading seven records every 128 ms;
+        # Save new's "Full" clicked, nothing written.
+        for k in range(1, NUSER + 1):
             ap.apply_live(h, live_with(live0, *LOOKS[k - 1]))
             g.click(h, f"Save new: Profile {k}", SCR(PROFILES), k)
-            if k < 8:
+            if k < NUSER:
                 g.turn(h, 1, "to Save new", SCR(PROFILES), k + 1)
         recs, _ = slots(h)
-        g.check(all(recs), "eight: a slot not saved")
-        g.dwell(h, "the eight's settle", 6.0)
-        g.turn(h, 1, "to Save new, Full", SCR(PROFILES), 9)
+        g.check(all(recs), "seven: a slot not saved")
+        g.dwell(h, "the seven's settle", 6.0)
+        g.turn(h, 1, "to Save new, Full", SCR(PROFILES), NUSER + 1)
         before = slots(h)
-        g.click(h, "Full: nothing written", SCR(PROFILES), 9)
+        g.click(h, "Full: nothing written", SCR(PROFILES), NUSER + 1)
         g.check(slots(h) == before, "Full: the block changed")
         g.check(edit(h) == (0, 0), f"on Save new: an edit open {edit(h)}")
         # P5e: each row rested on 1.2 s: a profile's preview open (ME_PROFILE)
         # from 0.6 s, Back's and Save new's none; the passes as the effects
         # and the screen levels switch.
-        for k in range(10):
+        for k in range(NUSER + 2):
             g.turn(h, 1, f"the list, row {k}", SCR(PROFILES), k)
             g.dwell(h, f"a rest on row {k}, 1.2 s", 1.2)
-            want = (1, ME_PROFILE) if 1 <= k <= 8 else (0, 0)
+            want = (1, ME_PROFILE) if 1 <= k <= NUSER else (0, 0)
             g.check(edit(h) == want, f"row {k}: the edit {edit(h)}, not {want}")
-        g.turn(h, -2, "to Profile 7, a fast turn", SCR(PROFILES), 7)
-        g.dwell(h, "the list of eight, Profile 7 previewed, 3 s", 3.0)
-        g.check(edit(h) == (1, ME_PROFILE), "Profile 7: no preview")
+        g.turn(h, -2, "to Profile 6, a fast turn", SCR(PROFILES), 6)
+        g.dwell(h, "the list of seven, Profile 6 previewed, 3 s", 3.0)
+        g.check(edit(h) == (1, ME_PROFILE), "Profile 6: no preview")
         # Its page keeps the preview; Save's confirm shows the live settings;
         # back, the profile's again; Back to the list, then out: none.
-        g.click(h, "Profile 7's page", SCR(PSLOT), 0x61)
-        g.check(edit(h) == (1, ME_PROFILE), "Profile 7's page: no preview")
-        g.turn(h, 1, "to Save current here", SCR(PSLOT), 0x62)
-        g.click(h, "Save's confirm, the live settings", SCR(PSAVE), 6)
+        g.click(h, "Profile 6's page", SCR(PSLOT), 0x51)
+        g.check(edit(h) == (1, ME_PROFILE), "Profile 6's page: no preview")
+        g.turn(h, 1, "to Save current here", SCR(PSLOT), 0x52)
+        g.click(h, "Save's confirm, the live settings", SCR(PSAVE), 5)
         g.check(edit(h) == (0, 0), "Save's confirm: a preview open")
-        g.hold(h, "cancelled, Profile 7's again", SCR(PSLOT), 0x62)
+        g.hold(h, "cancelled, Profile 6's again", SCR(PSLOT), 0x52)
         g.check(edit(h) == (1, ME_PROFILE), "back from the confirm: no preview")
-        g.hold(h, "the list", SCR(PROFILES), 7)
+        g.hold(h, "the list", SCR(PROFILES), 6)
         g.hold(h, "the top level", SCR(TOP), R_PROF)
         g.check(edit(h) == (0, 0), "out of Profiles: a preview open")
-        g.check(ap.read_live(h)[3] == LOOKS[7][0], "out of Profiles: the live effect isn't Profile 8's")
-        g.dwell(h, "the top level, Profile 8 active, 3 s", 3.0)
+        g.check(ap.read_live(h)[3] == LOOKS[NUSER - 1][0], "out of Profiles: the live effect isn't Profile 7's")
+        g.dwell(h, "the top level, Profile 7 active, 3 s", 3.0)
         # Load over a preview: Profile 3 becomes the live settings, saved.
-        g.click(h, "Profiles", SCR(PROFILES), 8)
-        g.turn(h, -5, "to Profile 3", SCR(PROFILES), 3)
+        g.click(h, "Profiles", SCR(PROFILES), NUSER)
+        g.turn(h, 3 - NUSER, "to Profile 3", SCR(PROFILES), 3)
         g.dwell(h, "Profile 3 previewed", 1.0)
         g.click(h, "Profile 3's page", SCR(PSLOT), 0x21)
         g.click(h, "Load", SCR(PROFILES), 3)
@@ -206,7 +208,7 @@ def main():
         g.hold(h, "cancelled", SCR(PSLOT), 0x23)
         g.hold(h, "Profiles", SCR(PROFILES), 3)
         g.hold(h, "the top level", SCR(TOP), R_PROF)
-        for s in range(8):
+        for s in range(NUSER):
             g.check(ap.xfer(h, 0x41, [s])[5] == 0, f"the dev delete of slot {s} refused")
         g.settle(h, "the deletes' repaint")
         g.click(h, "Profiles, nothing saved", SCR(PROFILES), 1)

@@ -1419,6 +1419,11 @@ void env_settings_flush(void) { fk_flushes++; fk_settle_pending = false; }
 void env_settings_touch(void) { fk_settle_touches++; fk_settle_pending = true; }
 bool env_settings_pending(void) { return fk_settle_pending; }
 void env_prof_switched(uint8_t slot, uint8_t st) { (void)slot; (void)st; }   /* the Win/Mac switch: profiles_test.c */
+static int  fk_defaults_reads;
+void        env_defaults(env_defaults_t *d) {   /* Reset settings (10-27): mode 1 is Solid (fk_effect_names) */
+    fk_defaults_reads++;
+    *d = (env_defaults_t){{1, 36, 64, 191, 102, 1, 0xFF}, 60, 5, 5, 0, 1, 1};
+}
 /* P5c: Rename's keys. Row 1's keycode is its column (the tests type by
  * keycode); the keys down, QMK's tapping, the one-shots' clears, Shift. */
 static int  fk_keys_down, fk_oneshot_clears;
@@ -1832,7 +1837,8 @@ static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor
                           !strncmp(cells, FONT_MONO_CHECK_BOX, 2)                         ? 0x468Cu
                           : (c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1]) ||
                                     c0 == (uint8_t)FONT_MONO_I_BATT[0] || c0 == (uint8_t)FONT_MONO_I_PROF[0] ||
-                                    (c0 >= (uint8_t)FONT_MONO_I_LOAD[0] && c0 <= (uint8_t)FONT_MONO_I_DELETE[1])
+                                    (c0 >= (uint8_t)FONT_MONO_I_LOAD[0] && c0 <= (uint8_t)FONT_MONO_I_DELETE[1]) ||
+                                    c0 == (uint8_t)FONT_MONO_I_RESET[0]   /* 10-27 */
                               ? (cursor ? 0xFFB8u : MENU_WHITE)
                               : 0);
 }
@@ -1905,14 +1911,14 @@ static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
 /* The top level's rows (P4, JD 10-25: Battery under Clock, Diagnostics
  * under Bootloader on page two): their indices, and each row's cells with
  * the defaults' values. */
-enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_PROF, T_BOOT, T_DIAG, T_HELP, T_ABOUT, T_EXIT,
-       T_ROWS };   /* P5b: Profiles page one's last, Bootloader to page two */
+enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_PROF, T_BOOT, T_DEFS, T_DIAG, T_HELP, T_ABOUT,
+       T_EXIT, T_ROWS };   /* P5b: Profiles page one's last, Bootloader to page two; 10-27: Reset settings under it */
 static const char *const top_rows_want[T_ROWS][2] = {
     {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 52 of 100 */
     {FONT_MONO_I_CONN "Connection", "BT 1"}, {FONT_MONO_I_POWER " Power", "Balanced"},   /* P3: the link */
     {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h:ss"},
     {FONT_MONO_I_BATT " Battery", "Percent"}, {FONT_MONO_I_PROF " Profiles", "None"},
-    {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R},
+    {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R}, {FONT_MONO_I_RESET " Reset settings", FONT_MONO_TRI_R},
     {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R},
     {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
 };
@@ -1941,8 +1947,9 @@ static void test_menu(void) {
     m_turn(-2);
     CHECK(sub5_cursor() == T_EXIT);
     top_frame_ok(T_EXIT);   /* page two */
-    /* Its thumb at the track's end: 69 px of 112 for thirteen rows (P5b), y 58-126 (codex: it was drawn off the panel). */
-    CHECK(fb[57][125] == MENU_TRACK && fb[58][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
+    /* Its thumb at the track's end: 64 px of 112 for fourteen rows (10-27: Reset settings; 69 for P5b's
+     * thirteen), y 63-126 (codex: it was drawn off the panel). */
+    CHECK(fb[62][125] == MENU_TRACK && fb[63][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
     m_turn(1);
     CHECK(sub5_cursor() == 0);
 
@@ -4116,66 +4123,67 @@ static void test_profiles(void) {
           row_bad(4, PNEW, MENU_DIM) == 0);
     m_unflash();
 
-    /* Eight: the list pages (ten rows), and Save new greys with "Full"; a
-     * click says so and writes nothing. */
-    for (int k = 4; k <= 8; k++) {
+    /* Seven (10-27; eight until then: the eighth record is the other
+     * side's settings as left): the list pages (nine rows), and Save new
+     * greys with "Full"; a click says so and writes nothing. */
+    for (int k = 4; k <= 7; k++) {
         m_to_pnew();
         m_click();
         CHECK(prof_active() == k - 1 && sub5_cursor() == k);
     }
     m_unflash();
-    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 8 && row_bad(0, PROW_ON("Profile 8"), MENU_LIT) == 0 &&
-          row_bad(1, cells2(PNEW, "Full"), MENU_GREY) == 0 && row_bad(2, "", 0) == 0);
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 7 && row_bad(7, PROW_ON("Profile 7"), MENU_LIT) == 0 &&
+          row_bad(6, PROW("Profile 6"), MENU_DIM) == 0);
     m_turn(1);
-    CHECK(sub5_cursor() == 9 && row_bad(1, cells2(PNEW, "Full"), MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 8 && row_bad(0, cells2(PNEW, "Full"), MENU_LIT) == 0 && row_bad(1, "", 0) == 0);
     w = fk_ee_writes;
     m_click();
-    CHECK(title_bad("Full: delete one") == 0 && fk_ee_writes == w && sub5_cursor() == 9);
+    CHECK(title_bad("Full: delete one") == 0 && fk_ee_writes == w && sub5_cursor() == 8);
     /* The list shrinking under the cursor (codex, P5d's review): the host's
      * deletes keep it on a row, and its page the cursor's. */
-    CHECK(prof_sub(0x41, 7, 0) == PROF_OK);
-    m_tick_settle();
-    CHECK(sub5_cursor() == 8 && row_bad(0, PNEW, MENU_LIT) == 0 && row_bad(1, "", 0) == 0);
     CHECK(prof_sub(0x41, 6, 0) == PROF_OK);
     m_tick_settle();
     CHECK(sub5_cursor() == 7 && row_bad(7, PNEW, MENU_LIT) == 0 && row_bad(6, PROW("Profile 6"), MENU_DIM) == 0);
+    CHECK(prof_sub(0x41, 5, 0) == PROF_OK);
+    m_tick_settle();
+    CHECK(sub5_cursor() == 6 && row_bad(6, PNEW, MENU_LIT) == 0 && row_bad(5, PROW("Profile 5"), MENU_DIM) == 0);
     /* ... and under a slot's page: back in range. */
-    m_click();   /* Save new: Profile 7 */
+    m_click();   /* Save new: Profile 6 */
     m_unflash();
     m_to_pnew();
-    m_click();   /* Profile 8 */
+    m_click();   /* Profile 7 */
     m_unflash();
     m_click();   /* its page */
-    CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x71);
-    CHECK(prof_sub(0x41, 7, 0) == PROF_OK && prof_sub(0x41, 6, 0) == PROF_OK);
+    CHECK(sub5_screen() == SC_PSLOT && sub5_cursor() == 0x61);
+    CHECK(prof_sub(0x41, 6, 0) == PROF_OK && prof_sub(0x41, 5, 0) == PROF_OK);
     m_tick_settle();
     m_hold();
-    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 7 && row_bad(7, PNEW, MENU_LIT) == 0);
-    m_click();   /* Profile 7 again */
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 6 && row_bad(6, PNEW, MENU_LIT) == 0);
+    m_click();   /* Profile 6 again */
     m_to_pnew();
-    m_click();   /* Profile 8 again */
+    m_click();   /* Profile 7 again */
     /* ... and under Delete's confirm (codex's verify): two more host deletes,
      * then the click; back in range, on Save new. */
     m_unflash();
-    m_click();   /* Profile 8's page */
+    m_click();   /* Profile 7's page */
     m_turn(3);
     m_click();   /* Delete's confirm */
-    CHECK(sub5_screen() == SC_PDEL && sub5_cursor() == 7);
-    CHECK(prof_sub(0x41, 6, 0) == PROF_OK && prof_sub(0x41, 5, 0) == PROF_OK);
+    CHECK(sub5_screen() == SC_PDEL && sub5_cursor() == 6);
+    CHECK(prof_sub(0x41, 5, 0) == PROF_OK && prof_sub(0x41, 4, 0) == PROF_OK);
     m_tick_settle();
     m_click();
-    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 6 && title_bad("Deleted") == 0 && row_bad(6, PNEW, MENU_LIT) == 0 &&
-          row_bad(5, PROW("Profile 5"), MENU_DIM) == 0 && row_bad(7, "", 0) == 0);
-    for (int k = 6; k <= 8; k++) {   /* Profiles 6-8 again */
+    CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 5 && title_bad("Deleted") == 0 && row_bad(5, PNEW, MENU_LIT) == 0 &&
+          row_bad(4, PROW("Profile 4"), MENU_DIM) == 0 && row_bad(6, "", 0) == 0);
+    for (int k = 5; k <= 7; k++) {   /* Profiles 5-7 again */
         m_to_pnew();
         m_click();
         CHECK(sub5_cursor() == k && prof_active() == k - 1);
     }
     m_to_pnew();
-    CHECK(sub5_cursor() == 9 && prof_active() == 7);
+    CHECK(sub5_cursor() == 8 && prof_active() == 6);
     m_turn(1);   /* wraps to Back, page one */
     CHECK(sub5_cursor() == 0 && row_bad(0, FONT_MONO_TRI_L " Back", MENU_LIT) == 0 &&
-          row_bad(1, PROW("Profile 1"), MENU_DIM) == 0 && row_bad(7, PROW("Profile 7"), MENU_DIM) == 0);
+          row_bad(1, PROW("Profile 1"), MENU_DIM) == 0 && row_bad(7, PROW_ON("Profile 7"), MENU_DIM) == 0);   /* the active one */
     CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
     m_unflash();
 
@@ -4748,6 +4756,82 @@ static void test_rename(void) {
     m_settle();
 }
 
+/* 10-27: Reset settings (JD: "the 'reset to defaults' option", on page two;
+ * the defaults JD's): its row under Bootloader; the confirm; a hold
+ * cancels, nothing changed; a click resets: the defaults saved, the power
+ * mode's too, the profiles kept and neither side's; the done page, then the
+ * top level showing the defaults; busy in a recovery. */
+enum { SC_DEFAULTS = 16 + 58 };
+static void defaults_away(uint8_t lcd) {   /* settings that aren't the defaults */
+    fk_power = 2; fk_clock = 4;
+    fk_lcd = fk_lcd_saved = lcd;
+    fk_ind[0] = fk_ind[1] = fk_ind_saved[0] = fk_ind_saved[1] = 40;
+    fk_batt_view = BATT_VIEW_HOURS;
+    fk_rgb = (env_rgb_t){3, 128, 255, 204, 128, 1, 0xFF};
+}
+static void test_defaults(void) {
+    fw_reset();
+    defaults_away(30);
+    CHECK(prof_sub(0x40, 0, 0) == PROF_OK);   /* a profile, the active one */
+    fk_prof_settle();
+    CHECK(prof_active() == 0);
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_DEFS);
+    CHECK(sub5_cursor() == T_DEFS);
+    top_frame_ok(T_DEFS);   /* page two: Bootloader, Reset settings, then the system items */
+
+    /* The question; a hold cancels, nothing changed. */
+    m_click();
+    CHECK(sub5_screen() == SC_DEFAULTS && sub5_cursor() == 0 && title_bad(FONT_MONO_I_RESET " Reset settings") == 0);
+    CHECK(text_slot_bad(22, "Back to defaults?", MENU_WHITE, false) == 0 &&
+          text_slot_bad(36, "Profiles are kept.", MENU_WHITE, false) == 0 &&
+          text_slot_bad(72, "Click: reset", MENU_WHITE, false) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE, false) == 0);
+    m_hold();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_DEFS && title_bad("Cancelled") == 0);
+    CHECK(fk_lcd == 30 && fk_power == 2 && fk_clock == 4 && fk_rgb.h == 128 && fk_batt_view == BATT_VIEW_HOURS &&
+          prof_active() == 0);
+    m_unflash();
+
+    /* Busy in a recovery: said so, nothing changed, still asking. */
+    m_click();
+    fk_recovering = true;
+    m_click();
+    CHECK(sub5_screen() == SC_DEFAULTS && sub5_cursor() == 0 && title_bad("Busy, try again") == 0 && fk_lcd == 30);
+    fk_recovering = false;
+    m_unflash();
+
+    /* The click: the defaults, saved; the profile kept, no side's. */
+    int lcd_saves = fk_lcd_saves, power_writes = fk_power_writes;
+    m_click();
+    CHECK(sub5_screen() == SC_DEFAULTS && sub5_cursor() == 1 && title_bad("Settings reset") == 0);
+    CHECK(text_slot_bad(22, "Settings reset.", MENU_WHITE, false) == 0 && text_slot_bad(36, "", 0, false) == 0 &&
+          text_slot_bad(72, "Click: back", MENU_WHITE, false) == 0 && text_slot_bad(86, "", 0, false) == 0);
+    CHECK(fk_rgb.mode == 1 && fk_rgb.h == 36 && fk_rgb.s == 64 && fk_rgb.v == 191 && fk_rgb.speed == 102 &&
+          fk_rgb.enable == 1);
+    CHECK(fk_lcd == 60 && fk_lcd_saved == 60 && fk_lcd_saves == lcd_saves + 1 && fk_ind_saved[0] == 5 &&
+          fk_ind_saved[1] == 5 && fk_clock == 0 && fk_batt_view == BATT_VIEW_PERCENT && fk_power == 1 &&
+          fk_power_writes == power_writes + 1);
+    CHECK(prof_active() == 0xFF && prof_valid_mask() == 0x01);
+    m_unflash();
+    m_click();   /* back */
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_DEFS);
+
+    /* Page one shows them: the screen, the power mode, the clock, the
+     * battery, and no profile. */
+    m_turn(-T_DEFS);
+    CHECK(sub5_cursor() == 0);
+    CHECK(row_bad(T_SCREEN, cells2(FONT_MONO_I_SCREEN "Screen", "60%"), MENU_DIM) == 0 &&
+          row_bad(T_POWER, cells2(FONT_MONO_I_POWER " Power", "Balanced"), MENU_DIM) == 0 &&
+          row_bad(T_CLOCK, cells2(FONT_MONO_I_CLOCK "Clock", "24h:ss"), MENU_DIM) == 0 &&
+          row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Percent"), MENU_DIM) == 0 &&
+          row_bad(T_PROF, PROF_TOP("None"), MENU_DIM) == 0);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
+    menu_watch = false;
+}
+
 int main(int argc, char **argv) {
 #ifdef MENU_ENABLE
     (void)argc; (void)argv;
@@ -4783,6 +4867,7 @@ int main(int argc, char **argv) {
     test_preview();
     test_preview_codex();
     test_rename();
+    test_defaults();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

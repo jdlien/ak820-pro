@@ -204,6 +204,16 @@ if [ "$BACKUP" = 1 ]; then
             echo "   profiles: using existing backup from $(fstat "$PROFILES")"
             echo
         fi
+        # Since 10-27 a firmware keeps seven profiles (the eighth record is
+        # the other side of the Win/Mac switch's settings): a backup of eight
+        # would be erased by the flash with no way back (codex, 10-27).
+        if [ "$PROF_HAVE" = 1 ] && ! "$PY" hostagent/ak820profiles.py fits "$PROFILES"; then
+            echo
+            echo "Not flashing: the board holds eight settings profiles. Delete one in the menu"
+            echo "  (Profiles, a profile's page, Delete) and run this again, or flash with"
+            echo "  --no-profiles to start with none."
+            exit 1
+        fi
     fi
 fi
 
@@ -297,6 +307,11 @@ if [ "$BACKUP" = 1 ]; then
             "$PY" hostagent/ak820profiles.py restore "$PROFILES"; rc=$?
             [ "$rc" = 0 ] && { LIGHT_DONE=1; break; }
             [ "$rc" = 2 ] && { echo "   (the new firmware has no HC_PROFILES: the lighting the old way)"; break; }
+            [ "$rc" = 4 ] && {   # the live settings restored, the profiles not: retrying won't change that
+                LIGHT_DONE=1
+                echo "  the profiles were NOT restored (above); they stay in $PROFILES"
+                break
+            }
             [ "$try" = 3 ] && {
                 echo "  profiles restore failed -- run it by hand once the board settles:"
                 echo "    $PY hostagent/ak820profiles.py restore"

@@ -48,7 +48,8 @@ sleep) the firmware disagrees with.
 | `Try again`         | Bootloader's click, when a key's release couldn't reach the computer over the radio first |
 | `Loaded`, `Deleted`, `Renamed` | 1.3 s after a profile's action (P5); `Saved` after its save          |
 | `Loaded w/o effect` | a profile whose effect this firmware lacks: the rest loaded              |
-| `Full: delete one`  | `+ Save new` with all eight saved                                        |
+| `Full: delete one`  | `+ Save new` with all seven saved                                        |
+| `Settings reset`    | 1.3 s after Reset settings (10-27)                                       |
 | `Busy, try again`   | a profile's action while the keyboard can't write (a recovery, or a computer restoring the profiles) |
 | `Save failed`       | a profile's write failed; no more writes until a restart                 |
 
@@ -64,6 +65,7 @@ Clock            24h
 Battery      Percent
 Profiles      Gaming
 Bootloader         ▶
+Reset settings     ▶
 Diagnostics        ▶
 Help               ▶
 About              ▶
@@ -74,12 +76,13 @@ Exit
   bulb, Screen a desktop, Connection the Bluetooth rune, Power the bolt,
   Indicators the sun, Clock a clock, Battery a vertical battery, Profiles a
   folder, Diagnostics a chip, Bootloader a desktop with a download arrow,
-  Help `?`, About `i`, Exit `×`. A heading carries its section's icon; the
-  top level's, the wrench.
-- Thirteen rows, eight a screen: page one ends at Profiles (P5, JD 10-25),
-  and Bootloader, Diagnostics, Help, About and Exit are on page two (the
-  scrollbar shows). Before P5, twelve (P4, JD 10-25: Battery under Clock,
-  Diagnostics under Bootloader).
+  Reset settings the anticlockwise circle arrow `↺` (10-27), Help `?`, About
+  `i`, Exit `×`. A heading carries its section's icon; the top level's, the
+  wrench.
+- Fourteen rows, eight a screen: page one ends at Profiles (P5, JD 10-25),
+  and Bootloader, Reset settings (10-27), Diagnostics, Help, About and Exit
+  are on page two (the scrollbar shows). Before 10-27, thirteen; before P5,
+  twelve (P4, JD 10-25: Battery under Clock, Diagnostics under Bootloader).
 - `Exit` and `◀ Back` rows show in light red when not selected; `▶` marks a
   row that opens a page; the saved option has a squared check.
 - Profiles' value is the profile in use: its name (9 characters of it), or
@@ -148,6 +151,36 @@ Counters reset.
 
 Click: back
 ```
+
+### Reset settings (10-27; title: `Reset settings`)
+
+The settings as a flash leaves them, JD's defaults (10-27): the lighting
+Solid, a warm white (hue 50, saturation 25%, brightness 75%, speed 40%), the
+screen at 60%, both indicator lights at 5%, the clock `24h:ss`, the battery
+`Percent`, the power mode `Balanced`. The profiles stay; neither side of the
+Win/Mac switch keeps one, nor its settings as left, so a flip changes nothing
+until a profile is loaded or saved again. The question:
+
+```
+Back to defaults?
+Profiles are kept.
+
+
+Click: reset
+Hold: cancel
+```
+
+Then `Settings reset` flashes and the page reads:
+
+```
+Settings reset.
+
+
+Click: back
+```
+
+`Busy, try again` while the keyboard can't write (a recovery, or a computer
+restoring the profiles), nothing changed.
 
 ### Bootloader (title: `Bootloader`)
 
@@ -440,9 +473,10 @@ that all the time there"):
 
 ### Profiles (P5, 10-25 and 10-26; on the top level; title: `Profiles`)
 
-Up to eight saved sets of settings: the lighting, the screen's level, the
-lock and charging lights, the clock and the battery readout (not the power
-mode).
+Up to seven saved sets of settings (eight until 10-27: the eighth record now
+keeps the other side of the Win/Mac switch as it was left): the lighting, the
+screen's level, the lock and charging lights, the clock and the battery
+readout (not the power mode).
 
 ```
 ◀ Back
@@ -454,7 +488,7 @@ mode).
 - The profile in use has the check box. One never named is `Profile n`, n
   its slot.
 - **+ Save new** saves the settings as a new profile (`Profile n`, the first
-  free slot), which becomes the one in use. With all eight saved it reads
+  free slot), which becomes the one in use. With all seven saved it reads
   `Full` on the right, greyed, and a click flashes `Full: delete one`.
 - Resting on a profile for 0.3 s previews its lighting and screen level;
   leaving the list puts the settings back.
@@ -532,9 +566,12 @@ dashboard's status band; `No profiles` with none saved, `Busy` when the
 keyboard can't load one.
 
 **The Win/Mac switch** (10-27, no words of its own): each side remembers
-the last profile loaded or saved on it, and a flip loads the other side's,
-its name in the status band as the keys show theirs. A side that has none
-yet changes nothing.
+the last profile loaded or saved on it, and a flip brings the other side
+back as it was left, changes included (JD: "don't lose your settings when
+switching between mac/windows"), or loads its profile the first time; its
+name in the status band as the keys show theirs. A side with no profile
+keeps nothing of its own: a flip to it changes nothing. Saving a profile the
+other side uses means that side loads it anew.
 
 ## Not built yet (the mockup's words)
 

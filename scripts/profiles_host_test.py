@@ -79,5 +79,46 @@ check(ap.decode_block(bytes(q))["active"] == {"windows": 4, "mac": None}, "decod
 txt = ap.describe({"switch": "mac", "decoded": {"block": d3}})
 check("the switch on the Mac" in txt and " W  slot 4" in txt and "  M slot 7" in txt, "describe's marks")
 check(" *  slot 4" in ap.describe({"decoded": {"block": d}}), "describe, one slot")
+
+# 10-27, later: magic 0xA4, seven profiles and the last record (the other side's settings as left).
+g4v = ap.Geometry(8, ap.MAGIC_V4)
+check(g4v.size == 218 and ap.USER_OF[ap.MAGIC_V4] == 7 and ap.FORMAT_OF[ap.MAGIC_V4] == 4, "v4's geometry")
+v4 = ap.convert(v3, g4v)   # slots 1, 4 and 7 saved, slot 8 empty: only the magic changes
+check(v4[0] == ap.MAGIC_V4 and v4[1:] == v3[1:], "v3 into v4: the records as they were")
+check(ap.convert(bytes(v2b), g4v)[1] == 0x33 and ap.convert(bytes(v2b), g4v)[2:] == bytes(v2b)[2:], "v2 into v4")
+# A profile in slot 8 moves to the first empty of 1-7, the active byte following it.
+e = bytearray(v3); e[2 + 7 * 27:2 + 8 * 27] = rec(88, b"Eighth"); e[1] = 0x37   # the Mac on slot 8, Windows on 4
+m = ap.convert(bytes(e), g4v)
+check(m[2 + 1 * 27:2 + 2 * 27] == rec(88, b"Eighth") and m[2 + 7 * 27] == 0 and m[1] == 0x31,
+      "slot 8's profile into slot 2, the Mac's nibble with it")
+full = bytearray(e)
+for s in range(8):
+    full[2 + s * 27:2 + (s + 1) * 27] = rec(s + 1)
+try:
+    ap.convert(bytes(full), g4v)
+    check(False, "eight profiles onto seven refused")
+except SystemExit as x:
+    check("seven" in str(x), "the refusal says seven")
+# The last record: kept onto 0xA4, dropped off it.
+def last_rec(side, h):
+    body = bytearray(25)
+    body[0] = 0x3F
+    body[1] = 1; body[2] = 1; body[3] = h; body[4] = 64; body[5] = 191; body[6] = 102
+    body[7] = 60; body[8] = 5; body[9] = 5; body[10] = 0; body[11] = 1
+    return bytes([ap.PS_LAST | side]) + bytes(body) + bytes([ap.crc8(body)])
+w = bytearray(v4); w[2 + 7 * 27:2 + 8 * 27] = last_rec(1, 36); w[1] = 0x03
+check(ap.convert(bytes(w), g4v) == bytes(w), "v4 onto v4 unchanged, the last record kept")
+d3 = ap.convert(bytes(w), g8)
+check(d3[0] == ap.MAGIC_V2 and d3[1] == 3 and d3[2 + 7 * 27:] == bytes(27), "v4 into v2: the last record dropped")
+check(ap.convert(bytes(w), ap.Geometry(8, ap.MAGIC_V3))[2 + 7 * 27] == 0, "v4 into v3: dropped too")
+for a, want in ((0x37, 0x3F), (0x76, 0xF6), (0x03, 0x03), (0xF7, 0xFF)):   # 7 is no profile on v4
+    q = bytearray(w); q[1] = a
+    check(ap.normalized(bytes(q))[1] == want, f"normalized v4 {a:#04x} -> {want:#04x}")
+d4 = ap.decode_block(bytes(w))
+check(len(d4["slots"]) == 7 and d4["active"] == {"windows": 4, "mac": 1} and d4["last"]["side"] == "mac" and
+      d4["last"]["lighting"]["hue"] == 36 and d4["last"]["screen"] == 60, "decode v4: seven, and the last record")
+q = bytearray(w); q[2 + 7 * 27 + 4] ^= 1
+check(ap.decode_block(bytes(q))["last"] == "damaged", "a damaged last record")
+check("the Mac's settings as left: Solid h36" in ap.describe({"decoded": {"block": d4}}), "describe's last line")
 print("host conversion:", "all checks passed" if not fails else f"{fails} failed")
 sys.exit(1 if fails else 0)

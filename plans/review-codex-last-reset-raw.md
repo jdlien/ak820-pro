@@ -1,0 +1,8 @@
+I’d hold the flash for these:
+
+- **P2 — previews become remembered settings:** [profiles.c:529](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:529) captures before cancelling previews. Preview another profile, flip away/back: the preview replaces the outgoing side’s actual settings. Cancel before capturing.
+- **P2 — swap durability:** [profiles.c:542](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:542) persists the outgoing record before incoming live settings finish their deferred writes. Cut power then reboot on the incoming side: boot skips recovery, losing that side’s previous unsaved settings.
+- **P2 — reset bypasses recovery BUSY under the latch:** [profiles.c:625](/C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:625): `writable()` returns WRITE_FAILED before checking recovery; reset rejects only BUSY. Check recovery independently.
+- **P2 — migration refusal comes after erase:** [ak820profiles.py:169](/C:/Users/jdlien/code/ak820-pro/hostagent/ak820profiles.py:169), [flash.sh:297](/C:/Users/jdlien/code/ak820-pro/flash.sh:297): eight populated 0xA3 slots pass backup, then conversion aborts restoration, including live settings. Preflight conversion before flashing.
+
+No additional findings in defaults, menu/title IDs, or seven-slot bounds. Tests/build weren’t rerun: process execution was denied.

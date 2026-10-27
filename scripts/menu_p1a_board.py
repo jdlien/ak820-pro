@@ -47,9 +47,11 @@ PF_WAITING, PF_RETRYING, PF_CONFIRMED, PF_SEL_LOST = 1, 2, 4, 8
 P_START, P_OPEN, P_DONE, P_ENDED, P_FAILED, P_UNSURE = range(6)
 LINK = lambda slot, st: L_BT | slot << 2 | st << 4  # noqa: E731
 # The top level since P5b (JD, 10-25): Lighting, Screen, Connection, Power,
-# Indicators, Clock, Battery, Profiles; Bootloader, Diagnostics, Help, About,
-# Exit on page two.
-R_CONN, R_POWER, R_IND, R_CLOCK, R_BATT, R_PROF, R_BOOT, R_DIAG, R_HELP, R_ABOUT, R_EXIT = 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+# Indicators, Clock, Battery, Profiles; Bootloader, Reset settings (10-27),
+# Diagnostics, Help, About, Exit on page two.
+R_CONN, R_POWER, R_IND, R_CLOCK, R_BATT, R_PROF, R_BOOT, R_DEFS, R_DIAG, R_HELP, R_ABOUT, R_EXIT = (
+    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
+DEFAULTS = 58   # 10-27: Reset settings' confirm (menu.c's N_DEFAULTS)
 SCR = lambda n: 16 + n  # noqa: E731
 SETTLE_S = 1.0
 
@@ -337,13 +339,18 @@ def main():
         click(h, "back from Camera", SCR(DIAG), 2, owner="menu")
         hold(h, "Diagnostics back", SCR(TOP), R_DIAG)
 
+        # 10-27: Reset settings' question, and a hold cancelling it (nothing reset).
+        turn(h, R_DEFS - R_DIAG, "to Reset settings", SCR(TOP), R_DEFS)
+        click(h, "Reset settings", SCR(DEFAULTS), 0)
+        hold(h, "Reset settings cancelled", SCR(TOP), R_DEFS)
+
         # P1b: Lighting's list, a choice and the editors, each cancelled (the
         # board keeps its settings); sub 14 says the edit closed, restored.
         def edit_state():
             r = xfer(h, 14)
             return r[6], r[8], r[9]
 
-        turn(h, -R_DIAG, "to Lighting", SCR(TOP), 0)
+        turn(h, -R_DEFS, "to Lighting", SCR(TOP), 0)
         click(h, "Lighting", SCR(LIGHT), 1)
         click(h, "Effect", SCR(EFFECT))
         _, _, saved = edit_state()
