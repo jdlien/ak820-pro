@@ -376,6 +376,13 @@ This file is the thread; read it first after a context loss. Updated
        19 B of macros (a four-profile build would keep 127 B); Rename types
        as US QWERTY reads the keys (JD, 10-26: noted, no fix asked; a
        layout option or a host-side rename if an owner needs one).
+     - **The daily of the mainline builds clean (10-26, 18:45):**
+       `via-daily-1f3c79e9-20261026-184552` (token `0xb26693c6`), every
+       release check passed, heap gap 2256 B (the dev's 136); the menu is in
+       it, the raw-HID jump and the overrun diagnostics are not. Not flashed:
+       JD keeps the dev build on the keyboard on gremlin for now. Nothing
+       left unmerged: the outer repo's one other branch,
+       `power-modes-revision`, is the pre-rebase copy of commits main has.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
