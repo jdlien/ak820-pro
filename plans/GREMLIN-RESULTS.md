@@ -1723,3 +1723,51 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   battery readout alone (Both live, Hours saved). **Owed (JD):** a real
   flip of the switch, to the Mac's side and back.
 
+
+### 20x. Each side kept as left, JD's defaults, Reset settings (10-27, 09:50-10:55)
+
+- **JD (10-27):** "If you have a profile associated but you switch the
+  win/mac switch, you lose your current settings, and flipping the switch
+  doesn't get them back ... Keep such a hidden profile that we can fall back
+  to"; "Reducing to 7 profiles seems like a fair price"; the defaults ("a
+  warm white like: Solid 75% brightness Hue 50, Sat 25 speed 40%, Screen
+  60%, Indicators both on at 5% ... Clock 24h:ss, Battery Percent", then
+  "balanced power mode, lighting on"); a reset on page two, its icon a
+  circle arrow ("arrow-rotate-left"); "it should de-associate the profiles
+  from the win/mac settings".
+- **`d83d47c4`, then `33d6d4ae`** on `gremlin/os-profiles` (dev, token
+  `0xe27cbc8a`, heap gap 136 B, unchanged; the daily of `d83d47c4` builds
+  clean): seven profiles, the eighth record the side not in use as it was
+  left (magic 0xA4); a side keeps its settings only once it has a profile;
+  saving a profile the other side uses drops that side's copy; the boot
+  swaps once when the record holds the boot side's (the switch moved while
+  off). The defaults in one place (keyboard.json's lighting: Solid 36 64 191
+  102; config.h's screen 60 and both lights 5; 24h:ss, Percent, Balanced),
+  and Reset settings under Bootloader (↺, U+21BA). Codex: four P2s (a
+  preview kept as a side's settings; the swap's order against a brownout;
+  Reset in a recovery under the latch; eight profiles across a flash), each
+  reproduced and fixed, closed; a P3 fixed
+  (`plans/review-codex-last-reset-2026-10-27.md`). Host tests: profiles
+  (thirteen of fourteen mutants caught, the fourteenth equivalent), the menu
+  (both builds, its fourteen rows and Reset's page), the conversion.
+- **The flash** (~10:40, `flash.sh`, its new `fits` check passing on three
+  profiles): the 0xA3 block converted to 0xA4, read back; the pair kept
+  (Windows RGB Cycle, the Mac Cyan-Magenta); the live settings back.
+- **The sides and Reset on the board** (`osp2_board.py`,
+  `rst-board-33d6d4ae.json`; the side read by dev sub 0x42): every step
+  passed: a side without a profile shows what was there; each flip brings the
+  other side back as left; a change on one side (Cycle All at 91, its `*`)
+  survived a flip there and back, and ten flips; a bounce changed nothing;
+  the side whose profile was deleted kept nothing, the other came back as
+  left. Reset through the menu: the defaults live, byte for byte; neither
+  side's profile, no last record, the profile kept; flips after it changed
+  nothing; the active byte written as none. The run's only FAIL a menu settle
+  of 1.01 s.
+- **The passes:** the menu's, the longest 16.8 ms (17.4 at §20w), 51 over 15
+  ms (74), FAILs only for settles of 1.0-1.2 s (`board-33d6d4ae.json`); the
+  profiles', seven slots, the longest 58.8 ms (a consolidation), FAILs only
+  for settles (`rst-p5-board-33d6d4ae.json`). The health page: 3 stalls of
+  25 ms or more since the flash, all flash's (3 erases by the profiles'
+  writer: a flip now saves the settings and the last record, ~40 B, so a
+  run of flips meets a consolidation sooner; nonflash 0).
+- **JD's profiles and live settings** stashed and put back, read back equal.

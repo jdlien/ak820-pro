@@ -1,0 +1,92 @@
+{
+  "_comment": "AK820 Pro settings profiles (the EEPROM's top 218 B, 8 slots) and the live settings, as HC_PROFILES reads them. Restore with ak820profiles.py restore.",
+  "saved": "2026-10-27 10:32:21",
+  "format": 3,
+  "switch": "windows",
+  "block": "a301017f010278ccad562a01000002004379616e2d4d6167656e7461f7017f01042bffff032a0100000200524742204379636c6500000030017f01014d00ff00640100000200427269676874205768697465ba000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "live": "01bf01042bffff032a010000030000000000000000000000000032",
+  "decoded": {
+    "block": {
+      "formatted": true,
+      "active": {
+        "windows": 2,
+        "mac": 1
+      },
+      "slots": [
+        {
+          "lighting": {
+            "on": true,
+            "effect": "Alphas/Mods",
+            "effect_id": 2,
+            "hue": 120,
+            "sat": 204,
+            "val": 173,
+            "speed": 86
+          },
+          "screen": 42,
+          "lock_lights": 1,
+          "charging_light": 0,
+          "clock": "24h:ss",
+          "battery": "hours",
+          "name": "Cyan-Magenta"
+        },
+        {
+          "lighting": {
+            "on": true,
+            "effect": "Cycle All",
+            "effect_id": 4,
+            "hue": 43,
+            "sat": 255,
+            "val": 255,
+            "speed": 3
+          },
+          "screen": 42,
+          "lock_lights": 1,
+          "charging_light": 0,
+          "clock": "24h:ss",
+          "battery": "hours",
+          "name": "RGB Cycle"
+        },
+        {
+          "lighting": {
+            "on": true,
+            "effect": "Solid",
+            "effect_id": 1,
+            "hue": 77,
+            "sat": 0,
+            "val": 255,
+            "speed": 0
+          },
+          "screen": 100,
+          "lock_lights": 1,
+          "charging_light": 0,
+          "clock": "24h:ss",
+          "battery": "hours",
+          "name": "Bright White"
+        },
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "live": {
+      "lighting": {
+        "on": true,
+        "effect": "Cycle All",
+        "effect_id": 4,
+        "hue": 43,
+        "sat": 255,
+        "val": 255,
+        "speed": 3
+      },
+      "screen": 42,
+      "lock_lights": 1,
+      "charging_light": 0,
+      "clock": "24h:ss",
+      "battery": "both",
+      "power": "Always on"
+    }
+  }
+}

@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-27 ~09:40.
+2026-10-27 ~10:55.
 
 ## Where things stand
 
@@ -408,8 +408,23 @@ This file is the thread; read it first after a context loss. Updated
        10-27 has the design, and why whole keymaps in profiles don't fit).
        The active byte a slot a side (magic 0xA3); `ak820profiles.py`
        converts. Set up there for JD's flip: Windows RGB Cycle, the Mac
-       Cyan-Magenta. **Owed (JD):** a real flip, to the Mac's side and
-       back; then merge both branches, pin deps.lock.
+       Cyan-Magenta.
+     - **Then, the same branch (10-27, ~10:55): each side kept as left, JD's
+       defaults, Reset settings** (`33d6d4ae`, GREMLIN-RESULTS §20x; codex:
+       four P2s fixed and closed). Seven profiles, the eighth record the
+       side not in use as it was left (magic 0xA4); the defaults in one
+       place (warm white Solid 75%, screen 60, both lights 5, 24h:ss,
+       Percent, Balanced); Reset settings under Bootloader (↺). On the
+       keyboard on gremlin since ~10:40, every board check passed.
+     - **Then the Power page's bulbs** (`a5d9171c`, JD: "use the power mode
+       icons that we show on the battery row, right aligned"; the mock-up
+       `history/config-menu-p3-20261025/power-bulbs-mock.png`, as built
+       `power-bulbs-as-built.png`): codex's review running at ~10:55.
+       **Owed (JD), all three at once:** a real flip, to the Mac's side and
+       back (Cyan-Magenta, then RGB Cycle as left); a look at the Power
+       page; Reset settings only if he wants his settings reset. Then merge
+       `gremlin/batt-both` and `gremlin/os-profiles`, pin deps.lock, and
+       CLAUDE.md's Fn line ("up to eight" profiles: seven; Reset settings).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

@@ -10,7 +10,7 @@
  *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/menu_s0_test.c \
  *       $D/menu/panel_owner.c $D/menu/menu_input.c $D/menu/menu_slots.c \
  *       $D/menu/menu_fixture.c $D/menu/menu_ops.c $D/menu/menu_text.c $D/menu/menu.c \
- *       $D/menu/menu_edit.c $D/menu/profiles.c $D/graphics/batt_text.c -o ms0 && ./ms0
+ *       $D/menu/menu_edit.c $D/menu/profiles.c $D/graphics/batt_text.c $D/graphics/power_bulb.c -o ms0 && ./ms0
  *
  * and again with -DMENU_ENABLE (the production opener, P1a): that build runs
  * test_menu_enable() only, since the S0 suite expects the opener off unarmed.
@@ -37,6 +37,7 @@
 #include "profiles.h"                          /* P5b: the settings profiles' store, under the menu's pages */
 #include "../graphics/res/font_small_mono.h"   /* through -I $D/menu */
 #include "../graphics/batt_text.h"           /* P4: the previews as the dashboard composes them */
+#include "../graphics/power_bulb.h"          /* 10-27: the Power choice's bulbs */
 #include "../indicator_levels.h"               /* P2a: the indicators' levels and tick */
 
 static int fails;
@@ -1843,6 +1844,7 @@ static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor
                               : 0);
 }
 static uint16_t ts_rule_y;   /* a pixel row the text's check expects the grey rule on (x 4-123), 0 none */
+static uint8_t  ts_bulb;     /* 10-27: a Power option's row, its mode + 1 (0 none): its bulb at x 111-123 */
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg) {
     int            bad = 0;
     size_t         len = strlen(cells);
@@ -1861,6 +1863,7 @@ static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool curso
                 if (g[r] & (0x80 >> ((x - 4) % 6))) want = icon_fg && cell < 2 ? icon_fg : fg;
                 if (ts_rule_y && y + r == ts_rule_y) want = MENU_GREY;
             }
+            if (ts_bulb && x >= 111) want = power_bulb_px((uint8_t)(ts_bulb - 1u), (uint8_t)(x - 111), (uint8_t)r, 0);
             if (fb[y + r][x] != want) bad++;
         }
     return bad;
@@ -1879,6 +1882,14 @@ static int row_bad(int r, const char *cells, uint16_t fg) {
     return text_slot_bad((uint16_t)(15 + 14 * r), cells, fg, fg == MENU_LIT);
 }
 static int title_bad(const char *t) { return text_slot_bad(0, t, MENU_WHITE, false); }
+/* 10-27: a Power option's row (1-4, the modes in order), its bulb at the
+ * right edge (JD: "right aligned on the right edge"); its text short of it. */
+static int pow_bad(int r, const char *cells, uint16_t fg) {
+    ts_bulb = (uint8_t)r;
+    int bad = row_bad(r, cells, fg);
+    ts_bulb = 0;
+    return bad;
+}
 /* A profile's summary, its first line (row 5) under the rule (JD, 10-26). */
 static int psum0_bad(const char *cells) {
     ts_rule_y = 15 + 14 * 5;
@@ -1958,9 +1969,12 @@ static void test_menu(void) {
     m_click();
     CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 2 && title_bad(FONT_MONO_I_POWER " Power") == 0);
     CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
-    CHECK(row_bad(1, "  Always on", MENU_DIM) == 0);   /* the bullet's cell, then a space: JD's breathing room */
-    CHECK(row_bad(2, FONT_MONO_CHECK_BOX "Balanced", MENU_LIT) == 0);
-    CHECK(row_bad(4, "  Lights out", MENU_DIM) == 0);
+    CHECK(pow_bad(1, "  Always on", MENU_DIM) == 0);   /* the bullet's cell, then a space: JD's breathing room */
+    CHECK(pow_bad(2, FONT_MONO_CHECK_BOX "Balanced", MENU_LIT) == 0);
+    CHECK(pow_bad(3, "  Power saver", MENU_DIM) == 0);
+    CHECK(pow_bad(4, "  Lights out", MENU_DIM) == 0);   /* 10-27: each with its mode's bulb */
+    CHECK(fb[15 + 14 * 1][117] == 0xFFFFu && fb[15 + 14 * 3 + 6][114] == 0x8410u &&
+          fb[15 + 14 * 4 + 2][112] == 0xDEFBu && fb[15 + 14 * 2][124] == 0);   /* a ray, Saver's glass, the slash; the trail */
     m_turn(2);   /* Lights out */
     m_click();   /* commits */
     CHECK(fk_power == 3 && fk_power_writes == 1);
@@ -2116,13 +2130,13 @@ static void test_menu(void) {
     CHECK(op27(2, 0, 0) == MI_OK);
     CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
     m_settle();
-    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && row_bad(3, FONT_MONO_CHECK_BOX "Power saver", MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 3 && pow_bad(3, FONT_MONO_CHECK_BOX "Power saver", MENU_LIT) == 0);
     /* An external change inside an open choice: the bullet moves, the cursor
      * stays; then Back by its row cancels, writing nothing. */
     fk_power = 0;
     fw_pass(5);
     m_settle();
-    CHECK(sub5_cursor() == 3 && row_bad(1, FONT_MONO_CHECK_BOX "Always on", MENU_DIM) == 0 && row_bad(3, "  Power saver", MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 3 && pow_bad(1, FONT_MONO_CHECK_BOX "Always on", MENU_DIM) == 0 && pow_bad(3, "  Power saver", MENU_LIT) == 0);
     int w0 = fk_power_writes;
     m_turn(-3);   /* to ‹ Back */
     m_click();
@@ -2212,7 +2226,7 @@ static void test_menu(void) {
         char        want[24];
         CHECK(sub5_screen() == 16 + 2 && sub5_cursor() == 1 + (fk_power & 3));
         snprintf(want, sizeof want, "%s%s", FONT_MONO_CHECK_BOX, pw);
-        CHECK(row_bad(1 + (fk_power & 3), want, MENU_LIT) == 0);
+        CHECK(pow_bad(1 + (fk_power & 3), want, MENU_LIT) == 0);
         CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0);
         CHECK(title_bad(FONT_MONO_I_POWER " Power") == 0);
     }

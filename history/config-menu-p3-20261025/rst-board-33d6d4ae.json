@@ -1,0 +1,303 @@
+{
+ "log": [
+  {
+   "ok": true,
+   "what": "magic 0xa4, the switch on windows"
+  },
+  {
+   "ok": true,
+   "what": "save slot 1: status 0"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to mac, no profile: what was there (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "windows's settings kept: 0x10"
+  },
+  {
+   "ok": true,
+   "what": "save slot 2: status 0"
+  },
+  {
+   "ok": true,
+   "what": "a profile a side: 0x10"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to windows: as left (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to mac: as left (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to mac: the change kept (JD: \"don't lose your settings\") (4, 91)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "a bounce: nothing (4, 91)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 1 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 2 to mac: (4, 91)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 3 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 4 to mac: (4, 91)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 5 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 6 to mac: (4, 91)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 7 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 8 to mac: (4, 91)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 9 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 10 to mac: (4, 91)"
+  },
+  {
+   "ok": true,
+   "what": "delete slot 2: 0"
+  },
+  {
+   "ok": true,
+   "what": "slot 2 deleted, mac none: 0xf0"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to windows: as left, the copy used up (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to mac, none: what was there (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "back to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "the defaults, live (bytes off: {})"
+  },
+  {
+   "ok": true,
+   "what": "no side's, no last record, slot 1 kept: 0xff"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flips after it change nothing: (1, 60)"
+  },
+  {
+   "ok": true,
+   "what": "the active byte written as none: 0xff"
+  },
+  {
+   "ok": true,
+   "what": "no pass of 340 ms or more"
+  },
+  {
+   "ok": true,
+   "what": "delete slot 1: 0"
+  }
+ ],
+ "steps": [
+  {
+   "what": "open",
+   "ms": 1010,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "to Reset settings",
+   "ms": 878,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 9,
+   "inv": 0
+  },
+  {
+   "what": "Reset settings",
+   "ms": 553,
+   "owner": "menu",
+   "screen": 74,
+   "cursor": 0,
+   "inv": 0
+  },
+  {
+   "what": "reset",
+   "ms": 440,
+   "owner": "menu",
+   "screen": 74,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "the done page, 2 s",
+   "ms": 0,
+   "owner": "menu",
+   "screen": 74,
+   "cursor": 1,
+   "inv": 0
+  },
+  {
+   "what": "back",
+   "ms": 983,
+   "owner": "menu",
+   "screen": 17,
+   "cursor": 9,
+   "inv": 0
+  },
+  {
+   "what": "close",
+   "ms": 436,
+   "owner": "dash",
+   "screen": 0,
+   "cursor": 255,
+   "inv": 0
+  }
+ ],
+ "meas": {
+  "piece_us": 5440,
+  "op_us": 40688,
+  "pass_max_us": 59226,
+  "over15": 2,
+  "repaint_ms": 964,
+  "tgen": 45,
+  "settled": 11,
+  "superseded": 34,
+  "band_ms": 2,
+  "page": 0,
+  "dbg_gen": 5,
+  "dbg_done_gen": 5,
+  "committed": 165,
+  "passes": 5862,
+  "token": 3,
+  "health_gen": 1,
+  "dbg_sec": 35,
+  "rtc_sec": 44,
+  "aliased": false
+ },
+ "consolidated": false,
+ "fails": [
+  "open: settled in 1010 ms"
+ ]
+}

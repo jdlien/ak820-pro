@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## The Win/Mac switch loads each side's last profile (2026-10-27) -- BUILT: `bf29a081` on `gremlin/os-profiles`, on the keyboard on gremlin (GREMLIN-RESULTS §20w), not merged
+## The Win/Mac switch loads each side's last profile (2026-10-27) -- BUILT: `bf29a081`, then each side kept as left (`33d6d4ae`, the eighth record; JD: "don't lose your settings") on `gremlin/os-profiles`, on the keyboard on gremlin (GREMLIN-RESULTS §20w, §20x), not merged; its note below "So a change since the load ... is lost" no longer holds
 
 JD (10-27): "can we make it so that the current profile is remembered for
 windows and Mac layers so when a user flicks the switch, it changes to the
