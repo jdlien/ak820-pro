@@ -1,0 +1,213 @@
+{
+ "log": [
+  {
+   "ok": true,
+   "what": "magic 0xa3, the switch on windows"
+  },
+  {
+   "ok": true,
+   "what": "save slot 1: status 0"
+  },
+  {
+   "ok": true,
+   "what": "slot 1 is windows's, mac none: 0xf0"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to mac, which remembers none: nothing loaded (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "save slot 2: status 0"
+  },
+  {
+   "ok": true,
+   "what": "slot 2 is mac's: 0x10"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to windows: not loaded before the rest (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "to windows: slot 1 loaded (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to mac: slot 2 loaded (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "a bounce: nothing loaded (4, 91)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 1 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 2 to mac: (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 3 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 4 to mac: (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 5 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 6 to mac: (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 7 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 8 to mac: (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 9 to windows: (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "flip 10 to mac: (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "delete slot 2: status 0"
+  },
+  {
+   "ok": true,
+   "what": "slot 2 deleted, mac none: 0xf0"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to windows: slot 1 (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to mac: status 0"
+  },
+  {
+   "ok": true,
+   "what": "to mac, none: nothing loaded (4, 90)"
+  },
+  {
+   "ok": true,
+   "what": "0x42 to windows: status 0"
+  },
+  {
+   "ok": true,
+   "what": "back to windows, the real switch's: slot 1 (1, 20)"
+  },
+  {
+   "ok": true,
+   "what": "no pass of 340 ms or more"
+  },
+  {
+   "ok": false,
+   "what": "the longest pass 52314 us"
+  },
+  {
+   "ok": true,
+   "what": "delete slot 1: status 0"
+  }
+ ],
+ "meas": {
+  "piece_us": 0,
+  "op_us": 0,
+  "pass_max_us": 52314,
+  "over15": 1,
+  "repaint_ms": 0,
+  "tgen": 39,
+  "settled": 7,
+  "superseded": 32,
+  "band_ms": 0,
+  "page": 0,
+  "dbg_gen": 5,
+  "dbg_done_gen": 5,
+  "committed": 112,
+  "passes": 3874,
+  "token": 3,
+  "health_gen": 1,
+  "dbg_sec": 15,
+  "rtc_sec": 18,
+  "aliased": false
+ },
+ "consolidated": false,
+ "fails": [
+  "the longest pass 52314 us"
+ ]
+}

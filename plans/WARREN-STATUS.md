@@ -4,7 +4,7 @@ Warren is gremlin's session (the Windows test PC). It owns the configuration
 menu's build: [`CONFIG-MENU-BUILD-PLAN.md`](CONFIG-MENU-BUILD-PLAN.md)
 (revision 15). Results: [`GREMLIN-RESULTS.md`](GREMLIN-RESULTS.md) §10-17.
 This file is the thread; read it first after a context loss. Updated
-2026-10-26 ~22:45.
+2026-10-27 ~09:40.
 
 ## Where things stand
 
@@ -398,12 +398,18 @@ This file is the thread; read it first after a context loss. Updated
        was on the cable's position); then merge. **Next after it (JD):** an
        experimental fork with a bigger menu font ("might be interesting to
        see you do an experimental fork to try").
-       **On the todo list (10-27, JD: "Maybe add it to our todo list"):**
-       the Win/Mac switch loading each side's last profile, always on
-       (BACKLOG.md, its entry of 10-27, with the design and why whole
-       keymaps in profiles don't fit). JD's call on the Both order (hours
-       first or percent first) is open: kept percent first, offered the
-       flip.
+       JD's call on the Both order (hours first or percent first) is open:
+       kept percent first, offered the flip.
+     - **The Win/Mac switch loads each side's last profile (10-27, ~09:40):
+       on the keyboard on gremlin, NOT merged** (`gremlin/os-profiles` at
+       `bf29a081`, branched from `gremlin/batt-both`, so merge Both first;
+       GREMLIN-RESULTS §20w; codex: no blocker). JD: "implement the profile
+       association with win/Mac switch", always on (BACKLOG.md's entry of
+       10-27 has the design, and why whole keymaps in profiles don't fit).
+       The active byte a slot a side (magic 0xA3); `ak820profiles.py`
+       converts. Set up there for JD's flip: Windows RGB Cycle, the Mac
+       Cyan-Magenta. **Owed (JD):** a real flip, to the Mac's side and
+       back; then merge both branches, pin deps.lock.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

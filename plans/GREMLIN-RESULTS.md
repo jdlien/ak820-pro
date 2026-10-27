@@ -1679,3 +1679,47 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
   needs an hour awake on battery; the keyboard's slider was on the cable's
   position (ak820battery.py: `slider_usb`).
 
+### 20w. The Win/Mac switch loads each side's last profile (10-27, 08:00-09:40)
+
+- **JD (10-27):** "can we make it so that the current profile is remembered
+  for windows and Mac layers so when a user flicks the switch, it changes
+  to the last profile used with that layer?"; "I think always on makes
+  sense here"; "implement the profile association with win/Mac switch."
+- **`bf29a081`** on `gremlin/os-profiles`, branched from `gremlin/batt-both`
+  (dev, token `0xef38bc14`, heap gap 136 B, unchanged; the daily builds
+  clean, 2248 B): the active byte a slot a side (bits 0-3 Windows', 4-7 the
+  Mac's, 0xF none; magic 0xA3); a flip loads the new side's slot once the
+  switch has rested three 10 Hz ticks; the boot's reading loads nothing;
+  HC_PROFILES 7's [9] the side, dev sub 0x42 the switch read as [4].
+  `hostagent/ak820profiles.py` converts the older backups (one slot into
+  both sides'). Codex: no blocker (`plans/review-codex-os-profiles-2026-10-27.md`).
+  Host tests: profiles (`test_switch`; six mutants of the switch logic each
+  caught), the menu (both builds), the conversion.
+- **The flash** (~09:03, `flash.sh`): its backup came off `0ada282c`'s 0xA2
+  block, its restore converted it, JD's active RGB Cycle onto both sides
+  (`WM`), read back equal; the live settings back.
+- **The switch's own check** (`osp_board.py`, `osp-board-bf29a081.json`),
+  the side read by 0x42, the real switch on Windows: slot 1 saved on
+  Windows (`0xF0`), the Mac's none and loading nothing; slot 2 on the Mac
+  (`0x10`); each flip loading the other's look (effect, screen) after the
+  rest and not before; a bounce back loading nothing (the change since the
+  load kept); ten flips, each loading; a Delete clearing its side (`0xF0`)
+  and a flip to it then loading nothing; back on the real side. One pass
+  over 15 ms in the whole run, 52.3 ms: the health page has 2 stalls of
+  25 ms or more since the flash, both flash's (`count_ge_25ms_nonflash` 0),
+  one erase by the RGB writer (this run's) and one by the profiles' (P5d's
+  Save new): the known consolidation, BACKLOG; the script excused only a
+  save's, so it FAILed that line.
+- **The menu's pass:** the longest 17.4 ms (17.4 at §20v), 74 over 15 ms (65
+  at §20v; 59, 33-35 before); FAILs only for settles of 1.0-1.2 s and the
+  17.4 against the 17.0 line (`board-bf29a081.json`). **The profiles'
+  pass:** the consolidation on the second Save new (65535 us), otherwise
+  17.7 ms; FAILs only for the settles (`osp-p5-board-bf29a081.json`).
+- **JD's profiles and live settings** stashed and put back, read back equal.
+  **Then** (`osp_demo.py`): the Mac's side given Cyan-Magenta by the menu's
+  Load with the side read as the Mac's, then Windows' again, JD's live
+  settings re-applied exactly: the pair `0x01` (Windows RGB Cycle, the Mac
+  Cyan-Magenta). The live settings differ from the saved RGB Cycle in the
+  battery readout alone (Both live, Hours saved). **Owed (JD):** a real
+  flip of the switch, to the Mac's side and back.
+
