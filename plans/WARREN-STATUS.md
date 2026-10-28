@@ -451,7 +451,12 @@ This file is the thread; read it first after a context loss. Updated
        only when dark or after a long stretch without typing: built on
        `gremlin/pcf-unseen` (`ecb10f0e`, on USB only; codex four
        rounds), on the keyboard on gremlin since 20:36, its board test
-       PASS. **Owed:** JD's eye on a sync with the lights on; the board
+       PASS. The keyboard on Buzz runs it too since 21:54:52 (JD's word,
+       flashed by the session on Buzz mid-drain: dev, token `0xdc5524d4`,
+       heap gap 128 B), so a merge as is needs no reflash there. On
+       battery it changes nothing there: the radio clock's write still
+       follows each sync (the open case). **Owed:** JD's eye on a sync
+       with the lights on; the board
        day to day; then merge both branches (CLAUDE.md's core-file list gains
        `quantum/wear_leveling/wear_leveling.c` + `.h`).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
