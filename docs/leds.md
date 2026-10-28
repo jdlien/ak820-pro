@@ -229,7 +229,10 @@ internal-flash write"):
   window late, 10-20 µs.
 - **What scanning leaves is the erase.** Two pages, 1-2 ms each, stall the
   CPU and the row ISR with it ([sn32f299.md](sn32f299.md), p. 251), so
-  the selected row holds while the rest go dark. Neither strategy touches it.
+  the scan stops with every LED off: the row timer stops at each period's
+  end until the ISR re-arms it (JD's video of the same stall from the
+  clock chip, below, shows the whole board dimming, no row lit). Neither
+  strategy touches it.
 - **So the board cleans up early, where nobody sees it**
   (`flash_tidy.c`, since `4ee668eb`). Once the log is half full, it
   consolidates when the committed frame is dark and nothing has been
@@ -239,6 +242,43 @@ internal-flash write"):
   cleanups. ⚠️ Every consolidation erases the only copy before writing it
   back, so a power loss inside one loses the settings and the keymap. Half,
   not a quarter, holds the early ones to at most twice the count (codex).
+
+### The other flicker: the clock chip's write after every sync (2026-10-27)
+
+With the cleanup out of sight, JD still saw a flicker now and then, twice
+with nothing written: "in between" the Write test's options, and
+scrolling Profiles' rows. A watcher (flash writes, long passes, the row
+rate each second) showed nothing at either; the daemon's log had a clock
+sync a minute or two before each. JD filmed the next one at 240 fps
+([history/pcf-flicker-20261027/](../history/pcf-flicker-20261027/README.md)):
+
+| Clip, played at 30 fps | Board's clock | Dark frames | The PCF writer's step (`rtc.c`) |
+|---|---|---|---|
+| 15.2 s | ~19:15:17.9 | 3 in 17 ms | STOP read, STOP write, time write |
+| 19.3 s | ~19:15:18.4 | 1 | the release, 0.49 s before the boundary |
+| 22.8-23.3 s | ~19:15:18.9 | 6 in 60 ms | the bracket's reads, hunting the first increment |
+
+- **Each PCF transaction blacks the board out.** It holds the row ISR's
+  interrupt off (`ak820_i2c_xfer_begin()`: SDA's direction switches are
+  read-modify-writes of port A's MODE, which the row ISR writes too), and
+  the row timer stops at each period's end until the ISR re-arms it, so
+  every LED is off for the transaction: up to 3.4 ms (HC_RTC page 2's
+  `i2c_max_cycles`). In the clip every row dims alike, 5-9% of a frame.
+- **It came every 5 minutes on USB:** each of the daemon's syncs makes a
+  correction, and each correction requests a write
+  (`pcf_sync_request()`). The keyboard on Buzz should do the same with
+  the Mac's daemon.
+- **The watcher couldn't see it:** a 3 ms hold is 0.3% of a second's row
+  count, the noise is ~0.2%.
+- **The fix, JD's call (10-27):** the clock is synced as before, and the
+  PCF written only when nobody is looking: the committed frame dark
+  (every deep sleep comes after the dark, and waits on the write) or a
+  long stretch without typing. The writer plans from the board's clock
+  when it runs, so a late write is as accurate as an early one. Until it
+  lands the PCF is stale; only a power loss reads it then, and the host's
+  next sync corrects the clock. Letting the scan run through a transfer
+  instead would make each 3-4 times longer (the row ISR takes ~73% of the
+  CPU) and loosen the bracket's timing.
 
 ## The rainbow is a GEOMETRY problem, not flicker
 

@@ -88,7 +88,7 @@ a percent at a time."
   **The icon keeps its colours** (JD: "Apple would just keep it monochrome
   white, but I'm okay to retain that").
 
-## The LED blink at an internal-flash write (2026-10-27) -- JD's bug; the consolidation is the blink; the scan through writes and the early cleanup built (`dc8e6d0c`, on the keyboard on gremlin, not merged)
+## The LED blink at an internal-flash write (2026-10-27) -- JD's bug; the consolidation is the blink; the scan through writes and the early cleanup built (`dc8e6d0c`, on the keyboard on gremlin, not merged); the other flicker is the clock chip's write after each sync
 
 JD (10-27): "the board flickers once in a while. Hard to replicate, somewhat
 sporadic, and subtle. But it does look glitchy when it happens"; "I mainly
@@ -121,8 +121,9 @@ notice the lights ... I haven't noticed screen blinking."
   is "a very noticeable flicker"; on Scan, "a more subtle flicker". So the
   ordinary write is not the blink JD sees: the consolidation is. What Scan
   leaves is most likely the erase: two 1 KB pages, 1-2 ms each, stall the
-  CPU and the row ISR (sn32f299.md, p. 251), so one row holds while the
-  rest go dark. Not yet tried: Dim + write.
+  CPU and the row ISR (sn32f299.md, p. 251), so the scan stops with every
+  LED off (the clock chip's video showed that stall: below). Not yet
+  tried: Dim + write.
 - **How often a consolidation comes:** when the log fills, never on a timer.
   The log is 127 lines; a write takes a line per 5 bytes of its block. A
   settled kb_eeconfig change (10 B) or an RGB save (8 B) costs 2, a profile
@@ -156,6 +157,26 @@ notice the lights ... I haven't noticed screen blinking."
   A read-only watcher on gremlin logs every flash write, long pass and
   dip in the row rate with its time, for JD to match a flicker against
   the keyboard's clock.
+- **The second cause: the clock chip's write (10-27, ~19:05-19:20).** JD
+  saw another "scrolling between my selected theme and Save new" on
+  Profiles. The watcher saw nothing there, but the daemon's log had a
+  clock sync a minute or two before each sighting (17:55:12, 19:05:14).
+  Every sync's correction requests a PCF write, and every PCF transaction
+  holds the row ISR off, which leaves all the LEDs off. Predicted at
+  19:15:14 + the slew; JD filmed it at 240 fps and saw "a set of (I
+  think) three flickers": three bursts, the writer's three steps, on
+  the second (history/pcf-flicker-20261027/; docs/leds.md, "The other
+  flicker").
+- **JD's call:** "Update the clock, only write the RTC when we sleep or
+  after a pretty long no-typing delay. The failure mode is pretty minor
+  since the board corrects the clock in a few minutes after a reboot
+  anyways". Build: the PCF writer's start waits for the committed frame
+  dark or ~10 min without input; a run under way finishes (STOP is never
+  left asserted). Codex before the flash.
+- **Open:** 16 settings writes 19:01-19:05 (the log 0 to 304 B) while
+  JD was on Profiles; scrolling and its previews write nothing
+  (`prof_preview()` and the rollback are `_noeeprom`), so either JD
+  saved or loaded, or something writes that shouldn't.
 - **Owed:** JD's watch on the board day to day; then the merge.
 
 ## The default keymap as AJazz ships the board (2026-10-27) -- JD's call, the polish phase

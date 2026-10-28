@@ -1845,3 +1845,15 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
     each long pass and each second the row rate falls 2% below its
     median (the second-to-second spread at rest: ~0.2%, one reading
     1.3% low in 20).
+  - **The second cause, the PCF write** (~19:05-19:20,
+    `history/pcf-flicker-20261027/`): JD saw another on Profiles ~19:05,
+    with nothing in the watcher's log but settings writes; the daemon
+    had synced at 19:05:14 (and at 17:55:12, inside the first). The
+    longest PCF transaction since boot: 115 ILRC cycles, ~3.4 ms, with
+    the row ISR held off. JD's 240 fps clip of the next sync (19:15:14,
+    a -51 ms correction slewed for ~3 s): the board dims 4.4-9.4% in
+    frames 456-460, 578 and 683-698 (playback 15.2, 19.3, 22.8-23.3 s;
+    the board's ~19:15:17.9, 18.4, 18.9), every row alike: the STOP and
+    time writes (3 transactions), the release, the bracket's reads.
+    JD: "you can see a set of (I think) three flickers", the first
+    "about 15s into the video".

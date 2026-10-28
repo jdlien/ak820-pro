@@ -1,0 +1,25 @@
+18:00:34.936  start: flash_writes 926, ge25 12 (nonflash 0), cleanups 2, log used 0
+18:10:41.839  (alive: row rate median 3707/s)
+18:20:48.747  (alive: row rate median 3707/s)
+18:30:55.595  (alive: row rate median 3708/s)
+18:41:02.479  (alive: row rate median 3707/s)
+18:51:09.347  (alive: row rate median 3708/s)
+19:01:16.269  (alive: row rate median 3708/s)
+19:01:33.521  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 16, flash gap max 69 ms
+19:02:24.280  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 32, flash gap max 69 ms
+19:03:14.991  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 48, flash gap max 69 ms
+19:03:40.385  flash writes +2, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 104, flash gap max 69 ms
+19:03:45.473  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 112, flash gap max 69 ms
+19:04:03.714  flash writes +3, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 152, flash gap max 69 ms
+19:04:34.167  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 168, flash gap max 69 ms
+19:04:41.288  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 184, flash gap max 69 ms
+19:04:44.332  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 200, flash gap max 69 ms
+19:04:45.345  flash writes +2, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 256, flash gap max 69 ms
+19:04:50.422  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 264, flash gap max 69 ms
+19:04:53.489  flash writes +3, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 304, flash gap max 69 ms
+19:11:24.334  (alive: row rate median 3697/s)
+19:13:16.692  flash writes +1, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 320, flash gap max 69 ms
+19:13:20.740  flash writes +2, passes >= 25 ms +0 (outside a write +0), cleanups 2 (+0), log used 344, flash gap max 69 ms
+19:21:31.296  (alive: row rate median 3736/s)
+19:31:38.114  (alive: row rate median 3737/s)
+19:41:44.933  (alive: row rate median 3737/s)

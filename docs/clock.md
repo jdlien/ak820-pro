@@ -57,6 +57,13 @@ discipline + host time sync; the PCF becomes write-only), **`PCF_LEGACY`**
   - ⚠️ Off-by-one trap: the seconds register to write during STOP is
     `cur`, not `cur+1` — aiming at boundary(cur+1) left the PCF a full
     second ahead (hardware round 1).
+  - ⚠️ **Every transaction blacks out the LEDs** (found 10-27): it holds
+    the row ISR's interrupt off for its length, up to 3.4 ms, and a write
+    is three bursts over a second (STOP and the time, the release, the
+    bracket). After every host sync that made a correction, so every 5
+    minutes on USB: JD saw it, and filmed it at 240 fps
+    ([leds.md](leds.md), "The other flicker"). JD's call: write the PCF
+    only when the lights are dark or after a long stretch without typing.
 - **Boot acquisition**: after the splash, a coarse PCF edge-hunt (1-byte
   read every 8 passes, ≤1.5 s, cancelled by any host sync) phase-steps the
   clock. A no-host slider-flip reboot came up at **+13 ms**.
