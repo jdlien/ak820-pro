@@ -62,8 +62,13 @@ discipline + host time sync; the PCF becomes write-only), **`PCF_LEGACY`**
     is three bursts over a second (STOP and the time, the release, the
     bracket). After every host sync that made a correction, so every 5
     minutes on USB: JD saw it, and filmed it at 240 fps
-    ([leds.md](leds.md), "The other flicker"). JD's call: write the PCF
-    only when the lights are dark or after a long stretch without typing.
+    ([leds.md](leds.md), "The other flicker"). JD's call, built on
+    `gremlin/pcf-unseen`: on USB (`REF_SOF` and the bus active), the write
+    waits for the lights dark or 10 min without input; off USB it goes at
+    once, so `RTC_AUTO_CALIBRATION` (which waits on a pending or stale
+    PCF) resumes against a fresh one. ⚠️ So on USB the PCF can be hours
+    stale (HC_RTC page 4's `pending`, `stale`): harmless there, as
+    nothing reads it.
 - **Boot acquisition**: after the splash, a coarse PCF edge-hunt (1-byte
   read every 8 passes, ≤1.5 s, cancelled by any host sync) phase-steps the
   clock. A no-host slider-flip reboot came up at **+13 ms**.

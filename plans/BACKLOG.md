@@ -170,9 +170,14 @@ notice the lights ... I haven't noticed screen blinking."
 - **JD's call:** "Update the clock, only write the RTC when we sleep or
   after a pretty long no-typing delay. The failure mode is pretty minor
   since the board corrects the clock in a few minutes after a reboot
-  anyways". Build: the PCF writer's start waits for the committed frame
-  dark or ~10 min without input; a run under way finishes (STOP is never
-  left asserted). Codex before the flash.
+  anyways". Built (`gremlin/pcf-unseen`, `65f86da5`..`ecb10f0e`; codex
+  four rounds, `plans/review-codex-pcf-unseen-2026-10-27.md`): on USB
+  the writer's start waits for the committed frame dark or 10 min without
+  input; off USB it goes at once (codex: the board's own discipline
+  against the PCF waits on a pending one, so deferring off USB left it
+  off and carried drift into the PCF). A run under way finishes (STOP is
+  never left asserted). Open: on battery with the Mac's radio clock, the
+  write still follows each sync.
 - **Open:** 16 settings writes 19:01-19:05 (the log 0 to 304 B) while
   JD was on Profiles; scrolling and its previews write nothing
   (`prof_preview()` and the rollback are `_noeeprom`), so either JD

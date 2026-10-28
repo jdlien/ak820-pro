@@ -1,0 +1,51 @@
+{
+ "events": [
+  "20:37:10  start: {'ps_state': 0, 'runs_ok': 0, 'restarts': 0, 'pending': 1, 'stale': 1, 'maybe_stopped': 0}",
+  "20:37:10  ok    a sync left a write pending",
+  "20:38:10  after 60 s lit: {'ps_state': 0, 'runs_ok': 0, 'restarts': 0, 'pending': 1, 'stale': 1, 'maybe_stopped': 0}",
+  "20:38:10  ok    lit: still pending, nothing run",
+  "20:38:11  dark after 1.5 s: {'ps_state': 0, 'runs_ok': 1, 'restarts': 0, 'pending': 0, 'stale': 0, 'maybe_stopped': 0}",
+  "20:38:11  ok    dark: the write ran once, not stale",
+  "20:40:07  pending (the next sync): {'ps_state': 0, 'runs_ok': 1, 'restarts': 0, 'pending': 1, 'stale': 1, 'maybe_stopped': 0}",
+  "20:40:07  ok    the next sync left a write pending",
+  "20:40:27    20 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:40:47    40 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:41:07    60 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:41:27    80 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:41:47   100 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:42:07   120 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:42:27   140 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:42:47   160 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:43:07   180 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:43:27   200 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:43:47   220 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:44:07   240 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:44:27   260 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:44:47   280 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:45:07   300 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:45:27   320 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:45:47   340 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:46:07   360 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:46:27   380 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:46:47   400 s lit: pending 1, runs_ok 1, stale 1, keys since 0",
+  "20:47:07   420 s lit: pending 0, runs_ok 2, stale 0, keys since 0",
+  "20:47:07  ok    lit: the write ran after 420 s pending (10 min from the last input)",
+  "20:47:07  health: {'ge25': 1, 'ge25_nonflash': 0, 'key_presses': 0}"
+ ],
+ "start": {
+  "ps_state": 0,
+  "runs_ok": 0,
+  "restarts": 0,
+  "pending": 1,
+  "stale": 1,
+  "maybe_stopped": 0
+ },
+ "dark_s": 1.5,
+ "lit_s": 420,
+ "end": {
+  "ge25": 1,
+  "ge25_nonflash": 0,
+  "key_presses": 0
+ },
+ "fails": []
+}

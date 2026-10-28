@@ -1,0 +1,7 @@
+Not both closed.
+
+- **P2 remains:** the timeout bounds starvation, but calibration stays disabled before accumulated drift is written into PCF (~9 seconds at 1% error): [rtc.c:2307](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:2307), [rtc.c:1495](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:1495).
+- **New P2:** a sync accepted before `wake_coarse()` gets aged by its sleep correction without rebasing `last_sync_secs`, potentially exceeding 900 immediately: [rtc.c:2013](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:2013), [rtc.c:1524](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:1524).
+- **Dev burst starvation is closed:** [rtc.c:1522](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:1522), [rtc.c:2262](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:2262).
+
+Wake/acquisition clears and radio/INTERNAL/SKIP_PCF paths otherwise look consistent. [New tests:126](C:/Users/jdlien/code/ak820-pro/scripts/rtc_pcf_sync_test.c:126) cover the predicate, not these interactions. Static review; execution unavailable.

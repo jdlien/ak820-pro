@@ -1857,3 +1857,15 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
     time writes (3 transactions), the release, the bracket's reads.
     JD: "you can see a set of (I think) three flickers", the first
     "about 15s into the video".
+  - **The fix on the board** (`ecb10f0e`, dev, token `0x80954432`,
+    flashed 20:36; `gremlin/pcf-unseen`, codex four rounds,
+    `plans/review-codex-pcf-unseen-2026-10-27.md`): on USB the write
+    waits for the lights dark or 10 min without input. Before it, the
+    status page counted 42 writes against 41 syncs since 16:33.
+    `pcf-unseen-board-ecb10f0e.json`: the enumerated sync (20:37:04)
+    left a write pending, still pending after 60 s lit; the lights held
+    dark (op 14, stage 2), it ran in 1.5 s, the PCF not stale; the next
+    sync (20:40:04) pending again, lit with no key, it ran at 20:47:07,
+    10 min after the boot (no key since). PASS; one pass >= 25 ms since
+    the boot, flash's. The 20:40 sync corrected -458 ms: the flash's
+    erased period re-converging (CLAUDE.md, "A flash erases").

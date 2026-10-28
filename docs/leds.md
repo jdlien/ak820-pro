@@ -270,10 +270,16 @@ sync a minute or two before each. JD filmed the next one at 240 fps
   the Mac's daemon.
 - **The watcher couldn't see it:** a 3 ms hold is 0.3% of a second's row
   count, the noise is ~0.2%.
-- **The fix, JD's call (10-27):** the clock is synced as before, and the
-  PCF written only when nobody is looking: the committed frame dark
-  (every deep sleep comes after the dark, and waits on the write) or a
-  long stretch without typing. The writer plans from the board's clock
+- **The fix, JD's call (10-27), built on `gremlin/pcf-unseen`
+  (`ecb10f0e`; codex four rounds):** the clock is synced as before; on
+  USB the PCF is written only when nobody is looking: the committed frame
+  dark, or 10 min without a key or the knob (`pcf_start_ok()`,
+  `rtc_pcf_sync.h`). Only on USB, with SOF owning the rate and the bus
+  active: there nothing reads the PCF (the board's own discipline stands
+  down, no deep sleep), so a late write costs nothing. Off USB it goes at
+  once, as before, so the discipline resumes against a fresh PCF within
+  100 ms of the cable going; on battery with the radio clock the write
+  still follows each sync (open). The writer plans from the board's clock
   when it runs, so a late write is as accurate as an early one. Until it
   lands the PCF is stale; only a power loss reads it then, and the host's
   next sync corrects the clock. Letting the scan run through a transfer

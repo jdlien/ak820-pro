@@ -1,0 +1,5 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md: the project's notes.
+
+Narrow re-check before flashing: qmk_firmware-ak820pro `git diff d72bfaf4 ecb10f0e` (branch gremlin/pcf-unseen). Your third look (plans/review-codex-pcf-unseen-fix2-raw.md) closed the sleep-age P2 and left one conditional P2: rtc_task() is skipped while an animation plays (ak820pro.c:648), freezing ref_state at REF_SOF after an unplug or suspend, so a lit, typing board could defer indefinitely. The fix: pcf_start_ok() (rtc.c) now also reads usbGetDriverStateI(&USBD1) == USB_ACTIVE under chSysLock, the same signal rtc_task() mirrors into usb_active_mirror, and defers only while ref_state == REF_SOF and the bus is active. rtc_fast_task(), where the gate runs, is not gated on anim_active() (ak820pro.c:607). Dev build OK, heap gap 128 B.
+
+Is that P2 closed, and is the lock in pcf_start_ok() safe where it runs (rtc_fast_task's normal path and a wake's recovery path)? Anything new? File and line. Under 80 words.

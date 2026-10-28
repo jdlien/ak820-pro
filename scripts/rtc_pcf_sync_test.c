@@ -123,6 +123,22 @@ int main(void) {
     pcf_sync_host_skipped(&s);
     CHECK(pcf_sync_retry_due(&s, PCF_SYNC_RETRY_S));
 
+    /* 10-27: on USB's rate the writer starts only where nobody watches the
+     * LEDs: dark, or ten minutes without input. Lit and typing it waits, a
+     * minute short too. */
+    CHECK(!pcf_sync_may_start(true, false, 0));
+    CHECK(!pcf_sync_may_start(true, false, 5u * 60000u));
+    CHECK(!pcf_sync_may_start(true, false, PCF_SYNC_UNSEEN_IDLE_MS - 1u));
+    CHECK(pcf_sync_may_start(true, false, PCF_SYNC_UNSEEN_IDLE_MS));
+    CHECK(pcf_sync_may_start(true, false, 0xFFFFFFFFu));
+    CHECK(pcf_sync_may_start(true, true, 0));            /* dark: at once, a key just pressed or not */
+    /* Codex: off USB's rate (unplugged; on battery the PCF is read, by the
+     * board's own discipline and across a sleep) it goes at once, lit and
+     * typing. */
+    CHECK(pcf_sync_may_start(false, false, 0));
+    CHECK(pcf_sync_may_start(false, true, 0));
+    CHECK(PCF_SYNC_UNSEEN_IDLE_MS == 10u * 60u * 1000u);
+
     printf(fails ?"%d FAILED\n" : "rtc_pcf_sync: all passed\n", fails);
     return fails != 0;
 }

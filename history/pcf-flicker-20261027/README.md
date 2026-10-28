@@ -53,6 +53,14 @@ if the digit is drawn ~0.1 s after the board's second turns: the writes at
 ~18.0, the release 0.49 s before 19.0, and the bracket ending on 19.0, where
 the PCF's first increment is timed.
 
+## The fix on the board (`ecb10f0e`, 20:36-20:47)
+
+`pcf-unseen-board-ecb10f0e.json` (`pcf_unseen_board.py`, HC_RTC
+page 4): the sync at the board's return left a write pending, still
+pending a minute later with the lights on; held dark, it ran in 1.5 s;
+the next sync's waited, lit and untouched, until 10 min after the boot.
+Before the fix the page counted 42 writes against 41 syncs since 16:33.
+
 ## Then
 
 JD's call: the clock is synced as before; the PCF is written only when

@@ -448,8 +448,11 @@ This file is the thread; read it first after a context loss. Updated
        every 5-min sync, each transaction holding the row ISR off: JD
        filmed three at 240 fps on the predicted second (GREMLIN-RESULTS
        §20z, `history/pcf-flicker-20261027/`). JD's call: write the PCF
-       only when dark or after a long stretch without typing; building
-       it. **Owed:** JD's watch on the board day to day; then merge (CLAUDE.md's core-file list gains
+       only when dark or after a long stretch without typing: built on
+       `gremlin/pcf-unseen` (`ecb10f0e`, on USB only; codex four
+       rounds), on the keyboard on gremlin since 20:36, its board test
+       PASS. **Owed:** JD's eye on a sync with the lights on; the board
+       day to day; then merge both branches (CLAUDE.md's core-file list gains
        `quantum/wear_leveling/wear_leveling.c` + `.h`).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
