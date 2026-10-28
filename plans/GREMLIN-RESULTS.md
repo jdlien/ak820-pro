@@ -1835,3 +1835,13 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
     after the fill (10 min after the last key), kind 2, the log 0. PASS.
   - **Health after both:** two stalls >= 25 ms, both the cleanups (the
     longest flash gap 62 ms), none not flash's.
+  - **JD's eye on Dim + cleanup** (~17:55): "can't see any flicker at the
+    dim"; but one flicker "in between me trying the options". From
+    17:53:58 (the daemon's sample) to 17:57:40 (a read): flash writes
+    913 to 926, passes >= 25 ms 2 to 12, none outside a flash write,
+    cleanups still 2, the log at 0: every long pass a deliberate
+    cleanup unless JD clicked fewer than ten. From 18:00 a read-only
+    watcher (scratchpad `flicker_watch.py`, 1 s) logs each flash write,
+    each long pass and each second the row rate falls 2% below its
+    median (the second-to-second spread at rest: ~0.2%, one reading
+    1.3% low in 20).

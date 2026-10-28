@@ -443,8 +443,11 @@ This file is the thread; read it first after a context loss. Updated
        `0x42b3bf75`, heap gap 128 B, the floor). ⚠️ The Write test's spare
        byte broke that flash's keymap restore (the tool read it as a macro):
        restored from a copy without it; `ak820keymap.py` now stops at the
-       16th macro's NUL. **Owed:** JD's eye on Dim + cleanup and on the
-       board day to day; then merge (CLAUDE.md's core-file list gains
+       16th macro's NUL. Dim + cleanup: JD saw no flicker at the dim
+       (~17:55), but one "in between" the options, unexplained; a
+       read-only watcher timestamps flash writes and row-rate dips
+       (GREMLIN-RESULTS §20z). **Owed:** JD's watch on the board day
+       to day; then merge (CLAUDE.md's core-file list gains
        `quantum/wear_leveling/wear_leveling.c` + `.h`).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted

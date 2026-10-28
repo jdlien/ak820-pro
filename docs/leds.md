@@ -40,7 +40,7 @@ fill, the padlock, the bolt, the AM/PM tiles), so its exposure is brief. A
 fix that feeds SPI0's FIFO from the main thread with the interrupt masked
 (`gremlin/fill-poll` `f2b107be`, codex cleared it,
 `plans/review-codex-spi0-poll-2026-10-24.md` on `warren/config-menu`) cut
-that to 1.3%. It is not on the mainline.
+that to 1.3%. It is on the mainline since `30f1e0cfde` (10-25).
 
 What each wrong ordering did (all measured): UART at the bottom → mangled
 frames both directions (ACK timeouts, dropped keystrokes, dropped `5B 32` =

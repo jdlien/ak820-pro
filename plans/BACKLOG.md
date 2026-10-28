@@ -144,8 +144,19 @@ notice the lights ... I haven't noticed screen blinking."
   Always on (on battery the other modes go dark first); the Write test's
   Dim + cleanup, waiting for two rendered frames after the cap. Docs:
   docs/leds.md, "The blink is the consolidation". GREMLIN-RESULTS §20z.
-- **Owed:** JD's eye on Dim + cleanup (does a cleanup at the dim show?), and
-  on the board day to day; then the merge.
+- **Dim + cleanup, by eye (10-27, ~17:55):** JD: "can't see any flicker at
+  the dim". But JD saw one flicker "in between me trying the options"
+  and wonders whether there is another cause. The board's counters for
+  those minutes (17:53:58-17:57:40): 13 flash writes, 10 passes >= 25 ms,
+  every one in a flash write (none outside), no early cleanup (the count
+  stayed 2) and the log empty, so no full-log consolidation either. Each
+  long pass was a Cleanup or Dim + cleanup click, unless JD clicked fewer
+  than ten. Not counted there: the row ISR slowed by the CPU-fed SPI0
+  fills (docs/leds.md), which the fill-poll fix cut to 1.3% of the rows.
+  A read-only watcher on gremlin logs every flash write, long pass and
+  dip in the row rate with its time, for JD to match a flicker against
+  the keyboard's clock.
+- **Owed:** JD's watch on the board day to day; then the merge.
 
 ## The default keymap as AJazz ships the board (2026-10-27) -- JD's call, the polish phase
 
