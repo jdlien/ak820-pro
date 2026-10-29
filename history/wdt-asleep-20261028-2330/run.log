@@ -1,0 +1,32 @@
+[23:30:37] starting in 60 s (JD: hands off the keyboard)
+[23:31:37] pausing the daemon
+[23:31:39] dumping the battery log (a watchdog reset erases it)
+# 1 entries (log v8, one per 900 s), newest 425 s ago
+2026-10-28 23:31:41 == run 1 of 3: cap 120 s, unfed
+2026-10-28 23:31:49 armed unfed, cap 120 s (15 s delay); data off
+2026-10-28 23:32:08 asleep (the current fell); watching for a rise
+2026-10-28 23:34:28 the current rose 138.9 s after entry (29.3 mA)
+2026-10-28 23:34:37 data on
+2026-10-28 23:34:40 record: {'state': 2, 'reason': 'cap', 'blocked': 0, 'flags': 91, 'slept': True, 'pcf': True, 'usb_back_20s': True, 'pll_ceiling': False, 'bound': False, 'reattach': True, 'secs': 120, 'strays': 0, 'p0': 0, 'p2': 0, 'p1': 0, 'pll_loops': 87, 'key_gain': 0, 'seq': 1, 'timed_out': []}
+2026-10-28 23:34:40 watchdog record: {'valid': False, 'site': 'none', 'site_id': 0, 'parent': 'none', 'parent_id': 0, 'last_pass_uptime_ms': 0, 'boot_rstst': 1, 'consecutive_resets': 0}
+2026-10-28 23:34:40 VERDICT cap 120: slept to the cap unfed (120 s counted): it does not count
+2026-10-28 23:34:47 == run 2 of 3: cap 120 s, unfed
+2026-10-28 23:34:55 armed unfed, cap 120 s (15 s delay); data off
+2026-10-28 23:35:14 asleep (the current fell); watching for a rise
+2026-10-28 23:37:33 the current rose 138.7 s after entry (29.1 mA)
+2026-10-28 23:37:43 data on
+2026-10-28 23:37:46 record: {'state': 2, 'reason': 'cap', 'blocked': 0, 'flags': 91, 'slept': True, 'pcf': True, 'usb_back_20s': True, 'pll_ceiling': False, 'bound': False, 'reattach': True, 'secs': 120, 'strays': 0, 'p0': 0, 'p2': 0, 'p1': 0, 'pll_loops': 87, 'key_gain': 0, 'seq': 2, 'timed_out': []}
+2026-10-28 23:37:46 watchdog record: {'valid': False, 'site': 'none', 'site_id': 0, 'parent': 'none', 'parent_id': 0, 'last_pass_uptime_ms': 0, 'boot_rstst': 1, 'consecutive_resets': 0}
+2026-10-28 23:37:46 VERDICT cap 120: slept to the cap unfed (120 s counted): it does not count
+2026-10-28 23:37:53 == run 3 of 3: cap 600 s, unfed
+2026-10-28 23:38:01 armed unfed, cap 600 s (15 s delay); data off
+2026-10-28 23:38:20 asleep (the current fell); watching for a rise
+2026-10-28 23:50:12 the current rose 711.8 s after entry (29.0 mA)
+2026-10-28 23:50:22 data on
+2026-10-28 23:50:25 record: {'state': 2, 'reason': 'cap', 'blocked': 0, 'flags': 91, 'slept': True, 'pcf': True, 'usb_back_20s': True, 'pll_ceiling': False, 'bound': False, 'reattach': True, 'secs': 600, 'strays': 0, 'p0': 0, 'p2': 0, 'p1': 0, 'pll_loops': 87, 'key_gain': 0, 'seq': 3, 'timed_out': []}
+2026-10-28 23:50:25 watchdog record: {'valid': False, 'site': 'none', 'site_id': 0, 'parent': 'none', 'parent_id': 0, 'last_pass_uptime_ms': 0, 'boot_rstst': 1, 'consecutive_resets': 0}
+2026-10-28 23:50:25 VERDICT cap 600: slept to the cap unfed (600 s counted): it does not count
+2026-10-28 23:50:33 done: cap 120: False, cap 120: False, cap 600: False
+[23:50:33] exit 0
+[23:50:33] restarting the daemon
+	state = xpcproxy

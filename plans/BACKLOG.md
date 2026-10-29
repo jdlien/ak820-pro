@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## A watchdog reset inside a deep sleep (2026-10-28) -- open: the keyboard on gremlin, ~8 min into an untouched sleep on BT, cable out; the diagnostic `gremlin/ds-phase` built (GREMLIN-RESULTS §21)
+## A watchdog reset inside a deep sleep (2026-10-28) -- open: the keyboard on gremlin, ~8 min into an untouched sleep on BT, cable out; (c) ruled out on JD's board; the diagnostic `gremlin/ds-phase` on JD's board since 23:51 10-28 (GREMLIN-RESULTS §21)
 
 The record named only `deep_sleep()` (site 27), and the sleep's facts were
 in `.bss`. Reading the code leaves (a) a wedge at the wake's first flash
@@ -35,6 +35,33 @@ dev builds, keeps the sleep under way through a reset (HC_DEVHOOK op 24
 slot 9). Buzz's session runs the repro on its bench: unfed armed sleeps
 (for c), long untouched sleeps on battery with the host away, and, by JD's
 hand, sleeps with the cable fully out (the bench's cable stays in the hub).
+
+**(c) is out: the WDT does not count in Deep-sleep** (23:31-23:50 10-28,
+[`../history/wdt-asleep-20261028-2330/`](../history/wdt-asleep-20261028-2330/README.md)).
+Three armed sleeps, unfed, on JD's board ran to the cap: 120, 120 and 600
+counted seconds, against an ~11.5 s timeout. Before tonight the only
+evidence was 10-18's single 30 s run. So the reset needed the core awake
+~12 s without a feed: (a) or (b). For (b), `usb_phy_onI()` turns the USB
+transceiver on at every wake, and the driver stays `USB_ACTIVE` after a
+pull.
+
+**What's different from every bench sleep:** the cable fully out (relay 2
+and `uhubctl` cut the power and the data, but D+/D- stay on the hub port),
+and the host away (it's always been near, or the board on 2.4G). Gremlin's
+board had slept cable-out six times before, each woken on purpose within
+minutes.
+
+**On JD's board since 23:51 10-28** (`27d1105dc1`, token `0xbc3b64c4`):
+slot 9 survives a reset through the bootloader
+([`../history/ds-phase-check-20261028-2350/`](../history/ds-phase-check-20261028-2350/README.md)),
+so a reset inside a sleep will now say where, what woke it, when and the
+strays.
+
+**Next:**
+1. The board untouched overnight with its cable fully out, on the pack. The
+   logger timestamps any wake.
+2. Then long sleeps on the pack, with the host away where it can be done.
+
 
 ## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
 

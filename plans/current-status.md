@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-28, 23:15. The block below is where things stand, written to
+Updated 2026-10-28, 23:58. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -42,7 +42,16 @@ bulbs.
 
 ### What is running
 
-- **Firmware on JD's board since 23:09 10-28: `8ec0c8b9b4`** (dev,
+- **Firmware on JD's board since 23:51 10-28: Warren's `27d1105dc1`**
+  (`gremlin/ds-phase`, on `8ec0c8b9b4` below; dev, token `0xbc3b64c4`,
+  heap gap 184 B): deep sleep's phases in the watchdog record, and the sleep
+  under way kept through a reset (op 24 slot 9). It's the diagnostic for
+  gremlin's WDT reset in a deep sleep ([`BACKLOG.md`](BACKLOG.md), "A WDT
+  reset inside a deep sleep on gremlin's board"). Flashed twice, 23:50-23:53,
+  flash.sh exit 0 each time, everything restored. Before it, three unfed
+  armed sleeps showed the WDT does not count in Deep-sleep
+  (`../history/wdt-asleep-20261028-2330/`). USB data off from 23:53:47.
+- **Before it, from 23:09 10-28: `8ec0c8b9b4`** (dev,
   `via-dev-8ec0c8b9b4-20261028-230846.bin`, token `0xe612779e`, 240,582 B,
   heap gap 224 B, the branch `more-info` on the mainline below): Help's
   More info (P1d), the credits beside the splash's bunny and a turn to a QR
@@ -54,7 +63,9 @@ bulbs.
   every frame but the dev Write test's row, as before. flash.sh exit 0 at
   23:09:41, everything restored; the screen's default level 80 went on
   with it (a default only: the live level stays JD's). Codex: no findings,
-  "OK to keep on the board". USB data still on from 20:18:58.
+  "OK to keep on the board". JD at 23:40: the page looks good, and the QR
+  code scans on his iPhone. USB data on 20:18:58-23:31:49; the intervals
+  after it are in `../history/wdt-asleep-20261028-2330/`.
 - **The mainline is `c4bc085271` since the evening of 10-28** (Warren
   fast-forwarded `ak820pro-jdlien` from `ce3f842de2` and pinned
   `deps.lock`; JD: "we should get everything merged into main now"). It is

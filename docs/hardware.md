@@ -495,7 +495,9 @@ explicitly. It wakes on:
   nobody touches still wakes daily; every count is 32-bit.
 A wake that is neither an edge on a wake pin nor a counted second is a stray; 1,000 of them wake it too. The
 watchdog is fed each counted second (it does not count in Deep-sleep:
-measured 19:16 10-18, 30 s unfed with no reset).
+measured 19:16 10-18, 30 s unfed with no reset, and 23:31-23:50 10-28,
+120, 120 and 600 counted seconds unfed with no reset,
+`history/wdt-asleep-20261028-2330/`).
 
 **Measured** (10-18/19, the experiment's build): **3.24 mA at 4.12 V asleep
 (13.35 mW), against ~27 mA awake and dark**; 247 of 247 cycles slept and woke

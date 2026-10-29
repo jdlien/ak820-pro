@@ -129,7 +129,13 @@ Warren's `gremlin/pcf-unseen` (the clock chip's write when nobody is
 looking) and the dev Write test. The daily build is clean (heap gap
 2336 B). Gremlin's keyboard runs its dev build since 20:51 10-28 (token
 `0x189635f2`).
-**On JD's board since 23:09 10-28: `8ec0c8b9b4`** (dev, token
+**On JD's board since 23:51 10-28: Warren's `27d1105dc1`** (dev, token
+`0xbc3b64c4`, heap gap 184 B, `gremlin/ds-phase`): the build below plus
+deep sleep's phases in the watchdog record and the sleep kept through a
+reset (op 24 slot 9), the diagnostic for gremlin's WDT reset in a deep sleep
+(`plans/BACKLOG.md`). Its first finding: the WDT does not count in
+Deep-sleep (840 counted s unfed, `history/wdt-asleep-20261028-2330/`).
+**Before it, from 23:09 10-28: `8ec0c8b9b4`** (dev, token
 `0xe612779e`, heap gap 224 B, the branch `more-info`): the mainline above
 plus Help's More info (P1d): the credits beside the splash's bunny, and a
 turn to a QR code to this repository
