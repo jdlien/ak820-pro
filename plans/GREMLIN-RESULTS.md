@@ -1909,3 +1909,9 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
   through a reset (op 24 slot 9, with the wake ring and slot 8 in `.ram0`'s
   no-init part). Codex reviewing; Buzz's session flashes it on JD's board
   and runs the repro on its bench, at JD's word.
+- **(c) is out** (Buzz's session, ~00:15 10-29, `8ec0c8b9` on the pack,
+  data cut, op 14's arm with no feed, no press): 120, 120 and 600
+  counted seconds (139, 139 and 712 s real), each woken on its cap, 0
+  strays, no reset, the record empty: 840 counted seconds unfed against
+  a ~11.5 s timeout. The WDT does not count in Deep-sleep, so the reset
+  needed the core awake ~12 s without a feed: (a) or (b).
