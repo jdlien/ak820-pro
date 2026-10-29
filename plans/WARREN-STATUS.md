@@ -459,6 +459,17 @@ This file is the thread; read it first after a context loss. Updated
        with the lights on; the board
        day to day; then merge both branches (CLAUDE.md's core-file list gains
        `quantum/wear_leveling/wear_leveling.c` + `.h`).
+     - **On the keyboard on gremlin since 20:51 10-28: `c4bc0852`**, the
+       session on Buzz's `menu-8x16` (the Font setting, 8px / 10px / 10px
+       bold; System info in Diagnostics; the camera page gone; the screen's
+       default level 80), which sits on `ecb10f0e`, so the PCF fix stays.
+       JD: "Wanna pull and flash it?" Codex cleared up to `fbc6c4a1`
+       (`plans/review-codex-menu-font-switch-2026-10-28.md`); `c4bc0852` is
+       one default in config.h. Dev, token `0x189635f2`, heap gap 224 B.
+       flash.sh exit 0, the keymap, five profiles and the live settings
+       restored and read back; the daemon's sync at 20:51:22, -1.7 ms
+       after. main merged into `warren/config-menu` (`menu_s0_test.c`:
+       main's side, which carries the Write test).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
