@@ -111,7 +111,7 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-10-23)
+## Current state (2026-10-28)
 
 **Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-22
 — RESUME HERE"). **Feature-complete for JD's board.** What's left:
@@ -120,8 +120,18 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
   to Buzz, the new Mac, on 10-23 spoiled the first;
 - stripping the bench, the soak, and the release for other owners.
 
-**On the board since 20:39 10-28: `fbc6c4a1fd`** (dev, token
-`0xd044efc5`, heap gap 224 B, the local branch `menu-8x16`, not pushed):
+**The mainline since 10-28 evening: `c4bc085271`** (`ak820pro-jdlien`
+fast-forwarded from `ce3f842de2` by Warren; `deps.lock` pins it): the
+Font setting (8px, 10px, 10px bold; the preview, the face in profiles),
+the 12 px greyscale icons, the dashboard's spacing, System info in
+Diagnostics, the camera page removed, the screen's default level 80; and
+Warren's `gremlin/pcf-unseen` (the clock chip's write when nobody is
+looking) and the dev Write test. The daily build is clean (heap gap
+2336 B). Gremlin's keyboard runs its dev build since 20:51 10-28 (token
+`0x189635f2`).
+**On JD's board since 20:39 10-28: `fbc6c4a1fd`** (dev, token
+`0xd044efc5`, heap gap 224 B): the mainline above without the screen's
+default level 80 (a default only, so no reflash is needed for it):
 `8b0f47e245` below plus, in 10px (Terminus regular), the page titles and
 the song's title kept bold.
 **Before it, from 20:19 10-28: `8b0f47e245`** (dev, token

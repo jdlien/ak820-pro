@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-28, 11:30. The block below is where things stand, written to
+Updated 2026-10-28, 21:00. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -42,6 +42,13 @@ bulbs.
 
 ### What is running
 
+- **The mainline is `c4bc085271` since the evening of 10-28** (Warren
+  fast-forwarded `ak820pro-jdlien` from `ce3f842de2` and pinned
+  `deps.lock`; JD: "we should get everything merged into main now"). It is
+  JD's board's build plus the screen's default level 80, and it carries
+  Warren's `gremlin/pcf-unseen` and the dev Write test. Gremlin's keyboard
+  runs it since 20:51 (token `0x189635f2`); JD on the Font page there:
+  "Identical to the board on Buzz."
 - **Firmware on JD's board since 20:39 10-28: `fbc6c4a1fd`** (dev, token
   `0xd044efc5`): the build below plus bold page titles and a bold song title
   in 10px (JD: "we still judiciously use bold"). flash.sh exit 0 at
