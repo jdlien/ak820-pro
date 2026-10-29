@@ -69,7 +69,7 @@ keeps the last eight sleeps.
   radio module, not the core; the overnight sleeps had nothing like it
   (max 3.77 mA).
 - **When the cable came out is not certain.** JD remembers shortly before
-  9; the chat has his "I'll unplug now" at 09:40:42, after the Shift. The
+  9; the chat has JD's "I'll unplug now" at 09:40:42, after the Shift. The
   sleeps' draw sides with the chat: sleep 1 (cable in) 3.28 mA and sleep 2
   (out) 3.12, against sleep 3 3.51 and sleep 4 3.19. Taken as in through
   sleep 3 and out from about 09:44:49, which would make the 9 s the pull.
