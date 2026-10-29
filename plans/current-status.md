@@ -68,6 +68,15 @@ bulbs.
   reports a new track, so a late title says which it was. The constant is
   shared with gremlin's Windows daemon: tell Warren. Then BACKLOG's entry
   and its 45 s, the tests, and the install on the Mac.
+- **The profile summary's colours with colons in the 10px faces.** Large's
+  second line is `H337 S84 B34` (`menu.c`, `prof_summary()`; the 8px face
+  already shows `H:337 S:84% B:34%`). A 10px line holds 15 cells
+  (`COLS_L`), so `H:337 S:84 B:34` fits exactly, but a saturation or
+  brightness of 100 with a hue of 100 or more does not (`H:359 S:100
+  B:100` is 17). The rule: colons when the line fits, the current form
+  when it doesn't. With it, the mock-up's oracle (`plans/menu-mockup/core.js`,
+  the same line), `scripts/menu_s0_test.c` and the verify shots. A flash,
+  so after the overnight run's reading, on top of Warren's diagnostic.
 
 ### What is running
 
