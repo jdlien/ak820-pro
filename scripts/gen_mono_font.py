@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""The configuration menu's 1-bit small face (plans/CONFIG-MENU-BUILD-PLAN.md,
-"Generated files"): writes graphics/res/font_small_mono.h.
+"""The configuration menu's two 1-bit faces (plans/CONFIG-MENU-BUILD-PLAN.md,
+"Generated files"; plans/MENU-8X16-PLAN.md, B1): writes
+graphics/res/font_small_mono.h (Small, Cozette 6x14) and
+graphics/res/font_menu_mono.h (Large, Terminus Bold 8x16), and the mock-up's
+copies of both (plans/menu-mockup/font6x14.hex and f-termb.hex).
 
     python scripts/gen_mono_font.py [--check] < /dev/null
 
@@ -12,20 +15,32 @@
   through mkbdfatlas.py's own placement (cell 6x14, baseline row 9, its
   xshift). A mismatch refuses: the atlas and the BDF have drifted.
 - `‹ › • ▸ ✓` come from the BDF, placed the same way, at codes 0x80-0x84,
-  and are checked against the mockup's EXTRA13 (plans/config-menu-mockup.html).
+  and are checked against the mockup's 6x14 face (plans/config-menu-mockup.html,
+  FACES.c6).
 - Then ICONS, JD's picks from the icon picker (10-24,
   scripts/gen_icon_gallery.py), from 0x85, placed by place(): ASCII's shift
   when the ink fits a cell with it, else unshifted; a glyph wider than a cell
   (double width, or 7 px of ink on a 6 px advance) takes two codes, its left
   and right halves. The picker draws with this same place().
+- An icon named in DRAWN is drawn by hand instead, cell for cell, and split
+  into its halves the same way.
 - 14 B a glyph, a byte a row, column 0 in bit 7.
 
---check writes nothing and fails if the header on disk differs."""
+The whole table is compared with the mockup's 6x14 face: a difference is a
+note when writing (rebuild the mockup after) and a failure with --check.
+
+Large's table is the mock-up's own: plans/menu-mockup/mkfont8.js builds it
+from the Terminus Bold BDF (plans/menu-mockup/terminus/, OFL 1.1), the icons
+redrawn for 8x16 (icons16.js) and Small's five marks centred, so the
+firmware draws exactly what the mock-up does. It needs node.
+
+--check writes nothing and fails if a file on disk differs."""
 import argparse
 import os
-import re
 import struct
+import subprocess
 import sys
+import tempfile
 import zlib
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
@@ -34,9 +49,18 @@ import mkbdfatlas  # noqa: E402
 
 ATLAS = os.path.join(ROOT, "assets-src", "current", "Iosevka-Medium-13.png")
 BDF = os.path.join(ROOT, "assets-src", "cozette.bdf")
-MOCKUP = os.path.join(ROOT, "plans", "config-menu-mockup.html")
-OUT = os.path.join(ROOT, "qmk_firmware-ak820pro", "keyboards", "a_jazz", "ak820pro",
-                   "graphics", "res", "font_small_mono.h")
+MOCKDIR = os.path.join(ROOT, "plans", "menu-mockup")
+MOCK_SMALL = os.path.join(MOCKDIR, "font6x14.hex")
+MOCK_LARGE = os.path.join(MOCKDIR, "f-termb.hex")
+TERMINUS = os.path.join(MOCKDIR, "terminus", "ter-u16b.bdf")
+# 10-28: Terminus regular, the third face (JD): its ASCII beside Bold's, the
+# extras shared, so only 95 glyphs more in the firmware.
+TERMINUS_R = os.path.join(MOCKDIR, "terminus", "ter-u16n.bdf")
+MOCK_REGULAR = os.path.join(MOCKDIR, "f-term.hex")
+RES = os.path.join(ROOT, "qmk_firmware-ak820pro", "keyboards", "a_jazz", "ak820pro", "graphics", "res")
+OUT = os.path.join(RES, "font_small_mono.h")
+OUT_LARGE = os.path.join(RES, "font_menu_mono.h")
+LCW, LCH = 8, 16   # Large's cell
 CW, CH, BASELINE = 6, 14, 9
 EXTRAS = [("‹", 0x2039), ("›", 0x203A), ("•", 0x2022), ("▸", 0x25B8), ("✓", 0x2713)]
 EXTRA_NAMES = ["LSAQUO", "RSAQUO", "BULLET", "TRIANGLE", "CHECK"]
@@ -49,7 +73,7 @@ ICONS = [
     ("TRI_R", 0x25B6, 1),          # ▶ a row that opens a page
     ("CURSOR", 0x1FB70, 1),        # the selected row's, in its line's lead (columns 0-2): the thin bar
                                    # (JD, 10-24; U+1FB6C's triangle was "a little too cramped")
-    ("WRENCH", 0x1F527, 2),        # 🔧 before "Configuration"
+    ("WRENCH", 0x1F527, 2),        # 🔧 before "Configuration", drawn (DRAWN)
     ("CHECK_BOX", 0xF631, 2),      # the saved option (nf-mdi-checkbox_marked; JD: the circle "doesn't look good")
     ("I_POWER", 0xF0E7, 1),        # the top level's icons: nf-fa-bolt,
     ("I_CLOCK", 0xF017, 2),        # nf-fa-clock,
@@ -73,7 +97,50 @@ ICONS = [
     ("I_DELETE", 0xF48E, 2),       # Delete, nf-oct-trashcan
     ("I_RESET", 0x21BA, 1),        # Reset settings (JD, 10-27: "circular arrow like fontawesome's arrow-rotate-left"),
                                    # the anticlockwise open circle arrow, 5 x 6 px
+    ("I_FONT", 0x1F524, 2),        # Font (10-28): a large A and a small one, drawn (DRAWN)
 ]
+
+# Icons drawn by hand for this face, in place of the BDF's glyph: CH rows of
+# `#` (ink) and `.`, the icon's cells side by side, placed as they will draw.
+DRAWN = {
+    # One jaw opening to the top right, 10 x 9, the handle's end rounded
+    # (Cozette's own is two jaws and reads as a bone at this size). Its caps
+    # are rows 2-9, the capitals' height, beside the title's text.
+    "WRENCH": [
+        "............",
+        "............",
+        ".......##...",
+        "......##....",
+        "......##..#.",
+        "......#####.",
+        ".....#####..",
+        "....###.....",
+        "...###......",
+        "..###.......",
+        "..##........",
+        "............",
+        "............",
+        "............",
+    ],
+    # A large A and a small one, the Font row's (a placeholder until a
+    # design is picked): capitals rows 2-9, the small A's rows 5-9.
+    "I_FONT": [   # JD's pick (10-28, with ak820-pro-90): its small A 3 px wide, column 11 clear before the label
+        "............",
+        "............",
+        "...#........",
+        "..#.#.......",
+        "..#.#.......",
+        ".#...#...#..",
+        ".#...#..#.#.",
+        ".#####..###.",
+        "#.....#.#.#.",
+        "#.....#.#.#.",
+        "............",
+        "............",
+        "............",
+        "............",
+    ],
+}
 
 
 def read_png(path):
@@ -188,14 +255,29 @@ def place(g, base, dx):
     sys.exit(f"ink columns {lo}..{hi} fit no cell")
 
 
-def mockup_extras():
-    m = re.search(r"const EXTRA13 = (\{[^}]*\})", open(MOCKUP, encoding="utf-8").read())
-    if not m:
-        sys.exit(f"{MOCKUP}: no EXTRA13")
-    out = {}
-    for ch, bits in re.findall(r'"(.)": "([01]{84})"', m.group(1)):
-        out[ch] = {(i % CW, i // CW) for i, b in enumerate(bits) if b == "1"}
-    return out
+def read_hex(path, ch):
+    """-> a face hex as a list of `ch` row bytes a glyph ([] if missing)."""
+    h = open(path).read().strip() if os.path.exists(path) else ""
+    if len(h) % (ch * 2):
+        sys.exit(f"{path}: not whole {ch}-row glyphs")
+    return [[int(h[(g * ch + r) * 2:(g * ch + r) * 2 + 2], 16) for r in range(ch)]
+            for g in range(len(h) // (ch * 2))]
+
+
+def hex_of(cells):
+    return "".join(f"{r:02x}" for rows in cells for r in rows)
+
+
+def write_or_check(path, text, check, what):
+    if check:
+        old = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
+        if old != text:
+            sys.exit(f"{path} is stale: run scripts/gen_mono_font.py")
+        print(f"{what} is current")
+        return
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    print(f"wrote {path}")
 
 
 def rows_of(ink):
@@ -225,29 +307,36 @@ def main():
     if any((0, 0) in bdf_cell(glyphs, 0x20 + i, dx, label(i)) for i in range(95)):
         sys.exit("a glyph has ink under the atlas's marker")
 
-    mock = mockup_extras()
+    mock = read_hex(MOCK_SMALL, CH)
     extras, xlabels, defines = [], [], []
     for (ch, cp), name in zip(EXTRAS, EXTRA_NAMES):
         ink = bdf_cell(glyphs, cp, dx, ch)
-        if mock.get(ch) != ink:
-            sys.exit(f"{ch}: the BDF's placement differs from the mockup's EXTRA13")
+        if len(mock) <= 95 + len(extras) or mock[95 + len(extras)] != rows_of(ink):
+            sys.exit(f"{ch}: the BDF's placement differs from the mockup's 6x14 face")
         defines.append((name, [0x80 + len(extras)], f"{ch} U+{cp:04X}"))
         extras.append(ink)
         xlabels.append(f"{ch} U+{cp:04X}")
     dw = dwidths(BDF)
     for name, cp, n in ICONS:
-        if cp not in glyphs:
-            sys.exit(f"{BDF}: no glyph for U+{cp:04X} ({name})")
-        w, s, _ = place(glyphs[cp], 12 if dw.get(cp, 6) > 6 else 6, dx)
-        if w // CW != n:
-            sys.exit(f"{name} U+{cp:04X}: {w // CW} cells, ICONS says {n}")
-        ink = {(x + s, y) for x, y in mkbdfatlas.glyph_pixels(glyphs[cp], BASELINE)}
-        if any(not 0 <= y < CH for _, y in ink):
-            sys.exit(f"{name} U+{cp:04X}: ink outside the {CH} rows")
-        defines.append((name, [0x80 + len(extras) + k for k in range(n)], f"U+{cp:04X}"))
+        what = f"U+{cp:04X}" + (" drawn" if name in DRAWN else "")
+        if name in DRAWN:
+            art = DRAWN[name]
+            if len(art) != CH or any(len(line) != n * CW or set(line) - set("#.") for line in art):
+                sys.exit(f"{name}: DRAWN wants {CH} rows of {n * CW} '#' or '.'")
+            ink = {(x, y) for y, line in enumerate(art) for x, c in enumerate(line) if c == "#"}
+        else:
+            if cp not in glyphs:
+                sys.exit(f"{BDF}: no glyph for U+{cp:04X} ({name})")
+            w, s, _ = place(glyphs[cp], 12 if dw.get(cp, 6) > 6 else 6, dx)
+            if w // CW != n:
+                sys.exit(f"{name} U+{cp:04X}: {w // CW} cells, ICONS says {n}")
+            ink = {(x + s, y) for x, y in mkbdfatlas.glyph_pixels(glyphs[cp], BASELINE)}
+            if any(not 0 <= y < CH for _, y in ink):
+                sys.exit(f"{name} U+{cp:04X}: ink outside the {CH} rows")
+        defines.append((name, [0x80 + len(extras) + k for k in range(n)], what))
         for k in range(n):
             extras.append({(x - k * CW, y) for x, y in ink if k * CW <= x < (k + 1) * CW})
-            xlabels.append(f"{name} U+{cp:04X}" + ("" if n == 1 else " left" if k == 0 else " right"))
+            xlabels.append(f"{name} {what}" + ("" if n == 1 else " left" if k == 0 else " right"))
     if 0x80 + len(extras) > 0x100:
         sys.exit("more extras than codes 0x80-0xFF")
 
@@ -260,7 +349,8 @@ def main():
         "// menu's 1-bit small face: Cozette 6x14, the 95 ASCII glyphs as the shipped",
         "// atlas has them (assets-src/current/Iosevka-Medium-13.png, FONT_SMALL), and",
         f"// {len(extras)} more from assets-src/cozette.bdf at 0x80-0x{0x7F + len(extras):02X}: five marks, then JD's",
-        "// icons (a two-cell icon is two codes). A byte a row, column 0 in bit 7.",
+        "// icons (a two-cell icon is two codes; one drawn by hand, the wrench). A byte",
+        "// a row, column 0 in bit 7.",
         "#pragma once",
         "",
         "#include <stdint.h>",
@@ -283,15 +373,59 @@ def main():
     lines += ["};", ""]
     text = "\n".join(lines)
 
-    if a.check:
-        old = open(OUT, encoding="utf-8").read() if os.path.exists(OUT) else ""
-        if old != text:
-            sys.exit(f"{OUT} is stale: run scripts/gen_mono_font.py")
-        print("font_small_mono.h is current")
-        return
-    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
-        f.write(text)
-    print(f"wrote {OUT}: {len(cells)} glyphs, {len(cells) * CH} B")
+    names = [label(i) if i < 95 else xlabels[i - 95] for i in range(len(cells))]
+    write_or_check(OUT, text, a.check, "font_small_mono.h")
+    # The mock-up's copy of Small, which mkfont8.js reads for Large's marks.
+    write_or_check(MOCK_SMALL, hex_of(cells) + "\n", a.check, "font6x14.hex")
+
+    # Large: the mock-up builds it (mkfont8.js), from Small's hex as written.
+    with tempfile.TemporaryDirectory() as tmp:
+        built = os.path.join(tmp, "f-termb.hex")
+        subprocess.run(["node", "mkfont8.js", TERMINUS, built], cwd=MOCKDIR, check=True, stdout=subprocess.DEVNULL)
+        large = read_hex(built, LCH)
+        built_r = os.path.join(tmp, "f-term.hex")
+        subprocess.run(["node", "mkfont8.js", TERMINUS_R, built_r], cwd=MOCKDIR, check=True, stdout=subprocess.DEVNULL)
+        regular = read_hex(built_r, LCH)
+    if len(large) != len(cells) or len(regular) != len(cells):
+        sys.exit(f"Large has {len(large)} glyphs, Regular {len(regular)}, Small {len(cells)}")
+    if regular[95:] != large[95:]:
+        sys.exit("Regular's extras differ from Bold's: the firmware shares Bold's")
+    write_or_check(MOCK_LARGE, hex_of(large) + "\n", a.check, "f-termb.hex")
+    write_or_check(MOCK_REGULAR, hex_of(regular) + "\n", a.check, "f-term.hex")
+    llines = [
+        "// Copyright 2026 JD Lien",
+        "// SPDX-License-Identifier: GPL-2.0-or-later",
+        "//",
+        "// GENERATED by scripts/gen_mono_font.py -- do not edit. The configuration",
+        "// menu's 1-bit large face (plans/MENU-8X16-PLAN.md): Terminus Bold 8x16",
+        "// (Terminus Font 4.49.1, SIL OFL 1.1: plans/menu-mockup/terminus/), the 95",
+        "// ASCII glyphs from its BDF, then the extras in font_small_mono.h's codes and",
+        "// order: Small's five marks centred, the cursor the cell's height, and the",
+        "// icons redrawn for 8x16 (plans/menu-mockup/icons16.js). Built by the mock-up's",
+        "// mkfont8.js, so the firmware draws what the mock-up does. A byte a row,",
+        "// column 0 in bit 7.",
+        "#pragma once",
+        "",
+        "#include <stdint.h>",
+        "",
+        f"#define FONT_LARGE_W {LCW}",
+        f"#define FONT_LARGE_H {LCH}",
+        f"#define FONT_LARGE_N {len(large)}   /* FONT_MONO_N: the same codes */",
+        "",
+        "static const uint8_t font_large_mono[FONT_LARGE_N][FONT_LARGE_H] = {",
+    ]
+    for i, rows in enumerate(large):
+        llines.append("    {" + ", ".join(f"0x{r:02X}" for r in rows) + "},   /* " + names[i] + " */")
+    llines += ["};", "",
+               "/* 10-28: Terminus regular 8x16 (ter-u16n.bdf, the same release), the third",
+               " * face: its 95 ASCII glyphs; its extras are font_large_mono's. */",
+               "#define FONT_REGULAR_N 95",
+               "",
+               "static const uint8_t font_regular_mono[FONT_REGULAR_N][FONT_LARGE_H] = {"]
+    for i, rows in enumerate(regular[:95]):
+        llines.append("    {" + ", ".join(f"0x{r:02X}" for r in rows) + "},   /* " + names[i] + " */")
+    llines += ["};", ""]
+    write_or_check(OUT_LARGE, "\n".join(llines), a.check, "font_menu_mono.h")
 
 
 if __name__ == "__main__":

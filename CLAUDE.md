@@ -120,11 +120,61 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
   to Buzz, the new Mac, on 10-23 spoiled the first;
 - stripping the bench, the soak, and the release for other owners.
 
-**On the board since 19:08 10-25: the mainline, `30f1e0cfde`** (dev, token
-`0x195cbf4c`; `ak820pro-jdlien` and `deps.lock` point at it): Warren's
-configuration menu (S0 through P4, the Clock options), the LED fix and the
-wake's dark-frame fix, flashed mid-drain on battery; the drain runs on to
-the cut. ⚠️ **On Buzz the daemon's lock-light channel sent nothing from
+**On the board since 20:39 10-28: `fbc6c4a1fd`** (dev, token
+`0xd044efc5`, heap gap 224 B, the local branch `menu-8x16`, not pushed):
+`8b0f47e245` below plus, in 10px (Terminus regular), the page titles and
+the song's title kept bold.
+**Before it, from 20:19 10-28: `8b0f47e245`** (dev, token
+`0xb9f4c717`, heap gap 224 B, the local branch `menu-8x16`, not pushed):
+`ccfe080920` below plus Terminus regular as a third face (8px, 10px, 10px
+bold), the Font page's 0.3 s preview and note, the face in every profile,
+About in Diagnostics as System info, and the Fn+D camera page removed.
+**Before it, from 18:59 10-28: `ccfe080920`** (dev, token
+`0x65019724`, heap gap 128 B, the local branch `menu-8x16`, not pushed):
+`59b2c9d7b3` below plus the 10px face's icons from JD's 12 px set in four
+greys (`graphics/res/icons12_2bpp.h`, made in `~/Documents/ak820pro-icons`)
+and the Font icon he picked in both faces.
+**Before it, from 18:44 10-28: `59b2c9d7b3`** (dev, token
+`0x1765e95a`, heap gap 128 B, the local branch `menu-8x16`, not pushed):
+`ecb10f0e9b` below plus the Font setting
+([`plans/MENU-8X16-PLAN.md`](plans/MENU-8X16-PLAN.md)): a Font row after
+Bootloader picks 8px (Cozette 6 x 14, the menu as it was) or 10px
+(Terminus Bold 8 x 16, the default), and 10px also draws the song's
+artist and title; the dashboard's song lines a row apart, the clock 2
+rows down and the lock row 1 down ([docs/display.md](docs/display.md)).
+Flashed mid-drain with the settings kept. **Before it, from 18:22:
+`36fe62ea9c`** (token `0xf9274d6f`), the same without the spacing.
+**Before it, from 11:05 10-28: `3b6e43ef73`** (dev, token
+`0xcddf82ef`, the local branch `font-test`): `ecb10f0e9b` below plus a
+temporary Font test page in Diagnostics, frames from the external flash at
+0xE00000 for judging the 8 x 16 menu faces; not for merging.
+**Before it, from 21:54 10-27: `ecb10f0e9b`, Warren's
+`gremlin/pcf-unseen`, not yet merged** (dev, token `0xdc5524d4`, heap gap
+128 B, at the floor): the mainline `ce3f842de2` (`deps.lock`) plus the
+clock chip's write only while the lights are dark or after 10 min without
+input, and the softer LED blink at a flash write with the dev Write test.
+Flashed mid-drain with the settings kept; the profiles converted to the
+Win/Mac switch's sides.
+**Before it, from 20:29 10-26: `1f3c79e904`** (dev, token
+`0x60a8fe4b`): the menu's idle close at 60 s.
+**Before it, from 16:01 10-26: `553108e5f2`** (dev, token
+`0x9286ca96`): the profile page's polish (the actions' icons, the
+summary's rule, the 300 ms preview).
+**Before it, from 13:29 10-26: `13c5e910cb`** (dev, token `0xffc7a951`):
+settings profiles complete, eight slots with Save new, the preview and
+Rename, flashed mid-drain with the settings kept for the first time.
+**Before it, from 09:49 10-26: `57d5e90030`** (dev, token `0xde2973aa`):
+settings profiles' P5a and P5b, the store, the Profiles pages and the
+Next/Previous profile keys
+([`plans/SETTINGS-PROFILES-PLAN.md`](plans/SETTINGS-PROFILES-PLAN.md)), and
+Warren's effects' speeds, flashed mid-drain on battery from Warren's branch
+for JD's look and merged after it.
+That flash reset the EEPROM's settings one last time (firmware before P5a
+has no `HC_PROFILES`); from here `flash.sh` keeps them. **Before it, from
+19:08 10-25: the mainline until 10-26, `30f1e0cfde`** (dev, token
+`0x195cbf4c`): Warren's configuration menu (S0 through P4, the Clock
+options), the LED fix and the wake's dark-frame fix, flashed mid-drain on
+battery; the drain runs on to the cut. ⚠️ **On Buzz the daemon's lock-light channel sent nothing from
 10-23 to 19:28 10-25**, until Input Monitoring was granted
 (`plans/current-status.md`): a new Mac needs that grant before it works.
 **Before it, from 22:02 10-24: `52acdffe99`** (dev, token `0xab194817`,
@@ -540,12 +590,17 @@ on one previews its lighting and screen level; Rename alone takes the
 keyboard's typing,
 [`plans/SETTINGS-PROFILES-PLAN.md`](plans/SETTINGS-PROFILES-PLAN.md); each
 side of the Win/Mac switch remembers its profile, and a flip brings the
-other side back as it was left (10-27); Reset settings, under Bootloader,
-puts the defaults back and keeps the profiles; the Power page shows each
-mode's bulb) ·
-`Fn`+`D` debug page (tap
-cycles debug page → camera page (big volts and %) → dashboard, HOLD
-~800 ms resets the health counters) · `Fn`+`B` power mode (Always on /
+other side back as it was left (10-27); Font, under Bootloader, picks
+8px (Cozette), 10px (Terminus) or 10px bold (Terminus Bold, the default)
+for the menu and the now-playing text, previewed after a 0.3 s rest and
+saved in profiles too (10-28); Reset settings, under Font, puts the
+defaults back and keeps the profiles; System info, About's page, is in
+Diagnostics since 10-28; the Power page shows each mode's bulb) ·
+`Fn`+`D` debug page (a tap toggles dashboard ↔ debug page, or menu ↔
+debug page inside the menu; HOLD ~800 ms resets the health counters; the
+camera page was removed on 10-28, since the bench's power cut and INA228
+logger replaced filming the screen, and the debug page still shows the
+`5C`) · `Fn`+`B` power mode (Always on /
 Balanced / Power saver / Lights out; the enum keeps Full / Normal / Saver /
 Minimal: the idle ladder on battery, Phase 2, shown on battery as a bulb in
 the bolt's slot; Lights out keeps the lights and the backlight off, lighting

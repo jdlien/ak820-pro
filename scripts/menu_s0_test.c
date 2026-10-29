@@ -36,6 +36,8 @@
 #include "menu_edit.h"
 #include "profiles.h"                          /* P5b: the settings profiles' store, under the menu's pages */
 #include "../graphics/res/font_small_mono.h"   /* through -I $D/menu */
+#include "../graphics/res/font_menu_mono.h"    /* 10-28: Large's, the same codes */
+#include "../graphics/res/icons12_2bpp.h"      /* 10-28: Large's icons in four greys */
 #include "../graphics/batt_text.h"           /* P4: the previews as the dashboard composes them */
 #include "../graphics/power_bulb.h"          /* 10-27: the Power choice's bulbs */
 #include "../indicator_levels.h"               /* P2a: the indicators' levels and tick */
@@ -141,8 +143,18 @@ bool mb_glyph_big(char c, uint16_t x, uint16_t y) {
  * rows come in panel order, the frame keeps RGB565. */
 static int pixel_ops;
 static int fk_bulb_paints;   /* 10-27: the Power page's bulbs sent (x 111, 14 wide) */
+/* 10-28: a rectangle off the panel. The panel refuses it (lcd_stream_begin()),
+ * so the fakes do, counted, instead of writing past fb: a leftover 20-column
+ * or 8-row geometry in Large fails here (plans/MENU-8X16-PLAN.md, B2). */
+static int fk_oob;
+static bool off_panel(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+    if (x + w <= MB_W && y + h <= MB_H) return false;
+    fk_oob++;
+    return true;
+}
 bool mb_rows(uint16_t x, uint16_t y, uint16_t w, uint16_t h, mb_row_fn fn, const void *ctx) {
     dma_settle();
+    if (off_panel(x, y, w, h)) return false;
     if (x == 111 && w == 14) fk_bulb_paints++;
     pass_bytes += (uint32_t)w * h * 2u;
     uint16_t rows = h;
@@ -169,6 +181,7 @@ static int      mono_ops;
 static uint16_t mono_min_x = 0xFFFFu;   /* the Clock's ticks: the leftmost column a mono blit painted */
 bool mb_mono(const uint8_t *bits, uint8_t stride, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t fg, uint16_t bg) {
     dma_settle();   /* the stream quiesces */
+    if (off_panel(x, y, w, h)) return false;
     if (x < mono_min_x) mono_min_x = x;
     pass_bytes += (uint32_t)w * h * 2u;
     uint16_t rows = h;
@@ -340,21 +353,18 @@ static void test_transitions(void) {
     CHECK(po_event(PO_EV_DEBUG_CLICK, false, 0) == PO_ACT_REFUSED);
     CHECK(po_event(PO_EV_STARTUP, false, 0) == 0 && po_phase() == RESTORE_WAITING);
 
-    /* Diagnostics > Health, then a click back; > Camera direct; DBG_PAGE cycles. */
+    /* Diagnostics > Health, then a click back; > Camera refused (10-28: the
+     * page gone); DBG_PAGE toggles. */
     a = po_event(PO_EV_DIAG_HEALTH, false, 0);
     CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_OPEN && po_debug_page() == DEBUG_PAGE_HEALTH);
     CHECK((a & PO_ACT_DEBUG_ENTER) && (a & PO_ACT_EDIT_CANCEL) && po_return_to_diag() && po_visible());
     a = po_event(PO_EV_DEBUG_CLICK, false, 0);
     CHECK(po_owner() == PANEL_MENU && (a & PO_ACT_MENU_CLEAR));
-    a = po_event(PO_EV_DIAG_CAMERA, false, 0);
-    CHECK(po_owner() == PANEL_DEBUG && po_debug_page() == DEBUG_PAGE_CAMERA);
-    po_event(PO_EV_DEBUG_CLICK, false, 0);
+    CHECK(po_event(PO_EV_DIAG_CAMERA, false, 0) == PO_ACT_REFUSED && po_owner() == PANEL_MENU);
     a = po_event(PO_EV_DBG_PAGE, false, 0);   /* MENU: into Health */
     CHECK(po_owner() == PANEL_DEBUG && po_debug_page() == DEBUG_PAGE_HEALTH);
-    a = po_event(PO_EV_DBG_PAGE, false, 0);   /* Health to Camera in place */
-    CHECK(a == PO_ACT_DEBUG_CAMERA && po_debug_page() == DEBUG_PAGE_CAMERA);
     a = po_event(PO_EV_DBG_PAGE, false, 0);   /* back to MENU at Diagnostics */
-    CHECK(po_owner() == PANEL_MENU && po_session() == SESSION_OPEN);
+    CHECK(po_owner() == PANEL_MENU && po_session() == SESSION_OPEN && (a & PO_ACT_MENU_CLEAR));
 
     /* Close from DEBUG under the session: DASH, a restore started. */
     po_event(PO_EV_DIAG_HEALTH, false, 0);
@@ -365,13 +375,12 @@ static void test_transitions(void) {
     CHECK(po_gen() == (uint16_t)(g + 1) && !po_visible() && !po_sleep_blocked());
     CHECK(po_event(PO_EV_CLOSE, false, 0) == PO_ACT_REFUSED);
 
-    /* Standalone DEBUG: today's three-step cycle, and leaving DONE invalid. */
+    /* Standalone DEBUG: the two-step toggle (10-28), and leaving DONE invalid. */
     boot_to_dash();
     g = po_gen();
     a = po_event(PO_EV_DBG_PAGE, false, 0);
     CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_NONE && po_phase() == RESTORE_WAITING);
     CHECK(!po_restored(g) && po_panel_lit_for_owner());
-    CHECK(po_event(PO_EV_DBG_PAGE, false, 0) == PO_ACT_DEBUG_CAMERA);
     a = po_event(PO_EV_DBG_PAGE, false, 0);
     CHECK(po_owner() == PANEL_DASH && (a & PO_ACT_RESTORE_START) && po_phase() == RESTORE_CLEAR);
     to_done();
@@ -480,8 +489,8 @@ static void test_restore_residual_and_loss(void) {
     /* The other owners' handlers. */
     po_event(PO_EV_OPENER, false, 0);
     CHECK(po_loss(0) == PO_ACT_RESET_BUFFERS);
-    po_event(PO_EV_DIAG_CAMERA, false, 0);
-    CHECK(po_loss(0) == PO_ACT_DEBUG_ENTER && po_debug_page() == DEBUG_PAGE_CAMERA);
+    po_event(PO_EV_DIAG_HEALTH, false, 0);
+    CHECK(po_loss(0) == PO_ACT_DEBUG_ENTER && po_debug_page() == DEBUG_PAGE_HEALTH);
     po_event(PO_EV_CLOSE, false, 0);
     while (po_phase() != RESTORE_RESIDUAL) po_restore_advance();
     CHECK(po_residual_next(&in, 20000) == PO_RES_DONE);
@@ -928,7 +937,7 @@ static void test_mono(void) {
                 for (uint8_t lead = 0; lead <= 2; lead++)
                     for (uint8_t trail = 0; trail <= 2; trail++)
                         for (int inks = 0; inks < 4; inks++) {
-                            mt_line_t ln = {ss[si], cells, lead, trail, (inks & 1) != 0, (inks & 2) != 0, 0};
+                            mt_line_t ln = {ss[si], cells, lead, trail, (inks & 1) != 0, (inks & 2) != 0, 0, MT_SMALL};
                             uint16_t  lw = mt_width(&ln);
                             size_t    sl = strlen(ss[si]);
                             for (uint16_t c0 = 0; c0 < lw; c0++)
@@ -966,7 +975,7 @@ static void test_mono(void) {
 
         static char ws[256];
         memset(ws, 'W', 255);
-        mt_line_t wide = {ws, 255, 0, 1, false, false, 0};
+        mt_line_t wide = {ws, 255, 0, 1, false, false, 0, MT_SMALL};
         memset(bb, 0xA5, sizeof bb);
         mt_bits(&wide, 1524, 7, 3, 1, bb, 1);   /* the last glyph's six columns and one trail pixel */
         CHECK(bb[0] == (uint8_t)(font_small_mono['W' - 0x20][3] & 0xFC) && bb[1] == 0xA5);
@@ -982,7 +991,7 @@ static void test_mono(void) {
     /* menu_text.c's edges and padding, on their own: a short string pads
      * with spaces; ink edges are set on every row asked for. */
     uint8_t   b[2 * 16];
-    mt_line_t l = {"A", 3, 2, 3, true, false, 0};
+    mt_line_t l = {"A", 3, 2, 3, true, false, 0, MT_SMALL};
     CHECK(mt_width(&l) == 2 + 18 + 3);
     mt_bits(&l, 0, 23, 3, 2, b, 16);
     for (int r = 0; r < 2; r++) {
@@ -1001,7 +1010,7 @@ static void test_mono(void) {
      * over lead_ink, cut to the band; the glyph never reaches column 3, the
      * 1 px gap before cell 0. */
     const uint8_t *cg = font_small_mono[95 + (uint8_t)MT_CURSOR[0] - 0x80];
-    mt_line_t      lg = {"A", 1, 4, 1, true, false, (uint8_t)MT_CURSOR[0]};
+    mt_line_t      lg = {"A", 1, 4, 1, true, false, (uint8_t)MT_CURSOR[0], MT_SMALL};
     CHECK(cg[5] == 0x80 && cg[0] == 0x80 && cg[13] == 0);   /* the thin bar (JD, 10-24): column 0, rows 0-12 */
     mt_bits(&lg, 0, 11, 0, MT_CELL_H, b, 2);
     for (int r = 0; r < MT_CELL_H; r++) {
@@ -1342,6 +1351,12 @@ static uint8_t fk_batt_view = 1;   /* BATT_VIEW_* */
 static int  fk_batt_writes;
 uint8_t env_batt_view(void) { return fk_batt_view; }
 void env_batt_view_set(uint8_t v) { fk_batt_view = v; fk_batt_writes++; }
+/* 10-28, the Font setting: Small, the menu the checks before it were written
+ * for; the Large tour sets it (plans/MENU-8X16-PLAN.md). */
+static uint8_t fk_font = ENV_FONT_SMALL, fk_font_writes, fk_refonts;
+uint8_t env_font(void) { return fk_font; }
+void env_font_set(uint8_t f) { fk_font = f; fk_font_writes++; }
+void env_text_refont(void) { fk_refonts++; }
 /* What the readout is made of: 85% on battery, 160 h left, the average mature. */
 static env_batt_t fk_batt = {85, true, 9600, 120};
 void env_batt_facts(env_batt_t *b) { *b = fk_batt; }
@@ -1459,7 +1474,7 @@ bool env_wt_dim_applied(void) {   /* the ladder's next tick, ~100 ms */
 static int  fk_defaults_reads;
 void        env_defaults(env_defaults_t *d) {   /* Reset settings (10-27): mode 1 is Solid (fk_effect_names) */
     fk_defaults_reads++;
-    *d = (env_defaults_t){{1, 36, 64, 191, 102, 1, 0xFF}, 60, 5, 5, 0, 1, 1};
+    *d = (env_defaults_t){{1, 36, 64, 191, 102, 1, 0xFF}, 80, 5, 5, 0, 1, 1};   /* config.h's screen level: 80 (10-28) */
 }
 /* P5c: Rename's keys. Row 1's keycode is its column (the tests type by
  * keycode); the keys down, QMK's tapping, the one-shots' clears, Shift. */
@@ -1540,21 +1555,27 @@ const char *env_build_flavour(void) { return "dev"; }
  * most of each; codex on 541a8cbd: the cursor has its own colour and chunk). */
 static bool menu_watch;
 static int  menu_max_lit, menu_max_cursor;
+/* 10-28: by the face the menu draws in (the fake's setting): Small's eight
+ * rows of 14 from y 15, Large's seven of 16 from y 16. */
 static int lit_rows(void) {
-    int n = 0;
-    for (int r = 0; r < 8; r++) {
+    const bool L = me_font() != ENV_FONT_SMALL;   /* the face shown: the Font page's preview's too */
+    const int  y0 = L ? 16 : 15, h = L ? 16 : 14;
+    int        n = 0;
+    for (int r = 0; r < (L ? 7 : 8); r++) {
         bool lit = false;
-        for (int y = 15 + 14 * r; y < 29 + 14 * r && !lit; y++)
+        for (int y = y0 + h * r; y < y0 + h * (r + 1) && !lit; y++)
             for (int x = 3; x <= 124 && !lit; x++) lit = fb[y][x] == MENU_LIT;
         n += lit;
     }
     return n;
 }
 static int cursor_rows(void) {
-    int n = 0;
-    for (int r = 0; r < 8; r++) {
+    const bool L = me_font() != ENV_FONT_SMALL;
+    const int  y0 = L ? 16 : 15, h = L ? 16 : 14;
+    int        n = 0;
+    for (int r = 0; r < (L ? 7 : 8); r++) {
         bool c = false;
-        for (int y = 15 + 14 * r; y < 29 + 14 * r && !c; y++)
+        for (int y = y0 + h * r; y < y0 + h * (r + 1) && !c; y++)
             for (int x = 0; x < 3 && !c; x++) c = fb[y][x] == MENU_CURSOR;
         n += c;
     }
@@ -1576,7 +1597,7 @@ static void fw_pass(uint32_t dt) {
     }
     if (po_owner() == PANEL_MENU) menu_pump();
     if (pass_bytes > max_pass_bytes) max_pass_bytes = pass_bytes;
-    if (menu_watch && po_owner() == PANEL_MENU) {
+    if (menu_watch && po_owner() == PANEL_MENU && !ms_clearing()) {   /* a face change's clear: the old face's frame going */
         int l = lit_rows(), c = cursor_rows();
         if (l > menu_max_lit) menu_max_lit = l;
         if (c > menu_max_cursor) menu_max_cursor = c;
@@ -1598,8 +1619,12 @@ static mi_state_t wait_terminal(uint8_t seq, int max_passes) {
     }
     return MI_ST_PENDING;
 }
+static uint8_t ts_face;   /* 10-28: the face the frame checks expect (MT_SMALL, MT_LARGE) */
 static void fw_reset(void) {
     fake_reset();
+    fk_font = ENV_FONT_SMALL;
+    fk_font_writes = fk_refonts = 0;
+    ts_face = MT_SMALL;
     fk_prof_reset();
     po_init();
     mi_init();
@@ -1870,6 +1895,7 @@ static int frames(const char *dir, int n) {
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg);
 static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor) {
     uint8_t c0 = (uint8_t)cells[0];
+    if (c0 == (uint8_t)FONT_MONO_I_FONT[0]) return text_slot_bad2(y, cells, fg, cursor, cursor ? 0xFFB8u : MENU_WHITE);   /* 10-28 */
     return text_slot_bad2(y, cells, fg, cursor,
                           !strncmp(cells, FONT_MONO_CHECK_BOX, 2)                         ? 0x468Cu
                           : (c0 >= (uint8_t)FONT_MONO_I_POWER[0] && c0 <= (uint8_t)FONT_MONO_I_CONN[1]) ||
@@ -1881,43 +1907,91 @@ static int text_slot_bad(uint16_t y, const char *cells, uint16_t fg, bool cursor
 }
 static uint16_t ts_rule_y;   /* a pixel row the text's check expects the grey rule on (x 4-123), 0 none */
 static uint8_t  ts_bulb;     /* 10-27: a Power option's row, its mode + 1 (0 none): its bulb at x 111-123 */
+static uint8_t  ts_g0;       /* 10-28: the first glyph row at y (Large's title: 1) */
+/* A code's glyph in the face the checks expect: Small's 14 rows, Large's 16. */
+static const uint8_t *ts_glyph(uint8_t code) {
+    int i = code >= 0x80 && code < 0x80 + FONT_MONO_N - 95 ? 95 + code - 0x80 : code >= 0x20 && code < 0x7F ? code - 0x20 : '?' - 0x20;
+    if (ts_face == MT_LARGE_R) return i < FONT_REGULAR_N ? font_regular_mono[i] : font_large_mono[i];   /* 10-28: Regular, Bold's extras */
+    return ts_face == MT_LARGE ? font_large_mono[i] : font_small_mono[i];
+}
+/* 10-28: Large draws an icon in cells 0-1 from the 12 px set in four greys,
+ * a row's and a title's: the set's icon for the cells' first code, or -1.
+ * The test's own map and decode, not menu.c's. */
+static int ts_icon12(const char *cells) {
+    static const struct { const char *code; int icon; } m[] = {
+        {FONT_MONO_I_LIGHT, ICON12_LIGHTING}, {FONT_MONO_I_SCREEN, ICON12_SCREEN}, {FONT_MONO_I_CONN, ICON12_CONNECTION},
+        {FONT_MONO_I_POWER, ICON12_POWER}, {FONT_MONO_I_IND, ICON12_INDICATORS}, {FONT_MONO_I_CLOCK, ICON12_CLOCK},
+        {FONT_MONO_I_BATT, ICON12_BATTERY}, {FONT_MONO_I_PROF, ICON12_PROFILES}, {FONT_MONO_I_BOOT, ICON12_BOOTLOADER},
+        {FONT_MONO_I_RESET, ICON12_RESET_SETTINGS}, {FONT_MONO_I_DIAG, ICON12_DIAGNOSTICS}, {FONT_MONO_I_HELP, ICON12_HELP},
+        {FONT_MONO_I_ABOUT, ICON12_ABOUT}, {FONT_MONO_I_EXIT, ICON12_EXIT}, {FONT_MONO_I_LOAD, ICON12_LOAD},
+        {FONT_MONO_I_SAVE, ICON12_SAVE}, {FONT_MONO_I_RENAME, ICON12_RENAME}, {FONT_MONO_I_DELETE, ICON12_DELETE},
+        {FONT_MONO_CHECK_BOX, ICON12_SAVED}, {FONT_MONO_I_WAIT, ICON12_TRYING}, {FONT_MONO_I_FAIL, ICON12_FAILED},
+        {FONT_MONO_WRENCH, ICON12_MENU_TITLE}, {FONT_MONO_I_FONT, ICON12_FONT},
+    };
+    if (ts_face == MT_SMALL) return -1;
+    for (size_t i = 0; i < sizeof m / sizeof m[0]; i++)
+        if ((uint8_t)cells[0] == (uint8_t)m[i].code[0]) return m[i].icon;
+    return -1;
+}
+/* Level n of RGB565 c: each channel at n/3, rounded. */
+static uint16_t ts_level(uint16_t c, int n) {
+    int r = (int)((c >> 11) * n / 3.0 + 0.5), g = (int)(((c >> 5) & 63) * n / 3.0 + 0.5), b = (int)((c & 31) * n / 3.0 + 0.5);
+    return (uint16_t)((r << 11) | (g << 5) | b);
+}
 static int text_slot_bad2(uint16_t y, const char *cells, uint16_t fg, bool cursor, uint16_t icon_fg) {
     int            bad = 0;
     size_t         len = strlen(cells);
-    const uint8_t *cg  = font_small_mono[95 + (uint8_t)FONT_MONO_CURSOR[0] - 0x80];
-    for (uint16_t r = 0; r < 14; r++)
+    const int      i12 = ts_icon12(cells);
+    const int      cw = ts_face != MT_SMALL ? 8 : 6, ch = (ts_face != MT_SMALL ? 16 : 14) - ts_g0;
+    const int      dy = ts_face != MT_SMALL ? 1 : 0;   /* Large's bulb a row down */
+    const uint8_t *cg = ts_glyph((uint8_t)FONT_MONO_CURSOR[0]) + ts_g0;
+    for (uint16_t r = 0; r < ch; r++)
         for (uint16_t x = 0; x <= 124; x++) {
             uint16_t want = 0;
             if (x < 3) {
                 if (cursor && (cg[r] & (0x80 >> x))) want = MENU_CURSOR;   /* its own colour (JD, 10-24) */
+            } else if (i12 >= 0 && x >= 4 && x < 20) {   /* the icon's 16 x 16 cell, its row r + g0 */
+                int lv = (icons12[i12][(r + ts_g0) * 4 + (x - 4) / 4] >> (6 - 2 * ((x - 4) % 4))) & 3;
+                if (lv) want = ts_level(icon_fg ? icon_fg : fg, lv);
             } else if (x >= 4 && x <= 123) {
-                size_t  cell = (size_t)(x - 4) / 6;
-                uint8_t code = cell < len ? (uint8_t)cells[cell] : (uint8_t)' ';
-                const uint8_t *g = code >= 0x80 && code < 0x80 + FONT_MONO_N - 95 ? font_small_mono[95 + code - 0x80]
-                                 : code >= 0x20 && code < 0x7F ? font_small_mono[code - 0x20]
-                                                               : font_small_mono['?' - 0x20];
-                if (g[r] & (0x80 >> ((x - 4) % 6))) want = icon_fg && cell < 2 ? icon_fg : fg;
+                size_t         cell = (size_t)(x - 4) / cw;
+                uint8_t        code = cell < len ? (uint8_t)cells[cell] : (uint8_t)' ';
+                const uint8_t *g    = ts_glyph(code) + ts_g0;
+                if (g[r] & (0x80 >> ((x - 4) % cw))) want = icon_fg && cell < 2 ? icon_fg : fg;
                 if (ts_rule_y && y + r == ts_rule_y) want = MENU_GREY;
             }
-            if (ts_bulb && x >= 111) want = power_bulb_px((uint8_t)(ts_bulb - 1u), (uint8_t)(x - 111), (uint8_t)r, 0);
+            if (ts_bulb && x >= 111)
+                want = (int)r >= dy ? power_bulb_px((uint8_t)(ts_bulb - 1u), (uint8_t)(x - 111), (uint8_t)(r - dy), 0) : 0;
             if (fb[y + r][x] != want) bad++;
         }
     return bad;
 }
-/* A row's 20 cells: the label left, the value right. */
+/* A row's 20 cells (Large's 15): the label left, the value right. */
 static const char *cells2(const char *label, const char *value) {
     static char out[21];
-    memset(out, ' ', 20);
-    out[20] = '\0';
+    const int   n = ts_face != MT_SMALL ? 15 : 20;
+    memset(out, ' ', (size_t)n);
+    out[n] = '\0';
     memcpy(out, label, strlen(label));
-    memcpy(out + 20 - strlen(value), value, strlen(value));
+    memcpy(out + n - strlen(value), value, strlen(value));
     return out;
 }
-/* A list row: the cursor with the lit colour. */
+/* A list row: the cursor with the lit colour. Large's rows from y 16, 16 apart. */
+static uint16_t row_y(int r) { return (uint16_t)(ts_face != MT_SMALL ? 16 + 16 * r : 15 + 14 * r); }
 static int row_bad(int r, const char *cells, uint16_t fg) {
-    return text_slot_bad((uint16_t)(15 + 14 * r), cells, fg, fg == MENU_LIT);
+    return text_slot_bad(row_y(r), cells, fg, fg == MENU_LIT);
 }
-static int title_bad(const char *t) { return text_slot_bad(0, t, MENU_WHITE, false); }
+/* Large's title draws its glyph rows 1-15 at y 0-14; in Regular, in Bold's
+ * glyphs (10-28: the titles stay bold). */
+static int title_bad(const char *t) {
+    const uint8_t f = ts_face;
+    if (ts_face == MT_LARGE_R) ts_face = MT_LARGE;
+    ts_g0   = ts_face != MT_SMALL ? 1 : 0;
+    int bad = text_slot_bad(0, t, MENU_WHITE, false);
+    ts_g0   = 0;
+    ts_face = f;
+    return bad;
+}
 /* 10-27: a Power option's row (1-4, the modes in order), its bulb at the
  * right edge (JD: "right aligned on the right edge"); its text short of it. */
 static int pow_bad(int r, const char *cells, uint16_t fg) {
@@ -1928,7 +2002,7 @@ static int pow_bad(int r, const char *cells, uint16_t fg) {
 }
 /* A profile's summary, its first line (row 5) under the rule (JD, 10-26). */
 static int psum0_bad(const char *cells) {
-    ts_rule_y = 15 + 14 * 5;
+    ts_rule_y = row_y(5);
     int bad   = text_slot_bad(ts_rule_y, cells, MENU_WHITE, false);
     ts_rule_y = 0;
     return bad;
@@ -1958,16 +2032,19 @@ static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
 /* The top level's rows (P4, JD 10-25: Battery under Clock, Diagnostics
  * under Bootloader on page two): their indices, and each row's cells with
  * the defaults' values. */
-enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_PROF, T_BOOT, T_DEFS, T_DIAG, T_HELP, T_ABOUT,
-       T_EXIT, T_ROWS };   /* P5b: Profiles page one's last, Bootloader to page two; 10-27: Reset settings under it */
+enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_PROF, T_BOOT, T_FONT, T_DEFS, T_DIAG, T_HELP,
+       T_EXIT, T_ROWS };   /* 10-28: About in Diagnostics, as System info, its first row (D_SYSINFO) */
+enum { D_SYSINFO = 1, D_HEALTH, D_RESET, D_WTEST };   /* 10-28: the Camera page gone */   /* P5b: Profiles page one's last, Bootloader to page two; 10-27: Reset settings under it;
+                                     * 10-28: Font under Bootloader */
 static const char *const top_rows_want[T_ROWS][2] = {
     {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 52 of 100 */
     {FONT_MONO_I_CONN "Connection", "BT 1"}, {FONT_MONO_I_POWER " Power", "Balanced"},   /* P3: the link */
     {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h:ss"},
     {FONT_MONO_I_BATT " Battery", "Percent"}, {FONT_MONO_I_PROF " Profiles", "None"},
-    {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R}, {FONT_MONO_I_RESET " Reset settings", FONT_MONO_TRI_R},
+    {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R}, {FONT_MONO_I_FONT "Font", "8px"},
+    {FONT_MONO_I_RESET " Reset settings", FONT_MONO_TRI_R},
     {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R},
-    {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_ABOUT "About", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
+    {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
 };
 static void top_frame_ok(int cursor);
 
@@ -1994,8 +2071,8 @@ static void test_menu(void) {
     m_turn(-2);
     CHECK(sub5_cursor() == T_EXIT);
     top_frame_ok(T_EXIT);   /* page two */
-    /* Its thumb at the track's end: 64 px of 112 for fourteen rows (10-27: Reset settings; 69 for P5b's
-     * thirteen), y 63-126 (codex: it was drawn off the panel). */
+    /* Its thumb at the track's end: 64 px of 112 for fourteen rows (10-28: About in Diagnostics; 60 for
+     * fifteen, 69 for P5b's thirteen), y 63-126 (codex: it was drawn off the panel). */
     CHECK(fb[62][125] == MENU_TRACK && fb[63][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
     m_turn(1);
     CHECK(sub5_cursor() == 0);
@@ -2084,10 +2161,11 @@ static void test_menu(void) {
     m_hold();    /* Back to the top: Help's row */
     CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_HELP);
 
-    /* About: the snapshot, formatted. */
-    m_turn(T_ABOUT - T_HELP);
+    /* System info (About, in Diagnostics since 10-28): the snapshot, formatted. */
+    m_turn(T_DIAG - T_HELP);
     m_click();
-    CHECK(title_bad(FONT_MONO_I_ABOUT "About") == 0);
+    m_click();   /* Diagnostics' first row */
+    CHECK(title_bad(FONT_MONO_I_DIAG " System info") == 0);
     CHECK(row_bad(0, "Firmware 36afff30", MENU_WHITE) == 0);
     CHECK(row_bad(1, "dev, 0xef38330e", MENU_WHITE) == 0);
     CHECK(row_bad(2, "Up 1d 1h 54m", MENU_WHITE) == 0);
@@ -2105,25 +2183,26 @@ static void test_menu(void) {
     fw_pass(5); fw_pass(5);
     CHECK(op27(2, 0, 0) == MI_OK);   /* and in again */
     m_settle();
-    CHECK(title_bad(FONT_MONO_I_ABOUT "About") == 0 && row_bad(6, "Mode Lights out", MENU_WHITE) == 0);
+    CHECK(title_bad(FONT_MONO_I_DIAG " System info") == 0 && row_bad(6, "Mode Lights out", MENU_WHITE) == 0);
     CHECK(row_bad(3, "Battery -", MENU_WHITE) == 0 && row_bad(4, "Pack -", MENU_WHITE) == 0);
     m_click();
 
-    /* Diagnostics: Health hands off; a click comes back to its row. */
-    m_turn(T_DIAG - T_ABOUT);   /* Diagnostics */
-    m_click();
-    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 1 && title_bad(FONT_MONO_I_DIAG " Diagnostics") == 0);
+    /* Diagnostics, System info's click back on its row: Health hands off; a
+     * click comes back to its row. */
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == D_SYSINFO && title_bad(FONT_MONO_I_DIAG " Diagnostics") == 0);
+    CHECK(row_bad(D_SYSINFO, cells2("System info", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_turn(D_HEALTH - D_SYSINFO);
     m_click();
     CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_OPEN);
     CHECK(op27(2, 0, 0) == MI_OK);
     CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
     for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
     m_settle();
-    CHECK(po_owner() == PANEL_MENU && sub5_screen() == 16 + 4 && sub5_cursor() == 1);
-    CHECK(row_bad(1, cells2("Health page", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    CHECK(po_owner() == PANEL_MENU && sub5_screen() == 16 + 4 && sub5_cursor() == D_HEALTH);
+    CHECK(row_bad(D_HEALTH, cells2("Health page", FONT_MONO_TRI_R), MENU_LIT) == 0);
 
     /* Reset counters: the question, a click resets, the done page, back. */
-    m_turn(2);
+    m_turn(D_RESET - D_HEALTH);
     m_click();
     CHECK(sub5_screen() == 16 + 10 && sub5_cursor() == 0 && title_bad(FONT_MONO_I_DIAG " Reset counters") == 0);
     CHECK(text_slot_bad(22, "Clear the health", MENU_WHITE, false) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE, false) == 0);
@@ -2132,7 +2211,7 @@ static void test_menu(void) {
     CHECK(text_slot_bad(22, "Counters reset.", MENU_WHITE, false) == 0 && text_slot_bad(36, "", 0, false) == 0 &&
           text_slot_bad(86, "", 0, false) == 0);
     m_click();
-    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 3 && fk_resets == 1);
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == D_RESET && fk_resets == 1);
     m_click();   /* again, then a hold cancels */
     m_hold();
     CHECK(fk_resets == 1 && sub5_screen() == 16 + 4 && title_bad("Cancelled") == 0);
@@ -2193,7 +2272,7 @@ static void test_menu(void) {
     for (int i = 0; i < 300; i++) fw_pass(5);
     m_turn(T_DIAG - T_POWER);
     m_click();
-    m_turn(1);   /* Camera */
+    m_turn(D_HEALTH - D_SYSINFO);   /* Health */
     CHECK(op27(1, 1, 0) == MI_OK);   /* Reset counters */
     CHECK(wait_terminal(rpt[6], 50) == MI_ST_DONE);
     fw_pass(5);
@@ -2205,19 +2284,11 @@ static void test_menu(void) {
     m_settle();
     CHECK(sub5_screen() == 16 + 10);
     m_hold();
-    /* The Camera page's return lands on its row. */
-    m_turn(-1);
-    m_click();
-    CHECK(po_owner() == PANEL_DEBUG);
-    CHECK(op27(2, 0, 0) == MI_OK);
-    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
-    for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
-    m_settle();
-    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == 2 && row_bad(2, cells2("Camera page", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    CHECK(sub5_screen() == 16 + 4 && sub5_cursor() == D_RESET);
     m_hold();
     /* 4. About replaced while its old rows are still committed: Back for one
      * pass, new facts, in again, at several boundaries. */
-    m_turn(T_ABOUT - T_DIAG);   /* About, from Diagnostics */
+    m_click();   /* Diagnostics, on System info */
     m_click();
     for (int k = 0; k < 6; k++) {
         CHECK(op27(2, 0, 0) == MI_OK);   /* Back */
@@ -2230,14 +2301,15 @@ static void test_menu(void) {
         m_settle();
         char want[21];
         snprintf(want, sizeof want, "Pack %u mV", 3500u + k);
-        CHECK(title_bad(FONT_MONO_I_ABOUT "About") == 0 && row_bad(4, want, MENU_WHITE) == 0);
+        CHECK(title_bad(FONT_MONO_I_DIAG " System info") == 0 && row_bad(4, want, MENU_WHITE) == 0);
         snprintf(want, sizeof want, "Mode %s", (const char *[]){"Always on", "Balanced", "Power saver", "Lights out"}[k & 3]);
         CHECK(row_bad(6, want, MENU_WHITE) == 0);
     }
     m_click();
+    m_hold();     /* from Diagnostics to the top, on its row */
     /* Every Help topic paged to its end: 7, 7, 12 and 13 lines (JD's text, 10-24), so its
      * last top is 0, 0, 4 and 5. */
-    m_turn(-1);   /* Help */
+    m_turn(T_HELP - T_DIAG);   /* Help */
     m_click();
     for (int t = 0; t < 4; t++) {
         static const uint8_t last_top[4] = {0, 0, 4, 5};
@@ -3045,8 +3117,7 @@ static void test_p2a(void) {
     CHECK(me_active() && fk_ind[0] == 18 && fk_ind_force == 1);
     (void)env_po_event(PO_EV_DBG_PAGE);   /* Fn+D or op 1 from the menu: Health */
     CHECK(po_owner() == PANEL_DEBUG && !me_active() && fk_ind[0] == 17 && fk_ind_force == 0);
-    (void)env_po_event(PO_EV_DBG_PAGE);   /* Camera */
-    (void)env_po_event(PO_EV_DBG_PAGE);   /* back to the menu */
+    (void)env_po_event(PO_EV_DBG_PAGE);   /* back to the menu (10-28: no Camera page between) */
     for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
     m_settle();
     CHECK(po_owner() == PANEL_MENU && fk_ind[0] == 17 && fk_ind_force == 0);
@@ -3147,8 +3218,8 @@ static void test_menu_enable(void) {
     CHECK(po_session() == SESSION_OPEN && sub5_screen() == 16 + 1);
     knob(true);
     /* From the Fn+D page with no session (DEBUG/NONE): C1 hands off to a fresh
-     * menu, its top level (do_open). Then Diagnostics > Camera and its
-     * return, which lands on Camera's row. */
+     * menu, its top level (do_open). Then Diagnostics > Health and its
+     * return, which lands on its row (10-28: System info above it). */
     (void)env_po_event(PO_EV_DBG_PAGE);
     CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_NONE);
     knob(true);
@@ -3904,16 +3975,18 @@ static void test_clock(void) {
      * as it opens, even with About's bytes saying it has, at this tick. */
     m_turn(-(int)sub5_cursor());
     m_click();
-    m_turn(T_ABOUT - T_CLOCK);
+    m_turn(T_DIAG - T_CLOCK);
     m_click();
+    m_click();   /* System info */
     m_settle();
     m_click();
-    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_ABOUT);
+    m_hold();
+    CHECK(sub5_screen() == 16 + 1 && sub5_cursor() == T_DIAG);
     union { env_about_t a; struct { env_time_t t; uint16_t tick; uint8_t have, st; } c; } u = {.a = fk_about};
     CHECK(u.c.have && (u.c.st & 1u));
     fk_tick       = u.c.tick;
     fk_time_reads = 0;
-    m_turn(T_CLOCK - T_ABOUT);
+    m_turn(T_CLOCK - T_DIAG);
     m_click();
     m_settle();
     CHECK(sub5_screen() == SC_CLOCK && fk_time_reads == 1 && clock_rows_bad(6, 5) == 0);
@@ -4865,12 +4938,16 @@ static void test_defaults(void) {
     /* The click: the defaults, saved; the profile kept, no side's. */
     int lcd_saves = fk_lcd_saves, power_writes = fk_power_writes;
     m_click();
+    /* 10-28: the default face too, Large: the confirm re-laid out in it, the song text told once */
+    CHECK(fk_font == ENV_FONT_LARGE && fk_font_writes == 1 && fk_refonts == 1);
+    ts_face = MT_LARGE;
+    m_settle();
     CHECK(sub5_screen() == SC_DEFAULTS && sub5_cursor() == 1 && title_bad("Settings reset") == 0);
-    CHECK(text_slot_bad(22, "Settings reset.", MENU_WHITE, false) == 0 && text_slot_bad(36, "", 0, false) == 0 &&
-          text_slot_bad(72, "Click: back", MENU_WHITE, false) == 0 && text_slot_bad(86, "", 0, false) == 0);
+    CHECK(text_slot_bad(24, "Settings reset.", MENU_WHITE, false) == 0 && text_slot_bad(40, "", 0, false) == 0 &&
+          text_slot_bad(80, "Click: back", MENU_WHITE, false) == 0 && text_slot_bad(96, "", 0, false) == 0);
     CHECK(fk_rgb.mode == 1 && fk_rgb.h == 36 && fk_rgb.s == 64 && fk_rgb.v == 191 && fk_rgb.speed == 102 &&
           fk_rgb.enable == 1);
-    CHECK(fk_lcd == 60 && fk_lcd_saved == 60 && fk_lcd_saves == lcd_saves + 1 && fk_ind_saved[0] == 5 &&
+    CHECK(fk_lcd == 80 && fk_lcd_saved == 80 && fk_lcd_saves == lcd_saves + 1 && fk_ind_saved[0] == 5 &&
           fk_ind_saved[1] == 5 && fk_clock == 0 && fk_batt_view == BATT_VIEW_PERCENT && fk_power == 1 &&
           fk_power_writes == power_writes + 1);
     CHECK(prof_active() == 0xFF && prof_valid_mask() == 0x01);
@@ -4878,18 +4955,597 @@ static void test_defaults(void) {
     m_click();   /* back */
     CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_DEFS);
 
-    /* Page one shows them: the screen, the power mode, the clock, the
-     * battery, and no profile. */
+    /* Page one shows them, in Large: the screen, the power mode (its bulb,
+     * Balanced), the clock, the battery; no profile, on page two. */
     m_turn(-T_DEFS);
     CHECK(sub5_cursor() == 0);
-    CHECK(row_bad(T_SCREEN, cells2(FONT_MONO_I_SCREEN "Screen", "60%"), MENU_DIM) == 0 &&
-          row_bad(T_POWER, cells2(FONT_MONO_I_POWER " Power", "Balanced"), MENU_DIM) == 0 &&
+    ts_bulb = 2;
+    CHECK(row_bad(T_POWER, cells2(FONT_MONO_I_POWER " Power", ""), MENU_DIM) == 0);
+    ts_bulb = 0;
+    CHECK(row_bad(T_SCREEN, cells2(FONT_MONO_I_SCREEN "Screen", "80%"), MENU_DIM) == 0 &&
           row_bad(T_CLOCK, cells2(FONT_MONO_I_CLOCK "Clock", "24h:ss"), MENU_DIM) == 0 &&
-          row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "Percent"), MENU_DIM) == 0 &&
-          row_bad(T_PROF, PROF_TOP("None"), MENU_DIM) == 0);
+          row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "%"), MENU_DIM) == 0);
+    m_turn(T_PROF);
+    CHECK(row_bad(0, cells2(FONT_MONO_I_PROF " Profiles", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    CHECK(fk_oob == 0);
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
     CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
     menu_watch = false;
+}
+
+/* 10-28: the Large face (plans/MENU-8X16-PLAN.md): Terminus Bold 8x16, 15
+ * columns and 7 rows, the mock-up's words and behaviours; the Font page both
+ * ways; a host's restore with the menu open; the fixture left alone. */
+enum { SC_FONT = 16 + 61, SC_ABOUT = 16 + 6, SC_HELP = 16 + 5, SC_TOPIC0 = 16 + 11 };
+static const char *const top_rows_l[T_ROWS][2] = {
+    {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},
+    {FONT_MONO_I_CONN "Link", "BT 1"}, {FONT_MONO_I_POWER " Power", ""},   /* the mode as its bulb */
+    {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R}, {FONT_MONO_I_CLOCK "Clock", "24h:ss"},
+    {FONT_MONO_I_BATT " Battery", "%"}, {FONT_MONO_I_PROF " Profiles", FONT_MONO_TRI_R},
+    {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R}, {FONT_MONO_I_FONT "Font", "Bold"},   /* "10px bold"'s short */
+    {FONT_MONO_I_RESET " Defaults", FONT_MONO_TRI_R}, {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R},
+    {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
+};
+static void top_frame_ok_l(int cursor) {
+    const int page = cursor / 7;
+    for (int r = 0; r < 7; r++) {
+        int i   = page * 7 + r;
+        ts_bulb = i == T_POWER ? (uint8_t)(fk_power + 1u) : 0;
+        int bad = i >= T_ROWS ? row_bad(r, "", 0)
+                              : row_bad(r, cells2(top_rows_l[i][0], top_rows_l[i][1]),
+                                        i == cursor ? MENU_LIT : i == T_EXIT ? MENU_LEAVE : MENU_DIM);
+        ts_bulb = 0;
+        if (bad) printf("  top_frame_ok_l(%d): row %d, item %d, %d px\n", cursor, r, i, bad);
+        CHECK(bad == 0);
+    }
+}
+static void test_large(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_lcd  = 52;   /* the top level's 52% */
+    fk_font = ENV_FONT_LARGE;
+    ts_face = MT_LARGE;
+    fk_time = (env_time_t){13, 45, 1, 24, 10, 2026};
+    fk_time_ok = true;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    const int oob = fk_oob;
+
+    /* The top level: the wrench's space dropped for the title's 15 cells; the
+     * separator at y 15; seven rows a page, Exit page three's alone. */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == 0);
+    CHECK(title_bad(FONT_MONO_WRENCH "Configuration") == 0);
+    CHECK(fb[15][4] == MENU_GREY && fb[15][123] == MENU_GREY && fb[14][60] != MENU_GREY);
+    top_frame_ok_l(0);
+    CHECK(fb[16][125] == MENU_WHITE && fb[71][125] == MENU_WHITE && fb[72][125] == MENU_TRACK);   /* a 56 px thumb at the top (14 rows) */
+    m_turn(T_EXIT);
+    CHECK(sub5_cursor() == T_EXIT);
+    top_frame_ok_l(T_EXIT);
+    CHECK(fb[71][125] == MENU_TRACK && fb[72][125] == MENU_WHITE && fb[127][125] == MENU_WHITE);   /* at the end: y 72-127 */
+    m_turn(T_FONT - T_EXIT);
+    top_frame_ok_l(T_FONT);
+
+    /* The Font page: 8px, 10px and 10px bold, Bold's box; a hold leaves it,
+     * nothing saved. */
+    m_click();
+    CHECK(sub5_screen() == SC_FONT && sub5_cursor() == 3 && title_bad(FONT_MONO_I_FONT "Font") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, "  8px", MENU_DIM) == 0 &&
+          row_bad(2, "  10px", MENU_DIM) == 0 && row_bad(3, FONT_MONO_CHECK_BOX "10px bold", MENU_LIT) == 0 &&
+          row_bad(4, "For the menus", MENU_WHITE) == 0 && row_bad(5, "and now playing", MENU_WHITE) == 0 &&
+          row_bad(6, "", 0) == 0);   /* 10-28: the note, as Battery's */
+    m_hold();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_FONT && title_bad("Cancelled") == 0);
+    CHECK(fk_font == ENV_FONT_LARGE && fk_font_writes == 0 && fk_refonts == 0);
+    m_unflash();
+
+    /* Small: saved, the song text told, the menu re-laid out in Small on the
+     * Font row (page two of eight), "Saved". */
+    m_click();
+    m_turn(-2);
+    m_click();
+    CHECK(fk_font == ENV_FONT_SMALL && fk_font_writes == 1 && fk_refonts == 1);
+    ts_face = MT_SMALL;
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_FONT && title_bad("Saved") == 0);
+    top_frame_ok(T_FONT);
+    m_unflash();
+    CHECK(title_bad(FONT_MONO_WRENCH " Configuration") == 0);
+    /* and Large again, from Small's page */
+    m_click();
+    CHECK(sub5_screen() == SC_FONT && sub5_cursor() == 1 && row_bad(1, FONT_MONO_CHECK_BOX "8px", MENU_LIT) == 0 &&
+          row_bad(3, "  10px bold", MENU_DIM) == 0);
+    m_turn(2);
+    m_click();
+    CHECK(fk_font == ENV_FONT_LARGE && fk_font_writes == 2 && fk_refonts == 2);
+    ts_face = MT_LARGE;
+    m_unflash();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_FONT);
+    top_frame_ok_l(T_FONT);
+
+    /* Fn+B with the top level showing: the Power row's bulb follows the mode. */
+    m_turn(T_POWER - T_FONT);
+    top_frame_ok_l(T_POWER);
+    fk_power = 3;
+    m_tick_settle();
+    top_frame_ok_l(T_POWER);
+    fk_power = 1;
+    m_tick_settle();
+    top_frame_ok_l(T_POWER);
+
+    /* The Clock page: each format by its example, no value; Off's word. */
+    m_turn(T_CLOCK - T_POWER);
+    m_click();
+    CHECK(sub5_screen() == SC_CLOCK && sub5_cursor() == 1);
+    CHECK(row_bad(1, FONT_MONO_CHECK_BOX "13:45:01", MENU_LIT) == 0 && row_bad(2, "  13:45", MENU_DIM) == 0 &&
+          row_bad(3, "  1:45:01 PM", MENU_DIM) == 0 && row_bad(4, "  1:45 PM", MENU_DIM) == 0 &&
+          row_bad(5, "  Oct 24, 2026", MENU_DIM) == 0 && row_bad(6, "  Off", MENU_DIM) == 0);
+    (void)clock_tick(1);   /* a second: the row whole, its digits right */
+    CHECK(row_bad(1, FONT_MONO_CHECK_BOX "13:45:02", MENU_LIT) == 0 && row_bad(3, "  1:45:02 PM", MENU_DIM) == 0);
+    fk_time = (env_time_t){9, 59, 59, 24, 10, 2026};
+    (void)clock_tick(0);
+    (void)clock_tick(1);   /* 9:59:59 to 10:00:00: digits on both sides of x 64 */
+    CHECK(row_bad(3, "  10:00:00 AM", MENU_DIM) == 0 && row_bad(1, FONT_MONO_CHECK_BOX "10:00:00", MENU_LIT) == 0);
+    m_hold();
+    m_unflash();
+
+    /* Help: Large's wrap, its first topic "Menu basics". */
+    m_turn(T_HELP - T_CLOCK);
+    m_click();
+    CHECK(sub5_screen() == SC_HELP && row_bad(1, cells2("Menu basics", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_TOPIC0 && title_bad(FONT_MONO_I_HELP "Menu basics") == 0);
+    CHECK(row_bad(0, "Turn: move", MENU_WHITE) == 0 && row_bad(5, "Closes after 60", MENU_WHITE) == 0 &&
+          row_bad(6, "seconds idle.", MENU_WHITE) == 0);
+    m_hold();
+    m_hold();
+
+    /* About: eight lines on seven rows; a turn shows the eighth. */
+    m_turn(T_DIAG - T_HELP);
+    m_click();
+    m_click();   /* System info */
+    CHECK(sub5_screen() == SC_ABOUT && title_bad(FONT_MONO_I_DIAG " System info") == 0);
+    CHECK(row_bad(0, "FW 36afff30", MENU_WHITE) == 0 && row_bad(1, "dev, 0xef38330e", MENU_WHITE) == 0 &&
+          row_bad(2, "Up 1d 1h 54m", MENU_WHITE) == 0 && row_bad(5, "Left: 64h", MENU_WHITE) == 0 &&
+          row_bad(6, "Mode Balanced", MENU_WHITE) == 0);
+    m_turn(1);
+    CHECK(row_bad(0, "dev, 0xef38330e", MENU_WHITE) == 0 && row_bad(5, "Mode Balanced", MENU_WHITE) == 0);
+    CHECK(fb[16][125] == MENU_TRACK && fb[127][125] == MENU_WHITE);   /* the thumb at the end */
+
+    /* A host's restore of the live record with About scrolled: Small, the
+     * page from its first line, cleared and repainted; then Large again. */
+    menu_font_set(ENV_FONT_SMALL);
+    CHECK(fk_font == ENV_FONT_SMALL && fk_refonts == 3);
+    ts_face = MT_SMALL;
+    m_settle();
+    CHECK(sub5_screen() == SC_ABOUT && title_bad(FONT_MONO_I_DIAG " System info") == 0 &&
+          row_bad(0, "Firmware 36afff30", MENU_WHITE) == 0 && row_bad(6, "Mode Balanced", MENU_WHITE) == 0);
+    menu_font_set(ENV_FONT_SMALL);   /* the same face: nothing */
+    CHECK(fk_font_writes == 3 && fk_refonts == 3);
+    menu_font_set(ENV_FONT_LARGE);
+    ts_face = MT_LARGE;
+    m_settle();
+    CHECK(fk_refonts == 4 && row_bad(0, "FW 36afff30", MENU_WHITE) == 0);
+    m_hold();
+    m_hold();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_DIAG);
+    top_frame_ok_l(T_DIAG);
+
+    /* The Screen's editor: the bar at y 56-65, the hints from y 80. */
+    m_turn(T_SCREEN - T_DIAG);
+    m_click();
+    CHECK(sub5_screen() == SC_SCREEN && title_bad(FONT_MONO_I_SCREEN "Screen") == 0);
+    CHECK(fb[56][13] == MENU_GREY && fb[65][114] == MENU_GREY && fb[55][13] == 0 && fb[66][114] == 0);
+    CHECK(text_slot_bad(80, "Turn: change", MENU_WHITE, false) == 0 && text_slot_bad(96, "Click: save", MENU_WHITE, false) == 0 &&
+          text_slot_bad(112, "Hold: cancel", MENU_WHITE, false) == 0);
+    m_hold();
+    m_unflash();
+
+    /* Reset settings' question in Large; a hold cancels. */
+    m_turn(T_DEFS - T_SCREEN);
+    m_click();
+    CHECK(title_bad(FONT_MONO_I_RESET " Defaults") == 0);
+    CHECK(text_slot_bad(24, "Use defaults?", MENU_WHITE, false) == 0 && text_slot_bad(40, "Profiles stay.", MENU_WHITE, false) == 0 &&
+          text_slot_bad(80, "Click: reset", MENU_WHITE, false) == 0 && text_slot_bad(96, "Hold: cancel", MENU_WHITE, false) == 0);
+    m_hold();
+    m_unflash();
+
+    /* Closed: a face change re-lays out nothing; the fixture's session is
+     * left alone, the song text told either way. */
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    CHECK(op27(4, 0, 0) == MI_OK && fx_screen() == FX_SCREEN_F1);
+    menu_font_set(ENV_FONT_SMALL);
+    CHECK(fk_font == ENV_FONT_SMALL && fk_refonts == 5 && fx_screen() == FX_SCREEN_F1 && po_owner() == PANEL_MENU);
+    CHECK(op27(4, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    CHECK(fk_oob == oob && max_pass_bytes <= MB_PASS_BYTES && menu_max_lit <= 1 && menu_max_cursor <= 1);
+    CHECK(po_invariant_fail() == 0);
+    menu_watch = false;
+    fk_font    = ENV_FONT_SMALL;
+    ts_face    = MT_SMALL;
+}
+
+/* 10-28: Large's other pages: Lighting's rows in its words, Indicators,
+ * Battery's notes from row 4, a profile's page (its name on the top level,
+ * the list's name cut to 11, the summary's two lines under the rule at y
+ * 96, the confirms and Rename in 15 columns). */
+static void test_large_pages(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_font = ENV_FONT_LARGE;
+    ts_face = MT_LARGE;
+    fk_rgb = (env_rgb_t){2, 240, 215, 86, 127, 1, 0xFF};   /* Alphas/Mods: speed is its second colour */
+    fk_rgb_ee = fk_rgb; fk_rgb_dirty = false;
+    fk_lcd = fk_lcd_saved = 52;
+    fk_ind[0] = fk_ind[1] = 40;
+    fk_batt_view = BATT_VIEW_PERCENT;
+    fk_batt = (env_batt_t){85, true, 9600, 20};   /* 20 of the 60 minutes: the note */
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    const int oob = fk_oob;
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+
+    /* Lighting: seven rows, the page exactly. */
+    m_click();
+    CHECK(sub5_screen() == SC_LIGHT && title_bad(FONT_MONO_I_LIGHT " Lighting") == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, cells2("FX", "Alphas/Mods"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("Brightness", "34%"), MENU_DIM) == 0 && row_bad(3, cells2("Hue", "337"), MENU_DIM) == 0 &&
+          row_bad(4, cells2("Saturation", "84%"), MENU_DIM) == 0 && row_bad(5, cells2("2nd color", "+178"), MENU_DIM) == 0 &&
+          row_bad(6, cells2("Lights", "On"), MENU_DIM) == 0);
+    m_turn(4);
+    m_click();   /* Second color's editor: the hue's, its value at y 48 */
+    CHECK(sub5_screen() == SC_SPEED && title_bad(FONT_MONO_I_LIGHT " Second color") == 0);
+    m_hold();
+    m_unflash();
+    m_hold();
+    m_unflash();
+
+    /* Indicators: Lock LEDs. */
+    m_turn(T_IND);
+    m_click();
+    CHECK(sub5_screen() == SC_IND && row_bad(1, cells2("Lock LEDs", "40%"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("Charging", "40%"), MENU_DIM) == 0);
+    m_turn(1);
+    m_click();
+    CHECK(sub5_screen() == SC_CHGL && title_bad(FONT_MONO_I_IND "Charging") == 0);
+    m_hold();
+    m_unflash();
+    m_hold();
+    m_unflash();
+
+    /* Battery: % on the top level; Hours; the note on rows 4-6. */
+    m_turn(T_BATT - T_IND);
+    CHECK(row_bad(T_BATT, cells2(FONT_MONO_I_BATT " Battery", "%"), MENU_LIT) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_BATT && row_bad(1, cells2(FONT_MONO_CHECK_BOX "%", "85%"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("  Hours", "--"), MENU_DIM) == 0 && row_bad(3, cells2("  Both", "85% --"), MENU_DIM) == 0 &&
+          row_bad(4, "Hours show once", MENU_WHITE) == 0 && row_bad(5, "on battery 1 h:", MENU_WHITE) == 0 &&
+          row_bad(6, "40 min to go.", MENU_WHITE) == 0);
+    /* The estimate ready, under 10 h and under 1 h: Percent's preview is its
+     * longest, "18% <1h", and every row keeps a space before its value (codex,
+     * the build's review: "Percent" ran into it). */
+    fk_batt = (env_batt_t){18, true, 360, 120};
+    m_settle();
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "%", "18% 6h"), MENU_LIT) == 0 && row_bad(2, cells2("  Hours", "6h"), MENU_DIM) == 0 &&
+          row_bad(3, cells2("  Both", "18% 6h"), MENU_DIM) == 0 && row_bad(4, "", 0) == 0);
+    fk_batt = (env_batt_t){18, true, 30, 120};
+    m_settle();
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "%", "18% <1h"), MENU_LIT) == 0 && row_bad(2, cells2("  Hours", "<1h"), MENU_DIM) == 0 &&
+          row_bad(3, cells2("  Both", "18% <1h"), MENU_DIM) == 0);
+    fk_batt = (env_batt_t){85, true, 9600, 20};
+    m_hold();
+    m_unflash();
+
+    /* Profiles: one saved, renamed long; the top level shows its name. */
+    m_turn(T_PROF - T_BATT);   /* page two's first */
+    CHECK(sub5_cursor() == T_PROF && row_bad(0, cells2(FONT_MONO_I_PROF " Profiles", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    fk_rgb = (env_rgb_t){3, 128, 255, 204, 128, 1, 0xFF};   /* Cycle All, 180 degrees, 100%, 80%, speed 50% */
+    m_click();
+    m_click();   /* Save new */
+    fk_prof_settle();
+    m_unflash();
+    fk_name(0, "Twelve chars");
+    CHECK(prof_sub(0x41, 3, 0) == PROF_OK);
+    m_tick_settle();
+    CHECK(row_bad(1, cells2(FONT_MONO_CHECK_BOX "Twelve char", FONT_MONO_TRI_R), MENU_LIT) == 0);   /* cut to 11 */
+    m_click();
+    CHECK(sub5_screen() == SC_PSLOT && title_bad(FONT_MONO_I_PROF " Twelve chars") == 0);
+    CHECK(row_bad(2, FONT_MONO_I_SAVE "Save here", MENU_DIM) == 0 && row_bad(3, FONT_MONO_I_RENAME " Rename", MENU_DIM) == 0);
+    ts_rule_y = row_y(5);
+    CHECK(text_slot_bad(row_y(5), cells2("Cycle All", "50%"), MENU_WHITE, false) == 0);
+    ts_rule_y = 0;
+    CHECK(fb[96][60] == MENU_GREY && row_bad(6, "H180 S100 B80", MENU_WHITE) == 0);
+    m_turn(1);
+    m_click();   /* Save here: the confirm */
+    CHECK(sub5_screen() == SC_PSAVE && title_bad(FONT_MONO_I_PROF " Save profile") == 0);
+    CHECK(text_slot_bad(24, "Save over", MENU_WHITE, false) == 0 && text_slot_bad(40, "Twelve chars?", MENU_WHITE, false) == 0 &&
+          text_slot_bad(80, "Click: save", MENU_WHITE, false) == 0 && text_slot_bad(96, "Hold: cancel", MENU_WHITE, false) == 0);
+    m_hold();
+    m_unflash();
+    m_turn(2);
+    m_click();   /* Delete's */
+    CHECK(sub5_screen() == SC_PDEL && title_bad(FONT_MONO_I_PROF " Delete") == 0);
+    CHECK(text_slot_bad(24, "Delete", MENU_WHITE, false) == 0 && text_slot_bad(40, "Twelve chars?", MENU_WHITE, false) == 0 &&
+          text_slot_bad(80, "Click: delete", MENU_WHITE, false) == 0);
+    m_hold();
+    m_unflash();
+    m_hold();
+    m_hold();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_PROF &&
+          row_bad(0, cells2(FONT_MONO_I_PROF " Twelve char", FONT_MONO_TRI_R), MENU_LIT) == 0);   /* the active one's name, 11 */
+    fk_lcd = 60;
+    m_tick_settle();
+    CHECK(row_bad(0, cells2(FONT_MONO_I_PROF " Twelve cha*", FONT_MONO_TRI_R), MENU_LIT) == 0);   /* 10 and the `*` */
+    fk_lcd = 52;
+
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    CHECK(fk_oob == oob && max_pass_bytes <= MB_PASS_BYTES && menu_max_lit <= 1 && menu_max_cursor <= 1);
+    menu_watch = false;
+    fk_font    = ENV_FONT_SMALL;
+    ts_face    = MT_SMALL;
+}
+
+/* 10-28: the face from a host's restore of the live record (op 5), as
+ * flash.sh sends it, through the real handler: with the menu on About
+ * scrolled, on Help scrolled, on the top level's Exit row, mid-repaint, on a
+ * profile's confirm, under the debug page, and with the fixture's F3 showing
+ * (codex, the build's review). Each ends in the new face, where the menu
+ * holds the panel, with every frame paged afresh. */
+static uint8_t live_rec[32];
+static void live_export(void) {
+    memset(prpt, 0, sizeof prpt);
+    prpt[0] = 0x07; prpt[1] = 0x13; prpt[2] = 0x10; prpt[3] = 4;
+    CHECK(prof_hid(prpt) && prpt[31] == PROF_OK);
+    memcpy(live_rec, prpt, sizeof prpt);
+}
+/* The exported record, its face set to `small` (or, 10-28, Regular's bit 3
+ * when `reg`), sent back: op 5's answer. */
+static bool    live_reg;
+static uint8_t live_apply(bool small) {
+    memcpy(prpt, live_rec, sizeof prpt);
+    prpt[3] = 5;
+    uint8_t *r = &prpt[4];
+    r[PR_BVIEW] = (uint8_t)((r[PR_BVIEW] & ~0x0Cu) | (small ? 4u : 0u) | (live_reg ? 8u : 0u));
+    r[PR_CRC]   = prof_crc8(&r[PR_FIELDS], PR_CRC - PR_FIELDS);
+    CHECK(prof_hid(prpt));
+    return prpt[31];
+}
+/* 10-28 (JD, through ak820-pro-90): the Font page's preview, the face under
+ * the cursor once the knob rests MENU_PREVIEW_MS and nothing written, the
+ * saved mark kept on the saved face; Back's row, a hold, the idle close and a
+ * host's restore each put the saved face back; a click saves at once. And the
+ * third face, Terminus regular: Large's layout in its own glyphs. */
+static void m_font_rest(void) {   /* the knob at rest past MENU_PREVIEW_MS, a pass at a time, then settled */
+    m_rest(MENU_PREVIEW_MS + 10);
+    m_settle();
+}
+static void test_font_preview(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_lcd = fk_lcd_saved = 52;
+    fk_font = ENV_FONT_LARGE;
+    ts_face = MT_LARGE;
+    fk_time = (env_time_t){13, 45, 1, 24, 10, 2026};
+    fk_time_ok = true;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    const int oob = fk_oob;
+    live_export();   /* Bold's record, for the restore below */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_FONT);
+    m_click();
+    CHECK(sub5_screen() == SC_FONT && sub5_cursor() == 3 && me_field() == ME_FONT && me_font() == ENV_FONT_LARGE);
+
+    /* A turn shows nothing new until the knob rests. */
+    CHECK(op27(1, -1, 0) == MI_OK && wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    CHECK(sub5_cursor() == 2 && me_font() == ENV_FONT_LARGE);
+    m_font_rest();
+    CHECK(me_font() == ENV_FONT_REGULAR && fk_font == ENV_FONT_LARGE && fk_font_writes == 0 && fk_refonts == 0);
+    ts_face = MT_LARGE_R;   /* Regular's glyphs, Large's rows; the box stays on Bold, the saved */
+    CHECK(title_bad(FONT_MONO_I_FONT "Font") == 0 && row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 &&
+          row_bad(1, "  8px", MENU_DIM) == 0 && row_bad(2, "  10px", MENU_LIT) == 0 &&
+          row_bad(3, FONT_MONO_CHECK_BOX "10px bold", MENU_DIM) == 0 && row_bad(4, "For the menus", MENU_WHITE) == 0 &&
+          row_bad(5, "and now playing", MENU_WHITE) == 0);
+    /* 8px: the whole menu in Small's layout */
+    m_turn(-1);
+    m_font_rest();
+    CHECK(me_font() == ENV_FONT_SMALL && fk_font == ENV_FONT_LARGE && fk_font_writes == 0 && fk_refonts == 0);
+    ts_face = MT_SMALL;
+    CHECK(sub5_screen() == SC_FONT && sub5_cursor() == 1 && title_bad(FONT_MONO_I_FONT "Font") == 0 &&
+          row_bad(1, "  8px", MENU_LIT) == 0 && row_bad(3, FONT_MONO_CHECK_BOX "10px bold", MENU_DIM) == 0 &&
+          row_bad(4, "", 0) == 0 && row_bad(5, "For the menus and", MENU_WHITE) == 0 &&
+          row_bad(6, "now playing", MENU_WHITE) == 0);
+    /* Back's row: the saved face */
+    m_turn(-1);
+    m_font_rest();
+    CHECK(me_font() == ENV_FONT_LARGE && sub5_cursor() == 0);
+    ts_face = MT_LARGE;
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LIT) == 0 && row_bad(3, FONT_MONO_CHECK_BOX "10px bold", MENU_DIM) == 0);
+
+    /* A hold mid-preview: "Cancelled", the saved face, nothing written. */
+    m_turn(1);
+    m_font_rest();
+    CHECK(me_font() == ENV_FONT_SMALL);
+    m_hold();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_FONT && me_field() == ME_NONE && me_font() == ENV_FONT_LARGE &&
+          fk_font_writes == 0 && fk_refonts == 0 && title_bad("Cancelled") == 0);
+    m_unflash();
+    top_frame_ok_l(T_FONT);
+
+    /* The idle close mid-preview: the next open in the saved face. */
+    m_click();
+    m_turn(-2);
+    m_font_rest();
+    CHECK(me_font() == ENV_FONT_SMALL);
+    fw_pass(MI_IDLE_MS + 10);
+    fw_pass(5);
+    CHECK(po_session() == SESSION_NONE && me_field() == ME_NONE && me_font() == ENV_FONT_LARGE && fk_font_writes == 0);
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == 0);
+    top_frame_ok_l(0);
+
+    /* A host's restore mid-preview (flash.sh's op 5, Regular's bit): the page
+     * "Cancelled", the restore's face. */
+    m_turn(T_FONT);
+    m_click();
+    m_turn(-2);
+    m_font_rest();
+    CHECK(me_font() == ENV_FONT_SMALL);
+    live_reg = true;
+    CHECK(live_apply(false) == PROF_OK);
+    live_reg = false;
+    CHECK(fk_font == ENV_FONT_REGULAR && fk_font_writes == 1 && me_field() == ME_NONE && me_font() == ENV_FONT_REGULAR);
+    m_tick_settle();
+    ts_face = MT_LARGE_R;
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_FONT && title_bad("Cancelled") == 0);
+    m_unflash();
+    CHECK(row_bad(T_FONT % 7, cells2(FONT_MONO_I_FONT "Font", "10px"), MENU_LIT) == 0 &&
+          row_bad(T_BOOT % 7, cells2(FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R), MENU_DIM) == 0);
+
+    /* A click saves, at once, no rest: Bold again. */
+    m_click();
+    CHECK(sub5_screen() == SC_FONT && sub5_cursor() == 2 && row_bad(2, FONT_MONO_CHECK_BOX "10px", MENU_LIT) == 0);
+    m_turn(1);
+    m_click();
+    CHECK(fk_font == ENV_FONT_LARGE && fk_font_writes == 2 && me_field() == ME_NONE);
+    ts_face = MT_LARGE;
+    CHECK(sub5_screen() == SC_TOP && title_bad("Saved") == 0);
+    m_unflash();
+    top_frame_ok_l(T_FONT);
+    /* The live record packs Regular's bit and takes it back. */
+    fk_font = ENV_FONT_REGULAR;
+    live_export();
+    CHECK((live_rec[4 + PR_BVIEW] & 0x0Cu) == 8u);
+    fk_font = ENV_FONT_LARGE;
+    CHECK(fk_oob == oob && max_pass_bytes <= MB_PASS_BYTES && menu_max_lit <= 1 && menu_max_cursor <= 1);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+    menu_watch = false;
+}
+static void test_large_restore(void) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_lcd = fk_lcd_saved = 52;
+    fk_font = ENV_FONT_LARGE;
+    ts_face = MT_LARGE;
+    fk_time = (env_time_t){13, 45, 1, 24, 10, 2026};
+    fk_time_ok = true;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    const int oob = fk_oob;
+    live_export();
+    CHECK((live_rec[4 + PR_BVIEW] & 4u) == 0);   /* Large: the bit clear */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+
+    /* System info, scrolled: Small, from its first line. */
+    m_turn(T_DIAG);
+    m_click();
+    m_click();
+    m_turn(1);
+    CHECK(row_bad(0, "dev, 0xef38330e", MENU_WHITE) == 0);
+    CHECK(live_apply(true) == PROF_OK && fk_font == ENV_FONT_SMALL && fk_refonts == 1);
+    ts_face = MT_SMALL;
+    m_tick_settle();
+    CHECK(po_owner() == PANEL_MENU && sub5_screen() == SC_ABOUT && row_bad(0, "Firmware 36afff30", MENU_WHITE) == 0 &&
+          row_bad(7, "Link BT 1 connected", MENU_WHITE) == 0);
+    live_export();
+    CHECK((live_rec[4 + PR_BVIEW] & 4u) != 0);   /* Small: the bit set, its crc good (op 5 took it) */
+    m_hold();
+    m_hold();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_DIAG);
+    top_frame_ok(T_DIAG);   /* page two of eight */
+
+    /* The Exit row, page two in both faces (10-28: fourteen rows). */
+    m_turn(T_EXIT - T_DIAG);
+    CHECK(live_apply(false) == PROF_OK && fk_font == ENV_FONT_LARGE && fk_refonts == 2);
+    ts_face = MT_LARGE;
+    m_tick_settle();
+    CHECK(sub5_cursor() == T_EXIT);
+    top_frame_ok_l(T_EXIT);
+
+    /* Help's Shortcuts, scrolled to its last page in Large: Small's from its top. */
+    m_turn(T_HELP - T_EXIT);
+    m_click();
+    m_turn(2);
+    m_click();
+    m_turn(1);
+    m_turn(1);
+    CHECK(sub5_screen() == SC_TOPIC0 + 2 && sub5_cursor() == 8);   /* 15 lines, the last page from 8 */
+    CHECK(live_apply(true) == PROF_OK && fk_font == ENV_FONT_SMALL);
+    ts_face = MT_SMALL;
+    m_tick_settle();
+    CHECK(sub5_screen() == SC_TOPIC0 + 2 && sub5_cursor() == 0 && row_bad(0, "Fn+Q/W/E  BT slot", MENU_WHITE) == 0);
+    m_hold();
+    CHECK(sub5_screen() == SC_HELP && sub5_cursor() == 3);
+    m_hold();
+
+    /* Mid-repaint: a move's paint cut short by the restore; the frame ends whole, in Large. */
+    CHECK(op27(1, -(int)(T_HELP - T_POWER), 0) == MI_OK);
+    for (int i = 0; i < 6; i++) fw_pass(5);
+    CHECK(!ms_settled());
+    CHECK(live_apply(false) == PROF_OK && fk_font == ENV_FONT_LARGE);
+    ts_face = MT_LARGE;
+    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    m_tick_settle();
+    CHECK(sub5_cursor() == T_POWER);
+    top_frame_ok_l(T_POWER);
+
+    /* A profile's Save confirm: the confirm in Small, its slot's page under it paged afresh. */
+    m_turn(T_PROF - T_POWER);
+    m_click();
+    m_click();   /* Save new */
+    fk_prof_settle();
+    m_unflash();
+    m_click();   /* its page */
+    m_turn(1);
+    m_click();   /* Save here's confirm */
+    CHECK(sub5_screen() == SC_PSAVE);
+    CHECK(live_apply(true) == PROF_OK && fk_font == ENV_FONT_SMALL);
+    ts_face = MT_SMALL;
+    m_tick_settle();
+    CHECK(po_owner() == PANEL_MENU && sub5_screen() == SC_PSAVE && title_bad(FONT_MONO_I_PROF " Save profile") == 0 &&
+          text_slot_bad(22, "Replace Profile 1", MENU_WHITE, false) == 0 && text_slot_bad(86, "Hold: cancel", MENU_WHITE, false) == 0);
+    m_hold();
+    m_unflash();
+    CHECK(sub5_screen() == SC_PSLOT && row_bad(2, FONT_MONO_I_SAVE "Save current here", MENU_LIT) == 0);
+    m_hold();
+    m_hold();
+    /* Profile 1 was saved in Large: the face is a profile's since 10-28, so Small marks it modified. */
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_PROF && row_bad(T_PROF, PROF_TOP("Prof. 1*"), MENU_LIT) == 0);   /* unnamed: "Prof. N*" */
+
+    /* Under the debug page: the face saved, the menu left alone; it comes
+     * back in the new face. */
+    m_turn(T_DIAG - T_PROF);
+    m_click();
+    m_turn(D_HEALTH - D_SYSINFO);
+    m_click();   /* Health: the debug page */
+    CHECK(po_owner() == PANEL_DEBUG && po_session() == SESSION_OPEN);
+    CHECK(live_apply(false) == PROF_OK && fk_font == ENV_FONT_LARGE);
+    ts_face = MT_LARGE;
+    CHECK(po_owner() == PANEL_DEBUG);
+    CHECK(op27(2, 0, 0) == MI_OK);
+    CHECK(wait_terminal(rpt[6], 300) == MI_ST_DONE);
+    for (int i = 0; i < 50 && po_owner() != PANEL_MENU; i++) fw_pass(5);
+    m_settle();
+    CHECK(po_owner() == PANEL_MENU && sub5_screen() == 16 + 4 && sub5_cursor() == D_HEALTH &&
+          title_bad(FONT_MONO_I_DIAG " Diagnostics") == 0 && row_bad(D_HEALTH, cells2("Health page", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    /* The fixture's F3: its own face and layout, whatever the setting. */
+    CHECK(op27(4, 0, 0) == MI_OK && fx_screen() == FX_SCREEN_F1);
+    CHECK(op27(0, 16, 0) == MI_OK && fx_screen() == FX_SCREEN_F3);
+    for (int i = 0; i < 300 && !(ms_settled() && !mb_busy()); i++) fw_pass(5);
+    uint16_t f3[MB_H][MB_W];
+    memcpy(f3, fb, sizeof fb);
+    CHECK(live_apply(true) == PROF_OK && fk_font == ENV_FONT_SMALL);
+    for (int i = 0; i < 300 && !(ms_settled() && !mb_busy()); i++) fw_pass(5);
+    CHECK(fx_screen() == FX_SCREEN_F3 && memcmp(f3, fb, sizeof fb) == 0);
+    CHECK(op27(4, 0, 0) == MI_OK && po_session() == SESSION_NONE);
+
+    CHECK(fk_oob == oob && max_pass_bytes <= MB_PASS_BYTES && menu_max_lit <= 1 && menu_max_cursor <= 1);
+    CHECK(po_invariant_fail() == 0);
+    menu_watch = false;
+    fk_font    = ENV_FONT_SMALL;
+    ts_face    = MT_SMALL;
 }
 
 /* 10-27: dev builds' Write test (JD: "a dev-only option in the menu that
@@ -5043,7 +5699,13 @@ int main(int argc, char **argv) {
     test_preview_codex();
     test_rename();
     test_defaults();
+    test_large();
+    test_large_pages();
+    test_large_restore();
+    test_font_preview();
     test_wtest();
+    if (fk_oob) printf("%d rectangle(s) off the panel\n", fk_oob);
+    CHECK(fk_oob == 0);
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

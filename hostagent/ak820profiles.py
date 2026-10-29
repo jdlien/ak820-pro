@@ -35,6 +35,13 @@ as the first four slots, eight into four only when slots 5-8 are empty; onto
 is); off 0xA4 the last record is dropped; one active slot into the pair as
 both sides', the pair into one as Windows' (else the Mac's).
 
+Since 10-28 the live record's battery-readout byte carries the menu's face in
+bit 2 (set Small, clear Large; the readout in bits 0-1); profiles never carry
+it. The backup keeps the bit as read and the restore sends it as kept. A
+firmware from before the Font setting refuses a live record with the bit set
+(its readout's range is 1-3), so the restore then sends it once more without
+the bit: everything but the face, which that firmware doesn't have.
+
 Usage:
     ak820profiles.py dump    [file]   # default ~/Documents/ak820pro-profiles.json
     ak820profiles.py restore [file] [--block-only | --live-only]
@@ -74,6 +81,11 @@ PAIRED = (MAGIC_V3, MAGIC_V4)                                      # the active 
 LAST, PS_LAST = 7, 0x10                                            # 0xA4's last record: its index, its state | the side
 SIDES = {0: None, 1: "windows", 2: "mac"}                          # sub 7's [9]
 PF_LIGHTING, PF_LCD, PF_LOCKS, PF_CHARGING, PF_CLOCK, PF_BVIEW, PF_NAME, PF_POWER = (1 << i for i in range(8))
+PF_LIVE = 0xBF                          # the live record's fields (subs 4 and 5): the power mode, no name
+BV_VIEW, BV_SMALL = 0x03, 0x04          # its readout byte (10-28): the readout, and the menu's face (set Small)
+BV_REG = 0x08                           # the third face (10-28): set Regular, Terminus regular
+BV_FACE = BV_SMALL | BV_REG
+VIEWS = {1: "percent", 2: "hours", 3: "both"}
 STATUS = {0: "ok", 1: "bad request", 2: "no such restore (token)", 3: "busy (a deep sleep's recovery, or a restore)",
           4: "invalid", 5: "write failed", 6: "incomplete (a page missing)", 7: "unknown record format",
           8: "ok, the effect skipped (this build lacks it)"}
@@ -246,7 +258,9 @@ def read_live(h):
     return live
 
 
-def write_block(h, block, g):
+def write_block(h, block, g, may_refuse=False):
+    """The block, page by page, then the commit. may_refuse: a commit refused
+    as out of range (4) is returned, not raised, for the caller's retry."""
     token = random.randint(1, 255)
     st = busy_retry(lambda: xfer(h, 1, [0, token], echo=(5,))[6], "begin")
     if st != 0:
@@ -257,18 +271,57 @@ def write_block(h, block, g):
         if st != 0:
             raise SystemExit(f"restore refused at page {p}: {STATUS.get(st, st)}")
     st = busy_retry(lambda: xfer(h, 3, [0, token], echo=(5,))[6], "commit")
+    if st == 4 and may_refuse:
+        return st
     if st != 0:
         raise SystemExit(f"restore refused at commit: {STATUS.get(st, st)} (the board's profiles read as empty)")
 
 
+def block_faces(block):
+    """Whether any record in the block carries the menu's face (10-28)."""
+    return any(block[2 + s * REC] != 0 and block[2 + s * REC + 12] & BV_FACE for s in range(block_slots(block)))
+
+
+def block_without_faces(block):
+    """The block with every record's face taken out, each crc taken again: for
+    a firmware from before profiles carried the face (10-28), which refuses a
+    record with it at the commit."""
+    b = bytearray(block)
+    for s in range(block_slots(block)):
+        o = 2 + s * REC
+        if b[o] != 0 and b[o + 12] & BV_FACE:
+            b[o + 12] &= ~BV_FACE & 0xFF
+            b[o + 26] = crc8(b[o + 1:o + 26])
+    return bytes(b)
+
+
+def without_face(live):
+    """The live record with the menu's face taken out of its readout byte
+    (10-28), the crc taken again over bytes 1-25."""
+    r = bytearray(live)
+    r[12] &= ~BV_FACE & 0xFF
+    r[26] = crc8(r[1:26])
+    return bytes(r)
+
+
 def apply_live(h, live):
+    """Sub 5, then the flush. Returns the apply's status and the record the
+    board took: a firmware from before the Font setting (10-28) refuses one
+    with the face's bit set (and one from before Regular, bit 3), so that is
+    sent once more without it."""
     st = busy_retry(lambda: xfer(h, 5, live)[31], "apply")
+    if st == 4 and live[12] & BV_FACE:
+        live = without_face(live)
+        print("  the board refused the menu's face (a firmware from before the Font setting): "
+              "the live settings sent again without it")
+        st = busy_retry(lambda: xfer(h, 5, live)[31], "apply")
     if st not in (0, 8):
         raise SystemExit(f"live settings refused: {STATUS.get(st, st)}")
+    applied = st
     st = busy_retry(lambda: xfer(h, 6)[4], "flush")
     if st != 0:
         raise SystemExit(f"flush refused: {STATUS.get(st, st)}")
-    return st
+    return applied, live
 
 
 # --- Reading a record ----------------------------------------------------------
@@ -288,7 +341,11 @@ def decode(r):
     if f & PF_CLOCK:
         d["clock"] = CLOCKS[r[11]] if r[11] < len(CLOCKS) else r[11]
     if f & PF_BVIEW:
-        d["battery"] = {1: "percent", 2: "hours", 3: "both"}.get(r[12], r[12])
+        v = r[12]
+        if not v & ~(BV_VIEW | BV_FACE) and (v & BV_FACE) != BV_FACE:   # 10-28: the face, every record's
+            d["font"] = "small" if v & BV_SMALL else "regular" if v & BV_REG else "large"
+            v &= BV_VIEW
+        d["battery"] = VIEWS.get(v, v)
     if f & PF_POWER:
         d["power"] = POWER[r[13]] if r[13] < len(POWER) else r[13]
     if f & PF_NAME:
@@ -366,7 +423,7 @@ def describe(doc):
         lines.append(f"live: {l.get('effect')} {'on' if l.get('on') else 'off'} h{l.get('hue')} s{l.get('sat')} "
                      f"v{l.get('val')} speed {l.get('speed')}, screen {lv.get('screen')}%, locks {lv.get('lock_lights')}, "
                      f"charging {lv.get('charging_light')}, clock {lv.get('clock')}, battery {lv.get('battery')}, "
-                     f"power {lv.get('power')}")
+                     + (f"font {lv['font']}, " if "font" in lv else "") + f"power {lv.get('power')}")
     return "\n".join(lines)
 
 
@@ -428,7 +485,11 @@ def cmd_restore(path, block_only, live_only):
                     block_err = str(e)
                     print(f"profiles NOT restored: {block_err}")
             if want is not None:
-                write_block(h, want, g)
+                if write_block(h, want, g, may_refuse=block_faces(want)) == 4:
+                    want = block_without_faces(want)
+                    print("  the board refused the profiles' font (a firmware from before profiles carried it): "
+                          "the profiles sent again without it")
+                    write_block(h, want, g)
                 if read_block(h, g) != normalized(want):
                     raise SystemExit("the profiles' read-back differs from the backup -- the restore did not land")
                 note = f" ({block_slots(block)} slots into {g.slots})" if block_slots(block) != g.slots else ""
@@ -436,12 +497,12 @@ def cmd_restore(path, block_only, live_only):
             elif block_err is None:
                 print("profiles: none in the backup, the board's left unformatted")
         if not block_only:
-            st = apply_live(h, live)
+            st, sent = apply_live(h, live)   # sent: without the face when an older firmware refused it
             back = read_live(h)
             note = ", the effect skipped (this build lacks it)" if st == 8 else ""
-            if back[1:26] != live[1:26] and st != 8:
+            if back[1:26] != sent[1:26] and st != 8:
                 print("  note: the live settings read back differently -- the board clamped something:")
-                print("  asked " + json.dumps(decode(live)))
+                print("  asked " + json.dumps(decode(sent)))
                 print("  got   " + json.dumps(decode(back)))
             print(f"live settings restored and flushed{note}")
         doc_now = {"switch": g.side, "decoded": {"block": decode_block(read_block(h, g)), "live": decode(read_live(h))}}

@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-25, 19:30. The block below is where things stand, written to
+Updated 2026-10-28, 11:30. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -23,11 +23,189 @@ knob's click opens it). It went on mid-drain at JD's word instead of after
 the drain. What is left is real use and a soak, and the polish and release
 for other owners.
 
+**Settings profiles are complete on JD's board since 13:29 10-26**: P5a-P5e
+and P5c (`13c5e910cb`, main `77220e2`), eight slots with Save new, the
+preview and Rename. Before it, **P5a and P5b from 09:49 10-26**
+(`plans/SETTINGS-PROFILES-PLAN.md`): P5a, the store, `HC_PROFILES` and
+`flash.sh`'s profiles backup; P5b, the Profiles pages and the
+Next/Previous keys. P5b went on from Warren's branch so JD could look at
+the pages on his own board, and merged after his look (main `a252afd`).
+**The profile page's polish since 16:01 10-26** (`553108e5f2`, main
+`6361951`): the actions' icons, the summary's grey rule and the 300 ms
+preview; and since 20:29, the menu's idle close at 60 s (`1f3c79e904`,
+main `94d4fa3`). Fn+A and Fn+S are the Previous and Next profile keys on
+both Fn layers. **Since 21:54 10-27, Warren's clock-chip flicker fix
+ahead of the mainline** (`ecb10f0e9b`, `gremlin/pcf-unseen`), on top of
+10-27's mainline (`ce3f842de2`, main `ccb9ea0`): the Win/Mac switch's
+profiles, the battery readout's Both, Reset settings and the Power page's
+bulbs.
+
 ### What is running
 
-- **Firmware on JD's board since 19:08:05 10-25: `30f1e0cfde`, the
-  mainline** (dev, token `0x195cbf4c`, 206,326 B, heap gap 128 B, the
-  floor). `ak820pro-jdlien` and `deps.lock` point at it, and ChibiOS-Contrib
+- **Firmware on JD's board since 20:39 10-28: `fbc6c4a1fd`** (dev, token
+  `0xd044efc5`): the build below plus bold page titles and a bold song title
+  in 10px (JD: "we still judiciously use bold"). flash.sh exit 0 at
+  20:39:48, everything restored. B8's redraw times measured at 20:30 on the
+  build below (`plans/MENU-8X16-PLAN.md`). Codex: no findings.
+- **Built, not flashed (JD: "no need to flash this"): the screen's default
+  level 80, from 60** (config.h; a fresh flash and Reset settings). It goes
+  on with the next flash.
+- **Before it, from 20:19 10-28: `8b0f47e245`** (dev,
+  `via-dev-8b0f47e245-20261028-201700.bin`, token `0xb9f4c717`, 236,758 B,
+  heap gap 224 B): JD's decisions relayed by ak820-pro-90. Terminus regular
+  as a third face (8px, 10px, 10px bold), the Font page's preview after a
+  0.3 s rest and its note, the face saved in every profile, About in
+  Diagnostics as System info (fourteen top-level rows), the camera page
+  removed. Every host check and the oracle pass. JD: "Flash it now, if
+  there are substantive fixes, we can flash that again": flash.sh exit 0 at
+  20:19:27, everything restored (the live settings in 8px). Codex's
+  review came back after: no findings, "OK to flash". USB data on 18:22:30-19:53:16, and again
+  from 20:18:58 for this flash.
+- **Firmware on JD's board since 18:59 10-28: `ccfe080920`** (token
+  `0x65019724`): the build below plus the 10px face's icons from the
+  12 px set in four greys, and the Font icon JD picked (both faces).
+  flash.sh exit 0 at 18:59:54. Codex reviewed both evening commits
+  (the spacing and the icons): no findings, "OK to keep on the board"
+  (`plans/review-codex-menu-font-switch-2026-10-28.md`).
+- **Before it, from 18:44 10-28: `59b2c9d7b3`** (token
+  `0x1765e95a`): the build below plus the dashboard's spacing (the song
+  lines a row apart, the clock 2 down, the lock row 1 down) and the Font
+  values renamed 8px and 10px. flash.sh exit 0 at 18:44:35, everything
+  restored. Its predecessor ran 18:22-18:44 with no pass >= 25 ms
+  (longest 16 ms). USB data on 18:22:30-19:53:16 (relay 2 off).
+- **Before it, from 18:22 10-28: `36fe62ea9c`**, the Font
+  setting (`plans/MENU-8X16-PLAN.md`), on the firmware's local `menu-8x16`,
+  not pushed (`via-dev-36fe62ea9c-20261028-170658.bin`, token `0xf9274d6f`,
+  heap gap 128 B). Codex cleared it. Flashed mid-drain on the pack:
+  flash.sh exit 0 at 18:23:00, the keymap, the profiles and the live
+  settings restored and read back, the clock synced at 18:23:03 (-188.8 ms
+  to -0.2), no pass >= 25 ms in the first health read. USB data on
+  17:09:05-17:21:17 (the board asleep, never enumerated, nothing flashed)
+  and again from 18:22:30 for the flash and B8's look. Next: B8 on the
+  board (the plan's checklist).
+- **Before it, from 11:04:59 10-28: `3b6e43ef73`, a local
+  branch `font-test`** (dev, token `0xcddf82ef`, heap gap 128 B, the
+  floor): `ecb10f0e9b` below plus a temporary Font test page under
+  Diagnostics (dev builds only), which turns through whole 128 x 128
+  frames read from the external flash at 0xE00000 ("AKFT" and a count,
+  then a frame every 32 KB), to judge the 8 x 16 menu faces on the panel
+  itself (`plans/config-menu-mockup.html`). An independent review found
+  nothing at P1 or P2. Not for merging: drop it when the face is chosen.
+  - **Flashed mid-drain, on battery** (relay 2 off), with JD's go. The
+    USB data had been on since 10:31:36, when the Mac rebooted (the hub
+    came back with the port on). The jump waited once for a key, then
+    took; `flash.sh` restored and read back the keymap, the two profiles
+    and the live settings.
+  - **The frames:** 16 of the 44 rendered (Cozette as built, 7; Terminus
+    Bold, 9), 557,056 B to 0xE00000, CRC verified on the board, 293 s at
+    about 2.7 KB/s (27 B a raw-HID round trip), the daemon paused
+    11:21:01-11:25:55. A first try at all 44 (1.47 MB, about 11 min) ran
+    in the foreground with its progress hidden and was stopped partway
+    (the daemon down 11:06-11:15); the 16-frame write replaced its start,
+    and the header's count keeps the page off the rest.
+  - **Data off at 11:26:09.**
+  - ⚠️ **The frames must be lo byte first:** the flash-to-panel DMA swaps
+    each pair (`mkanim.py` says the same of its frames). The first upload
+    was hi first, and JD saw the dim grey (#C8C8C8) as a dark purple.
+    `frames.js` was fixed, and a second upload put the comparison on the
+    board: the top level once in each face (Cozette, Terminus Bold,
+    Terminus, Spleen, Dina Bold, Dina), its title naming the face; 229,376
+    B, CRC verified, 123 s, the daemon paused 11:49:33-11:51:37. Data on
+    again for it, 11:48:54-11:51:42.
+- **Before it, from 21:54:52 10-27: `ecb10f0e9b`, Warren's
+  `gremlin/pcf-unseen`, not yet merged** (dev, token `0xdc5524d4`, heap gap
+  128 B, exactly the floor). It is the mainline `ce3f842de2` (main
+  `ccb9ea0`: each side of the Win/Mac switch keeps its own profile, the
+  battery readout's Both, JD's defaults and Reset settings, the Power
+  page's bulbs) plus `gremlin/write-test` (the softer LED blink at an
+  internal-flash write, the early cleanup, the dev Write test in
+  Diagnostics) and the PCF write only where nobody watches the LEDs: on
+  USB it waits for the lights dark or 10 min without input; off USB it goes
+  at once. Codex four rounds (`plans/review-codex-pcf-unseen-2026-10-27.md`
+  on `warren/config-menu`); GREMLIN-RESULTS §20z. Main's host side runs it
+  as is (Warren's branch adds only tests).
+  - **Flashed mid-drain, on battery** (relay 2 off), at JD's word ("flash
+    the latest"): data on at 21:54:21, the jump at once. `flash.sh`
+    restored and read back the keymap, converted the two profiles
+    ("Purple/Blue", "Rainbow Slow") to the switch's sides, both sides
+    loading "Purple/Blue", and restored the live settings (Purple/Blue,
+    screen 69%, battery hours, Balanced).
+  - **The clock:** +1823.4 ms at the first sync (the PCF read at boot,
+    likely drifting since USB data went off 25 h earlier), -1693.8 ms at
+    the next (the period re-learning), then -13.9 and -33.3 with the loop
+    moving. Data off at 22:06:03: 7.2 mAh in the window.
+  - **Back to the pin:** `setup.sh` checks the firmware clone's HEAD
+    against `deps.lock`, so `git -C qmk_firmware-ak820pro checkout
+    ak820pro-jdlien` before the next `setup.sh`, or fast-forward to the
+    merge when it lands.
+- **Before it: `1f3c79e904`, from 20:29:34 10-26, the mainline from
+  `94d4fa3` to `ccb9ea0`** (dev, token `0x60a8fe4b`, heap gap 136 B).
+  It is `553108e5f2` with the menu's idle close at 60 s, not 24; editors,
+  Pairing and Rename keep the 3-minute backstop. GREMLIN-RESULTS §20u.
+  - **Flashed mid-drain, on battery** (relay 2 off), with JD's go: data
+    on at 20:28:39; the jump waited 26 times for keys to go quiet (JD
+    typing). `flash.sh` restored and read back the keymap (with Fn+A and
+    Fn+S on `PROF_PRV` and `PROF_NXT`, bound in VIA at 16:16), the
+    profiles and the live settings.
+  - **The clock:** -389.3 ms at the first sync, -1551.2 ms at the next,
+    then -37.6 with the loop moving. Data off at 20:40:34: 7.3 mAh in the
+    window.
+- **Before it: `553108e5f2`, from 16:01:57 10-26, the mainline from
+  `6361951` to `94d4fa3`** (dev, token `0x9286ca96`, 219,522 B, heap gap
+  136 B). It is `13c5e910cb` plus Warren's profile page polish, menu
+  code and font data only: the actions' icons (circled arrows for Load and
+  Save, a pencil for Rename, a trashcan for Delete), a grey rule above each
+  profile's summary with the bulb on its H/S/B line, and the preview after
+  300 ms, not 600. No storage or protocol change. GREMLIN-RESULTS §20r-t;
+  JD had it on gremlin's keyboard from ~15:14.
+  - **Flashed mid-drain, on battery** (relay 2 off), with JD's go: data
+    on at 16:01:21; the jump waited seven times for keys to go quiet (JD
+    typing). `flash.sh` restored and read back the keymap, the profiles
+    (one saved, "Purple/Blue") and the live settings.
+  - **The clock:** -321.2 ms at the first sync, -1721.0 ms at the next
+    (the period re-learning), then -28.6 with the loop moving. Data off at
+    16:13:01: 6.81 mAh in the window.
+- **Before it: `13c5e910cb`, from 13:29:59 10-26, the mainline from
+  `77220e2` to `6361951`** (dev, token `0xffc7a951`, heap gap 136 B).
+  It is `57d5e90030` plus Warren's P5d (eight slots, Save new; the block
+  218 B at 806-1023, magic 0xA2, nine HC_PROFILES pages, sub 7 the
+  geometry; VIA's macros 19 B), P5e (a 0.6 s rest on a profile previews
+  its lighting and screen) and P5c (Rename, with `action_tapping_idle()`:
+  twelve core files). GREMLIN-RESULTS §20o-q.
+  - **Flashed mid-drain, on battery** (relay 2 off), with JD's go: data
+    on at 13:29:30, the jump took at once. The first flash that kept the
+    settings: `flash.sh` saved and restored the live settings (Balanced,
+    24h:ss, locks 1, charging 0, percent) through `HC_PROFILES`; no
+    profiles were saved on the board, so none converted. The screen read
+    61 before and 63 after: JD adjusting it during the flash, not the
+    restore.
+  - **The clock:** -264.3 ms at the first sync, -1676.5 ms at the next
+    (the period, which no restore carries, re-learning), then -23.8 with
+    the loop moving. Data off at 13:41:04: 6.71 mAh in the window.
+- **Before it: `57d5e90030`, from 09:49 10-26, the mainline from
+  `a252afd` to `77220e2`** (dev, token `0xde2973aa`, 214,346 B, heap gap 136 B).
+  Main `a252afd` pinned it (Warren's merge after JD's look). It is `5ecc9a32cc` (P5a and Warren's effects'
+  speeds, `93e55f78`) plus P5b: the Profiles row as
+  page one's last (Bootloader to page two), the Profiles and slot pages,
+  Load, Save and Delete with confirms, the summary, the `*`, and `PROF_NXT`
+  and `PROF_PRV`, appended and unbound. Codex cleared it in six rounds
+  (`plans/review-codex-p5b-code-2026-10-25.md` on `warren/config-menu`);
+  Warren's board passes are GREMLIN-RESULTS §20n, with JD's look and a
+  power cycle on this board (slider to cable, cable out): the profiles
+  came back and loaded.
+  - **Flashed mid-drain, on battery** (relay 2 off throughout), with JD's
+    go: data on at 09:49:04, the jump waited three times for keys to go
+    quiet (JD typing), and `flash.sh` restored and verified the keymap and
+    the lighting. Its profiles step skipped, as it must from firmware
+    before P5a, so the EEPROM's settings reset once more: Balanced, and the
+    screen, indicator, clock and readout settings to their defaults. Every
+    flash from here keeps them.
+  - **The clock:** -402.0 ms at the first sync (09:49:47), then -1465.6,
+    then -14.5 and -30.0 ms with the loop still moving, as after the flash
+    before. Data off at 10:00:57.
+- **Before it: `30f1e0cfde`, the mainline until 10-26** (dev, token
+  `0x195cbf4c`, 206,326 B, heap gap 128 B, the floor), from 19:08:05
+  10-25. `ak820pro-jdlien` and `deps.lock` point at it, and ChibiOS-Contrib
   at `5a1674e905` (main `7a679e9`, Warren's merge). It is `b9555ff3e6` plus
   Warren's `gremlin/s1`: the configuration menu (S0, S1, P1a-P4, the Clock
   options), the LED fix (`gremlin/fill-poll`) and the wake fix below.
@@ -103,9 +281,9 @@ for other owners.
   - the INA228 logging to `history/power-bench-2026-10-15/power.csv`,
     under launchd since 21:14:45 10-24 (`com.jdlien.ak820pro.powerlog`;
     `scripts/power_log_agent.sh status`);
-  - JD's daily setting (effect 2, hue 185, sat 227, val 115, speed 231;
-    the screen at the new default, 42 of 100), the slider on BT, Balanced
-    again since the flash of 19:08 10-25. The drain from FULL runs since
+  - JD's daily setting (effect 2, hue 178, sat 219, val 125, speed 231 at
+    the flash of 09:49 10-26; the screen at the default, 42 of 100), the
+    slider on BT, Balanced again since that flash. The drain from FULL runs since
     04:44:26 10-24.
 - **The clock's 30 min cut passed** on this build: the replug found -20.0 ms,
   against +1106.3 ms the morning before without the trim
@@ -181,6 +359,73 @@ The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
   drain runs on to the RGB cut on the menu's build. The new build's log is
   v8, whose LCD column is `bkl100` (0-100; `scripts/gauge_replay.py` reads
   both).
+- **The flash of `57d5e90030`, P5b, mid-drain:** data on
+  09:49:04-10:00:57, 6.93 mAh in those 11.9 min, none charged; 478.0 mAh
+  since FULL at 10:00:58 (11.9%). The pre-flash battery log (v8, 58
+  entries) is `~/Documents/ak820pro-battlogs/log-20261026-094912-preflash.csv`.
+  The board's gauge restarts from the voltage again, so its check runs
+  from 09:50 10-26 on as its own leg.
+- **The flash of `13c5e910cb`, P5c-P5e, mid-drain:** data on
+  13:29:30-13:41:04, 6.71 mAh in those 11.6 min, none charged; 580.0 mAh
+  since FULL at 13:41:04 (14.5%). The pre-flash battery log is
+  `~/Documents/ak820pro-battlogs/log-20261026-132937-preflash.csv`.
+- **The flash of `553108e5f2`, the profile page's polish, mid-drain:**
+  data on 16:01:21-16:13:01, 6.81 mAh in those 11.7 min, none charged;
+  656.2 mAh since FULL at 16:13:01 (16.4%). The pre-flash battery log (v8,
+  10 entries) is
+  `~/Documents/ak820pro-battlogs/log-20261026-160127-preflash.csv`.
+- **VIA, binding Fn+A and Fn+S:** data on 16:16:03-16:17:03, the daemon
+  stopped for it; 658.5 mAh since FULL after.
+- **The flash of `1f3c79e904`, the menu's 60 s close, mid-drain:** data
+  on 20:28:39-20:40:34, 7.3 mAh in those 11.9 min, none charged; 774.7 mAh
+  since FULL at 20:40:34 (19.3%). The pre-flash battery log (v8, 17
+  entries) is
+  `~/Documents/ak820pro-battlogs/log-20261026-202845-preflash.csv`. Each of
+  these flashes restarts the board's gauge from the voltage, so its legs
+  begin at 13:30, 16:02 and 20:30 10-26.
+- **The lighting changed by ~20:50 10-26:** JD moved from Alphas/Mods
+  (h178 s219 v125) to a slowly cycling rainbow, and the drain runs on with
+  it as real use. The board's battery log records each entry's LED drive
+  (`led_pm`), so the change shows there, and the drain also checks the
+  per-colour model against a moving colour mix. By 21:54 10-27 the
+  rainbow was saved as a second profile ("Rainbow Slow", Cycle L-R) and
+  the live lighting back on "Purple/Blue".
+- **The flash of `ecb10f0e9b`, the clock chip's flicker fix, mid-drain:**
+  data on 21:54:21-22:06:03, 7.2 mAh in those 11.7 min, none charged;
+  1053.2 mAh since FULL at 22:06:02 (26.3%; the logger's count unbroken
+  since 13:00 10-26). The pre-flash battery log (v8, 101 entries) is
+  `~/Documents/ak820pro-battlogs/log-20261027-215429-preflash.csv`. The
+  board's gauge leg begins at 21:55 10-27.
+- **The flash of `3b6e43ef73`, the Font test, mid-drain:** data on
+  10:31:36-11:26:09 (the Mac's reboot turned it on), 33.7 mAh in those
+  54.6 min, none charged; 1144.3 mAh since FULL at 11:26:09 (28.5%). The
+  pre-flash battery log is
+  `~/Documents/ak820pro-battlogs/log-20261028-110439-preflash.csv`. The
+  board's gauge leg begins at 11:05 10-28.
+  The comparison frames' upload: data on 11:48:54-11:51:42, 2.07 mAh in
+  2.8 min; 1161.1 mAh since FULL at 11:51:42.
+- ⚠️ **The logger's charge count restarted twice on 10-26. From 13:00:02.8,
+  mAh since FULL = `charge_mah` + 557.488** (±0.05 in all). From 12:51:38
+  to 13:00:00 it was + 552.646; before that, + 1116.956. The second: relay
+  2 closed for 3 s at 13:00:01.2 with the keyboard's cable in port 2 and
+  data on; the hubs dropped again at once (the last row 13:00:00.55,
+  4.818931; the count back at 13:00:02.83; 2.28 s, 0.023 mAh, uncounted),
+  and the relay board then left USB. With the cable out of the hub
+  (12:57-12:59) relay 2 closed with nothing dropped. The first: The
+  relay's control lead broke when the bench went under the desk; after
+  JD's resolder, a 1 s pulse of relay 2 (12:51:36.6) pulled down the hubs'
+  5 V and reset the relay board, the QT Py and hub `3-1.3.4` together.
+  The last row before it: 12:51:36.07, -564.330560 (552.625 since FULL);
+  the first after: 12:51:41.55, 0.033778 (3.3 s of counting at 36.8 mA),
+  so ~2.2 s at 34.7 mA (0.021 mAh) went uncounted. No charge reached the
+  pack (the current stayed positive throughout). The hub's reset also put
+  the keyboard's USB data on, 12:51:39-12:52:03. Relay 2 closed cleanly on
+  the same hubs at 23:46 10-23, so the repair was the suspect. **Fixed by
+  13:10:** JD found stray strands of the keyboard cable's braid barely
+  touching the new joints, separated the wires and trimmed them. Relay 2
+  then charged at ~366 mA four times (13:08:45, 13:10:17, 13:12:09, and a
+  3 s pulse from the Mac at 13:13:14), with no drop and the count intact;
+  ~1 mAh went into the pack, counted.
 
 ### Stopped 23:46:52 10-23: the untethered drain at real use, restarted from FULL
 

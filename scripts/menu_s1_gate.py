@@ -7,10 +7,12 @@
 In one armed interval:
   baseline     three 5 s dashboard windows, and ten of 500 ms
   sustained    5 s windows of paced A/B repaints, each settled in 1,000 ms
-  transitions  Fn+D in, Camera, Fn+D out, the menu's open, a layout change
-               and the close: ten each, 500 ms windows until the completion
-               is seen, plus one
-  camera       the clock second's completion, by C10's procedure
+  transitions  Fn+D in, Fn+D out, the menu's open, a layout change and the
+               close: ten each, 500 ms windows until the completion is seen,
+               plus one
+  health       the clock second's completion on the Health page, whose
+               Uptime and ISR lines change every second, by C10's procedure
+               (measured on the camera page until it was removed, 10-28)
   continuous   a detent every 50 ms for 10 s
 The instrumentation is the same in every window: one poller reads sub 5 and
 sub 10 every 100 ms, bracketed, and completions are judged from its reads
@@ -243,7 +245,7 @@ def close_menu(bd):
 def run(a):
     h = open_device()
     bd = Board(h)
-    out = {"windows": [], "transitions": {}, "camera_second": [], "continuous": {}, "timing": {}}
+    out = {"windows": [], "transitions": {}, "health_second": [], "continuous": {}, "timing": {}}
     try:
         to_dash(h)
         time.sleep(1.0)
@@ -334,9 +336,6 @@ def run(a):
             g = bd.m["dbg_gen"]
             transition("fnd_in", bd.op1, debug_done_after(g))
             bd.poll(force=True)
-            g = bd.m["dbg_gen"]
-            transition("camera", bd.op1, debug_done_after(g))
-            bd.poll(force=True)
             rg = bd.st["restore_gen"]
             transition("fnd_out", bd.op1, restore_after(rg))
             bd.poll(force=True)
@@ -353,13 +352,12 @@ def run(a):
             check(d["mean"] >= KIND_MEAN_RATIO, f"{kind}: mean {d['mean']:.3f} < {KIND_MEAN_RATIO}")
             check(min(d["windows"]) >= WINDOW_RATIO, f"{kind}: a window at {min(d['windows']):.3f} < {WINDOW_RATIO}")
 
-        # Camera's clock second, by C10's procedure.
-        bd.phase = "camera_second"
+        # The Health page's clock second, by C10's procedure.
+        bd.phase = "health_second"
         to_dash_checked(bd)
         bd.op1()
-        bd.op1()
-        wait_poll(bd, lambda st, m: m["page"] == 2 and st["debug_done"], time.perf_counter() + 3 * SETTLE_S,
-                  "Camera didn't settle")
+        wait_poll(bd, lambda st, m: m["page"] == 1 and st["debug_done"], time.perf_counter() + 3 * SETTLE_S,
+                  "Health didn't settle")
         for _ in range(5):
             discards = 0
             while True:
@@ -375,12 +373,12 @@ def run(a):
                                     arrived + SETTLE_S, "the second's composition wasn't painted in time")
                 if bd.m["rtc_sec"] != S:   # the clock moved on first: discard, retry
                     discards += 1
-                    ensure(discards < 3, "Camera's second: three discards")
+                    ensure(discards < 3, "Health's second: three discards")
                     continue
-                out["camera_second"].append(round((done_at - arrived) * 1000))
+                out["health_second"].append(round((done_at - arrived) * 1000))
                 break
-        bd.op1()   # Camera to the dashboard
-        wait_poll(bd, lambda st, m: dash_done(st), time.perf_counter() + 5 * SETTLE_S, "Camera's exit didn't restore")
+        bd.op1()   # Health to the dashboard
+        wait_poll(bd, lambda st, m: dash_done(st), time.perf_counter() + 5 * SETTLE_S, "Health's exit didn't restore")
 
         bd.phase = "continuous"
         # Continuous: exactly 200 detents, one every 50 ms on absolute
@@ -460,7 +458,7 @@ def run(a):
         print(f"  sustained ratio {w['ratio']:.3f}")
     for k, d in out["transitions"].items():
         print(f"  {k:8} mean {d['mean']:.3f}, min {min(d['windows']):.3f}, completion ms {d['ms']}")
-    print(f"  camera second ms {out['camera_second']}")
+    print(f"  health second ms {out['health_second']}")
     print(f"  continuous {out['continuous']}")
     return 0
 

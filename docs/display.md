@@ -23,21 +23,30 @@ did not need adjusting after the flip; pixels reach every edge.
 ```
 0..24     connection strip   25
 25..26    gap                 2
-27..54    text (2 lines)     28   two 6x14 cells, at 27 and 41
-55        gap                 1
-56..77    clock              22   Regular-30, CROPPED to its ink
-78..81    gap                 4
-82..104   lock band          23   20px face
+27..55    text (2 lines)     29   two 14-row cells, at 27 and 42
+56..57    gap                 2
+58..79    clock              22   Regular-30, CROPPED to its ink
+80..82    gap                 3
+83..105   lock band          23   20px face; its last row is the battery's first
 105..127  battery            23   20px face
 ```
 
 - **A glyph blit paints its WHOLE cell, background included** — no
   transparency, no tinting (colour exists only via `lcd_fill_rect`). Cells
-  cannot overlap; two lines cost exactly 2× the cell height.
+  may overlap only where both are blank: the lock band's last row and the
+  battery's first, measured from the atlas (no glyph of the 20px face inks
+  its cell's top row, and the lock labels are capitals ending at row 18;
+  `display.c` asserts both).
 - **Spacing is judged by INK, not band boundaries** — the 20px cell carries 4
   blank rows above caps and 4 below baseline, so "move a band 1px" is never
   one constant (balancing the lock row took three coupled moves). Measure
-  ink-to-ink: icons→text 2, text→clock 2, clock→lock 8, lock→batt 8.
+  ink-to-ink: icons→text 2, text→clock 2 (3 in Cozette), clock→lock 7,
+  lock→batt 7; between the song lines, descender to capital, 2 (4 in
+  Cozette).
+- **10-28: the clock down 2, the lock row down 1, the line pitch 14 → 15,**
+  for the Large face's song lines (Terminus Bold's capitals are 10 rows to
+  Cozette's 8 in the same 14-row cell). Before, Large had 1 blank row
+  between the lines and 1 above the clock, and the rhythm below was 8 and 8.
 - **Anything drawn must fit inside its band's clear rect.** The 16px padlock
   at `LOCK_Y+3` needs a band ≥ 19 rows; when the band was briefly 17px its
   bottom rows sat outside the clear and stayed lit forever.
@@ -234,7 +243,7 @@ or the track starting. ⚠️ **Test display changes with a track playing.**
 `./build.sh dev` compiles in `DPROBE` (`AK820_DEV_HOOKS`): the worst time of
 each of the 14 Fn+D restore stages and of each housekeeping sub-draw, held
 until reset. `HC_DEVHOOK` (raw HID `0x76`) reads it and resets it, and can
-press `Fn`+`D`, so the pages can be cycled with no hands:
+press `Fn`+`D`, so the debug page can be toggled with no hands:
 `scripts/devhook.py press | reset | read`. It is what found the stalls above.
 Daily and fpb builds carry none of it (`build.sh` fails them if they do).
 
@@ -254,10 +263,11 @@ comments that send people to it.
 
 ## The Fn+D debug page
 
-Full-panel diagnostics, nine rows in the 6×14 face, on `Fn`+`D`. **Tap cycles
-dashboard → debug page → camera page → dashboard; hold ~800 ms resets the
-counters** (fires under the finger, not on release — see `bt_ui.c` for why
-that distinction matters).
+Full-panel diagnostics, nine rows in the 6×14 face, on `Fn`+`D`. **A tap
+toggles dashboard ↔ debug page (inside the menu's session, menu ↔ debug page);
+hold ~800 ms resets the counters** (fires under the finger, not on release —
+see `bt_ui.c` for why that distinction matters). Raw-HID op 1 does what the
+tap does. The menu's Diagnostics page opens the same page as **Health page**.
 
 ```
 Uptime      2m 14s     ISR       73% 3900   ← occupancy + rate; field rate = /18
@@ -304,38 +314,24 @@ While the restore runs, `display_housekeeping_task()` stands aside
 called from its own site in `housekeeping_task_kb()` — the gate's comment says
 why, do not fold the pump into the housekeeping task.
 
-### The camera page (the second tap)
+### The camera page: removed 2026-10-28
 
-The pack and the level in digits a camera can read across a room, for filming
-battery runs (added 2026-10-02: on JD's security camera the debug page's text is
-~3 px tall, and the board dying on the lights-off reserve is the one moment no
-RAM log survives).
+From 2026-10-02 a second tap of `Fn`+`D` showed the camera page: the pack in
+volts, the level with the time left, the board's clock and the raw `5C`, in
+the clock's 15×22 face, big enough for a room camera to film the end of a
+battery run. It was removed on 2026-10-28 because the bench's power cut and
+the INA228 logger ([test-bench.md](test-bench.md)) replaced filming the
+screen. The debug page's `Batt` row still shows the raw `5C`, its age and the
+pack in mV.
 
-```
- 3.712V     ← the pack in volts; >4.036V / <3.161V at the 5C clamps, -.---V none
-58% 31h     ← the level, and on battery the time left to the cut (Phase 2;
-              "4d" from 100 h, "<1h", "~" for the space while the average is
-              under an hour old; the level alone on USB or after the cut);
-              --% unknown. 8 cells since Phase 2 ("100%~51h")
-14:03:27    ← the board's clock
-5C 62@3     ← the raw 5C @ its age in s (the 10×23 status face)
-```
-
-The clock is for **time-lapse video**, which stamps no time on its frames
-(JD's Pixel 8 records at 5×-120×): every frame dates itself, to the second,
-from the clock the host agent keeps right.
-
-**In the clock's font, 15×22, since 2026-10-06** (`6eadbd0e3a`, shipped in
-flash 2). The atlas, cropped for the clock, still holds all 95 ASCII glyphs;
-the crop cut only descenders, and the page draws none (digits `. : % V < > -`,
-and since Phase 2 `h d ~`; `scripts/camera_page_preview.py` renders them).
-Each line is a fixed grid of cells, so a changed character repaints only its
-own cell, and the pump paints **one changed cell per main-loop pass**. It
-shares the debug page's banded clear and staged restore, and recomposes once a
-second. Previews were rendered from the shipped atlases before any code
-(`scripts/camera_page_preview.py`). It replaced **seven-segment digits drawn as
-rectangles** (26×48 px, 6 px segments), which JD found ugly and cryptic; the
-earlier note here that the clock atlas holds only `0-9:` was wrong.
+What changed with it: the tap toggles instead of cycling; the menu's
+Diagnostics page lost its Camera page row; `display_debug_meas()` (op 27
+sub 10's page byte) reports 1 for the debug page and 0 otherwise, where 2 was
+the camera page; `PO_EV_DIAG_CAMERA` is kept only as a number the panel
+owner refuses, and `MENU_DIAG_CAMERA` is never returned. The code (`cam_lines[]` in
+`graphics/display.c`) is in the firmware's history before that date. One fact
+from it still holds: the clock atlas, cropped for the clock, keeps all 95
+ASCII glyphs; the crop cut only descenders.
 
 ## Backlight (software PWM, dimmable, persisted)
 
@@ -469,7 +465,9 @@ draws 13.35 mW, an eighth (Lights out) to a twentieth (JD's lights) of its awake
 draw, so the sleeps stretch the calendar time and not the number (what it is and how it is counted: [battery.md](battery.md),
 "The gauge across a deep sleep"). Above 10 hours the row stays as it was: a
 long number there says nothing worth the cells. The tenths view never adds
-hours. `Fn`+`D`'s camera page shows time left at any length (below).
+hours. The menu's Battery page shows time left at any length on the row
+instead, with its Hours of use or Both readout (`160h`, `85% 160h`); until
+2026-10-28 `Fn`+`D`'s camera page did too.
 
 ## At a deep sleep and its wake
 
@@ -564,8 +562,31 @@ are harmless; the producer polls every 3 s.
   `DISPLAY_TEXT_MAX_L0/_L1` in display.h, mirrored by `MAXLEN` in
   `hostagent/ak820text.py`. The producer puts the ARTIST on line 0 and the
   TITLE on line 1 (title gets the wider line).
+- **The menu's Font setting picks the face** (10-28,
+  [`plans/MENU-8X16-PLAN.md`](../plans/MENU-8X16-PLAN.md)). Small is Cozette
+  6×14 from the flash atlas, as above. Large, the default, is Terminus Bold
+  cropped to 8×14 (its rows 1-14, everything ASCII inks but the backtick's
+  top). It draws from the menu's own table in internal flash through a
+  pseudo font id, `LCD_FONT_SONG_LARGE` (0x0816), which `lcd_bus.c` sends
+  by `lcd_blit_mono`, a glyph a pass as the queue paces. So no asset is
+  added and no board is re-provisioned. Large gives the artist 14 characters
+  and the title 15. The third face (10-28), Terminus regular, is the same
+  cell from its own table through `LCD_FONT_SONG_REGULAR` (0x0817), with
+  Large's budgets. The menu calls the three 8px, 10px and 10px bold. In
+  10px only the artist is regular: the title (line 1, or line 0 alone) stays
+  Bold, as the menu's page titles do.
+  - **The text is kept whole and cut when drawn** (`graphics/text_fit.c`):
+    the host still sends 19 and 21, and a change of face shows more or less
+    of the same text without a resend.
+  - **A change of face repaints the lines** (`display_text_refont()` sets
+    `text_dirty`; `queue_line` treats the new font id as a moved run). That
+    holds even with the menu closed, as when `flash.sh` restores the live
+    settings.
+  - Since the 10-28 spacing (line 1 at y 42, the clock 2 rows down), a
+    descender above the next line's capitals leaves two blank rows in
+    Large, four in Cozette.
 - Single-line text keeps the adaptive size: ≤ `TEXT_BIG_MAX` (11) chars uses
-  the 20px face.
+  the 20px face, whatever the Font setting.
 - Icons: `0 none, 1 play, 2 pause, 3 stop` — icon IDs, not "media state".
   Each is a 12×12 RAM tile sent in one transfer since flash 2e (it was
   `lcd_fill_rect` runs, ~9 ms for play).
