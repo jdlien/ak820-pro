@@ -43,15 +43,20 @@ pub const IDLE_ARM: Duration = Duration::from_secs(30);
 pub const WAKE_DELAY: Duration = Duration::from_secs(4);
 /// No text or transport frame past this much input idleness. A frame into a
 /// sleeping board is lost and costs its module's radio ~10 mA for ~10 s (the
-/// mainline soak's hour, 10-21). Lights out sleeps at 60 s, the shortest
-/// rung, and a frame lasts up to 12 s (the board's lifetime): with the
-/// board's keys as the last input, one begun before this ends before the
-/// board can sleep. A heuristic, not a bound: the host's last input can be
-/// the trackpad's, newer than the board's (codex, the hold's review, 3). At
-/// least [`IDLE_ARM`], so the wake guess is armed while anything is held and
-/// its fire sends it. The board shows the last title until its 3 min
-/// expiry, so a desk left alone keeps it for a while.
-pub const HOLD_IDLE: Duration = Duration::from_secs(45);
+/// mainline soak's hour, 10-21), and with no hold the title's refresh did
+/// that every minute while the host played (~1.6 mA on 3 mA asleep). 3 min
+/// since 10-29 (45 s before, sized to Lights out): a track that changed
+/// while nobody touched the host waited for the next touch, though Balanced
+/// sleeps at 20 min (`power.c`, `ladders[]`). Balanced and Always on lose
+/// nothing to it; Power saver, asleep at 3 min, at most a frame in flight
+/// (a frame lasts up to 12 s, the board's lifetime); Lights out, asleep at
+/// 1 min, ~2 title refreshes into a sleeping board each idle stretch. A
+/// heuristic, not a bound: the host's last input can be the trackpad's,
+/// newer than the board's (codex, the hold's review, 3). At least
+/// [`IDLE_ARM`], so the wake guess is armed while anything is held and its
+/// fire sends it. The board shows the last title until its 3 min expiry
+/// after the last refresh, so a desk left alone keeps it ~4-6 min.
+pub const HOLD_IDLE: Duration = Duration::from_secs(180);
 /// How often a pending restore is tried, and the wake guess and the locks'
 /// validity are sampled while the channel is granted.
 pub const TICK: Duration = Duration::from_secs(1);
@@ -332,6 +337,17 @@ fn current_of(slot: &Slot, now: Instant) -> (Option<(Media, Instant)>, Option<In
     }
 }
 
+/// A title's two lines, `artist - title`, for the log.
+fn title_lines(payload: &Content) -> Option<String> {
+    if payload.0 != super::TYPE_NOW_PLAYING || payload.1.len() < 2 {
+        return None;
+    }
+    let n0 = payload.1[1] as usize;
+    let l0 = String::from_utf8_lossy(&payload.1[2..2 + n0.min(payload.1.len() - 2)]);
+    let l1 = String::from_utf8_lossy(&payload.1[(2 + n0).min(payload.1.len())..]);
+    Some(format!("{} - {}", l0, l1))
+}
+
 /// A change frame for the log: the title's lines, or the transport's icon and
 /// readout.
 fn describe(payload: &Content, m: &Media) -> String {
@@ -339,10 +355,7 @@ fn describe(payload: &Content, m: &Media) -> String {
     match payload.0 {
         super::TYPE_CLEAR => "lockchan: sent clear".into(),
         super::TYPE_NOW_PLAYING if payload.1.len() >= 2 => {
-            let n0 = payload.1[1] as usize;
-            let l0 = String::from_utf8_lossy(&payload.1[2..2 + n0.min(payload.1.len() - 2)]);
-            let l1 = String::from_utf8_lossy(&payload.1[(2 + n0).min(payload.1.len())..]);
-            format!("lockchan: sent title {} - {}", l0, l1)
+            format!("lockchan: sent title {}", title_lines(payload).unwrap_or_default())
         }
         super::TYPE_TRANSPORT if payload.1.len() == 6 => {
             let pos = u16::from_be_bytes([payload.1[2], payload.1[3]]) as u32;
@@ -584,7 +597,14 @@ impl<P: Platform> Core<P> {
             let mut s = h.0.slot.lock().unwrap_or_else(|e| e.into_inner());
             let (view, stale_at) = current_of(&s, now);
             if let Some((m, _)) = &view {
-                self.text.set(text_id(&m.text), now);
+                // When the player's change reached the channel, beside the
+                // frame's "sent": a late title says whether it came late or
+                // waited here (the hold, a backoff).
+                if self.text.set(text_id(&m.text), now) && s.granted {
+                    if let Some(t) = title_lines(&m.text) {
+                        s.status.log.push(format!("lockchan: title from the player {t}"));
+                    }
+                }
                 self.tr.set(tr_policy_id(m, self.seek_rev), now);
             }
             if std::mem::take(&mut s.force) {
@@ -674,7 +694,13 @@ impl<P: Platform> Core<P> {
         let idle_for =
             |d: Duration| input.is_some_and(|(last, now)| Duration::from_millis(now.wrapping_sub(last) as u64) >= d);
         let hold = idle_for(HOLD_IDLE);
+        let was_held = self.held;
         self.held = hold && [self.text.due(), self.tr.due()].into_iter().flatten().any(|t| t <= now);
+        if self.held && !was_held && granted {
+            let idle_s = input.map_or(0, |(last, now)| now.wrapping_sub(last) / 1000);
+            let what = if self.text.due().is_some_and(|t| t <= now) { "the title" } else { "the play time" };
+            self.publish(h, |st| st.log.push(format!("lockchan: held, {idle_s} s without input: {what} waits for the next")));
+        }
 
         // A pending restore goes first, granted or not, every TICK, until it
         // is confirmed (R3-1; implementation review, 1).
@@ -741,8 +767,7 @@ impl<P: Platform> Core<P> {
         let text_due = if hold { None } else { self.text.due() };
         let tr_due = if shown && !hold { self.tr.due() } else { None };
         // A clock frame after both (review, 11).
-        // Held as they are (HOLD_IDLE), so one begun before it likely ends
-        // before Lights out's sleep, a heuristic as there: it goes at the
+        // Held as they are (HOLD_IDLE), a heuristic as there: it goes at the
         // wake (the Mac session, the hold).
         let clock_due = if clock_on && !self.clock_unmeasured && !hold { self.clock.due() } else { None };
         let kind = match (text_due, tr_due, clock_due) {
@@ -1731,9 +1756,14 @@ mod tests {
         observe_through(&mut r, 30, |h, t| h.set_text(title("Bravo"), t));
         assert_eq!(r.kb.borrow().writes.len(), n, "neither the refresh nor the change while idle");
         assert_eq!(r.h.status().state, "held");
+        // The log says it waited here, and when the change came.
+        let log = r.h.take_log();
+        let held = format!("lockchan: held, {} s without input: the title waits for the next", HOLD_IDLE.as_secs());
+        assert_eq!(log.iter().filter(|l| l.starts_with("lockchan: held")).collect::<Vec<_>>(), [&held], "{log:?}");
+        assert!(log.iter().any(|l| l.starts_with("lockchan: title from the player ") && l.contains("Bravo")), "{log:?}");
         // A key, with nothing observed anew: the wake guess fires, and the
         // held change waits its delay.
-        r.input.set(Some((200_000, 200_000)));
+        r.input.set(Some((400_000, 400_000)));
         let t2 = r.t.now();
         run_until(&mut r, t2 + WAKE_DELAY - Duration::from_millis(500));
         assert_eq!(r.kb.borrow().writes.len(), n, "not before the wake delay");
@@ -1766,6 +1796,24 @@ mod tests {
         assert_eq!(r.kb.borrow().writes.len(), n, "not at once on the unlock");
         run_until(&mut r, t2 + WAKE_DELAY + Duration::from_secs(10));
         assert!(r.kb.borrow().writes.len() > n + 20, "the refresh after the delay");
+    }
+
+    #[test]
+    fn a_change_a_minute_into_the_idle_goes_at_once() {
+        // Short of the hold (45 s until 10-29): no waiting for the next touch.
+        let mut r = rig();
+        let t0 = granted(&mut r, title("Alpha"));
+        r.input.set(Some((1000, 1000)));
+        run_until(&mut r, t0 + Duration::from_secs(15));
+        r.input.set(Some((1000, 61_000)));
+        r.h.take_log();
+        observe_through(&mut r, 10, |h, t| h.set_text(title("Bravo"), t));
+        assert!(sent(&r, &title("Bravo"), 0), "sent at a minute idle");
+        let log = r.h.take_log();
+        assert!(!log.iter().any(|l| l.starts_with("lockchan: held")), "{log:?}");
+        let from = log.iter().position(|l| l.starts_with("lockchan: title from the player ")).expect("logged");
+        let sent_at = log.iter().position(|l| l.starts_with("lockchan: sent title ")).expect("sent");
+        assert!(from < sent_at, "the player's title before its frame: {log:?}");
     }
 
     #[test]
@@ -2404,8 +2452,8 @@ mod tests {
         run_until(&mut r, t0 + Duration::from_secs(20));
         assert_eq!(r.h.status().clock_frames, 1);
         let first = r.h.status().clock_last.unwrap();
-        // Idle from a minute in, through the ten-minute mark.
-        r.input.set(Some((1000, 1000 + 61_000)));
+        // Idle past the hold, through the ten-minute mark.
+        r.input.set(Some((1000, 1000 + HOLD_IDLE.as_millis() as u32 + 16_000)));
         run_until(&mut r, first + clk::EVERY + Duration::from_secs(60));
         assert_eq!(r.h.status().clock_frames, 1, "held back while idle");
         // A key: the wake guess fires; the frame goes after its delay.
@@ -2424,11 +2472,10 @@ mod tests {
         run_until(&mut r, t0 + Duration::from_secs(20));
         assert_eq!(r.h.status().clock_frames, 1);
         let first = r.h.status().clock_last.unwrap();
-        // 50 s idle across the refresh: past the hold, short of Lights out's
-        // sleep, where a frame begun could still run into it.
-        r.input.set(Some((1000, 1000 + 50_000)));
+        // 5 s past the hold, across the refresh.
+        r.input.set(Some((1000, 1000 + HOLD_IDLE.as_millis() as u32 + 5_000)));
         run_until(&mut r, first + clk::EVERY + Duration::from_secs(30));
-        assert_eq!(r.h.status().clock_frames, 1, "held at 50 s idle");
+        assert_eq!(r.h.status().clock_frames, 1, "held past the hold");
         // Exactly at the hold: still held.
         r.input.set(Some((1000, 1000 + HOLD_IDLE.as_millis() as u32)));
         run_until(&mut r, first + clk::EVERY + Duration::from_secs(40));
@@ -2440,14 +2487,14 @@ mod tests {
     }
 
     #[test]
-    fn a_clock_held_at_fifty_seconds_goes_at_the_wake() {
+    fn a_clock_held_past_the_hold_goes_at_the_wake() {
         let mut r = clock_rig(Some(38));
         let t0 = granted(&mut r, title("A"));
         run_until(&mut r, t0 + Duration::from_secs(20));
         let first = r.h.status().clock_last.unwrap();
-        r.input.set(Some((1000, 1000 + 50_000)));
+        r.input.set(Some((1000, 1000 + HOLD_IDLE.as_millis() as u32 + 5_000)));
         run_until(&mut r, first + clk::EVERY + Duration::from_secs(30));
-        assert_eq!(r.h.status().clock_frames, 1, "held at 50 s idle");
+        assert_eq!(r.h.status().clock_frames, 1, "held past the hold");
         // A key: the frame after the wake delay, not before.
         let t1 = r.t.now();
         r.input.set(Some((900_000, 900_000)));

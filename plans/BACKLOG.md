@@ -755,10 +755,22 @@ module's radio taking the writes.
   meanwhile. Nothing changes in the firmware: the frames already do not
   count as activity, because the ladder reads
   `last_input_activity_elapsed()` (the matrix and the knob).
+- **3 min since 10-29** (`sender.rs`, `HOLD_IDLE`). At 45 s a track that
+  changed while nobody touched the Mac showed only at the next touch (seen
+  01:43 10-29 on BT with the cable out, the title ~45 s late, and again
+  with ~90 s untouched), though Balanced sleeps at 20 min. At 3 min
+  Balanced and Always on lose nothing, Power saver (asleep at 3 min) at
+  most a frame in flight, and Lights out (asleep at 1 min) ~2 title
+  refreshes into a sleeping board each idle stretch: bounded, unlike the
+  ~1.6 mA without a hold. The daemon's log now says when a frame is held
+  (`lockchan: held, N s without input: the title waits for the next`) and
+  when the player's title reached the channel (`lockchan: title from the
+  player ...`), so a late title says which.
 - **What the user sees:** the board keeps the last title until its 3 min
-  expiry, so an idle desk shows it ~3-4 min past the last touch, then the
-  clock. A track that changes during the hold shows on the next touch; until
-  then the board shows the old title or, past the expiry, the clock.
+  expiry after the last refresh, so an idle desk shows it ~4-6 min past
+  the last touch (~3-4 min with the 45 s hold), then the clock. A track
+  that changes during the hold shows on the next touch; until then the
+  board shows the old title or, past the expiry, the clock.
 - **A Mac that is asleep or locked sends nothing already.** Asleep, the
   daemon is suspended with everything else. Locked, the channel refuses
   because the user's locks are unknown (R4-1); that is what ended the

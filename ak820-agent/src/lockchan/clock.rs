@@ -12,11 +12,11 @@
 //!   but never sooner than [`MIN_GAP`] after the last sent.
 //! - None while the host's input has been idle
 //!   [`HOLD_IDLE`](super::sender::HOLD_IDLE) or more (the sender's hold, as
-//!   for text and transport): the board on battery is likely asleep, losing
-//!   it, one begun later could run into Lights out's sleep at 60 s, and one
-//!   that is awake would hold its deep sleep off through the slew a
-//!   correction starts (20 ms a second; the Mac session, 10-20). A frame
-//!   held so goes at the wake guess.
+//!   for text and transport): a board on battery may be asleep, losing it
+//!   (Power saver sleeps at 3 min, Lights out at 1), and one that is awake
+//!   would hold its deep sleep off through the slew a correction starts
+//!   (20 ms a second; the Mac session, 10-20). A frame held so goes at the
+//!   wake guess.
 //! - A change of the host's UTC offset (DST, a zone change) or a step of its
 //!   wall clock against the monotonic one: a frame at once, exempt from the
 //!   gap (review, 7).
