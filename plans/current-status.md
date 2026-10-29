@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-28, 23:58. The block below is where things stand, written to
+Updated 2026-10-29, 02:10. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -39,6 +39,35 @@ ahead of the mainline** (`ecb10f0e9b`, `gremlin/pcf-unseen`), on top of
 10-27's mainline (`ce3f842de2`, main `ccb9ea0`): the Win/Mac switch's
 profiles, the battery readout's Both, Reset settings and the Power page's
 bulbs.
+
+### Pending, decided (10-29)
+
+- **The overnight cable-out run (10-28/29).** Warren's `fcb7ae00b4` on
+  JD's board, on its pack (relay 2 off, data off), with the USB cable
+  pulled out of the keyboard by 01:38 10-29. Out, the data lines float, as
+  on gremlin's board when its sleep took the WDT reset; the relay plus
+  `uhubctl` leave them held by the hub's pull-downs, which would hide an
+  interrupt storm from the USB block at the wake. Balanced sleeps 20 min
+  after the last key. The morning: the cable back in, data on
+  (`uhubctl -l 3-1.3.4 -p 2 -a on -e`), the daemon paused, op 24's slots
+  0-10 and the watchdog record read, the power log searched for wakes and
+  resets, the reading to Warren, then data off again for the drain.
+- **The lock-light hold to 3 min, with two log lines.** `HOLD_IDLE`
+  (`ak820-agent/src/lockchan/sender.rs`) holds text and transport frames
+  once the host's input has been idle 45 s, so on BT a track that changes
+  while nobody touches the Mac shows only at the next touch, plus
+  `WAKE_DELAY`'s 4 s (seen 01:43 10-29: the title ~45 s late, and again
+  with ~90 s untouched). 3 min costs nothing in Balanced (asleep at 20 min)
+  or Always on; in Power saver (asleep at 3) at most a frame in flight; in
+  Lights out (asleep at 1 min) ~2 title refreshes into a sleeping board per
+  idle stretch, each ~10 mA for ~10 s. Any hold bounds the old ~1.6 mA
+  (`BACKLOG.md`, "Lock-light frames into a sleeping board"). It also keeps
+  the title up past the board's 3 min expiry, and the clock frames, which
+  share the hold, keep coming for 3 min ("The clock's idle hold", below).
+  With it, two log lines: when a frame is held, and when the player
+  reports a new track, so a late title says which it was. The constant is
+  shared with gremlin's Windows daemon: tell Warren. Then BACKLOG's entry
+  and its 45 s, the tests, and the install on the Mac.
 
 ### What is running
 
