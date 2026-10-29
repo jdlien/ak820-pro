@@ -59,22 +59,16 @@ bulbs.
   data on, the daemon paused, `ds_slots.py` (slots 0-10, the watchdog
   record), the power log's sleeps and any restart, then back to Balanced
   if JD wants.
-- **The lock-light hold to 3 min, with two log lines.** `HOLD_IDLE`
-  (`ak820-agent/src/lockchan/sender.rs`) holds text and transport frames
-  once the host's input has been idle 45 s, so on BT a track that changes
-  while nobody touches the Mac shows only at the next touch, plus
-  `WAKE_DELAY`'s 4 s (seen 01:43 10-29: the title ~45 s late, and again
-  with ~90 s untouched). 3 min costs nothing in Balanced (asleep at 20 min)
-  or Always on; in Power saver (asleep at 3) at most a frame in flight; in
-  Lights out (asleep at 1 min) ~2 title refreshes into a sleeping board per
-  idle stretch, each ~10 mA for ~10 s. Any hold bounds the old ~1.6 mA
-  (`BACKLOG.md`, "Lock-light frames into a sleeping board"). It also keeps
-  the title up past the board's 3 min expiry, and the clock frames, which
-  share the hold, keep coming for 3 min ("The clock's idle hold", below).
-  With it, two log lines: when a frame is held, and when the player
-  reports a new track, so a late title says which it was. The constant is
-  shared with gremlin's Windows daemon: tell Warren. Then BACKLOG's entry
-  and its 45 s, the tests, and the install on the Mac.
+- **Done 09:04 10-29: the lock-light hold at 3 min, with two log lines**
+  (main `9bfdbb0`, the daemon 0.2.0 `v0.2.0-7-g9bfdbb0` installed on Buzz
+  with `--clock --radio --lockchan`). `HOLD_IDLE` held text and transport
+  frames once the host's input had been idle 45 s, so on BT a track that
+  changed while nobody touched the Mac showed only at the next touch. 3 min
+  costs nothing in Balanced (asleep at 20 min), and is bounded in Power
+  saver and Lights out (`BACKLOG.md`, "Lock-light frames into a sleeping
+  board"). The log now says `lockchan: title from the player ...` when a
+  title reaches the channel and `lockchan: held, N s without input: ...`
+  when a frame waits. Warren installs it on gremlin.
 
 ### What is running
 
