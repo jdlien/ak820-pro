@@ -1915,3 +1915,12 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
   strays, no reset, the record empty: 840 counted seconds unfed against
   a ~11.5 s timeout. The WDT does not count in Deep-sleep, so the reset
   needed the core awake ~12 s without a feed: (a) or (b).
+- **On JD's board since 00:03 10-29: `fcb7ae00`** (Buzz's build, token
+  `0xf2a645a7`, heap gap 152 B): codex's two P2s fixed (validated at
+  every boot; the sequence reserved), and slot 10, the inherited record
+  frozen at boot. Codex cleared both rounds (OK to keep on the board;
+  `plans/review-codex-ds-phase-2026-10-28.md`); the re-check's P2 was the
+  host's ring reader, fixed. Buzz's session's checks: slot 9 and 10
+  survive a re-flash through the bootloader. Overnight from ~00:10: the
+  cable out, untouched, on the pack; in the morning slots 0-10 and the
+  record.

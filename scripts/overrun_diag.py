@@ -149,18 +149,34 @@ def burst(h, sub=0, n=0, lo=40, hi=80, mask_us=0):
             "active": bool(b[10]), "skipped": U16(b, 12), "lo": b[14], "hi": b[15]}
 
 
+def walk_attempts(slots, seq, cap):
+    """The deep sleep's ring, oldest first. Since firmware fcb7ae00 (10-29)
+    each sleep reserves its number at its teardown, so one a reset cut short
+    leaves a gap: from seq-1 back over the last `cap` numbers, a slot is
+    taken only if it carries exactly that number and holds an entry (a real
+    one always has a reason), and a gap is skipped, not the end (codex, the
+    ds-phase re-check). Wrap-safe."""
+    out = []
+    for k in range(1, cap + 1):
+        want = (seq - k) & 0xFFFF
+        e = slots[want % cap]
+        if e["seq"] == want and e["reason"] != "none":
+            out.append(e)
+    return out[::-1]
+
+
 def wakes(h):
     """The deep sleep's last eight wakes, oldest first; re-read if one landed
-    during the readout (every reply carries the count written)."""
+    during the readout (every reply carries the next sleep's number)."""
     for _ in range(3):
         out = []
         for slot in range(8):
             b = op(h, 24, [slot])
             out.append({"seq": U16(b, 0), "reason": WAKES[b[2]] if b[2] < len(WAKES) else b[2], "flags": b[3],
                         "counted_s": U32(b, 4), "p0": hex(U32(b, 8)), "p1": hex(U32(b, 12)),
-                        "p2": hex(U32(b, 16)), "ms": U32(b, 20), "strays": U16(b, 24), "written": U16(b, 26)})
-        if len({w["written"] for w in out}) == 1:
-            return walk_back(out, out[0]["written"], 8)
+                        "p2": hex(U32(b, 16)), "ms": U32(b, 20), "strays": U16(b, 24), "next": U16(b, 26)})
+        if len({w["next"] for w in out}) == 1:
+            return walk_attempts(out, out[0]["next"], 8)
     sys.exit("the wake ring kept moving during its readout")
 
 

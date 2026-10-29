@@ -1,0 +1,12 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md. You may run read-only git commands inside it (git log, git show, git diff) in qmk_firmware-ak820pro.
+
+A narrow re-check. Your review of qmk_firmware-ak820pro's gremlin/ds-phase at 27d1105d (plans/review-codex-ds-phase-raw.md, verbatim) found no P1, two P2s and a P3, and said OK to keep on the board. The fixes are commit fcb7ae00 (git diff 27d1105d fcb7ae00); it is being flashed on JD's board now, ahead of an overnight run with the USB cable out, to catch a repeat of a watchdog reset inside deep_sleep().
+
+What changed:
+1. Your P2 on deferred validation: sleep_boot_check() (sleep.c; a no-op outside dev builds) runs right after watchdog_boot_check() in ak820pro.c and calls ds_keep_boot(); the read and sleep paths still call it as a fallback.
+2. Your P2 on the sequence: ds_last_begin() reserves wake_seq++ at the teardown into ds_last.seq; wake_ring_put() and stray_note() use ds_last.seq. Slots 0-7's [26..27] is now the next sequence number.
+3. New, not from your review: op 24 slot 10, the record the boot inherited, copied at boot into a .bss ds_inherited and served until the next reset. Reason: on battery the next ladder sleep's ds_last_begin() overwrites slot 9 within minutes of a reset, long before anyone can read it.
+4. Your P3: comments on the phases and on ds_kept. The magic bumped to 0x44534C32 so nothing written by 27d1105d is accepted.
+Dev heap gap 152 B (floor 128); the daily builds clean.
+
+Check that each fix does what it says, that slot 10 cannot serve anything that was not validated, that nothing in the boot order makes ds_keep_boot() run before watchdog_boot_rstst() is valid or before anything it depends on, that the reserved sequence cannot break the ring's indexing or the stray snapshot's pairing, and that nothing new can hang, reset or change the sleep. Return findings as P1/P2/P3 with file:line and a fix, or say plainly there are none, and end with a verdict: OK to keep on the board, or not.

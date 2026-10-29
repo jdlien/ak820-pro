@@ -487,9 +487,14 @@ This file is the thread; read it first after a context loss. Updated
        `gremlin/ds-phase` (`27d1105d`, on Buzz's `more-info`): the phase in
        the record (sites 28-31) and, on dev, the sleep under way kept
        through a reset (op 24 slot 9). Main `e5e019e` names the sites.
-       Codex reviewing (`plans/review-prompt-ds-phase.txt`); Buzz's session
-       flashes JD's board and runs the repro (JD's word). The keyboard on
-       gremlin is at Gizmo on USB, where it never deep-sleeps.
+       On JD's board since 00:03 10-29 at `fcb7ae00` (codex's two P2s
+       fixed, slot 10 the inherited record; codex cleared both rounds,
+       `plans/review-codex-ds-phase-2026-10-28.md`). (c), the WDT
+       counting asleep, is out (Buzz's session: 840 counted s unfed).
+       Overnight: JD's board cable-out, untouched; Buzz's session reads
+       it in the morning. The keyboard on gremlin is at Gizmo on USB,
+       where it never deep-sleeps. **Owed:** the morning's reading; then
+       a fix, or `ds-phase` onto gremlin's board for its own repeat.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
