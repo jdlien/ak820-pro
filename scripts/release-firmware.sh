@@ -42,7 +42,7 @@ command -v gh >/dev/null || die "gh (GitHub CLI) is not on PATH"
 
 # --- provenance -------------------------------------------------------------
 head=$(git -C "$FW" rev-parse HEAD)
-short=${head:0:8}
+short=$(git -C "$FW" rev-parse --short HEAD)   # build.sh names artifacts with the same call
 pin=$(awk '$1 == "qmk_firmware-ak820pro" { print $4 }' "$ROOT/deps.lock")
 [[ $head == "$pin" ]] || die "firmware HEAD $short is not deps.lock's pin ${pin:0:8}; move the pin (and re-verify on hardware) before releasing"
 if [[ -n $(git -C "$FW" status --porcelain --untracked-files=no) ]]; then
