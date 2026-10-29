@@ -68,7 +68,8 @@ bulbs.
   saver and Lights out (`BACKLOG.md`, "Lock-light frames into a sleeping
   board"). The log now says `lockchan: title from the player ...` when a
   title reaches the channel and `lockchan: held, N s without input: ...`
-  when a frame waits. Warren installs it on gremlin.
+  when a frame waits. On gremlin since 09:06:50 (Warren; Windows tests 497
+  pass, the 2 old local_time failures unchanged).
 
 ### What is running
 
