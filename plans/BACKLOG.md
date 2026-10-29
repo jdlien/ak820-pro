@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## A watchdog reset inside a deep sleep (2026-10-28) -- open: the keyboard on gremlin, ~8 min into an untouched sleep on BT, cable out; (c) ruled out on JD's board; the diagnostic `gremlin/ds-phase` on JD's board since 23:51 10-28 (GREMLIN-RESULTS §21)
+## A watchdog reset inside a deep sleep (2026-10-28) -- open: the keyboard on gremlin, ~8 min into an untouched sleep on BT, cable out; (c) ruled out on JD's board; the diagnostic `gremlin/ds-phase` on JD's board since 23:51 10-28, its overnight cable-out run clean (GREMLIN-RESULTS §21)
 
 The record named only `deep_sleep()` (site 27), and the sleep's facts were
 in `.bss`. Reading the code leaves (a) a wedge at the wake's first flash

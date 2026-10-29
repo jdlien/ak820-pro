@@ -1924,3 +1924,20 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
   survive a re-flash through the bootloader. Overnight from ~00:10: the
   cable out, untouched, on the pack; in the morning slots 0-10 and the
   record.
+- **The overnight run is clean** (Buzz's session,
+  `history/ds-phase-cableout-20261029/`): sleep 2 from 03:55:05 to a key
+  at 08:52:51 with the cable out, 15,012 counted seconds, 0 strays;
+  sleep 1 3,610 counted seconds to a key at 01:37:18, 0 strays; the
+  record empty, slot 10 only the check's 30 s sleep. ~15,000 second
+  wakes with the data lines floating (lead (a)'s moment) and one or two
+  real wakes cable-out (lead (b)'s), all clean. Not a reproduction.
+- **What the night did not copy from 10-28:** (i) the board: gremlin's
+  unit, and an errata-37-class margin is the part's own; (ii) the entry:
+  on 10-28 the sleep began ~2 s after a pulled cable, the ladder long
+  past on USB and the PCF write just gone, where both of the night's
+  began on the pack after 20 min idle; (iii) warm, beside JD in bed; (iv)
+  BT with its host downstairs, though the CH582 is not a wake source and
+  UART2's receiver is off asleep (`sleep.c`), so no path is seen there.
+  Next: Buzz's session's day of Power saver cable-out on JD's board; for
+  (i), `ds-phase` onto gremlin's board when it is back at gremlin, then
+  its own cable-out run shaped like 10-28's.
