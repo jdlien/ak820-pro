@@ -4,41 +4,34 @@
 
 # AK820 Pro — the "Jackrabbit" firmware
 
-Replacement firmware for the **AJAZZ AK820 Pro**, built on QMK. It turns the
-keyboard's 0.85″ screen into something you will actually look at: a clock
-set from your computer to within milliseconds, the song that is playing, the
-battery left in hours, and a menu for every setting, driven by the knob.
-Remap anything in VIA from a browser. On battery, expect a week or more
-between charges with the lights on, and two to four weeks in the
-power-saving modes, from figures measured on the bench rather than guessed.
+Replacement firmware for the **AJAZZ AK820 Pro**, built on QMK. Remap any
+key, layer or the knob in VIA, from a browser. And the keyboard's 0.85″
+screen becomes something you will actually look at: a clock set from your
+computer to within milliseconds, the song that is playing, the battery left
+in hours, and a menu for every setting, driven by the knob. On battery,
+expect a week or more between charges with the lights on, and two to four
+weeks in the power-saving modes, from figures measured on the bench rather
+than guessed.
 
 **[Download](https://github.com/jdlien/ak820-pro/releases)** ·
 **[Battery calculator](https://jdlien.github.io/ak820-pro/power/)** ·
 **[Get started](#get-started)** ·
 **[Before you flash](#before-you-flash)**
 
-It is a personal build, made for JD's keyboard and published for other
-AK820 Pro owners, on top of [fpb](https://github.com/fpb)'s QMK port.
-
-## What you get over stock
-
-- **Media keys that work over Bluetooth**, and pairing that answers the first
-  time you press it.
-- **No dropped keys.** Every key is sampled at least every ~5 ms, and the
-  firmware counts its own long passes: in everyday use, none reach 25 ms,
-  the point where a press could be lost. You can read the counters on the
-  screen (`Fn`+`D`).
-- **No backlight flicker.**
-- **A watchdog.** A wedged board recovers itself in ~12 s and says so on the
-  screen, instead of needing a replug.
-- **A screen worth having**, a menu, saved profiles and a real battery gauge,
-  all below.
-- **VIA**: remap keys, layers and the knob in Chrome or Edge, on any OS,
-  with nothing to install.
-
 ## Features
 
+### Remap anything with VIA
+
+Every key, every layer and the knob, remapped live in
+[VIA](https://usevia.app) from Chrome or Edge, on macOS, Windows or Linux.
+No rebuild and nothing to install, and `flash.sh` keeps your layout across
+firmware updates. Setup takes a minute: [Remap in VIA](#3-remap-in-via).
+
 ### The screen
+
+<p align="center">
+  <img src="docs/images/dashboard.jpg" alt="The dashboard on JD's board, mid-song" width="320">
+</p>
 
 The dashboard shows the time, the track playing (artist, title, play or
 pause and, where the player reports it, the time into the song), the battery
@@ -46,6 +39,10 @@ as a percentage, hours left or both, the connection (Bluetooth slot, 2.4G or
 cable) and the Win/Mac side, and a band for the layer and the lock keys. The
 menu and the song's text come in three faces: 8px, 10px, and 10px bold, the
 default.
+
+Above, on JD's board: the Mac side and Bluetooth slot 1, the artist and the
+title, the time into the track in the clock's place while it plays, and the
+battery at 57% with 63 hours of use left in Balanced (the bulb).
 
 The clock and the song come from a small agent on your computer
 ([below](#now-playing-and-the-clock-wired-or-wireless)). Without it the
@@ -154,6 +151,13 @@ it works in every connection mode:
 It reads the system's own now-playing service (MediaRemote on macOS, SMTC on
 Windows), so Spotify, Apple Music, foobar2000 and any browser show up
 without per-app support.
+
+### Brightness, finely tuned, with no flicker
+
+The key lighting, the screen and the lock and charging lights each have
+their own brightness: the screen and the indicators from 1% to 100% in 1%
+steps. The lock lights can sit at a faint glow instead of glaring, and
+nothing flickers at any level.
 
 ## What to expect
 
@@ -343,6 +347,9 @@ The menu covers all of these. They are here for speed.
   `flash.sh`.
 - **The board reset when you moved the slider:** the slider switches the
   power source, and most flips reboot the board. That is the hardware.
+- **The board froze, then came back by itself after ~12 s:** a watchdog
+  restarted it, and the screen says so. If it keeps happening, please open
+  an issue.
 - The agent's log: `~/Library/Logs/ak820pro/ak820-agent.log` on macOS,
   `%LOCALAPPDATA%\ak820pro\ak820-agent.log` on Windows.
 
