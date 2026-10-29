@@ -455,10 +455,11 @@ This file is the thread; read it first after a context loss. Updated
        flashed by the session on Buzz mid-drain: dev, token `0xdc5524d4`,
        heap gap 128 B), so a merge as is needs no reflash there. On
        battery it changes nothing there: the radio clock's write still
-       follows each sync (the open case). **Owed:** JD's eye on a sync
-       with the lights on; the board
-       day to day; then merge both branches (CLAUDE.md's core-file list gains
-       `quantum/wear_leveling/wear_leveling.c` + `.h`).
+       follows each sync (the open case). **MERGED 10-28** with the font
+       work below (JD: "we should get everything merged into main now");
+       CLAUDE.md's core-file list gained
+       `quantum/wear_leveling/wear_leveling.c` + `.h` (fourteen). **Owed:**
+       JD's eye on a sync with the lights on, and the board day to day.
      - **On the keyboard on gremlin since 20:51 10-28: `c4bc0852`**, the
        session on Buzz's `menu-8x16` (the Font setting, 8px / 10px / 10px
        bold; System info in Diagnostics; the camera page gone; the screen's
@@ -469,7 +470,17 @@ This file is the thread; read it first after a context loss. Updated
        flash.sh exit 0, the keymap, five profiles and the live settings
        restored and read back; the daemon's sync at 20:51:22, -1.7 ms
        after. main merged into `warren/config-menu` (`menu_s0_test.c`:
-       main's side, which carries the Write test).
+       main's side, which carries the Write test). JD: "Identical to the
+       board on Buzz."
+     - **MERGED (10-28, ~21:20), all fast-forwards:** `ak820pro-jdlien`
+       from `ce3f842d` to `c4bc0852`, which holds every `gremlin/*`,
+       `mac/*` and `menu-8x16` branch on the remote (`write-test`,
+       `pcf-unseen`, the font work); deps.lock pinned to it; main to
+       `warren/config-menu`. The daily builds clean (heap gap 2336 B,
+       token `0x5e00cf88`, not flashed). The session on Buzz held its
+       pushes and owns CLAUDE.md's "Current state" and current-status.md
+       for it. The keyboard on Buzz runs `fbc6c4a1`, `c4bc0852` without
+       the default screen level 80.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
