@@ -151,6 +151,11 @@ stretch it.** Original fpb splash kept at
 `assets-src/sonixqmk-original-splash.png`. There is also a bootloader splash
 (shown for the few ms before a flash).
 
+The menu's Help > More info draws the same bunny at 27 x 42, from a table in
+the firmware, not from the external flash: `scripts/gen_menu_art.py` makes it
+the same way (the alpha's box, then the area average) into
+`graphics/res/menu_art.h`, with the page's QR code. No provisioning.
+
 ## The flash memory map, and the GIF animation slot
 
 Verified against `graphics/lcd_bus.h` and `lcd_bus.c` rather than any upstream

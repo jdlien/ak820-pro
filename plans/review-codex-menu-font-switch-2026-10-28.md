@@ -231,3 +231,15 @@ All menu titles—including confirm/editor titles, flashes, and title hints—us
 
 Verdict: `fbc6c4a1fd` is correct on static review; no hardware validation performed.
 No findings. Flashed 20:39, before it came back.
+
+## Seventh look: 8ec0c8b9b4 (Help's More info, P1d: the credits beside the bunny and the QR code), verbatim
+
+No correctness findings in `8ec0c8b9b4`.
+
+Static review found consistent chunk/piece counts, maximum payloads of **512 pixel bytes** and **36 bitmap bytes**, and distinct RK_MORE signatures with bit 0 clear. Repaint coverage, navigation, font/profile transitions, node 9 reuse, and the QR encoder showed no bugs.
+
+Tests were not rerun.
+
+OK to keep on the board.
+
+No findings. Flashed 23:09, before it came back.

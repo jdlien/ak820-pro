@@ -228,7 +228,7 @@ fieldset label:has(input:focus-visible) { outline: 2px solid var(--accent); outl
           <li>Health page and Camera page hand the screen to <kbd>Fn</kbd>+<kbd>D</kbd>'s pages; here they're illustrative. A dev build's Diagnostics adds a Write test row, left out here.</li>
           <li>The dashboard behind the menu is approximate. The menu's pages are exact.</li>
           <li>Pairing and slot changes are simulated: a slot links 1.5 s after a click, and pairing waits until you stop it.</li>
-          <li>Not built yet, so not shown: About's second page with the bunny, and Help's QR code.</li>
+          <li>Help's More info (P1d): the credits beside the bunny, then a turn to the QR code.</li>
           <li>The 8×16 faces are a proposal: no firmware draws them yet.</li>
         </ul>
       </div>
@@ -273,7 +273,7 @@ async function loadAtlas(f) {
   f.glyph = code => f.ink[(code < 32 || code > 126 ? 63 : code) - 32];
 }
 
-const menu = createMenu({ faces: FACES, face: "c6", icons16: { cozette: "__I_COZ16__" }, icons12: "__I12__", big: { glyph: c => ATLAS.f20.glyph(c) } });
+const menu = createMenu({ faces: FACES, face: "c6", icons16: { cozette: "__I_COZ16__" }, icons12: "__I12__", menuArt: "__MENUART__", big: { glyph: c => ATLAS.f20.glyph(c) } });
 const m = menu.m, S = menu.S, C = menu.C;
 /* JD's board as it stands: two profiles, Purple/Blue in use. */
 m.rgb = { fx: 1, h: 191, s: 255, v: 115, speed: 213, on: 1 };

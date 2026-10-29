@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
     go(2); m_click(); shot("help-via"); m_hold();
     go(3); m_click(); shot("help-keys"); m_hold();
     go(4); m_click(); shot("help-tips"); m_hold();
+    go(5); m_click(); shot("help-more"); m_turn(1); shot("help-more-qr"); m_hold();   /* P1d: More info's two screens */
     m_hold();
     go(T_DIAG); m_click(); m_click(); shot("about"); m_hold(); m_hold();   /* 10-28: System info, in Diagnostics */
     printf("%d check(s) failed along the way\n", fails);

@@ -8,6 +8,7 @@ put("__F_TERMB__", r("f-termb.hex"));
 put("__F_TERM__", r("f-term.hex"));
 put("__I_COZ16__", r("icons-cozette16.hex"));
 put("__I12__", r("icons12.hex"));
+put("__MENUART__", r("menuart.hex"));
 put("__F20__", r("f20.uri"));
 put("__F30__", r("f30.uri"));
 fs.writeFileSync(process.argv[2], html + "\n");

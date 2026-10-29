@@ -11,8 +11,9 @@ sleep) the firmware disagrees with.
 
 - **Built** = on the keyboard on gremlin now (P1a through P5, the settings
   profiles; 10-26).
-- **Not built yet** = the mockup's words for P1d, the art: About's second
-  page and Help's QR code. Equally open to edits.
+- **P1d, the art**, Help's More info: built and on JD's board since 23:09
+  10-28 (firmware `8ec0c8b9b4`), the section below. Its words are as open to
+  edits as the rest.
 
 ## The limits every line must fit
 
@@ -240,9 +241,10 @@ Using the menu     ▶
 Customizing        ▶
 Shortcuts          ▶
 Pro tips           ▶
+More info          ▶
 ```
 
-(The mockup adds `More info ▶`, the QR code: not built yet, P1d.)
+(More info, P1d: the credits and the QR code, at the end of this file.)
 
 #### Using the menu
 
@@ -673,13 +675,16 @@ name in the status band as the keys show theirs. A side with no profile
 keeps nothing of its own: a flip to it changes nothing. Saving a profile the
 other side uses means that side loads it anew.
 
-## Not built yet (the mockup's words)
-
-### Help > More info (P1d), with the credits (JD, 10-28)
+## Help > More info (P1d, title: `More info`)
 
 About became System info in Diagnostics on 10-28, so the credits that were to
-be About's second page go to Help's More info topic instead (JD: "put the
-credits in Help's More info"). The topic holds both:
+be About's second page went to Help's More info topic instead. Built 10-28
+(`8ec0c8b9b4`, `menu/menu.c`'s "More info"): two screens a turn apart, the
+scrollbar showing which.
+
+**Screen one, the credits**, with the splash's bunny (27 x 42, its ink in
+levels of white) beside the first three lines; the link in blue. 8px (the
+text beside the bunny from cell 5):
 
 ```
 [bunny] AJAZZ
@@ -692,8 +697,21 @@ github.com/jdlien
 QMK Port by fpb
 ```
 
-and the QR code to `https://github.com/jdlien/ak820-pro` (no text in the
-mockup; it shows `github.com/jdlien` / `  /ak820-pro` when the QR isn't
-drawn). How the two share the topic (a page each, or the QR beside the link)
-is P1d's to lay out, in both faces; in 10px a line holds 15 characters, so
-`github.com/jdlien` (17) wraps.
+10px and 10px bold (15 columns and 7 rows: the link on three lines, and no
+room for the blank lines; the text beside the bunny from cell 4):
+
+```
+[bunny] AJAZZ
+[bunny] Jackrabbit
+[bunny] by JD Lien
+github.com
+  /jdlien
+  /ak820-pro
+QMK Port by fpb
+```
+
+**Screen two, the QR code** to `https://github.com/jdlien/ak820-pro`, no
+text: version 3-M, 3 px a module, a 2-module white quiet zone, 99 x 99 and
+centred under the title. Made by `scripts/gen_menu_art.py` (the QR encoder
+and the bunny both), and checked to decode with macOS's two QR readers from
+the host test's frames in all three faces.

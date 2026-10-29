@@ -7,7 +7,7 @@ const STEP = +(process.argv[2] || 300), LARGE = process.argv[3] === "large", REG
 const hex = f => fs.readFileSync(path.join(dir, f), "utf8").trim();
 const menu = createMenu({ faces: { c6: { hex: hex("font6x14.hex"), cw: 6, ch: 14 }, termb: { hex: hex("f-termb.hex"), cw: 8, ch: 16 },
                                    term: { hex: hex("f-term.hex"), cw: 8, ch: 16 } },
-  face: REGULAR ? "term" : LARGE ? "termb" : "c6", icons12: hex("icons12.hex"), clock: () => ({ h: 13, m: 45, s: 1, day: 24, month: 10, year: 2026 }) });
+  face: REGULAR ? "term" : LARGE ? "termb" : "c6", icons12: hex("icons12.hex"), menuArt: hex("menuart.hex"), clock: () => ({ h: 13, m: 45, s: 1, day: 24, month: 10, year: 2026 }) });
 const FRAMES = REGULAR ? "frames-regular" : LARGE ? "frames-large" : "frames";
 const T = { LIGHT: 0, SCREEN: 1, CONN: 2, POWER: 3, IND: 4, CLOCK: 5, BATT: 6, PROF: 7, BOOT: 8, FONT: 9, DEFS: 10, DIAG: 11, HELP: 12 };
 let now = 1000;
@@ -67,6 +67,7 @@ go(1); click(); shot("help-menu"); hold();
 go(2); click(); shot("help-via"); hold();
 go(3); click(); shot("help-keys"); hold();
 go(4); click(); shot("help-tips"); hold();
+go(5); click(); shot("help-more"); turn(1); shot("help-more-qr"); hold();   // P1d: More info's two screens
 hold();
 go(T.DIAG); click(); click(); shot("about"); hold(); hold();   // 10-28: System info, in Diagnostics
 console.log(bad ? bad + " frame(s) differ" : "every frame matches");

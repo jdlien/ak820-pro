@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-28, 21:00. The block below is where things stand, written to
+Updated 2026-10-28, 23:15. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -42,6 +42,19 @@ bulbs.
 
 ### What is running
 
+- **Firmware on JD's board since 23:09 10-28: `8ec0c8b9b4`** (dev,
+  `via-dev-8ec0c8b9b4-20261028-230846.bin`, token `0xe612779e`, 240,582 B,
+  heap gap 224 B, the branch `more-info` on the mainline below): Help's
+  More info (P1d), the credits beside the splash's bunny and a turn to a QR
+  code to the repository, in all three faces
+  ([`MENU-TEXT.md`](MENU-TEXT.md), "Help > More info"). The art is
+  `scripts/gen_menu_art.py`'s (a stdlib QR encoder; the code decodes with
+  macOS's CIDetector and Vision from the host test's frames in every face).
+  Every host check passes (ASan and UBSan too), and the oracle matches
+  every frame but the dev Write test's row, as before. flash.sh exit 0 at
+  23:09:41, everything restored; the screen's default level 80 went on
+  with it (a default only: the live level stays JD's). Codex: no findings,
+  "OK to keep on the board". USB data still on from 20:18:58.
 - **The mainline is `c4bc085271` since the evening of 10-28** (Warren
   fast-forwarded `ak820pro-jdlien` from `ce3f842de2` and pinned
   `deps.lock`; JD: "we should get everything merged into main now"). It is
@@ -49,14 +62,14 @@ bulbs.
   Warren's `gremlin/pcf-unseen` and the dev Write test. Gremlin's keyboard
   runs it since 20:51 (token `0x189635f2`); JD on the Font page there:
   "Identical to the board on Buzz."
-- **Firmware on JD's board since 20:39 10-28: `fbc6c4a1fd`** (dev, token
+- **Before it, from 20:39 10-28: `fbc6c4a1fd`** (dev, token
   `0xd044efc5`): the build below plus bold page titles and a bold song title
   in 10px (JD: "we still judiciously use bold"). flash.sh exit 0 at
   20:39:48, everything restored. B8's redraw times measured at 20:30 on the
   build below (`plans/MENU-8X16-PLAN.md`). Codex: no findings.
-- **Built, not flashed (JD: "no need to flash this"): the screen's default
-  level 80, from 60** (config.h; a fresh flash and Reset settings). It goes
-  on with the next flash.
+- **The screen's default level 80, from 60** (config.h; a fresh flash and
+  Reset settings): built at 20:42 without a flash (JD: "no need to flash
+  this"), and on the board with the More info build at 23:09.
 - **Before it, from 20:19 10-28: `8b0f47e245`** (dev,
   `via-dev-8b0f47e245-20261028-201700.bin`, token `0xb9f4c717`, 236,758 B,
   heap gap 224 B): JD's decisions relayed by ak820-pro-90. Terminus regular

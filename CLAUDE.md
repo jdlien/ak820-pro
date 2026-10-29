@@ -129,7 +129,13 @@ Warren's `gremlin/pcf-unseen` (the clock chip's write when nobody is
 looking) and the dev Write test. The daily build is clean (heap gap
 2336 B). Gremlin's keyboard runs its dev build since 20:51 10-28 (token
 `0x189635f2`).
-**On JD's board since 20:39 10-28: `fbc6c4a1fd`** (dev, token
+**On JD's board since 23:09 10-28: `8ec0c8b9b4`** (dev, token
+`0xe612779e`, heap gap 224 B, the branch `more-info`): the mainline above
+plus Help's More info (P1d): the credits beside the splash's bunny, and a
+turn to a QR code to this repository
+([`plans/MENU-TEXT.md`](plans/MENU-TEXT.md), "Help > More info";
+`scripts/gen_menu_art.py`).
+**Before it, from 20:39 10-28: `fbc6c4a1fd`** (dev, token
 `0xd044efc5`, heap gap 224 B): the mainline above without the screen's
 default level 80 (a default only, so no reflash is needed for it):
 `8b0f47e245` below plus, in 10px (Terminus regular), the page titles and
@@ -604,7 +610,8 @@ other side back as it was left (10-27); Font, under Bootloader, picks
 8px (Cozette), 10px (Terminus) or 10px bold (Terminus Bold, the default)
 for the menu and the now-playing text, previewed after a 0.3 s rest and
 saved in profiles too (10-28); Reset settings, under Font, puts the
-defaults back and keeps the profiles; System info, About's page, is in
+defaults back and keeps the profiles; Help's More info shows the credits
+and a QR code to this repository (10-28); System info, About's page, is in
 Diagnostics since 10-28; the Power page shows each mode's bulb) ·
 `Fn`+`D` debug page (a tap toggles dashboard ↔ debug page, or menu ↔
 debug page inside the menu; HOLD ~800 ms resets the health counters; the

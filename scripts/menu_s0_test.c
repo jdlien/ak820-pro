@@ -5663,6 +5663,112 @@ static void test_wtest(void) {
     menu_watch = false;
 }
 
+/* --- P1d: Help's More info (10-28) ---------------------------------------------
+ * Two screens a turn apart, in each face: the credits beside the bunny, then
+ * the QR code. Every pixel of both against the test's own reading of
+ * menu_art.h: the bunny's levels of white at x 4 (Small's a pixel under the
+ * separator, Large's 3 into its three rows), the text beside it from cell 5
+ * (Large's 4), the link in blue; the QR's 3 px modules and 2-module quiet zone
+ * white at x 14, 6 px under the first row, black around it. */
+#include "../graphics/res/menu_art.h"
+enum { SC_MORE = 16 + 9 };
+static uint16_t more_grey(int g) {
+    int r = (int)(g * 31 / 255.0 + 0.5), gr = (int)(g * 63 / 255.0 + 0.5);
+    return (uint16_t)((r << 11) | (gr << 5) | r);
+}
+/* Row r's band, x 0-124: the bunny where it reaches, `text` from cell `at`. */
+static int more_bad(int r, const char *text, bool link, int at) {
+    const bool L  = ts_face != MT_SMALL;
+    const int  cw = L ? 8 : 6, rh = L ? 16 : 14, cols = L ? 15 : 20, by = row_y(0) + (L ? 3 : 1);
+    char       cells[21];
+    memset(cells, ' ', sizeof cells);
+    memcpy(cells + at, text, strlen(text));
+    int bad = 0;
+    for (int rr = 0; rr < rh; rr++)
+        for (int x = 0; x <= 124; x++) {
+            int      y    = row_y(r) + rr;
+            uint16_t want = 0;
+            if (x >= 4 && x < 4 + MENU_BUNNY_W && y >= by && y < by + MENU_BUNNY_H)
+                want = more_grey(menu_bunny[y - by][x - 4]);
+            else if (x >= 4 && x < 4 + cols * cw && (ts_glyph((uint8_t)cells[(x - 4) / cw])[rr] & (0x80 >> ((x - 4) % cw))))
+                want = link ? 0x3CFFu : MENU_WHITE;
+            if (fb[y][x] != want) bad++;
+        }
+    return bad;
+}
+static int more_qr_bad(void) {
+    const bool L  = ts_face != MT_SMALL;
+    const int  qy = row_y(0) + 6, rows = L ? 7 : 8, rh = L ? 16 : 14;
+    int        bad = 0;
+    for (int y = row_y(0); y < row_y(0) + rows * rh; y++)
+        for (int x = 0; x <= 124; x++) {
+            uint16_t want = 0;
+            if (x >= 14 && x < 14 + 99 && y >= qy && y < qy + 99) {
+                int mx = (x - 14) / 3 - 2, my = (y - qy) / 3 - 2;
+                bool dark = mx >= 0 && my >= 0 && mx < MENU_QR_N && my < MENU_QR_N && ((menu_qr[my][mx / 8] >> (7 - mx % 8)) & 1);
+                want = dark ? 0 : 0xFFFFu;
+            }
+            if (fb[y][x] != want) bad++;
+        }
+    return bad;
+}
+static int more_credits_bad(void) {
+    static const struct { const char *t; bool link; } s[8] = {
+        {"AJAZZ", false}, {"Jackrabbit", false}, {"by JD Lien", false}, {"", false},
+        {"github.com/jdlien", true}, {"  /ak820-pro", true}, {"", false}, {"QMK Port by fpb", false}};
+    static const struct { const char *t; bool link; } l[7] = {
+        {"AJAZZ", false}, {"Jackrabbit", false}, {"by JD Lien", false}, {"github.com", true},
+        {"  /jdlien", true}, {"  /ak820-pro", true}, {"QMK Port by fpb", false}};
+    int bad = 0;
+    if (ts_face == MT_SMALL)
+        for (int r = 0; r < 8; r++) bad += more_bad(r, s[r].t, s[r].link, r < 4 ? 5 : 0);
+    else
+        for (int r = 0; r < 7; r++) bad += more_bad(r, l[r].t, l[r].link, r < 3 ? 4 : 0);
+    return bad;
+}
+static void more_face(uint8_t font, uint8_t face) {
+    fw_reset();
+    fk_power = 1; fk_clock = 0;
+    fk_lcd = fk_lcd_saved = 52;
+    fk_font = font;
+    ts_face = face;
+    fk_time = (env_time_t){13, 45, 1, 24, 10, 2026};
+    fk_time_ok = true;
+    menu_watch = true; menu_max_lit = menu_max_cursor = 0; max_pass_bytes = 0;
+    const int oob = fk_oob, rows = face != MT_SMALL ? 7 : 8;
+    const int bar0 = row_y(0), bar1 = row_y(0) + 111;   /* the scrollbar's ends */
+    CHECK(op27(11, 0, 0) == MI_OK);
+    m_settle();
+    m_turn(T_HELP);
+    m_click();
+    CHECK(sub5_screen() == SC_HELP && sub5_cursor() == 1);
+    m_turn(4);   /* Help's last row */
+    CHECK(sub5_cursor() == 5 && row_bad(5, cells2("More info", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_click();
+    CHECK(sub5_screen() == SC_MORE && sub5_cursor() == 0 && title_bad(FONT_MONO_I_HELP "More info") == 0);
+    CHECK(more_credits_bad() == 0);
+    CHECK(fb[bar0][125] == MENU_WHITE && fb[bar1][125] == MENU_TRACK);   /* the first of two screens */
+    m_turn(1);   /* the QR code */
+    CHECK(sub5_cursor() == rows && more_qr_bad() == 0 && title_bad(FONT_MONO_I_HELP "More info") == 0);
+    CHECK(fb[bar0][125] == MENU_TRACK && fb[bar1][125] == MENU_WHITE);
+    m_turn(1);   /* clamped */
+    CHECK(sub5_cursor() == rows && more_qr_bad() == 0);
+    m_turn(-1);
+    CHECK(sub5_cursor() == 0 && more_credits_bad() == 0);
+    m_turn(1);
+    m_click();   /* back, on its row */
+    CHECK(sub5_screen() == SC_HELP && sub5_cursor() == 5 && row_bad(5, cells2("More info", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_hold();
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_HELP);
+    CHECK(fk_oob == oob && max_pass_bytes <= MB_PASS_BYTES && menu_max_lit <= 1 && menu_max_cursor <= 1);
+    menu_watch = false;
+}
+static void test_more_info(void) {
+    more_face(ENV_FONT_SMALL, MT_SMALL);
+    more_face(ENV_FONT_LARGE, MT_LARGE);
+    more_face(ENV_FONT_REGULAR, MT_LARGE_R);
+}
+
 int main(int argc, char **argv) {
 #ifdef MENU_ENABLE
     (void)argc; (void)argv;
@@ -5704,6 +5810,7 @@ int main(int argc, char **argv) {
     test_large_restore();
     test_font_preview();
     test_wtest();
+    test_more_info();
     if (fk_oob) printf("%d rectangle(s) off the panel\n", fk_oob);
     CHECK(fk_oob == 0);
     if (fails) {

@@ -108,7 +108,7 @@ const ROWS = {
   ind: ["back", "locks", "chgl"],
   conn: ["back", "bt0", "bt1", "bt2", "pairnow"],
   diag: ["back", "about", "health", "reset"],   /* 10-28: About as System info; no Camera page. A dev build adds Write test */
-  help: ["back", "topic0", "topic1", "topic2", "topic3"],
+  help: ["back", "topic0", "topic1", "topic2", "topic3", "more"],   /* P1d: More info last */
   power: ["back", "pow0", "pow1", "pow2", "pow3"],
   clock: ["back", "clk0", "clk1", "clk2", "clk3", "clk4", "clk5"],
   batt: ["back", "bv0", "bv1", "bv2"],
@@ -118,13 +118,13 @@ const LABEL = { power: "Power", clock: "Clock", batt: "Battery", diag: "Diagnost
   health: "Health page", reset: "Reset counters", back: X.TRI_L + " Back", light: "Lighting",
   screen: "Screen", effect: "Effect", bright: "Brightness", hue: "Hue", sat: "Saturation", lights: "Lights", boot: "Bootloader",
   defaults: "Reset settings", ind: "Indicators", conn: "Connection", locks: "Lock lights", chgl: "Charging", prof: "Profiles",
-  pload: "Load", psave: "Save current here", pdelete: "Delete", prename: "Rename", pnew: "+ Save new", font: "Font" };
+  pload: "Load", psave: "Save current here", pdelete: "Delete", prename: "Rename", pnew: "+ Save new", font: "Font", more: "More info" };
 const ICON = { power: X.I_POWER + " ", clock: X.I_CLOCK, diag: X.I_DIAG + " ", help: X.I_HELP, exit: X.I_EXIT + " ",
   light: X.I_LIGHT + " ", screen: X.I_SCREEN, boot: X.I_BOOT, defaults: X.I_RESET + " ", ind: X.I_IND, conn: X.I_CONN,
   batt: X.I_BATT + " ", prof: X.I_PROF + " ", pload: X.I_LOAD, psave: X.I_SAVE, prename: X.I_RENAME + " ", pdelete: X.I_DELETE,
   font: X.I_FONT };
 const VALUE_ROWS = new Set(["effect", "bright", "hue", "sat", "speed", "lights", "screen", "locks", "chgl"]);
-const OPENS = new Set(["diag", "help", "about", "health", "reset", "light", "boot", "ind", "defaults"]);
+const OPENS = new Set(["diag", "help", "about", "health", "reset", "light", "boot", "ind", "defaults", "more"]);
 const EDITORS = new Set(["screen", "bright", "hue", "sat", "speed", "locks", "chgl"]);
 const CONFIRMS = new Set(["reset", "boot", "conninfo", "pairing", "psave", "pdelete", "prename", "defaults"]);
 const LISTS = new Set(["top", "diag", "help", "light", "ind", "conn", "profiles", "pslot"]);
@@ -135,6 +135,12 @@ const FONT_OPT = ["c6", "term", "termb"];
 const FONT_NAME = { c6: "8px", term: "10px", termb: "10px bold" }, FONT_SHORT = { c6: "8px", term: "10px", termb: "Bold" };
 const FONT_NOTE = [["For the menus and", "now playing"], ["For the menus", "and now playing"]];
 const isTopic = n => /^topic\d$/.test(n);
+/* P1d: Help's More info, two screens (menu.c's "More info"): the credits beside the bunny, then the QR code. The
+   credits by face, a line a row, the bunny's three from cell 5 (wide: 4); the link's lines in blue. */
+const MORE_TEXT = [["AJAZZ", "Jackrabbit", "by JD Lien", "", "github.com/jdlien", "  /ak820-pro", "", "QMK Port by fpb"],
+                   ["AJAZZ", "Jackrabbit", "by JD Lien", "github.com", "  /jdlien", "  /ak820-pro", "QMK Port by fpb"]];
+const MORE_LINK = [[4, 5], [3, 4, 5]];
+const BUNNY_W = 27, BUNNY_H = 42, QR_N = 29;
 const isOption = n => /^(pow|clk|bv|fopt)\d$/.test(n) || /^(effopt|ltsopt)$/.test(n) || /^bt\d$/.test(n) || n === "pslotrow";
 
 /* Geometry: the 6 x 14 face's is menu.c's constants. An 8 x 16 face's (wide): 15 columns from
@@ -172,6 +178,9 @@ function createMenu(opts) {
   const icons12 = [];
   if (opts.icons12) for (let i = 0; i < opts.icons12.length / 128; i++)
     icons12.push(Uint8Array.from({ length: 64 }, (_, b) => parseInt(opts.icons12.substr(i * 128 + b * 2, 2), 16)));
+  /* P1d: More info's art (opts.menuArt: menuart.hex, scripts/gen_menu_art.py): the bunny's 27 x 42 levels, then the
+     QR's 29 rows of 4 bytes (module 0 in bit 7, 1 dark). Without it the page draws its text only. */
+  const art = opts.menuArt ? Uint8Array.from({ length: opts.menuArt.length / 2 }, (_, i) => parseInt(opts.menuArt.substr(i * 2, 2), 16)) : null;
   let faceName = opts.face || Object.keys(faces)[0];
   let face = faces[faceName], G = geometry(face);
   /* The face as drawn: an 8 x 16 face's extras from the chosen icon set. */
@@ -366,6 +375,7 @@ function createMenu(opts) {
       return i < L.length ? { kind: "text", text: L[i] } : blank;
     }
     if (f.node === "about") { const i = f.top + r; return i < 8 ? { kind: "text", text: aboutLine(i) } : blank; }
+    if (f.node === "more") { const i = f.top + r; return i < 2 * G.ROWS ? { kind: "more", line: i } : blank; }
     if (f.node === "batt" && r >= G.NOTE_ROW0 && r < G.NOTE_ROW0 + 3) return { kind: "text", text: battNote(r - G.NOTE_ROW0) };
     if (f.node === "font" && r >= G.NOTE_ROW0 && r < G.NOTE_ROW0 + 2) return { kind: "text", text: FONT_NOTE[G.wide ? 1 : 0][r - G.NOTE_ROW0] };
     if (f.node === "pslot" && r >= G.PSUM_ROW0 && r < G.PSUM_ROW0 + G.PSUM_LINES) return { kind: "pnote", text: profSummary(S.pslot, r - G.PSUM_ROW0), rule: r === G.PSUM_ROW0 };
@@ -487,12 +497,13 @@ function createMenu(opts) {
     sat: "Saturation", lights: "Lights", boot: "Bootloader", defaults: "Reset settings", ind: "Indicators",
     conn: "Connection", conninfo: "Connection", locks: "Lock lights", chgl: "Charging light", pairing: "Pairing",
     batt: "Battery", profiles: "Profiles", psave: "Save profile", pdelete: "Delete profile", prename: "Rename profile",
-    font: "Font" };
+    font: "Font", more: "More info" };
   const TICON = { top: X.WRENCH + " ", power: ICON.power, clock: ICON.clock, diag: ICON.diag, reset: ICON.diag, help: ICON.help,
     about: ICON.diag, screen: ICON.screen, boot: ICON.boot, defaults: ICON.defaults, ind: ICON.ind, locks: ICON.ind,
     chgl: ICON.ind, conn: ICON.conn, conninfo: ICON.conn, pairing: ICON.conn, batt: ICON.batt, light: ICON.light,
     effect: ICON.light, bright: ICON.light, hue: ICON.light, sat: ICON.light, speed: ICON.light, lights: ICON.light,
-    profiles: ICON.prof, pslot: ICON.prof, psave: ICON.prof, pdelete: ICON.prof, prename: ICON.prof, font: ICON.font };
+    profiles: ICON.prof, pslot: ICON.prof, psave: ICON.prof, pdelete: ICON.prof, prename: ICON.prof, font: ICON.font,
+    more: ICON.help };
   /* wide: the shorter words, and an icon's space dropped where the title needs it. */
   function compose(icon, text) {
     if (!G.wide) return icon + text;
@@ -604,7 +615,7 @@ function createMenu(opts) {
       case "exit": return close(now);
       case "health": S.mode = "diag"; S.diagPage = 0; return;
       case "reset": case "boot": case "defaults": S.confirmPage = 0; push(node, 0); return;
-      default: if (isTopic(node)) { push(node, 0); cur().top = 0; }
+      default: if (isTopic(node) || node === "more") { push(node, 0); cur().top = 0; }
     }
   }
   function turn(turns, now) {
@@ -618,11 +629,12 @@ function createMenu(opts) {
       f.cursor = (((f.cursor + turns) % n) + n) % n;
       f.top = Math.floor(f.cursor / G.ROWS) * G.ROWS;
       if (PREVIEWS.has(f.node)) { const { node, val } = rowNode(f.node, f.cursor); setLive(f.node, node === "back" ? S.edit.before : val); }
-    } else if (isTopic(f.node) || f.node === "about") {   /* pages scroll a screen at a time */
-      const lines = f.node === "about" ? 8 : helpLines(+f.node[5]).length, maxtop = Math.max(0, lines - G.ROWS);
+    } else if (isTopic(f.node) || f.node === "about" || f.node === "more") {   /* pages scroll a screen at a time */
+      const lines = pageLines(f.node), maxtop = Math.max(0, lines - G.ROWS);
       f.top = Math.max(0, Math.min(maxtop, f.top + (turns > 0 ? G.ROWS : -G.ROWS)));
     }
   }
+  const pageLines = n => n === "about" ? 8 : n === "more" ? 2 * G.ROWS : helpLines(+n[5]).length;
   function editTurn(turns, now) {
     const fast = Math.abs(turns) >= 2 || (S.ftHave && now - S.ftLast < 90);
     S.ftHave = true; S.ftLast = now;
@@ -706,7 +718,7 @@ function createMenu(opts) {
   function setFace(name) {
     if (!faces[name] || faces[name] === face) return;
     faceName = name; face = faces[name]; G = geometry(face);
-    for (const f of S.stack) f.top = isTopic(f.node) || f.node === "about" ? 0 : Math.floor(f.cursor / G.ROWS) * G.ROWS;
+    for (const f of S.stack) f.top = isTopic(f.node) || f.node === "about" || f.node === "more" ? 0 : Math.floor(f.cursor / G.ROWS) * G.ROWS;
   }
   function setVariant(v) { S.variant = v; }
   function setIcons(name) { iconSet = name; }
@@ -781,14 +793,44 @@ function createMenu(opts) {
     title(now);
     const f = cur();
     for (let r = 0; r < G.ROWS; r++) {
-      const x = rowAt(r), y = G.ROW0 + r * G.ROW_H, { fg, icon } = rowColours(x);
+      const x = rowAt(r), y = G.ROW0 + r * G.ROW_H;
+      if (x.kind === "more") { moreRow(x.line, y); continue; }
+      const { fg, icon } = rowColours(x);
       let bulb = x.kind === "item" && /^pow\d$/.test(x.node) ? +x.node[3] : null;
       if (G.wide && x.top && x.node === "power" && S.variant !== "in") bulb = m.power;   /* wide: the mode as its bulb */
       slot(y, rowText(x), { row: true, fg, icon, cursor: !!x.lit, bulb });
       if (x.rule) fill(4, y, 123, y, C.GREY);
     }
-    const count = isTopic(f.node) ? helpLines(+f.node[5]).length : f.node === "about" ? 8 : rowCount(f.node);
+    const count = isTopic(f.node) || f.node === "about" || f.node === "more" ? pageLines(f.node) : rowCount(f.node);
     scrollbar(count, f.top);
+  }
+  /* P1d: a More info row, its band x 0-124 (more_paint()). The bunny at x 4, a pixel under the rule (wide: 3 into
+     its three rows), its ink a level of white; the QR's 3 px modules and 2-module quiet zone white, 99 x 99, centred. */
+  function moreRow(line, y) {
+    if (line >= G.ROWS) {
+      const qx = (W - 99) >> 1, qy = G.ROW0 + ((G.ROWS * G.ROW_H - 99) >> 1);
+      for (let r = 0; r < G.ROW_H; r++) for (let x = 0; x <= 124; x++) {
+        const dx = x - qx, dy = y + r - qy;
+        let c = 0;
+        if (dx >= 0 && dx < 99 && dy >= 0 && dy < 99) {
+          const mx = Math.floor(dx / 3) - 2, my = Math.floor(dy / 3) - 2;
+          const dark = art && mx >= 0 && my >= 0 && mx < QR_N && my < QR_N && (art[BUNNY_W * BUNNY_H + my * 4 + (mx >> 3)] >> (7 - (mx & 7))) & 1;
+          c = dark ? 0 : 0xFFFF;
+        }
+        px(x, y + r, c);
+      }
+      return;
+    }
+    const by = G.ROW0 + (G.wide ? 3 : 1), meets = y < by + BUNNY_H && y + G.ROW_H > by, at = meets ? (G.wide ? 4 : 5) : 0;
+    const t = MORE_TEXT[G.wide ? 1 : 0][line] || "";
+    slot(y, (" ".repeat(at) + t).padEnd(G.COLS).slice(0, G.COLS), { row: true, fg: MORE_LINK[G.wide ? 1 : 0].includes(line) ? LINK_COLOUR[2] : C.WHITE });
+    if (!meets || !art) return;
+    for (let r = 0; r < G.ROW_H; r++) for (let i = 0; i < BUNNY_W; i++) {
+      const b = y + r - by;
+      if (b < 0 || b >= BUNNY_H) continue;
+      const g = art[b * BUNNY_W + i], k = n => Math.floor((g * n + 127) / 255);
+      px(G.TEXT_X + i, y + r, (k(31) << 11) | (k(63) << 5) | k(31));
+    }
   }
   function confirmLines() {
     const n = cur().node, p = S.confirmPage & 1, nm = profName(cur().cursor), w = G.wide;
