@@ -30,7 +30,7 @@ firmware updates. Setup takes a minute: [Remap in VIA](#3-remap-in-via).
 ### The screen
 
 <p align="center">
-  <img src="docs/images/dashboard.jpg" alt="The dashboard on JD's board, mid-song" width="320">
+  <img src="docs/images/dashboard.webp" alt="The dashboard on JD's board, mid-song" width="320">
 </p>
 
 The dashboard shows the time, the track playing (artist, title, play or
