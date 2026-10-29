@@ -25,6 +25,17 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## A watchdog reset inside a deep sleep (2026-10-28) -- open: the keyboard on gremlin, ~8 min into an untouched sleep on BT, cable out; the diagnostic `gremlin/ds-phase` built (GREMLIN-RESULTS §21)
+
+The record named only `deep_sleep()` (site 27), and the sleep's facts were
+in `.bss`. Reading the code leaves (a) a wedge at the wake's first flash
+fetch, (b) an interrupt storm at the unlock, (c) the WDT counting asleep.
+`gremlin/ds-phase` (`27d1105d`) splits the site into phases (28-31) and, on
+dev builds, keeps the sleep under way through a reset (HC_DEVHOOK op 24
+slot 9). Buzz's session runs the repro on its bench: unfed armed sleeps
+(for c), long untouched sleeps on battery with the host away, and, by JD's
+hand, sleeps with the cable fully out (the bench's cable stays in the hub).
+
 ## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
 
 JD (10-28): "There's almost no downside to aggressive sleeping when the

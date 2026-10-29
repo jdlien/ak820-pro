@@ -1,0 +1,27 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md. You may run read-only git commands inside it (git log, git show, git diff) in qmk_firmware-ak820pro.
+
+Review a diagnostic firmware change for correctness. It is about to run on JD's keyboard (it may already be flashing; JD prefers flash first, fix after if there are substantive findings), so rank what you find by whether it could make the board misbehave (hang, reset, lose a key, corrupt state) above whether the diagnostic could mislead.
+
+THE INCIDENT. On 10-28 at ~23:02 gremlin's AK820 Pro (firmware c4bc0852, dev) took a genuine watchdog reset (RSTST 0x03) about 8 minutes into an untouched deep sleep: on battery, slider on BT, the host downstairs, the USB cable fully out. The retained watchdog record (watchdog_record.c, the 16 B .ram7 region) said only site 27 WDT_SITE_DEEP_SLEEP within housekeeping, and every other fact of that sleep (sleep.c's wake ring, stray_diag, ds_* statics) was in .bss and was zeroed at boot. Static reading found nothing in deep_sleep() that can wait unboundedly; the candidates are (a) a wedge at the wake's first flash fetch after the WFI (the errata-37 class in sleep.c's comment above ds_deep_wfi), (b) an interrupt storm or wedged ISR the moment chSysUnlock unmasks, (c) the WDT counting asleep with no counted second.
+
+THE CHANGE. Firmware: qmk_firmware-ak820pro, branch gremlin/ds-phase, commits 86663384 and 27d1105d on top of 8ec0c8b9 (git diff 8ec0c8b9 27d1105d). Host side: the outer repo's commit e5e019e (ak820-agent/src/health.rs, tests/watchdog_record_test.c).
+1. All builds: deep_sleep()'s phases stored straight into the retained path word: sites 28 DS_ASLEEP (before each WFI), 29 DS_WAKING (stored inside ds_deep_wfi, in SRAM, right after the WFI and the PMU write, before the ~108 us wait and the flash read), 30 DS_RESTORE (from the loop's exit through the clock restore), 31 DS_UNLOCKED (just before chSysUnlock to the return); and the scope's own word (site 27) after each wake. New watchdog_record_word() and watchdog_record_path(). Each store is made twice: on this part the last SRAM write before a stall can be lost at the reset (see commit_terminal's comment in watchdog_record.c). Sites 32+ belong to the main loop's sites (ak820pro.h's loop_site enum), so only 28-31 were free.
+2. Dev builds only (AK820_DEV_HOOKS): the sleep under way kept through a reset, as HC_DEVHOOK op 24 slot 9 (layout in sleep.h); the wake ring and stray_diag moved into .ram0's no-init part beside it (ChibiOS rules_memory.ld's .ram0 output section: crt1.c clears only __ram0_clear__..__ram0_noinit__). Trusted at boot only when watchdog_boot_rstst() shows no POR or LVD and the magic matches; otherwise zeroed. The ELF of the dev build places ds_last 0x20007e28, stray_diag 0x20007e44, wake_seq 0x20007e60, wake_ring 0x20007e64, __ram0_free__ 0x20007f34; ram7 starts at 0x20007FF0, the DFU magic at __ram0_end__ - 4. Dev heap gap 184 B (floor 128).
+
+The dev build's ds_deep_wfi as linked (arm-none-eabi-objdump):
+20001534 <ds_deep_wfi.constprop.0>:
+  movs r0,#2 ; ldr r1,[pc,#32] (=0x40032040, PMU CTRL) ; str r0,[r1] ; dsb sy ; wfi
+  movs r0,#0 ; str r0,[r1] ; str r3,[r2] ; str r3,[r2]
+  movs r3,#130 ; lsls r3,r3,#1 ; loop: subs r3,#1 ; cmp r3,#0 ; bne loop
+  ldr r3,[pc,#8] (=0x000350c4, ds_flash_word in flash) ; ldr r3,[r3] ; bx lr
+  literal pool at 0x20001558 (SRAM)
+
+PLEASE CHECK, citing file:line:
+- That nothing new can hang, reset or change the sleep's behaviour: the extra stores in the loop and in SRAM; the flags written just before NVIC_SystemReset; ds_keep_boot() and ds_last_begin() placement (outside versus under the lock); volatile and packed together; the memcpy/memset casts.
+- That the phases read back right: watchdog_record_leave() at the return over a phase word; a scope nested inside deep_sleep() (recovery_begin's callees, power_task) entered while a phase word is current (its parent would be the phase site: is that what a reader wants, or a problem?); watchdog_record_path() and ready; ISR-context rules (watchdog_record.h says main-loop only).
+- That the kept RAM is sound: the section really is not cleared by startup on this port (crt1.c, the CRT1_AREAS_NUMBER in use, rules_memory.ld); garbage after a POR or LVD is never served; a reset with the RAM kept but a different firmware layout; what the boot ROM or bootloader may do to that RAM (anything in the tree that says where it puts its stack or data); wake_seq continuing across a reset; slot 9's ds_kept semantics.
+- That ds_deep_wfi still fetches nothing from the flash before its wait, and that the added cycles cannot matter.
+- The host test and the Rust names (health.rs crash_site) against watchdog_record.h.
+- Anything a reader of the phases could misread, given the three candidates above.
+
+Return findings as P1 (could break the board), P2 (wrong or misleading result), P3 (minor), each with file:line and a fix, or say plainly that there are none. End with a verdict: OK to keep on the board, or not.

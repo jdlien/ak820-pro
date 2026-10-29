@@ -1869,3 +1869,43 @@ flash it now"). The reviews are `review-codex-p4-preview-2026-10-25.md`,
     10 min after the boot (no key since). PASS; one pass >= 25 ms since
     the boot, flash's. The 20:40 sync corrected -458 ms: the flash's
     erased period re-converging (CLAUDE.md, "A flash erases").
+
+### 21. A watchdog reset inside a deep sleep (10-28, 22:54-23:10)
+
+The keyboard on gremlin, `c4bc0852` (dev, token `0x189635f2`), the
+mainline since 20:51. JD pulled the cable at 22:54:38 (the daemon's log:
+the USB device leaving) and took the board upstairs, on BT with gremlin
+its host downstairs, on battery, Balanced, untouched. JD saw "WDT reset
+x1" and the rabbit at ~23:02 and plugged it into Gizmo after. Gizmo's
+session read it (`ak820 health --crash --json`, 23:10, nothing written):
+- **The record:** valid; site 27 `WDT_SITE_DEEP_SLEEP` within
+  housekeeping; RSTST `0x03` (WDTRSTF, with SWRSTF's reset value: a
+  genuine watchdog reset; `NVIC_SystemReset` reads `0x01`); consecutive 1;
+  `last_pass_uptime_ms` 7,399,572.
+- **The timing:** the uptime froze at the sleep's entry, ~2 s after the
+  unplug (the pending PCF write went first, then `DSB_RTC` cleared); uptime
+  472.8 s at 23:10:25 puts the reset at ~23:02:32. One sleep, ~8 min, and no
+  main-loop pass between its entry and the reset.
+- **Ruled out by reading the code:** a fault, halt or unhandled vector
+  (each writes its own site, `fault.c`); the PLL and CLKCFG ceilings
+  (`NVIC_SystemReset`, `0x01`); `usb_phy_onI()` (one register write);
+  strays (~150 us each awake, a break at 1000); the PCF gate (inert off
+  `REF_SOF`). Every call after the unlock inside the scope sets flags.
+- **Left:** (a) a wedge at the wake's first flash fetch (the errata-37
+  class, `sleep.c` above `ds_deep_wfi()`), (b) an interrupt storm or wedged
+  ISR the moment `chSysUnlock()` unmasks, (c) the WDT counting asleep with
+  no counted second. And something ended the sleep at ~23:02:20 untouched.
+- **Not new:** this board slept cable-out 6 times before (§1 on 10-19, A4
+  on 10-24), every one woken on purpose within minutes, on older builds,
+  the host near. The bench's soaks on Buzz have never shown a WDT reset in
+  a sleep (Buzz's session: 247/247, 97/100, 17/20, 139/150), all with the
+  cable in the hub; its first unfed armed sleep since 10-18's, 120 counted
+  seconds on `8ec0c8b9`, did not reset.
+- **The diagnostic** (JD: "you can build the diagnostic, but you should
+  collaborate with the agent on Buzz"): `gremlin/ds-phase` (`27d1105d`, on
+  `more-info`): the phase in the record (sites 28 asleep, 29 waking, stored
+  from SRAM before any flash fetch, 30 restore, 31 unlocked; 27 itself awake
+  in the function's own code), and on dev builds the sleep under way kept
+  through a reset (op 24 slot 9, with the wake ring and slot 8 in `.ram0`'s
+  no-init part). Codex reviewing; Buzz's session flashes it on JD's board
+  and runs the repro on its bench, at JD's word.

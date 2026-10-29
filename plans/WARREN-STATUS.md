@@ -481,6 +481,15 @@ This file is the thread; read it first after a context loss. Updated
        pushes and owns CLAUDE.md's "Current state" and current-status.md
        for it. The keyboard on Buzz runs `fbc6c4a1`, `c4bc0852` without
        the default screen level 80.
+     - **⚠️ A WDT reset inside a deep sleep, 23:02 10-28** (GREMLIN-RESULTS
+       §21, BACKLOG): the keyboard on gremlin, upstairs on BT and battery,
+       untouched; the record named only site 27. The diagnostic
+       `gremlin/ds-phase` (`27d1105d`, on Buzz's `more-info`): the phase in
+       the record (sites 28-31) and, on dev, the sleep under way kept
+       through a reset (op 24 slot 9). Main `e5e019e` names the sites.
+       Codex reviewing (`plans/review-prompt-ds-phase.txt`); Buzz's session
+       flashes JD's board and runs the repro (JD's word). The keyboard on
+       gremlin is at Gizmo on USB, where it never deep-sleeps.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
