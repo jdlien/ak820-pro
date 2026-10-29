@@ -170,6 +170,8 @@ pub fn crash_site(site: u8) -> String {
         17 => "i2c_read", 18 => "i2c_write", 19 => "internal_flash_write",
         20 => "internal_flash_erase", 21 => "internal_flash_drain", 22 => "test_stall",
         23 => "hard_fault", 24 => "unhandled_exception", 25 => "halt", 26 => "test_fault",
+        27 => "deep_sleep", 28 => "deep_sleep_asleep", 29 => "deep_sleep_waking",
+        30 => "deep_sleep_restore", 31 => "deep_sleep_unlocked",
         32 => "loop_none", 33 => "leds", 34 => "pair", 35 => "consumer",
         36 => "param", 37 => "rtc_task", 38 => "animation", 39 => "connection",
         40 => "status", 41 => "text", 42 => "locks", 43 => "clock_format",
@@ -791,6 +793,14 @@ mod tests {
         r[4] = 1;
         r[6] = 250;
         assert!(CrashRecord::decode(&r).unwrap().summary().starts_with("unknown_250"));
+        // The deep sleep's phases (firmware watchdog_record.h, 10-28): a phase
+        // within the sleep, and the sleep itself within housekeeping.
+        r[6] = 29;
+        r[7] = 27;
+        assert!(CrashRecord::decode(&r).unwrap().summary().starts_with("deep_sleep_waking within deep_sleep;"));
+        r[6] = 27;
+        r[7] = 2;
+        assert!(CrashRecord::decode(&r).unwrap().summary().starts_with("deep_sleep within housekeeping;"));
         r[5] = 0; // Invalid evidence must not display stale operation or uptime.
         let c = CrashRecord::decode(&r).unwrap();
         assert_eq!((c.site, c.parent, c.last_pass_uptime_ms), (0, 0, 0));

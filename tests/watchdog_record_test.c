@@ -187,6 +187,30 @@ int main(void) {
     watchdog_record_uptime(1000); boot(2);
     assert(record[9] == 3);
 
+    /* sleep.c's phases (10-28): nothing to store into before boot's capture;
+     * a word stored straight into the path reads back at a warm reset as
+     * (parent, site); and the enclosing scope's cleanup still puts its own
+     * parent back over a phase. */
+    ready = false;
+    assert(watchdog_record_path() == NULL);
+    boot(1);
+    {
+        WDT_SCOPE(WDT_SITE_HOUSEKEEPING);
+        uint32_t hk = retained.path;
+        {
+            WDT_SCOPE(WDT_SITE_DEEP_SLEEP);
+            volatile uint32_t *ph = watchdog_record_path();
+            assert(ph == &retained.path);
+            *ph = watchdog_record_word(WDT_SITE_DEEP_SLEEP, WDT_SITE_DS_UNLOCKED);
+        }
+        assert(retained.path == hk);
+    }
+    retained.path = watchdog_record_word(WDT_SITE_HOUSEKEEPING, WDT_SITE_DEEP_SLEEP);
+    *watchdog_record_path() = watchdog_record_word(WDT_SITE_DEEP_SLEEP, WDT_SITE_DS_WAKING);
+    boot(2 | 1);   /* WDTRSTF with SWRSTF's reset value: the 10-28 reset's 0x03 */
+    assert(record[0] == 1 && record[1] && record[2] == WDT_SITE_DS_WAKING &&
+           record[3] == WDT_SITE_DEEP_SLEEP && record[8] == 3 && record[9] == 1);
+
     puts("watchdog retained-record tests passed");
     return 0;
 }
