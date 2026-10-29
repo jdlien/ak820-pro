@@ -1,0 +1,53 @@
+# The overnight cable-out run on Warren's ds-phase (10-28/29)
+
+The diagnostic for gremlin's WDT reset inside a deep sleep
+([`../../plans/BACKLOG.md`](../../plans/BACKLOG.md), "A watchdog reset inside
+a deep sleep"; GREMLIN-RESULTS §21), on JD's board: Warren's `fcb7ae00b4`
+(dev, token `0xf2a645a7`), on its pack (relay 2 off), with the USB cable
+pulled out of the keyboard. Out, the data lines float, as on gremlin's
+board; with the relay and `uhubctl` alone they stay held by the hub's
+pull-downs. Balanced: asleep 20 min after the last key.
+
+## Timeline (10-29)
+
+| Time | What |
+|---|---|
+| 00:05:36 | USB data off after the flash and its check (`../ds-phase-check-20261029-0002/`) |
+| 00:24:57 | asleep (sleep 1) |
+| 01:37:18 | sleep 1 ends at a key; the cable came out about then (out by 01:38) |
+| 01:37-03:35 | JD's use, on BT |
+| 03:45 | the dim (35.3 to 32.7 mA), 10 min after the last key |
+| 03:55:05 | asleep (sleep 2) |
+| 08:52:51 | sleep 2 ends at a key, the cable out |
+| ~08:54 | the cable back in |
+| 08:55:09-08:55:39 | data on for the read (`slots-0858.json`), the daemon paused |
+| ~08:55 | Fn+B to Power saver for the day's run, the cable out again |
+
+## What the board and the power log say
+
+- **Sleep 2:** 15,012 counted seconds (17,706 real, the RTC's second
+  ~15% slow asleep), woken by a key (P2 `0x100`), flags `0xc0` (slept,
+  returned), **0 strays**. The power log: 3.12 mA mean, 3.77 max, no rise
+  in 4 h 55 min.
+- **Sleep 1:** 3,610 counted seconds, a key (P2 `0x200`), 0 strays.
+- **No reset:** the watchdog record is empty (`valid` false,
+  `consecutive_resets` 0), and slot 10 holds only sleep 0, the check's
+  30 s sleep inherited at the 00:03 re-flash. After the 08:52:51 wake the
+  current held at ~36.9 mA, with no restart ~12 s on.
+
+## What it shows
+
+Not a reproduction. Asleep, the core wakes once a counted second (the RTC)
+and goes back: ~15,000 of those with the data lines floating, lead (a)'s
+moment, all clean, and no stray wake at all. The real wake, where
+`usb_phy_onI()` turns the USB block back on (lead (b)'s moment), passed
+once for certain with the cable out (08:52:51) and probably twice
+(01:37:18).
+
+Next: Power saver for a day of JD's use with the cable out (a sleep after
+every 3 min pause, a real wake at every return), read in the evening.
+Slot 10 and the watchdog record keep a reset until the next one; the ring
+keeps the last eight sleeps.
+
+Files: `slots-0858.json` (op 24's slots 0-10 and the watchdog record, read
+with `ds_slots.py`, in `../ds-phase-check-20261029-0002/`), `run.log`.

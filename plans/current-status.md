@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-29, 02:10. The block below is where things stand, written to
+Updated 2026-10-29, 09:00. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -42,16 +42,23 @@ bulbs.
 
 ### Pending, decided (10-29)
 
-- **The overnight cable-out run (10-28/29).** Warren's `fcb7ae00b4` on
-  JD's board, on its pack (relay 2 off, data off), with the USB cable
-  pulled out of the keyboard by 01:38 10-29. Out, the data lines float, as
-  on gremlin's board when its sleep took the WDT reset; the relay plus
-  `uhubctl` leave them held by the hub's pull-downs, which would hide an
-  interrupt storm from the USB block at the wake. Balanced sleeps 20 min
-  after the last key. The morning: the cable back in, data on
-  (`uhubctl -l 3-1.3.4 -p 2 -a on -e`), the daemon paused, op 24's slots
-  0-10 and the watchdog record read, the power log searched for wakes and
-  resets, the reading to Warren, then data off again for the drain.
+- **The overnight cable-out run (10-28/29): clean, not a reproduction**
+  (`../history/ds-phase-cableout-20261029/`). Warren's `fcb7ae00b4` on
+  JD's board, on its pack, the USB cable pulled out of the keyboard by
+  01:38 10-29, so the data lines floated as on gremlin's board (the relay
+  plus `uhubctl` leave them held by the hub's pull-downs). The night's
+  sleep, 03:55:05 to JD's key at 08:52:51 with the cable still out:
+  15,012 counted seconds, 0 strays, 3.12 mA, no reset (the watchdog record
+  empty, slot 10 only the check's sleep). So ~15,000 per-second RTC wakes
+  with the lines floating and one certain real wake, all clean. Read
+  08:55:09-08:55:39 (data on, the daemon paused); sent to Warren.
+- **Running from ~08:55 10-29: Power saver for a day of JD's use with the
+  cable out,** for many sleeps and real wakes in gremlin's condition (a
+  sleep after every 3 min pause). It stretches the drain's runtime against
+  Balanced: note it in the drain's figures. The evening: the cable in,
+  data on, the daemon paused, `ds_slots.py` (slots 0-10, the watchdog
+  record), the power log's sleeps and any restart, then back to Balanced
+  if JD wants.
 - **The lock-light hold to 3 min, with two log lines.** `HOLD_IDLE`
   (`ak820-agent/src/lockchan/sender.rs`) holds text and transport frames
   once the host's input has been idle 45 s, so on BT a track that changes
