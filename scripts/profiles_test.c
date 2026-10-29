@@ -1,6 +1,7 @@
 /* Host test for keyboards/a_jazz/ak820pro/menu/profiles.c, the settings
  * profiles' store and HC_PROFILES (P5a, plans/SETTINGS-PROFILES-PLAN.md), and
- * what P5b adds: the deferred active slot, names, the `*`, the keys' step.
+ * what P5b adds: the deferred active slot, names, the `*`, the keys' step;
+ * since 10-28 the menu's face on the live record.
  * Build and run, mingw64's gcc first on PATH:
  *   D=qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro
  *   gcc -std=c11 -Wall -Wextra -DMENU_HOST_TEST -I $D/menu scripts/profiles_test.c $D/menu/profiles.c -o pt && ./pt */
@@ -74,6 +75,14 @@ uint8_t env_batt_view(void) { return fk_view; }
 void    env_batt_view_set(uint8_t v) { fk_view = v; call("B"); }
 uint8_t env_power_mode(void) { return fk_power; }
 void    env_power_set(uint8_t m) { fk_power = m; call("P"); }
+/* 10-28, the menu's face: its own field here, as kb_eeconfig's setters keep
+ * each other's, so a readout set never moves it; menu.c's menu_font_set(),
+ * the one way to change it, counted. */
+static uint8_t fk_font = ENV_FONT_LARGE;
+static int     fk_font_sets;
+uint8_t env_font(void) { return fk_font; }
+void    env_font_set(uint8_t f) { fk_font = f; }
+void    menu_font_set(uint8_t f) { fk_font_sets++; env_font_set(f); call("F"); }
 /* The effects: modes 1, 2, 4 with stable ids 1, 2, 4 (a build with Breathing,
  * id 3, disabled). */
 static const uint8_t fx_mode[3] = {1, 2, 3}, fx_id[3] = {1, 2, 4};
@@ -81,10 +90,10 @@ uint8_t env_effects(void) { return 3; }
 uint8_t env_effect_mode(uint8_t i) { return i < 3 ? fx_mode[i] : 0; }
 uint8_t env_effect_id(uint8_t i) { return i < 3 ? fx_id[i] : 0xFF; }
 /* An open preview's rollback, by domain. */
-static int fk_external[4];
+static int fk_external[5];
 static int fk_prev_lcd = -1;   /* an open preview's screen level to go back to (codex, 10-27), -1 none */
 void       menu_edit_external(uint8_t d) {
-    if (d < 4) fk_external[d]++;
+    if (d < 5) fk_external[d]++;
     if (d == ME_DOM_LCD && fk_prev_lcd >= 0) {
         fk_lcd      = (uint8_t)fk_prev_lcd;
         fk_prev_lcd = -1;
@@ -97,7 +106,7 @@ void           env_prof_switched(uint8_t slot, uint8_t st) { fk_switched++; fk_s
 /* Reset settings' defaults (10-27): JD's, as menu_glue.c reads them; mode 1
  * is Solid here (id 1). */
 void env_defaults(env_defaults_t *d) {
-    *d = (env_defaults_t){{1, 36, 64, 191, 102, 1, 0xFF}, 60, 5, 5, 0, 1, 1};
+    *d = (env_defaults_t){{1, 36, 64, 191, 102, 1, 0xFF}, 80, 5, 5, 0, 1, 1};   /* config.h's screen level: 80 (10-28) */
 }
 
 /* --- Helpers -------------------------------------------------------------------- */
@@ -109,6 +118,7 @@ static void reset(void) {
     fk_pending = false; fk_touches = 0;
     fk_rgb = (env_rgb_t){2, 240, 215, 86, 127, 1, 0xFF};
     fk_lcd = 52; fk_ind[0] = 30; fk_ind[1] = 60; fk_clock = 4; fk_power = 1; fk_view = 1;
+    fk_font = ENV_FONT_LARGE; fk_font_sets = 0;
     calls[0] = '\0';
     memset(fk_external, 0, sizeof fk_external);
     fk_switched = 0; fk_sw_slot = fk_sw_st = 0xEE;
@@ -303,21 +313,21 @@ static void test_delete_and_load(void) {
     fk_rgb.enable = 0; fk_rgb.h = 5; fk_lcd = 90; fk_clock = 0; fk_view = 1; fk_power = 3;
     calls[0] = '\0';
     CHECK(prof_load(2) == PROF_OK);
-    CHECK(strcmp(calls, "eMHSELIICB") == 0 && fk_rgb.enable == 1 && fk_rgb.h == 200 && fk_lcd == 10 && fk_clock == 1 &&
+    CHECK(strcmp(calls, "eMHSELIICBF") == 0 && fk_rgb.enable == 1 && fk_rgb.h == 200 && fk_lcd == 10 && fk_clock == 1 &&
           fk_view == 3 && fk_power == 3 && prof_active() == 2);
     /* A record saved off stays off: the enable last, saved, at its value. */
     fk_rgb.enable = 0;
     CHECK(prof_save(3, NULL) == PROF_OK);
     fk_rgb.enable = 1;
     calls[0] = '\0';
-    CHECK(prof_load(3) == PROF_OK && fk_rgb.enable == 0 && strcmp(calls, "eMHSDLIICB") == 0);
+    CHECK(prof_load(3) == PROF_OK && fk_rgb.enable == 0 && strcmp(calls, "eMHSDLIICBF") == 0);
     /* An effect id this build lacks (Breathing, 3): skipped, the rest loads. */
     uint8_t *rec = &ee[PROF_BASE + PROF_REC_OFF(2)];
     rec[PR_EFFECT] = 3;
     rec[PR_CRC]    = prof_crc8(&rec[PR_FIELDS], PR_CRC - PR_FIELDS);
     fk_rgb.mode = 1; fk_rgb.h = 0;
     calls[0] = '\0';
-    CHECK(prof_load(2) == PROF_OK_EFFECT_SKIPPED && fk_rgb.mode == 1 && fk_rgb.h == 200 && strcmp(calls, "eHSELIICB") == 0);
+    CHECK(prof_load(2) == PROF_OK_EFFECT_SKIPPED && fk_rgb.mode == 1 && fk_rgb.h == 200 && strcmp(calls, "eHSELIICBF") == 0);
     /* Id 4 is mode 3 in this build. Id 0 is never assigned: QMK clamps mode 0
      * to 1, so a record holding it loads without its effect (codex). */
     rec[PR_EFFECT] = 4;
@@ -946,7 +956,7 @@ static void test_switch_codex(void) {
     calls[0] = '\0';
     CHECK(prof_reset() == PROF_BUSY && calls[0] == '\0' && fk_lcd == 20);
     fk_recovering = false;
-    CHECK(prof_reset() == PROF_OK && fk_lcd == 60);   /* under the latch it still applies; nothing written */
+    CHECK(prof_reset() == PROF_OK && fk_lcd == 80);   /* under the latch it still applies; nothing written */
     prof_test_reset();
 }
 
@@ -961,8 +971,8 @@ static void test_reset(void) {
     int ext = fk_external[ME_DOM_RGB];
     calls[0] = '\0';
     CHECK(prof_reset() == PROF_OK && nlog == 0);
-    CHECK(strcmp(calls, "eMHSELIICBP") == 0 && fk_rgb.mode == 1 && fk_rgb.h == 36 && fk_rgb.s == 64 &&
-          fk_rgb.v == 191 && fk_rgb.speed == 102 && fk_rgb.enable == 1 && fk_lcd == 60 && fk_ind[0] == 5 &&
+    CHECK(strcmp(calls, "eMHSELIICBFP") == 0 && fk_rgb.mode == 1 && fk_rgb.h == 36 && fk_rgb.s == 64 &&
+          fk_rgb.v == 191 && fk_rgb.speed == 102 && fk_rgb.enable == 1 && fk_lcd == 80 && fk_ind[0] == 5 &&
           fk_ind[1] == 5 && fk_clock == 0 && fk_view == 1 && fk_power == 1 && fk_external[ME_DOM_RGB] == ext + 1);
     /* With a profile a side and the last record: those go, the profiles stay. */
     fk_lcd = 20;
@@ -974,14 +984,14 @@ static void test_reset(void) {
     settle();
     CHECK(B(PROF_OFF_ACTIVE) == 0x10 && last_state() == LAST_MAC && fk_lcd == 20 && fk_switched == 1);
     fk_power = 3;
-    CHECK(prof_reset() == PROF_OK && fk_lcd == 60 && fk_power == 1 && pair_now() == 0xFF && last_state() == PS_EMPTY &&
+    CHECK(prof_reset() == PROF_OK && fk_lcd == 80 && fk_power == 1 && pair_now() == 0xFF && last_state() == PS_EMPTY &&
           prof_active() == 0xFF && prof_valid_mask() == 0x03);
     settle();
     CHECK(B(PROF_OFF_ACTIVE) == 0xFF);
     /* A flip after it changes nothing: neither side has a profile. */
     prof_switch(true); ticks(3);
     prof_switch(false); ticks(3);
-    CHECK(fk_switched == 1 && fk_lcd == 60 && last_state() == PS_EMPTY);
+    CHECK(fk_switched == 1 && fk_lcd == 80 && last_state() == PS_EMPTY);
     /* Busy in a recovery or a restore: nothing applied. */
     fk_lcd = 7;
     calls[0] = '\0';
@@ -990,6 +1000,108 @@ static void test_reset(void) {
     fk_recovering = false;
     CHECK(hid(1, 0, 0x41) && rpt[6] == PROF_OK);
     CHECK(prof_reset() == PROF_BUSY && fk_lcd == 7);
+    prof_test_reset();
+}
+
+/* 10-28, the Font setting (plans/MENU-8X16-PLAN.md B5), every record's since
+ * JD's "make profiles respect the font size setting": the face in PR_BVIEW's
+ * bits 2-3 beside the readout (bit 2 Small, bit 3 Regular, neither Large),
+ * captured with it, compared for the `*`, range-checked, and applied through
+ * menu_font_set(). A record from before has the bits clear: Large. Both
+ * bits, or any above them, is out of range. */
+static uint8_t apply5(const uint8_t *rec) {   /* HC_PROFILES 5 of rec: its status */
+    memset(rpt, 0, sizeof rpt);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x10; rpt[3] = 5;
+    memcpy(&rpt[4], rec, PROF_REC);
+    CHECK(prof_hid(rpt));
+    return rpt[31];
+}
+static void recrc(uint8_t *r) { r[PR_CRC] = prof_crc8(&r[PR_FIELDS], PR_CRC - PR_FIELDS); }
+static void test_font(void) {
+    reset();
+    uint8_t r[PROF_REC], q[PROF_REC], small[PROF_REC], large[PROF_REC], reg[PROF_REC], s = 9;
+    /* Saved in Small: the readout and the face; the `*` follows either. */
+    fk_font = ENV_FONT_SMALL; fk_view = 2;
+    CHECK(prof_save(0, NULL) == PROF_OK && prof_slot(0, r) && r[PR_BVIEW] == (2 | 4) && prof_rec_valid(r));
+    CHECK(prof_active_rec(r) == 0 && !prof_differs(r));
+    fk_font = ENV_FONT_LARGE;
+    CHECK(prof_differs(r));
+    fk_font = ENV_FONT_SMALL; fk_view = 3;
+    CHECK(prof_differs(r));
+    /* A load and the keys' step: the readout and the face applied. */
+    fk_rgb.h = 9; fk_view = 1; fk_font = ENV_FONT_REGULAR;
+    CHECK(prof_save(1, NULL) == PROF_OK && prof_slot(1, q) && q[PR_BVIEW] == (1 | 8));
+    fk_view = 3; fk_font = ENV_FONT_LARGE; fk_font_sets = 0;
+    CHECK(prof_load(0) == PROF_OK && fk_view == 2 && fk_font == ENV_FONT_SMALL && fk_font_sets == 1);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 1 && fk_view == 1 && fk_font == ENV_FONT_REGULAR && fk_font_sets == 2);
+    CHECK(prof_step(true, &s) == PROF_OK && s == 0 && fk_view == 2 && fk_font == ENV_FONT_SMALL && fk_font_sets == 3);
+    /* A record saved before (the bits clear): Large. */
+    uint8_t *e0 = &ee[PROF_BASE + PROF_REC_OFF(0)];
+    e0[PR_BVIEW] = 2;
+    recrc(e0);
+    CHECK(prof_load(0) == PROF_OK && fk_view == 2 && fk_font == ENV_FONT_LARGE);
+    /* Out of range: both face bits, a bit above them, a readout of 0. */
+    static const uint8_t bad_bv[3] = {2 | 0x0C, 2 | 0x10, 4};
+    for (int i = 0; i < 3; i++) {
+        memcpy(q, r, PROF_REC);
+        q[PR_BVIEW] = bad_bv[i];
+        recrc(q);
+        CHECK(!prof_rec_valid(q));
+    }
+
+    /* The Win/Mac switch: each side's face with its settings, the last record
+     * carrying the side left (as left, unsaved changes too). */
+    reset();
+    prof_switch(false); ticks(1);
+    fk_view = 2; fk_font = ENV_FONT_LARGE;
+    CHECK(prof_save(0, NULL) == PROF_OK);   /* Windows' */
+    prof_switch(true); ticks(3);             /* the Mac, none yet: Windows' kept */
+    fk_view = 3; fk_font = ENV_FONT_REGULAR;
+    CHECK(prof_save(1, NULL) == PROF_OK);   /* the Mac's */
+    fk_font = ENV_FONT_SMALL;                /* changed, unsaved */
+    prof_switch(false); ticks(3);
+    CHECK(fk_switched == 1 && fk_view == 2 && fk_font == ENV_FONT_LARGE && last_state() == LAST_MAC &&
+          B(PROF_REC_OFF(PROF_LAST) + PR_BVIEW) == (3 | 4));
+    prof_switch(true); ticks(3);             /* the Mac's back from the last record, as left */
+    CHECK(fk_switched == 2 && fk_view == 3 && fk_font == ENV_FONT_SMALL && last_state() == LAST_WIN &&
+          B(PROF_REC_OFF(PROF_LAST) + PR_BVIEW) == 2);
+
+    /* 4 and 5, flash.sh's live record: the face in it as in any record, the
+     * crc over it; 5 applies it, and cancels the Font page's preview. */
+    reset();
+    fk_view = 2; fk_font = ENV_FONT_SMALL;
+    CHECK(hid(4, 0, 0) && rpt[31] == PROF_OK && rpt[4 + PR_FIELDS] == PF_LIVE && rpt[4 + PR_BVIEW] == (2 | 4) &&
+          rpt[4 + PR_CRC] == prof_crc8(&rpt[4 + PR_FIELDS], PR_CRC - PR_FIELDS) && prof_rec_valid(&rpt[4]));
+    memcpy(small, &rpt[4], PROF_REC);
+    fk_view = 3; fk_font = ENV_FONT_REGULAR;
+    CHECK(hid(4, 0, 0) && rpt[4 + PR_BVIEW] == (3 | 8) && prof_rec_valid(&rpt[4]));
+    memcpy(reg, &rpt[4], PROF_REC);
+    fk_font = ENV_FONT_LARGE;
+    CHECK(hid(4, 0, 0) && rpt[4 + PR_BVIEW] == 3 && prof_rec_valid(&rpt[4]));
+    memcpy(large, &rpt[4], PROF_REC);
+    fk_view = 1; fk_lcd = 0; fk_power = 3; calls[0] = '\0'; fk_font_sets = 0;
+    int ext = fk_external[ME_DOM_FONT];
+    CHECK(apply5(small) == PROF_OK && fk_view == 2 && fk_lcd == 52 && fk_power == 1 && fk_font == ENV_FONT_SMALL &&
+          fk_font_sets == 1 && strcmp(calls, "eMHSELIICBFP") == 0 && fk_external[ME_DOM_FONT] == ext + 1);
+    CHECK(hid(4, 0, 0) && memcmp(&rpt[4], small, PROF_REC) == 0);   /* flash.sh's round trip */
+    CHECK(apply5(reg) == PROF_OK && fk_view == 3 && fk_font == ENV_FONT_REGULAR && fk_font_sets == 2);
+    CHECK(apply5(large) == PROF_OK && fk_font == ENV_FONT_LARGE && fk_font_sets == 3);
+    /* Refused with nothing applied: both bits; a crc that fails; an unknown
+     * format; a recovery. */
+    memcpy(q, small, PROF_REC);
+    q[PR_BVIEW] |= 8;
+    recrc(q);
+    calls[0] = '\0';
+    CHECK(apply5(q) == PROF_INVALID && calls[0] == '\0' && fk_font == ENV_FONT_LARGE && fk_font_sets == 3);
+    memcpy(q, small, PROF_REC);
+    q[PR_HUE] ^= 1;
+    CHECK(apply5(q) == PROF_INVALID && calls[0] == '\0' && fk_font_sets == 3);
+    memcpy(q, small, PROF_REC);
+    q[PR_STATE] = 0x02;
+    CHECK(apply5(q) == PROF_FORMAT && fk_font == ENV_FONT_LARGE && fk_font_sets == 3);
+    fk_recovering = true;
+    CHECK(apply5(small) == PROF_BUSY && calls[0] == '\0' && fk_font == ENV_FONT_LARGE && fk_font_sets == 3);
+    fk_recovering = false;
     prof_test_reset();
 }
 
@@ -1004,6 +1116,7 @@ int main(void) {
     test_switch();
     test_reset();
     test_switch_codex();
+    test_font();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

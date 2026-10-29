@@ -105,8 +105,7 @@ def a3(h):
     if s["last_seq"] != seq or s["last_state"] != "done":
         return "INCONCLUSIVE", {"why": f"the probe was {s['last_state']}", "state": s}
     owner = s["owner"]
-    op1(h)
-    op1(h)   # Health to Camera, Camera to the dashboard
+    op1(h)   # Health to the dashboard (no camera page since 10-28)
     ok, s2 = until(h, dash_done)
     good = before[0] > 0 and before[1] > 0 and after == (0, 0) and owner == "debug" and ok \
         and s2["restore_gen"] == g0 + 1 and s2["invariant_fail"] == 0
@@ -175,8 +174,7 @@ def a8(h):
     ok_clear, s = until(h, lambda s: s["phase"] == "clear", timeout=1)
     op1(h)                                     # Fn+D during its CLEAR
     s_wait = read_state(h)
-    op1(h)
-    op1(h)
+    op1(h)                                     # Health to the dashboard
     ok, s2 = until(h, dash_done)
     good = ok_clear and s_wait["owner"] == "debug" and s_wait["phase"] == "waiting" and ok and \
         s2["restore_gen"] == g0 + 2 and s2["invariant_fail"] == 0

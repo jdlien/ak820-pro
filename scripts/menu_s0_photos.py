@@ -5,7 +5,8 @@ and holds it until the file named by --next appears (then deletes it), so a
 person can photograph each one at their own pace.
 
     A13: fixture-A; fixture-B-stop13; fixture-A-again; fixture-F2
-    A2:  the Camera page settled (photo 1); after sub 8 and 30 s (photo 2)
+    A2:  retired on 10-28 with the camera page, whose exclusive dispatch it
+         photographed
 
 The fixture closes after 60 s with no input (24 s until 10-26), so while a fixture frame is held
 the knob is turned one notch and back every 15 s (op 27 sub 1). That blinks
@@ -24,7 +25,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 from menu_s0_session import mutate, open_device, read_state, wait  # noqa: E402
-from menu_s0_accept import op1, to_dash, until  # noqa: E402
+from menu_s0_accept import to_dash, until  # noqa: E402
 
 KEEPALIVE_S = 15.0
 # The last input the board counted. One clock across every frame: sub 0 (the
@@ -112,20 +113,8 @@ def main():
         until(h, lambda s: s["pixels_done"], timeout=5)
         frame(h, "fixture-F2", a.next, True, log,
               lambda s: s["session"] == "open" and s["pixels_done"])
-        # A2
+        # A2 went with the camera page (10-28): close the fixture.
         to_dash(h)
-        op1(h)
-        op1(h)                                   # Health, then Camera
-        time.sleep(10)
-        s = read_state(h)
-        losses0 = s["losses"]
-        frame(h, "camera-1", a.next, False, log, lambda s: s["owner"] == "debug")
-        st, seq = mutate(h, 8)                   # an injected loss under Camera
-        wait(h, seq)
-        time.sleep(30)
-        frame(h, "camera-2", a.next, False, log,
-              lambda s: s["owner"] == "debug" and s["losses"] == losses0 + 1)
-        op1(h)                                   # Camera to the dashboard
         ok, s = until(h, lambda s: s["owner"] == "dash" and s["phase"] == "done")
         log.append({"frame": "dashboard-restored", "ok": ok and s["invariant_fail"] == 0, "state": s})
         say(f"DONE restored={ok} invariant_fail={s['invariant_fail']}")

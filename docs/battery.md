@@ -482,11 +482,12 @@ never fell far enough to fire):
   `5C`** (62), its **age in seconds** (3; `--` once 20 s stale), the **pack mV**
   from the estimate (`>4036` / `<3161` at the clamps), and **VDD** in mV. The
   page recomposes once a second, so the age skips a value now and then.
-- **The camera page** (a second tap of `Fn`+`D`): the pack in volts and the level
-  in seven-segment digits big enough for a room camera, for filming a run's end
-  ([display.md](display.md)). **Superseded (2026-10-06, flash 2):** the
-  seven-segment digits gave way to the clock's 15×22 font, on four lines: the
-  volts, the percent, the board's clock and the raw `5C`.
+- **The camera page is gone (2026-10-28).** A second tap of `Fn`+`D` used to
+  show the pack in volts, the level, the board's clock and the raw `5C` in
+  digits big enough for a room camera, for filming a run's end. It was removed
+  because the bench's power cut and the INA228 logger replaced filming the
+  screen ([display.md](display.md)). The debug page's row 8, above, still
+  shows the raw `5C`.
 
 ### The log (v4; v5 since flash 2, in the next section)
 
@@ -880,9 +881,12 @@ its accuracy is the voltage's, not claimed.
 
 **Time left** (`battery_time_left_min`): the level's energy over the average
 draw, which is the mean of the minutes on battery so far and an exponential
-average with a 12 h time constant from the 720th; frozen on USB. On
-`Fn`+`D`'s camera page: `58% 31h`, `85% 4d`, `9% <1h`, `100%~51h` while under
-an hour of average; nothing on USB, unknown or after the cut.
+average with a 12 h time constant from the 720th; frozen on USB. Shown on
+the battery row under 10 h (`18% 6h`), and at any length with the menu's
+Battery page set to Hours of use or Both (`160h`, `85% 160h`); over the
+cable, `ak820battery.py` prints it. Nothing on USB, unknown or after the
+cut. (`Fn`+`D`'s camera page showed it too, as `58% 31h`, until it was
+removed on 2026-10-28.)
 
 **Measured on the host** (`scripts/battery_sim`, 121 cases): R3 and drain 2e
 replayed through the firmware at one-second steps, under three orderings of

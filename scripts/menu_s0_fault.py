@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """The configuration menu's S0, acceptance case A7 (plans/CONFIG-MENU-S0-BOARD-
 TESTS.md): a real lost DMA completion, retried (N=1) and given up (N=2), under
-the dashboard, the fixture, the Health page and the Camera page. Needs the
-`devfault` build, whose HC_BLITFAULT ([0x07, 0x13, 0x77, N]) drops the next
-N completions. Each fault is triggered by a known DMA within 3 s.
+the dashboard, the fixture and the Health page (the Camera page too, until it
+was removed on 10-28). Needs the `devfault` build, whose HC_BLITFAULT ([0x07,
+0x13, 0x77, N]) drops the next N completions. Each fault is triggered by a
+known DMA within 3 s.
 
     venv-win/Scripts/python.exe scripts/menu_s0_fault.py [--out F] < /dev/null
 
@@ -56,7 +57,7 @@ def settle(h, owner):
 def one(h, owner, n, pattern=None):
     """One fault of N under `owner`. The trigger is a known DMA: under the
     fixture, sub 0 setting `pattern` (its title's glyphs); under the dashboard
-    and the debug pages, the next clock second."""
+    and the debug page, the next clock second."""
     before = counters()
     s0 = read_state(h)
     blitfault(h, n)
@@ -106,16 +107,14 @@ def main():
     h = open_device()
     results = []
     try:
-        for owner in ("dash", "menu", "health", "camera"):
+        for owner in ("dash", "menu", "health"):
             to_dash(h)
             if owner == "menu":
                 st, seq = mutate(h, 4)
                 wait(h, seq)
-            elif owner in ("health", "camera"):
+            elif owner == "health":
                 op1(h)
-                if owner == "camera":
-                    op1(h)
-            kind = "debug" if owner in ("health", "camera") else owner
+            kind = "debug" if owner == "health" else owner
             for n in (1, 2):
                 settle(h, kind)
                 ok, ev = one(h, kind, n, pattern=1 if n == 1 else 0)   # A to B, then back

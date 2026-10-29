@@ -25,6 +25,35 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
+
+JD (10-28): "There's almost no downside to aggressive sleeping when the
+board is in this state since the lights are off anyways. But at least we
+could ensure the board continues to type for a day or so after we get to
+the LED cut... a user can make it through the rest of their day before they
+have to charge in most cases." This revisits "Sleep after the LED cut in
+every mode" (10-21, below), which was left alone.
+
+- **Today, after the cut** (3400 mV, `power_set_lights_cut`): the RGB is
+  capped to 0 and nothing else changes. Below 15% the ladder already runs
+  Power saver's stages and sleeps at 3 min (`low_now`, `LOW_CAP_PM`); Lights
+  out keeps its 60 s; Always on never sleeps.
+- **The change:** once the cut fires, sleep after 60 s idle (Lights out's
+  `sleep_ms`) and cap the screen while awake (`SCREEN_DIM_LEVEL`, 37 of
+  100, or lower). In `power.c`: `power_sleep_wanted()`'s shortening under
+  `low_now` gains one under `lights_cut`, and `apply()`'s backlight cap one
+  for the cut. To settle when built: Always on too (the 10-21 proposal said
+  yes; `power_sleep_wanted()` returns false for it first), and how dim the
+  screen goes.
+- **What it buys, modelled:** the reserve was ~5 h awake and dark at
+  ~26 mA on 10-02, about 130 mAh. A working day of 8 h at ~10 mA (60 s
+  sleep, mostly asleep between bursts) and 16 h asleep at ~3 mA is about
+  130 mAh: a day, but only just. The sleep is the lever (3 mA against ~27
+  awake); the screen is ~1 mA at JD's level, a few mA brighter.
+- **Measure first:** R5, the drain since 04:44 10-24, runs on past the cut
+  to shutdown and measures the reserve as built at real use, and what ends
+  it (`plans/current-status.md`). Size the change against that.
+
 ## The Win/Mac switch loads each side's last profile (2026-10-27) -- BUILT: `bf29a081`, then each side kept as left (`33d6d4ae`, the eighth record; JD: "don't lose your settings") on `gremlin/os-profiles`, on the keyboard on gremlin (GREMLIN-RESULTS §20w, §20x), MERGED 10-27 (`ce3f842d`); its note below "So a change since the load ... is lost" no longer holds
 
 JD (10-27): "can we make it so that the current profile is remembered for
@@ -203,7 +232,11 @@ ever matters:
   the screen off after a long idle, even on USB; the panel's inversion
   setting. JD's board sleeps on battery, so it's less exposed.
 
-## A bootloader item in the menu (2026-10-24) -- JD's idea, the polish phase
+## ~~A bootloader item in the menu~~ (2026-10-24) -- DONE: built with P1b (`781d071f`, codex twice), on JD's board since 10-25; Reset settings sits under it since 10-27
+
+Built as below: the Bootloader page (`plans/MENU-TEXT.md`), entered from
+the menu on the board and flashed back. `Fn`+`Esc` stays bound. The
+original note:
 
 From JD's first look at P1a: a standalone item that says what it's for
 ("Use this to update the firmware"), a click to confirm "Enter Bootloader",
@@ -236,7 +269,12 @@ spec). A middle size (8x16 or so, 16 columns by 7 rows) would need a new
 1-bit face; `scripts/gen_mono_font.py` makes one from a BDF the same way,
 at ~1.6 KB of the MCU's flash. Cost per row grows with the cell's area.
 
-## Fast spins leave old menu rows highlighted (2026-10-24) -- for P1
+## ~~Fast spins leave old menu rows highlighted~~ (2026-10-24) -- FIXED in P1a (10-24): one lit row at most
+
+P1a's scheduler paints a row's un-highlight before any new highlight
+(`plans/CONFIG-MENU-P1-DESIGN.md`, the maybe-lit mask), and the host tests
+check one lit row at most after every pass, through reversals, wraps and
+preemption. The original note:
 
 JD (F3, the slow build): "if I scroll at just the right speed I can make
 most of the options turn yellow". Each detent retargets: the new row's
@@ -588,7 +626,7 @@ module's radio taking the writes.
   on the cable, the ladder does not run. Lights out (60 s) is the mode it
   would undercut most; leave it out there.
 
-## Sleep after the LED cut in every mode (2026-10-21) -- considered, left alone
+## Sleep after the LED cut in every mode (2026-10-21) -- considered, left alone; REVISITED 10-28: JD wants it ("A day of typing after the LED cut", top)
 
 The proposal: once the LED cut fires (3400 mV), sleep after 60 s idle in
 every mode, Always on included. Today Always on never sleeps, even on the

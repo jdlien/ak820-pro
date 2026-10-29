@@ -65,10 +65,10 @@ Clock            24h
 Battery      Percent
 Profiles      Gaming
 Bootloader         ▶
+Font       10px bold
 Reset settings     ▶
 Diagnostics        ▶
 Help               ▶
-About              ▶
 Exit
 ```
 
@@ -76,13 +76,13 @@ Exit
   bulb, Screen a desktop, Connection the Bluetooth rune, Power the bolt,
   Indicators the sun, Clock a clock, Battery a vertical battery, Profiles a
   folder, Diagnostics a chip, Bootloader a desktop with a download arrow,
-  Reset settings the anticlockwise circle arrow `↺` (10-27), Help `?`, About
-  `i`, Exit `×`. A heading carries its section's icon; the top level's, the
-  wrench.
-- Fourteen rows, eight a screen: page one ends at Profiles (P5, JD 10-25),
-  and Bootloader, Reset settings (10-27), Diagnostics, Help, About and Exit
-  are on page two (the scrollbar shows). Before 10-27, thirteen; before P5,
-  twelve (P4, JD 10-25: Battery under Clock, Diagnostics under Bootloader).
+  Font a large A and a small one (10-28), Reset settings the anticlockwise
+  circle arrow `↺` (10-27), Help `?`, Exit `×`. A heading carries its
+  section's icon; the top level's, the wrench.
+- Fourteen rows (10-28: Font added, About moved into Diagnostics as System
+  info): eight a screen in 8px, page one ending at Profiles, the rest on page
+  two; seven a screen in 10px, two pages. Before 10-28, fourteen with About
+  and no Font; before 10-27, thirteen; before P5, twelve.
 - `Exit` and `◀ Back` rows show in light red when not selected; `▶` marks a
   row that opens a page; the saved option has a squared check.
 - Profiles' value is the profile in use: its name (9 characters of it), or
@@ -122,13 +122,38 @@ level's value is the option's name: `24h:ss`, `24h`, `12h:ss`, `12h`,
 
 ```
 ◀ Back
+System info        ▶
 Health page        ▶
-Camera page        ▶
 Reset counters     ▶
 ```
 
-Health page and Camera page open the existing Fn+D pages (their own text,
-`graphics/display.c`, not part of this review unless you want it).
+System info is About's page, moved here on 10-28 (the title `System info`,
+Diagnostics' icon). Health page opens the existing Fn+D page (its own text,
+`graphics/display.c`). The Camera page was removed on 10-28. Dev builds add
+Write test.
+
+### Font (10-28; on the top level; title: `Font`)
+
+```
+◀ Back
+  8px
+  10px
+■ 10px bold
+
+For the menus and
+now playing
+```
+
+- The options name the capitals' height: 8px is Cozette 6x14 (the menu as it
+  was); 10px is Terminus regular 8x16, with the page titles and the song's
+  title still in bold (JD: "we still judiciously use bold"); 10px bold is
+  Terminus Bold 8x16 throughout, the default on a fresh board and after
+  Reset settings.
+- In 10px the note reads `For the menus` / `and now playing`, and the top
+  level shows 10px bold as `Bold` (its row has room for 8).
+- A rest of 0.3 s on an option shows the whole menu in it, unsaved; a click
+  saves it ("Saved"), Back or a hold puts the saved one back ("Cancelled").
+- The face is a profile's setting too: saved with it, loaded with it.
 
 ### Reset counters (title: `Reset counters`)
 
@@ -281,7 +306,82 @@ Bluetooth has three
 slots.
 ```
 
-### About (title: `About`), page 1
+### Help in Large (15 columns)
+
+The same topics wrapped for the Large face (Terminus Bold 8x16: 15 columns,
+7 rows; plans/MENU-8X16-PLAN.md), the mock-up's text. The generator reads
+each block under its "#### Large: <title>" heading. Small keeps the blocks
+above.
+
+#### Large: Menu basics
+
+```
+Turn: move
+Click: choose
+Hold: back
+Fn+click: close
+
+Closes after 60
+seconds idle.
+```
+
+#### Large: Customizing
+
+```
+Remap keys and
+the knob at
+usevia.app over
+USB.
+
+Load via.json
+from the repo:
+Settings, Show
+Design tab,
+Load Draft
+Definition.
+```
+
+#### Large: Shortcuts
+
+```
+Fn+QWE  BT 1-3
+ hold 2 s: pair
+Slider  BT 2.4G
+        or USB
+Fn+Lt/Rt  hue
+Fn+Up/Dn bright
+Fn+6/7 saturate
+Fn+X    lights
+Fn+\    effect
+Fn+B    power
+Fn+C    clock
+Fn+PgUp/Dn
+        screen
+Fn+Esc
+    bootloader
+```
+
+#### Large: Pro tips
+
+```
+Balanced sleeps
+after 20 min
+idle. A key
+wakes it and
+still types.
+
+The lights are
+the battery's
+big cost.
+Asleep, a night
+is about 1%.
+
+2.4G answers
+faster; BT has
+three slots.
+```
+
+### System info (title: `System info`; About until 10-28), page 1
 
 Filled in when the page opens. The formats, with an example:
 

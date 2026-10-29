@@ -34,7 +34,6 @@ try:
         menu_open(h); time.sleep(1); worst(h, "menu open")
         st, seq = mutate(h, 4); wait(h, seq); until(h, dash_done); time.sleep(1); worst(h, "menu close")
         op1(h); time.sleep(2); worst(h, "fn+d in")
-        op1(h); time.sleep(2); worst(h, "camera")
         op1(h); until(h, dash_done); time.sleep(1); worst(h, "fn+d out")
         menu_open(h)
         st, seq = mutate(h, 0, bytes([3, 0])); wait(h, seq); until(h, lambda s: s["pixels_done"], timeout=5)

@@ -10,10 +10,10 @@ into its real 10 ms deadline and the driver's restart; --n times, 2 s apart.
 Each must fail (the bus is stuck), take no more than ~12 ms whole, and leave
 no pass >= 25 ms; afterwards five ordinary reads (a burst) must all succeed.
 
-`restore`: --n cycles of three Fn+D taps (op 1: the debug page, the camera
-page, back to the dashboard), 1.5 s apart, so the staged restore runs --n
-times, the path the animation's stop and the boot redraw now share. No pass
->= 25 ms; the longest blit is reported.
+`restore`: --n cycles of two Fn+D taps (op 1: the debug page, back to the
+dashboard), 1.5 s apart, so the staged restore runs --n times, the path the
+animation's stop and the boot redraw now share. No pass >= 25 ms; the longest
+blit is reported. (Three taps until the camera page was removed on 10-28.)
 """
 import argparse, json, os, sys, time
 
@@ -64,7 +64,7 @@ def stuck(a, checks):
 def restore(a, checks):
     s0 = stalls()
     for i in range(a.n):
-        for _ in range(3):
+        for _ in range(2):   # the debug page, then the dashboard
             ds.with_dev(lambda h: od.op(h, 1, [0]))
             time.sleep(1.5)
     s1 = stalls()

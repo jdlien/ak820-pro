@@ -9,8 +9,9 @@ gate (plans/CONFIG-MENU-P1-DESIGN.md, "Tests (P1a)").
    counters' two pages, and a cancel.
 2. One measured interval (sub 10 armed): open; moves down and up with wraps;
    Power and Clock committed to another value and back (the board keeps its
-   own settings at the end); Help's four topics paged; About; Health and
-   Camera handed off and back; a choice cancelled; the hint; the close.
+   own settings at the end); Help's four topics paged; Diagnostics' System
+   info, and Health handed off and back (Camera too, until the camera page
+   was removed on 10-28); a choice cancelled; the hint; the close.
 3. Every step: the expected screen id (16 + the node) and cursor, pixels_done
    within 1,000 ms, invariant_fail 0. The interval: no pass over 17 ms (JD's
    (b), 10-24: menu painting passes of ~16-17 ms accepted; those over 15 are
@@ -46,10 +47,10 @@ S_IDLE, S_LINKING, S_PAIRING, S_CONNECTED, S_REJECTED = range(5)
 PF_WAITING, PF_RETRYING, PF_CONFIRMED, PF_SEL_LOST = 1, 2, 4, 8
 P_START, P_OPEN, P_DONE, P_ENDED, P_FAILED, P_UNSURE = range(6)
 LINK = lambda slot, st: L_BT | slot << 2 | st << 4  # noqa: E731
-# The top level since P5b (JD, 10-25): Lighting, Screen, Connection, Power,
-# Indicators, Clock, Battery, Profiles; Bootloader, Reset settings (10-27),
-# Diagnostics, Help, About, Exit on page two.
-R_CONN, R_POWER, R_IND, R_CLOCK, R_BATT, R_PROF, R_BOOT, R_DEFS, R_DIAG, R_HELP, R_ABOUT, R_EXIT = (
+# The top level since 10-28: Lighting, Screen, Connection, Power, Indicators,
+# Clock, Battery, Profiles, Bootloader, Font, Reset settings, Diagnostics,
+# Help, Exit. About is Diagnostics' System info, its first row after Back.
+R_CONN, R_POWER, R_IND, R_CLOCK, R_BATT, R_PROF, R_BOOT, R_FONT, R_DEFS, R_DIAG, R_HELP, R_EXIT = (
     2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
 DEFAULTS = 58   # 10-27: Reset settings' confirm (menu.c's N_DEFAULTS)
 SCR = lambda n: 16 + n  # noqa: E731
@@ -324,19 +325,14 @@ def main():
             click(h, f"topic {t} back", SCR(HELP), 1 + t)
         hold(h, "Help back", SCR(TOP), R_HELP)
 
-        # About.
-        turn(h, 1, "to About", SCR(TOP), R_ABOUT)
-        click(h, "About", SCR(ABOUT), 0)
-        click(h, "About back", SCR(TOP), R_ABOUT)
-
-        # Diagnostics: Health and Camera, handed off and back.
-        turn(h, R_DIAG - R_ABOUT, "to Diagnostics", SCR(TOP), R_DIAG)
+        # Diagnostics: System info (About), and Health handed off and back.
+        turn(h, R_DIAG - R_HELP, "to Diagnostics", SCR(TOP), R_DIAG)
         click(h, "Diagnostics", SCR(DIAG), 1)
+        click(h, "System info", SCR(ABOUT), 0)
+        click(h, "System info back", SCR(DIAG), 1)
+        turn(h, 1, "to Health", SCR(DIAG), 2)
         click(h, "Health page", owner="debug")
-        click(h, "back from Health", SCR(DIAG), 1, owner="menu")
-        turn(h, 1, "to Camera", SCR(DIAG), 2)
-        click(h, "Camera page", owner="debug")
-        click(h, "back from Camera", SCR(DIAG), 2, owner="menu")
+        click(h, "back from Health", SCR(DIAG), 2, owner="menu")
         hold(h, "Diagnostics back", SCR(TOP), R_DIAG)
 
         # 10-27: Reset settings' question, and a hold cancelling it (nothing reset).

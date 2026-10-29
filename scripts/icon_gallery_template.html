@@ -383,7 +383,7 @@ function drawLcd() {
     scrollbar(list.length, top);
   } else if (S === "diag") {
     backRow(0, false);
-    ["Health page", "Camera page", "Reset counters"].forEach((l, i) => row(i + 1, toks(l), [sub], colour(i === 0, false)));
+    ["Health page", "Reset counters"].forEach((l, i) => row(i + 1, toks(l), [sub], colour(i === 0, false)));
     cursorAt(1, PAL.cursor);
   } else {
     const opts = S === "power" ? ["Always on", "Balanced", "Power saver", "Lights out"]

@@ -105,13 +105,12 @@ def main():
         time.sleep(1.0)
         out += [window(h, "dash"), window(h, "dash")]
         # The Fn+D page's transitions (op 1), each in a 1 s window from its
-        # start: its clear into Health, Camera's, and the staged restore out.
+        # start: its clear into Health and the staged restore out (no camera
+        # page since 10-28).
         out.append(window(h, "dash-1s", secs=1.0))
         out.append(window(h, "fnd-enter", secs=1.0, first=lambda: op1(h)))
         time.sleep(2.0)
         out.append(window(h, "health-1s", secs=1.0))
-        out.append(window(h, "fnd-camera", secs=1.0, first=lambda: op1(h)))
-        time.sleep(2.0)
         out.append(window(h, "fnd-exit", secs=1.0, first=lambda: op1(h)))
         time.sleep(2.0)
         out.append(window(h, "dash-1s", secs=1.0))

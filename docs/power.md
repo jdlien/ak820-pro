@@ -337,7 +337,9 @@ and the power modes", and [hardware.md](hardware.md), "Deep sleep".
   time.
   - The battery row shows it under 10 hours (`18% 6h`).
   - A wake after 2 h or more asleep says `6h use left` once.
-  - `Fn`+`D`'s camera page shows it always.
+  - The menu's Battery page, set to Hours of use or Both, shows it at any
+    length (`160h`, `85% 160h`). `Fn`+`D`'s camera page showed it until it was
+    removed on 2026-10-28.
 - **An aged pack reads high.** The firmware assumes 15,579 mWh. A pack holding
   13% less would read up to ~6 points high late in a charge (simulated).
 - **macOS's Bluetooth battery percentage is not this gauge.** It shows the
