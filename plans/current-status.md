@@ -42,7 +42,14 @@ bulbs.
 
 ### What is running
 
-- **Firmware on JD's board since 23:51 10-28: Warren's `27d1105dc1`**
+- **Firmware on JD's board since 00:03 10-29: Warren's `fcb7ae00b4`**
+  (`gremlin/ds-phase`; dev, token `0xf2a645a7`, heap gap 152 B): the
+  build below plus codex's fixes (the kept RAM checked at every boot, the
+  sequence reserved at the teardown) and **op 24 slot 10**, the sleep a
+  reset cut short, frozen at boot so the next sleep can't overwrite it.
+  Checked: `../history/ds-phase-check-20261029-0002/`. USB data on
+  00:02:36 for the flash, off after it.
+- **Before it, from 23:51 10-28: Warren's `27d1105dc1`**
   (`gremlin/ds-phase`, on `8ec0c8b9b4` below; dev, token `0xbc3b64c4`,
   heap gap 184 B): deep sleep's phases in the watchdog record, and the sleep
   under way kept through a reset (op 24 slot 9). It's the diagnostic for

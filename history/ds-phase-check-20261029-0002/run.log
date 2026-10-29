@@ -1,0 +1,365 @@
+[00:02:46] pausing the daemon
+[00:02:48] flash 1: ak820pro-builds/out/via-dev-fcb7ae00b4-20261029-000229.bin
+firmware : ak820pro-builds/out/via-dev-fcb7ae00b4-20261029-000229.bin
+built    : Oct 29 00:02:29 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 19 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Oct 29 00:02:48 2026  (1954 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Oct 29 00:02:48 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 64%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Balanced
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Oct 29 00:02:48 2026  (2703 bytes)
+
+== dumping the battery log ==
+# 0 entries (log v8, one per 900 s), newest 0 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261029-000248-preflash.csv  Oct 29 00:02:48 2026  (6 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+profiles restored and read back
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 64%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Balanced
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[00:03:16] slots after flash 1
+{
+ "ring": [],
+ "wake_seq": 0,
+ "stray": {
+  "seq": 0,
+  "same_s": 0,
+  "first_s": 0,
+  "ispr": "0x0",
+  "icsr": "0x0",
+  "vectpending": 0,
+  "pendsv": false,
+  "pendst": false,
+  "ie_outside": [],
+  "mis_outside": [],
+  "iser_not_wake_set": false,
+  "last_n": 0,
+  "last_ispr": "0x0",
+  "last": {
+   "icsr": "0x0",
+   "vectpending": 0,
+   "pendsv": false,
+   "pendst": false
+  }
+ },
+ "last": {
+  "magic_ok": false,
+  "seq": 0,
+  "reason": "none",
+  "flags": "0x0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": false,
+  "returned": false,
+  "secs": 0,
+  "p0": "0x0",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "from_boot_before": false,
+  "rstst": "0x1"
+ },
+ "inherited": {
+  "magic_ok": false,
+  "seq": 0,
+  "reason": "none",
+  "flags": "0x0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": false,
+  "returned": false,
+  "secs": 0,
+  "p0": "0x0",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "present": false,
+  "rstst": "0x1"
+ },
+ "watchdog_record": {
+  "valid": false,
+  "site": "none",
+  "site_id": 0,
+  "parent": "none",
+  "parent_id": 0,
+  "last_pass_uptime_ms": 0,
+  "boot_rstst": 1,
+  "consecutive_resets": 0
+ }
+}
+[00:03:16] a 30 s fed armed sleep
+2026-10-29 00:03:18 == run 1 of 1: cap 30 s, unfed
+2026-10-29 00:03:26 armed fed, cap 30 s (15 s delay); data off
+2026-10-29 00:03:45 asleep (the current fell); watching for a rise
+2026-10-29 00:04:19 the current rose 32.6 s after entry (29.6 mA)
+2026-10-29 00:04:29 data on
+2026-10-29 00:04:32 record: {'state': 2, 'reason': 'cap', 'blocked': 0, 'flags': 91, 'slept': True, 'pcf': True, 'usb_back_20s': True, 'pll_ceiling': False, 'bound': False, 'reattach': True, 'secs': 30, 'strays': 0, 'p0': 0, 'p2': 0, 'p1': 0, 'pll_loops': 95, 'key_gain': 0, 'seq': 1, 'timed_out': []}
+2026-10-29 00:04:32 watchdog record: {'valid': False, 'site': 'none', 'site_id': 0, 'parent': 'none', 'parent_id': 0, 'last_pass_uptime_ms': 0, 'boot_rstst': 1, 'consecutive_resets': 0}
+2026-10-29 00:04:32 VERDICT cap 30: slept to the cap unfed (30 s counted): it does not count
+2026-10-29 00:04:39 done: cap 30: False
+[00:04:39] slots after the sleep
+{
+ "ring": [
+  {
+   "seq": 0,
+   "reason": "cap",
+   "flags": 64,
+   "counted": 30,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x0",
+   "ms": 38489,
+   "strays": 0
+  }
+ ],
+ "wake_seq": 1,
+ "stray": {
+  "seq": 0,
+  "same_s": 0,
+  "first_s": 0,
+  "ispr": "0x0",
+  "icsr": "0x0",
+  "vectpending": 0,
+  "pendsv": false,
+  "pendst": false,
+  "ie_outside": [],
+  "mis_outside": [],
+  "iser_not_wake_set": false,
+  "last_n": 0,
+  "last_ispr": "0x0",
+  "last": {
+   "icsr": "0x0",
+   "vectpending": 0,
+   "pendsv": false,
+   "pendst": false
+  }
+ },
+ "last": {
+  "magic_ok": true,
+  "seq": 0,
+  "reason": "cap",
+  "flags": "0xc0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": true,
+  "returned": true,
+  "secs": 30,
+  "p0": "0x0",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "from_boot_before": false,
+  "rstst": "0x1"
+ },
+ "inherited": {
+  "magic_ok": false,
+  "seq": 0,
+  "reason": "none",
+  "flags": "0x0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": false,
+  "returned": false,
+  "secs": 0,
+  "p0": "0x0",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "present": false,
+  "rstst": "0x1"
+ },
+ "watchdog_record": {
+  "valid": false,
+  "site": "none",
+  "site_id": 0,
+  "parent": "none",
+  "parent_id": 0,
+  "last_pass_uptime_ms": 0,
+  "boot_rstst": 1,
+  "consecutive_resets": 0
+ }
+}
+[00:04:39] flash 2, the same .bin (a software reset through the bootloader)
+firmware : ak820pro-builds/out/via-dev-fcb7ae00b4-20261029-000229.bin
+built    : Oct 29 00:02:29 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 19 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Oct 29 00:04:39 2026  (1954 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Oct 29 00:04:39 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 64%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Balanced
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Oct 29 00:04:40 2026  (2703 bytes)
+
+== dumping the battery log ==
+# 0 entries (log v8, one per 900 s), newest 0 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261029-000440-preflash.csv  Oct 29 00:04:40 2026  (6 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+profiles restored and read back
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 64%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Balanced
+
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before -1278.0 ms, after -1.4 ms, rtt 4.7 ms, U ~3.2 ms, lead now 5.34 ms, bias sent
+done.
+[00:05:07] slots after flash 2
+{
+ "ring": [
+  {
+   "seq": 0,
+   "reason": "cap",
+   "flags": 64,
+   "counted": 30,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x0",
+   "ms": 38489,
+   "strays": 0
+  }
+ ],
+ "wake_seq": 1,
+ "stray": {
+  "seq": 0,
+  "same_s": 0,
+  "first_s": 0,
+  "ispr": "0x0",
+  "icsr": "0x0",
+  "vectpending": 0,
+  "pendsv": false,
+  "pendst": false,
+  "ie_outside": [],
+  "mis_outside": [],
+  "iser_not_wake_set": false,
+  "last_n": 0,
+  "last_ispr": "0x0",
+  "last": {
+   "icsr": "0x0",
+   "vectpending": 0,
+   "pendsv": false,
+   "pendst": false
+  }
+ },
+ "last": {
+  "magic_ok": true,
+  "seq": 0,
+  "reason": "cap",
+  "flags": "0xc0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": true,
+  "returned": true,
+  "secs": 30,
+  "p0": "0x0",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "from_boot_before": true,
+  "rstst": "0x1"
+ },
+ "inherited": {
+  "magic_ok": true,
+  "seq": 0,
+  "reason": "cap",
+  "flags": "0xc0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": true,
+  "returned": true,
+  "secs": 30,
+  "p0": "0x0",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "present": true,
+  "rstst": "0x1"
+ },
+ "watchdog_record": {
+  "valid": false,
+  "site": "none",
+  "site_id": 0,
+  "parent": "none",
+  "parent_id": 0,
+  "last_pass_uptime_ms": 0,
+  "boot_rstst": 1,
+  "consecutive_resets": 0
+ }
+}
+[00:05:08] done: history/ds-phase-check-20261029-0002
+[00:05:08] restarting the daemon
+	state = xpcproxy

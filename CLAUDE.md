@@ -129,7 +129,11 @@ Warren's `gremlin/pcf-unseen` (the clock chip's write when nobody is
 looking) and the dev Write test. The daily build is clean (heap gap
 2336 B). Gremlin's keyboard runs its dev build since 20:51 10-28 (token
 `0x189635f2`).
-**On JD's board since 23:51 10-28: Warren's `27d1105dc1`** (dev, token
+**On JD's board since 00:03 10-29: Warren's `fcb7ae00b4`** (dev, token
+`0xf2a645a7`, heap gap 152 B, `gremlin/ds-phase`): `27d1105dc1` plus
+codex's fixes and op 24 slot 10, the sleep a reset cut short, kept until
+the next reset (`history/ds-phase-check-20261029-0002/`).
+**Before it, from 23:51 10-28: Warren's `27d1105dc1`** (dev, token
 `0xbc3b64c4`, heap gap 184 B, `gremlin/ds-phase`): the build below plus
 deep sleep's phases in the watchdog record and the sleep kept through a
 reset (op 24 slot 9), the diagnostic for gremlin's WDT reset in a deep sleep

@@ -51,8 +51,8 @@ and the host away (it's always been near, or the board on 2.4G). Gremlin's
 board had slept cable-out six times before, each woken on purpose within
 minutes.
 
-**On JD's board since 23:51 10-28** (`27d1105dc1`, token `0xbc3b64c4`):
-slot 9 survives a reset through the bootloader
+**On JD's board since 00:03 10-29** (`fcb7ae00b4`, token `0xf2a645a7`;
+`27d1105dc1` from 23:51): slot 9 survives a reset through the bootloader
 ([`../history/ds-phase-check-20261028-2350/`](../history/ds-phase-check-20261028-2350/README.md)),
 so a reset inside a sleep will now say where, what woke it, when and the
 strays.
