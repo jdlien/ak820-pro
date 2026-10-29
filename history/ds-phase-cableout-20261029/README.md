@@ -68,6 +68,11 @@ keeps the last eight sleeps.
   has no path that runs 9 s and returns without one, so it was probably the
   radio module, not the core; the overnight sleeps had nothing like it
   (max 3.77 mA).
+- **When the cable came out is not certain.** JD remembers shortly before
+  9; the chat has his "I'll unplug now" at 09:40:42, after the Shift. The
+  sleeps' draw sides with the chat: sleep 1 (cable in) 3.28 mA and sleep 2
+  (out) 3.12, against sleep 3 3.51 and sleep 4 3.19. Taken as in through
+  sleep 3 and out from about 09:44:49, which would make the 9 s the pull.
 
 Files: `slots-0858.json`, `slots-1037.json` (op 24's slots 0-10 and the watchdog record, read
 with `ds_slots.py`, in `../ds-phase-check-20261029-0002/`), `run.log`.
