@@ -675,7 +675,11 @@ other side uses means that side loads it anew.
 
 ## Not built yet (the mockup's words)
 
-### About, page 2 (P1d: the bunny beside the first three lines)
+### Help > More info (P1d), with the credits (JD, 10-28)
+
+About became System info in Diagnostics on 10-28, so the credits that were to
+be About's second page go to Help's More info topic instead (JD: "put the
+credits in Help's More info"). The topic holds both:
 
 ```
 [bunny] AJAZZ
@@ -688,7 +692,8 @@ github.com/jdlien
 QMK Port by fpb
 ```
 
-### Help > More info (P1d)
-
-The QR code to `https://github.com/jdlien/ak820-pro` (no text in the mockup;
-it shows `github.com/jdlien` / `  /ak820-pro` when the QR isn't drawn).
+and the QR code to `https://github.com/jdlien/ak820-pro` (no text in the
+mockup; it shows `github.com/jdlien` / `  /ak820-pro` when the QR isn't
+drawn). How the two share the topic (a page each, or the QR beside the link)
+is P1d's to lay out, in both faces; in 10px a line holds 15 characters, so
+`github.com/jdlien` (17) wraps.

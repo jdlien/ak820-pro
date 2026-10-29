@@ -30,7 +30,7 @@ in four flashes. The words and behaviour are the mockup's
 | **P1a, the tree** | the session identity; `menu.c` with lists, committing choices (Power, Clock), Help's four topics, About page 1, Reset counters, Diagnostics (Health, Camera), Exit; the latched model; the hint and the flash; one lit row at most; `MENU_ENABLE` on; `power_set_mode()` promoted | codex on the code; host tests; the gate, the failure paths and the LED rate on the menu's screens; JD's session |
 | **P1b, the previews** | C6: Lighting and Screen, the range and hue editors, the backstop; their rows join the top level | codex (a detailed section first); the plan's P1 exit gates |
 | **P1c, the keycode** | "Open" 3's amendment (its RAM reserved now) | codex on the amendment, then the code; then `Fn`+`D` unassigned on JD's board |
-| **P1d, the art** | About page 2 (the bunny, the credits, the link) and Help's More info (the QR code) | codex; the gate on both pages |
+| **P1d, the art** | Help's More info: the bunny, the credits and the link (About's page 2 until 10-28, when About became Diagnostics' System info; JD: "put the credits in Help's More info"), and the QR code | codex; the gate on the page |
 
 ## P1a
 

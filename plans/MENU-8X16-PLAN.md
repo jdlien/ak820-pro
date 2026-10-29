@@ -28,8 +28,9 @@
   click) and a note under it, the face carried in every profile record
   (PR_BVIEW bits 2-3), About in Diagnostics as System info (fourteen top
   rows: two pages of seven in Large), and the Fn+D camera page removed.
-  Heap gap 224 B after the camera page's RAM came back. Still open with
-  JD: whether About's planned credits page joins Help's More info.
+  Heap gap 224 B after the camera page's RAM came back. JD (10-28): the
+  credits planned for About's page 2 go to Help's More info with its QR
+  code ([MENU-TEXT.md](MENU-TEXT.md), "Not built yet").
   Flashed 20:19; codex: no findings.
 - **B8's redraw times, measured on JD's board at 20:30** (op 27 sub 10's
   repaint_ms, the board's own clock; `history/menu-font-timing-20261028/`).
