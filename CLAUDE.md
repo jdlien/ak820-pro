@@ -120,8 +120,13 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
   to Buzz, the new Mac, on 10-23 spoiled the first;
 - stripping the bench, the soak, and the release for other owners.
 
-**The mainline since 10-28 evening: `c4bc085271`** (`ak820pro-jdlien`
-fast-forwarded from `ce3f842de2` by Warren; `deps.lock` pins it): the
+**v0.2.0, released 10-29 from `8ec0c8b9b4`**: the mainline below plus
+Help's More info, fast-forwarded onto `ak820pro-jdlien` and pinned in
+`deps.lock` for the release (the daily and fpb builds, the Windows agent
+0.2.0; the README rewritten as the project's pitch). Warren's `ds-phase`
+diagnostics stay out of it.
+**The mainline from 10-28 evening to that release: `c4bc085271`** (`ak820pro-jdlien`
+fast-forwarded from `ce3f842de2` by Warren): the
 Font setting (8px, 10px, 10px bold; the preview, the face in profiles),
 the 12 px greyscale icons, the dashboard's spacing, System info in
 Diagnostics, the camera page removed, the screen's default level 80; and

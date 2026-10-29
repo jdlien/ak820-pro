@@ -100,7 +100,7 @@ cp "$via" "$stage/via.json"
     echo "  sonixflasher --vidpid 0c45/7140 --file ak820pro-via.bin"
     echo "Assets (erases first -- check 'ak820ctl info' answers), then power-cycle:"
     echo "  ak820ctl flash write 0x0CE0000 flash_assets.bin"
-    echo "Read README.md, 'Read this before your first flash', before either."
+    echo "Read README.md, 'Before you flash', before either."
 } > "$stage/FIRMWARE.txt"
 ( cd "$stage" && sha256sum ak820pro-via.bin ${fpb:+ak820pro-via-fpb.bin} flash_assets.bin via.json > firmware-sha256sums.txt )
 cat "$stage/FIRMWARE.txt"

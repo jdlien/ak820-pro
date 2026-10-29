@@ -11,18 +11,21 @@ keyboard. Nothing else -- no Python, no runtime, no driver, no admin rights.
 1. Unzip anywhere.
 2. Open a terminal (PowerShell or cmd, NOT elevated) in that folder and run:
 
-       .\ak820 install --clock
+       .\ak820 install --clock --radio --lockchan
 
    That copies ak820.exe and ak820-agent.exe to %LOCALAPPDATA%\ak820pro\bin,
    registers a per-user Scheduled Task (\ak820pro\AK820Pro-agent) that starts
    at logon, and starts it now. You can delete the zip afterwards.
 
-   --clock makes the daemon sync the clock as well as show the track. Leave
-   it off only if you run the repository's Python timekeeper from hostagent/
-   and want to keep it; the daemon refuses --clock while that task is
-   registered, because two clock writers corrupt each other's learning. If
-   the Python now-playing task from hostagent/ is installed, install stops
-   and removes it: the daemon replaces it.
+   Over the USB cable the track always shows. Each flag adds a job; leave
+   off any you don't want:
+
+       --clock      keep the keyboard's clock in sync with this PC
+       --radio      show the track over the 2.4G dongle, with the cable out
+       --lockchan   show the track over Bluetooth, signalled through the
+                    keyboard's lock lights (never Caps Lock)
+
+   To change them later, run install again with the flags you want.
 
 3. Useful afterwards. The installed copy is not on PATH; from PowerShell it
    is:  & "$env:LOCALAPPDATA\ak820pro\bin\ak820.exe" status
