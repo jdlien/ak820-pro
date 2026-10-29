@@ -1,0 +1,125 @@
+{
+ "ring": [
+  {
+   "seq": 0,
+   "reason": "cap",
+   "flags": 64,
+   "counted": 30,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x0",
+   "ms": 38489,
+   "strays": 0
+  },
+  {
+   "seq": 1,
+   "reason": "key",
+   "flags": 64,
+   "counted": 3610,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x200",
+   "ms": 1200053,
+   "strays": 0
+  },
+  {
+   "seq": 2,
+   "reason": "key",
+   "flags": 64,
+   "counted": 15012,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x100",
+   "ms": 9462918,
+   "strays": 0
+  },
+  {
+   "seq": 3,
+   "reason": "key",
+   "flags": 64,
+   "counted": 2122,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x4000",
+   "ms": 9782982,
+   "strays": 0
+  },
+  {
+   "seq": 4,
+   "reason": "key",
+   "flags": 64,
+   "counted": 2526,
+   "p0": "0x10",
+   "p1": "0x0",
+   "p2": "0x0",
+   "ms": 9984610,
+   "strays": 0
+  }
+ ],
+ "next_seq": 5,
+ "stray": {
+  "seq": 0,
+  "same_s": 0,
+  "first_s": 0,
+  "ispr": "0x0",
+  "icsr": "0x0",
+  "vectpending": 0,
+  "pendsv": false,
+  "pendst": false,
+  "ie_outside": [],
+  "mis_outside": [],
+  "iser_not_wake_set": false,
+  "last_n": 0,
+  "last_ispr": "0x0",
+  "last": {
+   "icsr": "0x0",
+   "vectpending": 0,
+   "pendsv": false,
+   "pendst": false
+  }
+ },
+ "last": {
+  "magic_ok": true,
+  "seq": 4,
+  "reason": "key",
+  "flags": "0xc0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": true,
+  "returned": true,
+  "secs": 2526,
+  "p0": "0x10",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "from_boot_before": false,
+  "rstst": "0x1"
+ },
+ "inherited": {
+  "magic_ok": true,
+  "seq": 0,
+  "reason": "cap",
+  "flags": "0xc0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": true,
+  "returned": true,
+  "secs": 30,
+  "p0": "0x0",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "present": true,
+  "rstst": "0x1"
+ },
+ "watchdog_record": {
+  "valid": false,
+  "site": "none",
+  "site_id": 0,
+  "parent": "none",
+  "parent_id": 0,
+  "last_pass_uptime_ms": 0,
+  "boot_rstst": 1,
+  "consecutive_resets": 0
+ }
+}

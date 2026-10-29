@@ -21,7 +21,13 @@ pull-downs. Balanced: asleep 20 min after the last key.
 | 08:52:51 | sleep 2 ends at a key, the cable out |
 | ~08:54 | the cable back in |
 | 08:55:09-08:55:39 | data on for the read (`slots-0858.json`), the daemon paused |
-| ~08:55 | Fn+B to Power saver for the day's run, the cable out again |
+| ~08:55 | Fn+B to Power saver for the day's run |
+| 08:58:11 | asleep (sleep 3), the cable still in |
+| 09:40:20 | sleep 3 ends at a key (right Shift) |
+| 09:43:42 | dark at ~13.5 mA for 14 s, then asleep (sleep 4) at 09:43:56 |
+| 09:44:49-09:44:57 | ~13.9 mA for 9 s inside sleep 4, then back to ~3.1 mA (the cable came out some time after 09:41) |
+| 10:33:54 | sleep 4 ends at a key; the cable back in |
+| 10:37:17-10:37:20 | data on for the read (`slots-1037.json`), the daemon paused |
 
 ## What the board and the power log say
 
@@ -49,5 +55,19 @@ every 3 min pause, a real wake at every return), read in the evening.
 Slot 10 and the watchdog record keep a reset until the next one; the ring
 keeps the last eight sleeps.
 
-Files: `slots-0858.json` (op 24's slots 0-10 and the watchdog record, read
+## The midday read (10:37)
+
+- **Sleep 3:** 2,122 counted s, a key (P2 `0x4000`), 0 strays.
+- **Sleep 4:** 2,526 counted s (2,998 real from 09:43:56), a key (P0
+  `0x10`), 0 strays, flags `0xc0`.
+- **No reset:** the watchdog record empty, `consecutive_resets` 0, slot 10
+  still sleep 0; the stray snapshot empty. `next_seq` 5.
+- **Unexplained:** the 9 s at ~13.9 mA at 09:44:49, the level of the dark
+  stretch before sleep 4, left no trace on the board: no new sleep, no
+  stray, and sleep 4's counted seconds span it. The board's own wake loop
+  has no path that runs 9 s and returns without one, so it was probably the
+  radio module, not the core; the overnight sleeps had nothing like it
+  (max 3.77 mA).
+
+Files: `slots-0858.json`, `slots-1037.json` (op 24's slots 0-10 and the watchdog record, read
 with `ds_slots.py`, in `../ds-phase-check-20261029-0002/`), `run.log`.
