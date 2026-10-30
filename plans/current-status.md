@@ -495,6 +495,19 @@ The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
   then charged at ~366 mA four times (13:08:45, 13:10:17, 13:12:09, and a
   3 s pulse from the Mac at 13:13:14), with no drop and the count intact;
   ~1 mAh went into the pack, counted.
+- ⚠️ **The count restarted a third time at 12:31:55 10-30. From then, mAh
+  since FULL = `charge_mah` + 1960.53** (±0.1). The logger's cable was
+  pulled by accident:
+  - **The gap:** the INA228 stopped answering after 12:30:01.83, when the
+    count was 1401.950 (1959.44 since FULL, 48.8% of R4's 4011.6 mAh; the
+    board showed 49%). The QT Py then left USB at 12:30:50 and booted again
+    at 12:31:54.
+  - **The bridge:** the new count began at ~12:31:54.8. The 113 s between
+    went uncounted, ~1.09 mAh at ~34.8 mA (36.2 before, 33.5 after).
+  - The board ran on its pack throughout (relay 2 off).
+- **White's cable out from ~12:31 10-30.** JD moved black (gremlin's
+  board) onto the relay cable. White's USB data is unavailable until its
+  cable is back; the drain runs on untethered.
 
 ### Stopped 23:46:52 10-23: the untethered drain at real use, restarted from FULL
 
