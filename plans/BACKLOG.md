@@ -27,8 +27,7 @@ The order agreed after the sleep experiments:
 
 ## Connected over BT but no typing after a wake (2026-10-29) -- JD's bug, noted; chase it when it repeats
 
-JD, ~23:35 10-29, on JD's board over BT (the cable-out day on Power saver,
-so asleep after each 3 min pause): "After being away for a bit, the
+JD, ~23:35 10-29, over BT: "After being away for a bit, the
 keyboard claimed it was connected but I couldn't type after logging in
 (which, oddly, worked). I had to switch bt channels back and forth." JD:
 not worth chasing until it reproduces.
@@ -38,13 +37,27 @@ board still showed BT connected; switching channel away and back (the
 CH582's link made again) brought typing back, with no reset or power
 cycle.
 
+**Where, from the logs (read only; which board and host is JD's to say):**
+- **Not on Buzz, by its logs** (Buzz's session): JD's board had no key
+  after 23:33:47 (dim 23:34:47, asleep 23:36:49), no held title went at
+  any return that evening, and the Mac's `bluetoothd` shows no channel
+  switch all day (only six remote link drops, each ~30 min into a quiet
+  sleep, each made again within ~1 s of the next key).
+- **gremlin:** the screen woke at 23:34:08 and the session unlocked at
+  23:34:23 (Winlogon/Operational 1, 2). The daemon (0.2.0, `--lockchan`)
+  had the lock-light channel granted all day, so a BLE AK820 was
+  connected: the pairing `CC:40:5F:CA:52:BC` from 10-20. It had held a
+  title since 19:23:29, and sent it at 23:34:39, 16 s after the unlock.
+  It then sent a transport pause at 23:34:42 and a clock at 23:34:57.
+
 **A lead to check first, not a cause:** the daemon's lock-light hold went
-from 45 s to 3 min that morning (`9bfdbb0`, on Buzz since 09:04). A title
-held while JD was away goes at the first input, which is the login, so a
-lock-light frame (a burst of LED output reports over BT) would reach the
-board just as typing stopped. 52 such frames went into the sleeping board
-that day (`history/ds-phase-cableout-20261029/`), all harmless as far as
-the power log shows.
+from 45 s to 3 min that morning (`9bfdbb0`; Buzz 09:04, gremlin 09:06). A
+title held while JD was away goes at the first input after the login,
+which on gremlin was 16 s after the unlock. So a lock-light frame (a burst
+of `IOCTL_KEYBOARD_SET_INDICATORS` LED reports over BLE) would have
+reached the board just as typing stopped. 52 such frames went into JD's
+sleeping board that day (`history/ds-phase-cableout-20261029/`), harmless
+as far as its power log shows.
 
 **If it repeats, before switching channels:** note the time; does Caps
 Lock's light follow the host (host to board alive), and does the knob or
