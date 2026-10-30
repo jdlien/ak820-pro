@@ -1,0 +1,24 @@
+blit_timeouts            0
+tx_sent                  6
+tx_timeouts              1
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          12
+scan_rate                174
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                13464
+build_token              0xf2a645a7
+msp_free                 648 bytes (interrupt stack; paint watermark)
+psp_free                 1240 bytes (main thread; paint watermark)
+blits_issued             74
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0

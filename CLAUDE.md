@@ -132,8 +132,13 @@ the 12 px greyscale icons, the dashboard's spacing, System info in
 Diagnostics, the camera page removed, the screen's default level 80; and
 Warren's `gremlin/pcf-unseen` (the clock chip's write when nobody is
 looking) and the dev Write test. The daily build is clean (heap gap
-2336 B). Gremlin's keyboard runs its dev build since 20:51 10-28 (token
-`0x189635f2`).
+2336 B). **The two boards are called white (JD's, on Buzz's bench: the
+drain, the power logger) and black (gremlin's), after their cases.**
+**Black runs Warren's `fcb7ae00b4` since 12:43 10-30** (ds-phase, as on
+white; token `0xf2a645a7`), flashed on Buzz's relay cable
+(`history/ds-phase-black-20261030/`). Before it: `8ec0c8b9b4` dev (token
+`0xb5f2fdab`, flashed from Gizmo at 23:34 10-28), and gremlin's own
+`c4bc0852` build (token `0x189635f2`) from 20:51 10-28.
 **On JD's board since 00:03 10-29: Warren's `fcb7ae00b4`** (dev, token
 `0xf2a645a7`, heap gap 152 B, `gremlin/ds-phase`): `27d1105dc1` plus
 codex's fixes and op 24 slot 10, the sleep a reset cut short, kept until

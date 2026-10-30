@@ -109,8 +109,13 @@ bulbs.
   `deps.lock`; JD: "we should get everything merged into main now"). It is
   JD's board's build plus the screen's default level 80, and it carries
   Warren's `gremlin/pcf-unseen` and the dev Write test. Gremlin's keyboard
-  runs it since 20:51 (token `0x189635f2`); JD on the Font page there:
+  ran it from 20:51 (token `0x189635f2`); JD on the Font page there:
   "Identical to the board on Buzz."
+  Since then the boards are called white (JD's) and black (gremlin's).
+  Black ran `8ec0c8b9b4` dev (token `0xb5f2fdab`, flashed from Gizmo at
+  23:34 10-28), and since 12:43 10-30 Warren's ds-phase `fcb7ae00b4`
+  (token `0xf2a645a7`), for a repeat of its watchdog reset in a deep sleep
+  (`../history/ds-phase-black-20261030/`).
 - **Before it, from 20:39 10-28: `fbc6c4a1fd`** (dev, token
   `0xd044efc5`): the build below plus bold page titles and a bold song title
   in 10px (JD: "we still judiciously use bold"). flash.sh exit 0 at
