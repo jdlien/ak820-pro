@@ -25,7 +25,7 @@ pull-downs. Balanced: asleep 20 min after the last key.
 | 08:58:11 | asleep (sleep 3), the cable still in |
 | 09:40:20 | sleep 3 ends at a key (right Shift) |
 | 09:43:42 | dark at ~13.5 mA for 14 s, then asleep (sleep 4) at 09:43:56 |
-| 09:44:49-09:44:57 | ~13.9 mA for 9 s inside sleep 4, then back to ~3.1 mA (the cable came out some time after 09:41) |
+| 09:44:49-09:44:57 | ~13.9 mA for 9 s inside sleep 4, then back to ~3.1 mA: a lock-light frame (below) |
 | 10:33:54 | sleep 4 ends at a key; the cable back in |
 | 10:37:17-10:37:20 | data on for the read (`slots-1037.json`), the daemon paused |
 
@@ -62,17 +62,25 @@ keeps the last eight sleeps.
   `0x10`), 0 strays, flags `0xc0`.
 - **No reset:** the watchdog record empty, `consecutive_resets` 0, slot 10
   still sleep 0; the stray snapshot empty. `next_seq` 5.
-- **Unexplained:** the 9 s at ~13.9 mA at 09:44:49, the level of the dark
-  stretch before sleep 4, left no trace on the board: no new sleep, no
-  stray, and sleep 4's counted seconds span it. The board's own wake loop
-  has no path that runs 9 s and returns without one, so it was probably the
-  radio module, not the core; the overnight sleeps had nothing like it
-  (max 3.77 mA).
+- **The 9 s at ~13.9 mA at 09:44:49 was a lock-light frame, not the core
+  and not the cable** (found that evening). It left no trace on the board:
+  no new sleep, no stray, and sleep 4's counted seconds span it. The day's
+  log has 52 like it, ~10 s each, ~63 s apart while the Mac was in use with
+  the keyboard asleep (34 between 18:04 and 18:41), and they stop at the
+  daemon's "held" (09:45:51, 17:49:31, 18:14:20, 18:42:10). The known
+  ~1.6 mA average of frames into a sleeping board (`plans/BACKLOG.md`).
 - **When the cable came out is not certain.** JD remembers shortly before
   9; the chat has JD's "I'll unplug now" at 09:40:42, after the Shift. The
   sleeps' draw sides with the chat: sleep 1 (cable in) 3.28 mA and sleep 2
-  (out) 3.12, against sleep 3 3.51 and sleep 4 3.19. Taken as in through
-  sleep 3 and out from about 09:44:49, which would make the 9 s the pull.
+  (out) 3.12, against sleep 3 3.51 and sleep 4 3.19, though frames into a
+  sleeping board move these means too.
+
+## The afternoon, from the power log (10:37-19:00)
+
+Twelve sleeps, each ended by a wake to the lit level, from 3 s to 2 h
+32 min (15:12:48-17:45:04); among them 1 h 12 min (17:48:45-19:00:46) with
+44 frames into it. Nothing in the
+current looks wrong; the board's record decides whether any wake was a reset.
 
 Files: `slots-0858.json`, `slots-1037.json` (op 24's slots 0-10 and the watchdog record, read
 with `ds_slots.py`, in `../ds-phase-check-20261029-0002/`), `run.log`.
