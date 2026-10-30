@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## Connected over BT but no typing after a wake (2026-10-29) -- JD's bug, noted; gremlin's board on gremlin, by the logs; chase it when it repeats
+## Connected over BT but no typing after a wake (2026-10-29) -- JD's bug; located 10-30: Windows stops attaching the board's keyboard collection to the session (the keys reach hidclass); the trigger unproven, the daemon's lock-light frame the suspect
 
 JD, ~23:35 10-29, over BT: "After being away for a bit, the
 keyboard claimed it was connected but I couldn't type after logging in
@@ -37,7 +37,7 @@ board still showed BT connected; switching channel away and back (the
 CH582's link made again) brought typing back, with no reset or power
 cycle.
 
-**Where, from the logs: gremlin's own board (`c4bc0852` dev), on gremlin**,
+**Where, from the logs: gremlin's own board, on gremlin**,
 by elimination (read only; JD's to correct):
 - **Not on Buzz, by its logs** (Buzz's session): JD's board had no key
   after 23:33:47 (dim 23:34:47, asleep 23:36:49), no held title went at
@@ -62,12 +62,49 @@ reached the board just as typing stopped. 52 such frames went into JD's
 sleeping board that day (`history/ds-phase-cableout-20261029/`), harmless
 as far as its power log shows.
 
-**If it repeats, before switching channels:** note the time; does Caps
-Lock's light follow the host (host to board alive), and does the knob or
-Fn menu answer on the LCD (the MCU alive). After: the host daemon's log
-around that time ("lockchan: held ...", "lockchan: title from the player
-..."), and the board's health counters (TX timeouts, UART overruns). To
-split the daemon from the firmware: a stretch with `--lockchan` off.
+**The repeat, 10-30 08:40-09:08, located** (the board left as it was; the
+board's counters over its cable, raw input on gremlin, and an HCI trace by
+Burrow, an elevated session on gremlin):
+- **The firmware:** token `0xb5f2fdab` is a clean dev build of
+  `8ec0c8b9b4` (`more-info`), flashed at Gizmo by Gizmo's session at
+  JD's word, 23:34 10-28. The same source as JD's board's
+  `0xe612779e`; nothing in the BT, UART or CH582 paths.
+- **The same shape:** gremlin's screen woke at 08:40:36 and the session
+  unlocked at 08:40:49. The daemon's first lock-light frame since
+  23:47:18 went at 08:41:21, 32 s later. After that, no typing.
+- **The board is fine:** its MCU counted every key and handed each to the
+  CH582 as an `A1` frame. All were ACKed, with `tx_drops` 0, no reset
+  and the watchdog record empty. The ACK timeouts climbed (10% of sends
+  early on, ~60% by 08:59), and all were retried successfully.
+- **The link is fine:** Windows showed it connected and read the battery
+  over GATT. Caps Lock from another keyboard lit the board's light, as a
+  Write Command to handle `0x0040`. The knob and the play key worked
+  throughout, as notifications on `0x0047`, reaching raw input from the
+  BLE device's `Col04`.
+- **The keys reached Windows:** each one is a Handle Value Notification
+  on `0x003C` (8 bytes) in the HCI trace, and hidclass's
+  `NumReadReports` grew by exactly the link's notification count
+  (385 = 219 + 120 + 46). There were no CCCD, Protocol Mode or other
+  writes, and no reconnection. But raw input got **no** keyboard events
+  from the BLE device's `Col01`. So the loss was above hidclass, in
+  kbdhid, kbdclass or the session's raw input.
+- **What cleared it:** JD RDP'd in (09:06:01) and came back to the
+  console (reconnected 09:08:07). The board's keys reached raw input at
+  09:08:08.4, and typing has worked since. A session reconnect re-attaches
+  the keyboards to the session, as a channel switch does by reconnecting
+  the board.
+- **The suspect:** the daemon's Windows sender opens exactly that
+  collection's keyboard-class interface (`Col01`, access 0) and sends
+  `IOCTL_KEYBOARD_SET_INDICATORS` bursts through it
+  (`platform/windows/lock_lights.rs`), holding the handle while the
+  channel is granted. Both times the frame came 16-32 s after an unlock.
+  The Mac's sender does the same within seconds of a wake (16 times on
+  JD's board since 10-29 09:40) without a loss, but it has no kbdclass.
+  Unproven.
+
+**Next, the repro:** cable out (the channel granted), lock gremlin, unlock
+it from the board, and keep typing past the daemon's first frame. Then the
+same with `--lockchan` off.
 
 ## A watchdog reset inside a deep sleep (2026-10-28) -- open: the keyboard on gremlin, ~8 min into an untouched sleep on BT, cable out; (c) ruled out on JD's board; the diagnostic `gremlin/ds-phase` on JD's board since 23:51 10-28, its overnight cable-out run clean (GREMLIN-RESULTS §21)
 
