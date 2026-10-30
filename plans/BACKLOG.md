@@ -25,6 +25,34 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## Connected over BT but no typing after a wake (2026-10-29) -- JD's bug, noted; chase it when it repeats
+
+JD, ~23:35 10-29, on JD's board over BT (the cable-out day on Power saver,
+so asleep after each 3 min pause): "After being away for a bit, the
+keyboard claimed it was connected but I couldn't type after logging in
+(which, oddly, worked). I had to switch bt channels back and forth." JD:
+not worth chasing until it reproduces.
+
+What is known: the keys reached the host for the login, then stopped; the
+board still showed BT connected; switching channel away and back (the
+CH582's link made again) brought typing back, with no reset or power
+cycle.
+
+**A lead to check first, not a cause:** the daemon's lock-light hold went
+from 45 s to 3 min that morning (`9bfdbb0`, on Buzz since 09:04). A title
+held while JD was away goes at the first input, which is the login, so a
+lock-light frame (a burst of LED output reports over BT) would reach the
+board just as typing stopped. 52 such frames went into the sleeping board
+that day (`history/ds-phase-cableout-20261029/`), all harmless as far as
+the power log shows.
+
+**If it repeats, before switching channels:** note the time; does Caps
+Lock's light follow the host (host to board alive), and does the knob or
+Fn menu answer on the LCD (the MCU alive). After: the host daemon's log
+around that time ("lockchan: held ...", "lockchan: title from the player
+..."), and the board's health counters (TX timeouts, UART overruns). To
+split the daemon from the firmware: a stretch with `--lockchan` off.
+
 ## A watchdog reset inside a deep sleep (2026-10-28) -- open: the keyboard on gremlin, ~8 min into an untouched sleep on BT, cable out; (c) ruled out on JD's board; the diagnostic `gremlin/ds-phase` on JD's board since 23:51 10-28, its overnight cable-out run clean (GREMLIN-RESULTS §21)
 
 The record named only `deep_sleep()` (site 27), and the sleep's facts were
