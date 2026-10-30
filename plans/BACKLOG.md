@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## Connected over BT but no typing after a wake (2026-10-29) -- JD's bug, noted; chase it when it repeats
+## Connected over BT but no typing after a wake (2026-10-29) -- JD's bug, noted; gremlin's board on gremlin, by the logs; chase it when it repeats
 
 JD, ~23:35 10-29, over BT: "After being away for a bit, the
 keyboard claimed it was connected but I couldn't type after logging in
@@ -37,12 +37,15 @@ board still showed BT connected; switching channel away and back (the
 CH582's link made again) brought typing back, with no reset or power
 cycle.
 
-**Where, from the logs (read only; which board and host is JD's to say):**
+**Where, from the logs: gremlin's own board (`c4bc0852` dev), on gremlin**,
+by elimination (read only; JD's to correct):
 - **Not on Buzz, by its logs** (Buzz's session): JD's board had no key
   after 23:33:47 (dim 23:34:47, asleep 23:36:49), no held title went at
   any return that evening, and the Mac's `bluetoothd` shows no channel
   switch all day (only six remote link drops, each ~30 min into a quiet
-  sleep, each made again within ~1 s of the next key).
+  sleep, each made again within ~1 s of the next key); it stayed
+  connected to Buzz from 22:47:15 to 23:59, and was asleep from 23:36:49
+  to at least 23:44.
 - **gremlin:** the screen woke at 23:34:08 and the session unlocked at
   23:34:23 (Winlogon/Operational 1, 2). The daemon (0.2.0, `--lockchan`)
   had the lock-light channel granted all day, so a BLE AK820 was
