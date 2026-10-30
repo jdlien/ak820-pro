@@ -103,7 +103,7 @@ lead, over five full drains and charges.
 What that gives you:
 
 - **The battery in hours of use,** at the lighting you have now, not only a
-  percentage.
+  percentage. Or as the icon alone, for a calmer screen.
 - **Four power modes**, used on battery. On USB nothing sleeps.
 
   | Mode | What it does |

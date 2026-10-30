@@ -530,14 +530,16 @@ Click: back              Click or hold: stop
 
 ### Battery (P4, 10-25; on the top level; title: `Battery`)
 
-A choice: `Percent`, `Hours of use`, `Both` (10-26); the top level's
-value: `Percent`, `Hours`, `Both`.
+A choice: `Percent`, `Hours of use`, `Both` (10-26), `Icon only`
+(10-30); the top level's value: `Percent`, `Hours`, `Both`, `Icon only`
+(Large: `%` and `Icon`).
 
 ```
 ◀ Back
 ■ Percent          85%
   Hours of use    160h
   Both        85% 160h
+  Icon only
 ```
 
 Each option shows what the dashboard would show on battery now (JD, 10-25:
@@ -550,13 +552,18 @@ it's not going to display yet"):
 ■ Percent          85%
   Hours of use      --
   Both          85% --
-
+  Icon only
+────────────────────
 Hours show after an
 hour on battery:
 40 min to go.
 ```
 
-Warmed up but plugged in: `Hours show only` / `on battery.`
+The note starts at row 5 under a grey rule, the profile summary's, on the
+note's top pixel row (not a row of its own), drawn only while the note says
+something. Large has two rows for it: `Hours in
+40 min` / `on battery.` Warmed up but plugged in: `Hours show only` / `on
+battery.`
 
 What the dashboard's battery shows (JD, 10-25: "a '160 h' or something like
 that all the time there"):
@@ -570,8 +577,14 @@ that all the time there"):
   `100% 51h`) close the space up to fit. Nine won't: at `100%` with 100 h
   or more it shows `100%` alone (JD: "only ever show time if we're under
   99% if it gets too tight"). Until there's an estimate, the percent.
-- Either way: `USB`, `Charge`, `No Batt` and `Low` as before. The hours
-  count awake time only, so they move with what the lights draw.
+- **Icon only** (JD, 10-27: "some people don't like the stress of seeing
+  the percent drop a percent at a time"): no text. The icon's fill and its
+  colours, the bolt and the bulb stay, and so do the warnings: the icon
+  turns red at 20%, the status band says `Battery low`, and a wake under
+  10 h of use says `6h use left`. Its row's preview is blank.
+- Either way: `USB`, `Charge`, `No Batt` and `Low` as before, Icon only
+  too: they say what an empty or red bar means. The hours count awake time
+  only, so they move with what the lights draw.
 
 ### Profiles (P5, 10-25 and 10-26; on the top level; title: `Profiles`)
 

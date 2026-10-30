@@ -42,6 +42,11 @@ firmware from before the Font setting refuses a live record with the bit set
 (its readout's range is 1-3), so the restore then sends it once more without
 the bit: everything but the face, which that firmware doesn't have.
 
+Since 10-30 the readout can be Icon only: bit 4 of the same byte, bits 0-1
+clear, in the live record and in profiles alike. A firmware from before it
+refuses that, so the restore sends the record (or the block) once more with
+Percent in its place, and then, if it is refused again, without the face.
+
 Usage:
     ak820profiles.py dump    [file]   # default ~/Documents/ak820pro-profiles.json
     ak820profiles.py restore [file] [--block-only | --live-only]
@@ -85,7 +90,15 @@ PF_LIVE = 0xBF                          # the live record's fields (subs 4 and 5
 BV_VIEW, BV_SMALL = 0x03, 0x04          # its readout byte (10-28): the readout, and the menu's face (set Small)
 BV_REG = 0x08                           # the third face (10-28): set Regular, Terminus regular
 BV_FACE = BV_SMALL | BV_REG
-VIEWS = {1: "percent", 2: "hours", 3: "both"}
+BV_ICON = 0x10                          # Icon only (10-30): bit 4, bits 0-1 clear
+VIEWS = {1: "percent", 2: "hours", 3: "both", 4: "icon only"}
+# What an older firmware refuses in the readout byte, newest first: the restore drops each in turn.
+LIVE_FALLBACKS = ((BV_ICON, "Icon only (a firmware from before it): the live settings sent again with Percent"),
+                  (BV_FACE, "the menu's face (a firmware from before the Font setting): "
+                            "the live settings sent again without it"))
+BLOCK_FALLBACKS = ((BV_ICON, "the profiles' Icon only (a firmware from before it): the profiles sent again with Percent"),
+                   (BV_FACE, "the profiles' font (a firmware from before profiles carried it): "
+                             "the profiles sent again without it"))
 STATUS = {0: "ok", 1: "bad request", 2: "no such restore (token)", 3: "busy (a deep sleep's recovery, or a restore)",
           4: "invalid", 5: "write failed", 6: "incomplete (a page missing)", 7: "unknown record format",
           8: "ok, the effect skipped (this build lacks it)"}
@@ -277,44 +290,68 @@ def write_block(h, block, g, may_refuse=False):
         raise SystemExit(f"restore refused at commit: {STATUS.get(st, st)} (the board's profiles read as empty)")
 
 
+def bv_without(v, bits):
+    """A readout byte with `bits` taken out: the face's (BV_FACE), and Icon
+    only's (BV_ICON, 10-30), which goes as Percent."""
+    if bits & BV_ICON and v & BV_ICON:
+        v = (v & ~BV_ICON & 0xFF) | 1
+    return v & ~(bits & BV_FACE) & 0xFF
+
+
+def block_has(block, bits):
+    """Whether any record in the block has any of `bits` in its readout byte."""
+    return any(block[2 + s * REC] != 0 and block[2 + s * REC + 12] & bits for s in range(block_slots(block)))
+
+
 def block_faces(block):
     """Whether any record in the block carries the menu's face (10-28)."""
-    return any(block[2 + s * REC] != 0 and block[2 + s * REC + 12] & BV_FACE for s in range(block_slots(block)))
+    return block_has(block, BV_FACE)
 
 
-def block_without_faces(block):
-    """The block with every record's face taken out, each crc taken again: for
-    a firmware from before profiles carried the face (10-28), which refuses a
-    record with it at the commit."""
+def block_without(block, bits):
+    """The block with `bits` taken out of every record's readout byte
+    (bv_without), each crc taken again: for a firmware from before them, which
+    refuses a record with them at the commit."""
     b = bytearray(block)
     for s in range(block_slots(block)):
         o = 2 + s * REC
-        if b[o] != 0 and b[o + 12] & BV_FACE:
-            b[o + 12] &= ~BV_FACE & 0xFF
+        if b[o] != 0 and b[o + 12] & bits:
+            b[o + 12] = bv_without(b[o + 12], bits)
             b[o + 26] = crc8(b[o + 1:o + 26])
     return bytes(b)
 
 
-def without_face(live):
-    """The live record with the menu's face taken out of its readout byte
-    (10-28), the crc taken again over bytes 1-25."""
+def block_without_faces(block):
+    """The block with every record's face taken out (10-28)."""
+    return block_without(block, BV_FACE)
+
+
+def rec_without(live, bits):
+    """The live record with `bits` taken out of its readout byte (bv_without),
+    the crc taken again over bytes 1-25."""
     r = bytearray(live)
-    r[12] &= ~BV_FACE & 0xFF
+    r[12] = bv_without(r[12], bits)
     r[26] = crc8(r[1:26])
     return bytes(r)
 
 
+def without_face(live):
+    """The live record with the menu's face taken out of its readout byte (10-28)."""
+    return rec_without(live, BV_FACE)
+
+
 def apply_live(h, live):
     """Sub 5, then the flush. Returns the apply's status and the record the
-    board took: a firmware from before the Font setting (10-28) refuses one
-    with the face's bit set (and one from before Regular, bit 3), so that is
-    sent once more without it."""
+    board took: a firmware from before Icon only (10-30) refuses one with its
+    bit, and one from before the Font setting (10-28) one with the face's bit
+    set (and one from before Regular, bit 3), so that is sent once more
+    without each, newest first."""
     st = busy_retry(lambda: xfer(h, 5, live)[31], "apply")
-    if st == 4 and live[12] & BV_FACE:
-        live = without_face(live)
-        print("  the board refused the menu's face (a firmware from before the Font setting): "
-              "the live settings sent again without it")
-        st = busy_retry(lambda: xfer(h, 5, live)[31], "apply")
+    for bits, what in LIVE_FALLBACKS:
+        if st == 4 and live[12] & bits:
+            live = rec_without(live, bits)
+            print(f"  the board refused {what}")
+            st = busy_retry(lambda: xfer(h, 5, live)[31], "apply")
     if st not in (0, 8):
         raise SystemExit(f"live settings refused: {STATUS.get(st, st)}")
     applied = st
@@ -342,9 +379,9 @@ def decode(r):
         d["clock"] = CLOCKS[r[11]] if r[11] < len(CLOCKS) else r[11]
     if f & PF_BVIEW:
         v = r[12]
-        if not v & ~(BV_VIEW | BV_FACE) and (v & BV_FACE) != BV_FACE:   # 10-28: the face, every record's
-            d["font"] = "small" if v & BV_SMALL else "regular" if v & BV_REG else "large"
-            v &= BV_VIEW
+        if not v & ~(BV_VIEW | BV_FACE | BV_ICON) and (v & BV_FACE) != BV_FACE and not (v & BV_ICON and v & BV_VIEW):
+            d["font"] = "small" if v & BV_SMALL else "regular" if v & BV_REG else "large"   # 10-28: every record's
+            v = 4 if v & BV_ICON else v & BV_VIEW                                           # 10-30: Icon only
         d["battery"] = VIEWS.get(v, v)
     if f & PF_POWER:
         d["power"] = POWER[r[13]] if r[13] < len(POWER) else r[13]
@@ -485,11 +522,14 @@ def cmd_restore(path, block_only, live_only):
                     block_err = str(e)
                     print(f"profiles NOT restored: {block_err}")
             if want is not None:
-                if write_block(h, want, g, may_refuse=block_faces(want)) == 4:
-                    want = block_without_faces(want)
-                    print("  the board refused the profiles' font (a firmware from before profiles carried it): "
-                          "the profiles sent again without it")
-                    write_block(h, want, g)
+                st = write_block(h, want, g, may_refuse=block_has(want, BV_ICON | BV_FACE))
+                for bits, what in BLOCK_FALLBACKS:   # newest first, as apply_live's
+                    if st == 4 and block_has(want, bits):
+                        want = block_without(want, bits)
+                        print(f"  the board refused {what}")
+                        st = write_block(h, want, g, may_refuse=block_has(want, BV_ICON | BV_FACE))
+                if st == 4:
+                    raise SystemExit("restore refused at commit: invalid (the board's profiles read as empty)")
                 if read_block(h, g) != normalized(want):
                     raise SystemExit("the profiles' read-back differs from the backup -- the restore did not land")
                 note = f" ({block_slots(block)} slots into {g.slots})" if block_slots(block) != g.slots else ""

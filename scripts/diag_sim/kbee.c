@@ -4,8 +4,8 @@
  * battery readout (byte 9) as
  * stored, every boundary, for each field alone; a zero-filled block (QMK's
  * answer to an older version); the deferred, coalesced write; since 10-28
- * the menu's face in byte 9's bit 2, beside the readout. Built and run by
- * run.sh. */
+ * the menu's face in byte 9's bit 2, beside the readout; since 10-30 Icon
+ * only, its bit 4. Built and run by run.sh. */
 #include <stdio.h>
 #include <string.h>
 #include "quantum.h"
@@ -14,6 +14,12 @@
 #include "indicator_levels.h"
 
 static uint32_t now_ms = 1000;
+
+/* Byte 9 as kb_eeconfig.c reads it (10-30): garbage with any of bits 5-7,
+ * both face bits, or Icon only's bit 4 beside a readout; and as it stores a
+ * readout, Icon only as bit 4 alone. */
+static bool    bv_garbage(int b) { return (b & 0xE0) != 0 || (b & 0x0C) == 0x0C || ((b & 0x10) && (b & 3)); }
+static uint8_t bv_bits(uint8_t v) { return v == KB_BATT_VIEW_ICON ? 0x10u : v; }
 uint32_t timer_read32(void) { return now_ms; }
 bool     sleep_recovering(void) { return false; }
 
@@ -125,8 +131,9 @@ int main(void) {
           "bytes 0-6 kept, the pending save written: %d, %u %u", writes, stored[7], stored[8]);
 
     /* P4: the battery readout (byte 9), its frozen encoding: 0 unset, 1
-     * percent, 2 hours, 3 both (JD, 10-26); unset and garbage read percent. */
-    static const struct { uint8_t b, view; } bv[] = {{0, 1}, {1, 1}, {2, 2}, {3, 3}, {4, 1}, {255, 1}};
+     * percent, 2 hours, 3 both (JD, 10-26), and Icon only bit 4 alone (10-30);
+     * unset and garbage read percent. */
+    static const struct { uint8_t b, view; } bv[] = {{0, 1}, {1, 1}, {2, 2}, {3, 3}, {4, 1}, {0x10, 4}, {0x11, 1}, {255, 1}};
     for (size_t i = 0; i < sizeof bv / sizeof bv[0]; i++) {
         memset(stored, 0, sizeof stored);
         stored[9] = bv[i].b;
@@ -154,12 +161,17 @@ int main(void) {
     boot();
     CHECK(kb_eeconfig_get_batt_view() == KB_BATT_VIEW_BOTH, "both after a reboot");
     kb_eeconfig_set_batt_view(0);
-    kb_eeconfig_set_batt_view(4);
+    kb_eeconfig_set_batt_view(5);
     settle();
     CHECK(writes == 2 && stored[9] == 3, "out of range: ignored, nothing written");
+    kb_eeconfig_set_batt_view(KB_BATT_VIEW_ICON);
+    settle();
+    CHECK(writes == 3 && stored[9] == 0x10 && memcmp(stored, old9, sizeof old9) == 0, "icon only stored as 0x10: %u", stored[9]);
+    boot();
+    CHECK(kb_eeconfig_get_batt_view() == KB_BATT_VIEW_ICON, "icon only after a reboot");
     kb_eeconfig_set_batt_view(KB_BATT_VIEW_PERCENT);
     settle();
-    CHECK(writes == 3 && stored[9] == 1, "percent stored as 1: %u", stored[9]);
+    CHECK(writes == 4 && stored[9] == 1, "percent stored as 1: %u", stored[9]);
     boot();
     CHECK(kb_eeconfig_get_batt_view() == KB_BATT_VIEW_PERCENT, "percent after a reboot");
 
@@ -172,8 +184,9 @@ int main(void) {
         {0x00, 1, KB_FONT_LARGE}, {0x01, 1, KB_FONT_LARGE}, {0x02, 2, KB_FONT_LARGE}, {0x03, 3, KB_FONT_LARGE},
         {0x04, 1, KB_FONT_SMALL}, {0x05, 1, KB_FONT_SMALL}, {0x06, 2, KB_FONT_SMALL}, {0x07, 3, KB_FONT_SMALL},
         {0x08, 1, KB_FONT_REGULAR}, {0x09, 1, KB_FONT_REGULAR}, {0x0A, 2, KB_FONT_REGULAR}, {0x0B, 3, KB_FONT_REGULAR},
-        {0x0C, 1, KB_FONT_LARGE}, {0x0E, 1, KB_FONT_LARGE}, {0x10, 1, KB_FONT_LARGE}, {0x80, 1, KB_FONT_LARGE},
-        {0xFE, 1, KB_FONT_LARGE}, {0xFF, 1, KB_FONT_LARGE},
+        {0x0C, 1, KB_FONT_LARGE}, {0x0E, 1, KB_FONT_LARGE}, {0x10, 4, KB_FONT_LARGE}, {0x14, 4, KB_FONT_SMALL},
+        {0x18, 4, KB_FONT_REGULAR}, {0x11, 1, KB_FONT_LARGE}, {0x13, 1, KB_FONT_LARGE}, {0x1C, 1, KB_FONT_LARGE},
+        {0x20, 1, KB_FONT_LARGE}, {0x80, 1, KB_FONT_LARGE}, {0xFE, 1, KB_FONT_LARGE}, {0xFF, 1, KB_FONT_LARGE},
     };
     for (size_t i = 0; i < sizeof bf / sizeof bf[0]; i++) {
         memset(stored, 0, sizeof stored);
@@ -186,8 +199,9 @@ int main(void) {
         memset(stored, 0, sizeof stored);
         stored[9] = (uint8_t)b;
         boot();
-        bool    garbage = (b & 0xF0) != 0 || (b & 0x0C) == 0x0C;
-        uint8_t view    = garbage || (b & 3) == 0 ? KB_BATT_VIEW_PERCENT : (uint8_t)(b & 3);
+        bool    garbage = bv_garbage(b);
+        uint8_t view    = garbage ? KB_BATT_VIEW_PERCENT : (b & 0x10) ? KB_BATT_VIEW_ICON
+                        : (b & 3) == 0 ? KB_BATT_VIEW_PERCENT : (uint8_t)(b & 3);
         uint8_t font    = garbage ? KB_FONT_LARGE : (b & 4) ? KB_FONT_SMALL : (b & 8) ? KB_FONT_REGULAR : KB_FONT_LARGE;
         CHECK(kb_eeconfig_get_batt_view() == view && kb_eeconfig_get_font() == font, "every byte: 0x%02x", b);
     }
@@ -195,7 +209,7 @@ int main(void) {
      * each setter keeping the other's field; stored canonically and read
      * back after a reboot; then each changed again, the other kept. */
     for (int first = 0; first < 2; first++)
-        for (uint8_t v = KB_BATT_VIEW_PERCENT; v <= KB_BATT_VIEW_BOTH; v++)
+        for (uint8_t v = KB_BATT_VIEW_PERCENT; v <= KB_BATT_VIEW_ICON; v++)
             for (uint8_t f = KB_FONT_LARGE; f <= KB_FONT_REGULAR; f++) {
                 memset(stored, 0, sizeof stored);
                 boot();
@@ -211,19 +225,19 @@ int main(void) {
                 }
                 CHECK(kb_eeconfig_get_batt_view() == v && kb_eeconfig_get_font() == f, "order %d, %u %u", first, v, f);
                 settle();
-                uint8_t want = (uint8_t)(v | (f == KB_FONT_SMALL ? 4u : f == KB_FONT_REGULAR ? 8u : 0u));
+                uint8_t want = (uint8_t)(bv_bits(v) | (f == KB_FONT_SMALL ? 4u : f == KB_FONT_REGULAR ? 8u : 0u));
                 CHECK(writes == 1 && stored[9] == want, "order %d, %u %u: one write of 0x%02x, got %d 0x%02x", first, v,
                       f, want, writes, stored[9]);
                 boot();
                 CHECK(kb_eeconfig_get_batt_view() == v && kb_eeconfig_get_font() == f, "%u %u after a reboot", v, f);
-                uint8_t v2 = (uint8_t)(v % 3u + 1u), f2 = (uint8_t)((f + 1u) % 3u);
+                uint8_t v2 = (uint8_t)(v % 4u + 1u), f2 = (uint8_t)((f + 1u) % 3u);
                 kb_eeconfig_set_batt_view(v2);
                 CHECK(kb_eeconfig_get_font() == f, "readout %u -> %u: the face %u kept", v, v2, f);
                 kb_eeconfig_set_font(f2);
                 CHECK(kb_eeconfig_get_batt_view() == v2 && kb_eeconfig_get_font() == f2, "face %u -> %u: the readout kept", f,
                       f2);
                 settle();
-                CHECK(writes == 2 && stored[9] == (uint8_t)(v2 | (f2 == KB_FONT_SMALL ? 4u : f2 == KB_FONT_REGULAR ? 8u : 0u)),
+                CHECK(writes == 2 && stored[9] == (uint8_t)(bv_bits(v2) | (f2 == KB_FONT_SMALL ? 4u : f2 == KB_FONT_REGULAR ? 8u : 0u)),
                       "changed: 0x%02x", stored[9]);
             }
     /* Unchanged saves write nothing; anything but the three faces, and a
@@ -237,7 +251,7 @@ int main(void) {
     kb_eeconfig_set_font(3);
     kb_eeconfig_set_font(0xFF);
     kb_eeconfig_set_batt_view(0);
-    kb_eeconfig_set_batt_view(4);
+    kb_eeconfig_set_batt_view(5);
     CHECK(!kb_eeconfig_write_pending(), "unchanged or ignored: nothing pending");
     settle();
     CHECK(writes == 0 && stored[9] == 0x06 && kb_eeconfig_get_batt_view() == KB_BATT_VIEW_HOURS &&
@@ -247,8 +261,8 @@ int main(void) {
      * on matching low bits (Hours over 0xFE: 0x02) nor the raw bit 2 kept
      * (Large over 0xFF: 0x00, not Small). The other bytes kept. */
     for (int b = 0x0C; b < 256; b++) {
-        if ((b & 0xF0) == 0 && (b & 0x0C) != 0x0C) continue;   /* valid */
-        for (uint8_t v = KB_BATT_VIEW_PERCENT; v <= KB_BATT_VIEW_BOTH; v++) {
+        if (!bv_garbage(b)) continue;   /* valid */
+        for (uint8_t v = KB_BATT_VIEW_PERCENT; v <= KB_BATT_VIEW_ICON; v++) {
             memcpy(stored, old9, sizeof old9);
             stored[9] = (uint8_t)b;
             boot();
@@ -256,8 +270,8 @@ int main(void) {
             kb_eeconfig_set_batt_view(v);
             CHECK(kb_eeconfig_get_batt_view() == v && kb_eeconfig_get_font() == KB_FONT_LARGE, "0x%02x, readout %u", b, v);
             settle();
-            CHECK(writes == 1 && stored[9] == v && memcmp(stored, old9, sizeof old9) == 0,
-                  "0x%02x, readout %u: one write of 0x%02x, got %d 0x%02x", b, v, v, writes, stored[9]);
+            CHECK(writes == 1 && stored[9] == bv_bits(v) && memcmp(stored, old9, sizeof old9) == 0,
+                  "0x%02x, readout %u: one write of 0x%02x, got %d 0x%02x", b, v, bv_bits(v), writes, stored[9]);
         }
         for (uint8_t f = KB_FONT_LARGE; f <= KB_FONT_REGULAR; f++) {
             memcpy(stored, old9, sizeof old9);
@@ -285,7 +299,7 @@ int main(void) {
     settle();
     CHECK(stored[9] == 0x00 && kb_eeconfig_get_font() == KB_FONT_LARGE, "Large over 0xFF: 0x%02x", stored[9]);
 
-    printf("%s kbee: the settings block's indicator and battery-readout bytes, and the menu's face\n",
+    printf("%s kbee: the settings block's indicator and battery-readout bytes, the menu's face, Icon only\n",
            failures ? "FAIL" : "ok  ");
     return failures ? 1 : 0;
 }

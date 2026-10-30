@@ -106,3 +106,11 @@ its uptime was 30,154 s, 8.4 h awake since the 10-29 flash.
 ⚠️ From 12:43 10-30 both boards run `fcb7ae00b4` with the same token
 (`0xf2a645a7`). Tell them apart by the level (white is mid-drain), the
 profiles' names, or the ring's `next_seq`.
+
+## The end on white (10-30 17:28)
+
+White went to the mainline plus Icon only at 17:28:27 10-30
+(`../icon-only-20261030/`), without a last read of the slots. Its battery
+log, dumped at that flash, runs unbroken from 00:20 10-29 to 17:20 10-30
+(165 entries, 15 min apart), and the RAM log restarts at any reset: **no
+reset on white in the whole run**, 41 h with ~31 h of it asleep.

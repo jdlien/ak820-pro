@@ -1105,6 +1105,42 @@ static void test_font(void) {
     prof_test_reset();
 }
 
+/* 10-30, Icon only (JD, 10-27): the fourth readout, PR_BVIEW's bit 4 with
+ * bits 0-1 clear, as kb_eeconfig's byte; beside a face, never beside a
+ * readout. Captured, compared for the `*`, applied, and through flash.sh's
+ * live record. */
+static void test_icon_only(void) {
+    reset();
+    uint8_t r[PROF_REC], q[PROF_REC], live[PROF_REC];
+    fk_view = 4; fk_font = ENV_FONT_SMALL;
+    CHECK(prof_save(0, NULL) == PROF_OK && prof_slot(0, r) && r[PR_BVIEW] == (0x10 | 4) && prof_rec_valid(r));
+    CHECK(prof_active_rec(r) == 0 && !prof_differs(r));
+    fk_view = 3;
+    CHECK(prof_differs(r));
+    fk_view = 1; fk_font = ENV_FONT_LARGE;
+    CHECK(prof_load(0) == PROF_OK && fk_view == 4 && fk_font == ENV_FONT_SMALL);
+    static const uint8_t good[3] = {0x10, 0x10 | 4, 0x10 | 8};
+    for (int i = 0; i < 3; i++) {
+        memcpy(q, r, PROF_REC);
+        q[PR_BVIEW] = good[i];
+        recrc(q);
+        CHECK(prof_rec_valid(q));
+    }
+    static const uint8_t bad[5] = {0x10 | 1, 0x10 | 2, 0x10 | 3, 0x10 | 0x0C, 0x20};
+    for (int i = 0; i < 5; i++) {
+        memcpy(q, r, PROF_REC);
+        q[PR_BVIEW] = bad[i];
+        recrc(q);
+        CHECK(!prof_rec_valid(q));
+    }
+    fk_view = 4; fk_font = ENV_FONT_LARGE;
+    CHECK(hid(4, 0, 0) && rpt[31] == PROF_OK && rpt[4 + PR_BVIEW] == 0x10 && prof_rec_valid(&rpt[4]));
+    memcpy(live, &rpt[4], PROF_REC);
+    fk_view = 2;
+    CHECK(apply5(live) == PROF_OK && fk_view == 4 && fk_font == ENV_FONT_LARGE);
+    CHECK(hid(4, 0, 0) && memcmp(&rpt[4], live, PROF_REC) == 0);   /* flash.sh's round trip */
+}
+
 int main(void) {
     test_codec();
     test_format_and_save();
@@ -1117,6 +1153,7 @@ int main(void) {
     test_reset();
     test_switch_codex();
     test_font();
+    test_icon_only();
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;

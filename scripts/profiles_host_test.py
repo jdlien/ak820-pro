@@ -1,7 +1,8 @@
 """ak820profiles.py's block conversion between P5a/P5b's four slots and P5d's eight,
 offline (no device): convert(), normalized(), decode_block(); since 10-28 the live
 record's face: its decode, the backup's and the restore's pass-through, and the
-retry without it onto an older firmware, against a fake board.
+retry without it onto an older firmware, against a fake board; since 10-30
+Icon only, and its retry as Percent.
 
     venv-win/Scripts/python.exe scripts/profiles_host_test.py < /dev/null"""
 import contextlib
@@ -169,12 +170,21 @@ check(nf == large and ap.rec_ok(nf), "without_face: the bit out, the crc taken a
 
 
 class FakeBoard:
-    """HC_PROFILES' subs 0, 4, 5, 6 and 7 on an 0xA4 block, as a firmware answers them. `old`: one from before
-    the Font setting, which refuses a record whose readout byte is out of 1-3 (bit 2 set) and never reports a face;
-    `refuse`: a record it refuses whatever its face."""
-    def __init__(self, live, old=False, refuse=False):
-        self.live, self.old, self.refuse, self.sent, self.reply = live, old, refuse, [], None
+    """HC_PROFILES' subs 0-7 on an 0xA4 block, as a firmware answers them. `old`: one from before the Font
+    setting, which refuses a record whose readout byte is out of 1-3 (bit 2 set) and never reports a face;
+    `pre_icon` (10-30): one with the face but from before Icon only, which refuses bit 4; `refuse`: a record it
+    refuses whatever its face."""
+    def __init__(self, live, old=False, refuse=False, pre_icon=False):
+        self.live, self.old, self.refuse, self.pre_icon, self.sent, self.reply = live, old, refuse, pre_icon, [], None
         self.block = bytes([ap.MAGIC_V4, 0xFF]) + bytes(8 * ap.REC)
+        self.staged, self.commits = None, 0
+
+    def bv_bad(self, v):
+        if self.old:
+            return not 1 <= v <= 3
+        if self.pre_icon:
+            return not 1 <= v & ap.BV_VIEW <= 3 or v & ~(ap.BV_VIEW | ap.BV_FACE) or v & ap.BV_FACE == ap.BV_FACE
+        return False
 
     def write(self, b):
         q = bytearray(b[1:])
@@ -186,10 +196,26 @@ class FakeBoard:
         elif sub == 4:
             q[4:4 + ap.REC] = self.live
             q[31] = 0
+        elif sub == 1:
+            self.staged = bytearray(self.block)
+            q[6] = 0
+        elif sub == 2:
+            p = q[4]
+            self.staged[p * ap.PAGE:(p + 1) * ap.PAGE] = q[6:6 + ap.PAGE][:len(self.staged) - p * ap.PAGE]
+            q[6] = 0
+        elif sub == 3:
+            self.commits += 1
+            recs = [bytes(self.staged[2 + i * ap.REC:2 + (i + 1) * ap.REC]) for i in range(8)]
+            bad = self.refuse or any(r[0] != 0 and self.bv_bad(r[12]) for r in recs)
+            if bad:
+                self.block = bytes([ap.MAGIC_V4, 0xFF]) + bytes(8 * ap.REC)
+            else:
+                self.block = bytes(self.staged)
+            q[6] = 4 if bad else 0
         elif sub == 5:
             r = bytes(q[4:4 + ap.REC])
             self.sent.append(r)
-            bad = not ap.rec_ok(r) or self.refuse or (self.old and not 1 <= r[12] <= 3)
+            bad = not ap.rec_ok(r) or self.refuse or self.bv_bad(r[12])
             q[31] = 4 if bad else 0
             if not bad:
                 self.live = r
@@ -253,6 +279,51 @@ with tempfile.TemporaryDirectory() as tmp:
         (res, out) = quiet(ap.cmd_restore, path, False, True)
         check(res == 0 and b.live == want and "clamped" not in out and "live settings restored" in out,
               f"cmd_restore --live-only, {'an older' if old else 'this'} firmware: {out}")
+
+# 10-30, Icon only: bit 4 of the readout byte, bits 0-1 clear; decoded; a firmware from before it refuses
+# it, and the restore sends it once more as Percent, then (one from before the Font setting) without the face.
+icon_s, icon_l = live_rec(ap.BV_ICON | ap.BV_SMALL), live_rec(ap.BV_ICON)
+pct_s, pct_l = live_rec(1 | ap.BV_SMALL), live_rec(1)
+check(ap.decode(icon_s)["battery"] == "icon only" and ap.decode(icon_s)["font"] == "small" and
+      ap.decode(icon_l)["font"] == "large", "decode: Icon only, its face")
+check(ap.decode(live_rec(ap.BV_ICON | 2))["battery"] == ap.BV_ICON | 2, "decode: Icon only beside a readout is garbage")
+check(ap.rec_without(icon_s, ap.BV_ICON) == pct_s and ap.rec_without(icon_s, ap.BV_ICON | ap.BV_FACE) == pct_l,
+      "rec_without: Icon only as Percent, the face out too")
+for kw, want_sent, want_live, said in (({}, [icon_s], icon_s, ()),
+                                       ({"pre_icon": True}, [icon_s, pct_s], pct_s, ("with Percent",)),
+                                       ({"old": True}, [icon_s, pct_s, pct_l], pct_l, ("with Percent", "without it"))):
+    b = FakeBoard(large, **kw)
+    (res, out) = quiet(ap.apply_live, b, icon_s)
+    check(res == (0, want_live) and b.sent == want_sent and b.live == want_live and all(w in out for w in said),
+          f"apply_live, Icon only, {kw or 'this firmware'}: {res} {out}")
+b = FakeBoard(large, refuse=True)
+(res, out) = quiet(ap.apply_live, b, icon_s)
+check(isinstance(res, SystemExit) and b.sent == [icon_s, pct_s, pct_l], "Icon only: a refusal after both retries")
+
+def bv_rec(bv, h=11):
+    body = bytearray(25)
+    body[0] = ap.PF_LIGHTING | ap.PF_LCD | ap.PF_BVIEW
+    body[1] = 1; body[2] = 3; body[3] = h; body[4] = 255; body[5] = 200; body[6] = 128; body[7] = 50; body[11] = bv
+    return bytes([1]) + bytes(body) + bytes([ap.crc8(body)])
+
+ib = bytes([ap.MAGIC_V4, 0xF0]) + bv_rec(ap.BV_ICON | ap.BV_REG) + bv_rec(2, 22) + bytes(6 * ap.REC)
+check(ap.block_has(ib, ap.BV_ICON) and not ap.block_has(ap.block_without(ib, ap.BV_ICON), ap.BV_ICON) and
+      ap.block_without(ib, ap.BV_ICON)[2:2 + ap.REC] == bv_rec(1 | ap.BV_REG) and
+      ap.block_without(ib, ap.BV_ICON)[2 + ap.REC:] == ib[2 + ap.REC:], "block_without: Icon only as Percent, the rest untouched")
+with tempfile.TemporaryDirectory() as tmp:
+    path = os.path.join(tmp, "p.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"format": 4, "block": ib.hex(), "live": icon_s.hex()}, f)
+    for kw, commits, rec0, live in (({}, 1, bv_rec(ap.BV_ICON | ap.BV_REG), icon_s),
+                                    ({"pre_icon": True}, 2, bv_rec(1 | ap.BV_REG), pct_s),
+                                    ({"old": True}, 3, bv_rec(1), pct_l)):
+        b = FakeBoard(live_rec(1), **kw)
+        ap.open_device = lambda: b
+        (res, out) = quiet(ap.cmd_restore, path, False, False)
+        check(res == 0 and b.commits == commits and b.block[2:2 + ap.REC] == rec0 and
+              b.block[2 + ap.REC:2 + 2 * ap.REC] == bv_rec(2, 22) and b.live == live and
+              "profiles restored and read back" in out and "live settings restored" in out,
+              f"cmd_restore, Icon only, {kw or 'this firmware'}: {res} {b.commits} {out}")
 
 print("host conversion:", "all checks passed" if not fails else f"{fails} failed")
 sys.exit(1 if fails else 0)

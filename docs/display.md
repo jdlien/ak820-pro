@@ -467,7 +467,9 @@ draw, so the sleeps stretch the calendar time and not the number (what it is and
 long number there says nothing worth the cells. The tenths view never adds
 hours. The menu's Battery page shows time left at any length on the row
 instead, with its Hours of use or Both readout (`160h`, `85% 160h`); until
-2026-10-28 `Fn`+`D`'s camera page did too.
+2026-10-28 `Fn`+`D`'s camera page did too. Its Icon only (2026-10-30) leaves
+the text slot clear, the hours under 10 included: the bar and its colour
+show the level, and `Low`, `Charge`, `USB` and `No Batt` still show.
 
 ## At a deep sleep and its wake
 

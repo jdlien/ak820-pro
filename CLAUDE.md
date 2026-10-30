@@ -139,7 +139,13 @@ white; token `0xf2a645a7`), flashed on Buzz's relay cable
 (`history/ds-phase-black-20261030/`). Before it: `8ec0c8b9b4` dev (token
 `0xb5f2fdab`, flashed from Gizmo at 23:34 10-28), and gremlin's own
 `c4bc0852` build (token `0x189635f2`) from 20:51 10-28.
-**On JD's board since 00:03 10-29: Warren's `fcb7ae00b4`** (dev, token
+**On white since 17:28 10-30: `5c8c5f5ea8`** (dev, token `0x5b880dd4`,
+heap gap 224 B, the branch `icon-only`): the mainline `8ec0c8b9b4` plus the
+battery readout's Icon only (`plans/BACKLOG.md`, "Icon only"; the text slot
+clear, the icon and the warnings kept), flashed mid-drain with the settings
+kept (`history/icon-only-20261030/`). Warren's ds-phase diagnostics are off
+white now; they run on black.
+**Before it, from 00:03 10-29: Warren's `fcb7ae00b4`** (dev, token
 `0xf2a645a7`, heap gap 152 B, `gremlin/ds-phase`): `27d1105dc1` plus
 codex's fixes and op 24 slot 10, the sleep a reset cut short, kept until
 the next reset (`history/ds-phase-check-20261029-0002/`).

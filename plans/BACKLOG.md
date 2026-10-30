@@ -257,7 +257,15 @@ rainbow cycling on Mac mode". Then: "I think always on makes sense here
   below) every few. What would fit: a byte of QMK's key options a
   profile (swap Alt and GUI, Caps as Ctrl), if a record's byte is found.
 
-## "Icon only": a battery readout of the icon alone (2026-10-27) -- JD's idea, pinned for later
+## "Icon only": a battery readout of the icon alone (2026-10-27) -- JD's idea; built 10-30 (`5c8c5f5ea8`, branch `icon-only`), on white since 17:28 10-30
+
+**Built as below** (`history/icon-only-20261030/`), with three things the
+pin didn't settle: Icon only is bit 4 of the byte (the face took bits 2-3
+on 10-28, so the readout's 2-bit field was full), `Low`, `Charge`, `USB`
+and `No Batt` stay (they say what an empty or red bar means), and in Large
+the note is two lines (`Hours in 40 min` / `on battery.`). A firmware from
+before reads the byte as garbage (percent), so `ak820profiles.py` restores
+it there as Percent.
 
 JD (10-27): "maybe we could have a 'None' option under the battery menu.
 Pin that for later... for someone that wants a more minimal screen ...

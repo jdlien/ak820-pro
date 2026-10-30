@@ -73,7 +73,14 @@ bulbs.
 
 ### What is running
 
-- **Firmware on JD's board since 00:03 10-29: Warren's `fcb7ae00b4`**
+- **Firmware on white since 17:28 10-30: `5c8c5f5ea8`** (the branch
+  `icon-only` on the mainline `8ec0c8b9b4`; dev, token `0x5b880dd4`, heap
+  gap 224 B): the battery readout's Icon only (`BACKLOG.md`, "Icon only";
+  `MENU-TEXT.md`, "Battery"). Flashed mid-drain on its pack with the
+  settings kept (`../history/icon-only-20261030/`). Warren's ds-phase
+  diagnostics are off white now (its run there was clean: 32 sleeps, no
+  reset); they run on black.
+- **Before it, on JD's board from 00:03 10-29: Warren's `fcb7ae00b4`**
   (`gremlin/ds-phase`; dev, token `0xf2a645a7`, heap gap 152 B): the
   build below plus codex's fixes (the kept RAM checked at every boot, the
   sequence reserved at the teardown) and **op 24 slot 10**, the sleep a
@@ -513,6 +520,11 @@ The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
 - **White's cable out from ~12:31 10-30.** JD moved black (gremlin's
   board) onto the relay cable. White's USB data is unavailable until its
   cable is back; the drain runs on untethered.
+- **White's cable back by 12:49 10-30.** USB data on 12:49:19-12:49:21
+  (the evening read, `../history/ds-phase-cableout-20261029/`) and
+  17:28:28-17:28:59 (Icon only's flash, on its pack, the settings kept;
+  47.7% just before). White was still in Power saver at the flash, as since
+  ~08:55 10-29: note it in the drain's figures.
 
 ### Stopped 23:46:52 10-23: the untethered drain at real use, restarted from FULL
 

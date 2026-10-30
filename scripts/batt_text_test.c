@@ -1,5 +1,5 @@
 /* The battery readout's text (P4, plans/CONFIG-MENU-P1-DESIGN.md; Both, JD
- * 10-26): the firmware's graphics/batt_text.c, verbatim, over the design's
+ * 10-26; Icon only, 10-30): the firmware's graphics/batt_text.c, verbatim, over the design's
  * table.
  *
  *   D=qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro
@@ -12,7 +12,7 @@
 
 static int fails;
 
-enum { P = BATT_VIEW_PERCENT, H = BATT_VIEW_HOURS, B = BATT_VIEW_BOTH };
+enum { P = BATT_VIEW_PERCENT, H = BATT_VIEW_HOURS, B = BATT_VIEW_BOTH, I = BATT_VIEW_ICON };
 
 static void want(const char *exp, uint8_t pct, bool on_batt, uint16_t left, bool ready, uint8_t view) {
     char out[BATT_TEXT_MAX + 1];
@@ -73,6 +73,12 @@ int main(void) {
     want("85%", 85, true, 9600, false, B);       /* no estimate yet: the percent */
     want("85%", 85, true, NONE, true, B);
     want("85%", 85, false, 9600, true, B);
+    /* Icon only (10-30): nothing, ready or not, under 10 h, on USB. */
+    want("", 85, true, 9600, true, I);
+    want("", 18, true, 380, true, I);
+    want("", 2, true, 59, true, I);
+    want("", 85, true, NONE, false, I);
+    want("", 100, false, 9600, true, I);
     if (fails) {
         printf("%d check(s) failed\n", fails);
         return 1;
