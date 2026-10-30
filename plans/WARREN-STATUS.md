@@ -494,10 +494,13 @@ This file is the thread; read it first after a context loss. Updated
        The overnight cable-out run on JD's board was clean (~15,000
        second wakes, a real wake cable-out, 0 strays, no reset; §21);
        Buzz's session runs a day of Power saver cable-out next. The
-       keyboard on gremlin is at Gizmo on USB, where it never
-       deep-sleeps. **Owed:** `ds-phase` onto gremlin's board when it is
-       back (JD's hand), then its own run shaped like 10-28's (idle on USB
-       past the ladder, the cable pulled, untouched, on BT).
+       White's run ended clean at its 17:28 10-30 flash to Icon only
+       (no reset in 41 h). Black (gremlin's board) runs `fcb7ae00`
+       since 12:43 10-30 (Buzz's session) and slept cable-out three
+       times on gremlin, once from 10-28's entry, all clean (§21).
+       **Open (JD's call):** 10-28's entry with a long untouched sleep
+       (idle on USB past the ladder, the cable pulled, hands off
+       15 min or more).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

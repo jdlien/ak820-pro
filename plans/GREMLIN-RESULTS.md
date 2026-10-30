@@ -1941,3 +1941,26 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
   Next: Buzz's session's day of Power saver cable-out on JD's board; for
   (i), `ds-phase` onto gremlin's board when it is back at gremlin, then
   its own cable-out run shaped like 10-28's.
+- **White's run ended clean** (Buzz's session): 32 sleeps by 12:49
+  10-30, and at its 17:28 flash to Icon only (`5c8c5f5ea8`, token
+  `0x5b880dd4`) the battery log ran unbroken from 00:20 10-29: no reset
+  in 41 h, ~31 h of it asleep.
+- **Black on `fcb7ae00` since 12:43 10-30** (gremlin's board, flashed
+  by Buzz's session), back on gremlin's USB, Power saver, BT to
+  gremlin. Three cable-out sleeps (the daemon's log for the pulls,
+  gremlin's raw input for the keys, device only):
+  - pulled 13:04:05, typed on, asleep ~13:07, a key ~13:37 (the link
+    had dropped at its 30:00, so that key was lost; the next woke
+    gremlin), replugged 13:38:37;
+  - **10-28's entry:** the last key 13:46:09, so the ladder was past
+    on USB; pulled 13:50:06 and asleep ~2 s later. A key at 13:51:43
+    (the link held, the key through), replugged 13:51:49; ~95 s
+    asleep;
+  - pulled 14:01:55, typed to 14:02:35, asleep ~14:05:35 to a key at
+    14:10:05, replugged 14:10:12.
+  Read at 14:10:32 (`ak820 health --crash`): RSTST `0x01` (the
+  flash's), the record empty, consecutive 0; the uptime accounts for
+  the three sleeps within seconds. Clean, but the 10-28 entry slept
+  only ~95 s, where the reset came ~8 min in. Not yet copied: that
+  entry with a long untouched sleep. Black keeps the recorder in daily
+  use; slots 9 and 10 need op 24 (Buzz's Python reader, not on gremlin).
