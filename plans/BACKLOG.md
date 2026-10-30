@@ -135,10 +135,12 @@ Winlogon on gremlin; Burrow's HCI trace and hidclass rundowns):
   HP), fixed by toggling Bluetooth or re-pairing. None documents this
   exact split (the consumer collection alive, the keyboard detached).
 
-**Also seen:** on Windows the waking key is lost. After a sleep, the
+**Also seen:** on Windows the waking key is lost, but only once the
+link has dropped (30 min of the board's radio silence). At 09:54 the
 first key took ~10 s to get a link (Windows' passive scan while locked
 and dark), and only one report of it arrived; the Mac reconnects within
-~1 s. A faster advertising burst after a wake might help; not
+~1 s. After a sleep with the link still held (11:05, 11:34; JD: the
+first key "correctly seemed to pass through"), it is not lost. A faster advertising burst after a wake might help; not
 investigated.
 
 **If it recurs:** don't switch channels. Plug the cable in, slider on BT
