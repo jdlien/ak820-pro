@@ -1,0 +1,158 @@
+{
+ "ring": [
+  {
+   "seq": 24,
+   "reason": "key",
+   "flags": 64,
+   "counted": 27577,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x200",
+   "ms": 25646402,
+   "strays": 0
+  },
+  {
+   "seq": 25,
+   "reason": "key",
+   "flags": 64,
+   "counted": 6,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x1",
+   "ms": 25828602,
+   "strays": 0
+  },
+  {
+   "seq": 26,
+   "reason": "key",
+   "flags": 64,
+   "counted": 1378,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x200",
+   "ms": 26103625,
+   "strays": 0
+  },
+  {
+   "seq": 27,
+   "reason": "key",
+   "flags": 64,
+   "counted": 4941,
+   "p0": "0x10",
+   "p1": "0x0",
+   "p2": "0x0",
+   "ms": 26383547,
+   "strays": 0
+  },
+  {
+   "seq": 28,
+   "reason": "key",
+   "flags": 64,
+   "counted": 224,
+   "p0": "0x10",
+   "p1": "0x0",
+   "p2": "0x0",
+   "ms": 26783213,
+   "strays": 0
+  },
+  {
+   "seq": 29,
+   "reason": "key",
+   "flags": 64,
+   "counted": 881,
+   "p0": "0x0",
+   "p1": "0x0",
+   "p2": "0x100",
+   "ms": 27842705,
+   "strays": 0
+  },
+  {
+   "seq": 30,
+   "reason": "key",
+   "flags": 64,
+   "counted": 68,
+   "p0": "0x10",
+   "p1": "0x0",
+   "p2": "0x0",
+   "ms": 28455876,
+   "strays": 0
+  },
+  {
+   "seq": 31,
+   "reason": "key",
+   "flags": 64,
+   "counted": 715,
+   "p0": "0x10",
+   "p1": "0x0",
+   "p2": "0x0",
+   "ms": 30059378,
+   "strays": 0
+  }
+ ],
+ "next_seq": 32,
+ "stray": {
+  "seq": 0,
+  "same_s": 0,
+  "first_s": 0,
+  "ispr": "0x0",
+  "icsr": "0x0",
+  "vectpending": 0,
+  "pendsv": false,
+  "pendst": false,
+  "ie_outside": [],
+  "mis_outside": [],
+  "iser_not_wake_set": false,
+  "last_n": 0,
+  "last_ispr": "0x0",
+  "last": {
+   "icsr": "0x0",
+   "vectpending": 0,
+   "pendsv": false,
+   "pendst": false
+  }
+ },
+ "last": {
+  "magic_ok": true,
+  "seq": 31,
+  "reason": "key",
+  "flags": "0xc0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": true,
+  "returned": true,
+  "secs": 715,
+  "p0": "0x10",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "from_boot_before": false,
+  "rstst": "0x1"
+ },
+ "inherited": {
+  "magic_ok": true,
+  "seq": 0,
+  "reason": "cap",
+  "flags": "0xc0",
+  "clk_ceil": false,
+  "pll_ceil": false,
+  "slept": true,
+  "returned": true,
+  "secs": 30,
+  "p0": "0x0",
+  "p1": "0x0",
+  "p2": "0x0",
+  "strays": 0,
+  "present": true,
+  "rstst": "0x1"
+ },
+ "watchdog_record": {
+  "valid": false,
+  "site": "none",
+  "site_id": 0,
+  "parent": "none",
+  "parent_id": 0,
+  "last_pass_uptime_ms": 0,
+  "boot_rstst": 1,
+  "consecutive_resets": 0
+ }
+}

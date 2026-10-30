@@ -84,3 +84,25 @@ current looks wrong; the board's record decides whether any wake was a reset.
 
 Files: `slots-0858.json`, `slots-1037.json` (op 24's slots 0-10 and the watchdog record, read
 with `ds_slots.py`, in `../ds-phase-check-20261029-0002/`), `run.log`.
+
+## The evening read (10-30 12:49)
+
+White's cable was out ~12:31-12:47 10-30 while black sat on the relay cable
+(`../black-health-20261030/`, `../ds-phase-black-20261030/`). Data was on
+12:49:19-12:49:21 (`slots-1249.json`). White read 49.3% and 3888 mV, and
+its uptime was 30,154 s, 8.4 h awake since the 10-29 flash.
+
+- **No reset in 32 sleeps since the 10-29 flash:** `next_seq` 32. Slot
+  10 still holds sleep 0 (the check's 30 s sleep), the watchdog record is
+  empty, and `consecutive_resets` is 0.
+- **The ring, sleeps 24-31:** every one woken by a key, flags `0x40`, 0
+  strays. Sleep 24 is the night of 10-29/30, 27,577 counted s (~9 h).
+  Slot 9 is sleep 31: 715 counted s, a key, `0xc0`. The stray snapshot is
+  empty.
+- **So no repeat on white** across a day of Power saver with the cable out
+  and two nights. The diagnostic moves to black, the board that reset
+  (`../ds-phase-black-20261030/`).
+
+⚠️ From 12:43 10-30 both boards run `fcb7ae00b4` with the same token
+(`0xf2a645a7`). Tell them apart by the level (white is mid-drain), the
+profiles' names, or the ring's `next_seq`.
