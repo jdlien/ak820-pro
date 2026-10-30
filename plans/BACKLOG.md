@@ -102,9 +102,50 @@ Burrow, an elevated session on gremlin):
   JD's board since 10-29 09:40) without a loss, but it has no kbdclass.
   Unproven.
 
-**Next, the repro:** cable out (the channel granted), lock gremlin, unlock
-it from the board, and keep typing past the daemon's first frame. Then the
-same with `--lockchan` off.
+**The repro, 10-30 09:12-11:40: none of seven runs reproduced it**
+(cable out, the channel granted; raw input, the daemon's log and
+Winlogon on gremlin; Burrow's HCI trace and hidclass rundowns):
+- **A frame mid-typing**, at the cable pull (09:12:23) and later
+  ones: typing carried on.
+- **A 9 s lock** (09:13:45-54): clean.
+- **The incidents' whole chain** (Lights out; locked 09:17:41; the
+  board asleep 09:18:40). The CH582 ended the link itself at
+  09:48:39.687, exactly 30:00 after its last packet (reason 0x13, as
+  on the Mac). A key at ~09:54:13 got the reconnect at 09:54:23.4:
+  host-initiated from a passive accept-list scan, encryption at +50 ms
+  (bonded), MTU 527/76, the Scan Refresh exchange (0x002B/0x0028), the
+  LED restore. There was no GATT discovery and no CCCD or Protocol Mode
+  write. The unlock was at 09:54:35 and the daemon's frame writes at
+  09:54:37-56 ("sent clock"), and typing was fine. The daemon's
+  handle survived the drop (hidclass OpenCount 13 throughout).
+- **Idle stretches unlocked**, the board asleep in Lights out, a frame
+  at the return (10:07, 10:12): clean.
+- **Balanced, locked 37 min** (10:28:48-11:05:55; asleep, the link
+  held). The unlock was at 11:06:11, then hands off while the frame
+  went (11:06:11-29) and the play-time frames after, then a return at
+  11:34 after the board's sleep: clean.
+- **A frame takes ~20 s of writes** before the daemon logs it as sent
+  (~350 Write Commands to `0x0040`). So in both incidents the writes
+  began at or just after the unlock, as they did in these runs.
+- **No filter drivers:** the BLE keyboard's stack is `kbdclass` |
+  `kbdhid` | `mshidumdf`. gremlin's radio is a MediaTek adapter
+  (0489:E13A, driver 1.1043.0.542) on Windows 11 25H2 (26200).
+  Web reports of BLE keyboards "connected but not typing" on Windows
+  after sleep or idle are common across brands (Logitech, Microsoft,
+  HP), fixed by toggling Bluetooth or re-pairing. None documents this
+  exact split (the consumer collection alive, the keyboard detached).
+
+**Also seen:** on Windows the waking key is lost. After a sleep, the
+first key took ~10 s to get a link (Windows' passive scan while locked
+and dark), and only one report of it arrived; the Mac reconnects within
+~1 s. A faster advertising burst after a wake might help; not
+investigated.
+
+**If it recurs:** don't switch channels. Plug the cable in, slider on BT
+(the BT state survives that), and read `ak820 health`. Check raw input
+per collection, and have an elevated shell take a HIDCLASS rundown. The
+trigger is still unproven. To clear or convict the daemon: a stretch of
+daily use with `--lockchan` off.
 
 ## A watchdog reset inside a deep sleep (2026-10-28) -- open: the keyboard on gremlin, ~8 min into an untouched sleep on BT, cable out; (c) ruled out on JD's board; the diagnostic `gremlin/ds-phase` on JD's board since 23:51 10-28, its overnight cable-out run clean (GREMLIN-RESULTS §21)
 
