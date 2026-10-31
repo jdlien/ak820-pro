@@ -2021,3 +2021,42 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     off (`power_sleep_wanted()`), so black stayed awake and dark on
     battery from ~04:02 to 04:46 (uptime 5,111 s of 5,240 wall). The
     night's long sleep did not happen. `--done` released the stage.
+- **10-28's shape on black: 9 h 12 min asleep cable-out, no reset**
+  (10-31, `05ef0f5bbc9`, Power saver, on BT to gremlin). Black idled on
+  the cable from 04:46 (after `--done`); JD pulled it at ~05:00:08 (by
+  uptime; the daemon logged it absent at 05:00:11) and left it
+  untouched, and it slept within seconds. JD woke it with a key (P2.9,
+  column C9) at ~14:12:42 and plugged it in. Read at 14:12:47: woke on
+  the key after 29,659 counted s (~33,150 s real, 1.118 real s to a
+  counted one), flags `pcf`, `acq`, `reattach`, `usb_20s`, `slept`; no
+  recovery step timed out; 0 strays; PLL 76 loops; slot 9 returned;
+  RSTST `0x01`, the record empty, consecutive 0. Uptime 5,933 s plus
+  the two sleeps' real time (139 s and ~33,150 s) is 39,222 s, against
+  39,216 s of wall since the 03:19:11 flash: no hidden reset.
+  - **What it rules out:** each counted second is a WFI exit, a return
+    to flash, a WDT feed and a WFI again (`sleep.c`'s loop), so this
+    sleep ran 29,659 of them clean. 10-28's reset came ~8 min, ~480 of
+    them, into a sleep of the same shape; a per-second fault at that
+    rate would have recurred here many times over. So the per-second
+    loop is unlikely to be the site (an inference), and what is left is
+    the once-a-sleep exit (sites 29, 64-67, 30, 31), a wake other than
+    the second, or something on 10-28 outside the board. The exit ran
+    once here, clean.
+  - **The census** (slot 11): 34 handler entries, 0 USB, only CT16B1
+    and CT16B3, the last CT16B3. At the unmask `INSTS` was 0 (no
+    `BUS_SUSPEND` this time), `INTEN` had `BUS_IE`, `USB_IE` and
+    `BUSWK_IE`, and `CFG` had `PHY_EN`, `DPPU_EN`, `SIE_EN` and
+    `VREG33_EN` without `ESD_EN`: F-045's state again, on both
+    cable-out wakes measured.
+  - **The waking key was lost** (JD: "I swear I lost a keystroke there
+    when I woke the board up"). The firmware counted it: the
+    recovery's input step closed on the key count inside its 50 ms (no
+    timed-out step). Windows' `DEVPKEY_Bluetooth_LastConnectedTime`
+    for black reads 08:12:43, six hours (the UTC offset) before
+    14:12:43; its minute and second match the wake, and USB's
+    `LastArrivalDate` reads 14:12:46 unshifted. So the BLE link came
+    back ~1 s after the wake: it had dropped during the sleep, and the
+    key left before it was back. That is BACKLOG's "the waking key is
+    lost, but only once the link has dropped" again. (The record's
+    "keys gained" is counted only on an armed sleep; its 0 is the
+    unfed run's.)

@@ -498,9 +498,7 @@ This file is the thread; read it first after a context loss. Updated
        (no reset in 41 h). Black (gremlin's board) runs `fcb7ae00`
        since 12:43 10-30 (Buzz's session) and slept cable-out three
        times on gremlin, once from 10-28's entry, all clean (§21).
-       **Open (JD's call):** 10-28's entry with a long untouched sleep
-       (idle on USB past the ladder, the cable pulled, hands off
-       15 min or more).
+       10-28's entry with a long untouched sleep: run 10-31 (below).
        **On black from 03:19 10-31: `05ef0f5bbc9`** (token
        `0x4de76a30`): sites 64-67 (the flash read, the clocks, CT16B3's
        spin, the tick) and op 24 slot 11, phase 31's interrupt census;
@@ -509,8 +507,15 @@ This file is the thread; read it first after a context loss. Updated
        **The unfed sleep on black, 04:00 10-31: no reset** (120 counted
        s unfed), so the WDT does not count asleep on black either. Its
        wake's census: `BUS_SUSPEND` latched, `ESD_EN` off, no USB
-       interrupt (§21). **Open (JD's call):** 10-28's shape with a long
-       sleep.
+       interrupt (§21).
+       **10-28's shape on black, 05:00-14:12 10-31: 9 h 12 min asleep
+       cable-out, no reset** (29,659 counted seconds' returns to flash
+       clean; 10-28 reset ~480 in). The per-second loop is unlikely to
+       be the site; the once-a-sleep exit ran clean once. `ESD_EN` off
+       again (F-045). The waking key was lost: the BLE link had
+       dropped in the sleep (§21). **Proposed next:** the mainline's
+       fixes (the CT16B3 wait bounded, `ESD_EN` restored, F-032), black
+       left on the ladder to catch a repeat.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

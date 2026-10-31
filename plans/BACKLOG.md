@@ -154,6 +154,10 @@ and dark), and only one report of it arrived; the Mac reconnects within
 ~1 s. After a sleep with the link still held (11:05, 11:34; JD: the
 first key "correctly seemed to pass through"), it is not lost. A faster advertising burst after a wake might help; not
 investigated.
+Again 10-31 14:12 on black after a 9 h deep sleep (JD: "I swear I
+lost a keystroke there"): the firmware counted the waking key inside
+50 ms, and Windows' last-connected stamp puts the link's return ~1 s
+after the wake (GREMLIN-RESULTS §21).
 
 **If it recurs:** don't switch channels. Plug the cable in, slider on BT
 (the BT state survives that), and read `ak820 health`. Check raw input
@@ -246,8 +250,17 @@ codex's host-only check: the WFI to the dummy read is all SRAM.
 asleep there either** (120 counted s unfed, woken on the cap, no reset),
 so mechanism 3 is out. Its cable-out wake's census: `BUS_SUSPEND`
 latched with `BUS_IE` on, `PHY_EN` on and `ESD_EN` off (F-045's state),
-and no USB interrupt in the window. Left on black: 10-28's shape with a
-long sleep.
+and no USB interrupt in the window.
+
+**10-28's shape on black (10-31 05:00-14:12): 9 h 12 min asleep
+cable-out, no reset.** 29,659 counted seconds, each a return to flash
+and a WDT feed, ran clean, where 10-28 reset ~480 in; so the per-second
+loop is unlikely to be the site, and the once-a-sleep exit (sites 29,
+64-67, 30, 31) or a wake other than the second is what is left. The
+exit ran clean once; its census shows `ESD_EN` off again (F-045).
+Proposed next: the mainline's fixes (the CT16B3 wait bounded with its
+own site, `ESD_EN` restored, F-032), with black left on the ladder to
+catch a repeat.
 
 
 ## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
