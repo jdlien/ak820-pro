@@ -277,6 +277,14 @@ Proposed next: the mainline's fixes (the CT16B3 wait bounded with its
 own site, `ESD_EN` restored, F-032), with black left on the ladder to
 catch a repeat.
 
+**The fixes, built (10-31, JD: "I want to try both fixes"):**
+`gremlin/wake-fixes` `70f7c1ea10e` (sites 68 and 69, codex cleared it
+after its three P2s), on black as the ds-phase merge `0118d39e67e` from
+14:57, and in Buzz's `audit-fixes`. The gate before the mainline is
+codex's four USB cases; case 1, a plug-in after a cable-out wake, passed
+on black at 15:28 with both bits off at the wake as the driver left
+them (GREMLIN-RESULTS §21).
+
 
 ## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
 

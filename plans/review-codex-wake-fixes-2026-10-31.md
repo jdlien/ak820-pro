@@ -56,5 +56,8 @@ once the hardware gate (4, below) passes.
    - a host suspend with the cable in, the host's resume, and the
      keyboard's remote wake.
 
-   Open: the first two on black with JD's hands; the last two on Buzz's
-   bench or gremlin.
+   Case 1 passed on black at 15:28 10-31 (GREMLIN-RESULTS section 21):
+   both bits off at the wake as the driver left them, then the cable's
+   plug-in ~20 s later enumerated and raw HID worked. Case 2 on black
+   once its pack charges; case 3 Buzz's session on white; case 4 JD's
+   call.

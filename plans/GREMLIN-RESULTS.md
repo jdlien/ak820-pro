@@ -2050,6 +2050,37 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     from gremlin; this run stayed beside it. Not reproduced here: the
     distance, and whatever ended 10-28's sleep at ~23:02:20 untouched
     (this one ended on JD's key).
+- **The wake fixes on black, and the gate's first case: a late plug-in
+  after a cable-out wake** (10-31). JD picked the fixes ("I want to try
+  both fixes"): F-045's pair restored as the driver left it, the CT16B3
+  reset bounded (site 69), F-032's clock failures recorded (site 68).
+  `gremlin/wake-fixes` `70f7c1ea10e`, merged onto ds-phase as
+  `0118d39e67e` (token `0x99bfbbb8`, dev heap gap 128 B), on black from
+  14:57; codex: no P1, three P2s fixed, the verify clean
+  ([`review-codex-wake-fixes-2026-10-31.md`](review-codex-wake-fixes-2026-10-31.md)).
+  JD pulled the cable at 15:21:23, left it ~6 min, pressed a key at
+  ~15:27:40 (uptime 1,416 s), waited ~15 s and plugged it in: present at
+  15:28:02, the clock synced over raw HID at 15:28:14. The sleep: woke on
+  the key after 339 counted s, flags `pcf`, `acq`, `reattach`,
+  `usb_20s`, `slept`; no step timed out; RSTST `0x01` (the flash's), the
+  record empty.
+  - **The census at the unmask:** `CFG` had `SIE_EN`, `DPPU_EN` and
+    `VREG33_EN`, with `PHY_EN` and `ESD_EN` both off: the pair as the
+    driver left it at the pull, where both earlier cable-out wakes had
+    `PHY_EN` on and `ESD_EN` off. `INSTS` `BUS_SUSPEND`; `INTEN`
+    `BUS_IE`, `USB_IE`, `BUSWK_IE`; 28 entries, 0 USB.
+  - **The plug-in ~20 s after the wake enumerated**, after the
+    recovery's re-attach (no host within 3 s). With the wake setting
+    nothing, only the driver's reset, resume and wakeup handlers can have
+    turned the transceiver on, and each sets `ESD_EN` with `PHY_EN`; so
+    both are on (from the code: `CFG` is not read back after it). Case 1
+    of codex's gate passes.
+  - **Left of the gate:** case 2, the cable's insertion waking the
+    sleeping board (it wakes on CHRG, so only with the pack charging);
+    case 3, a `uhubctl` reconnect with the driver ACTIVE and both bits
+    off (Buzz's session, on white); case 4, a host suspend with the
+    cable in, then the host's resume and the keyboard's remote wake
+    (JD's call).
   - **The census** (slot 11): 34 handler entries, 0 USB, only CT16B1
     and CT16B3, the last CT16B3. At the unmask `INSTS` was 0 (no
     `BUS_SUSPEND` this time), `INTEN` had `BUS_IE`, `USB_IE` and

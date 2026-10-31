@@ -516,6 +516,11 @@ This file is the thread; read it first after a context loss. Updated
        dropped in the sleep (§21). **Proposed next:** the mainline's
        fixes (the CT16B3 wait bounded, `ESD_EN` restored, F-032), black
        left on the ladder to catch a repeat.
+       **The fixes, 10-31 (JD's pick):** `gremlin/wake-fixes`
+       `70f7c1ea10e`, codex cleared (review-codex-wake-fixes); on black
+       as `0118d39e67e` (token `0x99bfbbb8`) from 14:57. Gate case 1 (a
+       plug-in after a cable-out wake) passed at 15:28; cases 2-4 open
+       (§21).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
