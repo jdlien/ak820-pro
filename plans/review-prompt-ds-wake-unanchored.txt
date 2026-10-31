@@ -1,0 +1,27 @@
+Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it. Do not run anything that opens USB or HID devices, talks to a keyboard, or changes any file: this is a read-only investigation. (A keyboard on this machine is mid-way through a multi-day battery test; touching it would spoil the test.)
+
+You are a second opinion on an unexplained hardware watchdog reset in keyboard firmware. Other reviewers have already formed theories; you are deliberately not being told them. Build your own list from the code and the chip's documented behaviour, and do not stop at the first plausible cause.
+
+THE SYSTEM. An Ajazz AK820 Pro keyboard running a QMK/ChibiOS port on a Sonix SN32F299 (Cortex-M0, 48 MHz). The firmware is in qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ (board code), plus local patches to QMK core (drivers/led/sn32f2xx.c, quantum/...) and to ChibiOS-Contrib (qmk_firmware-ak820pro/lib/chibios-contrib, the SN32 LLD drivers). Start with CLAUDE.md at the repo root, then docs/hardware.md ("Deep sleep", watchdog and health), docs/sn32f299.md (the MCU manual distilled with page numbers: Sleep and Deep-sleep, what wakes them, the watchdog, clocks, flash, errata), docs/leds.md (interrupt priorities), docs/wireless.md (the CH582F radio module on UART2). The deep sleep itself is sleep.c; the watchdog is watchdog.c and watchdog_record.c; fault.c writes fault sites; power.c runs the idle ladder that decides when to sleep.
+
+The code that ran is commit c4bc0852 of qmk_firmware-ak820pro. The working tree (branch icon-only, 5c8c5f5ea8) is identical to it in sleep.c, watchdog.c, watchdog_record.c, power.c, fault.c, drivers/, platforms/ and the chibios-contrib pin; it differs only in menu, display text and kb_eeconfig files. Read the working tree.
+
+THE INCIDENT (10-28, firmware c4bc0852, a "dev" build):
+- The board had been on USB (cable plugged into a Windows PC), idle long enough that the idle ladder's sleep time had passed while on USB (on USB it does not sleep). The user pulled the cable at 22:54:38. The board entered deep sleep about 2 s later: a pending write to the PCF real-time-clock chip over I2C went first, then the sleep began. Power mode Balanced. Slider on Bluetooth; the Bluetooth host (the PC) was then two floors away, so the link was weak or lost. On battery. Nobody touched it.
+- At ~23:02 the user saw the firmware's boot banner reporting a watchdog reset.
+- The retained watchdog record (survives reset, see watchdog_record.c) read: valid; site 27 (WDT_SITE_DEEP_SLEEP) within housekeeping; RSTST 0x03 (WDTRSTF set, SWRSTF at its reset value: a genuine watchdog reset; a software NVIC_SystemReset reads 0x01); consecutive resets 1; last_pass_uptime_ms 7,399,572.
+- The firmware's uptime counter froze at the sleep's entry (it does not advance asleep), and the post-reset uptime puts the reset at ~23:02:32: one sleep of ~8 minutes, and no main-loop pass between the sleep's entry and the reset.
+
+MEASURED SINCE (facts, not theories):
+- The watchdog does not count during Deep-sleep on this chip: three sleeps armed with no watchdog feed ran 120, 120 and 600 RTC-counted seconds against an ~11.5 s timeout, with no reset.
+- Asleep, the RTC's second runs ~13-15% slow.
+- Hundreds of deep sleeps on another unit of the same keyboard (247/247 one night, soaks of 97/100, 139/150; the failures were unrelated UART overruns and display paints) never produced a watchdog reset; nearly all had the USB cable plugged into a powered-off hub port (power and data cut by a relay and uhubctl, so D+/D- stayed connected to the hub), or the host nearby. That unit also ran 41 hours, ~31 h asleep, 32+ sleeps, several with the cable fully out of the keyboard, with no reset.
+- The unit that reset had slept with its cable fully out 6 times before, each woken on purpose within minutes, with the host near. Since then it ran three more cable-out sleeps cleanly, including one entered ~2 s after a pull with the ladder past on USB (as on 10-28), but that one was woken after ~95 s.
+- So the reset has been seen once, on one unit, in a sleep of ~8 minutes entered just after a cable pull, with the Bluetooth host far away.
+
+WHAT TO PRODUCE:
+1. Every mechanism you can find, in the code as written and the chip's documented behaviour, that could end in exactly this record: a genuine watchdog reset attributed to site 27, with no main-loop pass after the sleep's entry, ~8 minutes into an untouched deep sleep. For each: the path, with file:line references; why it fits THESE facts in particular (the cable fully out, the entry ~2 s after the pull with a PCF write just before, the far Bluetooth host, the rarity) or what it fails to explain; what in docs/sn32f299.md (cite pages) or the code supports it; and the cheapest test that would confirm or kill it (host-side, on the bench with relay/uhubctl, or a firmware diagnostic). Rank them by plausibility.
+2. Any way the record itself could mislead: could a reset that happened somewhere else carry site 27, could site 27 be stale, could RSTST be misread?
+3. Anything in the deep sleep's entry, wake or the code after it that looks wrong even if it does not explain this reset: unbounded waits, register sequences the manual says need care, interrupts that could be pending or storm at an unmask, state that the cable pull or a lost radio link changes mid-sleep.
+
+Be concrete. Quote the lines you rely on. Say plainly where you are guessing.

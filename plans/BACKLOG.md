@@ -186,6 +186,41 @@ strays.
    logger timestamps any wake.
 2. Then long sleeps on the pack, with the host away where it can be done.
 
+**Two unanchored reviews (10-31):** codex (Astra, xhigh) and Fable 5.1
+(xhigh), given the facts and the measurements but not (a)-(c)
+([`review-codex-ds-wake-unanchored-2026-10-31.md`](review-codex-ds-wake-unanchored-2026-10-31.md),
+[`review-fable-ds-wake-unanchored-2026-10-31.md`](review-fable-ds-wake-unanchored-2026-10-31.md)).
+Both rank (a) and a USB storm at the unmask on top (codex the flash first,
+Fable USB). New from them:
+- **An unbounded spin under the lock in phase 30:** `pwm_tick_startI()`
+  (`sleep.c:607`) reaches `CT16B3_ResetTimer()`, `while (TMRCTRL & CRST)`
+  (`sn32_ct.h:421-424`). It runs at every full wake; it would hang only if
+  the timer's clock did not run.
+- **USB flags the LLD never clears:** `ERR_TIMEOUT`, `EP0_PRESETUP` outside
+  the SETUP branch, nothing when `INSTS` reads 0; a level-held one is a
+  storm with no bound. And `usb_phy_onI()` restores `PHY_EN` but not
+  `ESD_EN`, which the suspend ISR clears too.
+- **More unbounded loops a wake can reach:** the USB FIFO's `RWSTATUS` waits
+  (`hal_usb_lld.c:147`) and UART2's ISR drain loops (priority 0).
+- **"Untouched" does not rule out a full wake:** the knob wakes on either
+  edge and CHRG on any falling edge, neither qualified, so a glitch can
+  start one.
+- **The WDT's "does not count asleep" is white's measurement only;** black
+  has never run the unfed sleep.
+
+JD (10-31): probably untouched. The board lay beside JD, in view and
+unused, so a bumped key is possible but unlikely; JD saw it crash. That
+leans to (a) or a glitch-started wake. `ds-phase` on black tells them apart
+at a repeat: 29 the flash return, 30 the restore (the CT16B3 spin), 31 an
+interrupt that never lets go, 28 the WDT counting asleep.
+3. **On black:** 10-28's shape with a long sleep (idle on USB 10+ min,
+   pulled, untouched 15+ min), as often as JD can; the unfed sleep once;
+   and in `ds-phase`, phase 30 split around the CT16B3 reset, and `INSTS`,
+   `CFG` and a USB ISR entry count kept with phase 31.
+4. **Later, on the mainline:** the CT16B3 wait bounded, with its own site
+   before the reset. Clearing the USB flags at the wake waits until black
+   has had its chance to repeat, since it could hide the cause.
+
 
 ## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
 
