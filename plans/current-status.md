@@ -125,9 +125,12 @@ bulbs.
   03:19 10-31 `05ef0f5bbc9` (token `0x4de76a30`, after `935e6e1bd2` from
   03:12): the wake's finer phases (sites 64-67, the CT16B3 spin at 66)
   and phase 31's interrupt census (op 24 slot 11), read on gremlin with
-  `ak820 sleep` (GREMLIN-RESULTS §21). It waits for a repeat of the
-  watchdog reset in a deep sleep, and for the unfed sleep (`ak820 sleep
-  --unfed`, the cable pulled by JD).
+  `ak820 sleep` (GREMLIN-RESULTS §21). Its unfed sleep (04:00 10-31, the
+  cable pulled by JD) ran 120 counted s with no reset, so the WDT does
+  not count in Deep-sleep on black either; that wake's census caught the
+  audit's F-045 state (`BUS_SUSPEND` latched, `PHY_EN` on, `ESD_EN` off)
+  with no USB interrupt in the window. It waits for 10-28's shape with a
+  long sleep, and for a repeat of the watchdog reset in a deep sleep.
 - **Before it, from 20:39 10-28: `fbc6c4a1fd`** (dev, token
   `0xd044efc5`): the build below plus bold page titles and a bold song title
   in 10px (JD: "we still judiciously use bold"). flash.sh exit 0 at
