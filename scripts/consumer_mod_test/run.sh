@@ -2,9 +2,11 @@
 # The knob's modified-consumer sequencer (plans/AUDIT-2026-10-31.md, F-004):
 # the real consumer_mod.c, quantum/action_util.c and tmk_core/protocol/report.c,
 # with register_code, unregister_code, register_mods, unregister_mods and
-# extract_mod_bits cut verbatim out of quantum/action.c and quantum/quantum.c.
+# extract_mod_bits cut verbatim out of quantum/action.c and quantum/quantum.c,
+# and quantum/keycode_config.c with MAGIC_ENABLE (the board's GUI lock).
 # Runs test.c without and with NKRO. CC picks the compiler (default cc); SAN
-# the sanitizer flags (SAN= for none); -v as the first argument narrates.
+# the sanitizer flags (SAN= for none); CONSUMER_MOD_C another copy of the
+# source (say, an older one); -v as the first argument narrates.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 q="$here/../../qmk_firmware-ak820pro"
@@ -49,13 +51,13 @@ cut_fn() {  # $1 file, $2 exact first line of the function
 
 inc="-I$here/stubs -I$kb -I$q/quantum -I$q/quantum/logging -I$q/quantum/keymap_extras
      -I$q/quantum/sequencer -I$q/tmk_core/protocol -I$q/platforms"
-defs="-DEXTRAKEY_ENABLE -DMODIFIED_CONSUMER_GAP_MS=$gap -DMODIFIED_CONSUMER_HOLD_MS=$hold -DENCODER_MAP_KEY_DELAY=$kdelay"
+defs="-DEXTRAKEY_ENABLE -DMAGIC_ENABLE -DMODIFIED_CONSUMER_GAP_MS=$gap -DMODIFIED_CONSUMER_HOLD_MS=$hold -DENCODER_MAP_KEY_DELAY=$kdelay"
 fails=0
 for nkro in "" "-DNKRO_ENABLE"; do
     # shellcheck disable=SC2086
     "$cc" -std=gnu11 -g -O1 -Wall -Wno-unused-function $san $defs $nkro $inc \
-        "$here/test.c" "$kb/consumer_mod.c" "$q/quantum/action_util.c" "$q/tmk_core/protocol/report.c" \
-        "$q/quantum/bitwise.c" "$gen/action_extract.c" "$gen/quantum_extract.c" -o "$gen/test"
+        "$here/test.c" "${CONSUMER_MOD_C:-$kb/consumer_mod.c}" "$q/quantum/action_util.c" "$q/tmk_core/protocol/report.c" \
+        "$q/quantum/bitwise.c" "$q/quantum/keycode_config.c" "$gen/action_extract.c" "$gen/quantum_extract.c" -o "$gen/test"
     echo "== ${nkro:-6KRO}"
     "$gen/test" "$@" | grep -E 'FAIL|failure' || fails=1
 done

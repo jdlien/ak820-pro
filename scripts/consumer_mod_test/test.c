@@ -19,8 +19,12 @@
  *    ENCODER_MAP_KEY_DELAY), release, wait_ms(ENCODER_MAP_KEY_DELAY), with the
  *    keycode reaching process_record_kb -> process_modified_consumer;
  *  - a physical modifier or letter key: the plain KC_* action path,
- *    process_action's ACT_LMODS with no mods -> register_code(code) /
- *    unregister_code(code) (the real functions).
+ *    keycode_config() (the real quantum/keycode_config.c, MAGIC_ENABLE) then
+ *    process_action's ACT_LMODS with no mods -> register_code() /
+ *    unregister_code() (the real functions);
+ *  - the keyboard endpoint's delivery: at once, or kb_latency_ms late while
+ *    the consumer usage goes at once (the two endpoints are polled
+ *    independently, which is what the gap exists to beat).
  */
 #include <stdio.h>
 #include <string.h>
@@ -32,8 +36,7 @@
 #include "consumer_mod.h"
 
 /* ---- stubs QMK's real files need on the host ---------------------------- */
-keymap_config_t keymap_config;
-debug_config_t  debug_config;
+debug_config_t  debug_config;   /* keymap_config is keycode_config.c's */
 
 static uint32_t now_ms;
 uint16_t timer_read(void) { return (uint16_t)now_ms; }
@@ -49,11 +52,26 @@ void     eeconfig_update_keymap(const keymap_config_t *k) { (void)k; }
 
 /* ---- the host model ----------------------------------------------------- */
 static uint8_t host_mods;           /* what the host believes is held */
+static uint32_t kb_latency_ms;      /* the keyboard endpoint's delivery delay */
+static struct { uint32_t due; uint8_t mods; } kbq[64];
+static int kbq_n;
+static void host_deliver(void) {    /* the keyboard reports due by now, in order */
+    int i = 0;
+    while (i < kbq_n && kbq[i].due <= now_ms) host_mods = kbq[i++].mods;
+    memmove(kbq, kbq + i, (size_t)(kbq_n - i) * sizeof kbq[0]);
+    kbq_n -= i;
+}
+static void host_mods_arrive(uint8_t m) {
+    if (!kb_latency_ms && !kbq_n) { host_mods = m; return; }
+    if (kbq_n < 64) { kbq[kbq_n].due = now_ms + kb_latency_ms; kbq[kbq_n].mods = m; kbq_n++; }
+}
 static uint8_t host_keys[32];       /* 6KRO keys or NKRO bitmap, copied */
 static bool    verbose;
 
 static const char *mods_str(uint8_t m) {
-    static char b[64];
+    static char bufs[2][64];   /* two per printf */
+    static int  n;
+    char *b = bufs[n++ & 1];
     b[0] = 0;
     if (!m) return "none";
     if (m & MOD_BIT(KC_LEFT_CTRL)) strcat(b, "LCtl ");
@@ -69,7 +87,7 @@ static const char *mods_str(uint8_t m) {
 void host_keyboard_send(report_keyboard_t *r) {
     if (verbose && r->mods != host_mods)
         printf("    t=%4u ms  host <- keyboard report, mods %-14s (0x%02x)\n", (unsigned)now_ms, mods_str(r->mods), r->mods);
-    host_mods = r->mods;
+    host_mods_arrive(r->mods);
     memset(host_keys, 0, sizeof host_keys);
     memcpy(host_keys, r->keys, sizeof r->keys);
 }
@@ -78,7 +96,7 @@ bool host_can_send_nkro(void) { return true; }
 void host_nkro_send(report_nkro_t *r) {
     if (verbose && r->mods != host_mods)
         printf("    t=%4u ms  host <- NKRO report, mods %-14s (0x%02x)\n", (unsigned)now_ms, mods_str(r->mods), r->mods);
-    host_mods = r->mods;
+    host_mods_arrive(r->mods);
     memset(host_keys, 0, sizeof host_keys);
     memcpy(host_keys, r->bits, sizeof r->bits < sizeof host_keys ? sizeof r->bits : sizeof host_keys);
 }
@@ -86,6 +104,7 @@ void host_nkro_send(report_nkro_t *r) {
 static int consumer_events, consumer_alt_only, consumer_full_lsa;
 void host_consumer_send(uint16_t usage) {
     if (!usage) return;
+    host_deliver();
     consumer_events++;
     uint8_t lsa = MOD_BIT(KC_LEFT_SHIFT) | MOD_BIT(KC_LEFT_ALT);
     if ((host_mods & lsa) == lsa) consumer_full_lsa++;
@@ -101,20 +120,22 @@ static uint32_t hk_last;
 static void run_ms(uint32_t n) {
     while (n--) {
         now_ms++;
+        host_deliver();
         if (now_ms - hk_last >= 100) {  /* ak820pro.c: the 10 Hz housekeeping */
             hk_last = now_ms;
             modified_consumer_task();
         }
     }
 }
-static uint8_t phys_mods;            /* the modifier keys physically down */
+static uint8_t phys_mods;            /* the modifiers the keys hold, after keycode_config() */
 static void phys_key(uint8_t code, bool down) {
+    uint8_t eff = (uint8_t)keycode_config(code);   /* keymap_common.c's action path */
     if (verbose)
         printf("    t=%4u ms  user %s %s\n", (unsigned)now_ms, down ? "presses" : "releases",
                code == KC_LEFT_SHIFT ? "Left Shift" : code == KC_LEFT_ALT ? "Left Option" :
                code == KC_RIGHT_SHIFT ? "Right Shift" : "a letter key");
-    if (IS_MODIFIER_KEYCODE(code)) {
-        if (down) phys_mods |= MOD_BIT(code); else phys_mods &= (uint8_t)~MOD_BIT(code);
+    if (IS_MODIFIER_KEYCODE(eff)) {
+        if (down) phys_mods |= MOD_BIT(eff); else phys_mods &= (uint8_t)~MOD_BIT(eff);
     }
     {   /* the tracker, as process_record_kb calls it */
         keyrecord_t r;
@@ -122,7 +143,7 @@ static void phys_key(uint8_t code, bool down) {
         r.event.pressed = down;
         consumer_mod_note_key(code, &r);
     }
-    if (down) register_code(code); else unregister_code(code);
+    if (down) register_code(eff); else unregister_code(eff);
 }
 static void detent(uint16_t kc) {
     if (verbose) printf("    t=%4u ms  knob detent\n", (unsigned)now_ms);
@@ -150,6 +171,7 @@ static void reset_world(void) {
 static int fails;
 static void check(const char *what, uint8_t got, uint8_t want) {
     bool ok = got == want;
+    if (kbq_n) { printf("BUG IN HARNESS: a check with keyboard reports in flight\n"); fails++; }
     printf("  %s %s: host mods %s (0x%02x), physically held %s (0x%02x)\n", ok ? "ok  " : "FAIL", what, mods_str(got), got,
            mods_str(want), want);
     if (!ok) fails++;
@@ -239,6 +261,42 @@ int main(int argc, char **argv) {
         fails++;
     } else
         printf("  ok   every usage carried Shift+Alt\n");
+
+    printf("\nS: Alt/GUI swapped: the Left Alt key holds GUI; one detent, 0.5 s, the key released\n");
+    reset_world();
+    keymap_config.swap_lalt_lgui = true;
+    phys_key(KC_LEFT_ALT, true);
+    run_ms(30);
+    detent(VOLU);
+    run_ms(500);
+    check("after the burst, the swapped key's GUI only", host_mods, phys_mods);
+    phys_key(KC_LEFT_ALT, false);
+    run_ms(50);
+    check("the key released: nothing left held", host_mods, phys_mods);
+    keymap_config.swap_lalt_lgui = false;
+
+    printf("\nL: keyboard reports 4 ms late; Option held, Shift pressed 1 ms before the detent\n");
+    reset_world();
+    kb_latency_ms = 4;
+    phys_key(KC_LEFT_ALT, true);
+    run_ms(30);
+    phys_key(KC_LEFT_SHIFT, true);
+    run_ms(1);
+    detent(VOLU);
+    run_ms(30);
+    printf("  consumer usages %d: %d with Shift+Alt, %d with Alt and no Shift\n", consumer_events, consumer_full_lsa,
+           consumer_alt_only);
+    if (consumer_events != 1 || consumer_full_lsa != 1) {
+        printf("  FAIL the usage reached the host before the Shift did (Alt+Volume: Sound settings)\n");
+        fails++;
+    } else
+        printf("  ok   the usage carried Shift+Alt\n");
+    phys_key(KC_LEFT_SHIFT, false);
+    phys_key(KC_LEFT_ALT, false);
+    run_ms(500);
+    kb_latency_ms = 0;
+    run_ms(10);
+    check("both released: nothing left held", host_mods, phys_mods);
 
     printf("\n%d failure(s)\n", fails);
     return fails ? 1 : 0;

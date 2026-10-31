@@ -101,6 +101,7 @@ static uint16_t ref_transitions = 0;
 static uint16_t deferred_passes = 0;
 static bool     pcf_backoff = false;
 static bool     pcf_maybe_stopped = false;
+static bool     pcf_boot_stopped = false;
 static volatile uint16_t lat_min = 0xFFFF, lat_max = 0, lat_n = 0;
 static volatile uint32_t lat_sum = 0;
 static volatile uint8_t  usb_active_mirror = 0;
@@ -193,7 +194,23 @@ int main(int argc, char **argv) {
         printf("   | two samples: %02u:%02u:%02u error %+9.3f ms\n", rep[8], rep[9], rep[10], eo);
     }
 
-    /* 2. Every phase of a second at 1 us. */
+    /* 2. No stamp: the second's interrupt pending and never served, so every
+     * one of rtc_now()'s tries sees SECIF. The reply must say unset (which
+     * the hosts skip) and carry zeros, not a calendar or a stale count. */
+    board_set(BASE_S * 1000000000LL + 250000000LL);
+    sim_regs.RIS |= mskRTC_SECIF;
+    memset(rep, 0xAA, 32);
+    rep[0] = 0x07; rep[1] = 0x10; rep[2] = 0x02;
+    rtc_read_into(rep);
+    bool zeros = true;
+    for (int i = 4; i <= 10; i++) zeros = zeros && rep[i] == 0;
+    for (int i = 12; i <= 15; i++) zeros = zeros && rep[i] == 0;
+    printf("no stamp (SECIF pending throughout): ok %u, fields %s, stale_count %u, board_sod %.0f\n", rep[3],
+           zeros ? "zero" : "NOT zero", stale_count, board_sod(rep));
+    if (rep[3] != 0 || !zeros || board_sod(rep) >= 0) { printf("FAIL: a reply with no stamp is not plainly unset\n"); fails++; }
+    sim_regs.RIS &= ~mskRTC_SECIF;
+
+    /* 3. Every phase of a second at 1 us. */
     long wrong = 0, unset = 0, torn_old = 0, n = 0;
     int64_t torn_lo = INT64_MAX, torn_hi = INT64_MIN;
     double worst = 0;

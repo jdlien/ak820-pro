@@ -1,0 +1,12 @@
+Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it. Do not run anything that opens USB or HID devices, talks to a keyboard, or changes any file: this is a read-only review. (A keyboard on this machine is mid-way through a multi-day battery test.) You may run the host tests named below; they only compile and run local C code.
+
+Review a batch of firmware fixes before they are flashed. The firmware is a QMK/ChibiOS port for the Ajazz AK820 Pro (Sonix SN32F299, Cortex-M0); CLAUDE.md at the repo root describes it. The fixes come from an audit, plans/AUDIT-2026-10-31.md: read the entries for F-002, F-009, F-007, F-028, F-003 and F-004 there, each with the audit's proposed fix.
+
+The change: in qmk_firmware-ak820pro, `git log --oneline 5c8c5f5ea8..b72462ba58` (branch audit-fixes; five commits, one per fix) and `git diff 5c8c5f5ea8 b72462ba58`. In the outer repo, commit ca30679: build.sh's new check that QMK Command is not linked, docs, and four host tests (scripts/rtc_get_stamp_test, scripts/usb_wakeup_test, scripts/pairing_sleep_test, scripts/consumer_mod_test; each has a run.sh).
+
+Deliberate choices to check rather than accept:
+- F-003: the audit proposed two things, reading a 5B 23 that arrives while pairing as the end of advertising, and a time backstop. Only the backstop was taken (10 min, CH582_PAIRING_MAX_MS), and it clears only is_pairing (the deep sleep's blocker), leaving conn_state PAIRING so a same-slot tap still takes the cancel-pairing bounce (docs/wireless.md explains the bounce). is_pairing is also cleared in ch582_set_profile's non-bounce branch and in ch582_cancel_connect().
+- F-009: when rtc_now() fails, RTC_GET_TIME now answers unset (data[3] = 0) where before it answered set with a count of 0. Check what the hosts do with that (time-util-ak820pro/ak820ctl.c's get_offset and its callers; ak820-agent/src/clock/).
+- F-004: the physical-modifier tracker is fed from process_record_kb before the consumer sequencer.
+
+For each problem: severity (P1 must fix before flashing, P2 should fix, P3 note), the file:line, the concrete failure scenario, and the fix. Also say what you checked and found sound. Be concrete and quote the lines you rely on.
