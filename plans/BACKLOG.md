@@ -37,6 +37,21 @@ A multi-agent audit of the whole firmware ([`AUDIT-2026-10-31.md`](AUDIT-2026-10
 - **F-005, F-006:** a PCF stopped by a reset replays one minute; a failed first PCF read leaves 00:00 until a host sync.
 When one is fixed, its test moves into `scripts/` with the fix.
 
+## A lock change made while the board sleeps is lost (the 10-31 audit, F-008) -- documented; a daemon-side refresh is the fix, not built
+
+The deep sleep turns UART2's receiver off, and the module forwards a host's
+LED change only when it changes (three copies, 0-5 ms apart), so a Caps toggled
+on another keyboard of a Windows host while the board sleeps stays wrong on
+the board until the next change (macOS keeps Caps per keyboard: the Mac is
+unaffected). Firmware can't ask the module for the state, and UART2's RX as a
+wake source would wake the board on every lock-light frame. The audit's way:
+on a host with the daemon, after the board's link comes back, write the LED
+report once with a padding bit set and then the real value, so the module sees
+a change and forwards it; the board's `(d & ~0x1F) == 0` guard drops the
+first. Windows only, where the daemon owns the lock-light channel. The frames
+in the pass that sleeps were fixed with F-020 (the admission checks UART2's
+input queue).
+
 ## Connected over BT but no typing after a wake (2026-10-29) -- JD's bug; located 10-30: Windows stops attaching the board's keyboard collection to the session (the keys reach hidclass); the trigger unproven, the daemon's lock-light frame the suspect
 
 JD, ~23:35 10-29, over BT: "After being away for a bit, the

@@ -506,6 +506,12 @@ second runs ~13% slow** (3,139 counted for 3,600; the ILRC unloaded), so the
 slept time comes from the PCF, and the counted seconds only when the PCF
 cannot be read.
 
+⚠️ **The radio's receiver is off asleep:** what the module sends then is lost,
+a host's lock-LED change among them ([wireless.md](wireless.md), the `5A`
+frames; the 10-31 audit, F-008). Anything already in UART2's input queue at the
+admission holds the sleep off (F-020), so a frame in the pass that sleeps is
+taken by the next one.
+
 **The wake's recovery** (`recovery_task`), each step closing on its own; the
 page's `open` bits show which are still running:
 1. **input**: the waking key counted (or the knob's detent), or 50 ms; only

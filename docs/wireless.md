@@ -187,6 +187,14 @@ the channel built on it is
   the `LINKING` promotion.
 - **Every change arrives three times**, 0-5 ms apart, and **a repeat of the
   same value is not forwarded** (the Mac sends it; it never reaches the board).
+  ⚠️ **So a lock change made while the board deep-sleeps is lost** (the 10-31
+  audit, F-008): the sleep turns UART2's receiver off, and nothing asks the
+  module for the state again. The Caps light and the screen's padlock stay
+  wrong until the next change. It needs a host that sends the board a lock
+  change made elsewhere: Windows does; macOS keeps Caps per keyboard, so the
+  Mac never does. A change in the pass that sleeps holds the sleep off (F-020).
+  The ways round it cost power (UART2's RX as a wake source would wake on every
+  lock-light frame) or need the daemon (`plans/BACKLOG.md`).
 - **No merging:** written back to back, one per ~30 ms, every one delivered.
   After even a 10 ms pause each write takes ~150 ms, and the first after idle
   130-376 ms; one 366 ms write was seen mid-burst.
