@@ -891,15 +891,20 @@ static void test_switch(void) {
     /* The reboot on the Mac's side, the switch where it was: its slot,
      * nothing loaded (the last record is Windows'). */
     prof_test_reset();
+    prof_boot_side(true);
     prof_switch(true);
     ticks(5);
     CHECK(fk_switched == 12 && prof_active() == 3 && hid(7, 0, 0) && rpt[9] == 2 && fk_lcd == 78);
-    /* The switch moved while the board was off: the boot on Windows finds
-     * Windows' settings in the last record, so the live ones are the Mac's.
-     * At the first tick, the flip's swap. */
+    /* The switch moved while the board was off: the default layer says the
+     * Mac (prof_boot_side()), the switch Windows, so the live settings are
+     * the Mac's. The flip's swap at the end of its countdown, as a live
+     * flip's (the 10-31 audit, F-030). */
     prof_test_reset();
+    prof_boot_side(true);
     prof_switch(false);
     CHECK(fk_switched == 12 && fk_lcd == 78);
+    ticks(2);
+    CHECK(fk_switched == 12);
     ticks(1);
     CHECK(fk_switched == 13 && fk_sw_slot == 0 && fk_lcd == 77 && prof_active() == 0 && hid(7, 0, 0) && rpt[9] == 1 &&
           last_state() == LAST_MAC && last_lcd() == 78);
