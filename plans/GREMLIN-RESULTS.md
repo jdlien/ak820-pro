@@ -1964,3 +1964,35 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
   only ~95 s, where the reset came ~8 min in. Not yet copied: that
   entry with a long untouched sleep. Black keeps the recorder in daily
   use; slots 9 and 10 need op 24 (Buzz's Python reader, not on gremlin).
+- **The unanchored reviews' host-only check, on the incident build**
+  (`c4bc0852` dev, token `0x189635f2`; its ELF matches the manifest's
+  sha256): `ds_deep_wfi` is at `0x20001534` in SRAM, with both its
+  literals (`PMU_CTRL`, `&ds_flash_word`) in SRAM after it. After the WFI
+  the PMU write and the 260-pass wait run from registers; the first
+  flash access is the dummy read, and the return to `0x153a4` the next.
+  The path is as designed; lead (a) is then the flash not ready for the
+  read or the return, which a reset at 29 or 64 now tells apart.
+- **On black from 03:19 10-31: `05ef0f5bbc9`** (dev, token
+  `0x4de76a30`, heap gap 128 B at the floor; before it `6ce20ccef98`
+  from 03:03 and `935e6e1bd2a` from 03:12, the same before codex's
+  fixes). Buzz's session's proposal after the reviews:
+  - **Sites 64-67** past the loop sites, parent 27: 64 after the SRAM
+    wait's flash read (29 now ends there), 65 the clocks back, 66 in
+    `pwm_tick_startI()` (CT16B3's `CRST` wait, unbounded, under the
+    lock), 67 the tick started, then 31.
+  - **Op 24 slot 11, the census of phase 31's window** (from the
+    unmask to the return): handler entries, USB's, the IRQs seen and
+    the last IPSR, from an IRQ prologue hook; USB `INSTS`, `CFG` and
+    `INTEN` at the unmask (`INSTS` at each USB entry after). Kept
+    through a reset like slot 9, and frozen for the boot after a reset
+    inside the window. 20 B, all the heap gap allowed.
+  - Codex: no P1, three P2s fixed
+    (`plans/review-codex-ds-census-2026-10-31.md`).
+  - **Read on gremlin with `ak820 sleep`** (ak820-agent, from
+    `target/release` until the next install): op 14's record and slots
+    0-11, decoded, read-only. `ak820 sleep --unfed` arms the unfed
+    sleep as the bench does (the ladder's sleep held off 10 min, the
+    stage dark, 120 counted s unfed, from 120 s on), and `--done` undoes
+    the three and reads.
+  Next on black: the unfed sleep (JD pulls the cable within 3 min of
+  the arm), and 10-28's shape with a long sleep.

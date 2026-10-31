@@ -1,0 +1,9 @@
+1. **Guard — fixed.** [sleep.c:493](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:493) publishes the guard after disposition and `DMB`; the ELF confirms it. All three callers run on the main thread. Interrupts cannot count before disposition, and the early return cannot skip it.
+
+2. **Sequence — fixed.** [sleep.c:546](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:546) clears non-frozen flags under the teardown lock, before advancing the sequence. The admission return precedes both changes. Frozen censuses survive subsequent sleeps and slot 11 correctly uses `ds_inherited.seq`; others use `ds_last.seq`.
+
+3. **Nesting — partially fixed; P2 remains.** Counts and `seen` updates are serialized, but [sleep.c:506](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:506) reads IPSR before masking. **Scenario:** USB reads IPSR; UART2 preempts, records itself and returns; USB resumes and overwrites `last` at [sleep.c:517](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:517). Thus `last` still need not identify the latest entry. Documenting it as the latest serialized update would resolve that claim.
+
+No new P1/P2. All compiled hook callers reach it with PRIMASK clear; NMI/HardFault do not call it. The longest masked path is 26 instructions, without calls or loops—well below UART2’s ~80–87 µs byte budget. No other masking breakage found. ELF provenance matches; heap gap is 128 B.
+
+**Verdict: OK to keep on black; findings 1–2 fixed, finding 3 needs the `last` semantics corrected.**

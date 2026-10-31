@@ -177,6 +177,8 @@ pub fn crash_site(site: u8) -> String {
         40 => "status", 41 => "text", 42 => "locks", 43 => "clock_format",
         44 => "clock", 45 => "battery", 46 => "eeconfig", 47 => "health",
         48 => "rgb_flush",
+        64 => "deep_sleep_read", 65 => "deep_sleep_clocked", 66 => "deep_sleep_tick",
+        67 => "deep_sleep_ticked",
         _ => return format!("unknown_{site}"),
     };
     name.into()
@@ -801,6 +803,11 @@ mod tests {
         r[6] = 27;
         r[7] = 2;
         assert!(CrashRecord::decode(&r).unwrap().summary().starts_with("deep_sleep within housekeeping;"));
+        // ... and the wake's finer phases past the loop sites (10-31).
+        r[6] = 66;
+        r[7] = 27;
+        assert!(CrashRecord::decode(&r).unwrap().summary().starts_with("deep_sleep_tick within deep_sleep;"));
+        assert_eq!((crash_site(64), crash_site(65), crash_site(67)), ("deep_sleep_read".into(), "deep_sleep_clocked".into(), "deep_sleep_ticked".into()));
         r[5] = 0; // Invalid evidence must not display stale operation or uptime.
         let c = CrashRecord::decode(&r).unwrap();
         assert_eq!((c.site, c.parent, c.last_pass_uptime_ms), (0, 0, 0));

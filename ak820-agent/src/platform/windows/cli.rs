@@ -35,6 +35,7 @@ pub fn main() -> ExitCode {
         ["probe"] => probe(),
         ["lighting"] => lighting(),
         ["health", flags @ ..] => health_cmd(flags),
+        ["sleep", flags @ ..] => sleep_cmd(flags),
         ["clock", flags @ ..] => clock(flags),
         ["install", flags @ ..] => install(flags),
         ["uninstall"] => uninstall(),
@@ -97,6 +98,8 @@ fn usage() {
          \x20 ak820 lighting       RGB values read back off the board\n\
          \x20 ak820 health         the firmware's health counters, as ak820health.py prints them\n\
          \x20   [--crash] [--stalls] [--rows] [--isr] [--json] [--raw]\n\
+         \x20 ak820 sleep [--raw]  the deep sleep's dev records (dev builds): the last sleep, the wake\n\
+         \x20                      ring, the last stray, the sleep kept through a reset, the wake's census\n\
          \x20 ak820 clock [--raw]  the RTC, as `ak820ctl clock --read` prints it;\n\
          \x20                      refuses while the Python timekeeper task runs (--anyway overrides)\n\
          \n\
@@ -346,6 +349,102 @@ fn health_cmd(flags: &[&str]) -> Result<(), String> {
         }
         if let Some((_, rates)) = &p4 {
             print!("{}", health::render_isr(rates));
+        }
+    }
+    report_drained(&drained);
+    Ok(())
+}
+
+/// The deep sleep's dev records (`sleepdiag`): op 14 sub 4 with arg 0, which
+/// only reads, then op 24's slots in order. Read-only, as the rest: what the
+/// bench's Python reads on the Mac, without hidapi's enumeration here. A
+/// firmware without a slot answers it unhandled, and the reading stops there.
+fn sleep_cmd(flags: &[&str]) -> Result<(), String> {
+    use crate::hid::exchange::REQUEST_TIMEOUT;
+    use crate::proto::Channel;
+    use crate::sleepdiag::{self as sd, Record, Slot};
+
+    // Development: the unfed armed sleep (deep_sleep.py --no-feed --no-press
+    // --cap 120), the one test of whether this unit's watchdog counts in
+    // Deep-sleep. --unfed writes, as the bench does: the ladder's sleep held
+    // off 10 min (op 14 sub 5, so its fed sleep cannot take the pull first),
+    // the stage forced dark (sub 2; the arm ignores the lit blockers), then
+    // the arm (sub 4: 120 s delay, 120 counted s, unfed). The cable pulled
+    // within 3 min, it sleeps unfed and wakes itself ~140 s later, or resets
+    // ~12 s in if the watchdog counts. --done undoes all three and reads.
+    let (raw, unfed, done) = match flags {
+        [] => (false, false, false),
+        ["--raw"] => (true, false, false),
+        ["--unfed"] => (false, true, false),
+        ["--done"] => (false, false, true),
+        other => return Err(format!("sleep: unknown flags {other:?}; the flags are --raw, --unfed, --done")),
+    };
+    contention_notice();
+    let dev = device::open_board().map_err(|e| e.to_string())?;
+    if unfed || done {
+        let set = |body: &[u8], sub_echo: Option<u8>| -> Result<[u8; 32], String> {
+            let r = dev
+                .request(Channel::Health, sd::DEVHOOK, body, REQUEST_TIMEOUT)
+                .map_err(|e| format!("devhook op 14 sub {}: {e}", body[1]))?
+                .report;
+            if r[0] == 0xFF || r[3] != sd::OP_SLEEP || sub_echo.is_some_and(|s| r[4] != s) {
+                return Err(format!("op 14 sub {} not answered as itself ({:02X?}): a dev build?", body[1], &r[..6]));
+            }
+            Ok(r)
+        };
+        const SCREEN_OFF: u8 = 3; // POWER_STAGE_SCREEN_OFF
+        if unfed {
+            let ms = 600_000u32.to_le_bytes();
+            set(&[sd::OP_SLEEP, 5, 0, ms[0], ms[1], ms[2], ms[3]], Some(5))?;
+            let r = set(&[sd::OP_SLEEP, 2, SCREEN_OFF], None)?;
+            if r[7] != SCREEN_OFF {
+                return Err(format!("the stage was not forced dark (forced {})", r[7]));
+            }
+            let cap = 120u32.to_le_bytes();
+            set(&[sd::OP_SLEEP, 4, 1, 120, cap[0], cap[1], cap[2], cap[3], 1, 0, 0, 0, 0], Some(4))?;
+            println!(
+                "armed: unfed, 120 counted s, from 120 s after now; the ladder's sleep held off 10 min, the stage dark.\n\
+                 Pull the cable within 3 minutes. It sleeps once the delay is up and wakes itself ~140 s later\n\
+                 (a reset ~12 s in if the watchdog counts asleep). Then plug it in and run `ak820 sleep --done`."
+            );
+            return Ok(());
+        }
+        set(&[sd::OP_SLEEP, 4, 2], Some(4))?;
+        set(&[sd::OP_SLEEP, 2, 0xFF], None)?;
+        set(&[sd::OP_SLEEP, 5, 0, 0, 0, 0, 0], Some(5))?;
+        println!("disarmed; the stage released; the ladder's own sleep time back");
+    }
+    let mut drained = Vec::new();
+    let mut ask = |body: &[u8]| -> Result<Option<[u8; 32]>, String> {
+        let reply = dev
+            .request(Channel::Health, sd::DEVHOOK, body, REQUEST_TIMEOUT)
+            .map_err(|e| format!("devhook op {}: {e}", body[0]))?;
+        drained.extend(reply.drained);
+        let r = reply.report;
+        if raw {
+            let hex: Vec<String> = r.iter().map(|b| format!("{b:02X}")).collect();
+            println!("op {:>2} {:>2}: {}", body[0], body[1], hex.join(" "));
+        }
+        if r[0] == 0xFF {
+            return Ok(None); // unhandled: not a dev build, or no such slot
+        }
+        if r[3] != body[0] {
+            return Err(format!("devhook op {} answered as op {}", body[0], r[3]));
+        }
+        Ok(Some(r))
+    };
+
+    let mut read = [0u8; 28];
+    read[..3].copy_from_slice(&[sd::OP_SLEEP, 4, 0]);
+    let rec = ask(&read)?.ok_or("the board does not answer op 14: not a dev build")?;
+    print!("{}", Record::decode(&rec)?.render());
+    for slot in 0..sd::SLOTS {
+        match ask(&[sd::OP_SLOT, slot])? {
+            Some(r) => print!("{}", Slot::decode(slot, &r[4..32])?.render()),
+            None => {
+                println!("(no slot {slot} on this firmware)");
+                break;
+            }
         }
     }
     report_drained(&drained);

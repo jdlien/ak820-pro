@@ -233,6 +233,15 @@ interrupt that never lets go, 28 the WDT counting asleep.
    before the reset. Clearing the USB flags at the wake waits until black
    has had its chance to repeat, since it could hide the cause.
 
+**Built and on black from 03:19 10-31** (`gremlin/ds-phase`
+`05ef0f5bbc9`, token `0x4de76a30`; GREMLIN-RESULTS section 21): item
+3's split and census. A reset reads 29 (the wait or the flash read), 64
+(the return's fetches), 65 (the restore), 66 (CT16B3's spin), 67 (the
+USB transceiver, the clocks' accounting) or 31, and slot 11 holds the
+window's interrupts and USB's flags. On gremlin `ak820 sleep` reads it,
+and `--unfed` arms the unfed sleep. The incident build's ELF passed
+codex's host-only check: the WFI to the dummy read is all SRAM.
+
 
 ## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
 

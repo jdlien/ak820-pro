@@ -501,6 +501,11 @@ This file is the thread; read it first after a context loss. Updated
        **Open (JD's call):** 10-28's entry with a long untouched sleep
        (idle on USB past the ladder, the cable pulled, hands off
        15 min or more).
+       **On black from 03:19 10-31: `05ef0f5bbc9`** (token
+       `0x4de76a30`): sites 64-67 (the flash read, the clocks, CT16B3's
+       spin, the tick) and op 24 slot 11, phase 31's interrupt census;
+       codex no P1, its three P2s fixed. `ak820 sleep` reads the slots
+       on gremlin; `--unfed` arms the unfed sleep, owed with JD's pull.
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow
