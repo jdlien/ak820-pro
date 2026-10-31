@@ -48,10 +48,12 @@ void     rtc_lld_add_secondsI(RTCDriver *rtcp, uint32_t seconds);
 typedef struct {
     volatile uint32_t SECCNT;
     volatile uint32_t RIS;
+    volatile uint32_t IC;   /* written by a step that takes a latched match (F-025) */
 } SN_RTC_Type;
 extern SN_RTC_Type sim_rtc_regs;
 #define SN_RTC (&sim_rtc_regs)
 #define mskRTC_SECIF (0x1u << 0)
+#define mskRTC_SECIC (0x1u << 0)
 
 typedef struct { volatile uint32_t FRMNO; } SN_USB_Type;
 extern SN_USB_Type sim_usb_regs;
@@ -85,3 +87,5 @@ extern NVIC_Type sim_nvic;
 #define CT16B1_IRQn 5
 static inline void NVIC_DisableIRQ(int n) { sim_nvic.ISER[0] &= ~(1u << n); }
 static inline void NVIC_EnableIRQ(int n)  { sim_nvic.ISER[0] |= (1u << n); }
+#define RTC_IRQn 25
+static inline void NVIC_ClearPendingIRQ(int n) { (void)n; }

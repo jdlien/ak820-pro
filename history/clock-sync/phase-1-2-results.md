@@ -30,7 +30,11 @@ Two things learned:
   interval containing the final write is long by exactly the ISR service
   latency `L` (0–7 cycles, ≤ 200 µs). Implemented as: transient slew
   writes compensated (exact), final restore uncompensated. Documented in
-  `rtc.c`.
+  `rtc.c`. (Corrected 10-31, the audit's F-026: "exact" held only for a
+  segment the next tick rewrites. The compensated start stayed in the
+  register, so every untouched interval after it ran `L` short and a 499 ms
+  slew ended 1.3 ms off at `L` = 2. Since then the start is compensated only
+  when the next tick rewrites it, and a slew ends within `2L`.)
 
 ## Phase 2 — SOF frequency discipline, slew, host-supplied bias, agent
 

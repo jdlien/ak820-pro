@@ -40,6 +40,8 @@ extern NVIC_Type sim_nvic;
 #define CT16B1_IRQn 18
 static inline void NVIC_DisableIRQ(int n) { sim_nvic.ISER[0] &= ~(1u << n); }
 static inline void NVIC_EnableIRQ(int n)  { sim_nvic.ISER[0] |=  (1u << n); }
+#define RTC_IRQn 25
+static inline void NVIC_ClearPendingIRQ(int n) { (void)n; }
 
 /* OSAL bits the RTC LLD and hal_rtc.c use. */
 static inline syssts_t osalSysGetStatusAndLockX(void) { return 0; }
