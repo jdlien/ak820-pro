@@ -1,0 +1,15 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md, which explains the project; read the parts you need.
+
+You reviewed the wake fixes (gremlin/wake-fixes cfe649c21b7 and its merge onto ds-phase c7bc7bd0db9); your review is plans/review-codex-wake-fixes-raw.md: no P1, three P2s, and a hardware gate. Verify the fixes for the three P2s. Do not modify anything. Use git read commands inside qmk_firmware-ak820pro.
+
+- The fix commit: `git -C qmk_firmware-ak820pro show 70f7c1ea10e` (on gremlin/wake-fixes, after cfe649c21b7).
+- Its merge onto black's branch: `git -C qmk_firmware-ak820pro show 0118d39e67e` and `git -C qmk_firmware-ak820pro diff c7bc7bd0db9 0118d39e67e`.
+
+What each fix claims:
+1. P2-1: pwm_tick_startI() no longer calls gptStartContinuousI(); pwm_tick_restartI() does what hal_gpt.c's gptStartContinuousI() and hal_gpt_lld.c's gpt_lld_start_timer() do for CT16B3 on SN32F290 (state, MR0 with CT16_PWM_UNLOCK, the counter reset now bounded, the flags cleared, the MR0 interrupt, CEN), so no unbounded CRST spin is left on the wake path. Check it against lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_gpt_lld.c and hal_gpt_lld.h line by line, including the #if branches that apply to this part and timer, and that gptStopTimerI() and the GPT driver's state stay consistent for the later stop.
+2. P2-2: the dev light sleep's PHY_EN|ESD_EN handling moved into chconf.h's CH_CFG_IDLE_LOOP_HOOK, taken and restored around each WFI under its __disable_irq() mask; light_task's copy (ls_usb_phy) is gone.
+3. P2-3: bootmagic_reset_eeprom() (ak820pro.c) overrides QMK's weak one: watchdog_record_forget() then eeconfig_disable(). watchdog_record_forget() clears ready and the retained magic, with a sacrificial write after it. Check quantum/bootmagic/bootmagic.c's order and that no other pre-capture bootloader entry exists in this build.
+
+Also: anything new these changes break, and the RAM (dev heap gap still exactly 128 B, daily 2336 B).
+
+OUTPUT: per P2, fixed or not, with file:line evidence; any new findings ranked P1/P2/P3; a verdict on keeping 0118d39e67e on black and on 70f7c1ea10e for the mainline (subject to the hardware gate you listed). Be terse.

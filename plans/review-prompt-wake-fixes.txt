@@ -1,0 +1,24 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md, which explains the project; read the parts you need.
+
+You are reviewing a firmware change before it goes onto the board and later into the mainline. Do not modify anything. Use git read commands (git show, git diff, git log) inside qmk_firmware-ak820pro.
+
+THE CHANGE
+- Branch gremlin/wake-fixes, one commit cfe649c21b7 on top of the mainline 8ec0c8b9b4 (deps.lock's pin): `git -C qmk_firmware-ak820pro show cfe649c21b7`.
+- Branch gremlin/ds-wake-fixes, merge commit c7bc7bd0db9: that commit merged into gremlin/ds-phase (05ef0f5bbc9, the dev diagnostics black runs). This merge is what will be flashed on black. `git -C qmk_firmware-ak820pro show c7bc7bd0db9` and `git -C qmk_firmware-ak820pro diff 05ef0f5bbc9 c7bc7bd0db9`.
+- Files: keyboards/a_jazz/ak820pro/sleep.c, sleep.h, indicators.c, watchdog_record.c, watchdog_record.h, ak820pro.h.
+
+WHAT IT IS FOR (plans/AUDIT-2026-10-31.md has F-045 and F-032; plans/GREMLIN-RESULTS.md section 21 has the measurements)
+1. F-045: deep_sleep() used to set USB_CFG.PHY_EN after every wake (usb_phy_onI). The SN32 USB LLD (lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/USB/hal_usb_lld.c) clears PHY_EN and ESD_EN together at BUS_SUSPEND and sets both at resume/wakeup. After a cable-out wake the board was left with PHY_EN on and ESD_EN off (seen twice on hardware). The fix takes the PHY_EN|ESD_EN pair under the lock before the teardown and restores only bits that were set then; the dev light sleep (light_task) does the same with a copy taken as its PMU/WFI bits begin.
+2. The CT16B3 counter reset: gptStartContinuousI -> gpt_lld_start_timer -> CT16B3_ResetTimer() spins on TMRCTRL.CRST with no bound (lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/CT/sn32_ct.h and hal_gpt_lld.c), under the lock, at every deep sleep's wake. pwm_tick_startI() now performs the same reset first with a bound (~0.5 ms); if it does not complete it writes a terminal watchdog record (site 69) and resets.
+3. F-032: the three bounded clock waits in deep_sleep() reset the board with NVIC_SystemReset, and a software reset's boot discarded the record. Now each writes a terminal record (site 68, a PC word naming the wait and CSST) first, and watchdog_record_boot() keeps a FAULT_MAGIC record with site 68 or 69 when RSTST has SWRSTF, without raising the consecutive-reset count.
+
+WHAT TO CHECK
+- Correctness of each fix against the hardware and the LLD as the code and docs/sn32f299.md describe them. In particular: is restoring "only bits set before the sleep" right in every path (cable out, bench uhubctl data cut with the driver still ACTIVE, host suspended with the cable in, a wake on the cable's insertion, the LLD's stale-SOF undo the audit describes)? Can a board that wakes with both bits off fail to come back on USB when the cable is plugged in afterwards, given what the LLD does on BUS_WAKEUP/RESUME/RESET with PHY_EN off? If that path is not provably fine, say what the hardware test must show.
+- The bounded CT16B3 reset: is SN_CT16B3->TMRCTRL the register the LLD's macro writes; is writing TMRCTRL = CRST at that point equivalent to what the LLD does next; any interaction with the GPT driver's state, the 20 kHz tick's ISR, or pwm_tick_startI's other callers (pwm_tick_run, boot) including a call before watchdog_record_boot() has run.
+- The terminal record under SWRSTF: can any other reset path (a flash's bootloader exit, NVIC_SystemReset elsewhere, the dev bootloader jump, a fault record followed by a software reset) now produce a falsely valid record? Is the count handling right? Does commit_terminal's sacrificial-write rule hold when NVIC_SystemReset follows immediately? Is ds_clock_failI safe under the lock and at 12 MHz (IHRC) after the PLL failed?
+- The merge onto ds-phase: the conflict resolution in sleep.c (DS_LAST ceiling flags kept before the new terminal record), watchdog_record.h (sites 64-69), ak820pro.h's static assert. Anything ds-phase's kept-sleep record (op 24 slots 9-11, ds_keep_boot) now gets wrong after a site-68/69 software reset.
+- RAM: the dev build's heap gap is exactly at its 128 B floor; the daily build's is 2336 B.
+- Anything else wrong in the diff.
+
+OUTPUT
+Findings ranked P1 (must fix before the board), P2 (fix before the mainline), P3 (note). Each with file:line, the concrete failure, and the fix. Then a verdict: OK to keep on black (c7bc7bd0db9)? OK for the mainline (cfe649c21b7) after which fixes? Be terse.

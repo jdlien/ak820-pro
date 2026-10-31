@@ -97,6 +97,21 @@ pub struct CrashRecord {
 pub const SITE_HARD_FAULT: u8 = 23;
 pub const SITE_UNHANDLED_EXCEPTION: u8 = 24;
 pub const SITE_HALT: u8 = 25;
+/// Terminal sites written just before a software reset (F-032, 10-31), the
+/// only records a reset-flags-0x01 boot keeps; their PC word is what the
+/// firmware found, not a PC.
+pub const SITE_DS_CLOCK: u8 = 68;
+pub const SITE_TICK_RESET: u8 = 69;
+
+/// `DS_CLOCK_*` in sleep.c: which of the deep sleep's clock waits ran out.
+fn ds_clock_wait(which: u32) -> String {
+    match which {
+        1 => "the switch to the IHRC".into(),
+        2 => "the PLL's lock".into(),
+        3 => "the switch back to the PLL".into(),
+        n => format!("clock wait {n}"),
+    }
+}
 
 impl CrashRecord {
     pub const NEEDS: u8 = 6;
@@ -136,6 +151,8 @@ impl CrashRecord {
                 (0, _) => String::new(),
                 (0xFFFF_FFFF, _) => " (stack frame unreadable, pc lost)".into(),
                 (pc, SITE_HALT) => format!(" called from 0x{pc:08x}"),
+                (pc, SITE_DS_CLOCK) => format!(" ({}, CSST 0x{:02x})", ds_clock_wait((pc >> 8) & 0xFF), pc & 0xFF),
+                (pc, SITE_TICK_RESET) => format!(" (CT16B3 TMRCTRL 0x{:04x})", pc & 0xFFFF),
                 (pc, _) => format!(" at pc 0x{pc:08x}"),
             };
             return format!("{}{at} in {} within {}; reset flags 0x{:02x}; consecutive {}",
@@ -178,7 +195,7 @@ pub fn crash_site(site: u8) -> String {
         44 => "clock", 45 => "battery", 46 => "eeconfig", 47 => "health",
         48 => "rgb_flush",
         64 => "deep_sleep_read", 65 => "deep_sleep_clocked", 66 => "deep_sleep_tick",
-        67 => "deep_sleep_ticked",
+        67 => "deep_sleep_ticked", 68 => "deep_sleep_clock", 69 => "tick_reset",
         _ => return format!("unknown_{site}"),
     };
     name.into()
@@ -848,6 +865,14 @@ mod tests {
         let r = report(GET5, 7, &[2, 1, 25, 1, 0, 0, 0, 0, 2, 1, 0x00, 0x20, 0, 0, 0]);
         assert_eq!(CrashRecord::decode(&r).unwrap().summary(),
             "halt called from 0x00002000 in thread within main_loop; reset flags 0x02; consecutive 1");
+
+        // The software reset's own records (F-032): what was found, not a PC.
+        let r = report(GET5, 7, &[2, 1, 68, 27, 0, 0, 0, 0, 1, 0, 0x41, 0x02, 0xC0, 0xD5, 0]);
+        assert_eq!(CrashRecord::decode(&r).unwrap().summary(),
+            "deep_sleep_clock (the PLL's lock, CSST 0x41) in thread within deep_sleep; reset flags 0x01; consecutive 0");
+        let r = report(GET5, 7, &[2, 1, 69, 66, 0, 0, 0, 0, 1, 0, 0x02, 0x00, 0xC3, 0xD5, 0]);
+        assert_eq!(CrashRecord::decode(&r).unwrap().summary(),
+            "tick_reset (CT16B3 TMRCTRL 0x0002) in thread within deep_sleep_tick; reset flags 0x01; consecutive 0");
 
         // An invalid format-2 record shows nothing stale.
         let mut r = report(GET5, 7, &FAULT_RECORD);
