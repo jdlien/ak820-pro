@@ -1,0 +1,12 @@
+supply       battery  (battery)
+level        36.9 %
+pack           3853 mV  (estimate 5C 79)
+module 5C    last 79%, 2 s ago
+vdd          3900 mV  (raw 2099, since boot 3895..3906 mV)  -- the rail, not the pack
+charger pins CHRG high, STDBY low
+led drive    2.1 % of maximum
+flags        on_batt done rgb_on linked
+power mode   Power saver, stage dim
+draw         165.2 mW now, average 156.3 mW over 295 min
+time left    36 h 47 min
+count        counting; band 23.3..48.2 %; energy since FULL 1000.3 mWh
