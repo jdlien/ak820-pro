@@ -32,6 +32,7 @@ void chSysLock(void) {}
 void chSysUnlock(void) {}
 void chThdSleepMilliseconds(uint32_t ms) { (void)ms; }
 bool oqIsEmptyI(output_queue_t *q) { (void)q; return true; }
+bool iqIsEmptyI(input_queue_t *q) { (void)q; return true; }
 void iqResetI(input_queue_t *q) { (void)q; }
 void NVIC_SystemReset(void) { fprintf(stderr, "NVIC_SystemReset called\n"); __builtin_trap(); }
 void usb_lld_connect_bus(USBDriver *u) { (void)u; }

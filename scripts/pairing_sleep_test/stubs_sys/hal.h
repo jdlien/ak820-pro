@@ -112,6 +112,7 @@ typedef struct { int dummy; } input_queue_t;
 typedef struct { int es; output_queue_t oqueue; input_queue_t iqueue; } SerialDriver;
 extern SerialDriver SD2;
 bool oqIsEmptyI(output_queue_t *q);
+bool iqIsEmptyI(input_queue_t *q);
 void iqResetI(input_queue_t *q);
 
 /* kernel */
