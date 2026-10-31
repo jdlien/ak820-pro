@@ -1996,3 +1996,28 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     the three and reads.
   Next on black: the unfed sleep (JD pulls the cable within 3 min of
   the arm), and 10-28's shape with a long sleep.
+- **The unfed sleep on black: the watchdog does not count asleep**
+  (10-31, `05ef0f5bbc9`, Power saver, on BT to gremlin). Armed at
+  03:57:42 (`ak820 sleep --unfed`: the stage forced dark, 120 counted s
+  unfed from 120 s on); JD pulled the cable before 04:00; asleep ~03:59:49
+  (uptime 2,438 s at the wake, from the 03:19:11 flash). Read at 04:46:31
+  after JD plugged it in: woke on the cap after 120 counted s (~139 s
+  real against a ~11.5 s timeout), slept, 0 strays, PLL 77 loops, slot 9
+  returned; RSTST `0x01` (the flash's), the record empty, consecutive 0.
+  So mechanism 3 of the unanchored reviews is out on black as on white.
+  - **The census of that cable-out wake** (slot 11): 27 handler entries
+    in the window, none USB's, only CT16B1 (the row ISR) and CT16B3 (the
+    20 kHz tick), the last CT16B3. At the unmask USB `INSTS` held
+    `BUS_SUSPEND` (`0x40000000`), `INTEN` had `BUS_IE`, `USB_IE` and
+    `BUSWK_IE`, and `CFG` had `PHY_EN`, `DPPU_EN`, `SIE_EN` and
+    `VREG33_EN`, but not `ESD_EN`. That is F-045's state (the audit, 10-31)
+    on hardware: the transceiver on and ESD off after a cable-out wake.
+    A latched, enabled `BUS_SUSPEND` raised no USB interrupt in the
+    window (~1 ms of the tick at 20 kHz), so the line did not pend again
+    after the sleep's `ICPR` clear. That reads as a pulsed request rather
+    than a level one, or the vector off in `ISER`; neither is measured.
+    No storm at this wake.
+  - **No sleep after it:** a forced stage keeps the ladder's own sleep
+    off (`power_sleep_wanted()`), so black stayed awake and dark on
+    battery from ~04:02 to 04:46 (uptime 5,111 s of 5,240 wall). The
+    night's long sleep did not happen. `--done` released the stage.

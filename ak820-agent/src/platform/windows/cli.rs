@@ -366,12 +366,14 @@ fn sleep_cmd(flags: &[&str]) -> Result<(), String> {
 
     // Development: the unfed armed sleep (deep_sleep.py --no-feed --no-press
     // --cap 120), the one test of whether this unit's watchdog counts in
-    // Deep-sleep. --unfed writes, as the bench does: the ladder's sleep held
-    // off 10 min (op 14 sub 5, so its fed sleep cannot take the pull first),
-    // the stage forced dark (sub 2; the arm ignores the lit blockers), then
-    // the arm (sub 4: 120 s delay, 120 counted s, unfed). The cable pulled
-    // within 3 min, it sleeps unfed and wakes itself ~140 s later, or resets
-    // ~12 s in if the watchdog counts. --done undoes all three and reads.
+    // Deep-sleep. --unfed writes, as the bench does: the stage forced dark
+    // (sub 2; the arm ignores the lit blockers, and a forced stage keeps the
+    // ladder's own fed sleep from taking the pull first), then the arm (sub 4:
+    // 120 s delay, 120 counted s, unfed). Op 14 sub 5's 10 min sleep time is
+    // belt and braces. The cable pulled within 3 min, it sleeps unfed and
+    // wakes itself ~140 s later, or resets ~12 s in if the watchdog counts.
+    // Until --done it stays awake and dark (black, 10-31: 44 min on battery).
+    // --done undoes all three and reads.
     let (raw, unfed, done) = match flags {
         [] => (false, false, false),
         ["--raw"] => (true, false, false),
@@ -403,9 +405,10 @@ fn sleep_cmd(flags: &[&str]) -> Result<(), String> {
             let cap = 120u32.to_le_bytes();
             set(&[sd::OP_SLEEP, 4, 1, 120, cap[0], cap[1], cap[2], cap[3], 1, 0, 0, 0, 0], Some(4))?;
             println!(
-                "armed: unfed, 120 counted s, from 120 s after now; the ladder's sleep held off 10 min, the stage dark.\n\
+                "armed: unfed, 120 counted s, from 120 s after now; the stage forced dark.\n\
                  Pull the cable within 3 minutes. It sleeps once the delay is up and wakes itself ~140 s later\n\
-                 (a reset ~12 s in if the watchdog counts asleep). Then plug it in and run `ak820 sleep --done`."
+                 (a reset ~12 s in if the watchdog counts asleep). Then it stays awake and dark, with no sleep\n\
+                 of its own, until it is plugged in and `ak820 sleep --done` releases the stage."
             );
             return Ok(());
         }

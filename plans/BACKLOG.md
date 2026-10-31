@@ -242,6 +242,13 @@ window's interrupts and USB's flags. On gremlin `ak820 sleep` reads it,
 and `--unfed` arms the unfed sleep. The incident build's ELF passed
 codex's host-only check: the WFI to the dummy read is all SRAM.
 
+**The unfed sleep on black (10-31 04:00): the WDT does not count
+asleep there either** (120 counted s unfed, woken on the cap, no reset),
+so mechanism 3 is out. Its cable-out wake's census: `BUS_SUSPEND`
+latched with `BUS_IE` on, `PHY_EN` on and `ESD_EN` off (F-045's state),
+and no USB interrupt in the window. Left on black: 10-28's shape with a
+long sleep.
+
 
 ## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
 
