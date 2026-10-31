@@ -2042,6 +2042,14 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     the once-a-sleep exit (sites 29, 64-67, 30, 31), a wake other than
     the second, or something on 10-28 outside the board. The exit ran
     once here, clean.
+  - **Where it differs from 10-28** (Buzz's session): 10-28 was
+    Balanced, this Power saver. The mode sets only when the ladder
+    sleeps; the sleep itself is the same call in every mode
+    (`deep_sleep(DS_BACKSTOP_S, false, 0)`, `sleep.c`), and both slept
+    ~2 s after the pull. On 10-28 JD carried the board upstairs, away
+    from gremlin; this run stayed beside it. Not reproduced here: the
+    distance, and whatever ended 10-28's sleep at ~23:02:20 untouched
+    (this one ended on JD's key).
   - **The census** (slot 11): 34 handler entries, 0 USB, only CT16B1
     and CT16B3, the last CT16B3. At the unmask `INSTS` was 0 (no
     `BUS_SUSPEND` this time), `INTEN` had `BUS_IE`, `USB_IE` and
