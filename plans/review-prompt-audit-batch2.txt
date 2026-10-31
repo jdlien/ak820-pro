@@ -1,0 +1,13 @@
+Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it. Do not run anything that opens USB or HID devices, talks to a keyboard, or changes any file: this is a read-only review. (A keyboard on this machine is mid-way through a multi-day battery test.)
+
+Review a batch of firmware fixes to the clock before they are flashed. The firmware is a QMK/ChibiOS port for the Ajazz AK820 Pro (Sonix SN32F299, Cortex-M0); CLAUDE.md at the repo root describes it, docs/clock.md the two clocks (the SN32's RTC, the battery-backed PCF8563) and the host sync. The fixes come from an audit, plans/AUDIT-2026-10-31.md: read F-005, F-006, F-016, F-025 and F-026 there, each with the audit's proposed fix.
+
+The change: in qmk_firmware-ak820pro, `git log --oneline 5cab8145e0..5e7b03b7f1` (branch audit-fixes; four commits) and `git diff 5cab8145e0 5e7b03b7f1`. In the outer repo the host tests: scripts/pcf_stop_reset_test, scripts/pcf_seed_retry_test, scripts/rtc_set_legacy_test, scripts/rtc_step_race_test, scripts/rtc_slew_test.
+
+Deliberate choices to check rather than accept:
+- F-005: rtc_init() reads Control_status_1 before the seed and clears STOP; it then marks the PCF stale with no_retry (pcf_sync_host_skipped), so neither the discipline nor the acquisition takes it as a reference and it is not written back unasked until a host sets the time. A failed release goes to PS_RECOVER with stop_asserted set. Check the interactions with the deep sleep's wake (wake_coarse uses the PCF's elapsed time), the acquisition, and pcf_sync_retry_due; and whether rtc_bus_guard() is safe this early in boot.
+- F-006: the seed retry sits in rtc_task() after its guards and the 60 s check, before the REF_SOF return.
+- F-025: inside the step's lock, a latched SECIF is cleared with the NVIC pending bit and counted, not served. Check against the LLD's handler (lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.c) and rtc_second_cb's other per-second work that is skipped this way.
+- F-026: the slew's start is compensated only when the next tick rewrites the register; interval_cycles accounting follows.
+
+For each problem: severity (P1 must fix before flashing, P2 should fix, P3 note), the file:line, the concrete failure scenario, and the fix. Also say what you checked and found sound. Be concrete and quote the lines you rely on.

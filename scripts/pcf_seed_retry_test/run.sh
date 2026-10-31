@@ -16,7 +16,7 @@ trap 'rm -rf "$o"' EXIT
     -Wno-missing-field-initializers -DRTC_AUTO_CALIBRATION -DRTC_CHECK_INTERVAL_S=60 -DRTC_PERIOD_INITIAL=33600 \
     -I"$here/stubs" -I"$kb" -I"$kb/rtc" -o "$o/test" "$here/test.c" "$kb/rtc/rtc.c"
 fails=0
-for m in control first; do
+for m in control first stopped sleepfirst; do
   "$o/test" "$m" | grep -E '^==|FAIL|PASSED' || fails=1
 done
 exit $fails

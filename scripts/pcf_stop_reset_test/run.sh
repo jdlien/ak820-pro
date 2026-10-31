@@ -27,7 +27,7 @@ fl="-std=gnu11 -g -O1 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function $
   "$cc" $fl "$o/rtc.o" "$o/hal_rtc_lld.o" "$o/hal_rtc.o" "$o/test.o" -o "$o/test"
 }
 fails=0
-for m in stuck control; do
+for m in stuck outage ctlfail control; do
   echo "== $m"
   "$o/test" "$m" | grep -E '^  (ok|FAIL)|^RESULT' || fails=1
 done

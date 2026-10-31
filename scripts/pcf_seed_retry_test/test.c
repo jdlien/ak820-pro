@@ -13,10 +13,16 @@
  *
  * Scenarios (argv[1]):
  *   control : the boot read succeeds          -> clock valid, acquisition DONE
- *   first   : only the FIRST PCF transaction fails (the seed in rtc_init),
- *             the PCF is healthy afterwards, on battery, no host -> valid by
- *             120 s, acquisition DONE
- *   bug     : the same, asserting the behaviour before the fix (fails now)
+ *   first      : the seed's calendar read fails, the PCF is fine after, on
+ *                battery, no host -> unset until the retry, valid by 120 s,
+ *                the acquisition DONE, and through a deep sleep
+ *   stopped    : a reset left STOP set and the seed fails -> STOP released at
+ *                boot, valid after the retry, the PCF stale and never written
+ *   sleepfirst : the board sleeps while unset -> the wake gives the
+ *                acquisition up, and it goes again once a retry takes
+ * (codex on F-005/F-006: the first version of this test failed the boot's
+ * first transaction, which became the control read, so the retry went
+ * untested.)
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -129,9 +135,14 @@ static uint8_t  pcf_ctl0;
 static uint8_t  pcf_ptr;
 static bool     pcf_vl;
 static int      pcf_fail_next;  /* fail this many transactions from now (NACK/deadline) */
-static unsigned pcf_xfers_total, pcf_xfers_failed, pcf_reads_ok_calendar;
+static int      pcf_fail_cal;   /* fail this many calendar reads (the 7 bytes at 0x02) from now */
+static unsigned pcf_xfers_total, pcf_xfers_failed, pcf_reads_ok_calendar, pcf_time_writes;
 
-static time_t pcf_now(void) { return pcf_epoch + (time_t)((sim_ms - pcf_ms0) / 1000u); }
+/* STOP (Control_status_1 bit 5) holds the divider: the time does not move. */
+static time_t pcf_now(void) {
+    if (pcf_ctl0 & 0x20) return pcf_epoch;
+    return pcf_epoch + (time_t)((sim_ms - pcf_ms0) / 1000u);
+}
 static uint8_t bcd(unsigned v) { return (uint8_t)(((v / 10) << 4) | (v % 10)); }
 static unsigned unbcd(uint8_t v) { return (unsigned)((v >> 4) * 10 + (v & 0x0F)); }
 
@@ -162,6 +173,7 @@ msg_t i2cMasterTransmitTimeout(I2CDriver *i2cp, i2caddr_t addr, const uint8_t *t
     pcf_xfers_total++;
     if (!i2cp->started || addr != 0x51) { pcf_xfers_failed++; return MSG_TIMEOUT; }
     if (pcf_fail_next > 0) { pcf_fail_next--; pcf_xfers_failed++; return MSG_TIMEOUT; }
+    if (pcf_fail_cal > 0 && ntx >= 1 && tx[0] == 0x02 && nrx == 7) { pcf_fail_cal--; pcf_xfers_failed++; return MSG_TIMEOUT; }
     if (ntx >= 1) pcf_ptr = tx[0];
     if (nrx == 0) {
         /* write: an 8-byte time write at 0x02 sets the calendar and clears VL */
@@ -176,7 +188,11 @@ msg_t i2cMasterTransmitTimeout(I2CDriver *i2cp, i2caddr_t addr, const uint8_t *t
             pcf_epoch = timegm(&tm);
             pcf_ms0   = sim_ms;
             pcf_vl    = false;
+            pcf_time_writes++;
         } else if (pcf_ptr == 0x00 && ntx == 2) {
+            bool was = pcf_ctl0 & 0x20, now = tx[1] & 0x20;
+            if (!was && now) pcf_epoch = pcf_now();   /* held from here */
+            if (was && !now) pcf_ms0 = sim_ms;        /* counts again from here */
             pcf_ctl0 = tx[1];
         }
         return MSG_OK;
@@ -234,7 +250,7 @@ static uint8_t acq_state_now(void) { uint8_t p4[28] = {0}; rtc_status_fill_page4
 static time_t lld_epoch(void) { return lld_time; }
 static void fmt(time_t t, char *buf, size_t n) { struct tm tm; gmtime_r(&t, &tm); strftime(buf, n, "%Y-%m-%d %H:%M:%S", &tm); }
 
-static void boot(int fail_first) {
+static void boot(int fail_cal) {
     /* PCF healthy, set to 2026-10-31 14:23:17.400 at power-on (phase offset) */
     struct tm tm = { .tm_year = 126, .tm_mon = 9, .tm_mday = 31, .tm_hour = 14, .tm_min = 23, .tm_sec = 17 };
     pcf_epoch = timegm(&tm);
@@ -242,8 +258,8 @@ static void boot(int fail_first) {
     sim_ms    = 400;      /* the board starts 400 ms into the PCF's second */
     pcf_ms0   = 0;
     pcf_vl    = false;
-    pcf_fail_next = fail_first;
-    rtc_init();           /* keyboard_post_init_kb: the one seed */
+    pcf_fail_cal = fail_cal;   /* the seed's calendar read, and as many retries as given */
+    rtc_init();           /* keyboard_post_init_kb: the boot's check, then the one seed */
 }
 
 static void report(const char *when) {
@@ -270,77 +286,95 @@ static int scenario_control(void) {
     return 0;
 }
 
-static int scenario_bug(int fixed_expect) {
-    printf("== %s: only the first PCF transaction (rtc_init's seed) fails; the PCF is fine after; on battery, no host\n",
-           fixed_expect ? "first" : "bug");
-    boot(1);
-    report("boot");
-    unsigned failed_at_boot = pcf_xfers_failed;
-    run_ms(120000);
-    report("120 s");
-    rtc_time_t t;
-    long d = (long)(lld_epoch() - pcf_now());
-    if (!fixed_expect) {
-        CHECK(failed_at_boot == 1, "exactly one failed transaction at boot");
-        CHECK(pcf_reads_ok_calendar >= 1, "the discipline read the PCF successfully afterwards");
-        CHECK(d >= -2 && d <= 2, "the discipline put the PCF's calendar into the LLD (LLD - PCF = %ld s)", d);
-        CHECK(!rtc_get_time(&t), "BUG: rtc_get_time() still false although the LLD has the right time");
-        rtc_stamp_t s;
-        CHECK(!rtc_now(&s), "BUG: rtc_now() false, so board_ms_now() fails too");
-        CHECK(acq_state_now() == 0, "BUG: boot acquisition stuck in ACQ_WAIT_SPLASH (0), is %u", acq_state_now());
-    } else {
-        CHECK(rtc_get_time(&t), "FIXED: clock valid after the retry");
-        CHECK(acq_state_now() == 2, "FIXED: acquisition DONE (2), is %u", acq_state_now());
-        CHECK(d >= -1 && d <= 1, "FIXED: LLD vs PCF %ld s", d);
-        return 0;
-    }
-
-    /* Six hours on battery with no host: still blank. */
-    run_ms(6ull * 3600ull * 1000ull);
-    report("6 h");
-    d = (long)(lld_epoch() - pcf_now());
-    CHECK(!rtc_get_time(&t), "BUG: still unset after 6 h of a healthy PCF");
-    CHECK(d >= -2 && d <= 2, "LLD tracks the PCF all along (LLD - PCF = %ld s)", d);
-
-    /* A deep sleep and its wake: the coarse read sets the calendar from the
-     * PCF, then acq_rearm() aborts the acquisition because rtc_valid is false. */
-    printf("  -- a deep sleep of 300 s and its wake\n");
-    CHECK(rtc_sleep_ok(), "sleep allowed (WAIT_SPLASH with !rtc_valid does not hold the board awake)");
+/* A deep sleep of 300 s (261 counted: the ILRC ~13% slow asleep) and its wake. */
+static void deep_sleep(void) {
+    CHECK(rtc_sleep_ok(), "sleep allowed");
     CHECK(rtc_sleep_prepare(), "pre-sleep read admitted");
-    uint64_t slept_ms = 300000; uint32_t counted = 261;   /* the ILRC ~13% slow asleep */
-    sim_ms += slept_ms;                                   /* asleep: no ticks served */
-    rtc_account_sleepI(counted);
-    rtc_wake_beginI(counted);
+    sim_ms += 300000;
+    rtc_account_sleepI(261);
+    rtc_wake_beginI(261);
     rtc_pass_mark();
     rtc_wake_allow();
     rtc_wake_gauge_taken();
     run_ms(5000);
+}
+
+static int scenario_first(void) {
+    printf("== first: rtc_init's seed (its calendar read) fails; the PCF is fine after; on battery, no host\n");
+    boot(1);
+    report("boot");
+    rtc_time_t t;
+    CHECK(!rtc_get_time(&t), "unset right after the failed seed");
+    run_ms(30000);
+    CHECK(!rtc_get_time(&t), "still unset before the retry's 60 s");
+    run_ms(90000);
+    report("120 s");
+    long d = (long)(lld_epoch() - pcf_now());
+    CHECK(rtc_get_time(&t), "valid after the retry");
+    CHECK(acq_state_now() == 2, "the acquisition DONE (2), is %u", acq_state_now());
+    CHECK(d >= -1 && d <= 1, "LLD vs PCF %ld s", d);
+    printf("  -- a deep sleep of 300 s and its wake\n");
+    deep_sleep();
     report("after wake");
     d = (long)(lld_epoch() - pcf_now());
-    CHECK(rtc_wake_acq_result() == 3, "BUG: the wake's acquisition ABORTED (3) by acq_rearm(), is %u", rtc_wake_acq_result());
-    CHECK(!rtc_get_time(&t), "BUG: still unset after the wake although the coarse read set the calendar");
-    CHECK(d >= -1 && d <= 1, "LLD set from the PCF by the coarse read (LLD - PCF = %ld s)", d);
+    CHECK(rtc_get_time(&t), "valid after the wake");
+    CHECK(d >= -1 && d <= 1, "LLD vs PCF %ld s after the wake", d);
+    CHECK(pcf_time_writes == 0, "the PCF's calendar never written without a host (%u)", pcf_time_writes);
+    return 0;
+}
 
-    /* Only a host set brings it back. */
-    printf("  -- a host's RTC_SET_TIME_MS (raw HID or lock-LED type 4)\n");
-    rtc_time_t h; time_t hn = pcf_now(); struct tm tm; gmtime_r(&hn, &tm);
-    h.year = (uint16_t)(tm.tm_year + 1900); h.month = (uint8_t)(tm.tm_mon + 1); h.day = (uint8_t)tm.tm_mday;
-    h.hours = (uint8_t)tm.tm_hour; h.minutes = (uint8_t)tm.tm_min; h.seconds = (uint8_t)tm.tm_sec; h.weekday = (uint8_t)tm.tm_wday;
-    int16_t off = 0;
-    uint8_t st = rtc_set_time_ms(&h, 0, 0, 0x7FFF, &off);
-    CHECK(st == 0, "host set STEPPED (0), got %u", st);
-    CHECK(rtc_get_time(&t), "a host set is what makes the clock valid");
+static int scenario_stopped(void) {
+    printf("== stopped: a reset left STOP set, and the seed's calendar read fails\n");
+    pcf_ctl0 = 0x20;   /* held since before the boot */
+    boot(1);
+    report("boot");
+    rtc_time_t t;
+    uint8_t p4[28] = {0}, p1[21] = {0};
+    rtc_status_fill_page4(p4);
+    CHECK(!(pcf_ctl0 & 0x20), "the boot released STOP (ctl 0x%02x)", pcf_ctl0);
+    CHECK(p4[24] == 1 && p4[7] == 0, "stale, not maybe-stopped (stale %u, maybe %u)", p4[24], p4[7]);
+    CHECK(!rtc_get_time(&t), "unset: the seed failed");
+    run_ms(120000);
+    report("120 s");
+    rtc_status_fill(1, p1);
+    CHECK(rtc_get_time(&t), "valid after the retry, though the PCF is stale");
+    CHECK(p1[9] & 0x20, "page 1's flags say it was stopped at boot (0x%02x)", p1[9]);
+    long d = (long)(lld_epoch() - pcf_now());
+    CHECK(d >= -1 && d <= 1, "LLD vs the running PCF %ld s", d);
+    run_ms(600000);
+    CHECK(pcf_time_writes == 0, "no calendar write without a host (%u)", pcf_time_writes);
+    CHECK(rtc_sleep_ok(), "nothing holds the board awake");
+    return 0;
+}
+
+static int scenario_sleep_first(void) {
+    printf("== sleep first: the seed, the wake's coarse read and the retry after it fail; the board sleeps unset\n");
+    boot(3);
+    run_ms(30000);
+    rtc_time_t t;
+    CHECK(!rtc_get_time(&t), "unset at 30 s");
+    deep_sleep();   /* the wake's rearm gives the acquisition up on an unset clock */
+    report("after wake");
+    CHECK(rtc_wake_acq_result() == 3, "the wake's acquisition ABORTED (3), is %u", rtc_wake_acq_result());
+    run_ms(180000);
+    report("+180 s");
+    CHECK(rtc_get_time(&t), "valid after a later retry");
+    run_ms(30000);
+    CHECK(acq_state_now() == 2, "the acquisition went again and is DONE (2), is %u", acq_state_now());
+    long d = (long)(lld_epoch() - pcf_now());
+    CHECK(d >= -1 && d <= 1, "LLD vs PCF %ld s", d);
     return 0;
 }
 
 int main(int argc, char **argv) {
     setenv("TZ", "UTC0", 1);   /* newlib with no TZ: UTC */
     tzset();
-    const char *which = argc > 1 ? argv[1] : "all";
+    const char *which = argc > 1 ? argv[1] : "control";
     if (!strcmp(which, "control")) scenario_control();
-    else if (!strcmp(which, "bug")) scenario_bug(0);
-    else if (!strcmp(which, "first")) scenario_bug(1);
-    else { scenario_control(); printf("\n(new process needed for the bug scenario: rtc.c's statics)\n"); }
+    else if (!strcmp(which, "first")) scenario_first();
+    else if (!strcmp(which, "stopped")) scenario_stopped();
+    else if (!strcmp(which, "sleepfirst")) scenario_sleep_first();
+    else { fprintf(stderr, "usage: %s control|first|stopped|sleepfirst (one a process: rtc.c's statics)\n", argv[0]); return 2; }
     printf("%s (%d failed checks)\n", fails ? "FAILURES" : "ALL CHECKS PASSED", fails);
     return fails ? 1 : 0;
 }

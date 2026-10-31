@@ -18,6 +18,10 @@
  * PCF runs off the pack and keeps its registers through an MCU reset).
  *
  *   ./test stuck     reset inside the STOP window of a write run
+ *   ./test outage    the same, and the bus out for 90 s from the boot: the
+ *                    release and the seed fail, then succeed (codex's P1)
+ *   ./test ctlfail   the same, and the boot's control read fails while the
+ *                    calendar read works (codex's P2)
  *   ./test control   reset after the run released STOP
  *
  * Before the fix the stuck case froze the clock: the seed took the stopped
@@ -112,10 +116,15 @@ static void pcf_write_ctl1(uint8_t v) {
 }
 void i2cStart(I2CDriver *d, const I2CConfig *c) { (void)d; (void)c; }
 void i2cStop(I2CDriver *d) { (void)d; }
+static uint64_t fail_until_cyc;    /* every transfer fails until then: a bus outage */
+static int      fail_ctl_reads;    /* fail this many Control_status_1 reads */
+static unsigned pcf_time_writes;   /* calendar writes */
 msg_t i2cMasterTransmitTimeout(I2CDriver *d, uint16_t addr, const uint8_t *tx, size_t ntx,
                                uint8_t *rx, size_t nrx, sysinterval_t timeout) {
     (void)d; (void)timeout;
     if (addr != 0x51 || ntx < 1) return MSG_TIMEOUT;
+    if (cyc < fail_until_cyc) return MSG_TIMEOUT;
+    if (fail_ctl_reads > 0 && tx[0] == 0 && ntx == 1 && nrx == 1) { fail_ctl_reads--; return MSG_TIMEOUT; }
     pcf_xfers_seen++;
     pcf_advance();
     uint8_t r = tx[0], t[7];
@@ -126,7 +135,7 @@ msg_t i2cMasterTransmitTimeout(I2CDriver *d, uint16_t addr, const uint8_t *tx, s
         else if (r == 1) pcf.ctl2 = tx[i];
         else if (r <= 8) { t[r - 2] = tx[i]; tw = true; }
     }
-    if (tw) pcf.epoch = pcf_from_regs(t);     /* the clone keeps its prescaler on a plain time write */
+    if (tw) { pcf.epoch = pcf_from_regs(t); pcf_time_writes++; }     /* the clone keeps its prescaler on a plain time write */
     for (size_t i = 0; i < nrx; i++, r++) {
         if (r == 0) pcf_ctl_reads++;
         rx[i] = r == 0 ? pcf.ctl1 : r == 1 ? pcf.ctl2 : r <= 8 ? t[r - 2] : 0;
@@ -236,7 +245,7 @@ static int phase_a(const char *self, const char *mode) {
             printf("[A] write run asserted STOP at true %s.%03u (ps_state %u, PCF ctl1 0x%02X)\n",
                    hms(true_epoch()), true_ms(), o[0], pcf.ctl1);
         }
-        if (!strcmp(mode, "stuck") && o[1] && o[0] == 4 /* PS_RELEASE_READ */) break;
+        if (strcmp(mode, "control") && o[1] && o[0] == 4 /* PS_RELEASE_READ */) break;   /* stuck, outage, ctlfail */
         if (!strcmp(mode, "control") && t_stop && o[0] == 0 && !(pcf.ctl1 & PCF_STOP) && cyc - t_stop > 3 * F_ILRC) break;
     }
     page4(o);
@@ -260,13 +269,21 @@ static int phase_a(const char *self, const char *mode) {
 static int phase_b(const char *mode, char **v) {
     cyc = strtoull(v[0], NULL, 10); T_BASE = strtoll(v[1], NULL, 10);
     pcf.epoch = strtoll(v[2], NULL, 10); pcf.ctl1 = (uint8_t)atoi(v[3]); pcf.next_inc = strtoll(v[4], NULL, 10);
-    bool stuck = !strcmp(mode, "stuck");
+    bool stuck = !strcmp(mode, "stuck"), outage = !strcmp(mode, "outage"), ctlfail = !strcmp(mode, "ctlfail");
+    /* codex on F-005: a bus outage through the boot's release and seed (90 s
+     * here), and a control read that fails while the calendar read works. */
+    if (outage) fail_until_cyc = cyc + 90 * F_ILRC;
+    if (ctlfail) fail_ctl_reads = 1;
     int64_t frozen = pcf.epoch;
     printf("[B] boot (all of rtc.c's statics zero) at true %s.%03u; PCF ctl1 0x%02X (STOP %s), PCF time %s\n",
            hms(true_epoch()), true_ms(), pcf.ctl1, (pcf.ctl1 & PCF_STOP) ? "SET" : "clear", hms(pcf.epoch));
     unsigned ctl_reads0 = pcf_ctl_reads;
     boot();
     printf("[B] seeded: board %s (true %s)\n", hms(board_epoch()), hms(true_epoch()));
+    rtc_time_t tv;
+    bool valid_at_boot = rtc_get_time(&tv);
+    uint8_t b4[28]; page4(b4);
+    unsigned writes0 = pcf_time_writes;
     uint16_t gen0 = rtc_clock_generation();
     int64_t bmin = INT64_MAX, bmax = INT64_MIN, worst = 0;
     for (int m = 1; m <= 10; m++) {
@@ -286,6 +303,32 @@ static int phase_b(const char *mode, char **v) {
     }
     printf("[B] Control_status_1 reads by the firmware since the reset: %u\n", pcf_ctl_reads - ctl_reads0);
     int64_t err = board_epoch() - true_epoch();
+    if (outage || ctlfail) {
+        pcf_advance();
+        uint8_t e4[28]; page4(e4);
+        uint8_t p1[21]; rtc_status_fill(1, p1);
+        uint16_t gens = (uint16_t)(rtc_clock_generation() - gen0);
+        CHECK(!(pcf.ctl1 & PCF_STOP), "STOP released once the PCF answers (ctl1 0x%02X)", pcf.ctl1);
+        CHECK(e4[24] == 1 && e4[7] == 0, "stale, and known to run (stale %u, maybe-stopped %u)", e4[24], e4[7]);
+        CHECK((p1[9] & 0x20) != 0, "page 1's flags say it was stopped at boot (0x%02X)", p1[9]);
+        CHECK(pcf_time_writes == writes0, "the PCF's calendar never written without a host (%u)", pcf_time_writes - writes0);
+        CHECK(rtc_sleep_ok(), "nothing holds the board awake");
+        CHECK(rtc_get_time(&tv), "the clock is set");
+        if (outage) {
+            int64_t dp = board_epoch() - pcf.epoch;
+            CHECK(!valid_at_boot, "unset at boot: the outage failed the seed too");
+            CHECK(gens <= 1, "no snap: the seed's one change (%u)", gens);
+            /* The PCF stayed stopped through the outage, so both are behind true by that much: the board takes its time from it. */
+            CHECK(dp >= -1 && dp <= 1, "the board seeded from the running PCF (board - PCF %+" PRId64 " s; true - board %+" PRId64 " s)",
+                  dp, -err);
+        } else {
+            CHECK(valid_at_boot && b4[7] == 1, "seeded at boot, the PCF maybe stopped (%u)", b4[7]);
+            CHECK(gens == 0, "no snap back to the stopped PCF (%u)", gens);
+            CHECK(worst >= -3 && worst <= 1, "the board keeps its own time, worst err %+" PRId64 " s", worst);
+        }
+        printf(fails ? "RESULT: FAIL\n" : "RESULT: PASS (%s)\n", outage ? "released after the outage, the calendar never written" : "the failed check retried; no snap");
+        return fails ? 1 : 0;
+    }
     if (!stuck) {
         CHECK(worst >= -2 && worst <= 2, "control: a reset outside the STOP window keeps time (worst err %+" PRId64 " s)", worst);
         printf(fails ? "RESULT: control FAILED\n" : "RESULT: control passes (no bug without the STOP window)\n");
@@ -346,7 +389,9 @@ int main(int argc, char **argv) {
     setenv("TZ", "UTC", 1); tzset();     /* newlib on the board: no TZ */
     setvbuf(stdout, NULL, _IOLBF, 0);
     if (argc >= 8 && !strcmp(argv[1], "after")) return phase_b(argv[2], &argv[3]);
-    if (argc >= 2 && (!strcmp(argv[1], "stuck") || !strcmp(argv[1], "control"))) return phase_a(argv[0], argv[1]);
-    fprintf(stderr, "usage: %s stuck|control\n", argv[0]);
+    if (argc >= 2 && (!strcmp(argv[1], "stuck") || !strcmp(argv[1], "control") || !strcmp(argv[1], "outage") ||
+                      !strcmp(argv[1], "ctlfail")))
+        return phase_a(argv[0], argv[1]);
+    fprintf(stderr, "usage: %s stuck|control|outage|ctlfail\n", argv[0]);
     return 2;
 }

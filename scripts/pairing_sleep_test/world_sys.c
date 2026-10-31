@@ -126,3 +126,4 @@ void rtc_wake_gauge_taken(void) { NOT_HERE(); }
 bool rtc_wake_slept(uint32_t *slept_s, bool *from_pcf) { (void)slept_s; (void)from_pcf; NOT_HERE(); }
 uint32_t watchdog_record_enter(uint8_t site) { (void)site; NOT_HERE(); }
 void watchdog_record_leave(uint32_t *previous) { (void)previous; NOT_HERE(); }
+void watchdog_record_stop(uint8_t site, uint8_t exception, uint32_t pc) { (void)site; (void)exception; (void)pc; NOT_HERE(); }
