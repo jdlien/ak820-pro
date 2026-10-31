@@ -145,6 +145,10 @@ case "$CHECK_AS" in
   dev)       [[ -n "$jump" ]] || { echo "FAIL: the dev build lacks the raw-HID bootloader jump" >&2; fail=1; }
              [[ -n "$hooks" ]] || { echo "FAIL: the dev build lacks the dev hooks" >&2; fail=1; } ;;
 esac
+# QMK Command is off in every flavour (plans/AUDIT-2026-10-31.md, F-002): with
+# it, both Shifts and B or Esc jump to the bootloader and Backspace formats the
+# EEPROM, which a Shift-to-Shift roll while typing capitals is enough to do.
+[[ -z "$(awk '$3 == "command_proc"' <<<"$nm_out")" ]] || { echo "FAIL: QMK Command is linked (keyboard.json \"command\")" >&2; fail=1; }
 # The deep sleep (plans/DEEP-SLEEP-BUILD-PLAN.md, validation 8). Its
 # production path is in every flavour: the ladder's question, the PCF's
 # "before" read, the battery's hand-over and the driver's sleep pair, each

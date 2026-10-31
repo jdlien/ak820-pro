@@ -884,9 +884,9 @@ is on the Mac layers only (Alt+Shift is Windows' input-language hotkey).
 
 **Caps Lock didn't capitalise (2026-08-28, resolved by reflash, cause
 unknown):** macOS showed the caps indicator but letters stayed lowercase.
-The NKRO-split theory was never confirmed. If it recurs: both shifts + `S`
-dumps nkro/protocol/led state to console; `N` toggles NKRO; `H` lists magic
-keys. Related fact that is NOT a bug: macOS tracks Caps per keyboard — the
+The NKRO-split theory was never confirmed. (QMK Command, whose both Shifts +
+`S` dumped the NKRO state, is off since the 10-31 audit: its both Shifts +
+`B` jumped to the bootloader mid-typing, F-002.) Related fact that is NOT a bug: macOS tracks Caps per keyboard — the
 laptop's and the AK820's Caps are independent.
 
 ## ⚠️ Two sessions cannot share this tree blindly

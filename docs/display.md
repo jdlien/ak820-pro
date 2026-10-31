@@ -510,10 +510,9 @@ via `#define PARAM_OVERLAY` in config.h — keep it that way.
 - **POLLED on the 10 Hz tick, not hooked into keycodes** — catches Fn
   hotkeys, custom keycodes, `Fn`+`X` (`RM_TOGG`, QMK builtin, never reaches
   the custom switch) AND VIA changes. A `primed` flag skips the boot pass.
-- NKRO is the readout with no other feedback anywhere; it is toggled by
-  magic key (both shifts + `N`) which is easy to hit by accident. Both
-  shifts + `S` dumps status, `H` lists the magic keys — a mysteriously
-  misbehaving key is worth checking against that list.
+- NKRO is the readout with no other feedback anywhere. Its old toggle,
+  QMK Command's both Shifts + `N`, is gone with Command (off since the
+  10-31 audit, F-002); a key bound to `NK_TOGG` still toggles it.
 - Effect names are a local table (10 enabled effects), not
   `rgb_matrix_get_mode_name()` — smaller, readable, band-sized.
 - Priority: pair hint > RGB readout > link state > host text.
