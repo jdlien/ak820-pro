@@ -1,8 +1,24 @@
 # Current status
 
-Updated 2026-10-29, 09:00. The block below is where things stand, written to
+Updated 2026-10-31, 06:10. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-10-31 — the row ISR rewrite is planned and READY, not built
+
+[`ROW-ISR-PLAN.md`](ROW-ISR-PLAN.md), revision 14: the RGB row ISR
+rewritten board-local on direct registers, with a fixed-rate slot timer
+on CT16B4, one-shot pulse timers parked dark, the key scan without mode
+writes (which ends the clock chip's flicker), a 444 Hz field as the
+release candidate and 889 Hz as an experiment, brightness preserved by
+calibration against a stage-0 baseline. Made from two independent designs
+(Claude's blind draft and codex's), a collaborator audit and fourteen
+readiness reviews, the last one READY for stages 0-3; the raw reviews are
+beside it as `review-codex-row-isr-*-raw.md`. Nothing built. Stage 0
+needs the key-press rig rebuilt: JD's QT Py RP2040 with PC817C
+optocouplers into gutted-switch plugs (parts arriving 11-01; the wiring
+reference is a private artifact), plus a waveform witness. The first code
+is the presser's CircuitPython and a serial backend for the bench scripts.
 
 ## 2026-10-22 — RESUME HERE
 

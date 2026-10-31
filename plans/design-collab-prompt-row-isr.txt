@@ -1,0 +1,19 @@
+Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md. Do not modify anything; do not run builds.
+
+Two designs were written independently for the same job, rewriting and optimizing the AK820 Pro's RGB row ISR (the LED matrix driver on the Sonix SN32F299 that also scans the keys), and have now been merged into one plan:
+
+- plans/ROW-ISR-PLAN.md, revision 1: the merged plan. Its last section, "Comparison with codex's design", is the decision log: what was taken from each design, what was rejected and why, what each got wrong.
+- plans/review-codex-row-isr-design-2026-10-31-raw.md: the codex design, from the brief plans/design-prompt-row-isr.txt.
+- plans/ROW-ISR-PLAN-rev0.md: Claude's revision 0, the other input, written before reading the codex design.
+
+The sources both drew on: docs/leds.md; docs/sn32f299.md (sections 5, 6, 7, 10); docs/hardware.md; docs/test-bench.md ("The wake rig"); docs/power.md; plans/UART-LATENCY-PLAN.md; plans/MATRIX-PUBLISH-PLAN.md; plans/BACKLOG.md ("Row-ISR body", "The LED blink at an internal-flash write"); qmk_firmware-ak820pro/drivers/led/sn32f2xx.c and .h; qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ (config.h, mcuconf.h, halconf.h, keyboard.json, rtc/rtc.c, sleep.c, health.c, power.c, battery.c around P_RGB_R_NW, menu/profiles.h); qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.c and GPIO/hal_pal_lld.c; qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/lib/fallback/I2C/hal_i2c_lld.c; qmk_firmware-ak820pro/quantum/matrix.c, quantum/color.c, quantum/rgb_matrix/; qmk_firmware-ak820pro/builddefs/common_features.mk. CLAUDE.md at the repo root has the working rules.
+
+You are the second designer, working with the first toward the best plan. Please:
+
+1. Audit the merge: for each decision in the decision log, say whether you agree, with the evidence (file and line, or the manual's page as docs/sn32f299.md cites it), or why not. Pay particular attention to the rejections: the masked-copy flush instead of a frame handoff, the two-cadence target, the per-cadence handler ceiling.
+2. Check the merged design's numbers and claims: the slot timeline, the lit fraction, the 4.845 and 2.42 scale factors, the expected field rates, handler budgets and CPU shares, the RAM and flash figures, the colour-slot order derived from update_pwm_channels(), the GPIO masks, the register bits and keys. Mark what is wrong and why.
+3. Find what both designs missed: hardware behaviour, firmware interactions (the SPI0 DMA at the same priority, the 20 kHz tick, sleep, the bootloader jump, the flash program windows, the battery model, the profiles, VIA, the deep-sleep wake path, the two boards), or a risk the repository's history records. Anything in the plan that is built on an unsettled open question.
+4. Propose concrete improvements to the merged design and its stages and gates, each as a change to a named section, with the reason. Keep the measurable gates; add any the design needs.
+5. Say which open questions remain and the cheapest measurement that settles each on this bench (health counters, the stall counters, the INA228 logger, a 240 fps camera, the key-press rig JD is rebuilding).
+
+Be concrete; cite paths and lines; do not pad; do not restate the plan.

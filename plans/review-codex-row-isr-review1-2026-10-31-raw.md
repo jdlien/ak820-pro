@@ -1,0 +1,60 @@
+**NOT READY for stages 0–3 as written.** The remaining blockers concern timer lifecycle, missed-slot handling, staging, and acceptance measurements. No files were changed and no builds were run.
+
+1. **Must-fix before building — D2 versus D3 step 6: the admission test does not guarantee parked timers.**  
+   D2 requires the **terminal match** to finish before the next slot; D3 admits a pulse using only its **largest channel width**. A late, dim slot can pass that test while its timer remains running into the next slot. Loading a brighter next duty can then put its match ahead of the running counter; selecting the next mux row before restarting can produce an unintended pulse. This applies at stage 2’s cadence too. The relevant output and counter semantics are in [sn32f299.md, §7](/Users/jdlien/code/ak820-pro/docs/sn32f299.md:710).
+
+   **Fix:** either admit against the complete terminal window, including skew and guard, or explicitly release, stop and park all three timers before every duty update. Define the inactive state before mux selection. Test a late **dim-to-bright** transition, not just steady white.
+
+2. **Must-fix before building — D3 steps 1/6 and D10: missed-slot detection remains incomplete.**  
+   The critical section checks `TC` and whether **entry** saw missed slots. If preemption crosses a scheduler boundary during steps 2–5, `TC` wraps and can again report ample time. Reading `RIS` at exit discovers this **after arming**; the pending interrupt can immediately service another row in the same slot.
+
+   Additionally, elapsed time between service timestamps is not a slot epoch: changing entry latency changes that interval, and CT16B5 has fractional ticks per slot and wraps after about 349 ms. D10’s modulo duration also needs to account for boundaries crossed during the handler. [Counter properties](/Users/jdlien/code/ak820-pro/docs/sn32f299.md:766)
+
+   **Fix:** specify phase-aware epoch reconstruction, rounding/wrap handling, and at most one service per epoch. Revalidate the epoch and pending match **inside the arm critical section**. Define how pending events are consumed without replay, and re-prime on scan-only/cadence changes as well as sleep. Injection gates must cover delays **inside** the handler and near boundaries.
+
+3. **Must-fix before building — stages 1–2, D8 and “Risks”: brightness neutrality is still assumed too early.**  
+   Stage 1 removes the PWM service while promising identical timing, although the existing cadence depends on callback execution time and end-of-callback rearming. Removing that machinery changes timing unless compensated explicitly. [Existing rearm](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/drivers/led/sn32f2xx.c:782)
+
+   Stage 2 then fixes the historical **258 µs** cadence and retains an identity duty table, calling pulse energy unchanged before Q4 establishes the old output. A hot/dark hold test does not establish the ordinary per-slot pulse energy. The existing driver disables columns sequentially before deselecting the mux, while the LLD normally enables reset-on-match. [Output-disable sequence](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/drivers/led/sn32f2xx.c:472), [reset configuration](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.c:298)
+
+   **Fix:** define how stage 1 preserves measured timing, or defer PWM-service removal to the scheduler stage. Make stage 2 use the measured baseline and permit brightness compensation there, rather than only in stage 5. Specify its terminal register literally: preserving channel 255 while requiring `channel < terminal` cannot reuse today’s terminal value 255.
+
+4. **Must-fix before building — stages 1–2: “keep the old scan function” needs an explicit implementation contract.**  
+   `CUSTOM_MATRIX=lite` excludes `quantum/matrix.c`. Its old scan therefore needs a board-local implementation. More importantly, its row helpers use `ATOMIC_BLOCK_FORCEON`, which calls thread-class `chSysLock()/chSysUnlock()` from the ISR—contrary to the plan’s own interrupt-context rule. [Build selection](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/builddefs/common_features.mk:673), [row helpers](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/quantum/matrix.c:75), [atomic implementation](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/platforms/chibios/atomic_util.h:21)
+
+   The retained scan estimate also contributes approximately **84/3 = 28 µs per handler**, before LED work, against stage 2’s **25 µs complete-handler mean** gate.
+
+   **Fix:** specify the temporary board-local scanner, preserving sampling behaviour while using context-correct locking. Set stage 2’s budget from stage 0b’s attribution, or move the necessary scan optimization into that stage.
+
+5. **Must-fix before building — stage 0b, stage 2 and Q5: the instruments cannot certify the waveform gates.**  
+   Eyes, 240 fps video and the configured INA228 logger cannot establish a 208 ns pulse, restart glitches, pulse repetition, or precise pulse width. The logger averages over approximately 200 ms; register snapshots establish configuration and stopped-counter state, not the intervening output waveform. [Logger configuration](/Users/jdlien/code/ak820-pro/docs/test-bench.md:447)
+
+   Consequently, “widths 0, 1, 254 and 255 right by eye” cannot close the stop/restart assumptions on which fail-dark and brightness preservation depend. The simultaneous STOP/RST output claim also remains an inference; the header documents the individual actions. [STOP/RST definitions](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/CT/sn32_ct.h:352)
+
+   **Fix:** make sufficiently fast column/mux waveform capture an acceptance requirement before stage 2 passes, at both the interim and final timer clocks. Keep camera/logger checks for visible artifacts and average energy. Make Q1’s delay sweep an explicit stage 3 gate; a fixed 2 µs choice plus ordinary typing does not establish its margin.
+
+6. **Must-fix before building — stage 3 and the rig section: the delivery chain is not exact.**  
+   Adding ISR transition counters does not repair the separate consume-side race: `input_note_consume()` runs before the locked compare/copy. An ISR update between those operations reaches debounce without entering `raw_edges`. This is already explained in [BACKLOG.md](/Users/jdlien/code/ak820-pro/plans/BACKLOG.md:1374) and visible in [the driver](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/drivers/led/sn32f2xx.c:1067). Also, `raw_edges` counts changed **bits**; `cooked_changes` counts differing rows. [Health implementation](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/health.c:122)
+
+   **Fix:** derive consumed transitions from the exact snapshot copied to `raw_matrix`, then count outside the lock if necessary. Collect a comparable short-tap baseline with the repaired rig. Define synchronization between the rig’s timestamps and the host clock before claiming millisecond latency changes. Manual testing plus another day cannot substitute for the specified short-tap comparison. Separate ordinary settings writes from forced consolidation, whose permitted input-loss exception otherwise contradicts “every press at every link.”
+
+The remaining factual corrections are smaller:
+
+| Severity | Where and contradictory source | Fix |
+|---|---|---|
+| **Should-fix** | “What is known,” scan paragraph: push-pull mode assertions modify **MODE only**, not CFG/CFG1. [PAL](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/GPIO/hal_pal_lld.c:243) | Identify MODE as the shared-register race. The I2C input transition changes CFG; these row-output assertions do not. |
+| **Should-fix** | I2C description: the actual fallback drives transmitted bits push-pull and switches SDA to input for reads/ACKs. [Bit write/read](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/lib/fallback/I2C/hal_i2c_lld.c:212) | Describe that implementation precisely rather than implying direction-switched open-drain transmission throughout. |
+| **Note** | D6: the 20 kHz tick’s GPIO writes use **BSET/BCLR**, not literal DATA stores. [Tick](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/indicators.c:111), [PAL atomics](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/GPIO/hal_pal_lld.h:330) | Correct the register name. I found no additional running interrupt-side GPIO mode writer invalidating the proposed MODE-race fix. |
+| **Note** | D1: this target declares small-timer `MR[5]`, not four entries. [Definitions](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/CT/sn32_ct.h:96) | Change four to five. The `MR[9]` bounds finding remains valid. |
+| **Should-fix** | D10: elapsed-slot counts versus wall time cannot independently measure omitted prologue/epilogue cost under a fixed scheduler. The port also has different return paths. [Epilogue](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/lib/chibios/os/common/ports/ARMv6-M/chcore.c:124) | Use an explicit assembly-derived bound or independent handler timing; call the slot comparison a cadence check. |
+| **Should-fix** | “Risks”: net RAM reduction, smaller final flash, and continued power-model validity are asserted more strongly than the evidence permits. | Treat 552 B as gross reclaimable RAM; subtract new counters/state. Verify dark/base power as well as LED power before declaring the existing model valid. |
+
+The write keys, control masks, GPIO masks, IOEN-to-GPIO behaviour, documented STOP clearing CEN, nominal cadence/brightness arithmetic, and quoted existing object/heap figures otherwise check out. The **21% lit fraction remains conditional**, as the plan initially labels it. I independently checked the saved objects and both named ELFs.
+
+**Stage 4 is close, but not fully specified for acceptance.**  
+**Must-fix before building stage 4:** add measurement of the writer’s bracket width and bracket success/failure. The current status page exposes release/boundary error and acquisition uncertainty, but not the writer’s bracket width; the writer computes its edge without retaining that width. [Bracket calculation](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:1668), [status payload](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:2285) The unlock/relock design, retained bus arbitration, and 5/10 ms timeout distinction are otherwise adequate.
+
+**Stage 5 is NOT sufficiently specified yet.** Two further changes are required before building it:
+
+- **Must-fix — D8:** define emitted-tick normalization, accumulator widths and atomic take/reset, and especially `lit_ms`. Today that means elapsed time with **any committed channel nonzero**, not the fraction of nonempty mux slots. Replacing it with lit-slot time changes saturated-colour and sparse-frame accounting. Specify the new contract and validate sparse frames, omissions and dark transitions alongside full-board holds. [Existing contract](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/drivers/led/sn32f2xx.h:81), [energy calculation](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/battery.c:680)
+- **Must-fix — G4/Q2/stage 5 gates:** value 64 exercises channel 12, leaving the lowest nonzero codes untested. Shorter pulses can change those stored values before stage 6. Add low-code optical preservation gates at stage 5, and repeat stage 4’s clock/timeout tests plus wireless and sleep/wake gates at the higher cadence. Passing them at 258 µs slots does not establish them at 125 µs.

@@ -1850,6 +1850,11 @@ re-init after the write. Needs a hardware round-trip -- do not ship blind.
 
 ## Row-ISR body: the one lever that lifts scan rate, main loop and field rate together (measured 2026-09-03)
 
+**Planned (10-31):** [`ROW-ISR-PLAN.md`](ROW-ISR-PLAN.md), revision 14,
+READY for stages 0-3 after fourteen codex readiness reviews; the "not for
+now" below is superseded. The flicker at the clock chip's write is the
+reason; the CPU and the field rate come with it.
+
 `rgb_callback` re-arms its PWM counter at its END, so its period is (body +
 ~70 µs) and the body sets everything downstream. Health page 4
 (`ak820health.py --isr`): 3,876 ISR/s, body **188 µs mean** (160 µs LED-only,
