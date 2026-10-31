@@ -22,6 +22,8 @@
  *                    release and the seed fail, then succeed (codex's P1)
  *   ./test ctlfail   the same, and the boot's control read fails while the
  *                    calendar read works (codex's P2)
+ *   ./test ctlsync   ctlfail, and a host's sync 2 s after the boot, the check
+ *                    still owed (codex's verify, P3)
  *   ./test control   reset after the run released STOP
  *
  * Before the fix the stuck case froze the clock: the seed took the stopped
@@ -269,7 +271,8 @@ static int phase_a(const char *self, const char *mode) {
 static int phase_b(const char *mode, char **v) {
     cyc = strtoull(v[0], NULL, 10); T_BASE = strtoll(v[1], NULL, 10);
     pcf.epoch = strtoll(v[2], NULL, 10); pcf.ctl1 = (uint8_t)atoi(v[3]); pcf.next_inc = strtoll(v[4], NULL, 10);
-    bool stuck = !strcmp(mode, "stuck"), outage = !strcmp(mode, "outage"), ctlfail = !strcmp(mode, "ctlfail");
+    bool stuck = !strcmp(mode, "stuck"), outage = !strcmp(mode, "outage"), ctlsync = !strcmp(mode, "ctlsync");
+    bool ctlfail = !strcmp(mode, "ctlfail") || ctlsync;
     /* codex on F-005: a bus outage through the boot's release and seed (90 s
      * here), and a control read that fails while the calendar read works. */
     if (outage) fail_until_cyc = cyc + 90 * F_ILRC;
@@ -280,6 +283,13 @@ static int phase_b(const char *mode, char **v) {
     unsigned ctl_reads0 = pcf_ctl_reads;
     boot();
     printf("[B] seeded: board %s (true %s)\n", hms(board_epoch()), hms(true_epoch()));
+    if (ctlsync) {
+        /* codex's verify, P3: a host's sync while the boot's check is still
+         * owed. The writer's own run reads STOP and releases it; the check
+         * reads it running at its next turn. */
+        run_s(2);
+        host_sync();
+    }
     rtc_time_t tv;
     bool valid_at_boot = rtc_get_time(&tv);
     uint8_t b4[28]; page4(b4);
@@ -303,6 +313,18 @@ static int phase_b(const char *mode, char **v) {
     }
     printf("[B] Control_status_1 reads by the firmware since the reset: %u\n", pcf_ctl_reads - ctl_reads0);
     int64_t err = board_epoch() - true_epoch();
+    if (ctlsync) {
+        pcf_advance();
+        uint8_t e4[28]; page4(e4);
+        CHECK(!(pcf.ctl1 & PCF_STOP), "STOP released (ctl1 0x%02X)", pcf.ctl1);
+        CHECK(e4[24] == 0 && e4[7] == 0, "the host's write landed: not stale, not maybe-stopped (stale %u, maybe %u)", e4[24], e4[7]);
+        CHECK(err >= -1 && err <= 1, "the board on the host's time (err %+" PRId64 " s)", err);
+        CHECK(pcf.epoch - true_epoch() >= -1 && pcf.epoch - true_epoch() <= 1, "the PCF on it too (%+" PRId64 " s)",
+              (int64_t)(pcf.epoch - true_epoch()));
+        CHECK(rtc_sleep_ok(), "nothing holds the board awake");
+        printf(fails ? "RESULT: FAIL\n" : "RESULT: PASS (a host sync with the boot's check owed)\n");
+        return fails ? 1 : 0;
+    }
     if (outage || ctlfail) {
         pcf_advance();
         uint8_t e4[28]; page4(e4);
@@ -390,8 +412,8 @@ int main(int argc, char **argv) {
     setvbuf(stdout, NULL, _IOLBF, 0);
     if (argc >= 8 && !strcmp(argv[1], "after")) return phase_b(argv[2], &argv[3]);
     if (argc >= 2 && (!strcmp(argv[1], "stuck") || !strcmp(argv[1], "control") || !strcmp(argv[1], "outage") ||
-                      !strcmp(argv[1], "ctlfail")))
+                      !strcmp(argv[1], "ctlfail") || !strcmp(argv[1], "ctlsync")))
         return phase_a(argv[0], argv[1]);
-    fprintf(stderr, "usage: %s stuck|control|outage|ctlfail\n", argv[0]);
+    fprintf(stderr, "usage: %s stuck|control|outage|ctlfail|ctlsync\n", argv[0]);
     return 2;
 }

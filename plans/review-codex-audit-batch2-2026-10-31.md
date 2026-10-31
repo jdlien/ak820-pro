@@ -120,3 +120,25 @@ What I checked and found sound:
 - **F-025:** The [LLD handler:115](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.c:115) reads/clears RIS, then performs `rtc_time++` before the callback. Consuming SECIF and NVIC pending under the step’s lock correctly prevents that increment from corrupting the freshly set calendar. Keeping `reload_pending` preserves the intended first period. The skipped callback loses one `rtc_check_seconds` increment and one latency sample—a one-tick scheduling/telemetry omission. `interval_cycles = 0; win_valid = false;` prevents the SOF estimator from treating the interrupted interval as a valid measurement.
 
 - **F-026:** [rtc.c:590](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc.c:590) compensates exactly the two start cases whose next tick rewrites the register: `slew_left == 1`, or `slew_left == 2 && slew_r != 0`. Otherwise, the first interval accounts for `L + v + 1`, and untouched intervals use the unchanged register plus one. The remainder is followed immediately by restoration. The residual is consequently bounded by the start and restore latencies, rather than accumulating with slew length.
+---
+
+## The verify pass (codex, the same session settings, on `895c086af7`)
+
+No new issue and nothing left of the P1/P2s. Its one P3, the coverage of a host sync while the boot's check is still owed: taken, as `scripts/pcf_stop_reset_test`'s `ctlsync` case (the writer's run releases STOP, the host's time lands on the board and the PCF, nothing holds the board awake). A failed seed under an established SOF reference is not added: the retry sits before the `REF_SOF` return, which the verify read as correct.
+
+**I found no new firmware correctness issue in `895c086af7`, and no remaining P1/P2 finding from the earlier review.** All five findings are addressed as dispositioned:
+
+- **P1:** Boot recovery only reads/releases STOP; it never queues a calendar write. Normal writer admission now requires `rtc_valid`.
+- **P2, failed control read:** The pending check and `pcf_maybe_stopped` survive failure.
+- **P2, stale seed:** Initial seeding now retries before the stale guard, preserving staleness.
+- **P2, ineffective test:** The injector targets the seven-byte calendar read, asserts initial invalidity, and exercises sleep after recovery.
+- **P3, acquisition:** A successful delayed seed rearms an aborted acquisition when the PCF is eligible.
+
+The requested interactions look sound: boot checks wait for the writer to become idle; a host correction retains its persistence obligation; successful writer verification can establish that STOP is clear. An outstanding boot check permits sleep, while `wake_coarse()` rejects PCF elapsed time when `pcf_maybe_stopped` remains set. Moving the side-effect-free bus-use and cadence checks earlier does not bypass the discipline’s stale/slew guards. Calling `acq_rearm()` from `rtc_task()` correctly restarts ordinary acquisition without starting wake recovery.
+
+**One P3 coverage note remains:**
+
+- **The tests do not exercise host sync while the boot check is outstanding, or USB/SOF seeding.**  
+  [pcf_stop_reset_test/test.c:306](/Users/jdlien/code/ak820-pro/scripts/pcf_stop_reset_test/test.c:306), [pcf_seed_retry_test/test.c:48](/Users/jdlien/code/ak820-pro/scripts/pcf_seed_retry_test/test.c:48). The outage/control-failure cases return before the host-sync exercise; the seed suite keeps USB stopped throughout. Consequently, regressions involving writer verification clearing `pcf_maybe_stopped` while `pcf_ctl_check` remains owed, or seeding under `REF_SOF`, could pass these suites. **Fix:** Add host-sync cases with the check in both states 1 and 2, including writer recovery and subsequent sleep, plus a failed-seed case under established SOF with no host calendar set.
+
+Static review only: no builds/tests executed, device access, or file changes; all reads stayed inside the repository.
