@@ -129,8 +129,13 @@ bulbs.
   cable pulled by JD) ran 120 counted s with no reset, so the WDT does
   not count in Deep-sleep on black either; that wake's census caught the
   audit's F-045 state (`BUS_SUSPEND` latched, `PHY_EN` on, `ESD_EN` off)
-  with no USB interrupt in the window. It waits for 10-28's shape with a
-  long sleep, and for a repeat of the watchdog reset in a deep sleep.
+  with no USB interrupt in the window. 10-28's shape ran next (05:00 to
+  14:12 10-31, in Power saver where 10-28 was Balanced: 14 min idle on
+  USB, the cable pulled, untouched):
+  9 h 12 min asleep and no reset, 29,659 counted seconds each a return to
+  flash and a feed, so the per-second loop is unlikely to be the site;
+  its census showed `ESD_EN` off again. Black stays on the ladder for a
+  repeat of the watchdog reset in a deep sleep.
 - **Before it, from 20:39 10-28: `fbc6c4a1fd`** (dev, token
   `0xd044efc5`): the build below plus bold page titles and a bold song title
   in 10px (JD: "we still judiciously use bold"). flash.sh exit 0 at
