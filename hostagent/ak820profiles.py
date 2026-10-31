@@ -361,6 +361,28 @@ def apply_live(h, live):
     return applied, live
 
 
+def tell_side(h, src, now):
+    """Sub 8 (the 10-31 audit's review): a backup taken on the Win/Mac
+    switch's other side holds that side's live settings, and its last record
+    this side's. The board takes the live settings as the backup's side's and
+    flips to the switch's, as at a flip: each side keeps its own. Before it,
+    the next reboot kept the backup's side's settings here and dropped this
+    side's."""
+    if src not in ("windows", "mac") or now not in ("windows", "mac") or src == now:
+        return
+    of = {"windows": "Windows'", "mac": "the Mac's"}
+    try:
+        st = busy_retry(lambda: xfer(h, 8, [0 if src == "windows" else 1], echo=(4,))[5], "the live settings' side")
+    except Unhandled:
+        print(f"  note: the backup was taken on {of[src]} side of the Win/Mac switch, the board is on {of[now]}, "
+              f"and this firmware can't be told: {of[src]} settings now show on {of[now]} side")
+        return
+    if st != 0:
+        raise SystemExit(f"the live settings' side refused: {STATUS.get(st, st)}")
+    time.sleep(0.6)   # the flip's countdown (300 ms), then its writes
+    print(f"  the live settings are {of[src]} (the backup's side): the board flipped to {of[now]}")
+
+
 # --- Reading a record ----------------------------------------------------------
 
 def decode(r):
@@ -510,11 +532,10 @@ def cmd_restore(path, block_only, live_only):
     if len(block) != 2 + (4 if fmt == 1 else 8) * REC or len(live) != REC or not rec_ok(live):
         raise SystemExit(f"{path} is malformed -- refusing")
     h = open_device()
-    block_err = None
+    block_err, want = None, None
     try:
         g = geometry(h)
         if not live_only:
-            want = None
             if SLOTS_OF.get(block[0]) == block_slots(block):
                 try:   # codex (10-27): a backup that won't fit leaves the live settings to restore all the same
                     want = convert(block, g)
@@ -545,6 +566,8 @@ def cmd_restore(path, block_only, live_only):
                 print("  asked " + json.dumps(decode(sent)))
                 print("  got   " + json.dumps(decode(back)))
             print(f"live settings restored and flushed{note}")
+            if want is not None:
+                tell_side(h, doc.get("switch"), g.side)
         doc_now = {"switch": g.side, "decoded": {"block": decode_block(read_block(h, g)), "live": decode(read_live(h))}}
     finally:
         h.close()

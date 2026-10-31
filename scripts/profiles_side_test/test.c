@@ -2,29 +2,28 @@
  * F-030; first written as the audit's verify-041). Before the fix the boot
  * guessed a move from the last record, so a move toward a side with no
  * profile went unseen and the side left's settings were lost; now the boot
- * takes the side it was on from QMK's persisted default layer
- * (prof_boot_side()) and a move runs as a live flip.
+ * takes the side the settings are from the owner byte (PROF_OWNER_ADDR, the
+ * audit's review; the default layer first, which codex showed a cut in the
+ * flip's countdown or a PDF() key could leave wrong) and a move runs as a
+ * live flip.
  *
  * Reuses the project's own fakes: scripts/profiles_test.c is #included with
  * its main() renamed, and the real menu/profiles.c is compiled beside it. A
  * power-off is modelled as the project's own test models a reboot: settle()
  * (the deferred active byte written, kb_eeconfig's 5 s flush done), then
- * prof_test_reset() (profiles.c's RAM), then prof_boot_side() with the side
- * the default layer holds (the keymap writes it at every reading: sw() keeps
- * it here) and prof_switch(<switch position>) as dip_switch_init()'s boot
- * reading. */
+ * prof_test_reset() (profiles.c's RAM; the EEPROM, the owner byte with it,
+ * stays) and prof_switch(<switch position>) as dip_switch_init()'s boot
+ * reading. scripts/profiles_cut_test cuts inside the flips. */
 #define main profiles_test_main
 #include "../profiles_test.c"
 #undef main
 
-static bool dl_mac;   /* the persisted default layer: the last reading's side */
-static void sw(bool mac) { prof_switch(mac); dl_mac = mac; }
+static void sw(bool mac) { prof_switch(mac); }
 
 static void power_cycle_on(bool mac) {
     settle();
     prof_test_reset();
-    prof_boot_side(dl_mac);   /* dip_switch_update_kb(), before the keymap's write */
-    sw(mac);                  /* the boot's reading */
+    sw(mac);            /* the boot's reading */
     ticks(1);           /* the boot check */
     ticks(5);
 }
@@ -105,8 +104,8 @@ int main(void) {
     CHECK(last_state() == PS_EMPTY);
     fk_lcd = 33; settle();
     power_cycle_on(true);
-    printf("E both:     booted on Mac: LCD %u, last 0x%02x (no swap: Mac's profile not loaded, Windows' 33 not kept)\n",
-           fk_lcd, last_state());
+    printf("E both:     booted on Mac: LCD %u, last 0x%02x (a flip: slot 0's 50 loaded, Windows' 33 kept as 0x%02x)\n",
+           fk_lcd, last_state(), LAST_WIN);
     fk_lcd = 90;
     sw(false); ticks(3);
     printf("E both:     back on Windows: LCD %u (as left: 33)\n", fk_lcd);

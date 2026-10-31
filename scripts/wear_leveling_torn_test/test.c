@@ -4,8 +4,11 @@
  * 1-bits, so before the fix a torn multi-byte line kept its type, shrank its
  * address and length, and was replayed as a valid write to a lower address:
  * the store wiped (the magic broken) or another setting silently changed.
- * Now each such line carries a CRC-8 in byte 7, and one that fails ends the
- * playback, keeping what came before.
+ * Now each such line carries a check in byte 7, and one that fails ends the
+ * playback, keeping what came before. The check was a CRC-8 first; codex's
+ * review found a four-bit tear it passed (E below), so it is a Berger code,
+ * the count of 0-bits in bytes 0-6, which no one-way loss of bits can pass
+ * (F samples tears over the whole line).
  *
  * The original description follows. */
 /* verify-037: does the emulated EEPROM replay a half-programmed write-log line
@@ -354,6 +357,67 @@ int main(void) {
     ok &= enumerate("default layer at a Win/Mac flip (3,1)", w_winmac, 3, 1, 3, 4);
     ok &= enumerate("RGB config line (23,4)", w_rgb_hue, 23, 4, 23, 31);
     ok &= enumerate("profiles' magic byte (806,1)", w_prof_magic, 806, 1, 806, 807);
+
+    /* E: codex's review of the CRC-8: the kb datablock's first line, address
+     * bits 0 and 5 lost (0x25 -> 0x04) and a bit in each of value bytes 1
+     * and 2 (EE -> E6, 7F -> 6F): four bits, and the CRC-8 the same. */
+    puts("\nE. codex's four-bit tear of the kb datablock line: address 0x25 -> 0x04, value EE -> E6 and 7F -> 6F");
+    restore();
+    session(w_kb_brightness, NULL);
+    session(boot_and_read, NULL);
+    uint64_t kbl;
+    memcpy(&kbl, res->line, 8);
+    printf("  the line uncut: %02X %02X %02X %02X %02X %02X %02X %02X\n", res->line[0], res->line[1], res->line[2], res->line[3],
+           res->line[4], res->line[5], res->line[6], res->line[7]);
+    uint64_t lost_e = (0x21ull << 16) | (0x08ull << 32) | (0x10ull << 40);
+    if ((kbl & lost_e) != lost_e) {
+        puts("  FAIL: the fixture's line is not the one codex tore");
+        ok = 0;
+    } else if (run_cut(w_kb_brightness, ~lost_e)) {
+        show_line("torn line as played back");
+        keymap_config_t kc;
+        memcpy(&kc.raw, &res->img[4], 2);
+        int n = damage_outside(37, 47, NULL);
+        int e = res->enabled && n == 0;
+        printf("  after boot: enabled %d, keymap_config %04X, bytes changed outside the kb block %d: %s\n", res->enabled, kc.raw, n,
+               e ? "ok: refused" : "FAIL: replayed at address 4");
+        ok &= e;
+    }
+
+    /* F: tears over the whole line (data and check bits alike), sampled:
+     * each 1-bit lost with probability 1/2, 1/8 or 7/8, at least one lost. */
+    puts("\nF. sampled tear shapes over the whole line, data and check bits:");
+    struct { const char *name; session_fn w; unsigned lo, hi; } fw[] = {
+        {"kb datablock line (37,4)", w_kb_brightness, 37, 47},
+        {"RGB config line (23,4)", w_rgb_hue, 23, 31},
+        {"default layer at a Win/Mac flip (3,1)", w_winmac, 3, 4},
+    };
+    uint32_t rng = 0x10312026u;
+    for (unsigned k = 0; k < sizeof fw / sizeof fw[0]; k++) {
+        restore();
+        session(fw[k].w, NULL);
+        session(boot_and_read, NULL);
+        uint64_t line;
+        memcpy(&line, res->line, 8);
+        int wipe = 0, silent = 0, total = 0;
+        for (int t = 0; t < 600; t++) {
+            uint64_t lost = 0;
+            unsigned keep_in_8 = t % 3 == 0 ? 4u : t % 3 == 1 ? 7u : 1u;
+            for (int b = 0; b < 64; b++) {
+                rng = rng * 1664525u + 1013904223u;
+                if ((line >> b & 1u) && (rng >> 29) >= keep_in_8) lost |= 1ull << b;
+            }
+            if (!lost) continue;
+            if (!run_cut(fw[k].w, ~lost)) continue;
+            total++;
+            if (!res->enabled)
+                wipe++;
+            else if (damage_outside(fw[k].lo, fw[k].hi, NULL))
+                silent++;
+        }
+        printf("  %s: %d tear shapes: %d wipe the store, %d silently change other settings\n", fw[k].name, total, wipe, silent);
+        ok &= total > 0 && wipe == 0 && silent == 0;
+    }
 
     printf("\n%s\n", ok ? "RESULT: PASS (no tear wipes the store or changes another setting)" : "RESULT: FAIL");
     return ok ? 0 : 1;

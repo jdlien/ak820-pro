@@ -208,27 +208,30 @@ static void test_format_and_save(void) {
     memcpy(&ee[PROF_BASE + PROF_REC_OFF(2)], r, PROF_REC);
     B(PROF_OFF_ACTIVE) = 2;
     CHECK(!prof_formatted() && prof_active() == 0xFF && !prof_slot(2, r));
-    /* The first save formats first: eight states (P5d), the active byte, the magic last; then the save. */
+    /* The first save formats first: eight states (P5d), the active byte, the
+     * owner byte (the 10-31 audit's review: this side's), the magic last;
+     * then the save. */
     bool c = true;
     CHECK(prof_free_slot() == 0 && prof_valid_mask() == 0);
     CHECK(prof_save(0, &c) == PROF_OK && !c);
-    CHECK(nlog == 10 + 3);
+    CHECK(nlog == 11 + 3);
     for (int s = 0; s < 8; s++) CHECK(wlog[s].addr == PROF_BASE + PROF_REC_OFF(s) && wlog[s].first == PS_EMPTY);
     CHECK(wlog[8].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[8].first == 0xFF);
-    CHECK(wlog[9].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[9].first == PROF_MAGIC_V4);
+    CHECK(wlog[9].addr == PROF_OWNER_ADDR && wlog[9].first == 0x50);
+    CHECK(wlog[10].addr == PROF_BASE + PROF_OFF_MAGIC && wlog[10].first == PROF_MAGIC_V4);
     /* The save: the state empty, the body (26 B), the state saved; the active
      * slot deferred (P5b): it counts at once, and is written only after
      * kb_eeconfig's settled write. */
-    CHECK(wlog[10].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[10].first == PS_EMPTY && wlog[10].n == 1);
-    CHECK(wlog[11].addr == PROF_BASE + PROF_REC_OFF(0) + 1 && wlog[11].n == 26);
-    CHECK(wlog[12].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[12].first == PS_SAVED_V1 && wlog[12].n == 1);
+    CHECK(wlog[11].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[11].first == PS_EMPTY && wlog[11].n == 1);
+    CHECK(wlog[12].addr == PROF_BASE + PROF_REC_OFF(0) + 1 && wlog[12].n == 26);
+    CHECK(wlog[13].addr == PROF_BASE + PROF_REC_OFF(0) && wlog[13].first == PS_SAVED_V1 && wlog[13].n == 1);
     CHECK(B(PROF_OFF_ACTIVE) == 0xFF && prof_active() == 0 && fk_touches == 1 && fk_pending);
     prof_tick();
-    CHECK(nlog == 13);   /* kb_eeconfig's write still to come */
+    CHECK(nlog == 14);   /* kb_eeconfig's write still to come */
     settle();
-    CHECK(nlog == 14 && wlog[13].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[13].first == 0xF0 && wlog[13].n == 1);   /* Windows's, the Mac none (10-27) */
+    CHECK(nlog == 15 && wlog[14].addr == PROF_BASE + PROF_OFF_ACTIVE && wlog[14].first == 0xF0 && wlog[14].n == 1);   /* Windows's, the Mac none (10-27) */
     settle();
-    CHECK(nlog == 14);   /* once */
+    CHECK(nlog == 15);   /* once */
     CHECK(prof_valid_mask() == 0x01 && prof_free_slot() == 1);
     CHECK(prof_formatted() && prof_active() == 0 && prof_slot(0, r) && !prof_slot(2, r));
     /* A consolidation is reported. */
@@ -547,7 +550,7 @@ static void test_hid_live(void) {
     int ext = fk_external[ME_DOM_RGB];
     CHECK(hid(6, 0, 0) && rpt[4] == PROF_OK && fk_flushes == 1 && fk_external[ME_DOM_RGB] == ext + 1);
     /* An unknown sub: unhandled. Dev's 0x40 save and 0x41 delete. */
-    CHECK(!hid(8, 0, 0) && !hid(0x43, 0, 0));
+    CHECK(!hid(9, 0, 0) && !hid(0x43, 0, 0));
     CHECK(hid(0x40, 1, 0) && rpt[5] == PROF_OK && prof_active() == 1);
     CHECK(hid(0x41, 1, 0) && rpt[5] == PROF_OK && prof_active() == 0xFF);
     /* P5b: the flush writes the pending active slot too. */
@@ -889,18 +892,18 @@ static void test_switch(void) {
     CHECK(fk_switched == 12 && fk_sw_slot == 0 && fk_sw_st == PROF_WRITE_FAILED && calls[0] == 0 && prof_active() == 0 &&
           nlog == n && fk_lcd == 78);
     /* The reboot on the Mac's side, the switch where it was: its slot,
-     * nothing loaded (the last record is Windows'). */
+     * nothing loaded (the last record is Windows'). The owner byte says the
+     * Mac: the refused flip never moved it. */
+    CHECK(ee[PROF_OWNER_ADDR] == 0x51);
     prof_test_reset();
-    prof_boot_side(true);
     prof_switch(true);
     ticks(5);
     CHECK(fk_switched == 12 && prof_active() == 3 && hid(7, 0, 0) && rpt[9] == 2 && fk_lcd == 78);
-    /* The switch moved while the board was off: the default layer says the
-     * Mac (prof_boot_side()), the switch Windows, so the live settings are
-     * the Mac's. The flip's swap at the end of its countdown, as a live
-     * flip's (the 10-31 audit, F-030). */
+    /* The switch moved while the board was off: the owner byte says the
+     * Mac, the switch Windows, so the live settings are the Mac's. The
+     * flip's swap at the end of its countdown, as a live flip's (the 10-31
+     * audit, F-030). */
     prof_test_reset();
-    prof_boot_side(true);
     prof_switch(false);
     CHECK(fk_switched == 12 && fk_lcd == 78);
     ticks(2);
@@ -947,7 +950,9 @@ static void test_switch_codex(void) {
     prof_switch(false); ticks(3);
     CHECK(fk_switched == 1 && fk_sw_slot == 0 && fk_lcd == 20 && fk_prev_lcd == -1);
     CHECK(last_state() == LAST_MAC && last_lcd() == 31);   /* not the preview's 99 */
-    CHECK(fk_flushes == fl + 1 && fk_flush_last == LAST_WIN);   /* saved while the record still held Windows' */
+    /* The 10-31 audit's review: the side left's record first, then the side
+     * arrived at's settings, the owner byte around both. */
+    CHECK(fk_flushes == fl + 1 && fk_flush_last == LAST_MAC && ee[PROF_OWNER_ADDR] == 0x50);
     /* A flip to a side without a profile applies nothing, so saves nothing early. */
     CHECK(prof_delete(1) == PROF_OK);
     fl = fk_flushes;

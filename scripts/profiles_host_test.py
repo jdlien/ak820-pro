@@ -173,11 +173,13 @@ class FakeBoard:
     """HC_PROFILES' subs 0-7 on an 0xA4 block, as a firmware answers them. `old`: one from before the Font
     setting, which refuses a record whose readout byte is out of 1-3 (bit 2 set) and never reports a face;
     `pre_icon` (10-30): one with the face but from before Icon only, which refuses bit 4; `refuse`: a record it
-    refuses whatever its face."""
-    def __init__(self, live, old=False, refuse=False, pre_icon=False):
+    refuses whatever its face. `side`: sub 7's [9], the switch (1 Windows, 2 the Mac); `no_sub8`: a firmware
+    from before sub 8, the live settings' side (the 10-31 audit's review), which answers it unhandled."""
+    def __init__(self, live, old=False, refuse=False, pre_icon=False, side=1, no_sub8=False):
         self.live, self.old, self.refuse, self.pre_icon, self.sent, self.reply = live, old, refuse, pre_icon, [], None
         self.block = bytes([ap.MAGIC_V4, 0xFF]) + bytes(8 * ap.REC)
         self.staged, self.commits = None, 0
+        self.side, self.no_sub8, self.sub8 = side, no_sub8, []
 
     def bv_bad(self, v):
         if self.old:
@@ -222,7 +224,13 @@ class FakeBoard:
         elif sub == 6:
             q[4] = 0
         elif sub == 7:
-            q[4:10] = bytes([8, ap.REC, 9, ap.PAGE, ap.MAGIC_V4, 1])
+            q[4:10] = bytes([8, ap.REC, 9, ap.PAGE, ap.MAGIC_V4, self.side])
+        elif sub == 8:
+            if self.no_sub8:
+                q[0] = ap.UNHANDLED
+            else:
+                self.sub8.append(q[4])
+                q[5] = 0
         self.reply = bytes(q)
 
     def read(self, n, timeout_ms):
@@ -324,6 +332,28 @@ with tempfile.TemporaryDirectory() as tmp:
               b.block[2 + ap.REC:2 + 2 * ap.REC] == bv_rec(2, 22) and b.live == live and
               "profiles restored and read back" in out and "live settings restored" in out,
               f"cmd_restore, Icon only, {kw or 'this firmware'}: {res} {b.commits} {out}")
+
+# Codex's review of the audit's fixes (P2): a backup taken on one side of the Win/Mac switch, restored on
+# the other, tells the board the live settings are the backup's side's (sub 8), so it flips and each side
+# keeps its own; on the same side, or with the live settings or the profiles left out, nothing is sent; a
+# firmware from before sub 8 gets a note.
+ap.time.sleep = lambda s: None
+with tempfile.TemporaryDirectory() as tmp:
+    path = os.path.join(tmp, "p.json")
+    for swtch, board, kw, args, want8, said in (
+            ("windows", 2, {}, (False, False), [0], "the board flipped to the Mac's"),
+            ("mac", 1, {}, (False, False), [1], "the board flipped to Windows'"),
+            ("windows", 1, {}, (False, False), [], None),
+            (None, 2, {}, (False, False), [], None),
+            ("windows", 2, {}, (False, True), [], None),     # --live-only: the board's own profiles
+            ("windows", 2, {"no_sub8": True}, (False, False), [], "this firmware can't be told")):
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"format": 4, "switch": swtch, "block": ib.hex(), "live": icon_s.hex()}, f)
+        b = FakeBoard(live_rec(1), side=board, **kw)
+        ap.open_device = lambda: b
+        (res, out) = quiet(ap.cmd_restore, path, *args)
+        check(res == 0 and b.sub8 == want8 and (said is None or said in out) and (said is not None or "flipped" not in out),
+              f"cmd_restore, backup on {swtch}, board on {board}, {args} {kw}: sub 8 {b.sub8} {out}")
 
 print("host conversion:", "all checks passed" if not fails else f"{fails} failed")
 sys.exit(1 if fails else 0)

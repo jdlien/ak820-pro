@@ -5,7 +5,7 @@
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 fails=0
-for t in "$here"/*_test/run.sh; do
+for t in "$here"/*_test/run.sh "$here"/wear_leveling_gtest/run.sh; do
   name="$(basename "$(dirname "$t")")"
   [[ "$name" == flash_tidy_test ]] && continue   # older, not the audit's
   if out="$("$t" 2>&1)"; then echo "PASS $name"; else echo "FAIL $name"; echo "$out" | tail -15; fails=1; fi
