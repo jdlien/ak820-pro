@@ -22,8 +22,12 @@ JD picked the fixes on 10-31 ("I want to try both fixes") after black's 9 h
 `c7bc7bd0db9` went onto black at 14:44 10-31 while codex read (token
 `0xd26c31c8`). No P1; three P2s, fixed in `70f7c1ea10e`, merged as
 `0118d39e67e` and on black from 14:57 (token `0x99bfbbb8`, dev heap gap
-128 B, the floor; the daily's 2336 B). Codex's verify:
-[`review-codex-wake-fixes-verify-raw.md`](review-codex-wake-fixes-verify-raw.md).
+128 B, the floor; the daily's 2336 B). Codex's verify
+([`review-codex-wake-fixes-verify-raw.md`](review-codex-wake-fixes-verify-raw.md),
+prompt [`review-prompt-wake-fixes-verify.txt`](review-prompt-wake-fixes-verify.txt)):
+all three fixed, nothing new at any level, the RAM confirmed from the ELFs;
+keep `0118d39e67e` on black, and `70f7c1ea10e` is cleared for the mainline
+once the hardware gate (4, below) passes.
 
 ## Dispositions
 
