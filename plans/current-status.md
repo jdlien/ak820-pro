@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-01, 17:00. The block below is where things stand, written to
+Updated 2026-11-01, 17:41. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -16,7 +16,18 @@ on white passed (14:40-16:29,
 [`../history/v030-rc-white-20261101/`](../history/v030-rc-white-20261101/README.md)):
 the new profiles restore's first run on hardware read back, the Win/Mac
 flip, a deep sleep at 3.7-3.8 mA, the wake on a key. Then white went to
-the row ISR's stage 1 A/B (below) at 16:29.
+the row ISR's stage 1 A/B (below) at 16:29. It came back at 17:35 with
+stage 1 on it (`a8a567308d`, token `0x19884af9`, flashed 17:12 with the
+settings kept), its standing state restored (data off, the daemon running,
+Power saver); the A/B's record is `../history/rowisr-stage1-20261101/`.
+
+- ⚠️ **The drain's one break of relay 2's rule:** the A/B's session woke
+  white for a run on USB power (the charger's edge wakes the board), and
+  `power.csv` shows the pack charging at -546 mA twice: 16:46:47-16:46:49
+  (`charge_mah` 325.446 to 324.991, 0.46 mAh) and 16:47:58-16:48:03
+  (325.068 to 324.154, 0.91 mAh). 1.37 mAh in, against 4,011.6:
+  negligible to the runtime, but subtract it if the drain's arithmetic is
+  ever done to the mAh.
 
 - **Owed, unverified at the release:**
   - The clean-Windows install check: `scripts/sandbox-6b.ps1` can't run on
