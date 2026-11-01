@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-01, 17:41. The block below is where things stand, written to
+Updated 2026-11-01, 17:50. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -21,13 +21,15 @@ stage 1 on it (`a8a567308d`, token `0x19884af9`, flashed 17:12 with the
 settings kept), its standing state restored (data off, the daemon running,
 Power saver); the A/B's record is `../history/rowisr-stage1-20261101/`.
 
-- ⚠️ **The drain's one break of relay 2's rule:** the A/B's session woke
-  white for a run on USB power (the charger's edge wakes the board), and
-  `power.csv` shows the pack charging at -546 mA twice: 16:46:47-16:46:49
-  (`charge_mah` 325.446 to 324.991, 0.46 mAh) and 16:47:58-16:48:03
-  (325.068 to 324.154, 0.91 mAh). 1.37 mAh in, against 4,011.6:
+- ⚠️ **Three short charges in the drain:** the A/B's session woke white by
+  closing relay 2 for a few seconds (the charger's edge wakes the board),
+  with JD's go, and `power.csv` shows the pack charging at -546 mA each
+  time: 16:46:47-16:46:49 (`charge_mah` 325.446 to 324.991, 0.46 mAh),
+  16:47:58-16:48:03 (325.068 to 324.154, 0.91 mAh) and 17:45:42-17:45:48
+  (371.762 to 370.844, 0.92 mAh). 2.29 mAh in, against 4,011.6:
   negligible to the runtime, but subtract it if the drain's arithmetic is
-  ever done to the mAh.
+  ever done to the mAh. No more are planned; a slept-board test wakes
+  white with a key.
 
 - **Owed, unverified at the release:**
   - The clean-Windows install check: `scripts/sandbox-6b.ps1` can't run on
