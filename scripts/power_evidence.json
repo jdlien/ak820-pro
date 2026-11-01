@@ -5,7 +5,9 @@
    "dir": "history/power-bench-2026-10-15/current-map-20261021-1738",
    "date": "2026-10-21",
    "firmware": "36afff30e8",
-   "conditions": "BT, on the pack (VCELL 4.04-4.02 V) with USB data attached (the bench), current_map.py --set knobs at --hold 90 --settle 15: each knob alone from a shared dark floor (the RGB states with the screen off, the screen states with the RGB off), forward then backward; each state the mean of its two passes, from the INA228's charge register"
+   "conditions": "BT, on the pack (VCELL 4.04-4.02 V) with USB data attached (the bench), current_map.py --set knobs at --hold 90 --settle 15: each knob alone from a shared dark floor (the RGB states with the screen off, the screen states with the RGB off), forward then backward; each state the mean of its two passes, from the INA228's charge register",
+   "screen_ticks": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 23, 26, 29, 33, 37, 42, 48],
+   "screen_ticks_source": "36afff30e8's graphics/display.c, bkl_duty: the 24-level Screen the sweep ran on (P2b, 10-25, made it 0-100); each level's duty in ticks of 48, so scripts/power_model.py gives its levels on today's scale"
   }
  },
  "measured": {

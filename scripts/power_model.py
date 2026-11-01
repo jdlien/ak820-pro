@@ -8,8 +8,10 @@
 Everything firmware comes from the commit deps.lock pins, read with
 `git show <sha>:<path>`, never a branch head or the working tree: the model's
 constants (battery.c), the sleep's draw (battery.h), the low cap, the
-ladders and the ceilings (power.c), the backlight's duty table
-(graphics/display.c), the LED count (keyboard.json's rgb_matrix layout), QMK's
+ladders and the ceilings (power.c), the backlight's duty per level (since
+P2b, 10-25, the indicators' 101-level table, indicator_levels.h, rounded to
+whole ticks as display_backlight_duty() does; before it, display.c's 24),
+the LED count (keyboard.json's rgb_matrix layout), QMK's
 CIE table (quantum/led_tables.c) and the screen readout's rounding
 (param_overlay.c). A missing or ambiguous definition, or a table of the wrong
 size, is fatal: the page must never show a number the board does not use.
@@ -74,6 +76,42 @@ def c_array(src, name, n, where):
     return vals
 
 
+def backlight_duty(sha, dc):
+    """Each Screen level's backlight duty, in whole ticks of BKL_DUTY_FULL, as
+    display_backlight_duty() hands it to battery.c's model. Since P2b (10-25)
+    the level is 0-100 on the indicators' table, rounded to ticks; before it,
+    display.c's own 24-level table."""
+    if re.search(r"\bbkl_duty\s*\[", dc):
+        return c_array(dc, "bkl_duty", 24, "graphics/display.c")
+    if "ind_duty_ticks(ind_level_duty[display_backlight_effective()])" not in dc:
+        die("graphics/display.c: display_backlight_duty() is not ind_duty_ticks(ind_level_duty[...]) any more")
+    il = show(sha, f"{KB}/indicator_levels.h")
+    if "return (uint8_t)((duty + 128u) >> 8);" not in il:
+        die("indicator_levels.h: ind_duty_ticks() is not (duty + 128) >> 8 any more")
+    fine = c_array(il, "ind_level_duty", define(il, "IND_LEVEL_MAX", "indicator_levels.h") + 1, "indicator_levels.h")
+    return [(d + 128) >> 8 for d in fine]
+
+
+def sweep_screen(ticks_then, level, duty):
+    """A sweep's Screen level, read back on the scale it ran on (ticks_then:
+    that scale's duty per level, None for today's), on today's scale: its duty
+    in ticks, as measured; the position of that duty on today's scale, P2b's
+    own mapping 1 + 99 x ln(ticks) / ln 48 (graphics/display.c), fractional,
+    since not every old duty is a whole level's now (33 ticks lies between
+    levels 90 and 91); and the nearest level. Returns (level, duty, x)."""
+    import math
+    if level is None:
+        return None, None, None
+    if ticks_then is None:
+        return level, duty[level], level * 100 / (len(duty) - 1)
+    t = ticks_then[level]
+    x = 0.0 if t == 0 else 1 + (len(duty) - 2) * math.log(t) / math.log(duty[-1])
+    new = round(x)
+    if abs(duty[new] - t) > 1:
+        die(f"the sweep's screen level {level} ({t} ticks) lands near level {new}, {duty[new]} ticks today")
+    return new, t, round(x * 100 / (len(duty) - 1), 2)
+
+
 def ladders(src, saver_val):
     """power.c's ladders: {mode: {dim, lights_off, screen_off, sleep (ms, None = never), active_val}}."""
     out = {}
@@ -111,7 +149,7 @@ def firmware(sha):
         die("param_overlay.c: the LCD readout's rounding is not (lvl * 100u + mx / 2u) / mx any more")
     if "hsv.v > val_cap" not in pc:
         die("power.c: rgb_matrix_hsv_to_rgb no longer caps the value before hsv_to_rgb")
-    duty = c_array(dc, "bkl_duty", 24, "graphics/display.c")
+    duty = backlight_duty(sha, dc)
     full = define(bc, "BKL_DUTY_FULL", "battery.c")
     if duty[-1] != full:
         die(f"display.c's top duty {duty[-1]} is not battery.c's BKL_DUTY_FULL {full}")
@@ -162,11 +200,15 @@ def family(effect, h, s, level):
     return "held out"
 
 
-def knobs_sweep(ev):
+def knobs_sweep(ev, duty):
     """Each state's passes from a `--set knobs` run's results.json, at full
     precision: the setting each hold read back, the pack power (mA x VCELL),
-    the LED drive and the board's own modelled draw."""
+    the LED drive and the board's own modelled draw. A screen level read back
+    on another scale (ev's screen_ticks, the table it ran on) is given on
+    today's, with the duty it ran at (sweep_screen()), the one read back kept
+    beside it."""
     rel = ev["dir"]
+    then = ev.get("screen_ticks")
     res = json.load(open(os.path.join(ROOT, rel, "results.json")))
     if res.get("set") != "knobs":
         die(f"{rel}/results.json: set {res.get('set')!r}, not knobs")
@@ -186,8 +228,10 @@ def knobs_sweep(ev):
             die(f"{rel}: {name}'s passes read back different settings: {sorted(got, key=str)}")
         effect, h, sat, v, level = got.pop()
         mw = [s["measured"]["q_ma"] * s["measured"]["vcell_mv"] / 1000 for s in ss]
+        lv, dt, x = sweep_screen(then, level, duty)
         rows.append({"name": name, "family": family(effect, h, sat, level),
-                     "lighting": {"effect": effect, "h": h, "s": sat, "v": v}, "screen_level": level,
+                     "lighting": {"effect": effect, "h": h, "s": sat, "v": v},
+                     "screen_level": lv, "screen_duty": dt, "screen_x": x, "screen_level_read": level,
                      "passes": [round(x, 2) for x in mw], "mw": mean(mw),
                      "ma": mean([s["measured"]["q_ma"] for s in ss]),
                      "led_pm": [int(s["led_pm"]) for s in ss],
@@ -204,12 +248,13 @@ def collapse_numbers(text):
 def build():
     ev = json.load(open(EVIDENCE))
     sha = pinned_sha()
+    fw = firmware(sha)
     doc = {
         "schema": SCHEMA,
         "generated_by": "scripts/power_model.py from deps.lock's firmware and scripts/power_evidence.json; do not edit",
-        "firmware": firmware(sha),
+        "firmware": fw,
         "evidence": {
-            "knobs_sweep": knobs_sweep(ev["sweeps"]["knobs"]),
+            "knobs_sweep": knobs_sweep(ev["sweeps"]["knobs"], fw["backlight_duty"]),
             **ev["measured"],
         },
         "assumptions": ev["assumptions"],

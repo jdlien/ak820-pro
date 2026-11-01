@@ -63,17 +63,18 @@ test("model_nj: every oracle case, exactly", () => {
 
 test("the firmware facts the page leans on", () => {
   assert.equal(fw.led_count, 81);
-  assert.equal(fw.backlight_duty.length, 24);
+  assert.equal(fw.backlight_duty.length, 101);   /* P2b (10-25): the Screen 0-100 */
   assert.deepEqual([fw.cie1931[64], fw.cie1931[128], fw.cie1931[255]], [12, 48, 255]);
-  assert.equal(M.lcdPercent(fw, 5), 22);
-  assert.equal(M.lcdPercent(fw, 23), 100);
+  assert.equal(fw.backlight_duty[42], 5);   /* the old level 5, 5 ticks of 48 */
+  assert.equal(M.lcdPercent(fw, 42), 42);
+  assert.equal(M.lcdPercent(fw, 100), 100);
   assert.equal(fw.ladders.full.sleep_ms, null);
 });
 
 test("draws the plan states (untethered, BT)", () => {
-  near(M.boardMw(fw, setting(255, 5)), 296.584, 0.001, "full white, screen 5");
-  near(M.boardMw(fw, setting(128, 5)), 152.93, 0.01, "white 128, screen 5");
-  near(M.boardMw(fw, setting(255, 5), { usb: true }), 303.684, 0.001, "full white, screen 5, the bench's USB");
+  near(M.boardMw(fw, setting(255, 42)), 296.584, 0.001, "full white, screen 42% (5 ticks, the old level 5)");
+  near(M.boardMw(fw, setting(128, 42)), 152.93, 0.01, "white 128, screen 42% (5 ticks, the old level 5)");
+  near(M.boardMw(fw, setting(255, 42), { usb: true }), 303.684, 0.001, "full white, screen 42%, the bench's USB");
   near(M.boardMw(fw, setting(0, 0, { rgbOn: false, screenOn: false })), 106.9, 1e-9, "every light off");
   // Value 0 lights no LED, so the RGB's fixed cost does not apply; value 1 does.
   near(M.boardMw(fw, setting(0, 0, { screenOn: false })), 106.9, 1e-9, "value 0");
@@ -82,16 +83,16 @@ test("draws the plan states (untethered, BT)", () => {
 
 test("fixed-state runtimes reproduce the plan's figures", () => {
   const E = fw.e_cap_mwh;
-  near(E / M.boardMw(fw, setting(255, 5)), 52.53, 0.01, "full white, screen 5");
-  near(E / M.boardMw(fw, setting(128, 5)), 101.87, 0.01, "white 128");
-  near(E / M.boardMw(fw, setting(0, 5, { rgbOn: false })), 140.39, 0.01, "RGB off, screen 5");
+  near(E / M.boardMw(fw, setting(255, 42)), 52.53, 0.01, "full white, screen 42% (5 ticks, the old level 5)");
+  near(E / M.boardMw(fw, setting(128, 42)), 101.87, 0.01, "white 128");
+  near(E / M.boardMw(fw, setting(0, 42, { rgbOn: false })), 140.39, 0.01, "RGB off, screen 42% (5 ticks, the old level 5)");
   near(E / 106.9, 145.73, 0.01, "every light off");
-  const max24 = M.boardMw(fw, setting(255, 23)) + M.radioExtraMw(ev, "g24");
+  const max24 = M.boardMw(fw, setting(255, 100)) + M.radioExtraMw(ev, "g24");
   near(E / max24, 46.28, 0.01, "everything at max, 2.4G");
 });
 
 test("continuous use: the 15% tail at value 128, by mode", () => {
-  const s = setting(255, 5);
+  const s = setting(255, 42);
   const bal = M.continuousUse(fw, ev, s, "normal", F);
   near(bal.hiHours, 44.65, 0.01, "Balanced, above the cap");
   near(bal.loHours, 15.28, 0.01, "Balanced, the tail");
@@ -104,10 +105,10 @@ test("continuous use: the 15% tail at value 128, by mode", () => {
   const lo = M.continuousUse(fw, ev, s, "minimal", F);
   near(lo.hiMw, 106.9, 1e-9, "Lights out types dark, the screen too");
   // A setting already under the cap does not dim.
-  assert.ok(!M.continuousUse(fw, ev, setting(100, 5), "normal", F).dims);
+  assert.ok(!M.continuousUse(fw, ev, setting(100, 42), "normal", F).dims);
   // The sensitivity the plan quotes: one point of the tail's share.
   near(M.continuousUse(fw, ev, s, "normal", 0.14).hours - bal.hours, -0.493, 0.002, "one point of f");
-  const max24 = M.continuousUse(fw, ev, setting(255, 23, { radio: "g24" }), "normal", F);
+  const max24 = M.continuousUse(fw, ev, setting(255, 100, { radio: "g24" }), "normal", F);
   near(max24.hours, 51.45, 0.01, "everything at max, 2.4G, with the tail");
 });
 
@@ -128,7 +129,7 @@ test("the ladder: stages, the low cap's rules, sleep", () => {
 });
 
 test("pauses and days", () => {
-  const s = setting(255, 5);
+  const s = setting(255, 42);
   const sleep = M.sleepMw(ev, "bt");
   near(M.pauseMwh(fw, ev, s, "normal", false, 20) - (sleep * 20) / 60, 66.3, 0.1, "a Balanced pause, above sleep");
   near(M.pauseMwh(fw, ev, s, "saver", false, 3) - (sleep * 3) / 60, 6.15, 0.02, "a Power saver pause, above sleep");
@@ -147,7 +148,7 @@ test("pauses and days", () => {
 });
 
 test("standby", () => {
-  const s = setting(255, 5);
+  const s = setting(255, 42);
   near(M.standby(fw, ev, s, "normal", F).hours / 24, 48.99, 0.01, "asleep on BT");
   near(M.standby(fw, ev, { ...s, radio: "g24" }, "normal", F).hours / 24, 47.04, 0.01, "asleep on 2.4G");
   assert.equal(M.standby(fw, ev, s, "full", F).asleep, false, "Always on stays awake");
@@ -180,6 +181,7 @@ test("the measured points sit on the curves", () => {
   assert.equal(pts.rgb.length, 36);
   assert.equal(pts.screen.length, 7);
   for (const p of pts.rgb) near(p.mw, curves[p.colour][p.v].mw, 3.0, p.name);
-  const sc = M.screenCurve(fw, ev);
-  for (const p of pts.screen) near(p.mw, sc[p.level].mw, 0.5, p.name);
+  const at = (p) => M.boardMw(fw, { rgb: { on: false }, screen: { on: true, level: p.level, duty: p.duty } }) +
+    M.radioExtraMw(ev, "bt");
+  for (const p of pts.screen) near(p.mw, at(p), 0.5, p.name);   /* at the duty it ran at */
 });

@@ -47,8 +47,11 @@ export function rgbDrive(fw, rgb, vcap = 255) {
 }
 
 // display.c's effective duty: off is 0, and a stage's ceiling caps the level.
+// A measured state carries the duty it ran at (`duty`, in ticks): a sweep on
+// the old 24-level Screen ran at duties not every one of today's levels has.
 export function backlightDuty(fw, screen, levelCap = Infinity) {
   if (!screen.on) return 0;
+  if (screen.duty !== undefined && screen.duty !== null) return screen.duty;
   return fw.backlight_duty[Math.min(screen.level, levelCap)];
 }
 
@@ -221,7 +224,8 @@ export function measuredPoints(fw, ev, radio = "bt") {
     colour: r.family, v: r.lighting.v, x: (r.lighting.v * 100) / 255, mw: floor + r.mw - dark, name: r.name,
   }));
   const screen = rows.filter((r) => r.family === "screen").map((r) => ({
-    level: r.screen_level, x: lcdPercent(fw, r.screen_level), mw: floor + r.mw - dark, name: r.name,
+    level: r.screen_level, duty: r.screen_duty, x: r.screen_x ?? lcdPercent(fw, r.screen_level),
+    mw: floor + r.mw - dark, name: r.name,
   }));
   return { rgb, screen, floor };
 }
@@ -234,7 +238,7 @@ export function sweepAgreement(fw, ev) {
     const l = r.lighting;
     const setting = {
       rgb: l.effect === 0 ? { on: false } : { on: true, h: l.h, s: l.s, v: l.v },
-      screen: r.screen_level === null ? { on: false, level: 0 } : { on: true, level: r.screen_level },
+      screen: r.screen_level === null ? { on: false, level: 0 } : { on: true, level: r.screen_level, duty: r.screen_duty },
     };
     const model = boardMw(fw, setting, { usb: true });
     const passErr = Math.max(...r.passes.map((x) => Math.abs(model / x - 1)));

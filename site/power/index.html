@@ -204,7 +204,7 @@ footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border
       <div class="knob" id="vKnob"><label class="name" for="v">Bright</label><input type="range" id="v" min="0" max="255" step="1" aria-label="RGB brightness"><output id="vOut" for="v"></output></div>
       <div class="knob" id="sKnob"><label class="name" for="s">Sat.</label><input type="range" id="s" min="0" max="255" step="1" aria-label="RGB saturation"><output id="sOut" for="s"></output></div>
       <div class="knob" id="hKnob"><label class="name" for="h">Hue</label><input type="range" id="h" min="0" max="255" step="1" aria-label="RGB hue"><output id="hOut" for="h"></output></div>
-      <div class="knob" id="lcdKnob"><label class="name"><input type="checkbox" id="lcdOn"> Screen</label><input type="range" id="lcd" min="0" max="23" step="1" aria-label="Screen brightness"><output id="lcdOut" for="lcd"></output></div>
+      <div class="knob" id="lcdKnob"><label class="name"><input type="checkbox" id="lcdOn"> Screen</label><input type="range" id="lcd" min="0" max="100" step="1" aria-label="Screen brightness"><output id="lcdOut" for="lcd"></output></div>
     </div>
     <div class="selects">
       <label><span class="lab">Effect</span>
@@ -291,7 +291,7 @@ const int = (k, d, lo, hi) => { const n = parseInt(q.get(k), 10); return Number.
 const state = {
   rgbOn: q.get("rgb") !== "0", fx: q.get("fx") === "other" ? "other" : "solid",
   v: int("v", 255, 0, 255), h: int("h", 0, 0, 255), s: int("s", 0, 0, 255),
-  lcdOn: q.get("lcdon") !== "0", lcd: int("lcd", 5, 0, 23),
+  lcdOn: q.get("lcdon") !== "0", lcd: int("lcd", 42, 0, 100),   /* 0-100 since P2b (10-25); 42 is the old 5, 5 ticks */
   mode: MODE_NAME[q.get("mode")] ? q.get("mode") : "normal",
   radio: q.get("radio") === "g24" ? "g24" : "bt",
   day: doc.scenarios.some((s) => s.id === q.get("day")) ? q.get("day") : doc.scenarios[0].id,
@@ -709,12 +709,13 @@ function renderEvidence() {
   const dark = rows.filter((r) => r.family === "dark");
   const unlit = rows.filter((r) => !lit.includes(r));
   const scr = M.measuredPoints(fw, ev).screen;
-  const sc = M.screenCurve(fw, ev);
-  const scrOff = Math.max(...scr.map((p) => Math.abs(p.mw - sc[p.level].mw)));
+  const scrAt = (p) => M.boardMw(fw, { rgb: { on: false }, screen: { on: true, level: p.level, duty: p.duty } }) +
+    M.radioExtraMw(ev, "bt");   /* at the duty each ran at: the sweep's 24-level Screen */
+  const scrOff = Math.max(...scr.map((p) => Math.abs(p.mw - scrAt(p))));
   const dMw = dark.map((r) => r.measured);
   const worst = (xs) => (100 * Math.max(...xs.map((r) => Math.abs(r.err)))).toFixed(2);
   const r3 = ev.drains.runs.find((r) => r.name === "R3");
-  const fixed = fw.e_cap_mwh / M.boardMw(fw, { rgb: { on: true, h: 0, s: 0, v: 255 }, screen: { on: true, level: 5 } });
+  const fixed = fw.e_cap_mwh / M.boardMw(fw, { rgb: { on: true, h: 0, s: 0, v: 255 }, screen: { on: true, level: 42 } });   /* the drains' screen: 5 ticks, the old level 5 */
   const r3Untethered = r3.hours * r3.mean_mw / (r3.mean_mw - fw.p_usb_uw / 1000);
   const box = $("evidence");
   box.replaceChildren(
@@ -723,7 +724,7 @@ function renderEvidence() {
     el("ul", {},
       el("li", {}, `Measured on ${ev.knobs_sweep.date}, each of ${lit.length} solid-colour states, ${both.length} of them with the screen on as well, is within ${worst(lit)}% of the model (the mean of two passes).`),
       el("li", {}, `With every light off the keyboard drew ${Math.min(...dMw).toFixed(1)} to ${Math.max(...dMw).toFixed(1)} mW against the model's ${dark[0].model.toFixed(1)} (both with the bench's USB data), so the states with no LED lit, the screen alone included, read up to ${worst(unlit)}% above it. Measured from that floor, each of ${scr.length} screen levels costs within ${scrOff.toFixed(1)} mW of the model's figure.`),
-      el("li", {}, `Five drains from full to 0% at full white with the screen at level 5 ran 50 to 52 hours. The model gives ${fixed.toFixed(1)} h for that setting held still, about ${(100 * (fixed / r3Untethered - 1)).toFixed(0)}% longer than the logged drain (${r3.hours} h, about ${r3Untethered.toFixed(1)} h without the bench's USB cable). The page shows the model, not a correction for that gap.`),
+      el("li", {}, `Five drains from full to 0% at full white with the screen at 42% (the old level 5) ran 50 to 52 hours. The model gives ${fixed.toFixed(1)} h for that setting held still, about ${(100 * (fixed / r3Untethered - 1)).toFixed(0)}% longer than the logged drain (${r3.hours} h, about ${r3Untethered.toFixed(1)} h without the bench's USB cable). The page shows the model, not a correction for that gap.`),
       el("li", {}, "Every logged drain ran on firmware before the low-battery dimming existed, so the headline's dimmed tail is modelled, not yet measured.")),
     el("h3", {}, "Assumptions"),
     el("ul", {},
@@ -765,7 +766,7 @@ function update() {
   $("lcdOut").textContent = `${lcdPct}%`;
   const exact = {
     v: `Brightness ${state.v} of 255`, s: `Saturation ${state.s} of 255`,
-    h: `Hue ${state.h} of 255${colour ? `, ${colour}` : ""}`, lcd: `Screen level ${state.lcd} of 23, LCD ${lcdPct}%`,
+    h: `Hue ${state.h} of 255${colour ? `, ${colour}` : ""}`, lcd: `Screen ${lcdPct}%`,
   };
   for (const [id, text] of Object.entries(exact)) {
     $(id).setAttribute("aria-valuetext", text);
