@@ -254,6 +254,9 @@ static int fails;
 int main(void) {
     tmpdir = getenv("TEST_TMP");
     if (!tmpdir) tmpdir = ".";
+    char own_lock[512];   /* the test's own lock file, never the machine's */
+    snprintf(own_lock, sizeof own_lock, "%s/ak820ctl-flash.lock", tmpdir);
+    setenv("AK820CTL_LOCK", own_lock, 1);
     fault.drop_cmd = -1;
     mem = malloc(CHIP_SIZE);
     memset(mem, 0xFF, CHIP_SIZE);
@@ -339,7 +342,12 @@ int main(void) {
         if (fd >= 0) close(fd);
         CHECK(ctl(4, "flash", "write", hex(FLASH_ASSET_BASE + 0x200000u), write_file("small.bin", small, sizeof small)) == 0,
               "and runs once the other has ended");
-        unsetenv("AK820CTL_LOCK");
+        snprintf(lk, sizeof lk, "%s/no-such-dir/ak820ctl-flash.lock", tmpdir);   /* a lock that can't be made */
+        setenv("AK820CTL_LOCK", lk, 1);
+        e0 = n_erases;
+        rc = ctl(4, "flash", "write", hex(FLASH_ASSET_BASE + 0x200000u), write_file("small.bin", small, sizeof small));
+        CHECK(rc != 0 && n_erases == e0, "a lock that can't be made refuses too (rc %d), nothing erased", rc);
+        setenv("AK820CTL_LOCK", own_lock, 1);
     }
 
     /* F-001 */

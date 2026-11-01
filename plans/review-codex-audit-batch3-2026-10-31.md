@@ -346,3 +346,127 @@ What I checked and found sound:
 - **`75e78cb508`:** repeated module `36/33` cycles no longer restart the hold indefinitely. Board selections retain their hold, wake rearms the module allowance, and the promotion timer remains separate.
 
 I ran both Python host tests successfully with **in-memory fixtures and device imports stubbed**, plus the confirmation counterexample above. I did not build the C tests because the sandbox rejects temporary-file creation. No files were changed, no USB/HID interfaces were opened, and source inspection stayed inside the repository.
+## Codex's third verify: the second round's fixes and the low sweep (10-31 night)
+
+On `d99b9d3499`, `time-util-ak820pro` `1ca3cb2`, the outer repo's `d2338a7`
+and the low sweep `f3d7079d5f` (prompt: `review-prompt-audit-verify3.txt`):
+no P1; four P2s and three P3s. Every low-sweep fix read as correct (F-021,
+F-029, F-036, F-037, F-038, F-039, F-042, F-043, the op 17 clamp; F-040's
+health latch), and the sticky failure, `confirm_side()`, the correlated
+`xfer()` and the lock's lifetime sound. Dispositions, in the firmware's
+`4c7395a4c6` and `time-util-ak820pro` `cbff6b7`:
+
+- **P2 1, a store failure between the flush and the commit: fixed.**
+  `latched()` folds `env_store_failed()` (any wear-leveling failure since the
+  boot) into the profiles' latch wherever it is read: the commit's writes,
+  `writable()`, `prof_write_failed()` (sub 6, sub 7's [10] bit 1, the menu),
+  the restore's begin. `scripts/profiles_cut_test` fails the store between
+  a successful flush and the commit: unpublished, [10] 0x86.
+- **P2 2, the lock not machine-wide: fixed.** A `Global\` mutex on Windows
+  (not built on this Mac); `/tmp/ak820ctl-flash.lock` on POSIX, opened
+  read-only so another user can flock it; a lock that can't be made refuses
+  the session. The channel test checks that refusal too.
+- **P2 3, F-031's commit accepting a tail that arrived late: accepted.**
+  Without arrival stamps in the UART queue, a byte drained after a pass of
+  the board's own cannot be told from one the module sent late: codex's
+  counterexample (an empty read at 19 ms, the tail drained at 22 ms) and the
+  audit's F-031 case (the tail waiting behind a 20 ms pass) look the same.
+  The audit chose to keep the frame. The window is one pass at most (an
+  empty read past the lifetime aborts, `raw81_test.py`'s 10c), and a frame
+  still needs its sum, its CRC16 envelope and a fresh session seq. Dev
+  builds only.
+- **P2 4, F-040 under a whole wrap of animation: accepted.** It needs an
+  animation running without a break for 49.7 days; the latches and the
+  uptime stay where they are.
+- **P3 5, the cut test's allowance: fixed.** Windows' profile value is
+  allowed only for a second cut after the flip toward Windows emptied
+  Windows' snapshot (its first block write after the owner byte), and only
+  where the Mac has a profile to overwrite it with. Codex's counterexample
+  must now recover 25. The kb block's two-line model remains.
+- **P3 6, the ratchet test passing on cases that never ran: fixed.** It fails
+  on a setup error, a control that rose or a short count.
+- **P3 7, the clock comment: fixed.** The fastest sample usually passes over
+  one that waited; no RTC fake was built.
+
+### Verbatim, the third verify
+
+**No P1 found. Four P2 issues and three P3 gaps remain.** These are source-level findings; the Python profile suite passed with in-memory fixtures.
+
+1. **P2 — A store failure after sub 6 still escapes commit and confirmation.**  
+   [profiles.c:759](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:759), [menu_glue.c:187](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_glue.c:187).
+
+   Counterexample: restore on the backup’s own side. Sub 6 flushes successfully. Before sub 3, an eligible `flash_tidy_task()` consolidation erases the store but fails while programming it. `wl_failures` becomes nonzero; `TX_FAILED` remains clear. Subsequent small commit writes succeed, and no flip requires another flush. Sub 7 reports no failure, while read-back compares against the intact RAM cache. The host reports success over damaged durable settings.
+
+   **Fix:** consult the global store-failure state before publishing magic/ownership, latch it into profile failure state, and expose it through sub 7. Add failure injection **between the successful flush and commit**, including failed consolidation.
+
+2. **P2 — `flash_lock()` does not guarantee machine-wide exclusion.**  
+   [ak820ctl.c:145](/Users/jdlien/code/ak820-pro/time-util-ak820pro/ak820ctl.c:145).
+
+   Counterexamples:
+   - Two Windows logon sessions obtain different `Local\ak820ctl-flash` mutexes and can interleave writes to the same firmware buffer.
+   - `CreateMutexA()` returning `NULL`, or POSIX `open()` failing, permits the operation without a lock.
+   - Different `TMPDIR` values select different POSIX lock files.
+
+   **Fix:** fail closed on lock-creation errors and use a shared namespace/path—`Global\` on Windows, with appropriate access handling. Keep the existing lifetime through verification and relocking. Test creation failures and namespace differences; the current held-file test covers ordinary contention only.
+
+3. **P2 — F-031 removes effective lifetime checking at commit.**  
+   [raw81.c:114](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/bluetooth/raw81.c:114), [raw81.c:140](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/bluetooth/raw81.c:140).
+
+   Counterexample: collect the first 33 bytes at time zero, observe an empty queue at 19 ms, receive the valid checksum byte at 21 ms, and drain it at 22 ms. Commit tests the saved **19 ms** age and accepts the frame despite its 20 ms lifetime.
+
+   More generally, `empty_tick` is initialized at the start and updated only when its age is below the lifetime. Its commit check therefore cannot reject this late completion. I checked the timing arithmetic using a valid generated envelope.
+
+   **Fix:** distinguish arrival time from processing time, using receive timestamps or equivalent queue metadata. Preserve acceptance of bytes that arrived promptly behind a long firmware pass, while rejecting genuinely late tails. Restore that distinction in the tests; rewriting the former commit-timeout case removed its coverage.
+
+4. **P2 — F-040 still depends on observations that animation playback can suppress across a complete wrap.**  
+   [ak820pro.c:665](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/ak820pro.c:665), [rtc_persist.c:32](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/rtc/rtc_persist.c:32), [indicators.c:343](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/indicators.c:343).
+
+   Counterexample: start continuous animation five seconds after boot on USB and stop it at uptime `2^32 + 3000` ms. Animation suppresses `rtc_task()`, so the accumulator misses the entire wrap and sees only 3000 ms. The persistence boot delays return.
+
+   On a packless board, the same animation can prevent `battery_is_absent()` from ever latching its 15-second grace. Returning to the dashboard at that time falsely reinstates the grace until timer value 15000.
+
+   **Fix:** maintain uptime and latch boot thresholds from unconditional periodic work. Keep RTC bus operations gated separately. The added `diag_sim` assertion calls `rtc_persist_due()` with an already-correct 64-bit value; it does not exercise this integration.
+
+5. **P3 — The second-cut allowance still accepts loss before the recovery writes anything.**  
+   [profiles_cut_test/test.c:267](/Users/jdlien/code/ak820-pro/scripts/profiles_cut_test/test.c:267).
+
+   Counterexample: `k=0`, first cut at `c=n` after the completed Windows→Mac flip, recovery on Windows, and `c2=w2_from=0`. The second cut happens **before** the first owner write. Windows’ last record still contains 25, so Windows must recover 25. Nevertheless, the oracle accepts results Windows=20, Mac=95.
+
+   **Fix:** permit fallback to the profile only after a durable step actually destroys the incoming side’s saved snapshot. The first owner-write index is too early, especially with the inclusive comparison. Add an assertion that rejects the counterexample above. The acknowledged two-line approximation of the real ten-byte keyboard block also remains.
+
+6. **P3 — The battery ratchet suite can pass when its cases fail to run.**  
+   [battery_ratchet_test/test.c:284](/Users/jdlien/code/ak820-pro/scripts/battery_ratchet_test/test.c:284), [run.sh:20](/Users/jdlien/code/ak820-pro/scripts/battery_ratchet_test/run.sh:20).
+
+   Counterexample: every gap case returns a setup error. `setup` increases, `rose` remains zero, the executable returns success, and the launcher matches “0 gap cases with the level rising.” Control-case rises are also omitted from the exit condition.
+
+   **Fix:** fail on `rose || ctrl_rose || setup`, require the expected completed-case count, and propagate rises during setup.
+
+7. **P3 — The clock’s “fastest sample discards foreign-report waits” claim is false.**  
+   [ak820ctl.c:92](/Users/jdlien/code/ak820-pro/time-util-ak820pro/ak820ctl.c:92), [ak820ctl.c:405](/Users/jdlien/code/ak820-pro/time-util-ak820pro/ak820ctl.c:405).
+
+   Counterexample: all five GET samples wait through foreign traffic. Minimum RTT still selects one; it cannot discard all affected samples. The verification GET is a single sample without that selection.
+
+   **Fix:** describe minimum RTT as a heuristic and add RTC-specific fake-device coverage. If excluding such samples is required, have `xfer()` report discarded traffic and explicitly exclude/retry those measurements.
+
+What I checked and found sound:
+
+- **Sticky failures:** saturation and explicit-consolidation accounting are correct. The unchanged-cache deferred-write counterexample is fixed. Refusing later flushes until reboot is a defensible conservative policy; finding 1 concerns incomplete enforcement.
+- **`confirm_side()`:** polling every capable commit closes the previous pending-countdown escape. Comparing the committed side with the settled side fixes that reported case, and reported failures/timeouts are rejected. The caller’s new regression cases pass.
+- **`xfer()`:** full-length, channel/subcommand and command-or-unhandled matching closes the foreign `FC_INFO/FS_BUSY` → legacy-clock fallback. Same-command traffic still requires exclusive ownership.
+- **Flash-lock lifetime:** restricting it to flash operations and retaining it through verification/relocking is appropriate; ordinary `info` and clock commands do not replace the firmware’s write/CRC session.
+- **Macro warnings:** both now describe only established outcomes.
+
+| Low-sweep fix | Reading verdict |
+|---|---|
+| F-021 | Correct: forgetting an estimate ends the run; the downward guard independently prevents a stale target raising the level. |
+| F-029 | Correct in both keymaps: restores only saved `no_gui`. |
+| F-036 | Correct: `was_pair` forces repaint when the shared buffer retains its pointer. |
+| F-037 | Correct: playback consumes relayout; its exit paths force the necessary repaint. |
+| F-038 | Correct for the reported collision: class changes invalidate the rows, including on entry. |
+| F-039 | Correct: an idle blit wait no longer claims the stall mark. |
+| F-040 | Health’s settle latch is correct; ordinary sampled RTC deltas wrap correctly. The animation gaps remain above. |
+| F-042 | Correct: panel ownership gates Pairing’s backstop; entering debug rolls back the edit. |
+| F-043 | Correct for the round trip: return releases forced Dim before rebuilding the menu stack. |
+| Dev op 17/sub 4 | Correct: the maximum is now 5000 ms. |
+
+I reviewed the specified commits and test sources. I ran `profiles_host_test.py` with device imports stubbed, JSON fixtures entirely in memory, and bytecode writing disabled. I did not build or run the C tests because the sandbox prohibits temporary-file creation. No files changed, no USB/HID devices were opened, and file inspection stayed inside the repository.

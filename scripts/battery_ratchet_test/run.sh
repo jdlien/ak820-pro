@@ -17,4 +17,3 @@ cp "$kb/battery.c" "$kb/battery.h" "$kb/battery_tail.h" "$kb/power.c" "$kb/power
     -o "$o/test" "$here/test.c" "$o/power.c"
 "$o/test" > "$o/out.txt" 2>&1 || { tail -20 "$o/out.txt"; exit 1; }
 tail -1 "$o/out.txt"
-grep -q "0 gap cases with the level rising" "$o/out.txt"

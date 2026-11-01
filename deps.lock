@@ -26,7 +26,7 @@ qmk_firmware-ak820pro  https://github.com/jdlien/qmk_firmware.git  ak820pro-jdli
 # ak820ctl (clock + flash provisioning) and the asset pipeline (mkraw.py,
 # mkanim.py). MUST be this fork's branch, not fpb/main: main has no --bias
 # support, which the timekeeper agent drives, and the failure is silent.
-time-util-ak820pro  https://github.com/jdlien/time-util-ak820pro.git  ak820pro-local  1ca3cb2ca73ba7070bb6f03eca1ade0bf2d5bfec
+time-util-ak820pro  https://github.com/jdlien/time-util-ak820pro.git  ak820pro-local  cbff6b7ec4802e1bae2b528f6d79a044df147f2c
 
 # The flasher. fpb's fork, NOT SonixQMK/main: main fails on macOS Tahoe while
 # looking identical. Must be built USE_LIBUSB=1 -- a plain build also looks

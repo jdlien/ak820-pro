@@ -47,6 +47,7 @@ bool        env_settings_flush(void) {
     fk_flush_last = ee[PROF_BASE + PROF_REC_OFF(PROF_LAST)];
     return !fk_flush_fails;
 }
+bool        env_store_failed(void) { return fk_flush_fails; }
 void        env_settings_touch(void) { fk_touches++; fk_pending = true; }
 bool        env_settings_pending(void) { return fk_pending; }
 

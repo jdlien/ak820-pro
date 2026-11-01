@@ -283,5 +283,9 @@ int main(int argc, char **argv) {
             }
     printf("SUMMARY: control rises %d; %d gap cases with the level rising on battery, %d clean, %d setup/abnormal\n",
            ctrl_rose, rose, clean, setup);
-    return rose ? 1 : 0;
+    /* Every case must have run and come out clean: a setup failure, a control
+     * that rose, or a short count fails the test too (codex's third verify). */
+    int expect = (int)(sizeof sleeps / sizeof sleeps[0] * sizeof drops / sizeof drops[0]) * 5 +
+                 (int)(sizeof gaps / sizeof gaps[0] * sizeof drops / sizeof drops[0]) * 3;
+    return rose || ctrl_rose || setup || clean != expect ? 1 : 0;
 }

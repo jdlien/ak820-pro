@@ -128,6 +128,7 @@ bool env_settings_flush(void) {
     (void)ok;
     return !wl_failed_ever || !flush_reports;
 }
+bool env_store_failed(void) { return wl_failed_ever && flush_reports; }
 void env_settings_touch(void) { fk_pending = true; kb_dirty = true; }
 bool env_settings_pending(void) { return fk_pending; }
 
@@ -264,13 +265,16 @@ static bool cut_run(int k, int c, int c2, int w2_from, bool mac, int r[2], uint8
      * back; w2_from its first step, the owner byte OW_MOVING | Windows): then
      * Windows is the side arrived at, and the documented loss is its own, its
      * changes since its profile (20). Nowhere else (codex's verify). */
-    bool w2 = !mac && k != 2 && w2_from >= 0 && c2 >= w2_from;
+    bool w2 = !mac && (k == 0 || k == 3) && w2_from >= 0 && c2 >= w2_from;   /* the Mac with a profile: its record overwrites Windows' */
     return mac ? mac_ok(k, r[0]) && (win_ok(k, r[1]) || (w2 && r[1] == 20))
                : (win_ok(k, r[0]) || (w2 && r[0] == 20)) && mac_ok(k, r[1]);
 }
 
 /* The steps a clean boot takes after the flip cut at c (the recovery's), and
- * in *w2_from the first of its flip toward Windows (-1: none). */
+ * in *w2_from the first step after its flip toward Windows destroyed Windows'
+ * snapshot: the owner byte OW_MOVING | Windows, then the last record's state
+ * emptied by its first block write; a cut after that write landed is the
+ * first that can lose it (-1: none; codex's third verify). */
 static int boot_steps(int k, int c, bool mac, int *w2_from) {
     setup(k);
     cut_at = step + c;
@@ -280,10 +284,13 @@ static int boot_steps(int k, int c, bool mac, int *w2_from) {
     reboot(mac);
     settle_all();
     *w2_from = -1;
+    char want[48];
+    snprintf(want, sizeof want, "owner byte 0x%02X", 0x60 | PROF_SIDE_WIN);
     for (int i = base; i < step && i < 256; i++) {
-        char want[48];
-        snprintf(want, sizeof want, "owner byte 0x%02X", 0x60 | PROF_SIDE_WIN);
-        if (!strcmp(steplog[i], want)) { *w2_from = i - base; break; }
+        if (strcmp(steplog[i], want)) continue;
+        for (int j = i + 1; j < step && j < 256; j++)
+            if (!strncmp(steplog[j], "block", 5)) { *w2_from = j + 1 - base; break; }
+        break;
     }
     return step - base;
 }
@@ -466,6 +473,37 @@ static bool restore_deferred_fail(bool reports) {
     return reports ? ok : published;
 }
 
+/* Codex's third verify, finding 1: the restore's flush succeeds, then a store
+ * failure elsewhere (a consolidation's) before the commit: the commit must not
+ * publish, and sub 7 must report the latch. */
+static bool restore_fail_before_commit(void) {
+    restore_setup();
+    hid(1, 0, 0x77);
+    for (uint8_t p = 0; p < PROF_PAGES; p++) {
+        memset(rpt, 0, sizeof rpt);
+        rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x10; rpt[3] = 2; rpt[4] = p; rpt[5] = 0x77;
+        memcpy(&rpt[6], &r_blk[p * PROF_PAGE], PROF_PAGE);
+        prof_hid(rpt);
+    }
+    memset(rpt, 0, sizeof rpt);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x10; rpt[3] = 5;
+    memcpy(&rpt[4], r_live, PROF_REC);
+    prof_hid(rpt);
+    hid(6, 0, 0);
+    uint8_t fl = rpt[4];
+    wl_failed_ever = true;   /* flash_tidy's consolidation failed */
+    memset(rpt, 0, sizeof rpt);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x10; rpt[3] = 3; rpt[5] = 0x77; rpt[7] = 1u + PROF_SIDE_MAC;
+    prof_hid(rpt);
+    uint8_t cm = rpt[6];
+    hid(7, 0, 0);
+    bool published = d_ee[PROF_BASE + PROF_OFF_MAGIC] == PROF_MAGIC_V4, ok = fl == PROF_OK && cm != PROF_OK && !published &&
+                                                                            (rpt[10] & 2u);
+    printf("  the flush %u, then a store failure; the commit %u, the block %s, sub 7 [10] 0x%02X  %s\n", fl, cm,
+           published ? "published" : "unpublished", rpt[10], ok ? "ok" : "BUG");
+    return ok;
+}
+
 /* A write that fails in place of each step of the flip, the run going on, then
  * the reboot. flush_reports false: the control, the flush's status dropped. */
 static int fail_sweep(int k, bool reports) {
@@ -544,6 +582,8 @@ int main(void) {
     printf("\na deferred write of the restore's live record fails before the host's flush:\n");
     if (!restore_deferred_fail(true)) bad++;
     if (!restore_deferred_fail(false)) bad++;
+    printf("a store failure between the restore's flush and its commit:\n");
+    if (!restore_fail_before_commit()) bad++;
     preboot();
     printf("\n%d run(s), %d failure(s)\nRESULT: %s\n", runs, bad, bad ? "FAIL" : "PASS");
     return bad ? 1 : 0;

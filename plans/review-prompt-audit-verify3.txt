@@ -1,0 +1,18 @@
+Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it. Do not run anything that opens USB or HID devices, talks to a keyboard, or changes any file: this is a read-only review. (A keyboard on this machine is mid-way through a multi-day battery test.) You may build and run the host tests named below if they only write to a temporary directory; say if you do.
+
+The firmware is the QMK/ChibiOS port for the Ajazz AK820 Pro (CLAUDE.md at the repo root describes it); the audit is plans/AUDIT-2026-10-31.md. Two things to review before a release.
+
+1. Your second verify of Batches 3 and 4 (verbatim at the end of plans/review-codex-audit-batch3-2026-10-31.md, with the dispositions above it) raised four P2s and two P3s. Verify the fixes: in qmk_firmware-ak820pro (branch audit-fixes) `git show d99b9d3499` (wear_leveling_failures() saturating and counting consolidations, env_settings_flush() false while it is nonzero, sub 7's [10] bit 2); `git -C time-util-ak820pro show 1ca3cb2` (xfer() correlated for every command, flash_lock()); and the outer repo's `git show d2338a7` (ak820profiles.py's confirm_side() and its caller, the macro warnings, scripts/profiles_cut_test, scripts/profiles_host_test.py, scripts/flash_channel_test).
+
+2. The audit's low sweep, never reviewed: `git show f3d7079d5f` in qmk_firmware-ak820pro (F-021, F-029, F-031, F-036, F-037, F-038, F-039, F-040, F-042, F-043, and dev op 17 sub 4's clamp; each finding's text and proposed fix are in the audit), and the outer repo's tests for it: `git show 9eb5b37..d2338a7 -- scripts/battery_ratchet_test scripts/nogui_test scripts/raw81_test.py scripts/diag_sim` (or read those files). F-036, F-037, F-038, F-040's latches, F-042 and F-043 have no regression test of their own: say whether each fix is right by reading.
+
+Deliberate choices to check rather than accept:
+- The sticky store failure fails every later settings flush until a reboot, so a single failed write anywhere in the emulated EEPROM (a VIA keymap write, a consolidation in flash_tidy.c) refuses the profiles' flips and restores' commits for the rest of the boot.
+- confirm_side() decides "flipped" from the side the commit named versus the side settled once nothing is pending; it trusts [9] and [10] after a 3 s deadline.
+- xfer()'s match: rep[1], rep[2] equal to the request's, rep[0] the request's or 0xFF, a full 32 bytes. The clock's samples now may wait out a foreign report.
+- flash_lock() holds a flock (or a Local\ mutex on Windows, not built here) only for "flash" subcommands, from before the first command to the end of main(); a lock file it can't open lets the session go on.
+- F-031: raw81's lifetime judged only at the queue's empty reads, the commit taking the age from the last one. Is there an input that now completes a frame that should have been rejected?
+- F-040: rtc_persist's 64-bit uptime built from the 60 s scheduler's deltas.
+- F-021: the ratchet's run cleared in c5_forget(), and the step only downward.
+
+Report findings by severity (P1 must fix before release, P2 should, P3 tests/docs), each with a concrete counterexample and a proposed fix, then list what you checked and found sound.
