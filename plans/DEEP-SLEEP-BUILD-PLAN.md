@@ -400,6 +400,14 @@ sleep's sequence number (section 8).
   - The link's state cannot be asked, so a drop or a reconnect while asleep
     stays unknown until the module says otherwise. A missed `5B 32` is
     recovered by the 5A promotion. Accepted.
+    ⚠️ **Corrected by the 10-31 audit (F-023):** the promotion fires only
+    after a wake, on a 5A, and the host's LED report at connect went out
+    while the board slept; the module forwards changes only, so the next 5A
+    comes with a lock change, and before the fix none came from REJECTED at
+    all. Since then a link attempt under 60 s old holds off the sleep
+    (`DSB_LINKING`), the promotion fires from REJECTED too, and after a
+    sleep the band stops naming the "Hold Fn+Q 2s" remedy until the module
+    names a state again.
 - **USB, when a host appeared while the board slept.** The charge wake
   covers most cases. Otherwise:
   - **One re-attach**, if no SOF has arrived within 3 s of the wake. Its

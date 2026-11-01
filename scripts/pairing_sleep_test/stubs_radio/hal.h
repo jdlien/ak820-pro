@@ -23,6 +23,8 @@ extern SerialDriver SD2;
 #define EVENT_MASK(n) ((eventmask_t)1 << (n))
 #define TIME_IMMEDIATE ((sysinterval_t)0)
 #define CH_CFG_ST_FREQUENCY 187500u
+#define TIME_MS2I(ms) ((sysinterval_t)(((uint32_t)(ms) * CH_CFG_ST_FREQUENCY + 999u) / 1000u))
+systime_t chVTGetSystemTimeX(void);   /* world_sys.c: the simulated ms, in ticks */
 #define chnGetEventSource(sdp) (&(sdp)->es)
 void sdStart(SerialDriver *sdp, const SerialConfig *cfg);
 size_t chnReadTimeout(SerialDriver *sdp, uint8_t *b, size_t n, sysinterval_t t);

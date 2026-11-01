@@ -50,6 +50,7 @@ uint16_t battery_time_left_min(void) { return 0xFFFF; }
 void ch582_battery_poll_release(void) {}
 uint16_t ch582_battery_reports(void) { return 0; }
 bool ch582_is_pairing(void) { return false; }
+bool ch582_linking_recent(void) { return false; }
 void ch582_rx_resync(void) {}
 void ch582_sleep_wake(void) {}
 bool ch582_tx_idle(void) { return true; }
