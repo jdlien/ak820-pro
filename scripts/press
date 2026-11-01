@@ -1,0 +1,6 @@
+#!/bin/sh
+# The key presser, from any folder: `press status`, `press tap B 15`,
+# `press hold A`, `press batch A 15 40 1000` (scripts/presser.py has the rest).
+# To have it on PATH: ln -s "$PWD/scripts/press" ~/bin/press
+here=$(dirname "$(readlink -f "$0")")
+exec "$here/../venv/bin/python" "$here/presser.py" "$@"

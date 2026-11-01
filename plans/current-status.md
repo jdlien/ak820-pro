@@ -17,8 +17,12 @@ readiness reviews, the last one READY for stages 0-3; the raw reviews are
 beside it as `review-codex-row-isr-*-raw.md`. Nothing built. Stage 0
 needs the key-press rig rebuilt: JD's QT Py RP2040 with PC817C
 optocouplers into gutted-switch plugs (parts arriving 11-01; the wiring
-reference is a private artifact), plus a waveform witness. The first code
-is the presser's CircuitPython and a serial backend for the bench scripts.
+reference is a private artifact), plus a waveform witness. The first code,
+the presser's CircuitPython and a serial backend for the bench scripts, is
+written (`scripts/presser/`, `scripts/presser.py`, `--presser` in
+`keydrop_test.py` and `relay_press_test.py`; 24 in-process checks pass;
+nothing on a board yet). ⚠️ The QT Py on the bench is the power logger,
+so the presser needs its own RP2040 (a second QT Py or a Pico).
 
 ## 2026-10-22 — RESUME HERE
 

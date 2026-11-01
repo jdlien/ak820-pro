@@ -31,8 +31,10 @@ R_SHUNT = 0.015      # Adafruit 5832's shunt (its driver's default)
 CURRENT_LSB = 5e-6   # A per count: 2^19 counts = 2.62 A, the +-40.96 mV range at 15 mohm
 SHUNT_CAL = round(13107.2e6 * CURRENT_LSB * R_SHUNT * 4)  # x4 for ADCRANGE=1
 
-# GRB byte order. Green is dim to sit among the desk's other LEDs.
-GREEN, AMBER, RED = bytes((6, 0, 0)), bytes((10, 30, 0)), bytes((0, 30, 0))
+# GRB byte order. Green is the dimmest step there is, 1 of 255: visible on
+# its own, and it does not light the desk; amber and red are warnings and
+# stay brighter.
+GREEN, AMBER, RED = bytes((1, 0, 0)), bytes((10, 30, 0)), bytes((0, 30, 0))
 pixel_power = digitalio.DigitalInOut(board.NEOPIXEL_POWER)
 pixel_power.switch_to_output(value=True)
 pixel = digitalio.DigitalInOut(board.NEOPIXEL)

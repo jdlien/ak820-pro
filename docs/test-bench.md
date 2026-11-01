@@ -659,3 +659,75 @@ with a track playing and the overlay; 10,000-press runs; a nearly flat
 pack; a weak link; and the first key after a long idle, the baseline for
 every standby design. The relay's contact life (millions at signal current)
 is not a concern at that scale.
+
+## The key presser: two optocouplers on an RP2040 (10-31: written, not yet built)
+
+The wake rig's successor, planned in
+[`plans/ROW-ISR-PLAN.md`](../plans/ROW-ISR-PLAN.md) ("The key-press rig")
+and the hard prerequisite for its stage 3: two keys the Mac can press, on
+different key rows, silently, with the dwell exact to a fraction of a
+millisecond and **each closure stamped at the contact**, not at the command.
+
+**Hardware.** An RP2040 board running CircuitPython drives two Sharp PC817C
+optocouplers, each wired across one key's switch contacts through a
+gutted-switch plug in the hot-swap socket: the GPIO through 330 Ω into the
+opto's LED (pins 1-2), its phototransistor across the key (pin 4, the
+collector, on the column side; pin 3 on the row side; if the key never
+registers, swap them, since the keyboard's diode blocks the other
+direction and nothing is harmed). Channel A is A0 (GPIO29), B is A1
+(GPIO28), on a QT Py RP2040; GP26 and GP27 on a Pico. The keyboard and the
+presser share nothing but the opto's light: no ground, ever. The wiring
+drawing is the private artifact "AK820 key-press rig". Parts ordered
+10-31: PC817C (20), a resistor kit, 28 AWG silicone wire; the plug is a
+switch's bottom housing with the leads soldered to the contacts' bases and
+a two-pin connector a few centimetres out, so the keyboard unplugs from
+the rig instead of tearing the joint, which is how the old rig died.
+⚠️ **The presser needs its own board.** The QT Py RP2040 on the bench is
+the power logger (above), in service through the drain, and its drive is
+not to be touched while one runs; a second QT Py RP2040 or a Pico is the
+presser.
+
+**Firmware and host:** `scripts/presser/boot.py` and `code.py` go on the
+presser board's `CIRCUITPY` (the whole protocol is in `code.py`'s
+header). `boot.py` turns HID and MIDI off, opens a second serial port for
+the commands (the console keeps its escape codes and REPL to itself) and
+names the board **pid.codes `1209:0001` "AK820 key presser"**, never an
+Adafruit id, so `power_log.py`, which takes the first Adafruit board when
+`--serial` is not given, cannot mistake it for the logger's QT Py. The
+host side is `scripts/presser.py` (`scripts/press` from anywhere):
+
+```
+press status                 the board, its uid, each channel's state and count
+press tap [A|B] [ms]         one press, default A, 40 ms; prints the actual dwell
+press hold B / press release B
+press batch A 15 40 1000     n presses timed on the board; --csv keeps every stamp
+press sync                   the board's clock against the Mac's, with the uncertainty
+press led 3                  the idle light, 0-255
+```
+
+The board stamps every closure and release on its own clock (1/32768 s
+steps, the actual dwell reported, usually within 0.1 ms of the asked);
+`sync()` puts that clock on the Mac's by the shortest of several round
+trips and reports half that trip as the uncertainty, and a second sync
+after a batch gives the drift. `keydrop_test.py --presser A` and
+`relay_press_test.py --presser A` take the presser in place of relay 1
+(one small interface, `press`/`batch`/`hold`/`release`, with the relay
+kept behind it as `RelayKey`) and print the clock note beside their
+latencies: differences inside it are not claimed. A held key is released
+by the board itself if the Mac keeps the port closed for over a second.
+The idle light is a dim green, a brighter flick during each press, amber
+while a key is held.
+
+**Proof so far:** `scripts/presser_selftest.py` runs the board's `code.py`
+in-process under CPython against `presser.py` through an in-memory
+serial: 24 checks of the protocol, the timing loop, the stop, the guard and
+the error paths pass. Nothing has run on a board. **Bring-up, in order:**
+copy the two files to the presser's `CIRCUITPY` and `press find` (two
+ports, one answers); an LED and a resistor from A0 to GND, and `press tap`
+blinks it; then one channel's opto across a plug in (0,13), VIA's key
+tester (host agents paused), `press tap A 300`; then
+`relay_press_test.py --presser A` for the dwell map against the debounce,
+which the old rig put at ~10 ms. `deep_sleep.py`, `deep_cycles.py`,
+`ladder_sleep.py` and `ladder_check.py --rig` still press through relay 1,
+which presses nothing since 10-23; moving them to the presser is a later
+edit, once a channel is proven.

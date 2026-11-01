@@ -5,6 +5,8 @@ readiness review, [`review-codex-row-isr-review14-2026-10-31-raw.md`](review-cod
 stages 4 and 5 sufficiently specified once 0-3 pass; the 62.5 µs cadence
 an experiment.** Nothing built. Next: stage 0 (the baseline) once the rig
 and the witness exist; JD's optocouplers, resistors and wire arrive 11-01.
+The presser's code exists (10-31, self-tested in-process, not on a board)
+and needs its own RP2040: the bench's QT Py is the power logger.
 Every stage lands on white first, where the bench is, and on black after
 its gates pass (corrected after the review; revision 0 had black first,
 carried from the diagnostics' pattern unexamined).
@@ -1133,8 +1135,15 @@ What "better than before" should mean, most valuable first:
    board, so a scan fault on one row cannot hide behind another; the same
    column for both covers the shared-column leak case.
 3. **An optocoupler across each switch's contacts**, not a bare MOSFET
-   (which is not galvanically isolated), driven by JD's QT Py RP2040 from
-   the Mac over USB serial. The part is the Sharp PC817C (JD's order,
+   (which is not galvanically isolated), driven by an RP2040 board from
+   the Mac over USB serial: **a second QT Py RP2040 or a Pico, not the
+   QT Py on the bench, which is the power logger** (found 10-31: its
+   drive carries `scripts/qtpy/code.py` and the drain's charge count runs
+   through it). The presser's code is written and self-tested in-process,
+   not yet run on a board: `scripts/presser/` for the board,
+   `scripts/presser.py` for the Mac, `--presser A|B` in `keydrop_test.py`
+   and `relay_press_test.py` ([docs/test-bench.md](../docs/test-bench.md),
+   "The key presser"). The part is the Sharp PC817C (JD's order,
    10-31; the TLP222A photorelay would do too but takes a month to ship):
    its LED from the GPIO through 330 Ω (~6 mA), its phototransistor across
    the contacts with the collector, pin 4, on the key's column side and the
@@ -1143,7 +1152,7 @@ What "better than before" should mean, most valuable first:
    reverse path, so the rule is try, then swap. Its microsecond switching
    is faster than a photorelay's millisecond turn-on, which suits the
    short-tap tests. The wiring reference is the artifact "AK820 key-press
-   rig: QT Py RP2040 + TLP222A" (a PC817C panel beside the TLP222A one). The PC817C's switching times
+   rig: QT Py RP2040 + PC817C (or TLP222A)", drawn for the PC817C. The PC817C's switching times
    and its behaviour when reversed, and the LVC buffer's ratings in item
    4, come from the manufacturers' datasheets, not from this repository's
    sources, and stay labelled unverified until the exact parts' datasheets
@@ -1697,3 +1706,13 @@ end.
   diagnostics) without a reason, and review 2 had already noted that a day
   on black without the rig measures nothing. A logistics change outside the
   design, not re-reviewed. Committed and pushed.
+- 14:51 the presser written: `scripts/presser/boot.py` and `code.py` for the
+  board (two channels, closures stamped on the board's clock, batches
+  timed there, a held-key guard, its own USB identity), `scripts/presser.py`
+  and `scripts/press` for the Mac, `--presser A|B` in `keydrop_test.py`
+  and `relay_press_test.py` with relay 1 kept behind the same interface,
+  and `scripts/presser_selftest.py`, which runs the board's code under
+  CPython against the host's: 24 checks pass. Found on the way: the QT Py
+  on the bench is the power logger, so the presser needs its own RP2040;
+  its boot.py names it pid.codes 1209:0001 so the recorder's "first
+  Adafruit board" cannot take it. Nothing has run on a board.
