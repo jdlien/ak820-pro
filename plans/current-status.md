@@ -1,8 +1,51 @@
 # Current status
 
-Updated 2026-10-31, 06:10. The block below is where things stand, written to
+Updated 2026-10-31, 22:35. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-10-31 night — the audit's fixes done on `audit-fixes`; v0.3.0 waits on white's check
+
+The firmware audit's fixes ([`AUDIT-2026-10-31.md`](AUDIT-2026-10-31.md),
+[`BACKLOG.md`](BACKLOG.md)'s audit section for what is fixed and open) are
+done on the firmware's `audit-fixes`: five batches, codex's review of each
+and two verify rounds with every finding fixed or dispositioned
+(`review-codex-audit-batch1-2026-10-31.md` to `-batch4-`), then the low
+sweep. 28 host tests in `scripts/audit_tests.sh`, plus the menu suite,
+`raw81_test.py`, `profiles_host_test.py`, `diag_sim`. A protocol change for
+any host tool: a profiles restore now applies the live record before its
+commit, and the commit names the live settings' side (sub 3's [7]; sub 8
+is gone, never released); `ak820profiles.py` does it.
+
+**On white since 20:19 10-31: `57d1368f17`** (Batches 1-5, token
+`0x191986cf`, [`../history/audit-fixes-flash2-20261031/`](../history/audit-fixes-flash2-20261031/README.md)).
+Since then, on no board yet: the review fixes (the link hold's bound, the
+raw HID cap, the WIP latch, `FC_INFO`, the restore's order, the boot gate,
+the sticky store failure) and the low sweep. The last dev build:
+`via-dev-d99b9d3499-20261031-222523.bin` (token `0x9a76b429`, heap gap
+152 B); the daily `via-daily-d99b9d3499-20261031-222831.bin` (2288 B).
+Codex's third verify of the second round and the low sweep was running at
+22:30.
+
+**The release, v0.3.0 (JD's go, 10-31):**
+1. White wakes (one key: relay 2 stays off for the drain) and the release
+   candidate goes on as a dev build with `flash.sh`; a check on it: a deep
+   sleep and a wake on battery, typing over BT, a Win/Mac flip and back.
+2. `ak820pro-jdlien` fast-forwards to `audit-fixes` (34 commits, clean),
+   `deps.lock` pins it, `./build.sh daily` from the clean pin.
+3. The agent changed since v0.2.0 (Warren's lock-light hold, `ak820 sleep`,
+   the crash sites): `ak820-agent/Cargo.toml` and `Cargo.lock` to 0.3.0,
+   `cargo test`.
+4. `git tag -a v0.3.0`, push; CI makes the Release with the agent zip;
+   `scripts/release-firmware.sh v0.3.0`.
+5. `scripts/sandbox-6b.ps1 -Tag v0.3.0 -Wait` runs on Windows only: gremlin
+   (Warren).
+6. Docs: CLAUDE.md's "Current state", `README.md` if anything a stranger
+   sees changed.
+
+Not in it: Warren's waking-key hold for BT (on Batch 5, not ready at 22:30);
+the wake fixes' case 3 is unrun (it needs a key on white with the script
+armed). Next after the release: the row ISR rewrite, below.
 
 ## 2026-10-31 — the row ISR rewrite is planned and READY, not built
 
