@@ -685,7 +685,8 @@ the rig instead of tearing the joint, which is how the old rig died.
 ⚠️ **The presser needs its own board.** The QT Py RP2040 on the bench is
 the power logger (above), in service through the drain, and its drive is
 not to be touched while one runs; a second QT Py RP2040 or a Pico is the
-presser.
+presser. The same board carries the waveform witness (below): `code.py`
+routes its `W` lines to `witness.py` beside it.
 
 **Firmware and host:** `scripts/presser/boot.py` and `code.py` go on the
 presser board's `CIRCUITPY` (the whole protocol is in `code.py`'s
@@ -731,3 +732,108 @@ which the old rig put at ~10 ms. `deep_sleep.py`, `deep_cycles.py`,
 `ladder_sleep.py` and `ladder_check.py --rig` still press through relay 1,
 which presses nothing since 10-23; moving them to the presser is a later
 edit, once a channel is proven.
+
+## The waveform witness: the PIO on the presser's board (11-01: written, not yet on a board)
+
+Rig item 4 of [`plans/ROW-ISR-PLAN.md`](../plans/ROW-ISR-PLAN.md): the
+instrument that sees a pulse. The camera integrates for milliseconds and
+the INA228 for a fifth of a second; the rewrite's gates are claims about
+pulses tens of nanoseconds wide, one per slot, none during a hold-off, a
+clean restart. The presser's RP2040 is the instrument: its PIO samples
+four lines of the keyboard every clock, 125 million a second on a QT Py
+RP2040, into RAM by DMA, and the capture goes to the Mac over the
+presser's data port.
+
+**Wiring.** Four consecutive GPIOs, bit 0 first: on a QT Py RP2040 **SDA
+(GPIO24), SCL (GPIO25), A3 (GPIO26), A2 (GPIO27)**, leaving A0 and A1 to
+the presser; on a Pico GP2-GP5. Each line comes from the keyboard through
+a **1 kΩ series resistor** and nothing else; the grounds are common
+through the data cable. The keyboard's lines swing to its own rail, 3.90 V
+on battery and 4.5-4.8 V on USB, against the RP2040's rating of its 3.3 V
+supply plus half a volt, so: ⚠️ **relay 2 stays off while the probe is
+attached** (on battery the overshoot is a tenth of a volt, which the
+resistor and the pin's diode carry at a fraction of a milliamp; on USB the
+same resistor would pass about a milliamp, a risk to the capture board),
+and ⚠️ **the capture board is powered before the keyboard's lines reach
+it** (unpowered, it clamps lower). The bench's battery state keeps the
+data cable, so the host's commands work as on USB. A Pico 2 (RP2350)
+takes 5.5 V on its plain digital pins while powered and needs no care but
+the powered-first rule. The LVC Schmitt buffer per line (SN74LVC1G17) is
+the plan's route for captures with the USB rail live; nothing in stages
+0-2 needs one. The plan's line assignment: 0 a column (the LED's on-time
+is the LOW pulse), 1 a mux row (active high), 2 the marker, the Caps
+LED's pin D15 (high through a dev hold-off, op 28), 3 the inner marker
+C15.
+
+**Firmware and host:** `scripts/presser/witness.py` goes on the presser
+board's `CIRCUITPY` beside `code.py`, which routes `W` lines to it (the
+protocol is in its header). The host side is `scripts/witness.py`:
+
+| Command | What it does |
+|---|---|
+| `witness.py info` | The board's witness: its pins, system clock, buffer (words) and whether the PIO is ready. |
+| `witness.py levels` | The four lines read once as plain inputs: the probe's attachment check (a released column reads 1). |
+| `witness.py cap --out DIR/NAME [--lines 1\|2\|4] [--rate HZ\|full] [--ms MS \| --words N] [--trig none\|rise:I\|fall:I] [--wait MS]` | One capture: the first N lines at the rate, now or from line I's edge (to one sample), into `NAME.bin` (the raw words) and `NAME.json` (the actual rate, the trigger, the board's stall flag and stamps), then the report. |
+| `witness.py analyze DIR/NAME [--active 0:low,1:high,..] [--marker I] [--slot-us US] [--edges CSV] [--json]` | The report from a saved capture: per line the pulse widths, periods and gaps (min, median, max in ns), the longest gap, periods in slots; for the marker line each interval and what every other line did inside it; every transition to a CSV. |
+
+**What it resolves.** One sample is 8 ns at the full rate; the width
+uncertainty is one sample, which is the plan's requirement for the width
+gates and the one-tick glitch test, on one line at a time. Four lines at
+the full rate push a FIFO word every two cycles, beyond the DMA, and the
+board reports a FIFO stall (`stall=1`: the capture is not continuous), so
+the marker picture (column, mux row, marker) runs at a quarter rate, 32 ns
+a sample, which resolves a 208 ns pulse to 15% and a slot exactly. The
+buffer is what the board's heap gives, about 48k words on a QT Py: 12 ms
+of one line at the full rate, 12 ms of four lines at a quarter of it;
+32/lines samples a word. A Pico 2 has twice the RAM and a 150 MHz clock.
+The DMA is armed before the state machine restarts, so the capture's
+first word is the first the program pushed; a trigger that never comes
+times out at `--wait` and the board answers normally after.
+
+**Self-test, no hardware:** `venv/bin/python scripts/witness_selftest.py`
+runs the board's `code.py` and `witness.py` in-process with a fake PIO
+that hands them a synthetic stream, against `scripts/witness.py` through
+an in-memory serial: the PIO encodings, the packing and its decode, the
+base64 transfer and CRC, the pulse and marker arithmetic, the error
+paths, the timeout (33 checks). The sampling itself is the plan's
+qualification on the board: with the probe on, `levels` shows the
+released column high, VIA's key tester no phantom, and the PWM waveform
+unchanged against an unprobed neighbour.
+
+## The row ISR's diagnostics: dev op 28 (11-01, built, not yet on a board)
+
+Stage 0b of [`../plans/ROW-ISR-PLAN.md`](../plans/ROW-ISR-PLAN.md) on a
+dev build from the `row-isr` branch (`rgb/rowisr_diag.c`), driven by
+`scripts/rowisr_diag.py`:
+
+| Command | What it does |
+|---|---|
+| `rowisr_diag.py regs [TIMER\|all] [PAGE]` | A CT16 timer's registers as they stand (`TMRCTRL`, `TC`, `PRE`, `MCTRL`, `PWMCTRL`, `RIS`, the terminal match; page 1 the second set), decoded: `CEN`, each match's IE/RST/STOP, the PWM enables. `all` is CT16B0, B1, B2 and B4. Reads only. |
+| `rowisr_diag.py hold MS` | The row ISR's NVIC line off for 1-10000 ms, everything else running: Q4, what a stall shows (a hot row or dark), by eye, camera or the INA228. The hold is marked on the Caps Lock LED's pin D15, high for its length, the rising edge in one critical section with the disable and the falling edge with the enable, for a probe. Timed by the 20 kHz tick; refused while a hold or skip runs, while the tick is stopped, or while Caps Lock is lit (no edge to mark); a tick stop (light sleep's bit 3, deep sleep) cancels it with the line released, counted apart, and the housekeeping task ends one the tick failed to end. The line is held through the driver's nesting hold, so a clock-chip transaction overlapping it keeps the line off until its own end: the status flags that hold as overlapped, not a measurement. |
+| `rowisr_diag.py skip MS` | The callback does its LED work and skips the key scan for MS ms (keys dead meanwhile): health page 4's callback metric with and without it attributes the scan's cost (stage 0b). Timed and refused as `hold` is. |
+| `rowisr_diag.py status` | The hold's and the skip's state, the counts (ended by the tick, by the backstop, cancelled), whether the row line is enabled now and the driver's hold depth, whether the last hold overlapped, and whether the boot's prime timed out (Bootmagic then scanned an empty matrix). |
+| `rowisr_diag.py led INDEX R G B` / `led off` | One LED at one colour and every other dark, kept after every render: with a slow tagged slot sequence on the witness it settles Q6, which physical LED each mux pin drives. |
+
+Raw HID is exclusive on macOS: run it between a trial's reads, as the other
+bench scripts do. `--json` prints the decoded reply as one object.
+
+## Stage 0's baseline, as one command (11-01)
+
+`venv/bin/python scripts/rowisr_baseline.py run --label base --out DIR`
+takes the plan's stage 0 measurements that need no hands on the firmware
+the board is running: the token and settings, the health windows (idle;
+the debug page toggled once a second; a burst of clock-chip transactions;
+a cleanup window only with `--cleanup manual`, the operator at the menu's
+Write test), and the INA228 holds (Solid white, red, green and blue at
+64, 128 and 255, forward and back, dark at the start, middle and end;
+each 8 s of settle and 40 s of rows read from the drain's `power.csv`,
+never from the QT Py's port), then puts the lighting and the live
+settings back. The same on the next build, and
+`rowisr_baseline.py compare DIR/base.json DIR/stage1.json` reads the 3%
+gates. Bench state for a run: data on (`uhubctl ... -a on -e`) and off
+after; relay 2 untouched; the daemon paused for the whole run
+(`launchctl bootout gui/$UID/com.jdlien.ak820pro.agent`, back with
+`bootstrap`), since it seizes raw HID and its clock sync writes the PCF.
+A run that dies leaves `DIR/lighting-before.json` and
+`DIR/settings-before.json` to restore by hand (its header says how).
+About 25 minutes a run.

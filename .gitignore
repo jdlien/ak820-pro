@@ -1,6 +1,10 @@
 # Upstream clones -- each is its own repo with its own remote. Cloned by
 # ak820pro-builds/ak820pro-mac-setup.sh, not vendored here.
 qmk_firmware-ak820pro/
+# Worktrees of the firmware clone, one per long-lived branch (row-isr since 11-01):
+# `git -C qmk_firmware-ak820pro worktree add ../qmk_firmware-ak820pro-<name> <branch>`,
+# built with AK820_QMK_HOME pointing at it (env.sh).
+qmk_firmware-ak820pro-*/
 ajazz-ak820-pro/
 time-util-ak820pro/
 SonixFlasherC/

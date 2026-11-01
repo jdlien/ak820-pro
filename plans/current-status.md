@@ -1,8 +1,54 @@
 # Current status
 
-Updated 2026-10-31, 22:35. The block below is where things stand, written to
+Updated 2026-11-01, 15:40. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-11-01 evening — the witness's software and stage 0's runner written; white's session sequenced
+
+JD okayed an interim flash of the row ISR's stage 1 on white mid-drain
+(36% left, 4-5 days to the cut). The audit session flashes its v0.3.0
+candidate (4c7395a4c6, `via-dev-4c7395a4c6-20261031-224044.bin`) and
+runs its release checks first, then hands white over; the stage 1 A/B
+follows in one sitting: `scripts/rowisr_baseline.py run --label base`,
+`flash.sh` with `via-dev-a8a567308d-20261101-121551.bin`, the same run as
+`stage1`, `compare`. Bench state for it: the daemon paused
+(`launchctl bootout`/`bootstrap`), data on only for the session, relay 2
+never touched, the lighting and the live settings dumped and restored.
+Written today, no hardware needed: the waveform witness as a module of
+the presser's board (`scripts/presser/witness.py`, the PIO at 125 MHz,
+`scripts/witness.py` on the Mac, `scripts/witness_selftest.py`), and the
+runner. The witness's front end is a 1 kΩ series resistor per line with
+the keyboard on the bench's battery state, not an LVC buffer to buy
+([`ROW-ISR-PLAN.md`](ROW-ISR-PLAN.md), rig item 4: the two rules). What
+waits for the presser (JD wires it 11-02): stage 0's short-tap baseline,
+Bootmagic, deep sleep's wakes, the phantom-or-missing count; for the
+witness's wires: the pulse-train capture and stage 0b's lifecycle tests.
+
+## 2026-11-01 — the row ISR rewrite's stage 1 built on `row-isr`; waiting on the rig
+
+Stage 1 of [`ROW-ISR-PLAN.md`](ROW-ISR-PLAN.md) (D1: the RGB driver and the
+key matrix board-local, `keyboards/a_jazz/ak820pro/rgb/rowisr.c`, with the
+ChibiOS PWM machinery kept so the move can be measured against the old
+driver) and stage 0b's dev op 28 (`rgb/rowisr_diag.c`,
+`scripts/rowisr_diag.py`: the timers' registers, a marked row-only
+hold-off, a one-LED pattern) are built on the firmware branch `row-isr`,
+in the worktree `qmk_firmware-ak820pro-rowisr/` (built with
+`AK820_QMK_HOME=$PWD/qmk_firmware-ak820pro-rowisr ./build.sh dev`; the main
+clone stays the audit session's checkout). Based on `audit-fixes`
+4c7395a4c6, which v0.3.0 fast-forwards onto the mainline, so no rebase is
+expected. Builds: dev at a 136 B heap gap (the untouched base 152), daily
+and fpb 2296 B. ⚠️ **Nothing flashed.** Stage 1 goes on white only after
+stage 0's baseline is taken with the rig on the firmware white runs then,
+and only on JD's word. Needed for stage 0: the presser on its own RP2040
+(the bench's QT Py is the power logger) and the witness, which needs an LVC
+Schmitt buffer per probed line (the plan's rig item 4). Codex reviewed
+the move twice (`review-codex-row-isr-stage1-2026-11-01-raw.md`: NOT READY,
+four P1s in the diagnostics and the bootloader quiesce, all fixed;
+`review-codex-row-isr-stage1-verify-2026-11-01-raw.md`: READY TO FLASH for
+stage 1's measurements), dispositioned in the plan under "Stage 1's
+review". The branch is committed in the worktree at `a8a567308d`, not
+pushed.
 
 ## 2026-10-31 night — the audit's fixes done on `audit-fixes`; v0.3.0 waits on white's check
 

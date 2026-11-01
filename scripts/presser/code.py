@@ -12,6 +12,7 @@
 # reads pressed; low is released, the state at every start and after any
 # error. The keyboard and this board share nothing but the opto's light.
 #
+# W lines go to witness.py, the waveform witness, when it is on the drive.
 # Lines in over the data port (boot.py enables it), a reply out for each,
 # fields comma-separated, times in microseconds on this board's clock:
 #   V                        V,ak820-presser,1,<board>,<uid>,2
@@ -39,6 +40,11 @@ import digitalio
 import microcontroller
 import supervisor
 import usb_cdc
+
+try:
+    import witness   # the waveform witness, W commands (witness.py beside this file)
+except Exception:   # no module on the drive, or one this board cannot run
+    witness = None
 
 supervisor.runtime.autoreload = False  # a write to CIRCUITPY must not cut a batch short
 
@@ -245,6 +251,11 @@ def handle(line):
         idle_green = level
         led_idle()
         send("L,%d" % level)
+    elif c == "W":
+        if witness is None:
+            send("E,no witness module on this board")
+        else:
+            witness.handle(f, send)
     else:
         send("E,unknown command %s" % line[:24])
 

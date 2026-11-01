@@ -3,10 +3,43 @@
 Status: **revision 14, READY for stages 0-3 (10-31, the fourteenth
 readiness review, [`review-codex-row-isr-review14-2026-10-31-raw.md`](review-codex-row-isr-review14-2026-10-31-raw.md));
 stages 4 and 5 sufficiently specified once 0-3 pass; the 62.5 µs cadence
-an experiment.** Nothing built. Next: stage 0 (the baseline) once the rig
-and the witness exist; JD's optocouplers, resistors and wire arrive 11-01.
-The presser's code exists (10-31, self-tested in-process, not on a board)
-and needs its own RP2040: the bench's QT Py is the power logger.
+an experiment.** **Stage 1 and stage 0b's dev op are built, not flashed
+(11-01):** the firmware branch `row-isr`, in its own worktree
+(`qmk_firmware-ak820pro-rowisr/`, built with
+`AK820_QMK_HOME=.../qmk_firmware-ak820pro-rowisr ./build.sh dev`; the main
+clone stays the audit session's), based on `audit-fixes` 4c7395a4c6, which
+the v0.3.0 release fast-forwards onto the mainline. It carries D1 with the
+ChibiOS PWM service kept (`keyboards/a_jazz/ak820pro/rgb/rowisr.c` and
+`rowisr.h`: `drivers/led/sn32f2xx.c` and `quantum/matrix.c` out of the
+link, `matrix_common.c` and the three PWM drivers in it, as stage 1 wants),
+the prime in `matrix_init_custom()`, the row interrupt's hold-off through
+the driver (`sn32f2xx_row_irq_hold`; `rtc/rtc.c` no longer names
+`CT16B1_IRQn`), and dev op 28 (`rgb/rowisr_diag.c`, `scripts/rowisr_diag.py`):
+the timers' registers at the manual's offsets, a row-only hold-off of
+1-10000 ms with a marker on the Caps LED's pin, a one-LED pattern. Builds:
+dev at a 136 B heap gap against the untouched base's 152 (the diagnostics'
+statics), daily and fpb at 2296 B; text +996 B. Codex reviewed the move twice
+(gpt-6-astra; `review-codex-row-isr-stage1-2026-11-01-raw.md`, NOT READY on
+four P1s in the diagnostics and the quiesce gate, all fixed;
+`review-codex-row-isr-stage1-verify-2026-11-01-raw.md`, **READY TO FLASH
+for stage 1's measurements**), dispositioned under "Stage 1's review",
+above the process log. The branch is at `a8a567308d`. **11-01 afternoon:
+JD's go for stage 1 on white mid-drain (36% left, 4-5 days to the cut),
+sequenced with the audit session: it flashes the v0.3.0 candidate
+(4c7395a4c6, the exact base) and runs its release checks first, then
+white is this plan's for the A/B.** Written for it, no hardware needed:
+the witness's software (`scripts/presser/witness.py` on the presser's
+board, `scripts/witness.py` on the Mac, `scripts/witness_selftest.py`, 33
+checks) and stage 0's runner (`scripts/rowisr_baseline.py`: the health
+windows with their loads, the INA228 holds, the settings put back, and
+`compare` for the 3% gates). The witness's front end is no longer a part
+to buy: a 1 kΩ series resistor per line from JD's kit, captured on the
+presser's RP2040 with the keyboard on the bench's battery state (rig
+item 4, rewritten). What still waits for the presser: stage 0's
+short-tap baseline and the three stage 1 gates that need a key
+(Bootmagic, deep sleep's wakes, the phantom-or-missing count); for the
+witness's wires: stage 0's pulse-train capture and stage 0b's lifecycle
+tests.
 Every stage lands on white first, where the bench is, and on black after
 its gates pass (corrected after the review; revision 0 had black first,
 carried from the diagnostics' pattern unexamined).
@@ -883,6 +916,16 @@ rig, including the witness, and capture today's ordinary pulse train on
 one column and one mux row, which is the first look at Q4 and Q12 and the
 reference every later waveform gate compares against. Output: the
 baseline every later gate compares against.
+`scripts/rowisr_baseline.py run` (11-01) takes the health windows (idle;
+the debug page toggled once a second, dev op 1; a burst of clock-chip
+transactions at 250-300 ms, dev op 23; the cleanup window only with
+`--cleanup manual`, since the write test's Cleanup has no HID trigger) and
+the INA228 holds (27 states, forward and back, dark at the start, the
+middle and the end, each 8 s of settle and 40 s read from the drain's
+`power.csv`), records the token, the lighting and the live settings and
+puts them back, and `compare` reads the 3% gates between two runs. The
+clips, the optical references, the short-tap baseline and the pulse-train
+capture are the hands and the rig.
 
 ### Stage 0b: a bounded diagnostic build
 
@@ -909,7 +952,10 @@ interim scanner, the scan started and primed in matrix init, the hold-off
 on the same vector. Equivalence is **measured, not assumed**: the scanner's
 locking and the init order do change execution time. The PWM service
 comes out in stage 2 with the scheduler. Gates: Bootmagic with valid
-settings and after a settings reset; RGB disabled; every build flavour;
+settings and after a settings reset; RGB disabled (read as: `rowisr.c`
+compiles with `RGB_MATRIX_ENABLE` off and keeps scanning; the board as a
+whole has never built without rgb_matrix, since `param_overlay.c` and the
+menu call it, found 11-01); every build flavour;
 only the intended PWM owners in the linker map (the three PWM drivers
 remain at this stage); the callback's rate and elapsed metric within 3% of
 stage 0; the early quiesce safe before RGB init; no new phantom or missing key; `row_samples[]` fair;
@@ -918,6 +964,11 @@ worst is 6 ms, [docs/hardware.md](../docs/hardware.md)), windows that
 contain the retained PCF hold-off judged apart; stalls, UART errors and ACK timeouts at baseline;
 incremental LED power within 3% in the holds; every bootloader route works
 and the bootloader stays dark at `0x7140`; deep sleep 5 of 5 on BT.
+Of these, the callback's rate and elapsed, the row gaps, the stalls and
+link errors, the LED power and the raw-HID bootloader route are the
+runner's A/B with no hands (`rowisr_baseline.py compare`); Bootmagic, the
+deep sleep wakes and the phantom-or-missing count wait for the presser
+and are read on the same build afterwards.
 
 ### Stage 2: the hot path at the old cadence
 
@@ -1188,23 +1239,71 @@ What "better than before" should mean, most valuable first:
    ([docs/sn32f299.md](../docs/sn32f299.md), "Electrical"), so a resistive
    divider of a few kΩ to ground would pull a released column low and
    fake a key, and would bias the column transistor during PWM; it is
-   ruled out. The front end is high-impedance and rated for the rail,
-   which is ~3.9 V on battery and **4.47-4.79 V on USB** (the same doc,
-   "At a glance"): a single-gate LVC Schmitt buffer per channel (TI's SN74LVC1G17 or
-   Nexperia's 74LVC1G17), powered from the QT Py's 3.3 V, whose input is
-   rated for 5.5 V with the part unpowered or at 3.3 V; its worst-case
-   input leakage, input capacitance and minimum pulse width are taken
-   from the chosen manufacturer's datasheet and written into the
-   qualification, not assumed from the part name (TI rates the leakage at
-   ±5 µA maximum, which against a 50 kΩ pull-up is up to 0.25 V of droop
-   at the worst corner, which is exactly why the released-column check
-   below is the admission, not the figure); fed through 1 kΩ for safety
-   and driving the capture pin at 3.3 V; or a 10 MΩ, ≤ 15 pF scope probe. Qualification before any
-   gate is read: with the probe attached, the released column still reads
-   high on the witness itself, VIA's key tester shows no phantom on that
-   column, and the PWM waveform on the line is unchanged against an
-   unprobed neighbour, with the board on USB (relay 2 on, the data through
-   the hub), where the grounds are already common.
+   ruled out. The front end must also be rated for the rail, which is
+   3.90 V on battery (the buck-boost's output, flat) and **4.47-4.79 V on
+   USB** (the same doc, "At a glance"), against the RP2040's pin rating of
+   its 3.3 V supply plus half a volt. **The route taken (11-01): a 1 kΩ
+   series resistor per line, straight into the RP2040's pin, with the
+   keyboard on the bench's battery state** (relay 2 off; the data cable
+   stays, so the host's commands and the grounds are as on USB, only the
+   5 V is gone). At 3.90 V the overshoot is a tenth of a volt and the
+   resistor and the pin's protection diode carry a fraction of a
+   milliamp; a released column with its 50-75 kΩ pull-up sits within a few
+   millivolts of the rail, far above V_IH (0.7 × VDD), so no phantom key;
+   and the resistor against the pin's capacitance settles in about 20 ns,
+   fast enough for the narrowest widths. Two rules: **relay 2 stays off
+   while the probe is attached** (on USB the same resistor would pass
+   about a milliamp through the pin's diode, a risk to the capture board,
+   not the keyboard), and **the capture board is powered before the
+   keyboard's lines reach it** (an unpowered RP2040 clamps lower: plug the
+   board in first, then switch the relay, every time). Nothing in stages
+   0-2's gates needs a capture on USB power: the pulses are the same ISR
+   either way, only the LED current differs. For captures with the USB
+   rail live, the front end is a single-gate LVC Schmitt buffer per channel
+   (TI's SN74LVC1G17 or Nexperia's 74LVC1G17), powered from the board's
+   3.3 V, whose input is rated for 5.5 V with the part unpowered or at
+   3.3 V; its worst-case input leakage, input capacitance and minimum pulse
+   width taken from the chosen manufacturer's datasheet and written into
+   the qualification (TI rates the leakage at ±5 µA maximum, up to 0.25 V
+   of droop against a 50 kΩ pull-up at the worst corner, which is why the
+   released-column check is the admission, not the figure); fed through
+   1 kΩ and driving the capture pin at 3.3 V; or a 10 MΩ, ≤ 15 pF scope
+   probe. A Pico 2 (RP2350) needs neither: its datasheet rates the plain
+   digital GPIOs (not the four ADC-capable ones) at 5.5 V while IOVDD is
+   at 3.3 V and 3.63 V unpowered, so the powered-first rule stands.
+   Qualification before any gate is read, on the battery state: with the
+   probe attached, the released column still reads high on the witness
+   itself (`witness.py levels`), VIA's key tester shows no phantom on
+   that column, and the PWM waveform on the line is unchanged against an
+   unprobed neighbour.
+   **The software (11-01, self-tested, not yet on a board):**
+   `scripts/presser/witness.py` rides the presser's board (one RP2040,
+   both jobs; `code.py` routes its `W` lines to it): the PIO samples the
+   four lines every cycle, 125 MHz on a QT Py RP2040, into a buffer of
+   32-bit words by DMA armed before the state machine restarts, so the
+   first word is the first pushed; a capture starts now or at a chosen
+   line's rising or falling edge (`wait` instructions ahead of the `in`,
+   to one sample), the board's RX-FIFO stall flag says if any sample was
+   lost, and the words go to the Mac as base64 with a CRC. The lines are
+   SDA, SCL, A3 and A2 on a QT Py (GPIO24-27; A0 and A1 stay the
+   presser's), GP2-GP5 on a Pico: 0 a column, 1 a mux row, 2 the marker
+   D15, 3 the inner marker C15. `scripts/witness.py` arms it (`cap`), keeps
+   the raw words and the metadata, and `analyze` turns a capture into the
+   gates' numbers: per line the pulse widths, periods and gaps (min,
+   median, max, with the polarity per line), the longest gap, periods in
+   slots, and for a marker line the interval and what each other line did
+   inside it (pulses inside, straddling, the offsets from the edges). The
+   rates: one line at the full rate (8 ns a sample) is the width and
+   glitch instrument; four lines push a FIFO word every two cycles at the
+   full rate, beyond the DMA, so the marker picture runs at a quarter rate
+   (32 ns a sample) or less. A QT Py's ~48k-word buffer is 12 ms of one
+   line at the full rate, or of four at a quarter of it; a Pico 2 has twice
+   the RAM and a 150 MHz clock. `scripts/witness_selftest.py` runs both
+   ends in-process with a fake PIO (33 checks: the encodings, the packing
+   and decode, the transfer, the arithmetic, the error paths, the trigger
+   timeout). The RP2350 A2 stepping's input leakage erratum (a pin reading
+   high when driven low through a high impedance) does not reach a line
+   driven push-pull through 1 kΩ.
 
 The rig's own closure timestamps are what the chain starts from. Counts
 and short-tap acceptance need no clock sync. A latency claim does: the
@@ -1642,6 +1741,95 @@ plan's own exception: the consolidation can still swallow a short press
 and exceed 25 ms (`BACKLOG.md`), which this rewrite does not promise to
 end.
 
+## Stage 1's review: codex's findings, dispositions (11-01)
+
+The first review of the implementation (gpt-6-astra, xhigh, fresh,
+[`review-codex-row-isr-stage1-2026-11-01-raw.md`](review-codex-row-isr-stage1-2026-11-01-raw.md)):
+NOT READY, four P1s and two P2s, all on the diagnostics and one gate, none
+on the moved driver's equivalence. Each, and what was done:
+
+- **P1, overlapping holds** (the dev hold-off and the clock chip's
+  transaction each saved the line's enable bit; the dev hold's release
+  re-enabled the line inside the transaction's MODE writes). **Fixed:** the
+  driver's hold nests (`sn32f2xx_row_irq_hold/release` keep a depth and the
+  state the first holder found; the last release restores it); `rtc/rtc.c`
+  no longer keeps a bit of its own; op 28 reports a hold that began or
+  ended at a depth above its own as overlapped, so the marked interval is
+  known to be shorter than the line's and the run is not a measurement.
+- **P1, a hold armed across a tick stop or a sleep** (`pwm_tick_stopI()`
+  drove the marker low without releasing; deep sleep stopped the countdown
+  and its deadline clock, so the line stayed off after the wake until the
+  countdown resumed, which could lose the waking press). **Fixed:**
+  `pwm_tick_stopI()` cancels any hold or scan skip first
+  (`rowisr_diag_cancelI`: the line released, the marker dropped, counted
+  apart); light sleep's bit 3 and deep sleep's entry both go through it.
+  The housekeeping backstop stays as the second net.
+- **P1, the hold counter's overflow** (16 bits for up to 200,000 ticks;
+  found by the session before the review landed). **Fixed:** one 32-bit
+  word; the RAM taken back from the counters (16-bit) and the deadline (one
+  word), so the dev build's heap gap stays 136 B.
+- **P1, the bootloader quiesce unimplemented** (D7's teardown is in stage
+  1's gates, "the early quiesce safe before RGB init" and "every bootloader
+  route works and the bootloader stays dark", and the session had read it
+  as stage 2's; since stage 1 the timers run from `matrix_init_custom()`,
+  so Bootmagic's jump finds them running, where before the driver started
+  after Bootmagic). **Fixed:** `sn32f2xx_quiesce()`, idempotent, called
+  first in `watchdog.c`'s `bootloader_jump()`, which every route reaches
+  (Bootmagic, `Fn`+`Esc`, the raw-HID jump through `reset_keyboard()`):
+  under the lock the notification and the NVIC line off with the pending
+  flag cleared and every column channel off (I-class), every mux row low;
+  then the three timers stopped; then every LED pin high-impedance. Safe
+  before the hardware is up (the pins alone). `sn32f2xx_blank()` is the old
+  name for it.
+- **P2, the diagnostics file assumed rgb_matrix.** **Fixed:** the pattern
+  and sub 3 under `RGB_MATRIX_ENABLE`; the register capture, the hold and
+  the scan skip need nothing of it.
+- **P2, no rising edge when the Caps Lock LED is already lit.** **Fixed:**
+  a hold is refused while Caps is lit or previewed; the status says why
+  nothing started.
+- **P3, the `NO_LED` read past `led_state[]` is undefined behaviour, not
+  provably harmless after relocation.** **Kept at stage 1 by the plan's
+  rule** (the pulse path unchanged so the move is measured against the old
+  driver, which has the same read); the quiesce above covers the one new
+  exposure (a stuck row at Bootmagic's jump); stage 2's driver produces
+  explicit zeros. The file header names it.
+- Noted, no change: the prime's 50 ms timeout is reported (op 28's status,
+  `sn32f2xx_prime_timed_out()`), so a forfeited Bootmagic prime is never
+  silent; the scanner's generated code is not instruction-identical to the
+  old one (no `NO_PIN` branches, the compiler's own choices), which is why
+  the gate is a measured 3% and the comment in `rowisr.c` now says so;
+  pin init at boot runs before any interrupt touches a port's `MODE`, so
+  its lost atomic wrappers change nothing; the replies carry no correlation
+  field, as no dev op's do; op 28 does not supply stage 0b's slow tagged
+  slot sequence or Q5's timer configurations, which need stage 2's driver
+  in a dev mode (noted in stage 0b below the process log), and the scan's
+  cost attribution is now sub 4, a timed scan skip, read against health
+  page 4.
+
+The second review, of the fixed tree (gpt-6-astra, xhigh, fresh,
+[`review-codex-row-isr-stage1-verify-2026-11-01-raw.md`](review-codex-row-isr-stage1-verify-2026-11-01-raw.md)):
+**READY TO FLASH for stage 1's measurements, no P1**; the four P1s
+confirmed fixed under every interleaving it traced (the nesting hold with
+the transaction, the cancel at deep sleep's entry before the NVIC mask is
+saved, the 32-bit countdown and the wrap-safe deadline, the quiesce's
+ordering against a running callback). Its remaining findings, each done:
+
+- **P2, the marker's rising edge at a Caps transition** (Caps just cleared
+  leaves D15 high until the next tick, so a hold accepted then has no
+  edge). **Fixed:** the pin itself is read under the start lock and a high
+  pin refuses the hold.
+- **P2, the quiesce left a dev hold armed** (a tick expiry after the
+  timers stopped could re-enable the NVIC line; nothing could relight, but
+  the line-off state was conditional). **Fixed:** the quiesce cancels the
+  diagnostics first, inside its lock.
+- **P3, the status reply could mix pre- and post-expiry fields**
+  (unlocked reads). **Fixed:** one locked snapshot. And the note that the
+  scan skip does not touch scan-only's branch, so the cost attribution is
+  measured in the ordinary mode, is in the op's header.
+
+Stage 1 is therefore built and twice reviewed; what it waits for is the
+bench: stage 0's baseline on white, with the rig, before it is flashed.
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -1716,3 +1904,67 @@ end.
   on the bench is the power logger, so the presser needs its own RP2040;
   its boot.py names it pid.codes 1209:0001 so the recorder's "first
   Adafruit board" cannot take it. Nothing has run on a board.
+- 11-01 11:20: the firmware branch `row-isr` made in a worktree of the
+  clone (the other session's checkout untouched; env.sh takes
+  `AK820_QMK_HOME`), based on `audit-fixes` 4c7395a4c6, which that session
+  says fast-forwards onto the mainline as v0.3.0 once JD checks it on
+  white. The untouched base built from the worktree as the reference: dev
+  `via-dev-4c7395a4c6-20261101-114039.bin`, heap gap 152 B, token
+  `0xf59c43da`.
+- 11-01 11:50: stage 1 written and built: `rgb/rowisr.{c,h}` (the old
+  driver's code for this board's configuration only, the row helpers from
+  `quantum/matrix.c` beside it with I-class locking, `CUSTOM_MATRIX =
+  lite`, the custom rgb driver, the prime, the hold-off API) and stage 0b's
+  op 28 (`rgb/rowisr_diag.{c,h}`, the marker in `indicators.c`, the
+  backstop in `housekeeping_task_kb`), `scripts/rowisr_diag.py`. The first
+  build failed on `menu/menu_glue.c`, which had taken the old header
+  through `rgb_matrix_drivers.h`; fixed with the include. Dev
+  `via-dev-4c7395a4c6-dirty-20261101-115041.bin` (token `0x330ccd76`, heap
+  gap 136 B); daily and fpb 2296 B. `nm`: `matrix_scan_custom`,
+  `matrix_init_custom` and `matrix_can_read` strong from `rowisr.o`; no
+  `sn32f2xx.o` or `quantum/matrix.o`; `PWMD0/1/2` and `rgb_callback`
+  present. The board does not build with `RGB_MATRIX_ENABLE=no`
+  (`param_overlay.c` first), so that gate is narrowed to the driver file,
+  which does: with `MAKEFLAGS=-k` and `RGB_MATRIX_ENABLE=no`, `rowisr.c` and
+  `rowisr_diag.c` compile (12:15). Codex's review launched 12:05. Nothing
+  flashed.
+- 11-01 12:40: codex's review received (33 lines): NOT READY, four P1s on
+  the diagnostics and the quiesce gate, none on the moved driver
+  ("Stage 1's review", above). All fixed: the nesting hold, the cancel at a
+  tick stop, the 32-bit countdown, `sn32f2xx_quiesce()` on every bootloader
+  route; the P2s too; op 28 gains sub 4 (a timed scan skip, for stage 0b's
+  cost attribution) and reports the prime's timeout, the hold depth and an
+  overlap. Stage 0b's slow tagged slot sequence and Q5's timer
+  configurations are not in op 28: they need the new driver's timers (D2),
+  so they come as a dev mode of stage 2's driver, run on the stage-2 build
+  before its own gates. The three flavours rebuilt; a second review
+  launched 12:08.
+- 11-01 12:30: the second review received (22 lines): **READY TO FLASH for
+  stage 1's measurements**, no P1; two P2s and a P3 on the diagnostics,
+  all done ("Stage 1's review", above). The three flavours rebuilt once
+  more (dev 136 B, daily and fpb 2288 B) and the branch committed:
+  `row-isr` at `a8a567308d` (not pushed). White untouched.
+- 11-01 14:00: JD's questions. The presser on the logger's QT Py: possible
+  (the logger uses only the STEMMA port; CircuitPython's second serial
+  port keeps the two protocols apart), chosen against because the drain
+  is live (a reset for `boot.py`, wiring onto a running board) and a
+  crash in the new half would stop the logger. The LVC buffer, first
+  heard of as a purchase: explained; the RP2350's FT pins (5.5 V with
+  IOVDD at 3.3 V, 3.63 V unpowered, the ADC pins excepted) verified in
+  its datasheet; JD leans to the hardware he has, so rig item 4 is
+  rewritten to the 1 kΩ series route on the battery state with its two
+  rules, the buffer kept as the USB-rail option.
+- 11-01 15:30: JD's go for an interim flash on white mid-drain (36%, 4-5
+  days left) and the three steps: the witness's software
+  (`scripts/presser/witness.py`, `scripts/witness.py`,
+  `witness_selftest.py`, 33 checks), stage 0's runner
+  (`scripts/rowisr_baseline.py`; its windows and loads exercised against
+  a fake board, `compare` against synthetic runs), the docs. Sequenced
+  with the audit session (ak820-pro-76) by message: it flashes its
+  v0.3.0 candidate `via-dev-4c7395a4c6-20261031-224044.bin` (the exact
+  base; mine of the same commit is not to be used) and runs its release
+  checks, then messages "white is yours"; the bench's standing state
+  (data off, relay 2 off, the daemon up) is restored after the session,
+  the daemon paused for it, the lighting and the live settings dumped and
+  restored. White's own record: the candidate on it is the first run of
+  the new profiles restore. My stray `-dirty` builds deleted from `out/`.

@@ -5,7 +5,11 @@
 # depends on where the repo itself is checked out.
 AK820_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]:-$0}" )" && pwd )"
 export AK820_ROOT
-export QMK_HOME="$AK820_ROOT/qmk_firmware-ak820pro"
+# AK820_QMK_HOME, if set, names another checkout of the firmware clone to build
+# from: a git worktree on a long-lived branch (qmk_firmware-ak820pro-rowisr for
+# row-isr, 11-01), so a second session can build without moving the main
+# clone's checkout. build.sh stamps the artifact with that tree's own hash.
+export QMK_HOME="${AK820_QMK_HOME:-$AK820_ROOT/qmk_firmware-ak820pro}"
 
 # The venv's directory name is platform-specific, so everything downstream asks
 # for $AK820_VENV rather than hardcoding "venv".
