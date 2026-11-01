@@ -1,0 +1,10 @@
+[16:15:04] pausing the daemon
+[16:15:04] data on
+[16:15:06] board token: 0x6f758b40
+level        35.2 %
+power mode   Balanced, stage active
+time left    30 h 22 min
+backup (2026-11-01 14:40:00, DIFFERENT):
+[16:15:06] done
+[16:15:06] data off
+[16:15:06] daemon restarted
