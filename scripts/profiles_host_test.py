@@ -173,13 +173,19 @@ class FakeBoard:
     """HC_PROFILES' subs 0-7 on an 0xA4 block, as a firmware answers them. `old`: one from before the Font
     setting, which refuses a record whose readout byte is out of 1-3 (bit 2 set) and never reports a face;
     `pre_icon` (10-30): one with the face but from before Icon only, which refuses bit 4; `refuse`: a record it
-    refuses whatever its face. `side`: sub 7's [9], the switch (1 Windows, 2 the Mac); `no_sub8`: a firmware
-    from before sub 8, the live settings' side (the 10-31 audit's review), which answers it unhandled."""
-    def __init__(self, live, old=False, refuse=False, pre_icon=False, side=1, no_sub8=False):
+    refuses whatever its face. `side`: sub 7's [9], the switch (1 Windows, 2 the Mac). The 10-31 audit's review:
+    the commit's [7] names the live settings' side, and on the switch's other side the board flips, its sub 7
+    [10] bit 0 set for `flip_polls` polls, [9] the backup's side till then, the last record rewritten by it;
+    `pre_side`: a firmware from before, whose commit ignores [7] and whose [10] is 0; `latch`: the flip's
+    write fails (bit 1); `stuck`: the flip never ends."""
+    def __init__(self, live, old=False, refuse=False, pre_icon=False, side=1, pre_side=False, latch=False,
+                 stuck=False, flip_polls=2):
         self.live, self.old, self.refuse, self.pre_icon, self.sent, self.reply = live, old, refuse, pre_icon, [], None
         self.block = bytes([ap.MAGIC_V4, 0xFF]) + bytes(8 * ap.REC)
         self.staged, self.commits = None, 0
-        self.side, self.no_sub8, self.sub8 = side, no_sub8, []
+        self.side, self.pre_side, self.latch, self.stuck = side, pre_side, latch, stuck
+        self.flip_polls, self.pending, self.settled = flip_polls, 0, side
+        self.subs, self.commit_sides, self.flipped = [], [], False
 
     def bv_bad(self, v):
         if self.old:
@@ -191,6 +197,7 @@ class FakeBoard:
     def write(self, b):
         q = bytearray(b[1:])
         sub = q[3]
+        self.subs.append(sub)
         if sub == 0:
             q[5] = 0
             page = self.block[q[4] * ap.PAGE:(q[4] + 1) * ap.PAGE]
@@ -213,6 +220,9 @@ class FakeBoard:
                 self.block = bytes([ap.MAGIC_V4, 0xFF]) + bytes(8 * ap.REC)
             else:
                 self.block = bytes(self.staged)
+                self.commit_sides.append(q[7])
+                if not self.pre_side and q[7] in (1, 2) and q[7] != self.side:
+                    self.settled, self.pending = q[7], self.flip_polls
             q[6] = 4 if bad else 0
         elif sub == 5:
             r = bytes(q[4:4 + ap.REC])
@@ -224,13 +234,14 @@ class FakeBoard:
         elif sub == 6:
             q[4] = 0
         elif sub == 7:
-            q[4:10] = bytes([8, ap.REC, 9, ap.PAGE, ap.MAGIC_V4, self.side])
-        elif sub == 8:
-            if self.no_sub8:
-                q[0] = ap.UNHANDLED
-            else:
-                self.sub8.append(q[4])
-                q[5] = 0
+            if self.pending and not self.stuck:
+                self.pending -= 1
+                if not self.pending:   # the flip: the side left's settings into the last record
+                    self.settled, self.flipped = self.side, True
+                    self.block = self.block[:2 + 7 * ap.REC] + bytes([0x10 | (2 - self.side)]) + bytes(ap.REC - 1)
+            q[4:10] = bytes([8, ap.REC, 9, ap.PAGE, ap.MAGIC_V4, self.settled])
+            if not self.pre_side:
+                q[10] = 0x80 | (1 if self.pending else 0) | (2 if self.latch and self.flipped else 0)
         self.reply = bytes(q)
 
     def read(self, n, timeout_ms):
@@ -333,27 +344,46 @@ with tempfile.TemporaryDirectory() as tmp:
               "profiles restored and read back" in out and "live settings restored" in out,
               f"cmd_restore, Icon only, {kw or 'this firmware'}: {res} {b.commits} {out}")
 
-# Codex's review of the audit's fixes (P2): a backup taken on one side of the Win/Mac switch, restored on
-# the other, tells the board the live settings are the backup's side's (sub 8), so it flips and each side
-# keeps its own; on the same side, or with the live settings or the profiles left out, nothing is sent; a
-# firmware from before sub 8 gets a note.
+# Codex's review of the audit's fixes (P2) and its verify: a backup taken on one side of the Win/Mac switch,
+# restored on the other. The pages first, the block unpublished; the live record applied and flushed; then the
+# commit naming the live settings' side ([7]), so the owner byte is right from the magic on; the board flips to
+# the switch's side, and the host polls sub 7 to its end. On the same side, with the live settings left out
+# (--block-only) or no switch in the backup, [7] says nothing new; --live-only commits nothing. A firmware from
+# before gets a note; a failed flip and one that never ends fail the restore.
 ap.time.sleep = lambda s: None
+real_monotonic = ap.time.monotonic   # ap.time is the time module itself: put back after
 with tempfile.TemporaryDirectory() as tmp:
     path = os.path.join(tmp, "p.json")
-    for swtch, board, kw, args, want8, said in (
-            ("windows", 2, {}, (False, False), [0], "the board flipped to the Mac's"),
-            ("mac", 1, {}, (False, False), [1], "the board flipped to Windows'"),
-            ("windows", 1, {}, (False, False), [], None),
-            (None, 2, {}, (False, False), [], None),
-            ("windows", 2, {}, (False, True), [], None),     # --live-only: the board's own profiles
-            ("windows", 2, {"no_sub8": True}, (False, False), [], "this firmware can't be told")):
+    for swtch, board, kw, args, want7, said, fails_with in (
+            ("windows", 2, {}, (False, False), [1], "the board flipped to the Mac's", None),
+            ("mac", 1, {}, (False, False), [2], "the board flipped to Windows'", None),
+            ("windows", 1, {}, (False, False), [1], None, None),
+            (None, 2, {}, (False, False), [0], None, None),
+            ("windows", 2, {}, (True, False), [0], None, None),      # --block-only: the board's own live settings
+            ("windows", 2, {}, (False, True), [], None, None),       # --live-only: the board's own profiles
+            ("windows", 2, {"pre_side": True}, (False, False), [1], "this firmware can't be told", None),
+            ("windows", 2, {"latch": True}, (False, False), [1], None, "a write failed"),
+            ("windows", 2, {"stuck": True}, (False, False), [1], None, "did not finish its flip")):
         with open(path, "w", encoding="utf-8") as f:
             json.dump({"format": 4, "switch": swtch, "block": ib.hex(), "live": icon_s.hex()}, f)
         b = FakeBoard(live_rec(1), side=board, **kw)
         ap.open_device = lambda: b
+        clock = [0.0]
+        def mono():
+            clock[0] += 0.05
+            return clock[0]
+        ap.time.monotonic = mono
         (res, out) = quiet(ap.cmd_restore, path, *args)
-        check(res == 0 and b.sub8 == want8 and (said is None or said in out) and (said is not None or "flipped" not in out),
-              f"cmd_restore, backup on {swtch}, board on {board}, {args} {kw}: sub 8 {b.sub8} {out}")
+        order = [x for x in b.subs if x in (2, 3, 5, 6)]
+        live_first = args[1] or args[0] or (3 in order and 5 in order and 6 in order and
+                                           max(i for i, x in enumerate(order) if x == 2) < order.index(5) <
+                                           order.index(6) < order.index(3))
+        ok_res = (fails_with is None and res == 0) or (fails_with is not None and res != 0 and fails_with in str(res))
+        check(ok_res and b.commit_sides == want7 and live_first and (said is None or said in out) and
+              (said is not None or "flipped" not in out),
+              f"cmd_restore, backup on {swtch}, board on {board}, {args} {kw}: [7] {b.commit_sides}, "
+              f"subs {order}, {res} {out}")
+    ap.time.monotonic = real_monotonic
 
 print("host conversion:", "all checks passed" if not fails else f"{fails} failed")
 sys.exit(1 if fails else 0)

@@ -130,9 +130,11 @@ def rec_ok(r):
 
 class Geometry:
     """The board's block: P5d's answer to sub 7, or P5a's four slots; the
-    switch's side (10-27; None before, or before its first reading)."""
-    def __init__(self, slots, magic, side=None):
-        self.slots, self.magic, self.side = slots, magic, side
+    switch's side (10-27; None before, or before its first reading); whether
+    the commit takes the live settings' side (sub 7's [10] bit 7, the 10-31
+    audit's review)."""
+    def __init__(self, slots, magic, side=None, takes_side=False):
+        self.slots, self.magic, self.side, self.takes_side = slots, magic, side, takes_side
         self.size = 2 + slots * REC
         self.pages = (self.size + PAGE - 1) // PAGE
 
@@ -144,7 +146,7 @@ def geometry(h):
         return Geometry(4, MAGIC_V1)    # P5a and P5b; a build without HC_PROFILES fails at the first read
     if r[5] != REC or r[7] != PAGE or SLOTS_OF.get(r[8]) != r[4] or Geometry(r[4], r[8]).pages != r[6]:
         raise SystemExit(f"the board's profile geometry is new to this tool: {r[4:9].hex()}")
-    return Geometry(r[4], r[8], SIDES.get(r[9]))
+    return Geometry(r[4], r[8], SIDES.get(r[9]), bool(r[10] & 0x80))
 
 
 def block_slots(block):
@@ -271,9 +273,9 @@ def read_live(h):
     return live
 
 
-def write_block(h, block, g, may_refuse=False):
-    """The block, page by page, then the commit. may_refuse: a commit refused
-    as out of range (4) is returned, not raised, for the caller's retry."""
+def write_pages(h, block, g):
+    """The restore's begin and its pages; the block stays unpublished (its
+    magic 0) until the commit. Returns the token."""
     token = random.randint(1, 255)
     st = busy_retry(lambda: xfer(h, 1, [0, token], echo=(5,))[6], "begin")
     if st != 0:
@@ -283,11 +285,25 @@ def write_block(h, block, g, may_refuse=False):
         st = busy_retry(lambda: xfer(h, 2, bytes([p, token]) + data, echo=(4, 5))[6], f"page {p}")
         if st != 0:
             raise SystemExit(f"restore refused at page {p}: {STATUS.get(st, st)}")
-    st = busy_retry(lambda: xfer(h, 3, [0, token], echo=(5,))[6], "commit")
+    return token
+
+
+def commit(h, token, side=0, may_refuse=False):
+    """The commit; side the live settings' (1 Windows, 2 the Mac, 0 the
+    switch's), [7], which a firmware from before the 10-31 audit's review
+    ignores. may_refuse: a commit refused as out of range (4) is returned, not
+    raised, for the caller's retry."""
+    st = busy_retry(lambda: xfer(h, 3, [0, token, 0, side], echo=(5,))[6], "commit")
     if st == 4 and may_refuse:
         return st
     if st != 0:
         raise SystemExit(f"restore refused at commit: {STATUS.get(st, st)} (the board's profiles read as empty)")
+    return st
+
+
+def write_block(h, block, g, may_refuse=False, side=0):
+    """The block, page by page, then the commit."""
+    return commit(h, write_pages(h, block, g), side, may_refuse)
 
 
 def bv_without(v, bits):
@@ -361,26 +377,33 @@ def apply_live(h, live):
     return applied, live
 
 
-def tell_side(h, src, now):
-    """Sub 8 (the 10-31 audit's review): a backup taken on the Win/Mac
-    switch's other side holds that side's live settings, and its last record
-    this side's. The board takes the live settings as the backup's side's and
-    flips to the switch's, as at a flip: each side keeps its own. Before it,
-    the next reboot kept the backup's side's settings here and dropped this
-    side's."""
-    if src not in ("windows", "mac") or now not in ("windows", "mac") or src == now:
-        return
+def confirm_side(h, g, src):
+    """After a commit that named the live settings' side (the 10-31 audit's
+    review): a backup taken on the Win/Mac switch's other side holds that
+    side's live settings and this side's last record, and the board flips to
+    the switch's side, each side keeping its own. Polled to its end through
+    sub 7 ([9] the side, [10] bit 0 a flip still to run, bit 1 the write
+    latch): a fixed wait confirmed nothing (codex). True when it flipped."""
+    if src not in ("windows", "mac") or g.side not in ("windows", "mac") or src == g.side:
+        return False
     of = {"windows": "Windows'", "mac": "the Mac's"}
-    try:
-        st = busy_retry(lambda: xfer(h, 8, [0 if src == "windows" else 1], echo=(4,))[5], "the live settings' side")
-    except Unhandled:
-        print(f"  note: the backup was taken on {of[src]} side of the Win/Mac switch, the board is on {of[now]}, "
-              f"and this firmware can't be told: {of[src]} settings now show on {of[now]} side")
-        return
-    if st != 0:
-        raise SystemExit(f"the live settings' side refused: {STATUS.get(st, st)}")
-    time.sleep(0.6)   # the flip's countdown (300 ms), then its writes
-    print(f"  the live settings are {of[src]} (the backup's side): the board flipped to {of[now]}")
+    if not g.takes_side:
+        print(f"  note: the backup was taken on {of[src]} side of the Win/Mac switch, the board is on {of[g.side]}, "
+              f"and this firmware can't be told: {of[src]} settings now show on {of[g.side]} side")
+        return False
+    deadline = time.monotonic() + 3.0
+    while True:
+        r = xfer(h, 7)
+        if r[10] & 2:
+            raise SystemExit(f"the flip to {of[g.side]} side failed: a write failed, and the board refuses the profiles' "
+                             "writes until a reboot; power-cycle it, then restore again")
+        if not r[10] & 1 and SIDES.get(r[9]) == g.side:
+            break
+        if time.monotonic() > deadline:
+            raise SystemExit(f"the board did not finish its flip to {of[g.side]} side within 3 s")
+        time.sleep(0.1)
+    print(f"  the live settings were {of[src]} (the backup's side): the board flipped to {of[g.side]}, each side its own")
+    return True
 
 
 # --- Reading a record ----------------------------------------------------------
@@ -542,21 +565,13 @@ def cmd_restore(path, block_only, live_only):
                 except SystemExit as e:
                     block_err = str(e)
                     print(f"profiles NOT restored: {block_err}")
-            if want is not None:
-                st = write_block(h, want, g, may_refuse=block_has(want, BV_ICON | BV_FACE))
-                for bits, what in BLOCK_FALLBACKS:   # newest first, as apply_live's
-                    if st == 4 and block_has(want, bits):
-                        want = block_without(want, bits)
-                        print(f"  the board refused {what}")
-                        st = write_block(h, want, g, may_refuse=block_has(want, BV_ICON | BV_FACE))
-                if st == 4:
-                    raise SystemExit("restore refused at commit: invalid (the board's profiles read as empty)")
-                if read_block(h, g) != normalized(want):
-                    raise SystemExit("the profiles' read-back differs from the backup -- the restore did not land")
-                note = f" ({block_slots(block)} slots into {g.slots})" if block_slots(block) != g.slots else ""
-                print(f"profiles restored and read back{note}")
-            elif block_err is None:
+            if want is None and block_err is None:
                 print("profiles: none in the backup, the board's left unformatted")
+        # The order (the 10-31 audit's review): the pages, with the block
+        # unpublished; the live settings applied and flushed; then the commit,
+        # naming their side, so a cut anywhere leaves either no profiles or an
+        # owner byte that names the live settings' side right.
+        token = write_pages(h, want, g) if want is not None else None
         if not block_only:
             st, sent = apply_live(h, live)   # sent: without the face when an older firmware refused it
             back = read_live(h)
@@ -566,8 +581,26 @@ def cmd_restore(path, block_only, live_only):
                 print("  asked " + json.dumps(decode(sent)))
                 print("  got   " + json.dumps(decode(back)))
             print(f"live settings restored and flushed{note}")
-            if want is not None:
-                tell_side(h, doc.get("switch"), g.side)
+        if want is not None:
+            src = None if block_only else doc.get("switch")
+            side = {"windows": 1, "mac": 2}.get(src, 0)
+            refusable = block_has(want, BV_ICON | BV_FACE)
+            st = commit(h, token, side, may_refuse=refusable)
+            for bits, what in BLOCK_FALLBACKS:   # newest first, as apply_live's
+                if st == 4 and block_has(want, bits):
+                    want = block_without(want, bits)
+                    print(f"  the board refused {what}")
+                    st = write_block(h, want, g, may_refuse=block_has(want, BV_ICON | BV_FACE), side=side)
+            if st == 4:
+                raise SystemExit("restore refused at commit: invalid (the board's profiles read as empty)")
+            flipped = confirm_side(h, g, src)
+            # A flip rewrites the last record (the side left's settings) and
+            # may clear it: the profiles and the active byte are compared.
+            upto = 2 + USER_OF.get(want[0], block_slots(want)) * REC if flipped else len(want)
+            if read_block(h, g)[:upto] != normalized(want)[:upto]:
+                raise SystemExit("the profiles' read-back differs from the backup -- the restore did not land")
+            note = f" ({block_slots(block)} slots into {g.slots})" if block_slots(block) != g.slots else ""
+            print(f"profiles restored and read back{note}")
         doc_now = {"switch": g.side, "decoded": {"block": decode_block(read_block(h, g)), "live": decode(read_live(h))}}
     finally:
         h.close()
