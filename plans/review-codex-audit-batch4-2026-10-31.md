@@ -126,3 +126,5 @@ What I checked and found sound:
 - **Other post-write commands are appropriate:** status reads RDSR; unlock and write-begin change RAM state; buffered data/end only require idle when flushing. `FC_INFO` is the exception above.
 - **The display repair consumer works once notified.** The pump sends a loss to the panel owner: dashboard damage gets staged repair with the five-second cooldown; menu/debug invalidate; animation stops.
 - **Timing remains a deliberate limitation.** Eight milliseconds is a CRC stopping threshold, with up to another chunk’s work before checking. The unchanged per-byte page program still costs the audit’s estimated 12–50 ms and can lose typing during provisioning. With functioning SPI it is well below the watchdog timeout; the unbounded USB drain is the remaining watchdog problem.
+Codex's second verify, which covered this batch too, and its dispositions are at the end of
+`review-codex-audit-batch3-2026-10-31.md`.

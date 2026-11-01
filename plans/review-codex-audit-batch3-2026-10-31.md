@@ -126,3 +126,223 @@ The following paths checked out:
 - **F-020/F-027/F-008:** The queue check runs under the Cortex-M0 system lock and unwinds before teardown. `if (!rc_usb_watch && !rc_active) return;` preserves both active recovery and the later USB observation. F-008 is explicitly documented in all three requested documents; it remains unfixed.
 
 I reviewed the supplied host-test sources but did not build or execute them. No files were changed, no device interfaces were opened, and all file reads stayed inside the repository.
+
+---
+
+## Codex's verify of the redo (10-31 evening)
+
+On `f70c493e0e` and `f40d3b47a1`: the four findings above closed, and five
+P2s and two P3s raised. Dispositions (Buzz's session), in the firmware's
+`c7b8b2b53e` and the outer repo's `3d8e2b3`, `9eb5b37`, `798ee30`:
+
+- **P2 1, a cut between the commit and sub 8: fixed.** The host applies and
+  flushes the live record with the block unpublished, then commits naming
+  its side (sub 3's [7]); the commit writes the owner before the magic and
+  arms the flip to the switch's side itself. Sub 8 goes (it was in no
+  release). `scripts/profiles_cut_test` cuts the restore at each of its 83
+  steps: no profiles before the magic, each side its own after.
+- **P2 2, mutations before the boot's check: fixed.** `writable()` refuses
+  SD_BOOT; begin, apply and Reset too; `prof_tick()`'s boot condition reads
+  the recovery and the restore directly.
+- **P2 3, a failed settings flush publishing OW_SETTLED: fixed** (and again
+  below). `env_settings_flush()` reports failure from
+  `wear_leveling_failures()`; `flush_settings()` latches TX_FAILED.
+- **P2 4, the host's unconfirmed flip: fixed** (and again below). Sub 7's
+  [10]: a flip pending, the latch; `confirm_side()` polls it.
+- **P2 5, a 19-byte macro backup aborting the restore: fixed.** The keymap and
+  the knob restore without the macros, exit 3, which `flash.sh` takes as a
+  warning (`scripts/keymap_macro_test`).
+- **P3 6, the cut tests: done.** Wear leveling's 4-byte lines, a second cut in
+  every recovering boot, failures injected with a control that must fail, a
+  pending Load, the boot gate.
+- **P3 7, the menu test's counts: fixed** (14 and 15, the owner's order).
+
+## Codex's second verify, Batches 3 and 4 (10-31 night)
+
+On `75e78cb508` (the link hold, from Warren's reading), `f79515e37a`,
+`ad917da23d`, `cd9fce3039`, `c7b8b2b53e`, `time-util-ak820pro`
+`4cc6571` and the outer repo's commits since `77b4f08` (prompt:
+`review-prompt-audit-batch34-verify.txt`): no P1; four P2s and two P3s.
+It found the link hold, the four-report cap, both idle paths of the WIP
+latch, the relock, `FC_INFO`, the boot gate, the commit's order and the
+macro restore sound. Dispositions, in the firmware's `d99b9d3499` and
+`time-util-ak820pro` `1ca3cb2`:
+
+- **P2 1, a deferred write failing before the flush: fixed.** The failure
+  count saturates and counts `wear_leveling_consolidate()` too, and
+  `env_settings_flush()` reports false while any write has failed since the
+  boot: the failed write's bytes sat in the cache and the flush skipped them
+  as unchanged. The cut test's fake now caches its settings as wear leveling
+  does, with the failure sticky; a restore whose deferred write fails before
+  the flush stays unpublished, and the control publishes.
+- **P2 2, `confirm_side()` skipping a flip the commit armed: fixed.** It polls
+  after every commit to a capable firmware, whatever the sides looked like
+  before, and decides the flip from the side the commit named and the side
+  settled after; sub 7's [10] bit 2 reports the switch's reading. Codex's
+  counterexample (settled on Windows, the switch already on the Mac, a
+  Windows backup) and its latched variant are host test cases, failing on
+  the old host.
+- **P2 3, flash sessions unserialized: fixed.** `flash_lock()`: `flock` on
+  `$TMPDIR/ak820ctl-flash.lock`, a `Local\` mutex on Windows (not built
+  on this Mac), from before the first flash command to the end of `main()`.
+  `scripts/flash_channel_test` holds the lock and sees a second session
+  refuse with nothing erased.
+- **P2 4, the clock's uncorrelated replies: fixed.** `xfer()` itself takes
+  only a matching full report, for every command; `xfer_flash()` folds into
+  it. A clock sample that waited out a foreign report is a slow one, which
+  the transaction discards. No clock-specific test (the fake device has no
+  RTC); the correlation is the flash test's.
+- **P3 5, the cut test's allowance: fixed.** Windows' profile value is allowed
+  only on a Windows boot and for a second cut at or after the recovering
+  boot's first step toward Windows. The kb block is still modelled as two
+  lines, not the real ten bytes; only the screen level is read from it.
+- **P3 6, the warnings: fixed.** The macro warning says the board's own were
+  left as they were; `flash.sh`'s last note claims only the keymap and the
+  knob.
+
+### Verbatim, the first verify
+
+The four original counterexamples are addressed. **Five P2 issues and two P3 gaps remain; I would hold the profile changes.** I found no new P1.
+
+| Original finding | Closed? |
+|---|---|
+| P1: default layer mistaken for settings ownership | **Yes, for the reported countdown-cut and `PDF()` cases.** The independent owner byte fixes that ambiguity. |
+| P2: opposite-side restore | **Yes for an uninterrupted restore.** Interrupted restores remain unsafe, as below. |
+| P2: CRC-8 accepts the four-bit tear | **Yes, under the stated one-direction bit-loss model.** |
+| P3: QMK’s eight-byte tests describe the old format | **Yes.** Counts, playback fixtures and the added torn-line case match the new format. |
+
+1. **P2 — A cut before sub 8 recreates the opposite-side restore failure.**  
+   [profiles.c:753](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:753), [ak820profiles.py:561](/Users/jdlien/code/ak820-pro/hostagent/ak820profiles.py:561).
+
+   Restore a Windows backup on Mac: live Windows settings = 25, saved Mac last-record = 95. Commit publishes the block and marks ownership **settled Mac**. The host then applies and flushes Windows’ 25, and only afterward sends sub 8.
+
+   Cut after that flush but before sub 8: boot sees settled Mac, retains Windows’ settings, and [clears Mac’s valid last record](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:685). Cuts between commit, apply and the component flushes likewise have no restore-phase recovery.
+
+   **Fix:** Make source ownership and restore progress durable within the restore transaction, retaining recovery information until application and flushing finish. Publish magic only after the necessary metadata. Alternatively, refuse opposite-side restores before modifying anything. Simply sending sub 8 earlier introduces a countdown/apply race.
+
+2. **P2 — External mutations can run before `SD_BOOT` resolves ownership.**  
+   [profiles.c:298](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:298), [profiles.c:692](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:692), [profiles.c:916](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:916).
+
+   The initial switch reading sets `SD_SETTLED` to the physical side before reading the durable owner. `writable()` does not reject `SD_BOOT`; Load, Save, Delete, Rename and Prof keys can therefore operate against that provisional state. Sub 5 also permits application before this check.
+
+   Example: boot physically on Mac with Windows-owned live settings. An early sub-5 application replaces those settings before housekeeping; boot then identifies them as Windows-owned and captures the replacement as Windows’ outgoing snapshot. Raw HID is serviced [before housekeeping](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/quantum/main.c:54), so this ordering is available on the board.
+
+   **Fix:** Resolve boot ownership before accepting external mutations, or give those entry points a separate `SD_BOOT` busy gate. Do not simply add it to `writable()`: `prof_tick()` currently uses that function to decide whether boot checking may run.
+
+3. **P2 — Settings-flush failures can still publish `OW_SETTLED`.**  
+   [profiles.c:624](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:624), [menu_glue.c:273](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_glue.c:273), [eeprom_wear_leveling.c:38](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/drivers/eeprom/eeprom_wear_leveling.c:38).
+
+   `env_settings_flush()` returns no status, and QMK discards the underlying write result. These failures never set `TX_FAILED`.
+
+   A transient failed kb-config write that leaves its log location erased, followed by successful RGB and owner writes, produces mixed durable settings with a settled owner. Boot consequently skips recovery. The same problem exists in `boot_recover()`.
+
+   **Fix:** Propagate or latch failures from the settings writes, and publish settled ownership only after both flushes succeed. A cached readback cannot establish durability. This is the existing wrapper limitation now undermining the new transaction marker.
+
+4. **P2 — The host reports success when the asynchronously scheduled flip fails.**  
+   [ak820profiles.py:375](/Users/jdlien/code/ak820-pro/hostagent/ak820profiles.py:375), [profiles.c:959](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:959).
+
+   Sub 8 acknowledges after writing source ownership and scheduling the countdown. If `last_put()` or the final owner write subsequently fails, the firmware latches failure, but `tell_side()` merely sleeps 600 ms, prints “the board flipped”, and returns successfully. The following block/live reads do not report that latch.
+
+   I confirmed the host behavior using the actual extracted `tell_side()` with a fake transport and a failure injected during its sleep: it sent only sub 8 and reported success.
+
+   **Fix:** Expose and poll the flip’s completion/error result. A fixed delay is not confirmation that its writes succeeded.
+
+5. **P2 — A valid full 19-byte macro backup can abort the entire restore after flashing.**  
+   [ak820keymap.py:250](/Users/jdlien/code/ak820-pro/hostagent/ak820keymap.py:250), [flash.sh:292](/Users/jdlien/code/ak820-pro/flash.sh:292).
+
+   Concrete old buffer: fifteen empty macros, then macro 16 containing `AB`, its terminator, and the validity byte—19 bytes total. `macros_used()` returns 18 bytes; the new buffer permits 17 before its flag.
+
+   The size check correctly refuses this buffer, but only **after firmware flashing erased EEPROM**, and before restoring any keymap data. Three retries then exit `flash.sh`, also skipping profiles and live settings. The backups survive, but the board remains reset.
+
+   **Fix:** Check macro capacity against the target firmware before flashing. Alternatively, restore the independent keymap/settings while explicitly reporting that the macros could not fit.
+
+6. **P3 — The cut tests omit recovery cuts and restore cut windows.**  
+   [profiles_cut_test/test.c:184](/Users/jdlien/code/ak820-pro/scripts/profiles_cut_test/test.c:184), [profiles_cut_test/test.c:220](/Users/jdlien/code/ak820-pro/scripts/profiles_cut_test/test.c:220).
+
+   The sweep disables cutting before reboot, so `boot_recover()` always completes uninterrupted. Restore tests exercise completed sequences only. Also, each 26-byte record-body write and each settings flush is modeled as one durable step, although wear leveling splits them into physical lines.
+
+   Consequently, these tests can pass while findings 1 and 3 remain.
+
+   **Fix:** Nest a second cut sweep inside recovery; cut restore commit/apply/flush/sub-8 transitions; inject returned failures as well as resets; and exercise physical-line boundaries. Add pending menu choices and pre-boot-check actions to the initial states.
+
+7. **P3 — The menu integration test still expects the pre-owner write counts.**  
+   [menu_s0_test.c:4091](/Users/jdlien/code/ak820-pro/scripts/menu_s0_test.c:4091).
+
+   First Save still expects 13 writes and settlement 14. Formatting now adds the owner write, making those counts 14 and 15. Unlike `profiles_test.c`, these assertions were not updated.
+
+   **Fix:** Update both counts and assert the owner write’s address/value and ordering.
+
+The following checks were sound:
+
+- **Flip and recovery cut ordering:** Before `OW_MOVING`, the old owner remains authoritative. Until the outgoing last-record state commits, recovery repeats the flip from the old live settings. Once that record commits, recovery reloads the destination profile and flushes it before settling ownership. Repeating a cut during that recovery follows the same states. I found no additional ownership inversion in these source traces. Losing the destination’s modifications after its snapshot is overwritten remains the documented fallback.
+- **Profile-write failure latch:** Failures in the pending pair, moving marker or outgoing record prevent application; failure of the final owner write leaves durable moving ownership for reboot recovery. Failure clearing a consumed record leaves a stale record that boot can remove. The settings-flush and host-reporting exceptions are findings 3 and 4.
+- **Unformatted blocks:** Fresh-flash and aborted-restore blocks ignore the leftover owner. `format()` establishes ownership before publishing magic. Sub 8’s unformatted no-op is consistent with having no side-specific profiles.
+- **Menu actions and Reset:** During an ordinary flip countdown, Load/Save/Prof keys correctly use the outgoing settled side. Delete handles both active nibbles and associated snapshots; Rename retains its invalidate/body/state ordering. Completed Reset clears both selections and the last record while preserving user slots. The boot-pending exception is finding 2.
+- **Normal same-side firmware upgrade:** Flashing erases the old wear-leveling format; `flash.sh` waits six seconds before restoring. With fitting macros, the first unformatted boot, block commit, live application and flush have consistent ownership. No sub 8 is needed in this settled same-side case.
+- **Macro boundaries:** Macros occupy **787–804**, owner **805**, profiles **806–1023**. VIA accesses and QMK macro reset respect the 18-byte size. The dev Write test now targets **803**, preserving validity byte 804 and owner 805. In-memory checks of the actual `macros_used()` confirmed that empty old buffers and the old dev-test spare byte migrate safely.
+- **Berger check:** The original seven data bytes require check **33**; the four-bit tear requires **37**, so it is rejected. Dropping data bits increases the required count; dropping check bits decreases the stored count. An entirely dropped line is the existing zero end marker and safely loses that final write. All appended eight-byte log records use the multi-byte encoding; optimized records remain restricted to two-byte stores. Consolidated data and its FNV hash are separate and unchanged. Log occupancy and `flash_tidy.c` remain measured in physical bytes.
+
+I reviewed both commits, their callers and all supplied test sources/runners. I did not build or execute the file-writing test runners; execution was limited to isolated, in-memory Python checks. No USB/HID interfaces were opened, no files were changed, and reviewed files stayed inside the requested repository.
+### Verbatim, the second verify
+
+**No new P1 found. Four P2 issues remain, plus two P3 gaps.**
+
+1. **P2 — A failure before the explicit flush can still produce a successful restore.**  
+   [menu_glue.c:276](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/menu_glue.c:276), [wear_leveling.c:762](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/quantum/wear_leveling/wear_leveling.c:762).
+
+   Counterexample: sub 5 applies the backup, then the host pauses two seconds—inside `TX_TICKS`. The ordinary deferred RGB write runs and fails to unlock flash, after updating the wear-leveling cache. Sub 6 subsequently snapshots the already-incremented failure count; its forced RGB write skips the unchanged cached bytes. It reports success, and commit publishes the owner and magic over settings that never fully landed. Choose sufficient log space so no subsequent consolidation repairs them.
+
+   A failed standalone `wear_leveling_consolidate()` also escapes this counter entirely.
+
+   **Fix:** expose a sticky persistence-failure flag covering normal writes and explicit consolidation. Have profile writes and flush confirmation consult it until reboot or verified recovery. Test a deferred failure between apply and flush using the real cache’s unchanged-write behavior. Batch 3 finding 3 is only partially fixed.
+
+2. **P2 — `confirm_side()` can skip a flip that commit actually arms.**  
+   [ak820profiles.py:387](/Users/jdlien/code/ak820-pro/hostagent/ak820profiles.py:387), [profiles.c:774](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/menu/profiles.c:774).
+
+   Counterexample: restore a Windows backup during an existing Win→Mac countdown. Geometry still reports Windows because `[9]` describes `SD_SETTLED`, while the physical switch already requests Mac. Commit correctly arms the Mac flip, but `src == g.side` makes confirmation return immediately. Read-back can finish before the flip fails.
+
+   I reproduced this with the host test’s fake board: restore returned **0**, with the flip still pending and only the initial geometry query issued. Completing the flip then returned **`0x82`**, including the failure latch.
+
+   **Fix:** check pending/failure status after every capable commit, irrespective of the initial source-side comparison. Either wait for a settled board before beginning or expose the physical target separately. Determine the read-back comparison from the completed transition. Batch 3 finding 4 remains incomplete.
+
+3. **P2 — Flash sessions still need serialization.**  
+   [ak820ctl.c:120](/Users/jdlien/code/ak820-pro/time-util-ak820pro/ak820ctl.c:120), [hid_protocol.c:277](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/hid_protocol.c:277).
+
+   Counterexample on Windows: process A begins writing address A; process B begins address B, replacing the firmware’s shared `fw_addr/fw_fill`; A’s next data packet now contributes to B’s write. Both processes can accept each other’s identically headed acknowledgements. A later CRC failure does not undo the damage. Having one provisioning executable does not prevent two instances.
+
+   **Fix:** acquire an OS-wide per-device lock before opening a write/erase/CRC session, retaining it through verification and relocking. Add a two-client interleaving test. The cross-channel correlation fix is sound; this portion of the original Batch 4 finding remains unresolved.
+
+4. **P2 — Keeping the clock’s uncorrelated `xfer()` preserves cross-channel failures.**  
+   [ak820ctl.c:73](/Users/jdlien/code/ak820-pro/time-util-ak820pro/ak820ctl.c:73), [ak820ctl.c:375](/Users/jdlien/code/ak820-pro/time-util-ak820pro/ak820ctl.c:375).
+
+   Counterexample: while the sole clock client awaits GET, it receives another process’s `FC_INFO/FS_BUSY` reply: `07 11 01 01`, followed by zeros. `xfer()` accepts it, `get_offset()` reads protocol zero, and `cmd_clock()` records a legacy capability and performs a legacy set against modern firmware.
+
+   **Fix:** require full-length, matching channel/command replies for clock transactions too. Retain the separate single-clock-owner rule: correlation cannot distinguish two clock clients, but it does reject flash/text replies. This is a retained defect, not a regression introduced by the new flash helper.
+
+5. **P3 — The second-cut allowance hides more than the documented Windows return-flip loss.**  
+   [profiles_cut_test/test.c:252](/Users/jdlien/code/ak820-pro/scripts/profiles_cut_test/test.c:252).
+
+   `w2` permits Windows’ profile value whenever **any** second cut exists. For example, `k=0`, `mac=true`, `c2=0`, with results Mac=95 and Windows=20 passes—even though the recovering boot never flips toward Windows and the second cut precedes its first durable write. Windows should retain 25 there.
+
+   **Fix:** allow 20 only when the recorded execution actually reaches the relevant cut window in a flip toward Windows. Also tighten the storage model: its two-line keyboard block differs from the real ten-byte block, and its flush fake bypasses the cache behavior behind finding 1. Batch 3 finding 6 is improved, but not closed.
+
+6. **P3 — The macro warnings assert outcomes that were not established.**  
+   [ak820keymap.py:282](/Users/jdlien/code/ak820-pro/hostagent/ak820keymap.py:282), [flash.sh:382](/Users/jdlien/code/ak820-pro/flash.sh:382).
+
+   A manual restore with oversized macros leaves existing board macros untouched, yet says “the board has none.” Separately, after three failed profile restores, `flash.sh` still reaches the new warning saying the settings were restored.
+
+   **Fix:** say the macros were skipped and existing macros left unchanged; report settings success only when the corresponding restore succeeded.
+
+What I checked and found sound:
+
+- **Batch 3 finding 1:** pages → live apply/flush → active byte → owner → magic closes the original commit/sub-8 cut window. Timeout expiry leaves the block unpublished and the later commit rejected.
+- **Batch 3 finding 2:** the `SD_BOOT` gates cover Load, Save, Rename, Delete, profile stepping, begin, apply and Reset. Clearing `SD_BOOT` before `boot_check()` avoids self-blocking.
+- **Commit bookkeeping:** begin discards the previous pending pair; profile mutations stay blocked during restore; commit replaces the old countdown. I found no separate firmware defect in those interactions.
+- **Immediate flush failures:** failures occurring inside the explicit flush now latch and prevent settled-owner publication. Fixed addresses are in bounds, and this flush cannot wrap the failure counter.
+- **Read-back:** excluding the last record after a confirmed flip is appropriate; that record legitimately changes.
+- **Batch 3 findings 5 and 7:** oversized macros preserve keymap/encoder restoration with exit 3, and `flash.sh` continues. The menu test’s 14/15 write counts and owner ordering are corrected.
+- **Batch 4:** the four-report cap closes the reported watchdog-starvation loop; both idle observations preserve WIP damage; relocking covers ambiguous unlock failure and propagates failure; `FC_INFO` now waits for idle.
+- **Tests/docs:** the flash test now uses actual `ak820ctl`, asset tests exercise loading and ID lookup, the idle-blit interleaving is covered, the dependency pin matches, and animation documentation says 243.
+- **`75e78cb508`:** repeated module `36/33` cycles no longer restart the hold indefinitely. Board selections retain their hold, wake rearms the module allowance, and the promotion timer remains separate.
+
+I ran both Python host tests successfully with **in-memory fixtures and device imports stubbed**, plus the confirmation counterexample above. I did not build the C tests because the sandbox rejects temporary-file creation. No files were changed, no USB/HID interfaces were opened, and source inspection stayed inside the repository.

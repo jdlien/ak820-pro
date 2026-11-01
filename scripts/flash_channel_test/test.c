@@ -118,6 +118,7 @@ static void spi1_xfer(uint8_t b) { (void)spi1_rw(b); }
 /* ---- the device ak820ctl.c talks to (fake_hidapi/hidapi.h) ---------------- */
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/file.h>
 #include "hidapi.h"
 int ak820ctl_main(int argc, char **argv);
 
@@ -324,6 +325,21 @@ int main(void) {
         CHECK(fault.foreign > 0, "%u foreign reports came in during the second write", fault.foreign);
         CHECK(rc == 0 && crc32_of(mem + at, sizeof b) == crc32_of(b, sizeof b),
               "it was written and verified all the same, every sector erased (rc %d)", rc);
+    }
+
+    printf("ak820ctl: a second flash session while one holds the lock (codex's verify):\n");
+    {
+        char lk[512];
+        snprintf(lk, sizeof lk, "%s/ak820ctl-flash.lock", tmpdir);
+        setenv("AK820CTL_LOCK", lk, 1);
+        int fd = open(lk, O_RDWR | O_CREAT, 0600), held = fd >= 0 && flock(fd, LOCK_EX | LOCK_NB) == 0;
+        uint32_t e0 = n_erases;
+        int rc = ctl(4, "flash", "write", hex(FLASH_ASSET_BASE + 0x200000u), write_file("small.bin", small, sizeof small));
+        CHECK(held && rc != 0 && n_erases == e0, "refused, nothing erased (rc %d)", rc);
+        if (fd >= 0) close(fd);
+        CHECK(ctl(4, "flash", "write", hex(FLASH_ASSET_BASE + 0x200000u), write_file("small.bin", small, sizeof small)) == 0,
+              "and runs once the other has ended");
+        unsetenv("AK820CTL_LOCK");
     }
 
     /* F-001 */

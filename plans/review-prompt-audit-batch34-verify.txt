@@ -1,0 +1,33 @@
+Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it. Do not run anything that opens USB or HID devices, talks to a keyboard, or changes any file: this is a read-only review. (A keyboard on this machine is mid-way through a multi-day battery test.) You may build and run the host tests named below if they only write to a temporary directory; say if you do.
+
+You reviewed two batches of firmware fixes for the QMK/ChibiOS port for the Ajazz AK820 Pro (CLAUDE.md at the repo root describes it), from the audit in plans/AUDIT-2026-10-31.md. Your findings, with what was done about each, are in plans/review-codex-audit-batch4-2026-10-31.md (Batch 4, writing assets) and in your verify of Batch 3 (settings across a power cut), whose seven findings are summarized here:
+  1. P2 a cut between the restore's commit and sub 8 recreates the cross-side restore failure;
+  2. P2 external mutations can run before SD_BOOT resolves ownership;
+  3. P2 settings-flush failures can still publish OW_SETTLED;
+  4. P2 the host reports success when the asynchronously scheduled flip fails;
+  5. P2 a valid 19-byte macro backup aborts the whole restore after flashing;
+  6. P3 the cut tests omit recovery cuts and restore cut windows, line granularity and failure injection;
+  7. P3 menu_s0_test.c still expects the pre-owner write counts.
+
+Verify the fixes. Check each against the finding it answers, and look for what they break.
+
+qmk_firmware-ak820pro (branch audit-fixes), in order:
+- `git show 75e78cb508` (ch582f_ajazz.c: the module's own link attempts hold off a deep sleep only once between wakes; a peer reviewer found a module cycling 5B 36 and 33 in one main-loop pass could hold DSB_LINKING forever);
+- `git show f79515e37a` (usb_main.c + config.h: RAW_HID_TASK_MAX_REPORTS, your Batch 4 P1);
+- `git show ad917da23d` (lcd_bus.c: flash_wip_settle(), your Batch 4 P2);
+- `git show cd9fce3039` (hid_protocol.c: FC_INFO answers FS_BUSY mid-program, your Batch 4 P2);
+- `git show c7b8b2b53e` (profiles.c, menu_glue.c, menu_env.h, wear_leveling.c/.h: Batch 3 verify findings 1-4 in the firmware: the commit's [7], the owner before the magic, the flip it arms, sub 8 removed, the SD_BOOT gate, wear_leveling_failures() and flush_settings(), sub 7's [10]).
+time-util-ak820pro (the host's ak820ctl, a dependency clone in the repo): `git -C time-util-ak820pro show 4cc6571` (xfer_flash(), relock(); your Batch 4 P2s).
+The outer repo (main): `git show` each of `9dbbe3f`, `89e4d23`, `3d8e2b3`, `9eb5b37`, `798ee30` (the commits since 77b4f08: the tests above, hostagent/ak820profiles.py's new restore order and confirm_side(), hostagent/ak820keymap.py and flash.sh for finding 5, scripts/menu_s0_test.c for 7, deps.lock's ak820ctl pin, docs/display.md).
+
+Deliberate choices to check rather than accept:
+- The restore's new order (ak820profiles.py cmd_restore): pages with the block unpublished, then the live record applied (sub 5) and flushed (sub 6) while the restore is open, then the commit with [7]. The restore's 5 s page timeout (TX_TICKS) now also covers the apply and flush.
+- commit(): active byte, owner, magic; then side's SD_SETTLED and the countdown. Is there any state in which the commit's arming and a countdown already running, a pending pair, or the boot's check interact badly?
+- writable() now refuses SD_BOOT; prof_tick()'s boot condition no longer uses writable(). Check every writable() caller and every path that reads SD_BOOT.
+- flush_settings() latches TX_FAILED on a settings-flush failure, refusing every profile write until a reboot. wear_leveling_failures() counts failed wear_leveling_write() calls only (not wear_leveling_consolidate()'s, not the bounds check).
+- The host's read-back after a flip compares the magic, the active byte and the user slots, not the last record.
+- The cut test allows Windows its profile (20) when a second cut lands in a recovering boot's flip back to Windows: the flip's documented loss for the side arrived at. Is that the only case it hides?
+- ak820ctl keeps xfer() for the clock; flash sessions are not serialized.
+- The macro restore's exit 3, and flash.sh treating it as a warning.
+
+Report findings by severity (P1 must fix before release, P2 should, P3 tests/docs), each with a concrete counterexample and a proposed fix, then list what you checked and found sound.

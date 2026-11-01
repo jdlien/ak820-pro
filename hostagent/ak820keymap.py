@@ -279,7 +279,7 @@ def cmd_restore(path):
     print("(VIA reads the keymap at connect -- reload the tab to see it)")
     if skipped:
         print(f"WARNING: the backup's macros use {len(skipped)} bytes and this firmware's macro buffer holds "
-              f"{msize - 1}: the macros were NOT restored (the board has none). Trim them in {path} and run "
+              f"{msize - 1}: the macros were NOT restored (the board's own were left as they were). Trim them in {path} and run "
               f"`ak820keymap.py restore` again, or set them in VIA.", file=sys.stderr)
         sys.exit(MACROS_SKIPPED)
 

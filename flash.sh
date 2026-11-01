@@ -379,7 +379,7 @@ else
 fi
 if [ "${MACROS_SKIPPED:-0}" = 1 ]; then
     echo "WARNING: the VIA macros were not restored: they don't fit this firmware's macro buffer (above);"
-    echo "         the keymap, the knob and the settings were. Trim them in $KEYMAP, then"
+    echo "         the keymap and the knob were (the settings' own result is above). Trim them in $KEYMAP, then"
     echo "         $PY hostagent/ak820keymap.py restore"
 fi
 echo "done."

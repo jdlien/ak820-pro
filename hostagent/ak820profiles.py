@@ -377,32 +377,37 @@ def apply_live(h, live):
     return applied, live
 
 
-def confirm_side(h, g, src):
-    """After a commit that named the live settings' side (the 10-31 audit's
-    review): a backup taken on the Win/Mac switch's other side holds that
-    side's live settings and this side's last record, and the board flips to
-    the switch's side, each side keeping its own. Polled to its end through
-    sub 7 ([9] the side, [10] bit 0 a flip still to run, bit 1 the write
-    latch): a fixed wait confirmed nothing (codex). True when it flipped."""
-    if src not in ("windows", "mac") or g.side not in ("windows", "mac") or src == g.side:
-        return False
+def confirm_side(h, g, src, committed):
+    """After a commit (the 10-31 audit's review): a firmware whose commit takes
+    the live settings' side ([7]) flips to the switch's side when they differ,
+    each side keeping its own, and so does a countdown already running when
+    the switch moved before the restore. Polled after every such commit,
+    whatever the sides looked like before it, through sub 7 ([9] the side
+    settled, [10] bit 0 a flip still to run, bit 1 the write latch): a fixed
+    wait confirmed nothing (codex, both rounds). committed: the side the
+    commit named. True when a flip followed it."""
     of = {"windows": "Windows'", "mac": "the Mac's"}
     if not g.takes_side:
-        print(f"  note: the backup was taken on {of[src]} side of the Win/Mac switch, the board is on {of[g.side]}, "
-              f"and this firmware can't be told: {of[src]} settings now show on {of[g.side]} side")
+        if src in of and g.side in of and src != g.side:
+            print(f"  note: the backup was taken on {of[src]} side of the Win/Mac switch, the board is on "
+                  f"{of[g.side]}, and this firmware can't be told: {of[src]} settings now show on {of[g.side]} side")
         return False
     deadline = time.monotonic() + 3.0
     while True:
         r = xfer(h, 7)
         if r[10] & 2:
-            raise SystemExit(f"the flip to {of[g.side]} side failed: a write failed, and the board refuses the profiles' "
-                             "writes until a reboot; power-cycle it, then restore again")
-        if not r[10] & 1 and SIDES.get(r[9]) == g.side:
+            raise SystemExit("the restore's flip failed: a write failed, and the board refuses the profiles' writes "
+                             "until a reboot; power-cycle it, then restore again")
+        if not r[10] & 1:
             break
         if time.monotonic() > deadline:
-            raise SystemExit(f"the board did not finish its flip to {of[g.side]} side within 3 s")
+            raise SystemExit("the board did not finish its flip within 3 s")
         time.sleep(0.1)
-    print(f"  the live settings were {of[src]} (the backup's side): the board flipped to {of[g.side]}, each side its own")
+    final = SIDES.get(r[9])
+    if final is None or committed is None or final == committed:
+        return False
+    whose = f"{of[committed]} (the backup's side)" if src == committed else of[committed]
+    print(f"  the live settings were {whose}: the board flipped to {of[final]}, each side its own")
     return True
 
 
@@ -593,7 +598,7 @@ def cmd_restore(path, block_only, live_only):
                     st = write_block(h, want, g, may_refuse=block_has(want, BV_ICON | BV_FACE), side=side)
             if st == 4:
                 raise SystemExit("restore refused at commit: invalid (the board's profiles read as empty)")
-            flipped = confirm_side(h, g, src)
+            flipped = confirm_side(h, g, src, src if side else g.side)
             # A flip rewrites the last record (the side left's settings) and
             # may clear it: the profiles and the active byte are compared.
             upto = 2 + USER_OF.get(want[0], block_slots(want)) * REC if flipped else len(want)

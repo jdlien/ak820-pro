@@ -177,14 +177,16 @@ class FakeBoard:
     the commit's [7] names the live settings' side, and on the switch's other side the board flips, its sub 7
     [10] bit 0 set for `flip_polls` polls, [9] the backup's side till then, the last record rewritten by it;
     `pre_side`: a firmware from before, whose commit ignores [7] and whose [10] is 0; `latch`: the flip's
-    write fails (bit 1); `stuck`: the flip never ends."""
+    write fails (bit 1); `stuck`: the flip never ends; `switch`: the switch's reading ([10] bit 2) where it
+    differs from the side settled ([9]): a countdown already running (codex's verify)."""
     def __init__(self, live, old=False, refuse=False, pre_icon=False, side=1, pre_side=False, latch=False,
-                 stuck=False, flip_polls=2):
+                 stuck=False, flip_polls=2, switch=None):
         self.live, self.old, self.refuse, self.pre_icon, self.sent, self.reply = live, old, refuse, pre_icon, [], None
         self.block = bytes([ap.MAGIC_V4, 0xFF]) + bytes(8 * ap.REC)
         self.staged, self.commits = None, 0
         self.side, self.pre_side, self.latch, self.stuck = side, pre_side, latch, stuck
-        self.flip_polls, self.pending, self.settled = flip_polls, 0, side
+        self.switch = switch or side
+        self.flip_polls, self.pending, self.settled = flip_polls, (flip_polls if self.switch != side else 0), side
         self.subs, self.commit_sides, self.flipped = [], [], False
 
     def bv_bad(self, v):
@@ -221,8 +223,9 @@ class FakeBoard:
             else:
                 self.block = bytes(self.staged)
                 self.commit_sides.append(q[7])
-                if not self.pre_side and q[7] in (1, 2) and q[7] != self.side:
-                    self.settled, self.pending = q[7], self.flip_polls
+                if not self.pre_side:
+                    self.settled = q[7] if q[7] in (1, 2) else self.settled
+                    self.pending = self.flip_polls if self.settled != self.switch else 0
             q[6] = 4 if bad else 0
         elif sub == 5:
             r = bytes(q[4:4 + ap.REC])
@@ -237,11 +240,12 @@ class FakeBoard:
             if self.pending and not self.stuck:
                 self.pending -= 1
                 if not self.pending:   # the flip: the side left's settings into the last record
-                    self.settled, self.flipped = self.side, True
-                    self.block = self.block[:2 + 7 * ap.REC] + bytes([0x10 | (2 - self.side)]) + bytes(ap.REC - 1)
+                    left, self.settled, self.flipped = self.settled, self.switch, True
+                    self.block = self.block[:2 + 7 * ap.REC] + bytes([0x10 | (left - 1)]) + bytes(ap.REC - 1)
             q[4:10] = bytes([8, ap.REC, 9, ap.PAGE, ap.MAGIC_V4, self.settled])
             if not self.pre_side:
-                q[10] = 0x80 | (1 if self.pending else 0) | (2 if self.latch and self.flipped else 0)
+                q[10] = 0x80 | (1 if self.pending else 0) | (2 if self.latch and self.flipped else 0) | \
+                    (4 if self.switch == 2 else 0)
         self.reply = bytes(q)
 
     def read(self, n, timeout_ms):
@@ -363,7 +367,11 @@ with tempfile.TemporaryDirectory() as tmp:
             ("windows", 2, {}, (False, True), [], None, None),       # --live-only: the board's own profiles
             ("windows", 2, {"pre_side": True}, (False, False), [1], "this firmware can't be told", None),
             ("windows", 2, {"latch": True}, (False, False), [1], None, "a write failed"),
-            ("windows", 2, {"stuck": True}, (False, False), [1], None, "did not finish its flip")):
+            ("windows", 2, {"stuck": True}, (False, False), [1], None, "did not finish its flip"),
+            # codex's verify: settled on Windows, the switch moved to the Mac before the restore (a countdown
+            # running); a Windows backup's commit names Windows, and the flip to the Mac follows it
+            ("windows", 1, {"switch": 2}, (False, False), [1], "the board flipped to the Mac's", None),
+            ("windows", 1, {"switch": 2, "latch": True}, (False, False), [1], None, "a write failed")):
         with open(path, "w", encoding="utf-8") as f:
             json.dump({"format": 4, "switch": swtch, "block": ib.hex(), "live": icon_s.hex()}, f)
         b = FakeBoard(live_rec(1), side=board, **kw)

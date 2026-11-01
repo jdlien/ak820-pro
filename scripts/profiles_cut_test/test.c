@@ -46,8 +46,9 @@ void prof_test_reset(void);
 
 typedef struct { uint8_t lcd, ind[2], clock, view, font; } kb_t;
 static uint8_t   ee[1024], d_ee[1024];
-static kb_t      kb, d_kb;
-static env_rgb_t rgb, d_rgb;
+static kb_t      kb, d_kb, c_kb;      /* RAM, the flash, wear leveling's cache of them */
+static env_rgb_t rgb, d_rgb, c_rgb;
+static bool      wl_failed_ever;       /* a line failed since the boot: wear_leveling_failures() nonzero */
 static bool      kb_dirty, rgb_dirty;
 static uint8_t   power = 1;
 
@@ -65,6 +66,7 @@ static bool line(const char *what) {
     if (step == fail_at) {
         if (step < 256) snprintf(steplog[step], sizeof steplog[0], "FAILED %s", what);
         step++;
+        wl_failed_ever = true;
         return false;
     }
     durable(what);
@@ -89,9 +91,13 @@ uint8_t env_prof_write(uint16_t addr, const void *src, uint8_t n) {
 }
 bool env_recovering(void) { return false; }
 static bool fk_pending;
-/* kb_eeconfig's block, then the RGB config's, each in its lines. */
+/* kb_eeconfig's block, then the RGB config's, each in its lines; the cache
+ * first, so a failed line leaves its bytes there, and a write of bytes the
+ * cache already holds is skipped, as wear_leveling_write()'s. */
 static bool kb_write(const char *why) {
     char w[48];
+    if (!memcmp(&c_kb, &kb, sizeof kb)) return true;
+    c_kb = kb;
     snprintf(w, sizeof w, "kb_eeconfig line 0 (%s)", why);
     if (!line(w)) return false;
     d_kb.lcd = kb.lcd; d_kb.ind[0] = kb.ind[0]; d_kb.ind[1] = kb.ind[1]; d_kb.clock = kb.clock;
@@ -102,6 +108,8 @@ static bool kb_write(const char *why) {
 }
 static bool rgb_write(const char *why) {
     char w[48];
+    if (!memcmp(&c_rgb, &rgb, sizeof rgb)) return true;
+    c_rgb = rgb;
     snprintf(w, sizeof w, "RGB line 0 (%s)", why);
     if (!line(w)) return false;
     d_rgb.enable = rgb.enable; d_rgb.mode = rgb.mode; d_rgb.h = rgb.h; d_rgb.s = rgb.s;
@@ -115,7 +123,10 @@ bool env_settings_flush(void) {
     if (kb_dirty) { ok = kb_write("flush"); kb_dirty = false; }
     ok = rgb_write("forced flush") && ok; rgb_dirty = false;
     fk_pending = false;
-    return ok || !flush_reports;
+    /* reported: any failure since the boot (the firmware's sticky count); the
+     * control, as QMK's driver: nothing. */
+    (void)ok;
+    return !wl_failed_ever || !flush_reports;
 }
 void env_settings_touch(void) { fk_pending = true; kb_dirty = true; }
 bool env_settings_pending(void) { return fk_pending; }
@@ -164,16 +175,18 @@ static uint8_t last_lcd(void) { return ee[PROF_BASE + PROF_REC_OFF(PROF_LAST) + 
 static void flip(bool mac) { prof_switch(mac); ticks(3); }
 static void reboot(bool mac) {
     memcpy(ee, d_ee, sizeof ee);
-    kb = d_kb; rgb = d_rgb; kb_dirty = rgb_dirty = fk_pending = false;
+    kb = c_kb = d_kb; rgb = c_rgb = d_rgb; kb_dirty = rgb_dirty = fk_pending = false;
+    wl_failed_ever = false;
     prof_test_reset();
     prof_switch(mac);   /* dip_switch_init()'s reading */
     ticks(5);
 }
 static void fresh(void) {
     memset(ee, 0, sizeof ee); memset(d_ee, 0, sizeof d_ee);
-    kb = (kb_t){52, {30, 60}, 4, 1, ENV_FONT_LARGE}; d_kb = kb;
-    rgb = (env_rgb_t){2, 240, 215, 86, 127, 1, 0xFF}; d_rgb = rgb;
+    kb = (kb_t){52, {30, 60}, 4, 1, ENV_FONT_LARGE}; d_kb = c_kb = kb;
+    rgb = (env_rgb_t){2, 240, 215, 86, 127, 1, 0xFF}; d_rgb = c_rgb = rgb;
     kb_dirty = rgb_dirty = fk_pending = false;
+    wl_failed_ever = false;
     step = 0; cut_at = fail_at = -1;
     prof_test_reset();
 }
@@ -225,7 +238,7 @@ static int bad, runs;
  * boot that recovers it (c2 < 0: none), then a clean boot with the switch on
  * the Mac (mac) or moved back to Windows, and the flip to the other side.
  * Returns ok; r[] the looks on the two sides, o the owner left by the cut. */
-static bool cut_run(int k, int c, int c2, bool mac, int r[2], uint8_t *o) {
+static bool cut_run(int k, int c, int c2, int w2_from, bool mac, int r[2], uint8_t *o) {
     setup(k);
     cut_at = step + c;
     if (setjmp(cut_jmp) == 0) flip(true);
@@ -233,7 +246,8 @@ static bool cut_run(int k, int c, int c2, bool mac, int r[2], uint8_t *o) {
     *o = d_ee[PROF_OWNER_ADDR];
     if (c2 >= 0) {
         memcpy(ee, d_ee, sizeof ee);
-        kb = d_kb; rgb = d_rgb; kb_dirty = rgb_dirty = fk_pending = false;
+        kb = c_kb = d_kb; rgb = c_rgb = d_rgb; kb_dirty = rgb_dirty = fk_pending = false;
+        wl_failed_ever = false;
         prof_test_reset();
         cut_at = step + c2;
         if (setjmp(cut_jmp) == 0) { prof_switch(mac); ticks(5); settle_all(); }
@@ -246,16 +260,18 @@ static bool cut_run(int k, int c, int c2, bool mac, int r[2], uint8_t *o) {
     settle_all();
     r[1] = look();
     runs++;
-    /* A second cut can land in a flip TO Windows (the recovering boot's, with
-     * the switch moved back): then Windows is the side arrived at, and the
-     * documented loss is its own, its changes since its profile (20). */
-    bool w2 = c2 >= 0 && k != 2;
+    /* A second cut in the recovering boot's flip TO Windows (the switch moved
+     * back; w2_from its first step, the owner byte OW_MOVING | Windows): then
+     * Windows is the side arrived at, and the documented loss is its own, its
+     * changes since its profile (20). Nowhere else (codex's verify). */
+    bool w2 = !mac && k != 2 && w2_from >= 0 && c2 >= w2_from;
     return mac ? mac_ok(k, r[0]) && (win_ok(k, r[1]) || (w2 && r[1] == 20))
                : (win_ok(k, r[0]) || (w2 && r[0] == 20)) && mac_ok(k, r[1]);
 }
 
-/* The steps a clean boot takes after the flip cut at c (the recovery's). */
-static int boot_steps(int k, int c, bool mac) {
+/* The steps a clean boot takes after the flip cut at c (the recovery's), and
+ * in *w2_from the first of its flip toward Windows (-1: none). */
+static int boot_steps(int k, int c, bool mac, int *w2_from) {
     setup(k);
     cut_at = step + c;
     if (setjmp(cut_jmp) == 0) flip(true);
@@ -263,6 +279,12 @@ static int boot_steps(int k, int c, bool mac) {
     int base = step;
     reboot(mac);
     settle_all();
+    *w2_from = -1;
+    for (int i = base; i < step && i < 256; i++) {
+        char want[48];
+        snprintf(want, sizeof want, "owner byte 0x%02X", 0x60 | PROF_SIDE_WIN);
+        if (!strcmp(steplog[i], want)) { *w2_from = i - base; break; }
+    }
     return step - base;
 }
 
@@ -278,18 +300,18 @@ static void sweep(int k) {
     for (int c = 0; c <= n; c++) {
         int     rm[2], rw[2], nested = 0, nested_bad = 0;
         uint8_t o;
-        bool    okm = cut_run(k, c, -1, true, rm, &o);
-        bool    okw = cut_run(k, c, -1, false, rw, &o);
+        bool    okm = cut_run(k, c, -1, -1, true, rm, &o);
+        bool    okw = cut_run(k, c, -1, -1, false, rw, &o);
         if (!okm) bad++;
         if (!okw) bad++;
         /* A second cut at each step of the recovering boot, either way. */
         for (int b = 0; b < 2; b++) {
-            int n2 = boot_steps(k, c, b == 0);
+            int w2_from, n2 = boot_steps(k, c, b == 0, &w2_from);
             for (int c2 = 0; c2 < n2; c2++) {
                 int     r2[2];
                 uint8_t o2;
                 nested++;
-                if (!cut_run(k, c, c2, b == 0, r2, &o2)) {
+                if (!cut_run(k, c, c2, w2_from, b == 0, r2, &o2)) {
                     nested_bad++;
                     if (nested_bad <= 3)
                         printf("    BUG: cut %d, then the %s boot's step %d: %d -> %d\n", c, b ? "Windows" : "Mac", c2,
@@ -364,7 +386,7 @@ static void restore_sweep(void) {
     for (int i = 0; i < n && i < 160; i++) memcpy(r_log[i], steplog[base + i], sizeof r_log[0]);
     uint8_t ls = last_state(), ll = last_lcd();
     hid(7, 0, 0);
-    bool confirmed = rpt[9] == 1u + PROF_SIDE_MAC && rpt[10] == 0x80u;
+    bool confirmed = rpt[9] == 1u + PROF_SIDE_MAC && rpt[10] == 0x84u;   /* settled on the Mac, the switch there */
     reboot(true); settle_all();
     int rb = look();
     flip(false); settle_all();
@@ -404,6 +426,44 @@ static void restore_sweep(void) {
     printf("the restore cut at each of its %d steps: %d with the block unpublished (no profiles), %d of the rest ok\n",
            n + 1, unpub, n + 1 - unpub - cuts_bad);
     bad += cuts_bad;
+}
+
+/* Codex's verify, finding 1: the live record applied, then its deferred write
+ * (kb_eeconfig's settle, RGB's) fails before the host's flush: the bytes are
+ * in the cache, so the flush skips them as unchanged. The flush must report
+ * the failure and the commit must not publish; the control (the status
+ * dropped) publishes the owner over settings that never landed. */
+static bool restore_deferred_fail(bool reports) {
+    flush_reports = reports;
+    restore_setup();
+    bool ok = true;
+    hid(1, 0, 0x77);
+    for (uint8_t p = 0; p < PROF_PAGES; p++) {
+        memset(rpt, 0, sizeof rpt);
+        rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x10; rpt[3] = 2; rpt[4] = p; rpt[5] = 0x77;
+        memcpy(&rpt[6], &r_blk[p * PROF_PAGE], PROF_PAGE);
+        prof_hid(rpt);
+    }
+    memset(rpt, 0, sizeof rpt);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x10; rpt[3] = 5;
+    memcpy(&rpt[4], r_live, PROF_REC);
+    prof_hid(rpt);
+    fail_at = step;   /* the first deferred line */
+    if (kb_dirty) { (void)kb_write("settle"); kb_dirty = false; }
+    if (rgb_dirty) { (void)rgb_write("deferred"); rgb_dirty = false; }
+    fail_at = -1;
+    hid(6, 0, 0);
+    uint8_t fl = rpt[4];
+    memset(rpt, 0, sizeof rpt);
+    rpt[0] = 0x07; rpt[1] = 0x13; rpt[2] = 0x10; rpt[3] = 3; rpt[5] = 0x77; rpt[7] = 1u + PROF_SIDE_WIN;
+    prof_hid(rpt);
+    uint8_t cm = rpt[6];
+    bool published = d_ee[PROF_BASE + PROF_OFF_MAGIC] == PROF_MAGIC_V4;
+    ok = fl == PROF_WRITE_FAILED && cm != PROF_OK && !published;
+    printf("  %s: the flush %u, the commit %u, the block %s  %s\n", reports ? "reported" : "the control (dropped)", fl, cm,
+           published ? "published" : "unpublished", reports ? (ok ? "ok" : "BUG") : (published ? "(as it must)" : "BUG"));
+    flush_reports = true;
+    return reports ? ok : published;
 }
 
 /* A write that fails in place of each step of the flip, the run going on, then
@@ -447,7 +507,8 @@ static void preboot(void) {
     setup(0);
     flip(true); settle_all();
     memcpy(ee, d_ee, sizeof ee);
-    kb = d_kb; rgb = d_rgb;
+    kb = c_kb = d_kb; rgb = c_rgb = d_rgb;
+    wl_failed_ever = false;
     prof_test_reset();
     prof_switch(false);   /* the boot's reading, no tick yet */
     uint8_t ld = prof_load(0), sv = prof_save(2, NULL), rs = prof_reset();
@@ -480,6 +541,9 @@ int main(void) {
     printf("  %d bad with the flush's status reported; the control (the status dropped, as before): %d bad%s\n", fb, ctl,
            ctl ? " (as it must: a settled owner over a mix)" : "  BUG: the control should fail");
     bad += fb + (ctl ? 0 : 1);
+    printf("\na deferred write of the restore's live record fails before the host's flush:\n");
+    if (!restore_deferred_fail(true)) bad++;
+    if (!restore_deferred_fail(false)) bad++;
     preboot();
     printf("\n%d run(s), %d failure(s)\nRESULT: %s\n", runs, bad, bad ? "FAIL" : "PASS");
     return bad ? 1 : 0;
