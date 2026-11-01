@@ -40,7 +40,8 @@ IDLE = 1000            # the session idle, in the harness's long count (ms)
 class RX(ctypes.Structure):
     _fields_ = [("state", ctypes.c_int), ("boundary", ctypes.c_bool), ("tainted", ctypes.c_bool),
                 ("buf", ctypes.c_uint8 * 34), ("len", ctypes.c_uint8), ("start_tick", ctypes.c_uint16),
-                ("last_tick", ctypes.c_uint16), ("have_session", ctypes.c_bool), ("session", ctypes.c_uint8),
+                ("last_tick", ctypes.c_uint16), ("empty_tick", ctypes.c_uint16), ("have_session", ctypes.c_bool),
+                ("session", ctypes.c_uint8),
                 ("last_seq", ctypes.c_uint16), ("admitted_at", ctypes.c_uint32),
                 ("c_session", ctypes.c_uint8), ("c_seq", ctypes.c_uint16), ("inner", ctypes.c_uint8 * 26)] + \
                [(n, ctypes.c_uint32) for n in ("ok", "stale", "forbidden", "badenv", "badsum",
@@ -58,11 +59,11 @@ def build(cc):
     L.raw81_byte.restype = ctypes.c_int
     L.raw81_byte.argtypes = [ctypes.POINTER(RX), ctypes.c_uint8, ctypes.c_uint16]
     L.raw81_empty.restype = ctypes.c_bool
-    L.raw81_empty.argtypes = [ctypes.POINTER(RX), ctypes.c_uint16, ctypes.c_uint16]
+    L.raw81_empty.argtypes = [ctypes.POINTER(RX), ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint16]
     L.raw81_commit.restype = ctypes.c_int
     L.raw81_commit.argtypes = [ctypes.POINTER(RX), ctypes.c_bool, ctypes.c_uint16, ctypes.c_uint16, ctypes.c_uint32,
                                ctypes.c_uint32]
-    L.raw81_poll.argtypes = [ctypes.POINTER(RX), ctypes.c_bool, ctypes.c_uint16, ctypes.c_uint16]
+    L.raw81_poll.argtypes = [ctypes.POINTER(RX), ctypes.c_bool]
     L.raw81_window_done.argtypes = [ctypes.POINTER(RX), ctypes.c_bool]
     L.raw81_admit.argtypes = [ctypes.POINTER(RX), ctypes.c_uint8, ctypes.c_uint16, ctypes.c_uint32]
     L.raw81_receipt.argtypes = [ctypes.c_void_p, ctypes.c_uint8, ctypes.c_uint16, ctypes.c_uint8,
@@ -96,7 +97,7 @@ class Board:
         err_at_commit: the UART error flag is first seen by the poll just
         before a commit (an error raised during this drain)."""
         self.err_at_commit = err_at_commit
-        self.L.raw81_poll(ctypes.byref(self.rx), uart_err, self.tick, LIFE_T)
+        self.L.raw81_poll(ctypes.byref(self.rx), uart_err)
         for c in data:
             self.advance(step_ms)
             r = self.L.raw81_byte(ctypes.byref(self.rx), c, self.tick)
@@ -121,7 +122,7 @@ class Board:
                 if matched:
                     self.w = [0, 0, 0]
                 self.L.raw81_window_done(ctypes.byref(self.rx), matched)
-        if self.L.raw81_empty(ctypes.byref(self.rx), self.tick, SILENCE):
+        if self.L.raw81_empty(ctypes.byref(self.rx), self.tick, SILENCE, LIFE_T):
             self.w = [0, 0, 0]
 
     def quiet(self, ms=10):
@@ -219,8 +220,11 @@ def run(L):
     check("truncated", b.rx.lifetime == 1 and b.rx.state == 0, (b.rx.lifetime, b.rx.state))
     b = fresh(L)
     b.drain(wire81(env(7, health))[:20]); b.advance(LIFETIME + 1)
-    b.L.raw81_poll(ctypes.byref(b.rx), False, b.tick, LIFE_T)
-    check("truncated -> quarantine before silence is judged", b.rx.state == 2, b.rx.state)
+    b.L.raw81_poll(ctypes.byref(b.rx), False)
+    check("truncated: the drain's poll judges no lifetime (F-031)", b.rx.state == 1 and b.rx.lifetime == 0,
+          (b.rx.state, b.rx.lifetime))
+    b.drain(b"")
+    check("truncated: its empty read does", b.rx.lifetime == 1 and b.rx.state == 0, (b.rx.lifetime, b.rx.state))
     b.quiet(10); b.drain(wire81(env(8, health)))
     check("truncated recovers", [v[0] for v in b.verdicts] == ["OK"], b.verdicts)
 
@@ -252,13 +256,26 @@ def run(L):
         b = fresh(L); b.drain(wire81(head + bytes([c >> 8, c & 0xFF]) + inner))
         check(f"magic {magic:02x} session {session}", [v[0] for v in b.verdicts] == ["BADENV"], b.verdicts)
 
-    # 10c. A collection that crosses its lifetime inside the drain that
-    #      completes it: the poll at the drain's start passed, the commit must not.
+    # 10c. The module stalls mid-frame and its last bytes come 1 ms apart, the
+    #      queue read empty between them as the drain does: the empty read at
+    #      the lifetime aborts it (F-031: there, not at a drain's start).
     b = fresh(L)
     w = wire81(env(14, health))
     b.drain(w[:30]); b.advance(LIFETIME - 2)
-    b.drain(w[30:], step_ms=1)
-    check("lifetime at commit", [v[0] for v in b.verdicts] == ["LIFETIME"], b.verdicts)
+    for x in w[30:]:
+        b.advance(1)
+        b.drain(bytes([x]))
+    check("lifetime at an empty read", b.rx.lifetime == 1 and not [v for v in b.verdicts if v[0] == "OK"],
+          (b.rx.lifetime, b.verdicts))
+
+    # 10e. F-031: the 81 drained, then a pass of the board's own 20 ms long, the
+    #      rest of the frame waiting in the queue behind it with an ACK: OK, and the ACK.
+    b = fresh(L)
+    w = wire81(env(15, health))
+    b.drain(w[:1]); b.advance(LIFETIME)
+    b.drain(w[1:] + bytes([0x61, 0x0D, 0x0A]))
+    check("a long pass after the 81 (F-031)", [v[0] for v in b.verdicts] == ["OK"] and b.acks == 1,
+          (b.verdicts, b.acks))
 
     # 10d. Envelope v1 (0xC7, unmasked) is retired: BADENV.
     inner = health + bytes(26 - len(health))

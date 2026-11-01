@@ -292,6 +292,9 @@ static void persist(void) {
           "64 ticks off: only 6 h after boot");
     CHECK(!rtc_persist_due(10u * 3600000u, 33300, 33400, 5u * 3600000u), "and 6 h after this boot's last save");
     CHECK(!rtc_persist_due(3600000u, 0, 0, 0) && !rtc_persist_due(3600000u, 0, 27999, 0), "no candidate, or insane: never");
+    /* The 10-31 audit, F-040: past QMK's 49.7-day timer wrap the uptime goes on, so no new boot's 10 min or 6 h. */
+    CHECK(rtc_persist_due((1ull << 32) + 1000u, 0, 33300, 0) && rtc_persist_due((1ull << 32) + 1000u, 33300, 33400, 0),
+          "past the 49.7-day wrap: no new boot's waits");
 
     /* A fresh EEPROM (after a flash), a loop that converges at 2 min and
      * then never proposes again: saved once, at 10 min (the starvation trap). */
