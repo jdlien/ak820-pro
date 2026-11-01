@@ -105,6 +105,39 @@ After the fix: tick **20,000 Hz ±8**, ACK timeouts **0.042/frame** across a
 430-frame typing burst, zero dropped — at the *highest* row-ISR rate (18,800/s),
 which previously "broke Bluetooth".
 
+### 1.4 QMK's wear leveling and dynamic keymap, from the 10-31 audit → QMK
+
+Four QMK-wide findings of the firmware audit
+([`../plans/AUDIT-2026-10-31.md`](../plans/AUDIT-2026-10-31.md)), each with a
+host test against QMK's own code in `../scripts/`:
+
+- **F-010, a torn write log line replays as a valid write to a lower
+  address** (`quantum/wear_leveling/wear_leveling.c`). A cut mid-program only
+  drops 1-bits; the 8-byte store's multi-byte line has no check, so a tear in
+  the address bits writes the value elsewhere, and consolidation makes it
+  permanent. Here an 8-byte line holds 4 value bytes and a Berger code in byte
+  7, the count of 0-bits in bytes 0-6, which every tear raises while the
+  stored count can only fall; codex found a 4-bit tear a CRC-8 let through.
+  QMK's own 8-byte tests are updated for it. Costs a line per 4 bytes, not 5.
+  The 2- and 4-byte stores have the same exposure, unaddressed here.
+- **F-034, playback over-reads 1-2 stack bytes on a line of length 6 or 7**
+  (the same file): ASan and libFuzzer found it. `l > LOG_ENTRY_MULTIBYTE_MAX_BYTES`
+  should cancel playback, as the bounds check does; here F-010's length check
+  covers the 8-byte store only.
+- **F-017, a VIA keycode is two flash writes**
+  (`quantum/nvm/eeprom/nvm_dynamic_keymap.c`): a cut between them stores a
+  third keycode. One block write of both bytes fixes it.
+- **F-001's other half, `raw_hid_task()` drains without limit**
+  (`tmk_core/protocol/chibios/usb_main.c`): with each reply able to wait
+  100 ms for the IN endpoint, a host streaming reports and taking replies
+  slowly holds the main loop past any watchdog. Here
+  `RAW_HID_TASK_MAX_REPORTS` caps a pass's reports; unset, nothing changes.
+
+And one QMK default worth a word upstream: **QMK Command is on unless a board
+turns it off** (F-002), and both Shifts plus B, Esc or Backspace jump to the
+bootloader or format the EEPROM; rolling from one Shift to the other while
+typing is enough. Here `"command": false` in `keyboard.json`.
+
 ---
 
 ## Tier 2 — CH582F protocol fixes → fpb
