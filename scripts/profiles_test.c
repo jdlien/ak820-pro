@@ -40,10 +40,12 @@ bool        env_recovering(void) { return fk_recovering; }
 static int  fk_flushes, fk_touches;
 static bool fk_pending;   /* kb_eeconfig's write still to come */
 static uint8_t fk_flush_last;   /* the last record's state when the flush ran (codex, 10-27: the order) */
-void        env_settings_flush(void) {
+static bool    fk_flush_fails;  /* the 10-31 audit's review: a settings write failed */
+bool        env_settings_flush(void) {
     fk_flushes++;
     fk_pending    = false;
     fk_flush_last = ee[PROF_BASE + PROF_REC_OFF(PROF_LAST)];
+    return !fk_flush_fails;
 }
 void        env_settings_touch(void) { fk_touches++; fk_pending = true; }
 bool        env_settings_pending(void) { return fk_pending; }

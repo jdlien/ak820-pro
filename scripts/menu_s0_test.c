@@ -1435,7 +1435,7 @@ uint8_t env_prof_write(uint16_t addr, const void *src, uint8_t n) {
     return fk_ee_writes++ == fk_ee_fail_at ? ENV_WR_FAILED : ENV_WR_OK;
 }
 bool env_recovering(void) { return fk_recovering; }
-void env_settings_flush(void) { fk_flushes++; fk_settle_pending = false; }
+bool env_settings_flush(void) { fk_flushes++; fk_settle_pending = false; return true; }
 void env_settings_touch(void) { fk_settle_touches++; fk_settle_pending = true; }
 bool env_settings_pending(void) { return fk_settle_pending; }
 void env_prof_switched(uint8_t slot, uint8_t st) { (void)slot; (void)st; }   /* the Win/Mac switch: profiles_test.c */
