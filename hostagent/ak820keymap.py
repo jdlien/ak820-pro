@@ -159,6 +159,7 @@ def read_macros(h):
 
 
 MACRO_COUNT = 16   # QMK's DYNAMIC_KEYMAP_MACRO_COUNT, which the board leaves at its default
+MACROS_SKIPPED = 3   # restore's exit: the keymap and encoders restored, the macros didn't fit
 
 
 def macros_used(buf):
@@ -245,13 +246,16 @@ def cmd_restore(path):
         if layers != doc["layers"]:
             raise SystemExit(f"board has {layers} layers, file has {doc['layers']} -- refusing")
         # The macros, checked before anything is written: a backup whose
-        # macros don't fit this firmware's buffer (127 B since the profiles)
-        # is refused whole, and the file kept for its owner to trim.
+        # macros don't fit this firmware's buffer (18 B since the settings'
+        # owner byte, 10-31) restores without them, and the file is kept for
+        # its owner to trim. Not refused whole: flash.sh runs this after the
+        # flash erased the EEPROM, and a refusal left the keymap, the profiles
+        # and the live settings all at their defaults (codex, 10-31).
         used = macros_used(bytes.fromhex(doc["macros"])) if doc.get("macros") else b""
         msize = macro_size(h) if used else 0
+        skipped = b""
         if used and len(used) > msize - 1:
-            raise SystemExit(f"the backup's macros use {len(used)} bytes, and this firmware's macro buffer holds "
-                             f"{msize - 1} -- refusing; trim them in {path} or in VIA, then restore")
+            skipped, used = used, b""
         write_keymap(h, km)
         if doc.get("encoders"):
             write_encoders(h, doc["encoders"])
@@ -273,6 +277,11 @@ def cmd_restore(path):
     print(f"restored {len(km)} bytes across {doc['layers']} layers"
           f"{f', and {len(used)} macro bytes' if used else ''} from {path}, read back and verified")
     print("(VIA reads the keymap at connect -- reload the tab to see it)")
+    if skipped:
+        print(f"WARNING: the backup's macros use {len(skipped)} bytes and this firmware's macro buffer holds "
+              f"{msize - 1}: the macros were NOT restored (the board has none). Trim them in {path} and run "
+              f"`ak820keymap.py restore` again, or set them in VIA.", file=sys.stderr)
+        sys.exit(MACROS_SKIPPED)
 
 
 def cmd_show(path):

@@ -290,7 +290,12 @@ sleep 6                                  # let the HID interfaces settle
 if [ "$BACKUP" = 1 ]; then
     echo "== restoring the VIA keymap =="
     for try in 1 2 3; do
-        "$PY" hostagent/ak820keymap.py restore "$KEYMAP" && break
+        "$PY" hostagent/ak820keymap.py restore "$KEYMAP"; rc=$?
+        [ "$rc" = 0 ] && break
+        # 3: the keymap and the knob restored, the macros too big for this
+        # firmware's buffer: a warning, not a reason to leave the profiles
+        # and the live settings at their defaults too.
+        [ "$rc" = 3 ] && { MACROS_SKIPPED=1; break; }
         [ "$try" = 3 ] && { echo "restore failed -- run it by hand once the board settles:";
                             echo "  $PY hostagent/ak820keymap.py restore"; exit 1; }
         sleep 4
@@ -371,5 +376,10 @@ else
             ./time-util-ak820pro/ak820ctl clock || echo "clock sync failed -- run ./time-util-ak820pro/ak820ctl clock by hand"
             ;;
     esac
+fi
+if [ "${MACROS_SKIPPED:-0}" = 1 ]; then
+    echo "WARNING: the VIA macros were not restored: they don't fit this firmware's macro buffer (above);"
+    echo "         the keymap, the knob and the settings were. Trim them in $KEYMAP, then"
+    echo "         $PY hostagent/ak820keymap.py restore"
 fi
 echo "done."

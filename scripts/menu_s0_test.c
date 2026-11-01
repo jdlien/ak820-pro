@@ -1428,8 +1428,10 @@ static uint8_t fk_ee[1024];
 static int     fk_ee_writes, fk_ee_fail_at = -1, fk_settle_touches, fk_flushes, fk_ee_reads;
 static bool    fk_recovering, fk_settle_pending;
 void    env_prof_read(uint16_t addr, void *dst, uint8_t n) { memcpy(dst, &fk_ee[addr], n); fk_ee_reads++; }
+static uint16_t fk_ee_seq[64];   /* each write's address, by its index in fk_ee_writes */
 uint8_t env_prof_write(uint16_t addr, const void *src, uint8_t n) {
     memcpy(&fk_ee[addr], src, n);   /* the cache first, as wear_leveling.c's */
+    if (fk_ee_writes >= 0 && fk_ee_writes < 64) fk_ee_seq[fk_ee_writes] = addr;
     return fk_ee_writes++ == fk_ee_fail_at ? ENV_WR_FAILED : ENV_WR_OK;
 }
 bool env_recovering(void) { return fk_recovering; }
@@ -4082,15 +4084,19 @@ static void test_profiles(void) {
 
     /* Save new: the live settings into the first free slot as Profile 1,
      * "Saved", the cursor on its row with the check, Save new under it. The
-     * block formats first (eight states, the active byte, the magic); the
-     * active slot is deferred to kb_eeconfig's settle. */
+     * block formats first (the slots' states, the active byte, the owner,
+     * the magic); the active slot is deferred to kb_eeconfig's settle. */
     CHECK(fk_ee_writes == 0);
     m_click();
     CHECK(sub5_screen() == SC_PROF && sub5_cursor() == 1 && title_bad("Saved") == 0);
     CHECK(row_bad(1, PROW_ON("Profile 1"), MENU_LIT) == 0 && row_bad(2, PNEW, MENU_DIM) == 0 && row_bad(3, "", 0) == 0);
-    CHECK(prof_active() == 0 && fk_ee_writes == 10 + 3 && fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0xFF && fk_settle_pending);
+    CHECK(prof_active() == 0 && fk_ee_writes == 11 + 3 && fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0xFF && fk_settle_pending);
+    /* The owner (the 10-31 audit's review): settled on the switch's side,
+     * Windows here, written after the active byte and before the magic. */
+    CHECK(fk_ee[PROF_OWNER_ADDR] == (0x50u | PROF_SIDE_WIN) && fk_ee_seq[9] == PROF_OWNER_ADDR &&
+          fk_ee_seq[8] == PROF_BASE + PROF_OFF_ACTIVE && fk_ee_seq[10] == PROF_BASE + PROF_OFF_MAGIC);
     fk_prof_settle();
-    CHECK(fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0xF0 && fk_ee_writes == 14);   /* Windows's, the Mac none (10-27) */
+    CHECK(fk_ee[PROF_BASE + PROF_OFF_ACTIVE] == 0xF0 && fk_ee_writes == 15);   /* Windows's, the Mac none (10-27) */
     m_unflash();
 
     /* Its page: the name in the title; Load, Save current here, Delete; the
