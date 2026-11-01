@@ -1,0 +1,6 @@
+device 2026-10-31 15:30:45+0.357  (cnt 12001 / period 33600, nominal 33600)
+offset board-host -3411.1 ms  rtt 7.1 ms  flags 0x04  ref_state 1  sync_age 255 min  last_host_offset 802 ms
+sof_epoch 2  sof_frames_total 12573  bias_in_use 0 ppm
+raw 07 10 02 01 1A 0A 1F 06 0F 1E 2D 02 E1 2E 00 00 40 83 40 83 04 22 03 00 00 01 FF 02 1D 31 00 00
+host_mid_sod 55848.76821947097778320
+rtt_ms 7.11917877197265625

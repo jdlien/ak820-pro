@@ -1,0 +1,10 @@
+[15:30:46] daemon paused
+[15:30:47] data on
+[15:30:48] token 0x1038e774
+[15:30:48] data CUT while enumerated (the LLD left ACTIVE)
+[15:30:48] daemon restarted
+[15:30:48] waiting for the deep sleep (draw under 6 mA for 10 s)
+[15:32:32] asleep (draw 3.445 mA). WAITING FOR JD'S KEY
+[16:35:11] no wake in 60 min: stopping
+[16:35:11] data off (exit)
+[16:35:11] daemon restarted
