@@ -25,17 +25,19 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## The firmware audit of 10-31 -- 43 findings confirmed by host tests, none fixed yet; JD to pick the order
+## The firmware audit of 10-31 -- fixed on `audit-fixes` but for F-008, F-033, F-035 and the bench's F-045; for v0.3.0
 
-A multi-agent audit of the whole firmware ([`AUDIT-2026-10-31.md`](AUDIT-2026-10-31.md): 15 reviewers, 8 libFuzzer targets, a refute-then-test verifier per finding; the tests on Buzz in `~/code/ak820pro-audit-20261031/`). 49 unique findings: 1 critical, 1 high, 16 medium, 26 low confirmed or plausible, 4 for the bench, 1 refuted. No memory-safety bug in the board's own code. The ones to decide first:
-- **F-002: QMK Command is on in every build, v0.2.0's daily included.** Both Shifts plus B or Esc jump to the bootloader (the board looks dead), plus Backspace formats the EEPROM with the profiles, plus 1 or 3 makes the Fn layer the base. Rolling from one Shift to the other is enough ("NB" with opposite Shifts). The fix is `"command": false` in `keyboard.json`; `docs/hardware.md` and `docs/display.md` recommend some Command keys, so those lines change too.
-- **F-001:** a flash-channel CRC slice is 1,024 per-byte ChibiOS SPI calls, tens of ms or more per pass during provisioning, and a host that floods CRC commands keeps `raw_hid_task()` looping into the watchdog.
-- **F-003:** an abandoned pairing keeps the board awake on battery (~27 mA) until a slot key.
-- **F-004:** the Mac knob's Shift+Option burst drops a Shift or Option the user is holding.
-- **F-007:** typing over BT or 2.4G wakes a sleeping computer on the USB cable.
-- **F-009:** the whole-second clock slips, below.
-- **F-005, F-006:** a PCF stopped by a reset replays one minute; a failed first PCF read leaves 00:00 until a host sync.
-When one is fixed, its test moves into `scripts/` with the fix.
+A multi-agent audit of the whole firmware ([`AUDIT-2026-10-31.md`](AUDIT-2026-10-31.md): 15 reviewers, 8 libFuzzer targets, a refute-then-test verifier per finding; the verifiers' harnesses on Buzz in `~/code/ak820pro-audit-20261031/`). 49 unique findings: 1 critical, 1 high, 16 medium, 26 low confirmed or plausible, 4 for the bench, 1 refuted. No memory-safety bug in the board's own code.
+
+**Fixed** on the firmware's `audit-fixes` (10-31), each with its host test in `scripts/` (`scripts/audit_tests.sh` runs them) and codex's review of each batch with every finding dispositioned (`review-codex-audit-batch1-2026-10-31.md` to `-batch4-`; the verifies of 3 and 4 at the end of `-batch3-`): F-001 to F-007, F-009 to F-032, F-034 (on this board's 8-byte store, by F-010's length check), F-036 to F-044, Warren's wake fixes (F-032 and the PHY pair, the bench's F-045), the link hold's bound (Warren's reading of F-023) and the dev op 17 clamp. F-002 is the one that mattered most in use: both Shifts plus B, Esc, Backspace or 1 no longer jump to the bootloader, format the EEPROM or swap the base layer. On white since 20:19 10-31: Batches 1-5 (`57d1368f17`, `history/audit-fixes-flash2-20261031/`); the review fixes since and the low sweep not yet on a board.
+
+**Open:**
+- **F-008:** a lock change made while the board sleeps is lost (below): the daemon-side refresh.
+- **F-033:** the row ISR reads `led_state[255]` at the 9 empty matrix cells (upstream code): with the row ISR rewrite ([`ROW-ISR-PLAN.md`](ROW-ISR-PLAN.md)).
+- **F-034 upstream:** the 2- and 4-byte wear-leveling stores still over-read on a length of 6 or 7 (`ak820pro-builds/UPSTREAM-CONTRIBUTIONS.md`).
+- **F-035:** nothing rate-limits host-driven EEPROM writes over `HC_PROFILES`; accepted (a real restore costs one consolidation).
+- **F-045, the bench:** Warren's case 3 (a uhubctl reconnect across a deep sleep, a key waking it) is unrun.
+- **Small:** `display_blink()` cuts one cycle short at the 49.7-day wrap; the audit's loose ends (stale comments, the SN32 serial and USB LLD notes, the row ISR's per-column divide).
 
 ## A lock change made while the board sleeps is lost (the 10-31 audit, F-008) -- documented; a daemon-side refresh is the fix, not built
 
@@ -2317,7 +2319,7 @@ in the plan's terms, but it is now JD's stated priority for the port.
 
 ## Whole-second clock slips: four, on both boards, both OSes, both host implementations (found 2026-09-16) -- explained 10-31 (audit F-009): the GET reply tears the seconds from the count
 
-**The cause (10-31, [`AUDIT-2026-10-31.md`](AUDIT-2026-10-31.md), F-009):** `rtc_read_into()` (`hid_protocol.c:1385-1401`) takes the calendar from `rtc_get_time()` and SECCNT from a second, separate `rtc_now()`; a second edge between the two makes the reply read ~1,000 ms low. The host model gives 1 GET in ~1,700-3,300; 4 were seen in ~5,170 syncs. The board's clock was never wrong, only the reading. The fix builds the reply from one `rtc_now()` stamp. Not yet built.
+**The cause (10-31, [`AUDIT-2026-10-31.md`](AUDIT-2026-10-31.md), F-009):** `rtc_read_into()` (`hid_protocol.c:1385-1401`) takes the calendar from `rtc_get_time()` and SECCNT from a second, separate `rtc_now()`; a second edge between the two makes the reply read ~1,000 ms low. The host model gives 1 GET in ~1,700-3,300; 4 were seen in ~5,170 syncs. The board's clock was never wrong, only the reading. The fix builds the reply from one `rtc_now()` stamp: built on `audit-fixes` (Batch 1, `scripts/rtc_get_stamp_test`), on white since 15:29 10-31.
 
 
 **The signature, identical every time:** a periodic sync reads `before` about
