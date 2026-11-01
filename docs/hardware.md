@@ -484,7 +484,7 @@ The ones that failed the last time a sleep was wanted are on `HC_POWER` page
 | `lit`, `rgb`, `pairing` | the backlight is on, any LED is lit, the radio is pairing |
 | `pins`, `wdt`, `recovery` | a wake pin is on a port the sleep cannot wake from (a different board's pin map); the watchdog is not running; a wake's recovery is open |
 | `menu` | the configuration menu's session is open |
-| `linking` | a link attempt began under 60 s ago: its `5B 32` is lost if it comes while the receiver is off, and nothing repeats it (the 10-31 audit, F-023) |
+| `linking` | a link attempt began under 60 s ago: its `5B 32` is lost if it comes while the receiver is off, and nothing repeats it (the 10-31 audit, F-023). Every select of the board's own counts; an attempt of the module's own (a `5B 33`/`34`) only once between wakes, so a module cycling `36` and `33` cannot keep the board awake |
 
 **Asleep.** The SN32's Deep-sleep with the PLL off, the system timer (CT16B5)
 stopped under the lock and restarted at the wake: **QMK's timer and

@@ -297,6 +297,51 @@ static int scenario_rejected(bool led_change_later) {
     return ch582_get_conn_state();
 }
 
+/* The module cycling its attempts (unmeasured on the wire; the capture saw it
+ * give up after one round): every 20 s a 36 and the next 33 back to back, in
+ * one main-loop pass, so no pass between them sees REJECTED and admits the
+ * sleep. Its own attempts hold the sleep off once between wakes; a wake
+ * re-arms that, and a select of the board's own always holds. Returns the
+ * seconds held of the 10 min. */
+static unsigned held_s(unsigned seconds, bool cycle_every_20s) {
+    unsigned held = 0;
+    for (unsigned s = 1; s <= seconds; s++) {
+        run_ms_with_module(1000);
+        if (cycle_every_20s && s % 20 == 0) {
+            frame(0x5B, 0x36, 500);
+            frame(0x5B, 0x33, 300);
+        }
+        if (ch582_linking_recent()) held++;
+    }
+    return held;
+}
+
+static void scenario_cycle(void) {
+    boot_and_connect();
+    frame(0x5B, 0x33, 500);   /* the host leaves: the module's first attempt since boot */
+    unsigned held = held_s(600, true);
+    report("10 min of 33, 36+33 every 20 s");
+    CHECK(ch582_get_conn_state() == CH582_CONN_LINKING, "E: expected LINKING, got %s", st_name(ch582_get_conn_state()));
+    CHECK(held <= 61, "E: the module's attempts held the sleep off %u s of 600 (want the first 60 s only)", held);
+    CHECK(!ch582_linking_recent(), "E: at 10 min the cycle should hold nothing");
+
+    deep_sleep_enter();
+    asleep_ms(60000);
+    deep_sleep_exit();
+    frame(0x5B, 0x36, 500);
+    frame(0x5B, 0x33, 300);
+    run_ms_with_module(1000);
+    CHECK(ch582_linking_recent(), "E: the first attempt after a wake should hold again");
+    held = held_s(120, true);
+    CHECK(held <= 60, "E: after the wake, held %u s of 120 (want under a minute)", held);
+
+    ch582_set_profile(CH582_PROFILE_BT_1);   /* a slot key: the board's own select */
+    run_ms_with_module(1000);
+    CHECK(ch582_linking_recent(), "E: a select of the board's own should always hold");
+    run_ms_with_module(60000);
+    CHECK(!ch582_linking_recent(), "E: and lets go at 60 s");
+}
+
 int main(void) {
     fw_sections_init();
     printf("A. LINKING at sleep, the module re-links while asleep, no lock change after:\n");
@@ -323,6 +368,9 @@ int main(void) {
     CHECK(d == CH582_CONN_CONNECTED, "D: the promotion from REJECTED should recover, got %s", st_name(d));
     CHECK(ch582_get_host_leds() == 0x02, "D: host_leds should follow the host (Caps on), got 0x%02x", ch582_get_host_leds());
     CHECK(!ch582_link_state_stale(), "D: the promotion makes the state current");
+
+    printf("E. The module cycling 36 and 33 back to back for 10 min, no input:\n");
+    scenario_cycle();
 
     printf("\n%s (%d check(s) failed)\n", failures ? "RESULT: FAIL" : "RESULT: PASS", failures);
     return failures ? 1 : 0;
