@@ -693,7 +693,8 @@ deliberately not used.
 ## The animation slot (stock, orphaned, empty)
 
 `Fn`+`Delete` (`ANIM_TOG`) plays full-screen frames from external flash
-(`ANIM_BASE 0x540000`, 32 KB stride, 100 ms/frame, ceiling 244 frames).
+(`ANIM_BASE 0x540000`, 32 KB stride, 100 ms/frame, ceiling 243 frames,
+`ANIM_MAX`: the 244th would run into `FLASH_ASSET_BASE`).
 While running it owns the SPI bus — dashboard suspended, RTC polling stopped
 (the bit-banged RTC I2C shares port A with the flash SPI pins).
 
@@ -701,6 +702,8 @@ On this board the header reads **zero frames** (probed via `flash crc`:
 header CRC = CRC of 256 zero bytes, with orphaned stock frame data below it),
 so it is a no-op — `anim_toggle()` reads the header BEFORE pausing the
 dashboard (it used to blink the screen black for ~1 s doing nothing). There
-is NO validation beyond the zero count; a bad header paints garbage.
+is no validation beyond the count, which must be 1 to 243 (a header over
+`ANIM_MAX` reads as zero frames); frames past that are trusted, so a bad
+file paints garbage.
 Provision with `mkanim.py` (GIF → blob) if ever wanted; the region is below
 `FLASH_ASSET_BASE`, so `ak820ctl` needs `--unlock` to write it.

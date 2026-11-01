@@ -134,6 +134,27 @@ static void scenario_single(void) {
     CHECK(cell_wrong('6', x, CLOCK_Y, NULL) == 0, "...paints '6' exactly");
 }
 
+/* Codex on F-014's fix: the display looks at the loss while the chip is still
+ * busy, then the next blit is the first to see it idle. That blit's idle check
+ * cleared the latch and dropped the mark of the blit made mid-erase, so its
+ * garbage cell stayed. Whichever path sees the idle first must keep it. */
+static void scenario_idle_blit_first(void) {
+    printf("\n== a blit mid-erase, a look while busy, then an idle blit before the next look ==\n");
+    setup();
+    const uint16_t x = 40;
+    CHECK(hid_fc_erase(0xE00000u) == FS_OK, "FC_ERASE 0xE00000 answered FS_OK");
+    model_advance_us(3000);
+    CHECK(lcd_draw_flash_glyph_try(FONT_CLOCK, '6', x, CLOCK_Y) && lcd_blit_wait(), "the '6' blitted mid-erase");
+    CHECK(cell_wrong('6', x, CLOCK_Y, NULL) != 0, "...painted garbage (the chip ignored its READ)");
+    CHECK(!lcd_blit_lost_take(), "a look while still busy reports nothing yet");
+    model_advance_us(400000);
+    CHECK(!flash_busy(), "the erase done");
+    CHECK(lcd_draw_flash_glyph_try(FONT_CLOCK, '7', 70, CLOCK_Y) && lcd_blit_wait(), "another cell's blit, the first to see the chip idle");
+    CHECK(cell_wrong('7', 70, CLOCK_Y, NULL) == 0, "...paints '7' exactly");
+    CHECK(lcd_blit_lost_take(), "FIX: the next look still reports the mid-erase blit's loss, so the '6' is repainted");
+    CHECK(!lcd_blit_lost_take(), "...once");
+}
+
 /* The whole erase phase of `ak820ctl flash write 0xE00000 <557,056 B>` (the
  * 10-28 font-test frames: 136 sectors), driven as ak820ctl drives it: one
  * FC_ERASE per HID round trip, re-sent on FS_BUSY. A clock edge each second
@@ -178,6 +199,7 @@ int main(int argc, char **argv) {
     if (argc > 1) model_hiz = (uint8_t)strtoul(argv[1], NULL, 0);
     printf("MISO high-Z modelled as 0x%02X\n", model_hiz);
     scenario_single();
+    scenario_idle_blit_first();
     printf("\n== the erase phase of a 557,056 B write to 0xE00000 (136 sectors), as ak820ctl drives it ==\n");
     scenario_write_phase(2000, 45000);
     scenario_write_phase(10000, 45000);

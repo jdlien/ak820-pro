@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # The firmware's flash write path, the animation ceiling and header reader
 # (graphics/lcd_bus.c) and the raw-HID flash channel (hid_protocol.c),
-# extracted verbatim at build time, against a timed 16 MB chip model and a
-# replay of ak820ctl's cmd_write (plans/AUDIT-2026-10-31.md, F-001, F-015,
-# F-044; first written as the audit's verify-046). CC picks the compiler
+# extracted verbatim at build time, against a timed 16 MB chip model, and
+# ak820ctl.c itself on a fake hidapi (plans/AUDIT-2026-10-31.md, F-001, F-015,
+# F-044, and codex's review of them; first written as the audit's verify-046). CC picks the compiler
 # (default cc); SAN the sanitizer flags (SAN= for none).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -24,6 +24,9 @@ trap 'rm -rf "$g"' EXIT
 sed -n '/^\/\/ Nothing here ever blocks on the chip/,/^static inline bool is_flash_cmd/p' "$h" | sed '$d' > "$g/hid.inc"
 grep -q 'bool flash_writable' "$g/lcd.inc" && grep -q 'static void flash_command' "$g/hid.inc" ||
     { echo "FAIL: the extraction found nothing" >&2; exit 1; }
+ctl="$here/../../time-util-ak820pro/ak820ctl.c"
 # shellcheck disable=SC2086
-"$cc" -std=gnu11 -g -O1 $san -Wall -Wno-unused-function -I"$g" -o "$g/test" "$here/test.c"
-"$g/test"
+"$cc" -std=gnu11 -g -O1 $san -Wall -I"$here/fake_hidapi" -Dmain=ak820ctl_main -c -o "$g/ak820ctl.o" "$ctl"
+# shellcheck disable=SC2086
+"$cc" -std=gnu11 -g -O1 $san -Wall -Wno-unused-function -I"$g" -I"$here/fake_hidapi" -o "$g/test" "$here/test.c" "$g/ak820ctl.o"
+TEST_TMP="$g" "$g/test" || { echo "--- ak820ctl's output:"; tail -40 "$g/ak820ctl.log"; exit 1; }
