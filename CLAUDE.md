@@ -111,7 +111,7 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-10-28)
+## Current state (2026-11-01)
 
 **Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-22
 — RESUME HERE"). **Feature-complete for JD's board.** What's left:
@@ -120,6 +120,19 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
   to Buzz, the new Mac, on 10-23 spoiled the first;
 - stripping the bench, the soak, and the release for other owners.
 
+**v0.3.0, released 11-01 from `4c7395a4c6`**: the 10-31 firmware audit's
+fixes (41 of its 44 confirmed findings; `plans/AUDIT-2026-10-31.md`,
+`plans/BACKLOG.md`'s audit section) and the battery readout's Icon only,
+`ak820pro-jdlien` fast-forwarded to it and pinned in `deps.lock`; the daily
+and fpb builds and the Windows agent 0.3.0. ⚠️ Shipped before two checks:
+the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
+fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
+tools: a profiles restore applies the live record before its commit, and
+the commit names the live settings' side (`hostagent/ak820profiles.py`).
+**On white since 14:40 11-01: `4c7395a4c6`** (dev, token `0x6f758b40`, the
+release candidate, its checks in `history/v030-rc-white-20261101/`); from
+16:29 the row ISR's stage 1 A/B (`a8a567308d`, the branch `row-isr`,
+`plans/ROW-ISR-PLAN.md`), which the row ISR's session records.
 **v0.2.0, released 10-29 from `8ec0c8b9b4`**: the mainline below plus
 Help's More info, fast-forwarded onto `ak820pro-jdlien` and pinned in
 `deps.lock` for the release (the daily and fpb builds, the Windows agent

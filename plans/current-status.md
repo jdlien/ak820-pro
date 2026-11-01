@@ -1,8 +1,38 @@
 # Current status
 
-Updated 2026-11-01, 15:40. The block below is where things stand, written to
+Updated 2026-11-01, 17:00. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-11-01 — v0.3.0 released
+
+**v0.3.0 is published** ([the Release](https://github.com/jdlien/ak820-pro/releases/tag/v0.3.0)):
+the firmware `4c7395a4c6` (the 10-31 audit's fixes, below, and the battery
+readout's Icon only) as the daily and fpb builds, the agent 0.3.0 for
+Windows, the assets and `via.json` unchanged since v0.2.0.
+`ak820pro-jdlien` is fast-forwarded to it and `deps.lock` pins it (main
+`d90032a`, the tag; `1b9adc8` the power page's sha). The candidate's checks
+on white passed (14:40-16:29,
+[`../history/v030-rc-white-20261101/`](../history/v030-rc-white-20261101/README.md)):
+the new profiles restore's first run on hardware read back, the Win/Mac
+flip, a deep sleep at 3.7-3.8 mA, the wake on a key. Then white went to
+the row ISR's stage 1 A/B (below) at 16:29.
+
+- **Owed, unverified at the release:**
+  - The clean-Windows install check: `scripts/sandbox-6b.ps1` can't run on
+    gremlin, whose Windows Sandbox was left off on 09-16 (the RDP
+    black-screen fix). Turning it on needs an elevated feature install and a
+    reboot of JD's PC: JD's call.
+  - The wake fixes' hardware gate (codex cleared `70f7c1ea10e` for the
+    mainline on four USB cases passing): case 1 passed on black 10-31; case 2
+    (the cable's insertion waking the board) was running on black at 17:00;
+    case 3 (uhubctl on white) and case 4 (host sleep and remote wake) unrun.
+    v0.3.0 shipped before the gate finished, on two boards' day of use with
+    the same code. A failed case means a v0.3.1.
+- **After any `deps.lock` pin:** run `scripts/power_model.py` and commit
+  `site/power/power.json`, which records the pinned firmware's sha; the
+  power-page CI's `--check` fails otherwise (it did on `d90032a`).
+- **Not in it:** Warren's waking-key hold for BT (measurement first, on black, for the next release).
 
 ## 2026-11-01 evening — the witness's software and stage 0's runner written; white's session sequenced
 
