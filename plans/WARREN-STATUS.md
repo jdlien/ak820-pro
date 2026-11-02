@@ -519,8 +519,9 @@ This file is the thread; read it first after a context loss. Updated
        **The fixes, 10-31 (JD's pick):** `gremlin/wake-fixes`
        `70f7c1ea10e`, codex cleared (review-codex-wake-fixes); on black
        as `0118d39e67e` (token `0x99bfbbb8`) from 14:57. Gate case 1 (a
-       plug-in after a cable-out wake) passed at 15:28; cases 2-4 open
-       (§21).
+       plug-in after a cable-out wake) passed at 15:28; case 3 on white
+       (Buzz, 21:13 11-01); case 2 (the insertion's wake, on CHRG) on
+       black at 21:37 11-01; case 4 open (§21).
      - **Was next: icons for the slot page's actions** (JD: "Let's see if we
        can pick some icons for the Load/Save/Rename/Delete"). Shortlisted
        from Cozette (`scratchpad/icon_cands2.py`): Load the restore arrow

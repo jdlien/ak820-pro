@@ -2081,6 +2081,34 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     off (Buzz's session, on white); case 4, a host suspend with the
     cable in, then the host's resume and the keyboard's remote wake
     (JD's call).
+- **The gate's case 2: the cable's insertion wakes the sleeping board**
+  (11-01, black, `0118d39e67e`, token `0x99bfbbb8`, the slider on BT, the
+  boot of 14:57 10-31). First a false start worth keeping: with the hub's
+  port power switched off and the cable left in, black ran on its pack
+  all evening but stayed enumerated over the data lines (the daemon
+  synced every 5 min), so `DSB_USB` held the sleep off and it never
+  slept; white's bench sees the same. Then JD pulled the cable at the
+  keyboard at 21:32:08 (Windows' removal time), left it untouched and
+  plugged it back in with no key at ~21:37:52: present at 21:37:54, the
+  clock synced over raw HID at 21:37:57 ("board: absent -> present").
+  The sleep: woke on **charge** after 306 counted s, pins `P1 0x10000`
+  (CHRG, B16), flags `pcf`, `acq`, `usb_sof`, `usb_20s`, `slept`: the
+  host's frames inside the recovery, so no re-attach; no step timed out;
+  sleeps this boot 2 (the page; the ring's #3). It slept within seconds
+  of the pull: idle past Power saver's 3 min already, the pack the only
+  supply. The evening on the pack meant the charger started at the
+  plug-in.
+  - **The census at the unmask:** `CFG` `SIE_EN`, `DPPU_EN`,
+    `VREG33_EN`, `PHY_EN` and `ESD_EN` both off as the driver left them
+    at the pull; `INSTS` `BUS_SUSPEND`; `INTEN` `BUS_IE`, `USB_IE`,
+    `BUSWK_IE`; 27 entries, 0 USB. As in case 1, only the driver's
+    reset, resume and wakeup handlers can have turned the transceiver
+    on, each setting both bits.
+  - **No reset:** RSTST `0x01` (the flash's), the record empty, 0
+    consecutive, uptime 109,617 s at 21:38:01, which with the two
+    sleeps' ~720 s (counted x 1.118) is the time since the 10-31 flash
+    within ~70 s. Case 2 passes. With case 3 on white (21:13 11-01,
+    `history/wake-case3-20261101/`), only case 4 is left.
   - **The census** (slot 11): 34 handler entries, 0 USB, only CT16B1
     and CT16B3, the last CT16B3. At the unmask `INSTS` was 0 (no
     `BUS_SUSPEND` this time), `INTEN` had `BUS_IE`, `USB_IE` and

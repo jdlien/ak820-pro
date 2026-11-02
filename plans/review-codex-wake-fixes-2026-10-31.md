@@ -58,8 +58,14 @@ once the hardware gate (4, below) passes.
 
    Case 1 passed on black at 15:28 10-31 (GREMLIN-RESULTS section 21):
    both bits off at the wake as the driver left them, then the cable's
-   plug-in ~20 s later enumerated and raw HID worked. Case 2 on black
-   once its pack charges; case 4 JD's call.
+   plug-in ~20 s later enumerated and raw HID worked.
+
+   Case 2 passed on black at 21:37 11-01 (GREMLIN-RESULTS section 21):
+   the cable's insertion woke the sleeping board on CHRG after 306
+   counted s, both bits off at the wake as the driver left them, the
+   host's frames inside the recovery (no re-attach), enumerated 2 s
+   after the plug-in and the clock synced over raw HID, with no reset.
+   Case 4 is left.
 
    Case 3 passed on white at 21:03-21:13 11-01, on the row ISR's stage 2
    (`b120a2069c`, v0.3.1's USB and sleep code), in two forms: data on to the
