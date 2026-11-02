@@ -2102,7 +2102,7 @@ recovery case fixed (a pending start judged when it ends fresh, excluded
 when not; the earlier counterexample now counts two losses), the
 exclusion release fixed, the adoption and the double count fixed in every
 race modelled; one P1 left, one new P2, documentation. Dispositions, in
-the commit after `832e5db7d7`:
+`9d702160c8`:
 
 | # | What remained | Disposition |
 |---|---|---|
@@ -2408,5 +2408,9 @@ the commit after `832e5db7d7`:
   464 B. A fifth verify asked.
 - 11-02 12:56-13:02: codex's fifth verify: NOT READY on one P1 (the
   re-prime's unguarded residue could expire the frames' recovery) and a
-  wire-byte P2; fixed (dispositions above): the re-prime a guarded
-  observation, the unjudged counter seven bits. A sixth verify asked.
+  wire-byte P2; fixed in `9d702160c8` (dispositions above): the re-prime
+  a guarded observation, the unjudged counter seven bits. The flash
+  candidate `via-dev-9d702160c8-20261102-125928.bin`, token `0x76c941f1`,
+  heap gap 464 B. A sixth verify asked (a first launch of it reviewed an
+  unchanged tree by my mistake, an edit that had not applied; killed and
+  relaunched on the real commit).
