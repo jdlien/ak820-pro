@@ -153,7 +153,7 @@ def window(h, name, secs, load=None, cue=None):
     i = out["isr"]
     say(f"  {i['isr_per_s']} ISR/s, mean {i['isr_mean_us']} us, max {i['isr_max_us']} us, cpu {i['isr_cpu_pct']}%, "
         f"rows {i['row_samples_per_row_per_s']}/row/s; row_gap_max {out['end']['rows']['row_gap_max_ms']} ms, "
-        f">=25 ms {out['end']['stalls']['count_ge_25ms']}, loop gap {out['end']['stalls']['loop_gap_max_ms']} ms, "
+        f">=25 ms {out['end']['stalls']['count_ge_25ms']}, loop gap {out['end']['health']['loop_gap_max_ms']} ms, "
         f"uart overruns {out['end']['link']['uart_overrun']}, timeouts {out['end']['link']['timeouts']}")
     return out
 
@@ -233,6 +233,30 @@ def run(a):
         if devhook(h, 6) is None:
             raise SystemExit("not a dev build: the repaint and PCF loads need HC_DEVHOOK")
         before = {"lighting": lp.read_lighting(h), "health": hp.read_health(h)}
+        # The power ladder (dev op 14: [4] mode, [5] stage, [6] the RGB value's
+        # cap, [7] a forced stage): Power saver caps the value at 128 and the
+        # ladder dims and darkens the board minutes after the last key, which
+        # raw HID is not. Always on for the run, the mode put back at the end.
+        pw = devhook(h, 14, [0])
+        before["power"] = {"mode": pw[4], "stage": pw[5], "val_cap": pw[6], "forced": pw[7]}
+        def ladder_settles():
+            # the stage moves at the ladder's next pass, not in the reply
+            for _ in range(20):
+                pw = devhook(h, 14, [0])
+                if pw[5] == 0 and pw[6] == 255:
+                    return True
+                time.sleep(0.25)
+            return False
+        devhook(h, 14, [1, 0])
+        forced = False
+        if not ladder_settles():
+            devhook(h, 14, [2, 0])
+            forced = True
+            if not ladder_settles():
+                pw = devhook(h, 14, [0])
+                raise SystemExit(f"the ladder would not release: stage {pw[5]}, cap {pw[6]}, forced {pw[7]}")
+        say(f"power mode {before['power']['mode']} (stage {before['power']['stage']}, cap {before['power']['val_cap']}) "
+            f"-> Always on for the run" + (", stage forced active" if forced else ""))
     finally:
         h.close()
     json.dump(before["lighting"], open(os.path.join(a.out, "lighting-before.json"), "w"), indent=1)
@@ -243,6 +267,7 @@ def run(a):
     say("settings and lighting saved; battery:\n" + "\n".join("    " + l for l in battery.splitlines()[:8]))
     rec = {"label": a.label, "when": time.strftime("%Y-%m-%d %H:%M:%S"), "token": token,
            "health_version": before["health"]["version"], "lighting": before["lighting"], "battery": battery,
+           "power_before": before["power"], "ladder_forced": forced,
            "window_s": a.window, "windows": {}, "holds": [], "notes": []}
     path = os.path.join(a.out, f"{a.label}.json")
 
@@ -289,9 +314,14 @@ def run(a):
             for x in rec["holds"]:
                 x["incremental_ma"] = round(x["mean_ma"] - dark, 3) if (dark is not None and x["mean_ma"] is not None) else None
     finally:
-        say("restoring the lighting and the live settings")
+        say("restoring the power mode, the lighting and the live settings")
         try:
-            lp.write_lighting(h, before["lighting"])
+            try:
+                if forced:
+                    devhook(h, 14, [2, 0xFF])
+                devhook(h, 14, [1, before["power"]["mode"]])
+            finally:
+                lp.write_lighting(h, before["lighting"])
         finally:
             h.close()
         subprocess.run([VENV_PY, os.path.join(ROOT, "hostagent", "ak820profiles.py"), "restore",
@@ -308,7 +338,7 @@ def print_summary(rec):
         e = w["end"]
         print(f"  {name:8s} {i['isr_per_s']:8} ISR/s  mean {i['isr_mean_us']:6} us  max {i['isr_max_us']:7} us  "
               f"cpu {i['isr_cpu_pct']:5}%  rows {i['row_samples_per_row_per_s']:6}/row/s  row_gap_max {e['rows']['row_gap_max_ms']} ms  "
-              f">=25ms {e['stalls']['count_ge_25ms']}  loop_gap {e['stalls']['loop_gap_max_ms']} ms  "
+              f">=25ms {e['stalls']['count_ge_25ms']}  loop_gap {e['health']['loop_gap_max_ms']} ms  "
               f"overruns {e['link']['uart_overrun']}  timeouts {e['link']['timeouts']}")
     if rec["holds"]:
         print(f"  dark {rec.get('dark_ma')} mA; incremental mA by state (forward / back):")
@@ -343,12 +373,25 @@ def compare(a):
             bad += verdict == "FAIL"
             print(f"    {label:11s} {x:10} -> {y:10}  {d:+6.2f}%  {verdict}")
         for key, label in (("row_gap_max_ms", "row_gap_max ms"), ("count_ge_25ms", ">=25 ms stalls"),
-                           ("loop_gap_max_ms", "loop gap ms"), ("uart_overrun", "uart overruns"), ("timeouts", "ack timeouts")):
-            src = "rows" if key == "row_gap_max_ms" else "stalls" if key in ("count_ge_25ms", "loop_gap_max_ms") else "link"
+                           ("loop_gap_max_ms", "loop gap ms")):
+            src = {"row_gap_max_ms": "rows", "count_ge_25ms": "stalls", "loop_gap_max_ms": "health"}.get(key, "link")
             x, y = wa["end"][src][key], wb["end"][src][key]
             worse = y > x and key != "loop_gap_max_ms"
             bad += worse
-            print(f"    {label:15s} {x:6} -> {y:6}  {'WORSE' if worse else 'ok'}")
+            print(f"    {label:15s} {x:6} -> {y:6}  {'WORSE' if worse else 'ok'}"
+                  + ("  (the record's worst is 6 ms; a 1 ms step on a ms counter)" if worse and key == "row_gap_max_ms" and y - x <= 1 else ""))
+    # The link's counters count since the boot, not since the window, so a
+    # fresh boot (the flash) reads low and a long-up board high: compare the
+    # per-window growth, idle -> repaint -> pcf, which the reset does not touch.
+    names = [n for n in A["windows"] if n in B["windows"]]
+    if len(names) >= 2:
+        print("  link counters, growth from one window's end to the next (since-boot totals in brackets):")
+        for key, label in (("uart_overrun", "uart overruns"), ("timeouts", "ack timeouts")):
+            ga = [A["windows"][names[i + 1]]["end"]["link"][key] - A["windows"][names[i]]["end"]["link"][key] for i in range(len(names) - 1)]
+            gb = [B["windows"][names[i + 1]]["end"]["link"][key] - B["windows"][names[i]]["end"]["link"][key] for i in range(len(names) - 1)]
+            ta = [A["windows"][n]["end"]["link"][key] for n in names]
+            tb = [B["windows"][n]["end"]["link"][key] for n in names]
+            print(f"    {label:15s} {ga} -> {gb}   [{ta} -> {tb}]")
     if A["holds"] and B["holds"]:
         print("  incremental LED power (mA, dark subtracted), within 3%:")
         ha = {(x["state"], x["leg"]): x.get("incremental_ma") for x in A["holds"]}

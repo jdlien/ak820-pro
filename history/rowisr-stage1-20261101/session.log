@@ -1,0 +1,463 @@
+[16:29:47] pausing the daemon
+[16:29:47] data on
+[16:29:50] board token: 0x6f758b40
+[16:29:50] level: 35.0 %
+[16:29:50] stage 0 run 'base' -> history/rowisr-stage1-20261101
+[16:29:50] board token 0x6f758b40
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[16:29:50] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        35.0 %
+    pack           3848 mV  (estimate 5C 79)
+    module 5C    last 78%, 1 s ago
+    vdd          3899 mV  (raw 2097, since boot 3896..3906 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    9.3 % of maximum
+    flags        on_batt done rgb_on linked
+[16:29:50] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[16:30:14] restoring the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+Traceback (most recent call last):
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 392, in <module>
+    main()
+    ~~~~^^
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 386, in main
+    run(a)
+    ~~~^^^
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 254, in run
+    rec["windows"]["idle"] = window(h, "idle", a.window)
+                             ~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 156, in window
+    f">=25 ms {out['end']['stalls']['count_ge_25ms']}, loop gap {out['end']['stalls']['loop_gap_max_ms']} ms, "
+                                                                 ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+KeyError: 'loop_gap_max_ms'
+[16:30:14] the baseline run failed
+[16:30:15] data off
+[16:30:15] daemon restarted
+exit 1
+=== attempt 2 at 16:30:48: the loop-gap page fixed ===
+[16:30:48] pausing the daemon
+[16:30:48] data on
+[16:30:51] board token: 0x6f758b40
+[16:30:51] level: 35.0 %
+[16:30:51] stage 0 run 'base' -> history/rowisr-stage1-20261101
+[16:30:51] board token 0x6f758b40
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[16:30:51] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        35.0 %
+    pack           3844 mV  (estimate 5C 78)
+    module 5C    last 78%, 2 s ago
+    vdd          3899 mV  (raw 2103, since boot 3896..3906 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    9.3 % of maximum
+    flags        on_batt done rgb_on linked
+[16:30:51] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[16:31:15]   3746.0 ISR/s, mean 195.7 us, max 266.7 us, cpu 73.3%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 10 ms, uart overruns 0, timeouts 348
+[16:31:17] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[16:31:42]   3743.7 ISR/s, mean 195.9 us, max 277.3 us, cpu 73.4%, rows 208.0/row/s; row_gap_max 6 ms, >=25 ms 0, loop gap 17 ms, uart overruns 0, timeouts 350
+[16:31:44] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[16:32:08]   3695.9 ISR/s, mean 195.8 us, max 261.3 us, cpu 72.4%, rows 205.3/row/s; row_gap_max 9 ms, >=25 ms 0, loop gap 13 ms, uart overruns 0, timeouts 352
+[16:32:08] holds: 27 states x 48.0 s = 21.6 min
+[16:32:56]   hold dark         40.619 mA over 40 rows (sd 0.165), vcell 3815.9
+[16:33:44]   hold white 64     34.064 mA over 40 rows (sd 6.44), vcell 3816.6
+[16:34:32]   hold white 128    30.314 mA over 40 rows (sd 0.143), vcell 3817.7
+[16:35:00] restoring the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+Traceback (most recent call last):
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 392, in <module>
+    main()
+    ~~~~^^
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 386, in main
+    run(a)
+    ~~~^^^
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 282, in run
+    r = hold(h, a.power_csv, name, hue, sat, v, a.hold_s, a.settle_s)
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 215, in hold
+    time.sleep(settle_s + hold_s)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+[16:35:01] the baseline run failed
+[16:35:01] data off
+[16:35:01] daemon restarted
+exit 1
+=== attempt 3 at 16:35:48: Always on for the run ===
+[16:35:48] pausing the daemon
+[16:35:49] data on
+[16:36:21] no board on USB
+[16:36:21] data off
+[16:36:21] daemon restarted
+exit 1
+=== attempt 4 at 16:46:46: woken by relay 2 (charger edge), Always on for the run ===
+relay 1 off (key), relay 2 ON (power)
+relay 1 off (key), relay 2 off (power)
+[16:46:51] pausing the daemon
+[16:46:52] data on
+[16:47:24] no board on USB
+[16:47:24] data off
+[16:47:24] daemon restarted
+exit 1
+=== attempt 5 at 16:47:57: relay 2 on, data on while it is on (holds off the sleep), relay off, then the run ===
+relay 1 off (key), relay 2 ON (power)
+[16:48:00] board on USB with relay 2 on: 1
+relay 1 off (key), relay 2 off (power)
+[16:48:05] still on USB after relay 2 off
+[16:48:08] pausing the daemon
+Boot-out failed: 3: No such process
+[16:48:08] data on
+[16:48:11] board token: 0x6f758b40
+[16:48:11] level: 34.9 %
+[16:48:11] stage 0 run 'base' -> history/rowisr-stage1-20261101
+[16:48:11] board token 0x6f758b40
+the ladder would not release: stage 3, cap 255
+[16:48:11] the baseline run failed
+[16:48:11] data off
+[16:48:11] daemon restarted
+exit 1
+=== attempt 6 at 16:48:39: the ladder given time to settle ===
+[16:48:42] pausing the daemon
+Boot-out failed: 3: No such process
+[16:48:42] data on
+[16:48:44] board token: 0x6f758b40
+[16:48:44] level: 34.9 %
+[16:48:44] stage 0 run 'base' -> history/rowisr-stage1-20261101
+[16:48:44] board token 0x6f758b40
+[16:48:44] power mode 0 (stage 0, cap 255) -> Always on for the run
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+[16:48:44] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        34.9 %
+    pack           3869 mV  (estimate 5C 81)
+    module 5C    last 78%, 2 s ago
+    vdd          3902 mV  (raw 2101, since boot 3896..4218 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    20.1 % of maximum
+    flags        on_batt done rgb_on linked
+[16:48:44] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[16:49:09]   3744.1 ISR/s, mean 195.9 us, max 256.0 us, cpu 73.4%, rows 208.0/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 11 ms, uart overruns 0, timeouts 382
+[16:49:11] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[16:49:35]   3744.1 ISR/s, mean 195.9 us, max 282.7 us, cpu 73.3%, rows 208.0/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 17 ms, uart overruns 0, timeouts 384
+[16:49:37] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[16:50:01]   3696.2 ISR/s, mean 195.8 us, max 277.3 us, cpu 72.4%, rows 205.3/row/s; row_gap_max 9 ms, >=25 ms 0, loop gap 12 ms, uart overruns 0, timeouts 387
+[16:50:01] holds: 27 states x 48.0 s = 21.6 min
+[16:50:49]   hold dark         40.614 mA over 40 rows (sd 0.037), vcell 3815.5
+[16:51:37]   hold white 64     45.18 mA over 40 rows (sd 0.038), vcell 3815.0
+[16:52:25]   hold white 128    51.465 mA over 40 rows (sd 0.084), vcell 3812.6
+[16:53:13]   hold white 255    88.732 mA over 40 rows (sd 0.201), vcell 3802.0
+[16:54:01]   hold red 64       43.713 mA over 40 rows (sd 0.048), vcell 3814.1
+[16:54:50]   hold red 128      46.314 mA over 40 rows (sd 0.258), vcell 3812.8
+[16:55:38]   hold red 255      62.263 mA over 40 rows (sd 0.363), vcell 3810.2
+[16:56:26]   hold green 64     43.308 mA over 40 rows (sd 0.198), vcell 3814.0
+[16:57:14]   hold green 128    45.166 mA over 40 rows (sd 0.151), vcell 3814.2
+[16:58:02]   hold green 255    56.245 mA over 40 rows (sd 0.248), vcell 3810.1
+[16:58:50]   hold blue 64      43.258 mA over 40 rows (sd 0.12), vcell 3814.2
+[16:59:38]   hold blue 128     44.97 mA over 40 rows (sd 0.066), vcell 3813.2
+[17:00:26]   hold blue 255     55.072 mA over 40 rows (sd 0.233), vcell 3810.3
+[17:01:14]   hold dark         40.617 mA over 40 rows (sd 0.059), vcell 3814.9
+[17:02:02]   hold blue 255     55.136 mA over 40 rows (sd 0.197), vcell 3810.5
+[17:02:50]   hold blue 128     45.011 mA over 40 rows (sd 0.08), vcell 3813.3
+[17:03:38]   hold blue 64      43.289 mA over 40 rows (sd 0.063), vcell 3814.5
+[17:04:26]   hold green 255    56.241 mA over 40 rows (sd 0.198), vcell 3809.2
+[17:05:14]   hold green 128    45.244 mA over 40 rows (sd 0.056), vcell 3814.1
+[17:06:02]   hold green 64     43.358 mA over 40 rows (sd 0.061), vcell 3813.5
+[17:06:50]   hold red 255      62.344 mA over 40 rows (sd 0.294), vcell 3808.2
+[17:07:38]   hold red 128      46.342 mA over 40 rows (sd 0.116), vcell 3812.7
+[17:08:27]   hold red 64       43.698 mA over 40 rows (sd 0.111), vcell 3813.5
+[17:09:15]   hold white 255    88.756 mA over 40 rows (sd 0.234), vcell 3800.5
+[17:10:03]   hold white 128    51.471 mA over 40 rows (sd 0.139), vcell 3810.1
+[17:10:51]   hold white 64     45.142 mA over 40 rows (sd 0.216), vcell 3812.1
+[17:11:39]   hold dark         40.627 mA over 40 rows (sd 0.119), vcell 3813.5
+[17:11:39] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+[17:11:39] done -> history/rowisr-stage1-20261101/base.json
+
+base: token 0x6f758b40, 2026-11-01 16:48:44
+  idle       3744.1 ISR/s  mean  195.9 us  max   256.0 us  cpu  73.4%  rows  208.0/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 11 ms  overruns 0  timeouts 382
+  repaint    3744.1 ISR/s  mean  195.9 us  max   282.7 us  cpu  73.3%  rows  208.0/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 17 ms  overruns 0  timeouts 384
+  pcf        3696.2 ISR/s  mean  195.8 us  max   277.3 us  cpu  72.4%  rows  205.3/row/s  row_gap_max 9 ms  >=25ms 0  loop_gap 12 ms  overruns 0  timeouts 387
+  dark 40.619 mA; incremental mA by state (forward / back):
+    white 64   4.561 / 4.523
+    white 128  10.846 / 10.852
+    white 255  48.113 / 48.137
+    red 64     3.094 / 3.079
+    red 128    5.695 / 5.723
+    red 255    21.644 / 21.725
+    green 64   2.689 / 2.739
+    green 128  4.547 / 4.625
+    green 255  15.626 / 15.622
+    blue 64    2.639 / 2.67
+    blue 128   4.351 / 4.392
+    blue 255   14.453 / 14.517
+[17:11:39] flash: ak820pro-builds/out/via-dev-a8a567308d-20261101-121551.bin
+firmware : ak820pro-builds/out/via-dev-a8a567308d-20261101-121551.bin
+built    : Nov  1 12:15:51 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  1 17:11:39 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 177, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  1 17:11:39 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  1 17:11:40 2026  (3100 bytes)
+
+== dumping the battery log ==
+# 10 entries (log v8, one per 900 s), newest 83 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261101-171140-preflash.csv  Nov  1 17:11:40 2026  (1425 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before +137.6 ms, after -5.3 ms, rtt 2.9 ms, U ~2.5 ms, lead now 4.94 ms, bias sent
+done.
+[17:12:10] token after the flash: 0x19884af9 (want 0x19884af9)
+[17:12:10] stage 0 run 'stage1' -> history/rowisr-stage1-20261101
+[17:12:10] board token 0x19884af9
+[17:12:10] power mode 0 (stage 0, cap 255) -> Always on for the run
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+[17:12:10] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        32.6 %
+    pack           3839 mV  (estimate 5C 77)
+    module 5C    last 77%, 0 s ago
+    vdd          3901 mV  (raw 2097, since boot 3897..3904 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    20.1 % of maximum
+    flags        on_batt done rgb_on linked
+[17:12:10] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[17:12:34]   3705.2 ISR/s, mean 198.2 us, max 256.0 us, cpu 73.4%, rows 205.8/row/s; row_gap_max 6 ms, >=25 ms 0, loop gap 11 ms, uart overruns 0, timeouts 4
+[17:12:36] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[17:13:01]   3704.7 ISR/s, mean 198.3 us, max 288.0 us, cpu 73.5%, rows 205.8/row/s; row_gap_max 6 ms, >=25 ms 0, loop gap 16 ms, uart overruns 0, timeouts 10
+[17:13:03] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[17:13:27]   3654.1 ISR/s, mean 198.3 us, max 272.0 us, cpu 72.4%, rows 203.0/row/s; row_gap_max 9 ms, >=25 ms 0, loop gap 13 ms, uart overruns 0, timeouts 15
+[17:13:27] holds: 27 states x 48.0 s = 21.6 min
+[17:14:15]   hold dark         41.963 mA over 40 rows (sd 0.059), vcell 3813.2
+[17:15:03]   hold white 64     45.179 mA over 40 rows (sd 0.066), vcell 3812.3
+[17:15:51]   hold white 128    51.41 mA over 40 rows (sd 0.093), vcell 3811.2
+[17:16:39]   hold white 255    88.328 mA over 40 rows (sd 0.229), vcell 3800.2
+[17:17:27]   hold red 64       43.697 mA over 40 rows (sd 0.074), vcell 3812.8
+[17:18:15]   hold red 128      46.366 mA over 40 rows (sd 0.086), vcell 3811.9
+[17:19:03]   hold red 255      62.047 mA over 40 rows (sd 0.311), vcell 3807.5
+[17:19:51]   hold green 64     43.348 mA over 40 rows (sd 0.113), vcell 3812.0
+[17:20:39]   hold green 128    45.173 mA over 40 rows (sd 0.207), vcell 3813.0
+[17:21:28]   hold green 255    56.14 mA over 40 rows (sd 0.399), vcell 3810.1
+[17:22:16]   hold blue 64      43.261 mA over 40 rows (sd 0.159), vcell 3811.9
+[17:23:04]   hold blue 128     44.946 mA over 40 rows (sd 0.219), vcell 3812.3
+[17:23:52]   hold blue 255     55.03 mA over 40 rows (sd 0.249), vcell 3808.7
+[17:24:40]   hold dark         41.926 mA over 40 rows (sd 0.2), vcell 3813.0
+[17:25:28]   hold blue 255     55.147 mA over 40 rows (sd 0.256), vcell 3809.9
+[17:26:16]   hold blue 128     45.044 mA over 40 rows (sd 0.068), vcell 3812.0
+[17:27:04]   hold blue 64      43.335 mA over 40 rows (sd 0.04), vcell 3812.0
+[17:27:52]   hold green 255    56.267 mA over 40 rows (sd 0.313), vcell 3808.8
+[17:28:40]   hold green 128    45.248 mA over 40 rows (sd 0.078), vcell 3811.8
+[17:29:28]   hold green 64     43.421 mA over 40 rows (sd 0.044), vcell 3811.4
+[17:30:16]   hold red 255      62.199 mA over 40 rows (sd 0.286), vcell 3806.1
+[17:31:04]   hold red 128      46.393 mA over 40 rows (sd 0.082), vcell 3810.8
+[17:31:52]   hold red 64       43.722 mA over 40 rows (sd 0.062), vcell 3812.0
+[17:32:40]   hold white 255    88.384 mA over 40 rows (sd 0.243), vcell 3799.4
+[17:33:28]   hold white 128    51.435 mA over 40 rows (sd 0.095), vcell 3809.5
+[17:34:16]   hold white 64     45.181 mA over 40 rows (sd 0.111), vcell 3810.1
+[17:35:04]   hold dark         41.925 mA over 40 rows (sd 0.147), vcell 3812.5
+[17:35:04] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on Windows):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+    the Mac's settings as left: Alphas/Mods h178 s219 v177, screen 100%, clock 12h:ss
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+[17:35:05] done -> history/rowisr-stage1-20261101/stage1.json
+
+stage1: token 0x19884af9, 2026-11-01 17:12:10
+  idle       3705.2 ISR/s  mean  198.2 us  max   256.0 us  cpu  73.4%  rows  205.8/row/s  row_gap_max 6 ms  >=25ms 0  loop_gap 11 ms  overruns 0  timeouts 4
+  repaint    3704.7 ISR/s  mean  198.3 us  max   288.0 us  cpu  73.5%  rows  205.8/row/s  row_gap_max 6 ms  >=25ms 0  loop_gap 16 ms  overruns 0  timeouts 10
+  pcf        3654.1 ISR/s  mean  198.3 us  max   272.0 us  cpu  72.4%  rows  203.0/row/s  row_gap_max 9 ms  >=25ms 0  loop_gap 13 ms  overruns 0  timeouts 15
+  dark 41.938 mA; incremental mA by state (forward / back):
+    white 64   3.241 / 3.243
+    white 128  9.472 / 9.497
+    white 255  46.39 / 46.446
+    red 64     1.759 / 1.784
+    red 128    4.428 / 4.455
+    red 255    20.109 / 20.261
+    green 64   1.41 / 1.483
+    green 128  3.235 / 3.31
+    green 255  14.202 / 14.329
+    blue 64    1.323 / 1.397
+    blue 128   3.008 / 3.106
+    blue 255   13.092 / 13.209
+base (0x6f758b40) -> stage1 (0x19884af9); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3744.1 ->     3705.2   -1.04%  ok
+    mean us          195.9 ->      198.2   +1.17%  ok
+    cpu %             73.4 ->       73.4   +0.00%  ok
+    rows/row/s       208.0 ->      205.8   -1.06%  ok
+    max us           256.0 ->      256.0   +0.00%  
+    row_gap_max ms       5 ->      6  WORSE  (the record's worst is 6 ms; a 1 ms step on a ms counter)
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms         11 ->     11  ok
+  window repaint:
+    ISR/s           3744.1 ->     3704.7   -1.05%  ok
+    mean us          195.9 ->      198.3   +1.23%  ok
+    cpu %             73.3 ->       73.5   +0.27%  ok
+    rows/row/s       208.0 ->      205.8   -1.06%  ok
+    max us           282.7 ->      288.0   +1.87%  
+    row_gap_max ms       5 ->      6  WORSE  (the record's worst is 6 ms; a 1 ms step on a ms counter)
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms         17 ->     16  ok
+  window pcf:
+    ISR/s           3696.2 ->     3654.1   -1.14%  ok
+    mean us          195.8 ->      198.3   +1.28%  ok
+    cpu %             72.4 ->       72.4   +0.00%  ok
+    rows/row/s       205.3 ->      203.0   -1.12%  ok
+    max us           277.3 ->      272.0   -1.91%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms         12 ->     13  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [2, 3] -> [6, 5]   [[382, 384, 387] -> [4, 10, 15]]
+  incremental LED power (mA, dark subtracted), within 3%:
+    white 64   forward     4.561 ->    3.241  -28.94%  FAIL
+    white 128  forward    10.846 ->    9.472  -12.67%  FAIL
+    white 255  forward    48.113 ->   46.390   -3.58%  FAIL
+    red 64     forward     3.094 ->    1.759  -43.15%  FAIL
+    red 128    forward     5.695 ->    4.428  -22.25%  FAIL
+    red 255    forward    21.644 ->   20.109   -7.09%  FAIL
+    green 64   forward     2.689 ->    1.410  -47.56%  FAIL
+    green 128  forward     4.547 ->    3.235  -28.85%  FAIL
+    green 255  forward    15.626 ->   14.202   -9.11%  FAIL
+    blue 64    forward     2.639 ->    1.323  -49.87%  FAIL
+    blue 128   forward     4.351 ->    3.008  -30.87%  FAIL
+    blue 255   forward    14.453 ->   13.092   -9.42%  FAIL
+    blue 255   back       14.517 ->   13.209   -9.01%  FAIL
+    blue 128   back        4.392 ->    3.106  -29.28%  FAIL
+    blue 64    back        2.670 ->    1.397  -47.68%  FAIL
+    green 255  back       15.622 ->   14.329   -8.28%  FAIL
+    green 128  back        4.625 ->    3.310  -28.43%  FAIL
+    green 64   back        2.739 ->    1.483  -45.86%  FAIL
+    red 255    back       21.725 ->   20.261   -6.74%  FAIL
+    red 128    back        5.723 ->    4.455  -22.16%  FAIL
+    red 64     back        3.079 ->    1.784  -42.06%  FAIL
+    white 255  back       48.137 ->   46.446   -3.51%  FAIL
+    white 128  back       10.852 ->    9.497  -12.49%  FAIL
+    white 64   back        4.523 ->    3.243  -28.30%  FAIL
+  dark: 40.619 -> 41.938 mA
+RESULT: 26 metric(s) outside the gate
+history/rowisr-stage1-20261101/session.sh: line 66: syntax error near unexpected token `)'
+history/rowisr-stage1-20261101/session.sh: line 66: `nt $S1_TOKEN)"'
+[17:35:05] data off
+[17:35:05] daemon restarted
+exit 2

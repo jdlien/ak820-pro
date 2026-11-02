@@ -1,0 +1,113 @@
+{
+  "_comment": "AK820 Pro settings profiles (the EEPROM's top 218 B, 8 slots) and the live settings, as HC_PROFILES reads them. Restore with ak820profiles.py restore.",
+  "saved": "2026-11-01 17:45:10",
+  "format": 4,
+  "switch": "windows",
+  "block": "a40f017f0102b2db7de7640100010b00507572706c652f426c756500bf017f0105b2ffa8036401000006005261696e626f7720536c6f7739017f0101b200ffe7640100010b0042726967687420576869746539000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000113f0102b2dbb1e7640100010b00000000000000000000000000dd",
+  "live": "01bf0102b2dbb1e7640100010b020000000000000000000000009a",
+  "decoded": {
+    "block": {
+      "formatted": true,
+      "active": {
+        "windows": null,
+        "mac": 1
+      },
+      "slots": [
+        {
+          "lighting": {
+            "on": true,
+            "effect": "Alphas/Mods",
+            "effect_id": 2,
+            "hue": 178,
+            "sat": 219,
+            "val": 125,
+            "speed": 231
+          },
+          "screen": 100,
+          "lock_lights": 1,
+          "charging_light": 0,
+          "clock": "12h:ss",
+          "font": "regular",
+          "battery": "both",
+          "name": "Purple/Blue"
+        },
+        {
+          "lighting": {
+            "on": true,
+            "effect": "Cycle L-R",
+            "effect_id": 5,
+            "hue": 178,
+            "sat": 255,
+            "val": 168,
+            "speed": 3
+          },
+          "screen": 100,
+          "lock_lights": 1,
+          "charging_light": 0,
+          "clock": "24h:ss",
+          "font": "small",
+          "battery": "hours",
+          "name": "Rainbow Slow"
+        },
+        {
+          "lighting": {
+            "on": true,
+            "effect": "Solid",
+            "effect_id": 1,
+            "hue": 178,
+            "sat": 0,
+            "val": 255,
+            "speed": 231
+          },
+          "screen": 100,
+          "lock_lights": 1,
+          "charging_light": 0,
+          "clock": "12h:ss",
+          "font": "regular",
+          "battery": "both",
+          "name": "Bright White"
+        },
+        null,
+        null,
+        null,
+        null
+      ],
+      "last": {
+        "lighting": {
+          "on": true,
+          "effect": "Alphas/Mods",
+          "effect_id": 2,
+          "hue": 178,
+          "sat": 219,
+          "val": 177,
+          "speed": 231
+        },
+        "screen": 100,
+        "lock_lights": 1,
+        "charging_light": 0,
+        "clock": "12h:ss",
+        "font": "regular",
+        "battery": "both",
+        "side": "mac"
+      }
+    },
+    "live": {
+      "lighting": {
+        "on": true,
+        "effect": "Alphas/Mods",
+        "effect_id": 2,
+        "hue": 178,
+        "sat": 219,
+        "val": 177,
+        "speed": 231
+      },
+      "screen": 100,
+      "lock_lights": 1,
+      "charging_light": 0,
+      "clock": "12h:ss",
+      "font": "regular",
+      "battery": "both",
+      "power": "Power saver"
+    }
+  }
+}

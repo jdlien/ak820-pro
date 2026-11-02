@@ -1,0 +1,17 @@
+=== dark after sleep, 17:44:31 ===
+[17:45:11] probe 2 finished; waiting for the sleep
+[17:45:42] asleep (3.620 mA); waking with relay 2
+relay 1 off (key), relay 2 ON (power)
+[17:45:45] board on USB with relay 2 on: 1
+relay 1 off (key), relay 2 off (power)
+[17:45:50] token 0x19884af9
+[17:45:50] lighting before {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}; power mode before 2 (stage 3, cap 255)
+chain stopped before the relay step
+[17:46:01] data off
+[17:46:01] daemon restarted
+[17:46:23] restore pass: the chain was killed mid-hold, data went off under the python
+[17:46:24] board on USB: 1 (39.735 mA)
+[17:46:24] found: power mode 0 (stage 0, cap 255, forced 255), lighting {'animation_index': 1, 'hue': 0, 'sat': 0, 'val': 0, 'speed': 231}
+[17:46:24] restored: power mode 2 (stage 3, cap 255, forced 255), lighting {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}
+[17:46:24] data off
+[17:46:24] daemon restarted

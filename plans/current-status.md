@@ -1,8 +1,27 @@
 # Current status
 
-Updated 2026-11-01, 17:50. The block below is where things stand, written to
+Updated 2026-11-01, 18:20. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-11-01 evening — the row ISR's stage 1 measured on white: it passes, with one fix
+
+Stage 1 of [`ROW-ISR-PLAN.md`](ROW-ISR-PLAN.md) went on white and came
+through its A/B against the v0.3.0 candidate
+([`../history/rowisr-stage1-20261101/`](../history/rowisr-stage1-20261101/README.md)):
+the callback 1% slower, the CPU share identical, no stall, the row gaps as
+before, every lit state's draw identical. The one difference, 1.3 mA more
+at dark, was the audit's F-033 (`led_state[255]`, the NO_LED read), which
+the new link layout had put on the wear-leveling cache; fixed on
+`row-isr` (`b3270996d3`) in the audit's form and measured with the fix
+in both builds (dark 40.6 mA on each). **White runs stage 1 plus the fix
+(token `0x991e7b11`) since 18:09**, in its standing state. Owed on it
+with the presser (11-02): Bootmagic, deep sleep's five wakes, the
+phantom-or-missing count; and a warm set of windows for the ACK-timeout
+comparison. The runner (`scripts/rowisr_baseline.py`) now holds the
+ladder at Always on for a run. Next: the presser's bring-up and the
+short-tap baseline, the witness's wires, then stage 2 from the measured
+slot rate (3705/s on stage 1, 3744 on the base) and the pulse train.
 
 ## 2026-11-01 — v0.3.0 released
 

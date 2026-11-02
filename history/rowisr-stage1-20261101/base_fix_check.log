@@ -1,0 +1,141 @@
+=== base + fix check 18:01:03: ak820pro-builds/out/via-dev-cfe6c2d3a5-20261101-175914.bin, then back to ak820pro-builds/out/via-dev-b3270996d3-20261101-175317.bin ===
+[18:01:03] data on
+[18:01:36] no board on USB (asleep? one key wakes it)
+[18:01:36] data off
+[18:01:36] daemon restarted
+exit 1
+=== base + fix check 18:05:17: ak820pro-builds/out/via-dev-cfe6c2d3a5-20261101-175914.bin, then back to ak820pro-builds/out/via-dev-b3270996d3-20261101-175317.bin ===
+[18:05:17] data on
+[18:05:20] board token: 0x991e7b11
+[18:05:20] flash: ak820pro-builds/out/via-dev-cfe6c2d3a5-20261101-175914.bin
+firmware : ak820pro-builds/out/via-dev-cfe6c2d3a5-20261101-175914.bin
+built    : Nov  1 17:59:14 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  1 18:05:20 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 177, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  1 18:05:20 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  1 18:05:20 2026  (2707 bytes)
+
+== dumping the battery log ==
+# 0 entries (log v8, one per 900 s), newest 0 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261101-180520-preflash.csv  Nov  1 18:05:20 2026  (6 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[18:05:50] token after: 0xc1237f1a (want 0xc1237f1a)
+[18:05:50] lighting before {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}; power mode 2
+[18:06:38]   dark                   40.581 mA over 40 rows (sd 0.049)
+[18:07:27]   white 64               45.248 mA over 40 rows (sd 0.065)
+[18:08:15]   white 255              89.346 mA over 40 rows (sd 0.276)
+[18:09:03]   dark again             40.608 mA over 40 rows (sd 0.06)
+[18:09:03] RESULT base + fix: dark 40.581/40.608, white 64 45.248, white 255 89.346; base unfixed: dark 40.62, white 64 45.18, white 255 88.73
+[18:09:03] restoring the lighting, then Power saver
+[18:09:03] power mode now 2; lighting {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}
+[18:09:03] flash back: ak820pro-builds/out/via-dev-b3270996d3-20261101-175317.bin
+firmware : ak820pro-builds/out/via-dev-b3270996d3-20261101-175317.bin
+built    : Nov  1 17:53:17 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  1 18:09:04 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 177, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  1 18:09:04 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  1 18:09:04 2026  (2707 bytes)
+
+== dumping the battery log ==
+# 0 entries (log v8, one per 900 s), newest 0 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261101-180904-preflash.csv  Nov  1 18:09:04 2026  (6 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before -1539.4 ms, after -1.7 ms, rtt 3.2 ms, U ~2.4 ms, lead now 4.94 ms, bias sent
+done.
+[18:09:34] token after the flash back: 0x991e7b11 (want 0x991e7b11)
+[18:09:34] after the flash back: power mode 2, lighting {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}
+[18:09:34] done
+[18:09:34] data off
+[18:09:34] daemon restarted
+exit 0

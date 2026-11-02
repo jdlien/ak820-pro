@@ -1,0 +1,9 @@
+=== dark probe at 17:38:40 on  stage 1 ===
+[17:38:43] token 0x19884af9
+[17:38:43] token (see session log); lighting before {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}; mode 0 -> Always on (stage 0, cap 255)
+[17:39:31]   solid, value 0                     41.994 mA over 40 rows (sd 0.091)
+[17:39:40] restoring
+the scan skip was refused
+exit 1
+[17:39:40] data off
+[17:39:40] daemon restarted

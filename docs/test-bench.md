@@ -836,4 +836,12 @@ after; relay 2 untouched; the daemon paused for the whole run
 `bootstrap`), since it seizes raw HID and its clock sync writes the PCF.
 A run that dies leaves `DIR/lighting-before.json` and
 `DIR/settings-before.json` to restore by hand (its header says how).
-About 25 minutes a run.
+About 25 minutes a run. Two things learned on 11-01
+(`history/rowisr-stage1-20261101/`): the runner puts the board in Always on
+for the run and the mode back after, because Power saver caps the RGB value
+at 128 and the ladder dims and darkens an idle board minutes after the last
+key, and raw HID is not activity; and a board that has deep-slept is not on
+USB, so a run starts with a key press from JD (the charger pin wakes it
+too, but only for a second unless the data link is up before the 5 V goes,
+and relay 2 is the drain's). ⚠️ Never edit a running bash script: bash
+reads it as it goes.

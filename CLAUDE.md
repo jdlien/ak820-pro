@@ -129,10 +129,16 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 14:40 11-01: `4c7395a4c6`** (dev, token `0x6f758b40`, the
-release candidate, its checks in `history/v030-rc-white-20261101/`); from
-16:29 the row ISR's stage 1 A/B (`a8a567308d`, the branch `row-isr`,
-`plans/ROW-ISR-PLAN.md`), which the row ISR's session records.
+**On white since 18:09 11-01: the row ISR's stage 1 plus the NO_LED fix,
+`b3270996d3`** (dev, token `0x991e7b11`, the branch `row-isr`,
+`plans/ROW-ISR-PLAN.md`): stage 1's A/B against the v0.3.0 candidate
+passed every hands-free gate within 1.3% once the fix was in both builds
+(`history/rowisr-stage1-20261101/`); the first stage 1 build drew 1.3 mA
+more at dark through the audit's F-033 read, now fixed on the branch and
+measured. Owed on it: Bootmagic, deep sleep's five wakes, the
+phantom-or-missing count (the presser, 11-02). **Before it, from 14:40
+11-01: `4c7395a4c6`** (dev, token `0x6f758b40`, the release candidate, its
+checks in `history/v030-rc-white-20261101/`).
 **v0.2.0, released 10-29 from `8ec0c8b9b4`**: the mainline below plus
 Help's More info, fast-forwarded onto `ak820pro-jdlien` and pinned in
 `deps.lock` for the release (the daily and fpb builds, the Windows agent

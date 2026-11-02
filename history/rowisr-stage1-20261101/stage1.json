@@ -1,0 +1,630 @@
+{
+ "label": "stage1",
+ "when": "2026-11-01 17:12:10",
+ "token": "0x19884af9",
+ "health_version": 8,
+ "lighting": {
+  "animation_index": 2,
+  "hue": 178,
+  "sat": 219,
+  "val": 177,
+  "speed": 231
+ },
+ "battery": "supply       battery  (battery)\nlevel        32.6 %\npack           3839 mV  (estimate 5C 77)\nmodule 5C    last 77%, 0 s ago\nvdd          3901 mV  (raw 2097, since boot 3897..3904 mV)  -- the rail, not the pack\ncharger pins CHRG high, STDBY low\nled drive    20.1 % of maximum\nflags        on_batt done rgb_on linked\npower mode   Always on, stage active\ndraw         194.0 mW now, average 0.0 mW over 0 min\ntime left    -\ncount        off (not on battery); band 20.9..44.8 %; energy since FULL 0.7 mWh\n",
+ "power_before": {
+  "mode": 0,
+  "stage": 0,
+  "val_cap": 255,
+  "forced": 255
+ },
+ "ladder_forced": false,
+ "window_s": 24.0,
+ "windows": {
+  "idle": {
+   "name": "idle",
+   "secs": 24.01,
+   "isr": {
+    "isr_dt_s": 24.021,
+    "isr_per_s": 3705.2,
+    "isr_mean_us": 198.2,
+    "isr_min_us": 170.7,
+    "isr_max_us": 256.0,
+    "isr_cpu_pct": 73.4,
+    "row_samples_per_row_per_s": 205.8,
+    "timebase_vs_wall": 1.0002
+   },
+   "page4_before": {
+    "isr_entries": 799,
+    "isr_ticks_sum": 29699,
+    "isr_ticks_min": 32,
+    "isr_ticks_max": 47,
+    "st_freq": 187500,
+    "uptime_ms": 16129,
+    "row_samples_total": 267
+   },
+   "page4_after": {
+    "isr_entries": 89802,
+    "isr_ticks_sum": 3337453,
+    "isr_ticks_min": 32,
+    "isr_ticks_max": 48,
+    "st_freq": 187500,
+    "uptime_ms": 40150,
+    "row_samples_total": 29934
+   },
+   "end": {
+    "health": {
+     "blit_timeouts": 0,
+     "tx_sent": 9,
+     "tx_timeouts": 4,
+     "tx_drops": 0,
+     "rx_malformed": 0,
+     "loop_gap_max_ms": 11,
+     "scan_rate": 188,
+     "wdt_consecutive_resets": 0,
+     "flags": 0,
+     "version": 8,
+     "wdt_fired_last_boot": false,
+     "wdt_degraded": false
+    },
+    "stalls": {
+     "count_ge_10ms": 8,
+     "count_ge_25ms": 0,
+     "passes": 4600,
+     "flash_writes": 1,
+     "flash_gap_max_ms": 11,
+     "blit_gap_max_ms": 11,
+     "i2c_gap_max_ms": 0,
+     "count_ge_25ms_nonflash": 0,
+     "key_presses": 0,
+     "loop_gap_max_mark": "blit"
+    },
+    "rows": {
+     "row_samples": [
+      4993,
+      4993,
+      4992,
+      4992,
+      4992,
+      4992
+     ],
+     "row_gap_max_ms": 6,
+     "raw_edges": 0,
+     "consumes": 4601,
+     "cooked_changes": 0,
+     "row_gap_max_row": 4,
+     "matrix_rows": 6
+    },
+    "link": {
+     "sent": 9,
+     "timeouts": 4,
+     "queue_full": 0,
+     "giveups": 0,
+     "replaced": 0,
+     "uart_overrun": 0,
+     "uart_framing": 0,
+     "uart_parity": 0
+    }
+   },
+   "daemon_syncs_during": 0
+  },
+  "repaint": {
+   "name": "repaint",
+   "secs": 24.0,
+   "isr": {
+    "isr_dt_s": 23.989,
+    "isr_per_s": 3704.7,
+    "isr_mean_us": 198.3,
+    "isr_min_us": 170.7,
+    "isr_max_us": 288.0,
+    "isr_cpu_pct": 73.5,
+    "row_samples_per_row_per_s": 205.8,
+    "timebase_vs_wall": 0.9994
+   },
+   "page4_before": {
+    "isr_entries": 767,
+    "isr_ticks_sum": 28491,
+    "isr_ticks_min": 32,
+    "isr_ticks_max": 53,
+    "st_freq": 187500,
+    "uptime_ms": 42394,
+    "row_samples_total": 255
+   },
+   "page4_after": {
+    "isr_entries": 89638,
+    "isr_ticks_sum": 3332245,
+    "isr_ticks_min": 32,
+    "isr_ticks_max": 54,
+    "st_freq": 187500,
+    "uptime_ms": 66383,
+    "row_samples_total": 29879
+   },
+   "end": {
+    "health": {
+     "blit_timeouts": 0,
+     "tx_sent": 15,
+     "tx_timeouts": 10,
+     "tx_drops": 0,
+     "rx_malformed": 0,
+     "loop_gap_max_ms": 16,
+     "scan_rate": 169,
+     "wdt_consecutive_resets": 0,
+     "flags": 0,
+     "version": 8,
+     "wdt_fired_last_boot": false,
+     "wdt_degraded": false
+    },
+    "stalls": {
+     "count_ge_10ms": 62,
+     "count_ge_25ms": 0,
+     "passes": 4209,
+     "flash_writes": 0,
+     "flash_gap_max_ms": 0,
+     "blit_gap_max_ms": 15,
+     "i2c_gap_max_ms": 0,
+     "count_ge_25ms_nonflash": 0,
+     "key_presses": 0,
+     "loop_gap_max_mark": "none"
+    },
+    "rows": {
+     "row_samples": [
+      4983,
+      4984,
+      4984,
+      4984,
+      4984,
+      4984
+     ],
+     "row_gap_max_ms": 6,
+     "raw_edges": 0,
+     "consumes": 4210,
+     "cooked_changes": 0,
+     "row_gap_max_row": 4,
+     "matrix_rows": 6
+    },
+    "link": {
+     "sent": 15,
+     "timeouts": 10,
+     "queue_full": 0,
+     "giveups": 0,
+     "replaced": 0,
+     "uart_overrun": 0,
+     "uart_framing": 0,
+     "uart_parity": 0
+    }
+   },
+   "daemon_syncs_during": 0,
+   "load": {
+    "kind": "repaint",
+    "toggles": 24
+   }
+  },
+  "pcf": {
+   "name": "pcf",
+   "secs": 24.01,
+   "isr": {
+    "isr_dt_s": 23.993,
+    "isr_per_s": 3654.1,
+    "isr_mean_us": 198.3,
+    "isr_min_us": 170.7,
+    "isr_max_us": 272.0,
+    "isr_cpu_pct": 72.4,
+    "row_samples_per_row_per_s": 203.0,
+    "timebase_vs_wall": 0.9992
+   },
+   "page4_before": {
+    "isr_entries": 772,
+    "isr_ticks_sum": 28662,
+    "isr_ticks_min": 32,
+    "isr_ticks_max": 51,
+    "st_freq": 187500,
+    "uptime_ms": 68637,
+    "row_samples_total": 258
+   },
+   "page4_after": {
+    "isr_entries": 88445,
+    "isr_ticks_sum": 3287655,
+    "isr_ticks_min": 32,
+    "isr_ticks_max": 51,
+    "st_freq": 187500,
+    "uptime_ms": 92630,
+    "row_samples_total": 29482
+   },
+   "end": {
+    "health": {
+     "blit_timeouts": 0,
+     "tx_sent": 20,
+     "tx_timeouts": 15,
+     "tx_drops": 0,
+     "rx_malformed": 0,
+     "loop_gap_max_ms": 13,
+     "scan_rate": 190,
+     "wdt_consecutive_resets": 0,
+     "flags": 0,
+     "version": 8,
+     "wdt_fired_last_boot": false,
+     "wdt_degraded": false
+    },
+    "stalls": {
+     "count_ge_10ms": 45,
+     "count_ge_25ms": 0,
+     "passes": 4565,
+     "flash_writes": 0,
+     "flash_gap_max_ms": 0,
+     "blit_gap_max_ms": 0,
+     "i2c_gap_max_ms": 0,
+     "count_ge_25ms_nonflash": 0,
+     "key_presses": 0,
+     "loop_gap_max_mark": "none"
+    },
+    "rows": {
+     "row_samples": [
+      4918,
+      4918,
+      4917,
+      4917,
+      4918,
+      4918
+     ],
+     "row_gap_max_ms": 9,
+     "raw_edges": 0,
+     "consumes": 4566,
+     "cooked_changes": 0,
+     "row_gap_max_row": 0,
+     "matrix_rows": 6
+    },
+    "link": {
+     "sent": 20,
+     "timeouts": 15,
+     "queue_full": 0,
+     "giveups": 0,
+     "replaced": 0,
+     "uart_overrun": 0,
+     "uart_framing": 0,
+     "uart_parity": 0
+    }
+   },
+   "daemon_syncs_during": 0,
+   "load": {
+    "kind": "pcf_burst",
+    "n_asked": 106,
+    "at_stop": {
+     "left": 0,
+     "done": 88,
+     "failed": 0,
+     "exposure_ms": 22564,
+     "active": false
+    }
+   }
+  }
+ },
+ "holds": [
+  {
+   "state": "dark",
+   "hue": 0,
+   "sat": 0,
+   "val": 0,
+   "n": 40,
+   "mean_ma": 41.963,
+   "sd_ma": 0.059,
+   "vcell_mv": 3813.2,
+   "leg": "forward",
+   "incremental_ma": 0.025
+  },
+  {
+   "state": "white 64",
+   "hue": 0,
+   "sat": 0,
+   "val": 64,
+   "n": 40,
+   "mean_ma": 45.179,
+   "sd_ma": 0.066,
+   "vcell_mv": 3812.3,
+   "leg": "forward",
+   "incremental_ma": 3.241
+  },
+  {
+   "state": "white 128",
+   "hue": 0,
+   "sat": 0,
+   "val": 128,
+   "n": 40,
+   "mean_ma": 51.41,
+   "sd_ma": 0.093,
+   "vcell_mv": 3811.2,
+   "leg": "forward",
+   "incremental_ma": 9.472
+  },
+  {
+   "state": "white 255",
+   "hue": 0,
+   "sat": 0,
+   "val": 255,
+   "n": 40,
+   "mean_ma": 88.328,
+   "sd_ma": 0.229,
+   "vcell_mv": 3800.2,
+   "leg": "forward",
+   "incremental_ma": 46.39
+  },
+  {
+   "state": "red 64",
+   "hue": 0,
+   "sat": 255,
+   "val": 64,
+   "n": 40,
+   "mean_ma": 43.697,
+   "sd_ma": 0.074,
+   "vcell_mv": 3812.8,
+   "leg": "forward",
+   "incremental_ma": 1.759
+  },
+  {
+   "state": "red 128",
+   "hue": 0,
+   "sat": 255,
+   "val": 128,
+   "n": 40,
+   "mean_ma": 46.366,
+   "sd_ma": 0.086,
+   "vcell_mv": 3811.9,
+   "leg": "forward",
+   "incremental_ma": 4.428
+  },
+  {
+   "state": "red 255",
+   "hue": 0,
+   "sat": 255,
+   "val": 255,
+   "n": 40,
+   "mean_ma": 62.047,
+   "sd_ma": 0.311,
+   "vcell_mv": 3807.5,
+   "leg": "forward",
+   "incremental_ma": 20.109
+  },
+  {
+   "state": "green 64",
+   "hue": 85,
+   "sat": 255,
+   "val": 64,
+   "n": 40,
+   "mean_ma": 43.348,
+   "sd_ma": 0.113,
+   "vcell_mv": 3812.0,
+   "leg": "forward",
+   "incremental_ma": 1.41
+  },
+  {
+   "state": "green 128",
+   "hue": 85,
+   "sat": 255,
+   "val": 128,
+   "n": 40,
+   "mean_ma": 45.173,
+   "sd_ma": 0.207,
+   "vcell_mv": 3813.0,
+   "leg": "forward",
+   "incremental_ma": 3.235
+  },
+  {
+   "state": "green 255",
+   "hue": 85,
+   "sat": 255,
+   "val": 255,
+   "n": 40,
+   "mean_ma": 56.14,
+   "sd_ma": 0.399,
+   "vcell_mv": 3810.1,
+   "leg": "forward",
+   "incremental_ma": 14.202
+  },
+  {
+   "state": "blue 64",
+   "hue": 170,
+   "sat": 255,
+   "val": 64,
+   "n": 40,
+   "mean_ma": 43.261,
+   "sd_ma": 0.159,
+   "vcell_mv": 3811.9,
+   "leg": "forward",
+   "incremental_ma": 1.323
+  },
+  {
+   "state": "blue 128",
+   "hue": 170,
+   "sat": 255,
+   "val": 128,
+   "n": 40,
+   "mean_ma": 44.946,
+   "sd_ma": 0.219,
+   "vcell_mv": 3812.3,
+   "leg": "forward",
+   "incremental_ma": 3.008
+  },
+  {
+   "state": "blue 255",
+   "hue": 170,
+   "sat": 255,
+   "val": 255,
+   "n": 40,
+   "mean_ma": 55.03,
+   "sd_ma": 0.249,
+   "vcell_mv": 3808.7,
+   "leg": "forward",
+   "incremental_ma": 13.092
+  },
+  {
+   "state": "dark",
+   "hue": 0,
+   "sat": 0,
+   "val": 0,
+   "n": 40,
+   "mean_ma": 41.926,
+   "sd_ma": 0.2,
+   "vcell_mv": 3813.0,
+   "leg": "forward",
+   "incremental_ma": -0.012
+  },
+  {
+   "state": "blue 255",
+   "hue": 170,
+   "sat": 255,
+   "val": 255,
+   "n": 40,
+   "mean_ma": 55.147,
+   "sd_ma": 0.256,
+   "vcell_mv": 3809.9,
+   "leg": "back",
+   "incremental_ma": 13.209
+  },
+  {
+   "state": "blue 128",
+   "hue": 170,
+   "sat": 255,
+   "val": 128,
+   "n": 40,
+   "mean_ma": 45.044,
+   "sd_ma": 0.068,
+   "vcell_mv": 3812.0,
+   "leg": "back",
+   "incremental_ma": 3.106
+  },
+  {
+   "state": "blue 64",
+   "hue": 170,
+   "sat": 255,
+   "val": 64,
+   "n": 40,
+   "mean_ma": 43.335,
+   "sd_ma": 0.04,
+   "vcell_mv": 3812.0,
+   "leg": "back",
+   "incremental_ma": 1.397
+  },
+  {
+   "state": "green 255",
+   "hue": 85,
+   "sat": 255,
+   "val": 255,
+   "n": 40,
+   "mean_ma": 56.267,
+   "sd_ma": 0.313,
+   "vcell_mv": 3808.8,
+   "leg": "back",
+   "incremental_ma": 14.329
+  },
+  {
+   "state": "green 128",
+   "hue": 85,
+   "sat": 255,
+   "val": 128,
+   "n": 40,
+   "mean_ma": 45.248,
+   "sd_ma": 0.078,
+   "vcell_mv": 3811.8,
+   "leg": "back",
+   "incremental_ma": 3.31
+  },
+  {
+   "state": "green 64",
+   "hue": 85,
+   "sat": 255,
+   "val": 64,
+   "n": 40,
+   "mean_ma": 43.421,
+   "sd_ma": 0.044,
+   "vcell_mv": 3811.4,
+   "leg": "back",
+   "incremental_ma": 1.483
+  },
+  {
+   "state": "red 255",
+   "hue": 0,
+   "sat": 255,
+   "val": 255,
+   "n": 40,
+   "mean_ma": 62.199,
+   "sd_ma": 0.286,
+   "vcell_mv": 3806.1,
+   "leg": "back",
+   "incremental_ma": 20.261
+  },
+  {
+   "state": "red 128",
+   "hue": 0,
+   "sat": 255,
+   "val": 128,
+   "n": 40,
+   "mean_ma": 46.393,
+   "sd_ma": 0.082,
+   "vcell_mv": 3810.8,
+   "leg": "back",
+   "incremental_ma": 4.455
+  },
+  {
+   "state": "red 64",
+   "hue": 0,
+   "sat": 255,
+   "val": 64,
+   "n": 40,
+   "mean_ma": 43.722,
+   "sd_ma": 0.062,
+   "vcell_mv": 3812.0,
+   "leg": "back",
+   "incremental_ma": 1.784
+  },
+  {
+   "state": "white 255",
+   "hue": 0,
+   "sat": 0,
+   "val": 255,
+   "n": 40,
+   "mean_ma": 88.384,
+   "sd_ma": 0.243,
+   "vcell_mv": 3799.4,
+   "leg": "back",
+   "incremental_ma": 46.446
+  },
+  {
+   "state": "white 128",
+   "hue": 0,
+   "sat": 0,
+   "val": 128,
+   "n": 40,
+   "mean_ma": 51.435,
+   "sd_ma": 0.095,
+   "vcell_mv": 3809.5,
+   "leg": "back",
+   "incremental_ma": 9.497
+  },
+  {
+   "state": "white 64",
+   "hue": 0,
+   "sat": 0,
+   "val": 64,
+   "n": 40,
+   "mean_ma": 45.181,
+   "sd_ma": 0.111,
+   "vcell_mv": 3810.1,
+   "leg": "back",
+   "incremental_ma": 3.243
+  },
+  {
+   "state": "dark",
+   "hue": 0,
+   "sat": 0,
+   "val": 0,
+   "n": 40,
+   "mean_ma": 41.925,
+   "sd_ma": 0.147,
+   "vcell_mv": 3812.5,
+   "leg": "back",
+   "incremental_ma": -0.013
+  }
+ ],
+ "notes": [
+  "the cleanup window was skipped (no HID trigger for the write test's Cleanup; --cleanup manual)"
+ ],
+ "dark_ma": 41.938
+}

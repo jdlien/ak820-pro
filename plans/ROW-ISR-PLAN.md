@@ -23,11 +23,33 @@ statics), daily and fpb at 2296 B; text +996 B. Codex reviewed the move twice
 four P1s in the diagnostics and the quiesce gate, all fixed;
 `review-codex-row-isr-stage1-verify-2026-11-01-raw.md`, **READY TO FLASH
 for stage 1's measurements**), dispositioned under "Stage 1's review",
-above the process log. The branch is at `a8a567308d`. **11-01 afternoon:
-JD's go for stage 1 on white mid-drain (36% left, 4-5 days to the cut),
-sequenced with the audit session: it flashes the v0.3.0 candidate
-(4c7395a4c6, the exact base) and runs its release checks first, then
-white is this plan's for the A/B.** Written for it, no hardware needed:
+above the process log. **Stage 1 is on white and measured (11-01
+evening, [`history/rowisr-stage1-20261101/`](../history/rowisr-stage1-20261101/README.md)):**
+the A/B against the v0.3.0 candidate in one sitting, the runner's windows
+and holds on each: the callback 1.0-1.1% fewer a second with a mean 1.2%
+longer (the I-class locks in the row helpers), the CPU share identical,
+no stall ≥ 25 ms, the row gap 6 ms against 5 idle and 9 against 9 under
+the clock-chip burst, every lit state's draw identical. **One finding:**
+the first build drew 1.3 mA more at dark, and the cause is the plan's
+"harmless" `led_state[255]` read: in the base build it lands on the
+raw-HID IN queue's slot 0 (the last reply's bytes; the audit's F-033), in
+stage 1's on the wear-leveling cache, nonzero, so every slot on the nine
+LED-less positions drove a phantom width through the row and column
+transistors. Fixed on `row-isr` at `b3270996d3` in the audit's form
+(`continue` on `led_index >= SN32F2XX_LED_COUNT`) and measured with the
+fix in both builds: dark 40.62 against 40.58-40.61, white 64 45.26 against
+45.25, white 255 88.72 against 89.35. **Every hands-free stage 1 gate
+passes;** white runs stage 1 plus the fix (token `0x991e7b11`) since
+18:09. Owed on it: Bootmagic, deep sleep's five wakes, the
+phantom-or-missing count (the presser, 11-02) and a warm set of windows
+for the ACK-timeout comparison (the base had been up two hours, stage 1
+ten seconds). The runner learned two things on the way: the power ladder
+must be held at Always on for a run (Power saver caps the value and
+darkens an idle board, and raw HID is not activity), and a deep-sleeping
+board is not on USB (JD's key wakes it; the charger pin does too, for a
+second). JD's go for the flashes came at 15:30 and 17:55; the audit
+session flashed the candidate first (14:40) and handed white over at
+16:29. Written for it, no hardware needed:
 the witness's software (`scripts/presser/witness.py` on the presser's
 board, `scripts/witness.py` on the Mac, `scripts/witness_selftest.py`, 33
 checks) and stage 0's runner (`scripts/rowisr_baseline.py`: the health
@@ -1968,3 +1990,17 @@ bench: stage 0's baseline on white, with the rig, before it is flashed.
   the daemon paused for it, the lighting and the live settings dumped and
   restored. White's own record: the candidate on it is the first run of
   the new profiles restore. My stray `-dirty` builds deleted from `out/`.
+- 11-01 16:29-18:09: the A/B on white (`history/rowisr-stage1-20261101/`,
+  its README): six attempts before the clean run (a wrong health page in
+  the runner; Power saver's cap and the ladder's dim, which spoiled the
+  first holds; white asleep in a gap; a charger wake that re-slept; the
+  ladder read before it settled), the clean run 16:48-17:35, then the
+  dark figure's investigation (the probes, the symbol tables: the
+  `led_state[255]` read landing on the wear-leveling cache), the fix
+  built twice (first a zero channel, then the audit's `continue`, so the
+  mainline and the branch match), stage 1 plus the fix at 17:57 and the
+  base plus the fix (the audit session's `f033-noled`, `cfe6c2d3a5`) at
+  18:05, stage 1 plus the fix back at 18:09. Three relay 2 closes for the
+  wakes at JD's suggestion (2.29 mAh into the drain, the audit session's
+  figures); the later wakes JD's key. Stage 1's hands-free gates pass;
+  the `compare` report and every log are in the directory.

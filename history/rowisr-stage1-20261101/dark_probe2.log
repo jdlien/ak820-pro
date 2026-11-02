@@ -1,0 +1,18 @@
+=== dark probe 2 at 17:41:40 ===
+[17:41:43] token 0x19884af9
+[17:41:43] lighting before {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}; power mode before 0 (stage 0, cap 255, forced 255)
+[17:41:43] op 28 status: {'hold_active': 0, 'ms_left': 0, 'irqn': 16, 'line_enabled': 1, 'depth': 0, 'prime_timed_out': 0, 'skip_active': 0, 'skip_ms_left': 0}
+[17:41:43] a 2 s skip: accepted; status {'hold_active': 0, 'ms_left': 0, 'irqn': 16, 'line_enabled': 1, 'depth': 0, 'prime_timed_out': 0, 'skip_active': 1, 'skip_ms_left': 1994}
+[17:42:34]   solid, value 0                     42.003 mA over 40 rows (sd 0.049)
+[17:43:23]   solid, value 0, key scan skipped   42.026 mA over 40 rows (sd 0.053)
+[17:43:23]   (skips armed 3, refused 3)
+[17:43:33]   effect 0 read back {'animation_index': 0, 'hue': 0, 'sat': 0, 'val': 0, 'speed': 231}
+[17:44:21]   rgb matrix off (effect 0)          42.003 mA over 40 rows (sd 0.044)
+[17:45:09]   solid, value 0 (control)           42.0 mA over 40 rows (sd 0.046)
+[17:45:09] RESULT dark 42.003  scan-skipped 42.026 (skips {'ok': 3, 'refused': 3})  rgb-off 42.003  dark-again 42.0
+[17:45:09] restoring: the lighting, then Power saver
+[17:45:10] power mode now 2 (stage 3, cap 255, forced 255); lighting {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+exit 0
+[17:45:10] data off
+[17:45:10] daemon restarted
