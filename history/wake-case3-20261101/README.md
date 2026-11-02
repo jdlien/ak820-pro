@@ -46,10 +46,12 @@ board once it is back on USB. It never enumerates HID.
   the 5345 s since 19:44:00 less 20 s (the flash itself). The watchdog's
   last-boot flag is clear. PLL 87 loops on both wakes, 0 strays, no
   recovery step timed out.
-- **The waking key was not counted on the host** (`key_gain` 0 on both).
-  That is the known BLE behaviour: the link drops during a sleep, and the
-  key leaves before it is back (`plans/BACKLOG.md`). JD pressed a key
-  only to wake the board.
+- **Whether the waking key typed was not checked.** JD pressed a key only
+  to wake the board, and nobody looked for it on the Mac. The record's
+  `key_gain` (0 on both) says nothing here: the firmware counts it only on
+  a sleep the bench armed (op 14 sub 4, `sleep.c`'s `arm_task`), and these
+  were the ladder's own sleeps. (Corrected 11-02: this line first read the
+  0 as the key lost on the host.)
 
 ⚠️ The logs print FAIL for 3a (21:03) and 3b. That is the runner's first
 check, not the board. It wanted flag `0x04` and an uptime equal to the
