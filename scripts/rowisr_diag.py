@@ -41,8 +41,10 @@ it attributes the scan's cost (stage 0b). Timed and refused as `hold` is.
 
 `usb` reads the frame-counter detector's record (op 28 sub 6): how many
 intervals it judged, how many it rejected (a disagreement of the extension's
-span and the frame counter's beyond 3 ms + 0.2%, or a bus event inside the
-interval; each rejection is one epoch loss), the worst distance it accepted,
+span and the frame counter's beyond 3 ms + 0.2%, a bus event inside the
+interval, or the frames stopping with no flag; each rejection is one epoch
+loss), how many it excluded unjudged (both ends inside a stale's recovery
+with no frame yet: no loss of their own), the worst distance it accepted,
 the last rejection's two spans, and the clocks' state now.
 
 `silence` arms a silence of every interrupt (op 28 sub 7): after DELAY ms
@@ -170,7 +172,8 @@ def usb_dict(r):
             "usb_last_dt_ms": u16(o, 8), "usb_last_df_ms": u16(o, 10), "loss_gen": u32(o, 12), "usb_gen": u16(o, 16),
             "usb_state": USB_STATES.get(o[18], o[18]), "usb_trusted_now": bool(o[19]), "frmno": u16(o, 20),
             "time_valid": bool(o[22]), "time_excl": o[23], "guard_last_gap_ticks": u16(o, 24),
-            "guard_last_gap_ms": round(u16(o, 24) / 187.5, 3), "frames_fresh": bool(o[26])}
+            "guard_last_gap_ms": round(u16(o, 24) / 187.5, 3), "frames_fresh": bool(o[26]),
+            "usb_unjudged": o[27] & 0x7F, "recovery_pending": bool(o[27] & 0x80)}
 
 
 def report_dict(r, r2=None):
@@ -268,7 +271,8 @@ def main():
                 print(json.dumps(d))
             else:
                 print(f"frame counter: {d['usb_checked']} intervals judged, {d['usb_rejects']} rejected on the spans, "
-                      f"{d['usb_events']} rejected for a bus event; the worst accepted distance {d['usb_worst_ms']} ms; "
+                      f"{d['usb_events']} rejected for a bus event or the frames stopping, {d['usb_unjudged']} excluded unjudged in a "
+                      f"stale's recovery; the worst accepted distance {d['usb_worst_ms']} ms; "
                       f"the last rejection's spans {d['usb_last_dt_ms']} ms by the extension, {d['usb_last_df_ms']} by the frames")
                 print(f"  now: USB {d['usb_state']}, frames {'trusted' if d['usb_trusted_now'] else 'NOT trusted'}, FRMNO {d['frmno']}, "
                       f"bus-event generation {d['usb_gen']}; the extension {'VALID' if d['time_valid'] else 'INVALID'}, "
