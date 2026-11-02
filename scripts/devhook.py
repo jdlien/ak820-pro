@@ -132,6 +132,11 @@ elif cmd == "frames":
                   f"{(l['commit_ms'] - l['anchor_ms']) & 0xFFFFFFFF} ms from anchor to commit")
             print(f"  payload {bytes.fromhex(l['payload'])!r}")
 elif cmd == "rxtap" and args[1:] in (["arm"], ["stop"]):
+    # On a build with the link trace (gremlin/linktrace, 11-01) mode 2 is the
+    # trace holding the ring, and a stop drops it to 0 with the trace kept:
+    # read that with `ak820 sleep` first (codex's linktrace review, P2).
+    if args[1] == "stop" and xfer(h, 15, 0)[4] == 2:
+        sys.exit("the link trace holds the tap's ring: read it with `ak820 sleep`, or `rxtap arm` to take the ring")
     r = xfer(h, 15, 1 if args[1] == "arm" else 2)
     print(f"rx tap {'armed' if r[4] else 'stopped'}, {int.from_bytes(r[5:9], 'little')} bytes")
 elif cmd == "rxtap":
@@ -141,6 +146,8 @@ elif cmd == "rxtap":
     for _ in range(5):
         r = xfer(h, 15, 0)
         armed, count, size = r[4], u32(r[5:9]), int.from_bytes(r[9:11], "little")
+        if armed == 2:   # the link trace's ring: its count is the wake's timer, not bytes
+            sys.exit("the link trace holds the tap's ring: read it with `ak820 sleep`, or `rxtap arm` to take the ring")
         if size == 0 or size % 26: sys.exit(f"unexpected tap size {size}")   # 260, or 208 since the lock-LED clock
         pages = [xfer(h, 16, pg) for pg in range(size // 26)]
         if any(p[4] != pg or p[5] != 0 for pg, p in enumerate(pages)):
