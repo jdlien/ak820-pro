@@ -683,6 +683,34 @@ Each slot, in order:
    the bus healthy, which is the bench's state, a returning silence of any
    length up to 12 s reads INVALID.
 
+   **As built (11-02, `fdbad7e4a5`: the detector and the injection op):**
+   the entry snapshot takes `FRMNO`, the driver's state with `INSTS`'s
+   bus-event flags and a bus-event generation the USB handler bumps at
+   every reset, suspend and wakeup it raises (`usb_event_kb()`, a weak hook
+   at the head of `usb_main.c`'s event callback; the LLD's resume raises no
+   HAL event, and the SOF after it raises the wakeup). An interval that
+   began trusted (the driver ACTIVE, no flag pending) is judged at step 1
+   after the guard: a bus event inside it, serviced or pending, rejects it;
+   otherwise the extension's span in ms and the frame counter's, modulo
+   2,048, must agree within 3 ms plus the span shifted right by 9 (0.2%).
+   A rejection is one loss, the extension invalidated and the bumped
+   generation adopted by the service, so the next observation re-primes;
+   off USB nothing is judged. The record counts the intervals judged, the
+   rejections of each kind, the worst accepted distance and the last
+   rejection's two spans (op 28 sub 6, `rowisr_diag.py usb`, with the
+   clocks' state now). The injection is op 28 sub 7 (`rowisr_diag.py
+   silence MS [DELAY]`): every interrupt masked for 1-8,000 ms from the
+   housekeeping task after the delay, the marker on the Win Lock pin C15,
+   the spin's own count of CT16B5 in the status. The predicted outcomes
+   on this bench, from the length alone (the offsets add under 0.1 ms with
+   the tick running): 5 and 7 ms exact; 9, 20, 100 and 200 ms INVALID by
+   the guard; 350, 700 and 1,049 ms past the guard (residues 0.5, 0.9 and
+   0.4 ms) and INVALID by the frame counter on USB, undetected with the
+   data cut (the declared limit); 1,000, 2,048 and 7,000 ms INVALID by the
+   guard (residues 301, 300 and 9.5 ms). Each bus event (the data cut's
+   suspend, the reconnection's reset) is one loss by design. The witness's
+   edges are still owed for the lengths; the spin's count stands in.
+
    Deep sleep re-primes by the first tick after wake, and the handler
    treats everything before it as INVALID, so the order of the wake hooks
    (`sleep.c:604`) does not matter. `matrix_init_custom()` primes before
@@ -1938,7 +1966,7 @@ arithmetic, the quiesce). The fix round is the commit after
 | # | Finding | Disposition |
 |---|---|---|
 | 1 (P1) | Deep sleep's exit takes the columns back while scan-only is active, which then scans columns the parked outputs drive high; leaving scan-only restores the PWM only at the next scan slot. | **Fixed.** The columns' ownership follows the mode at once: `sn32f2xx_sleep_exitI()` releases them while scan-only is active, and the scan-only switch takes them back (or releases them) in the invocation that changes the cadence. |
-| 2 (P2) | D3's USB frame-counter detector for a long silence of every observer is absent: a 350 or 700 ms silence can read VALID on the USB bench. | **Deferred, with the consequence stated:** the long-gap injection gates that need it are not claimable until it is in; they also need the waveform witness, which is not wired, and a bus-event generation from the USB LLD (a local patch). A follow-up commit before those gates. |
+| 2 (P2) | D3's USB frame-counter detector for a long silence of every observer is absent: a 350 or 700 ms silence can read VALID on the USB bench. | **Deferred, with the consequence stated:** the long-gap injection gates that need it are not claimable until it is in; they also need the waveform witness, which is not wired, and a bus-event generation from the USB LLD (a local patch). A follow-up commit before those gates. **Built 11-02 (`fdbad7e4a5`; D3 case 5, "As built"), with the silence injection op; the bus-event generation through a hook in `usb_main.c`'s event callback, not the LLD; reviewed in `review-codex-row-isr-usb-detector-2026-11-02-raw.md`.** |
 | 3 (P2) | The degraded-mode exclusion was read at the driver's init, before `watchdog_boot_check()` decides it. | **Fixed.** `watchdog.c` declares the exclusion where the mode is decided. |
 | 4 (P2) | The epoch was committed as serviced before step 6's crossing check; with the flag acknowledged before the snapshot, a preemption between the two lost the new epoch's service as "spurious". | **Fixed.** The acknowledgement and the entry snapshot share one critical section; the serviced epoch is committed at step 6's decision; a crossed attempt commits nothing, so the re-entry reconstructs the missed slot from the previous service. |
 | 5 (P2) | The reconstruction divided by the ordinary slot in scan-only, and a cadence change reset `TC` after the entry snapshot. | **Fixed.** The cadence in force is a variable the period setter keeps; a cadence change ends its invocation with the pair re-primed. |
@@ -1961,7 +1989,7 @@ deferrals accepted; one new timing concern. Dispositions:
 | # | What remains | Disposition |
 |---|---|---|
 | 6 | `service_commit()` uses the entry pair's validity; an invalidating interruption after the arm leaves that service's latency and interval committed. | **Accepted as is.** The interval and the latency are the entry pair's figures, both ends VALID in one generation when taken; a loss after the arm is the next pair's, which the generation check excludes, and the duration (entry to exit) is excluded by the exit's check. Nothing committed was measured across a loss. |
-| 7 | The consumer bound over an hour is rejected without an invalidation or a generation bump; a 16-bit generation aliases after 65,536 losses (527 s of an 8 ms gap and re-prime every cycle). | **Accepted, labelled, deferred.** A rejected interval leaves the pair INVALID for the handler (`valid1` false, the service counted invalid) and the next VALID entry re-primes; an alias needs 65,536 counted losses, and `epoch_losses` saturates at 255 long before, so a record that shows saturated losses is the flag. A 32-bit generation comes with the injection ops (finding 2). |
+| 7 | The consumer bound over an hour is rejected without an invalidation or a generation bump; a 16-bit generation aliases after 65,536 losses (527 s of an 8 ms gap and re-prime every cycle). | **Accepted, labelled, deferred.** A rejected interval leaves the pair INVALID for the handler (`valid1` false, the service counted invalid) and the next VALID entry re-primes; an alias needs 65,536 counted losses, and `epoch_losses` saturates at 255 long before, so a record that shows saturated losses is the flag. A 32-bit generation comes with the injection ops (finding 2). **Built 11-02: 32 bits (`fdbad7e4a5`).** |
 | 8 | The decoder divides the wrapping elapsed sum (89 s of handler time, about 7.6 min of uptime at 52 µs a slot) by the cumulative sample count. | **Fixed in the decoder:** `ak820health.py --sched` prints the cumulative mean only with its wrap noted, and `--sched --window N` takes two reads N seconds apart and reports the window's mean from the deltas (the maxima stay since-reset). The runner's figures come from windows. |
 | 10 | Page 4's exit stamp precedes its own accounting; no quantitative bound on the instrumentation overhead; the ≤ 10 µs claim needs an independent measurement. | **Accepted.** The complete handler's cost is read as page 4's CPU share (`ISR/s × mean`), which is what stage 0's runner compares and stage 2's gate is written against; the LED part's ≤ 10 µs is attributed with op 28 sub 4 (the scan skipped) and bounded by the witness when its wires exist. |
 | 11 | The counting thresholds unchanged; the synchronized stamps and the validity in the diagnostic record deferred. | **Accepted, deferred with 2.** The worst gap is now every primed observation's, which is what the ordinary comparison needs. |
@@ -1970,6 +1998,27 @@ deferrals accepted; one new timing concern. Dispositions:
 The review's priorities for the first flash (scan-only, deep sleep, the
 wake with the RGB dark, scan-only's exit, the arm section's timing) are
 the bring-up's owed list beside the colour finding above.
+
+### The frame-counter detector's review (11-02 11:44): NOT READY, fixed
+
+[`review-codex-row-isr-usb-detector-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `fdbad7e4a5` and its dev ELF): three
+P1s, three P2s, one P3; the arithmetic, the hook's coverage, the spin and
+the RAM confirmed. Dispositions, all in the fix commit after it:
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 (P1) | "Trusted" does not establish continuous SOFs: after the bench's data cut the driver stays ACTIVE with `FRMNO` frozen (`sleep.c`), and an LLD path (a status word with SUSPEND and a stale SOF) returns to ACTIVE with the PHY off; successive short intervals then compare 0 against 0 and a 700 ms silence reads 1 ms against 0 frames. | **Fixed.** An end is trusted only with the driver ACTIVE, `USB_CFG.PHY_EN` set, no bus-event flag pending and `FRMNO` seen moving within the last 4 ms of the extension's time (the hardware's own suspend needs 3 ms of idle bus, so a data cut that raises it is caught by the flag, and one that does not is caught by the freshness); an interval that ends untrusted is rejected. The residual, SOFs stopping with no flag inside the 4 ms before a silence that aliases the guard, is named outside the guarantee (D3 case 5, "As built"). |
+| 2 (P1) | An armed silence survives a deep sleep entered with the tick already stopped: `pwm_tick_stopI()` returns before the cancel. | **Fixed.** The driver's own deep-sleep entry (`sn32f2xx_sleep_enterI`) cancels it. |
+| 3 (P1) | A frame-counter rejection set `valid1` false before the spurious check, so a re-entry inside an already-serviced epoch could rotate and arm a second pulse. | **Fixed.** The spurious check runs on the reconstruction first; the verdict on the interval follows and touches only the statistics and the generation. |
+| 4 (P2) | Adopting the generation relabelled the original snapshot: a gap the tick discarded between the snapshot and the rejection would be hidden, and the exit's duration accepted across it. | **Fixed.** The snapshot stays as taken; the bumped generation goes to the committed baseline only when the handler's own invalidation did the bump (`time_valid` still set at the rejection); otherwise the tick's loss is the one, counted once at the next entry, and nothing is adopted. Step 6 and the exit see the generation moved and measure nothing across it. |
+| 5 (P2) | The marker's pin was checked at the arm, not the firing; the edges' offsets from the mask were more than the plan's one store (a call before the rising edge, bookkeeping after the falling one). | **Fixed.** Checked again under the lock at the firing (a high pin: not run, counted); each edge a single store at the mask's end, the bookkeeping and the tick's resync outside; the disassembly checked. |
+| 6 (P2) | A bus-event rejection did not record its spans; `time_valid` in the reply is the later state; no rejected gap or endpoint stamps retained; integer milliseconds cannot ask for 7.5-8.5 ms. | **Fixed.** The spans recorded for every rejection; sub 6 adds the guard's last rejected gap and the frames' freshness; the length is in microseconds; sub 8 reports the last silence (the spin's length, the TC at each edge, the extension's time, generation and validity before and 200 µs after), which is the guard's view of it beside the spin's. The witness's synchronized stamps stay owed with its wires. |
+| 7 (P3) | Comments: the hook runs after the HAL's state change; the doc should separate the observation gap from the requested length and keep the 13 s scope; `>> 9` is 0.195%. | **Fixed** as worded. |
+
+Also taken: step 6 and the exit take a time-only snapshot (the USB loads
+stay out of their sections). Not taken: the 13 s scope is the plan's and
+unchanged; the watchdog's timeout is not a guarantee, as the plan says.
 
 ## Process log
 
@@ -2211,3 +2260,22 @@ the bring-up's owed list beside the colour finding above.
   read. The record since the boot (15.4 h, 14.6 asleep): 10.42 M slots,
   1,599 missed, 83 omitted, latency max 104.9 µs, elapsed max 207.8 µs,
   no stall. White released 11:10:31 in its standing state.
+- 11-02 11:15-11:30: **D3 case 5 built** (`fdbad7e4a5` on `row-isr`; dev
+  token `0xeb7a7b56`, heap gap 536 B): the frame-counter detector in the
+  handler's step 1 (the snapshot's `FRMNO`, `INSTS`, the driver's state
+  and a bus-event generation from a weak hook at the head of
+  `usb_main.c`'s event callback), the record's USB fields (op 28 sub 6),
+  the all-interrupt silence injection (sub 7, the marker on C15, the
+  length from the spin), the loss generation 32 bits (the verify review's
+  7). The disassembly: the span's divide sits in step 1's unmasked
+  stretch; no call inside any masked section. Codex asked
+  (`review-prompt-row-isr-usb-detector.txt`); the bench script
+  `history/rowisr-stage1-20261101/silence_check.sh` written with the
+  predicted outcomes (D3 case 5, "As built"); the flash waits for the
+  verdict, JD's go and Hutch's long-sleep key on white.
+- 11-02 11:44-11:55: codex NOT READY on the detector (three P1s: trust
+  outliving the frames, a silence surviving a sleep entered with the tick
+  stopped, a rejection skipping the spurious check), all fixed with the
+  P2s in the commit after `fdbad7e4a5` (dispositions above); the length in
+  microseconds and the sub 8 report; dev heap gap 488 B. The verify
+  review asked.
