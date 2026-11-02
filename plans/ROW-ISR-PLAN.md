@@ -702,8 +702,10 @@ Each slot, in order:
    silence MS [DELAY]`): every interrupt masked for 1-8,000 ms from the
    housekeeping task after the delay, the marker on the Win Lock pin C15,
    the spin's own count of CT16B5 in the status. The predicted outcomes
-   on this bench, from the length alone (the offsets add under 0.1 ms with
-   the tick running): 5 and 7 ms exact; 9, 20, 100 and 200 ms INVALID by
+   on this bench, from the length alone (the observation gap is the
+   silence plus the observers' offsets at each end, case 2's: the tick's
+   50 µs period plus its service latency, which no nominal figure bounds,
+   recorded by the report rather than assumed): 5 and 7 ms exact; 9, 20, 100 and 200 ms INVALID by
    the guard; 350, 700 and 1,049 ms past the guard (residues 0.5, 0.9 and
    0.4 ms) and INVALID by the frame counter on USB, undetected with the
    data cut (the declared limit); 1,000, 2,048 and 7,000 ms INVALID by the
@@ -1134,7 +1136,7 @@ inner mask on the Win Lock indicator's pin, C15). **The endpoint
 contract:** for a silence of every interrupt, the op masks first and
 raises the marker inside the mask, and lowers the marker inside the
 mask before it unmasks, so the marked interval lies within the silence
-and is shorter than it by a few instructions at each end (as built 11-02: nine instructions from the mask to the rising store, the pin's read, its mask and branch and the TC address, and one store before the unmask, the masked part its own function so the disassembly is the count; under 0.2 µs); for a row-only
+and is shorter than it by a few instructions at each end (as built 11-02: nine instructions with three loads from the mask to the rising store, the pin's read, its mask and branch and the TC address, about 14 cycles, 0.3 µs at 48 MHz before any stall, and one store before the unmask; the masked part its own function so the disassembly is the count; under half a microsecond); for a row-only
 hold, each marker edge and its NVIC write with the barriers
 (`core_cm0.h:659`) sit together inside one short critical section, so
 nothing can preempt between the pair and their separation is the few
@@ -2036,6 +2038,21 @@ fixed; 1, 4, 5, 6 and 7 partly; one new P2. Dispositions, in
 | 6 (P2) | `rowisr_time_read` copies state without observing and lacks the stamp; the 200 µs wait is a scheduler sleep and does not cover scan-only's observation; the host attributed every generation move to the guard. | **Fixed as far as the record can:** the copy returns the last observer's stamp and the guard's last rejected gap (sub 9), the wait is 2 ms, and a loss is attributed to the guard only when its rejected gap moved, otherwise to the frame counter or an exclusion against sub 6's counts. The synchronized endpoint stamps of the plan are the witness's, still owed with its wires; the bench's length-based predictions are what the script checks, and the observation gap is what the report shows. |
 | 7 (P3) | The injection's doc kept the single-store wording and an under-0.1 ms offset claim against the plan's unbounded service latency. | **Fixed** as worded: the observers' offsets as D3 case 2 states them, the edges as a few instructions. |
 
+### The detector's second verify review (11-02 12:17): NOT READY on two P1s, fixed
+
+[`review-codex-row-isr-usb-detector-verify2-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-verify2-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `19dc250cf2`): the added P2 and 4
+fixed; 1 partly, with one new P1; 5, 6 and 7 partly. Dispositions, in
+`ecd63d0c77`:
+
+| # | What remained | Disposition |
+|---|---|---|
+| 1 (P1) | The stale left `frm_seen` as it was, so the next observation could re-stamp the frames fresh from a movement that happened inside the discarded gap, then froze. | **Fixed.** A stale sets a new baseline, `FRMNO` as it reads at the invalidation and not fresh; only a frame seen moving after the gap restores the trust. |
+| new (P1) | The handler's own rejection staled the freshness while the adopted baseline kept `usb` set: the next interval, before the next SOF, read untrusted at its end and was rejected again, two losses for one silence. | **Fixed twice over.** The handler's rejection discards no time, so it no longer stales the frames (they disagreed with the extension because they counted the silence; `time_invalidateI(false)`); and the adopted baseline is marked untrusted, so the interval after a rejection is not judged at all. |
+| 5 (P2) | "Under 0.2 µs" understated: nine instructions with three loads, about 14 cycles, 0.29 µs nominal. | **Fixed** as stated: the contract says 14 cycles, 0.3 µs, under half a microsecond. |
+| 6 (P2) | `guard_rejected` compared the gap's value, so two equal rejected gaps read as "not the guard's"; the report's copies are not the last-before/first-after observation pair. | **Fixed** for the attribution: the guard counts its rejections, the report carries the count before and after, the host attributes by the count. The observation pair stays the witness's (its wires), as dispositioned before. |
+| 7 (P3) | The "As built" paragraph's "offsets under 0.1 ms". | **Fixed** as worded: case 2's offsets, recorded not assumed. |
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2308,3 +2325,11 @@ fixed; 1, 4, 5, 6 and 7 partly; one new P2. Dispositions, in
   store, one before the unmask); the report's second page. The flash
   candidate `via-dev-19dc250cf2-20261102-120904.bin`, token `0x625ec9ae`,
   heap gap 472 B. A second verify asked.
+- 11-02 12:17-12:22: codex's second verify: NOT READY on 1 (the stale
+  re-acquired from movement inside the discarded gap) and a new P1 (a
+  double count after a span rejection); fixed in `ecd63d0c77`
+  (dispositions above): a stale sets a new frame baseline, the handler's
+  rejection stales nothing and its adopted baseline is unjudged for one
+  interval, the guard counts its rejections for the report. The flash
+  candidate `via-dev-ecd63d0c77-20261102-121921.bin`, token `0xceaff288`,
+  heap gap 472 B. A third verify asked.

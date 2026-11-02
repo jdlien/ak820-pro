@@ -183,8 +183,9 @@ def report_dict(r, r2=None):
     d["gen_delta"] = (d["gen1"] - d["gen0"]) & 0xFFFF
     if r2 is not None:
         p = r2[4:]
-        d.update({"stamp0": u16(p, 0), "stamp1": u16(p, 2), "guard_gap0_ticks": u16(p, 4), "guard_gap1_ticks": u16(p, 6)})
-        d["guard_rejected"] = d["guard_gap1_ticks"] != d["guard_gap0_ticks"]
+        d.update({"stamp0": u16(p, 0), "stamp1": u16(p, 2), "guard_gap0_ticks": u16(p, 4), "guard_gap1_ticks": u16(p, 6),
+                  "guard_rejects0": u16(p, 8), "guard_rejects1": u16(p, 10)})
+        d["guard_rejected"] = d["guard_rejects1"] != d["guard_rejects0"]   # by the count, not the gap's value (two equal gaps would hide one)
         d["guard_gap1_ms"] = round(d["guard_gap1_ticks"] / 187.5, 3)
     return d
 
