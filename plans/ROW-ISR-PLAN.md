@@ -2133,8 +2133,7 @@ left. Disposition, in `d5bdaa7c43`:
 trace fixed (two losses, one rejection of each kind); the three-state
 trust, the adoption and the loss accounting verified through every
 transition and race it modelled, 2,400 isolated-injection phase cases
-against the nominal model; one P1 left. Disposition, in the commit after
-`d5bdaa7c43`:
+against the nominal model; one P1 left. Disposition, in `25fefd2cc3`:
 
 | # | What remained | Disposition |
 |---|---|---|
@@ -2454,7 +2453,8 @@ against the nominal model; one P1 left. Disposition, in the commit after
 - 11-02 13:26-13:32: codex's seventh verify: NOT READY on one P1 (an
   exclusion entered while already INVALID discarded time with the
   generation unchanged); fixed by the invariant (every discard moves the
-  generation: the exclusion's entry unconditionally, its end too) in the
-  commit after `d5bdaa7c43`; D3's rule amended again. An eighth verify
-  asked, with the question put: any other place time is discarded without
-  the generation moving.
+  generation: the exclusion's entry unconditionally, its end too) in
+  `25fefd2cc3`; D3's rule amended again. The flash candidate
+  `via-dev-25fefd2cc3-20261102-132754.bin`, token `0xefabb9ef`, heap gap
+  464 B. An eighth verify asked, with the question put: any other place
+  time is discarded without the generation moving.
