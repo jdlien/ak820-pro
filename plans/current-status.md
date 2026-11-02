@@ -793,6 +793,29 @@ The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
   17:28:28-17:28:59 (Icon only's flash, on its pack, the settings kept;
   47.7% just before). White was still in Power saver at the flash, as since
   ~08:55 10-29: note it in the drain's figures.
+- ⚠️ **The count restarted a fourth time at 12:59:59 10-30, and read ~0.26x
+  until ~15:25 10-31.** Found 11-02, not seen at the time:
+  - **The restart:** `charge_mah` fell from 8.846525 (12:59:58) to
+    0.000197 (12:59:59) while `qt_ms` ran on unbroken. So the INA228 lost
+    power and the QT Py did not. 1969.38 mAh since FULL at 12:59:58.
+  - **The scale:** from that second, `current_ma` and `vshunt_uv` both read
+    about a quarter of the truth: asleep 0.78 mA against 3.3 before and
+    after, awake ~10.7 against 41-44. That fits the chip back at its reset
+    values (ADCRANGE 0, SHUNT_CAL 4096: 0.26x) and unconfigured until the
+    logger's reconnects of 15:25-15:29 10-31, after which the readings are
+    right again (asleep 3.3-3.4 mA) and the register runs on unbroken. This
+    is an inference from the readings; the chip's registers were not read.
+  - **The charge:** 76.59 mAh counted from the restart to 15:24:57 10-31,
+    ~294-322 mAh true (x3.84 by the reset calibration, x4.2 by the asleep
+    currents' ratio). Roughly 220-245 mAh went uncounted. The 63 s gap in
+    the rows at the reconnect (to 15:26:00) is under 1 mAh either way.
+  - **So from ~15:25 10-31, mAh since FULL = `charge_mah` + 2201 (±14).**
+    At 11:40 11-02 (`charge_mah` 504.17), 2691-2719 mAh since FULL, 32-33%
+    of R4's 4011.6 left. The board read 36% on 11-01, which agrees; the
+    uncorrected count would say 38-39% today.
+  - Its anomaly is visible in a day's mean asleep current, which a check
+    on the logger should look at: an INA228 that silently resets at its
+    defaults keeps recording plausible numbers.
 
 ### Stopped 23:46:52 10-23: the untethered drain at real use, restarted from FULL
 
