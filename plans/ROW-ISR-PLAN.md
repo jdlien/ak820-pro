@@ -63,9 +63,11 @@ row gaps as before; over 5.8 M slots 401 missed and 24 pulses omitted,
 the worst latency 105 µs, no epoch loss. Light at full scale within 1% of
 the base by total; the base is not additive across colours (below, the
 stage 2 gate), so k stays 10 and the state-by-state 3% is restated.
-Owed: JD's eye on the colours; scan-only, deep sleep's wakes and the wake
-with the RGB dark (the review's bring-up list); the witness's pulse gates;
-D3's USB detector.** The runner learned two things on the way: the power ladder
+JD's eye, 20:45: the theme right on every key, and a uniform white with
+nothing over the nine holes at zero saturation. Owed: scan-only, deep
+sleep's wakes and the wake with the RGB dark (the review's bring-up list;
+the wake-gate session's case 3 on white counts toward the wakes); the
+witness's pulse gates; D3's USB detector.** The runner learned two things on the way: the power ladder
 must be held at Always on for a run (Power saver caps the value and
 darkens an idle board, and raw HID is not activity), and a deep-sleeping
 board is not on USB (JD's key wakes it; the charger pin does too, for a
@@ -2155,4 +2157,10 @@ the bring-up's owed list beside the colour finding above.
   fixed; the runner dumped the settings after setting Always on, so its
   restore left white in Always on twice, fixed, Power saver put back by
   hand at 20:09. White in its standing state since 20:10; ak820-pro-76
-  told. JD's eye on the colours is the open check.
+  told.
+- 11-01 20:40-20:50: JD's eye on stage 2, while the wake-gate session
+  held white (his key its case 3a's wake): the theme right on every key
+  (the F row, nav cluster, arrows, modifiers and backslash blue, the rest
+  purple) and, with the saturation taken to zero by keys, a uniform
+  white with no tint over the nine holes. Both visual gates pass; the
+  lighting to be put back from the backup once white is free.

@@ -32,8 +32,10 @@ full scale within 1% of the base by total (white +3%, each single colour
 4-5% under), and the old driver turns out not to be additive across
 colours (its white 64 was 54% of the sum of its single colours; stage 2's
 is the sum within 1%), so the plan's 3% state-by-state gate cannot be met
-by any one scale: k stays 10 and the gate is restated. JD's eye on the
-colours and his theme's brightness is the open check. Next: the presser's
+by any one scale: k stays 10 and the gate is restated. JD's eye at 20:45:
+the theme right on every key, and a uniform white with nothing over the
+nine holes at zero saturation (the lighting to be put back from the
+backup once the wake-gate session releases white). Next: the presser's
 bring-up (stage 0's short-tap baseline, stage 1's key gates, stage 2's
 deep sleep and scan-only), the witness's wires and the pulse gates, D3's
 USB long-silence detector, then stage 3.

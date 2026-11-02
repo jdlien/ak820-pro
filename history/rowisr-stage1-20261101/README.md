@@ -233,9 +233,15 @@ missed it, `ioreg` finds it.
 
 White was left on stage 2 (`b120a2069c`, token `0x4849bde6`) at 20:10 in
 its standing state: JD's lighting and Power saver read back, data off, the
-daemon running, relay 2 off. Owed on it: JD's eye on the colours and his
-theme's brightness; scan-only, deep sleep's wakes and the wake with the
-RGB dark (the verify review's bring-up list); the witness's pulse gates.
+daemon running, relay 2 off. **JD's eye, 20:40-20:50, by keys only while
+the wake-gate session held white:** the theme right on every key (the
+F row, the nav cluster, the arrows, the modifiers and the backslash blue,
+the alphas, numbers and punctuation purple, as his profile has them), and
+with the saturation taken to zero from the keyboard (his layout's Fn+`,`)
+a uniform white with no tint over the nine holes. The lighting is put back
+from the backup once white is free. Owed on it: scan-only, deep sleep's
+wakes (the wake-gate session's case 3 counts) and the wake with the RGB
+dark (the verify review's bring-up list); the witness's pulse gates.
 
 ## Files
 
