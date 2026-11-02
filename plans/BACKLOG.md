@@ -1144,6 +1144,21 @@ columns are edge sensed. Its cost is small: a 3 s wake, about one sleep in
 on. While a source is asserted it pends again. That is the shape for
 codex, not a decision.
 
+**Not at a radio link drop, as far as white's logger shows** (1 Hz, so a
+pulse under a second is invisible). One lead was that the radio module's
+bursts couple onto the columns. Those bursts are ~14.5 mA for ~10 s every
+~62 s, taken for relink attempts. Two things go against that lead:
+- **No burst came before the stray.** The logger read 3.25 and 3.84 mA at
+  11:31:02-03, and the MCU was awake at 11:31:04-06. That episode's first
+  burst came at 11:31:07, the second the MCU slept again. It ran 11 bursts
+  to 11:40:05, then stopped.
+- **Two episodes began inside the night's deep sleep with no stray:**
+  21:27:47 and 21:47:57 11-01, each from ~3.4 mA. The ring's only stray
+  since the 19:44 boot is #4.
+
+Black's ring at its next replug is the other check: is there a stray near
+its link's loss at ~11:50 11-02?
+
 **Next:**
 1. ~~**A dev diagnostic**~~ (done: `6fda6cd1c2`, op 24 slot 8; it caught
    the 11-02 stray above): at the first stray and at the exit, the full `RIS`
