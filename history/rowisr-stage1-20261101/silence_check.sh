@@ -37,7 +37,7 @@ def status(h): return rd.status_dict(rd.xfer(h, 2))
 def silence(h, ms, delay):
     us = int(round(ms * 1000))
     return rd.status_dict(rd.xfer(h, 7, us.to_bytes(4, "little") + bytes([delay & 0xFF, delay >> 8])))
-def report(h): return rd.report_dict(rd.xfer(h, 8))
+def report(h): return rd.report_dict(rd.xfer(h, 8), rd.xfer(h, 9))
 def snap(h):
     return {"record": record(h), "usb": usb(h), "sched": hp.read_sched(h)}
 def deltas(a, b):
@@ -76,8 +76,8 @@ try:
         log(f"{ms} ms: measured {meas} ms; losses {d['epoch_losses']} (expected {'the gap decides' if exp_losses is None else exp_losses}), "
             f"frame rejects {d['usb_rejects']} (expected {f}), bus-event rejects {d['usb_events']}, invalid {d['invalid_services']}, "
             f"spurious {d['spurious']}, missed slots {d['missed']}, omitted {d['omitted']}, judged {d['usb_checked']}; "
-            f"the extension read {rp['ext_delta_ms']} ms across it, generation +{rp['gen_delta']}, the guard's last gap "
-            f"{b['usb']['guard_last_gap_ms']} ms; last rejection spans {b['usb']['usb_last_dt_ms']}/{b['usb']['usb_last_df_ms']} ms "
+            f"the extension read {rp['ext_delta_ms']} ms across it, generation +{rp['gen_delta']}"
+            f"{' (the guard: its gap ' + str(rp['guard_gap1_ms']) + ' ms)' if rp['guard_rejected'] else ''}; last rejection spans {b['usb']['usb_last_dt_ms']}/{b['usb']['usb_last_df_ms']} ms "
             f"-> {'PASS' if ok else 'FAIL'}")
     res["after_usb"] = snap(h)
 finally:

@@ -49,10 +49,13 @@ the last rejection's two spans, and the clocks' state now.
 the board masks every interrupt for MS ms (sent in microseconds, so 7.5 and
 8.1 are fine) with a marker on the Win Lock LED's pin C15, then the record
 shows the guard's or the frame counter's verdict (`record`, `usb`; health
-page 7). The host sees no replies meanwhile. `report` (sub 8) gives the
-last silence as the spin measured it and the extension's reading before and
-after it: a bumped loss generation is the guard's rejection, an unchanged
-one with a short reading is the alias the frame counter must catch.
+page 7). The host sees no replies meanwhile. `report` (subs 8 and 9) gives
+the last silence as the spin measured it and the extension's copied state
+before and 2 ms after it: a loss generation moved across it is one loss,
+the guard's if its last rejected gap moved too, otherwise the frame
+counter's (compare `usb`'s counts); an unchanged generation with the
+extension's reading far short of the spin's is the alias past the guard,
+which the frame counter must catch on USB and nothing catches off it.
 
 Raw HID is exclusive on macOS: stop the daemon's pollers or run between a
 bench trial's reads, as the other bench scripts do.
@@ -170,7 +173,7 @@ def usb_dict(r):
             "guard_last_gap_ms": round(u16(o, 24) / 187.5, 3), "frames_fresh": bool(o[26])}
 
 
-def report_dict(r):
+def report_dict(r, r2=None):
     o = r[4:]
     d = {"us": u32(o, 0), "ticks": u32(o, 4), "measured_ms": round(u32(o, 4) / 187.5, 3), "ext0": u32(o, 8), "ext1": u32(o, 12),
          "gen0": u16(o, 16), "gen1": u16(o, 18), "tc0": u16(o, 20), "tc1": u16(o, 22), "valid0": bool(o[24]), "valid1": bool(o[25]),
@@ -178,6 +181,11 @@ def report_dict(r):
     d["ext_delta_ticks"] = (d["ext1"] - d["ext0"]) & 0xFFFFFFFF
     d["ext_delta_ms"] = round(d["ext_delta_ticks"] / 187.5, 3)
     d["gen_delta"] = (d["gen1"] - d["gen0"]) & 0xFFFF
+    if r2 is not None:
+        p = r2[4:]
+        d.update({"stamp0": u16(p, 0), "stamp1": u16(p, 2), "guard_gap0_ticks": u16(p, 4), "guard_gap1_ticks": u16(p, 6)})
+        d["guard_rejected"] = d["guard_gap1_ticks"] != d["guard_gap0_ticks"]
+        d["guard_gap1_ms"] = round(d["guard_gap1_ticks"] / 187.5, 3)
     return d
 
 
@@ -272,15 +280,18 @@ def main():
             else:
                 print(f"a silence of every interrupt armed: {us / 1000} ms after {delay or 200} ms")
                 print_status(r)
-        elif cmd == "report":   # op 28 sub 8
-            d = report_dict(xfer(h, 8))
+        elif cmd == "report":   # op 28 subs 8 and 9
+            d = report_dict(xfer(h, 8), xfer(h, 9))
             if as_json:
                 print(json.dumps(d))
             else:
+                verdict = ("no loss across it" if not d["gen_delta"] else
+                           f"a loss across it, the guard's (its rejected gap moved: {d['guard_gap1_ms']} ms)" if d["guard_rejected"] else
+                           "a loss across it, not the guard's (the frame counter's or an exclusion's: see `usb`)")
                 print(f"the last silence: asked {d['us'] / 1000} ms, the spin measured {d['measured_ms']} ms ({d['ticks']} ticks), "
-                      f"TC {d['tc0']} -> {d['tc1']}; the extension read {d['ext_delta_ms']} ms across it, "
-                      f"generation {d['gen0']} -> {d['gen1']} ({'a loss: the guard rejected it' if d['gen_delta'] else 'no loss: past the guard'}), "
-                      f"VALID before {d['valid0']} after {d['valid1']}; run {d['run']}, not run for a high pin {d['lost']}")
+                      f"TC {d['tc0']} -> {d['tc1']}; the extension read {d['ext_delta_ms']} ms across it (its stamps {d['stamp0']} -> {d['stamp1']}), "
+                      f"generation {d['gen0']} -> {d['gen1']}: {verdict}; VALID before {d['valid0']} after {d['valid1']}; "
+                      f"run {d['run']}, not run for a high pin {d['lost']}")
         elif cmd == "led":
             if args[1:] == ["off"]:
                 r = xfer(h, 3, bytes([0xFF, 0, 0, 0]))
