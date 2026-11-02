@@ -587,8 +587,10 @@ Each slot, in order:
      active.
    - The extension carries a **loss generation**, a counter incremented at
      every transition to INVALID and at every later discard of time while
-     INVALID (a re-prime refused for its own gap of 8 ms or more, as
-     built 11-02), and never otherwise. Every consumer
+     INVALID (a re-prime refused for its own gap of 8 ms or more, an
+     exclusion's entry while already INVALID, an exclusion's end: as built
+     11-02, the invariant is that wherever time is discarded the
+     generation moves), and never otherwise. Every consumer
      snapshot records it. An interval whose end generation differs from
      its start generation touched INVALID, whether or not an observer has
      re-primed in between, and is excluded from every statistic and
@@ -2124,6 +2126,20 @@ left. Disposition, in `d5bdaa7c43`:
 |---|---|---|
 | 1 (P1) | The refused re-prime discards time without moving the generation: a baseline the handler adopted after a frame-counter rejection (generation G) stays continuous with the VALID state after the discard (still G), and an interval across the discarded 2,048 ms, invisible modulo `FRMNO`, is accepted; one loss and one rejection where the version before counted two of each. | **Fixed.** A refused re-prime moves the generation and counts as the guard's rejection it is; the handler counts at most one loss per entry, so a sleep's refused first re-prime stays one loss and a second silence after an adopted rejection counts as the second silence it is. The epoch clock's rule now reads: the generation moves at every transition to INVALID and at every later discard of time. |
 
+### The detector's seventh verify review (11-02 13:26): NOT READY on one P1, fixed
+
+[`review-codex-row-isr-usb-detector-verify7-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-verify7-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `d5bdaa7c43`): the sixth verify's
+trace fixed (two losses, one rejection of each kind); the three-state
+trust, the adoption and the loss accounting verified through every
+transition and race it modelled, 2,400 isolated-injection phase cases
+against the nominal model; one P1 left. Disposition, in the commit after
+`d5bdaa7c43`:
+
+| # | What remained | Disposition |
+|---|---|---|
+| 1 (P1) | An exclusion entered while the extension was already INVALID (after a frame-counter rejection whose baseline the handler had adopted) discarded its time with the generation unchanged, since the invalidation helper bumped it only from VALID; the adopted baseline stayed continuous across the exclusion and a later alias was accepted. | **Fixed by the invariant:** wherever time is discarded the generation moves. An exclusion's entry bumps it unconditionally and a real exclusion's end bumps it too, beside the guard's rejection and the refused re-prime. The handler counts at most one loss per entry, so a sleep stays one loss. |
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2435,3 +2451,10 @@ left. Disposition, in `d5bdaa7c43`:
   generation rule amended. The flash candidate
   `via-dev-d5bdaa7c43-20261102-131530.bin`, token `0xc80e0e19`, heap gap
   464 B. A seventh verify asked, with its own trace to re-run.
+- 11-02 13:26-13:32: codex's seventh verify: NOT READY on one P1 (an
+  exclusion entered while already INVALID discarded time with the
+  generation unchanged); fixed by the invariant (every discard moves the
+  generation: the exclusion's entry unconditionally, its end too) in the
+  commit after `d5bdaa7c43`; D3's rule amended again. An eighth verify
+  asked, with the question put: any other place time is discarded without
+  the generation moving.
