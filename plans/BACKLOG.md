@@ -1066,7 +1066,7 @@ reserve; the other modes sleep at 3 min below 15% (Lights out at 60 s).
   sleeps at 60 s, and the "Battery low" notice comes at 10%. Revisit if a
   dead board ever costs something real, such as a long unplugged trip.
 
-## A stray-wake storm in a soak beside lock-light frames (2026-10-20) -- not the frames; cause not known yet
+## A stray-wake storm in a soak beside lock-light frames (2026-10-20) -- not the frames; caught by the diagnostic 11-02: one pending port IRQ that the sleep loop never clears, so its 1000 strays are one event; its source not known
 
 Found in the power-modes flash's BT soak (`845996c39c`,
 `history/power-modes-20261020/deep-bt*`): 17 of 20 cycles passed. The
@@ -1112,8 +1112,41 @@ So a stray is a WFI that returns with none of those. The candidates:
 - a port IRQ from a pin outside the wake mask;
 - spurious returns from noise on a pin.
 
+**Caught on white, 11:31 11-02** (row ISR stage 2, `b120a2069c`; read
+16:41 before its next flash, `history/rowisr-stage1-20261101/preflash-read.log`).
+The ladder's own sleep in Power saver, 911 counted s in, about 18 min by
+the PCF. Op 24's ring logged wake #4 as `strays`, 1000 strays, with no
+pin's bit (p0, p1 and p2 all 0). Slot 8 holds the record:
+- **All 1000 strays came in the first one's counted second** (`same_s`
+  1000, `first_s` 911). The last snapshot is the same as the first.
+- **`NVIC->ISPR` 0xa0000000: P2 (IRQ 29) and P0 (IRQ 31) pending.** These
+  are the column ports. `ICSR`'s vectpending was 45 (IRQ 29). Nothing else
+  was pending: no PendSV, no SysTick.
+- **No flags.** IE was set on no pin outside the wake mask, and no RIS bit
+  was set with IE there. NVIC's enables matched the wake set.
+- **No wake pin's RIS bit at any of them**, which is what makes a return
+  a stray, so the ring's pins are 0.
+- **After the wake** the board was up 3.1 s (the logger shows 28.8 mA),
+  then slept until JD's key at 16:40.
+
+**The loop explains the count.** The loop clears the port lines' NVIC
+pending bits before the sleep and after the exit, and never inside the
+loop (`sleep.c`, `deep_sleep()`). `take_second()` clears only the RTC's.
+So once P0 or P2 is pending with no RIS bit to show for it, every later
+WFI returns at once. The loop counts 1000 strays in microseconds and
+leaves through the backstop. **A storm is one event, not a thousand.**
+
+**What is still open is the event:** the column ports pended at the NVIC
+with no RIS bit in any port, in the wake mask or outside it. Both ports
+pended at once. An edge would have left its RIS latched, since the
+columns are edge sensed. Its cost is small: a 3 s wake, about one sleep in
+50 by 10-20's count, and one of white's six since 19:44 11-01. A fix could clear a pending port line with no RIS bit and sleep
+on. While a source is asserted it pends again. That is the shape for
+codex, not a decision.
+
 **Next:**
-1. **A dev diagnostic:** at the first stray and at the exit, the full `RIS`
+1. ~~**A dev diagnostic**~~ (done: `6fda6cd1c2`, op 24 slot 8; it caught
+   the 11-02 stray above): at the first stray and at the exit, the full `RIS`
    of P0-P3, `NVIC->ISPR & ISER`, `SCB->ICSR`, and the counted second of the
    first stray (how fast they came).
 2. **A deliberate test:** many frames sent during a long bench sleep
