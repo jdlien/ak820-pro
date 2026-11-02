@@ -129,12 +129,121 @@ daemon running, relay 2 off. Still owed on this build: Bootmagic, deep
 sleep's five wakes and the phantom-or-missing count (the presser, 11-02),
 and a warm set of windows for the ACK-timeout comparison.
 
+## Stage 2 on white, the same night (19:20-20:10)
+
+The hot path ([`plans/ROW-ISR-PLAN.md`](../../plans/ROW-ISR-PLAN.md), D2,
+D3, D7, D8, D10: CT16B4 the slot scheduler, CT16B0/1/2 one-shot pulse
+timers, the ChibiOS PWM service gone), after codex's two reviews
+(`plans/review-codex-row-isr-stage2-2026-11-01-raw.md`, NOT READY on one
+P1 and twelve P2s, all dispositioned; the verify review READY TO FLASH).
+`session.sh stage2` flashed `8e86b8d90a` (token `0xf6a21a82`) at 19:20
+after JD's key and ran the windows and the holds as `stage2`
+(`run-stage2.log`, `stage2.json`, `compare-stage2.txt`); `session.sh
+holds` flashed the fix below, `b120a2069c` (token `0x4849bde6`), at 19:44
+and reran the holds as `stage2fix` (`run-stage2fix.log`, `stage2fix.json`,
+`compare-stage2fix.txt`). White stayed awake between the two because the
+holds step's data-on came within the minute.
+
+### The first frame answered Q6
+
+JD saw the boot frame white with magenta on A, X, C, V, N, M, PgDn and the
+right arrow, then the restored theme peach and pink instead of purple and
+blue. The magenta keys are exactly the keys one row above the nine matrix
+positions with no LED ((0,14), (3,12), (4,1), (4,14), (5,3), (5,4), (5,5),
+(5,7), (5,8); the ninth key above one is `]`): at a near-white frame the
+green pin of key row k was being given the red of key row k+1, zero over a
+hole. So the mux pins are R, B, G per key row, as `config.h` always said,
+and the old driver's B, G, then the next row's R was a one-slot lead over
+the pins: its widths reach the LEDs a cycle after their write, and stage
+2's one-shot restart takes the widths written before it, so the same
+submission order rendered red from blue, blue from green and green from
+the row below's red (peach alphas, pink mods). The fix (`2d5a5d3e7f`):
+the key row advances on the first pin of its group, the scan slot with it,
+the D8 index and the decoder's row labels follow. With it, `b120a2069c`:
+the verify review's divide in the masked arm section is a comparison.
+
+### The handler, from the windows (`compare-stage2.txt`, on `8e86b8d90a`)
+
+| Window | Metric | Base | Stage 2 | Change |
+|---|---|---|---|---|
+| idle | ISR/s | 3744.1 | 3745.2 | +0.03% |
+| idle | mean µs (page 4, the scan included) | 195.9 | 59.8 | −69% |
+| idle | CPU % | 73.4 | 22.4 | −69% |
+| idle | max µs | 256 | 144 | |
+| idle | row gap max ms | 5 | 5 | 0 |
+| idle | loop gap ms | 11 | 3 | |
+| repaint | mean µs | 195.9 | 59.8 | −69% |
+| repaint | loop gap ms | 17 | 5 | |
+| pcf | ISR/s | 3696.2 | 3696.3 | 0 |
+| pcf | mean µs | 195.8 | 59.7 | −69% |
+| pcf | row gap max ms | 9 | 9 | 0 |
+| all | stalls ≥ 25 ms | 0 | 0 | 0 |
+| all | ACK timeouts a window | 2-3 | 0 | |
+
+The record (page 7 and op 28 sub 5; `sched-after-stage2fix.txt`,
+`power_saver_back.log`): over 5.82 M slots since the 19:44 boot, 401
+missed (the flash's settings restore), 24 pulses omitted of 2.90 M emitted
+(14 by the arm deadline, the longest run 1), the worst entry latency
+104.9 µs, the longest handler 161.8 µs, the shortest 28.5 µs, no epoch
+loss, no spurious service, no invalid service; a 60 s window of the dark
+idle board (Power saver's stage 3) 47.4 µs mean, 17.7% share by page 7's
+snapshot-to-snapshot figure. The first decode of sub 5 read the reply from
+byte 0 instead of past its 4-byte header (a "4,871-long run of omissions"
+was `0x1307`, the header's bytes); `rowisr_diag.py` is fixed.
+
+### The light, from the holds (`compare-stage2fix.txt`, incremental mA, dark subtracted)
+
+| State | Base | Stage 2 (fix) | Change |
+|---|---|---|---|
+| white 64 | 4.56 | 5.88 | +29% |
+| white 128 | 10.85 | 12.21 | +12.6% |
+| white 255 | 48.11 | 49.67 | +3.2% |
+| red 64 / 128 / 255 | 3.09 / 5.70 / 21.64 | 2.12 / 4.81 / 20.82 | −32 / −16 / −3.8% |
+| green 64 / 128 / 255 | 2.69 / 4.55 / 15.63 | 1.94 / 3.82 / 14.95 | −28 / −16 / −4.3% |
+| blue 64 / 128 / 255 | 2.64 / 4.35 / 14.45 | 1.87 / 3.60 / 13.77 | −29 / −17 / −4.7% |
+| dark | 40.62 | 40.94 | +0.3 mA |
+
+The return leg repeats the forward leg within 0.05 mA. Stage 2's light is
+additive: its white equals the sum of its single colours within 1% at
+every level (64: 5.88 against 5.93). The base's is not: its white 64 is
+54% of the sum of its single colours (4.56 against 8.42), its white 255
+93% (48.1 against 51.7). So the base's per-slot light depended on what
+the neighbouring slots carried, which a clean pulse cannot reproduce, and
+no single scale lands every state within 3%. k stays 10, set at
+full-scale white (+3.1%); the four full-scale states together are within
+1% of the base (99.2 against 99.8 mA). The +0.3 mA at dark is within the
+day's drift (the base's dark read 40.58-40.62 across the afternoon, the
+fix round 40.93-40.94 across its three holds).
+
+On the unfixed first build the colour holds showed the rotation in the
+draw too (`compare-stage2.txt`): its "red" lit the green pins (13.6 mA at
+255, the base's green 15.6 less the nine missing LEDs), its "green" the
+blue pins (13.8 against 14.5), its "blue" the red pins (21.0 against 21.6).
+
+### Two faults in the runner
+
+The settings dump was taken after Always on was set, so the `--live-only`
+restore put Always on back at the end of both runs (a board in Always on
+never sleeps on battery); fixed in `scripts/rowisr_baseline.py` (the dump
+first), and Power saver put back by hand at 20:09
+(`power_saver_back.sh`, `power_saver_back.log`). And a step's EXIT trap
+turning data off lets the idle board deep-sleep within the minute; the
+first run of that script looked for the board with `system_profiler` and
+missed it, `ioreg` finds it.
+
+White was left on stage 2 (`b120a2069c`, token `0x4849bde6`) at 20:10 in
+its standing state: JD's lighting and Power saver read back, data off, the
+daemon running, relay 2 off. Owed on it: JD's eye on the colours and his
+theme's brightness; scan-only, deep sleep's wakes and the wake with the
+RGB dark (the verify review's bring-up list); the witness's pulse gates.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
 - `settings-before.json`, `lighting-before.json`: the last run's dumps (restored); `settings-after-probe.json`.
 - `dark_probe.py` / `dark_probe2.py` and their logs: the probes; `dark_after_sleep.*`: the aborted slept-board test (its relay wake is the third charge); `peek.log`: an HC_PEEK attempt that found white asleep.
 - `fix_check.sh`, `fix_check.log`: the fix's flash and holds; `base_fix_check.sh`, `base_fix_check.log`: the base plus the fix, and stage 1 plus the fix back.
+- Stage 2: `flash-stage2.log`, `run-stage2.log`, `stage2.json`, `compare-stage2.txt`, `sched-after-stage2-flash.txt`, `health-after-stage2-flash.txt`, `sched-after-stage2-run.txt`, `record-after-stage2-run.txt` (its sub-5 fields misread by 4 bytes, see above); the fix: `flash-stage2fix.log`, `run-stage2fix.log`, `stage2fix.json`, `compare-stage2fix.txt`, `sched-after-stage2fix.txt`; `power_saver_back.sh`, `power_saver_back.log`, `settings-after-mode.json`.
 - `battery-before.txt`, `battery-after.txt`, `health-after-flash.txt`.
 
 ## Lessons

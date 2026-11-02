@@ -132,9 +132,23 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 18:09 11-01: the row ISR's stage 1 plus the NO_LED fix,
-`b3270996d3`** (dev, token `0x991e7b11`, the branch `row-isr`,
-`plans/ROW-ISR-PLAN.md`): stage 1's A/B against the v0.3.0 candidate
+**On white since 19:44 11-01: the row ISR's stage 2, the hot path on
+direct registers, `b120a2069c`** (dev, token `0x4849bde6`, the branch
+`row-isr`, `plans/ROW-ISR-PLAN.md`, the record in
+`history/rowisr-stage1-20261101/`): CT16B4 schedules the 267 µs slot,
+CT16B0/1/2 fire one clean pulse per slot, the handler's mean 60 µs against
+the old callback's 196 (page 4), the CPU share 22% against 73, no stall,
+the row gaps as before. ⚠️ **Its first flash (19:20) settled the mux pin
+order: R, B, G per key row, as `config.h` says**; the old driver's B, G,
+R-of-next was a one-slot lead over the pins (its widths reached the LEDs a
+cycle late), which stage 2's one-shot restart does not have, so the first
+build rendered every frame rotated. Light at full scale within 1% of the
+base by total; the old driver was not additive across colours (its white
+64 was 54% of the sum of its single colours), so no one scale matches it
+state by state. Owed on it: JD's eye on the colours, scan-only, deep
+sleep's wakes, the wake with the RGB dark, the witness's pulse gates.
+**Before it, from 18:09 11-01: stage 1 plus the NO_LED fix,
+`b3270996d3`** (dev, token `0x991e7b11`): stage 1's A/B against the v0.3.0 candidate
 passed every hands-free gate within 1.3% once the fix was in both builds
 (`history/rowisr-stage1-20261101/`); the first stage 1 build drew 1.3 mA
 more at dark through the audit's F-033 read, now fixed on the branch and

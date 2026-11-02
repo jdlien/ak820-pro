@@ -35,6 +35,58 @@ if [ "$STEP" = windows ]; then   # a later check on whatever runs: the windows o
     exit "${PIPESTATUS[0]}"
 fi
 
+if [ "$STEP" = stage2 ]; then   # stage 2's bring-up: flash $2 (token $3) over whatever runs, the full run as stage2, compare against base
+    ART2=$2; TOK2=$3
+    log "pausing the daemon"
+    launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1
+    trap 'uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
+    uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
+    wait_board 60 || { log "no board on USB (asleep? one key wakes it)"; exit 1; }
+    sleep 2
+    log "board token: $(token)"
+    venv/bin/python hostagent/ak820battery.py > "$OUT/battery-before-stage2.txt" 2>&1
+    log "flash: $ART2"
+    ./flash.sh "$ART2" < /dev/null 2>&1 | tee "$OUT/flash-stage2.log"
+    [ "${PIPESTATUS[0]}" = 0 ] || { log "flash FAILED"; exit 1; }
+    sleep 5
+    wait_board 40 || { log "no board after the flash"; exit 1; }
+    sleep 2
+    T=$(token); log "token after the flash: $T (want $TOK2)"
+    [ "$T" = "$TOK2" ] || { log "stage 2 is not what runs: stopping"; exit 1; }
+    "$A" health > "$OUT/health-after-stage2-flash.txt" 2>&1
+    venv/bin/python hostagent/ak820health.py --sched > "$OUT/sched-after-stage2-flash.txt" 2>&1
+    venv/bin/python scripts/rowisr_baseline.py run --label stage2 --out "$OUT" 2>&1 | tee "$OUT/run-stage2.log"
+    [ "${PIPESTATUS[0]}" = 0 ] || { log "the stage 2 run failed"; exit 1; }
+    venv/bin/python hostagent/ak820health.py --sched > "$OUT/sched-after-stage2-run.txt" 2>&1
+    venv/bin/python scripts/rowisr_diag.py record > "$OUT/record-after-stage2-run.txt" 2>&1
+    venv/bin/python scripts/rowisr_baseline.py compare "$OUT/base.json" "$OUT/stage2.json" | tee "$OUT/compare-stage2.txt"
+    exit 0
+fi
+
+if [ "$STEP" = holds ]; then   # a calibration re-run: flash $2 (token $3), the holds only as label $4, compare against base
+    ART2=$2; TOK2=$3; LABEL=${4:-stage2cal}
+    log "pausing the daemon"
+    launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1
+    trap 'uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
+    uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
+    wait_board 60 || { log "no board on USB (asleep? one key wakes it)"; exit 1; }
+    sleep 2
+    log "board token: $(token)"
+    log "flash: $ART2"
+    ./flash.sh "$ART2" < /dev/null 2>&1 | tee "$OUT/flash-$LABEL.log"
+    [ "${PIPESTATUS[0]}" = 0 ] || { log "flash FAILED"; exit 1; }
+    sleep 5
+    wait_board 40 || { log "no board after the flash"; exit 1; }
+    sleep 2
+    T=$(token); log "token after the flash: $T (want $TOK2)"
+    [ "$T" = "$TOK2" ] || { log "not the expected build: stopping"; exit 1; }
+    venv/bin/python scripts/rowisr_baseline.py run --label "$LABEL" --out "$OUT" --skip-windows 2>&1 | tee "$OUT/run-$LABEL.log"
+    [ "${PIPESTATUS[0]}" = 0 ] || { log "the run failed"; exit 1; }
+    venv/bin/python hostagent/ak820health.py --sched > "$OUT/sched-after-$LABEL.txt" 2>&1
+    venv/bin/python scripts/rowisr_baseline.py compare "$OUT/base.json" "$OUT/$LABEL.json" | tee "$OUT/compare-$LABEL.txt"
+    exit 0
+fi
+
 if [ "$STEP" = compare ]; then
     venv/bin/python scripts/rowisr_baseline.py compare "$OUT/base.json" "$OUT/stage1.json"
     exit $?

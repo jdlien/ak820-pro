@@ -43,7 +43,29 @@ passes;** white runs stage 1 plus the fix (token `0x991e7b11`) since
 18:09. Owed on it: Bootmagic, deep sleep's five wakes, the
 phantom-or-missing count (the presser, 11-02) and a warm set of windows
 for the ACK-timeout comparison (the base had been up two hours, stage 1
-ten seconds). The runner learned two things on the way: the power ladder
+ten seconds). The Fn+Esc bootloader route was checked dark by eye at
+18:50 and the raw-HID route through the four flashes. **Stage 2 is on white since 19:44 11-01 (`row-isr` at `b120a2069c`,
+token `0x4849bde6`):** D2, D3, D7, D8 and D10 as specified, the scheduler
+at the measured 267 µs slot, the interim scanner kept with the columns
+released around it by the control words, k = 10; health page 7 (HC_GET7,
+protocol 9) and op 28 sub 5 carry the record; dev heap gap 576 B against
+136, no PWM object or vector in the link. Codex reviewed it twice
+(`review-codex-row-isr-stage2-2026-11-01-raw.md`, NOT READY on one P1 and
+twelve P2s, all dispositioned; the verify review READY TO FLASH), see
+"Stage 2's review". **Its first flash at 19:20 settled Q6:** the mux pins
+are R, B, G per key row, as `config.h` says, and the old driver's B, G,
+R-of-next was a one-slot lead over them, so the first build rendered every
+frame rotated ("What is known"); fixed and re-measured
+(`history/rowisr-stage1-20261101/README.md`, "Stage 2"). Measured: the
+slot rate identical, the handler's mean 60 µs against the callback's 196
+(page 4, the scan included), the CPU share 22% against 73%, no stall, the
+row gaps as before; over 5.8 M slots 401 missed and 24 pulses omitted,
+the worst latency 105 µs, no epoch loss. Light at full scale within 1% of
+the base by total; the base is not additive across colours (below, the
+stage 2 gate), so k stays 10 and the state-by-state 3% is restated.
+Owed: JD's eye on the colours; scan-only, deep sleep's wakes and the wake
+with the RGB dark (the review's bring-up list); the witness's pulse gates;
+D3's USB detector.** The runner learned two things on the way: the power ladder
 must be held at Always on for a run (Power saver caps the value and
 darkens an idle board, and raw HID is not activity), and a deep-sleeping
 board is not on USB (JD's key wakes it; the charger pin does too, for a
@@ -164,17 +186,29 @@ period match on CT16B1 is the row ISR, `rgb_callback()`, at priority 3.
   which that README explains as the timer stopping. The code and the clips
   disagree (Q4). The design does not depend on which is right: it makes the
   stall state dark by configuration.
-- **The colour order within a field is not what the comment says.** By the
-  code (`update_pwm_channels()`, `sn32f2xx.c:491-559`: the key row advances
-  at `current_row % 3 == 2`, the colour case is 0 → B, 1 → G, 2 → R), mux
-  pin 3k lights key row k's blue, 3k+1 its green, and 3k+2 key row k+1's
-  red; for key row k the software submits R at slot 3k−1, B at 3k, G at
-  3k+1, modulo 18. So one key's three colours come in consecutive slots,
-  and the physical pin order must be B, G, R-of-the-next-row for colours to
-  render, not the "R, B, G per group" of `config.h:6`. The rainbow fringe
-  today is one to two slots, 258-516 µs, **3.1-6.2 arc-minutes** at 200°/s,
-  not the 18.6 the LED doc computes from a third of a field. Which physical
-  LED each mux pin drives is still unverified (Q6).
+- **The colour order within a field: the pins are R, B, G per key row, as
+  `config.h:6` says, and the old code submits each colour one slot ahead
+  of its pin.** By the code (`update_pwm_channels()`, `sn32f2xx.c:491-559`:
+  the key row advances at `current_row % 3 == 2`, the colour case is 0 → B,
+  1 → G, 2 → R), the software submits key row k's blue at slot 3k, its
+  green at 3k+1 and key row k+1's red at 3k+2, modulo 18, and revisions 0
+  to 14 of this plan read that as the pins' order (B, G, R-of-the-next-row;
+  Q6 kept it open). **Stage 2's first flash settled it (11-01, white):**
+  with the same submission order and the one-shot restart taking the
+  widths written before it, every frame rendered rotated, red from blue,
+  blue from green and green from the row below's red: peach alphas and
+  pink mods from a purple and blue theme, and at the boot default's
+  near-white frame magenta on the nine keys one key row above a position
+  with no LED (A, X, C, V, N, M, `]`, PgDn, Right), the holes' zeros
+  landing on the green pin above them. So the old driver's widths reach
+  the LEDs one slot after their write, and its order is a lead over the
+  pins, not the pins: the CT16's PWM takes a match value written while
+  the counter runs at a later cycle start, not at the write (inferred
+  from the two drivers' renderings; not measured on its own). Stage 2
+  submits R, B, G of one key row at 3k, 3k+1, 3k+2 (`2d5a5d3e7f`). One
+  key's three colours still come in consecutive slots, so the rainbow
+  fringe today is one to two slots, 258-516 µs, **3.1-6.2 arc-minutes**
+  at 200°/s, not the 18.6 the LED doc computes from a third of a field.
 - **Derived, unmeasured: today's light is not uniform across columns.** The
   callback releases the 15 columns one `pwmDisableChannel()` at a time,
   ~5 µs each, *before* it deselects the mux row (`sn32f2xx.c:472-490`), and
@@ -673,7 +707,9 @@ Each slot, in order:
    (D8) through the scale table: a load, a lookup and a store each, keyed on
    B0 and B2, zeros for the nine holes.
 5. Select the mux row for the next `(key row, colour)` from a table that
-   encodes the order Q6 confirms (initially the code's B, G, R-of-next). The
+   encodes the pins' order, R, B, G of one key row per group (Q6, settled
+   on white 11-01: the code's B, G, R-of-next was a one-slot lead over the
+   pins, "What is known"). The
    LED rotation advances on serviced slots, so a stall resumes where it
    stopped and every row gets its turn. Stage 0b verifies that selecting
    the row before the restart lights nothing (the outputs are parked).
@@ -1003,7 +1039,23 @@ hold-off moves to the new vector. Brightness is **calibrated against stage
 0, not assumed**: the old per-slot energy is conditional on Q4 and
 per-column (Q12), so the scale table is set here to match the board mean
 (k ≈ 10 for one clean pulse, up to 16 if the baseline carried the release's
-extra light, D2), and the change is recorded. Gates: no PWM object or
+extra light, D2), and the change is recorded. **Measured on white 11-01
+(k = 10, the runner's 27 holds, the pins' order fixed):** at full scale
+white +3.1% against the base and each single colour 4-5% under (red
+−4.0%, green −4.5%, blue −4.9%), the four together within 1%; at byte 128
+white +12.5% and the single colours −16 to −18%; at 64 white +29% and the
+single colours −28 to −31%. Stage 2's light is additive (white equals the
+sum of its single colours within 1% at every level) and the base's is not
+(its white 64 is 54% of its single colours' sum, its white 255 93%), so
+no single k lands every state within 3%: the old driver's per-slot light
+depended on what the neighbouring slots carried (its serial column
+release at the next callback, Q12, and the row selected into a running
+cycle), which a clean pulse does not reproduce. **k stays 10, chosen at
+full-scale white; the gate is read as the four full-scale states' total
+within 3%, met, and the per-state figures are the record.** The witness
+measures the old pulse shapes if the difference ever matters; JD's eye on
+his theme (the purple and blue, val 177) decides whether a per-colour
+table is wanted. Gates: no PWM object or
 vector retained (the linker map); the LED part of the handler ≤ 10 µs and
 the complete handler within stage 0b's attribution; the callback metric
 drops accordingly; **the waveform witness** shows, at this clock, one pulse per
@@ -1417,7 +1469,7 @@ not substitute for them.
 | Q3 | The PCF bracket's and the 5 ms deep-sleep path's tolerance of a 20% longer transaction. | `rtc.c`'s bracket math and `docs/clock.md`'s seed budget; per-kind transaction times, the bracket width and release error, the daemon's residuals, over a night of syncs with the handler preempting; the pre-sleep read and wake recovery under load. |
 | Q4 | What a stall shows today: does the counter free-run (a hot row) or stop (dark)? | Stage 0b's register capture and row-only hold at Solid white, by eye, camera and INA228. Gates the old light-energy figure D4's scale starts from; pulse shape needs a scope. |
 | Q5 | Restarting a stopped counter: `TC` writable while stopped; `CRST` self-clear cycles; the terminal-equality case; selecting the mux before the restart lights nothing. | Stage 0b on all three timers with the widths 0, 1, terminal−1 and an invalid terminal, service delayed; `TC` and `CEN` recorded; gross optical output. (`CEN` cleared by a stop match is documented, `sn32_ct.h:357`.) |
-| Q6 | Which physical LED each mux pin drives, so the colour-slot table is right. | Stage 0b's single-key, single-colour patterns per key row with a slow tagged slot sequence. Decides D3 step 5's table and the valid rainbow comparison. |
+| Q6 | Which physical LED each mux pin drives, so the colour-slot table is right. | **Settled 11-01 by stage 2's first flash, by eye:** R, B, G of one key row per group of three pins, `config.h`'s order; the old code's B, G, R-of-next was a one-slot lead over the pins ("What is known"). Stage 0b's tagged patterns would confirm it pin by pin; not needed for the table. |
 | Q7 | Closed: the handler keeps the port's prologue and epilogue (D3). | |
 | Q8 | Does the consolidation lose short presses today, and how long does its pass block after the rewrite? | Rig presses of 25-40 ms phase-swept across a forced cleanup, ISR transitions against consumed against debounced against host; the stall counters. Out of scope to fix; in scope to know. |
 | Q9 | Does a cheaper handler save power? | Matched dark and lit power-map holds; the awake loop spins rather than sleeping (`config.h:248`), so expect little until light sleep is wider. |
@@ -1852,6 +1904,54 @@ ordering against a running callback). Its remaining findings, each done:
 Stage 1 is therefore built and twice reviewed; what it waits for is the
 bench: stage 0's baseline on white, with the rig, before it is flashed.
 
+## Stage 2's review: codex's findings, dispositions (11-01)
+
+The first review of the stage 2 code ([`review-codex-row-isr-stage2-2026-11-01-raw.md`](review-codex-row-isr-stage2-2026-11-01-raw.md),
+gpt-6-astra, xhigh, read-only; its prompt
+[`review-prompt-row-isr-stage2.txt`](review-prompt-row-isr-stage2.txt)):
+NOT READY on one P1 and twelve P2s; the register audit itself checked out
+(the keys and addresses, the match-control bits, the PWM control words,
+the stop-only terminal, the TC-then-CEN restart, the admission's
+arithmetic, the quiesce). The fix round is the commit after
+`a13054e5d2` on `row-isr`; the verify review follows
+([`review-prompt-row-isr-stage2-verify.txt`](review-prompt-row-isr-stage2-verify.txt)).
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 (P1) | Deep sleep's exit takes the columns back while scan-only is active, which then scans columns the parked outputs drive high; leaving scan-only restores the PWM only at the next scan slot. | **Fixed.** The columns' ownership follows the mode at once: `sn32f2xx_sleep_exitI()` releases them while scan-only is active, and the scan-only switch takes them back (or releases them) in the invocation that changes the cadence. |
+| 2 (P2) | D3's USB frame-counter detector for a long silence of every observer is absent: a 350 or 700 ms silence can read VALID on the USB bench. | **Deferred, with the consequence stated:** the long-gap injection gates that need it are not claimable until it is in; they also need the waveform witness, which is not wired, and a bus-event generation from the USB LLD (a local patch). A follow-up commit before those gates. |
+| 3 (P2) | The degraded-mode exclusion was read at the driver's init, before `watchdog_boot_check()` decides it. | **Fixed.** `watchdog.c` declares the exclusion where the mode is decided. |
+| 4 (P2) | The epoch was committed as serviced before step 6's crossing check; with the flag acknowledged before the snapshot, a preemption between the two lost the new epoch's service as "spurious". | **Fixed.** The acknowledgement and the entry snapshot share one critical section; the serviced epoch is committed at step 6's decision; a crossed attempt commits nothing, so the re-entry reconstructs the missed slot from the previous service. |
+| 5 (P2) | The reconstruction divided by the ordinary slot in scan-only, and a cadence change reset `TC` after the entry snapshot. | **Fixed.** The cadence in force is a variable the period setter keeps; a cadence change ends its invocation with the pair re-primed. |
+| 6 (P2) | A sleep's loss went unreported (`have_last` cleared); a duration was accepted with only the exit end checked; statistics were committed before the service's validity was known. | **Fixed.** The losses are counted against a generation the handler last saw, across re-primes; a duration needs both ends VALID in one generation; the interval's statistics are taken at the commit. The re-prime by whichever observer comes first is accepted: no pair spans a loss. |
+| 7 (P2) | The fast path's bound did not cover the phase term (overflow at ~44.7 s of hold); the consumer bound was not enforced; an 8-bit generation can alias. | **Fixed.** The fast path below 7.3 M ticks (39 s); the consumer bound checked before any reconstruction; the generation 16 bits. |
+| 8 (P2) | Page 7 mixed populations (the mean over every service), its elapsed sum wraps at 89 s, the maximum clips, the small counters wrap. | **Fixed as far as 28 bytes allow:** page 7 carries the VALID-interval service count beside the slots elapsed, and the elapsed samples beside the sum; the sum's wrap is documented as a window's figure and the maximum's clip is flagged by the decoder; the small counters saturate; the rest moved to op 28 sub 5. |
+| 9 (P2) | A dark row crossed by a boundary was counted as an omission. | **Fixed.** A dark row is neither emitted nor omitted whatever the timing. |
+| 10 (P2) | The record's elapsed figure excludes the hooks and the accounting around the snapshots. | **Accepted, labelled:** page 7 is the snapshot-to-snapshot interval; page 4's hooks bracket the whole handler at 5.33 µs resolution, and the two together bound the complete cost (rowisr.h). |
+| 11 (P2) | The tick monitor's worst gap was tracked only above its 128 µs threshold. | **Fixed:** the worst gap of every primed observation. The synchronized stamps and the validity in the diagnostic record come with the injection ops (deferred with 2). |
+| 12 (P2) | The Rust daemon's decoder has no page 7. | **Deferred:** the daemon's checks are `>= need`, v9 passes, page 7 is additive; the Python decoder has it. |
+| 13 (P2) | The timers' blocks were not reset whole at init; a `CRST` timeout was ignored. | **Fixed.** `sys1ResetCT16Bn()` after the clocks, then the configuration; a reset that never completes starts nothing, releases the columns and is reported by op 28's status. |
+
+### The verify review (11-01 19:21): READY TO FLASH for the bench bring-up
+
+[`review-codex-row-isr-stage2-verify-2026-11-01-raw.md`](review-codex-row-isr-stage2-verify-2026-11-01-raw.md)
+(gpt-6-astra, xhigh, read-only, on `8e86b8d90a` and its dev ELF): the P1
+and findings 3, 4, 5, 9 and 13 fixed; 6, 7, 8, 10 and 11 partly; the two
+deferrals accepted; one new timing concern. Dispositions:
+
+| # | What remains | Disposition |
+|---|---|---|
+| 6 | `service_commit()` uses the entry pair's validity; an invalidating interruption after the arm leaves that service's latency and interval committed. | **Accepted as is.** The interval and the latency are the entry pair's figures, both ends VALID in one generation when taken; a loss after the arm is the next pair's, which the generation check excludes, and the duration (entry to exit) is excluded by the exit's check. Nothing committed was measured across a loss. |
+| 7 | The consumer bound over an hour is rejected without an invalidation or a generation bump; a 16-bit generation aliases after 65,536 losses (527 s of an 8 ms gap and re-prime every cycle). | **Accepted, labelled, deferred.** A rejected interval leaves the pair INVALID for the handler (`valid1` false, the service counted invalid) and the next VALID entry re-primes; an alias needs 65,536 counted losses, and `epoch_losses` saturates at 255 long before, so a record that shows saturated losses is the flag. A 32-bit generation comes with the injection ops (finding 2). |
+| 8 | The decoder divides the wrapping elapsed sum (89 s of handler time, about 7.6 min of uptime at 52 µs a slot) by the cumulative sample count. | **Fixed in the decoder:** `ak820health.py --sched` prints the cumulative mean only with its wrap noted, and `--sched --window N` takes two reads N seconds apart and reports the window's mean from the deltas (the maxima stay since-reset). The runner's figures come from windows. |
+| 10 | Page 4's exit stamp precedes its own accounting; no quantitative bound on the instrumentation overhead; the ≤ 10 µs claim needs an independent measurement. | **Accepted.** The complete handler's cost is read as page 4's CPU share (`ISR/s × mean`), which is what stage 0's runner compares and stage 2's gate is written against; the LED part's ≤ 10 µs is attributed with op 28 sub 4 (the scan skipped) and bounded by the witness when its wires exist. |
+| 11 | The counting thresholds unchanged; the synchronized stamps and the validity in the diagnostic record deferred. | **Accepted, deferred with 2.** The worst gap is now every primed observation's, which is what the ordinary comparison needs. |
+| new | `slot_ticks` as a variable put `__udivsi3` inside the masked step-6 path (`boundaries_between()` divides by it), confirmed in the ELF at `Vector90+0x7b8`, before the arm. | **Fixed** (`b120a2069c`): the crossed check is a comparison of the phase-corrected interval against the slot, the half slot a shift; `boundaries_between()` stays for the unmasked reconstruction at step 1. The masked section's bound is still to be measured (the witness). |
+
+The review's priorities for the first flash (scan-only, deep sleep, the
+wake with the RGB dark, scan-only's exit, the arm section's timing) are
+the bring-up's owed list beside the colour finding above.
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2004,3 +2104,55 @@ bench: stage 0's baseline on white, with the rig, before it is flashed.
   wakes at JD's suggestion (2.29 mAh into the drain, the audit session's
   figures); the later wakes JD's key. Stage 1's hands-free gates pass;
   the `compare` report and every log are in the directory.
+- 11-01 18:30-19:05: stage 2 written against D2, D3, D4, D7, D8 and D10
+  (the register facts from docs/sn32f299.md section 7 and the LLD's bit
+  names): rgb/rowisr.c's hot path replaced, the PWM service dropped from
+  the board (mcuconf.h, halconf.h), the column map a const table in the
+  driver (config.h's macro a comment), the tick's observation in
+  indicators.c, the exclusions in overrun_diag.c and at init from the
+  watchdog, health page 7 and op 28 sub 5 with their host decoders. Built
+  dev (576 B heap gap), daily and fpb (2,720 B) first time; committed as
+  `a13054e5d2`; codex's review launched 19:00
+  (`review-prompt-row-isr-stage2.txt`). Known already for the fix round:
+  leaving scan-only should take the columns back at once, not at the next
+  scan slot. JD's Fn+Esc check at 18:50: the board dark in the bootloader.
+- 11-01 19:05-19:20: codex's first review of stage 2 received (NOT READY:
+  one P1, twelve P2s); the fix round `8e86b8d90a` (dev `0xf6a21a82`, heap
+  gap 576 B) with every finding dispositioned ("Stage 2's review"); the
+  verify review launched; stage 2 flashed on white at 19:20 after JD's
+  key, the full run (windows and holds, as `stage2`) started against
+  `base.json`. The first record 15 s after the flash: 53,380 pulses
+  emitted, 15 omitted, latency max 103 µs, the handler's mean 52 µs
+  (against the old callback's 198), the draw 49 mA at JD's theme.
+- 11-01 19:21: the verify review received: READY TO FLASH for the bench
+  bring-up; dispositions under "The verify review".
+- 11-01 19:25-19:45: **the colour finding.** JD saw the boot frame white
+  with magenta on A, X, C, V, N, M, PgDn and Right, then the restored
+  theme peach and pink instead of purple and blue. The magenta keys are
+  exactly the keys one row above the nine LED-less matrix positions (the
+  ninth is `]`): the green pin of key row k was being given the red of key
+  row k+1, zero over a hole. So the pins are R, B, G per key row, as
+  `config.h` says, and the old driver's B, G, R-of-next was a one-slot
+  lead over them (its widths reach the LEDs a cycle late; stage 2's
+  one-shot restart has no such lag). Fixed as `2d5a5d3e7f` (the key row
+  advances on the first pin of its group, the scan slot with it; the D8
+  index; the decoder's row labels), and `b120a2069c` for the verify
+  review's divide. The running measurement was left to finish: its white
+  holds hold for the k calibration bar the nine missing greens (about
+  1% of the white draw), and its colour holds show the rotation in the
+  draw (stage 2's "red" lit the green pins, and so on).
+- 11-01 19:44-20:10: the fix flashed on white (`b120a2069c`, token
+  `0x4849bde6`; the pin order and the masked divide), the 27 holds rerun
+  as `stage2fix` against `base.json`: the colours on their own pins; at
+  full scale white +3.1%, the single colours 4-5% under, the four within
+  1% by total; the base not additive across colours (the stage 2 gate's
+  note). The record after 5.8 M slots: 401 missed, 24 pulses omitted (14
+  by the deadline, the longest run 1), latency max 105 µs, elapsed max
+  162 µs, no epoch loss, no spurious service; a 60 s window of the dark
+  idle board 47.4 µs mean, 17.7% share. Two tool faults found on the way:
+  `rowisr_diag.py record` read the reply from byte 0, not past its 4-byte
+  header (the first decode's "4,871-long run" was the header's bytes),
+  fixed; the runner dumped the settings after setting Always on, so its
+  restore left white in Always on twice, fixed, Power saver put back by
+  hand at 20:09. White in its standing state since 20:10; ak820-pro-76
+  told. JD's eye on the colours is the open check.

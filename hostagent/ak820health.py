@@ -35,6 +35,7 @@ VID, PID = 0x0C45, 0x8009
 USAGE_PAGE, USAGE = 0xFF60, 0x61
 SET_VALUE, HEALTH_CHANNEL, HC_GET = 0x07, 0x13, 0x01
 HC_GET2, HC_RESET, HC_GET3, HC_GET4 = 0x04, 0x05, 0x06, 0x07   # stall / reset / per-row / ISR pages
+HC_GET7 = 0x11   # protocol 9: the row handler's record (the row ISR rewrite, stage 2; rgb/rowisr.c)
 HC_FLASHW, HC_ACCT, HC_LINK = 0x0C, 0x0D, 0x0E                  # protocol 8: Phase 1b diagnostics
 
 FIELDS = ["blit_timeouts", "tx_sent", "tx_timeouts", "tx_drops",
@@ -61,6 +62,15 @@ FIELDS3 = ["row_samples", "row_gap_max_ms", "raw_edges", "consumes",
 # timer -- sets the row rate and caps the main loop. Ticks at st_freq per second.
 FIELDS4 = ["isr_entries", "isr_ticks_sum", "isr_ticks_min", "isr_ticks_max",
            "st_freq", "uptime_ms", "row_samples_total", "_reserved4"]
+
+# Page 7 (proto v9): the row handler's record since the health reset, in the
+# scheduler's 48 MHz ticks (plans/ROW-ISR-PLAN.md, D10). Slots elapsed are
+# reconstructed from the epoch clock, serviced counts the handler's services,
+# emitted the pulses armed (a dark row emits nothing and omits nothing),
+# omitted the slots left dark by a late arm or a preemption across a slot.
+FIELDS7 = ["slots_elapsed", "serviced_valid", "pulses_emitted", "pulses_omitted", "elapsed_sum_ticks",
+           "elapsed_samples", "latency_max_ticks", "elapsed_max_ticks"]
+SCHED_HZ = 48_000_000
 
 
 # Protocol 8. HC_LINK: every way the CH582F link can lose a frame
@@ -212,6 +222,49 @@ def read_isr(h=None, timeout_ms=500):
     finally:
         if own:
             h.close()
+
+
+def read_sched(h=None, timeout_ms=500):
+    """Page 7: the row handler's record (protocol 9, the row ISR rewrite's stage 2)."""
+    own = h is None
+    if own:
+        h = open_device()
+    try:
+        rep = _txn(h, HC_GET7, timeout_ms)
+        if rep[3] < 9:
+            raise SystemExit(f"firmware health proto v{rep[3]}; page 7 needs v9 (the row ISR rewrite's stage 2)")
+        v = struct.unpack_from("<6I2H", bytes(rep), 4)
+        d = dict(zip(FIELDS7, v))
+        us = 1e6 / SCHED_HZ
+        d["latency_max_us"] = round(d["latency_max_ticks"] * us, 2)
+        d["elapsed_max_us"] = round(d["elapsed_max_ticks"] * us, 2) if d["elapsed_max_ticks"] != 0xFFFF else ">1365 (clipped)"
+        d["elapsed_mean_us"] = round(d["elapsed_sum_ticks"] / d["elapsed_samples"] * us, 2) if d["elapsed_samples"] else None
+        d["missed_slots"] = d["slots_elapsed"] - d["serviced_valid"]   # boundaries the handler did not service, over the VALID intervals
+        return d
+    finally:
+        if own:
+            h.close()
+
+
+def sched_window(A, B, secs):
+    """The record's growth between two page-7 reads secs apart: the window's
+    figures from the deltas (modulo 2^32, so the elapsed sum's wrap at 89 s of
+    handler time does not matter inside a window shorter than that); the
+    maxima are since the reset and are not windowed (codex, stage 2's verify
+    review, finding 8)."""
+    us = 1e6 / SCHED_HZ
+    dd = {k: (B[k] - A[k]) & 0xFFFFFFFF for k in ("slots_elapsed", "serviced_valid", "pulses_emitted",
+                                                   "pulses_omitted", "elapsed_sum_ticks", "elapsed_samples")}
+    w = {"win_secs": round(secs, 2),
+         "win_slots_elapsed": dd["slots_elapsed"], "win_serviced_valid": dd["serviced_valid"],
+         "win_missed_slots": dd["slots_elapsed"] - dd["serviced_valid"],
+         "win_pulses_emitted": dd["pulses_emitted"], "win_pulses_omitted": dd["pulses_omitted"],
+         "win_elapsed_samples": dd["elapsed_samples"],
+         "win_elapsed_mean_us": round(dd["elapsed_sum_ticks"] / dd["elapsed_samples"] * us, 2) if dd["elapsed_samples"] else None,
+         "win_slots_per_s": round(dd["slots_elapsed"] / secs, 1) if secs > 0 else None}
+    if w["win_elapsed_mean_us"] is not None and w["win_slots_per_s"]:
+        w["win_cpu_pct"] = round(w["win_elapsed_mean_us"] * w["win_slots_per_s"] / 1e4, 2)   # the handler's share, snapshot to snapshot
+    return w
 
 
 def isr_rates(a, b, wall_s, rows=6):
@@ -457,6 +510,11 @@ def main():
                     help="per-row sampling: is every key looked at often enough?")
     ap.add_argument("--stalls", action="store_true",
                     help="also show the phase-1 stall counters")
+    ap.add_argument("--sched", action="store_true",
+                    help="page 7: the row handler's record (stage 2's scheduler: latency, elapsed, slots missed, pulses omitted)")
+    ap.add_argument("--window", type=float, default=None, metavar="SECS",
+                    help="with --sched: two reads SECS apart, the window's figures from the deltas "
+                         "(the cumulative elapsed sum wraps after 89 s of handler time, about 7.6 min of uptime)")
     ap.add_argument("--isr", action="store_true",
                     help="row-ISR cost: two page-4 reads 2 s apart -> entries/s, "
                          "mean/min/max us, CPU share")
@@ -501,6 +559,16 @@ def main():
         B = read_isr(); tB = time.monotonic()
         d.update(B)
         d.update(isr_rates(A, B, tB - tA, d.get("matrix_rows", 6)))
+    if a.sched:
+        if a.window:
+            import time
+            A = read_sched(); tA = time.monotonic()
+            time.sleep(a.window)
+            B = read_sched(); tB = time.monotonic()
+            d.update(B)
+            d.update(sched_window(A, B, tB - tA))
+        else:
+            d.update(read_sched())
     if a.json:
         print(json.dumps(d))
     else:
@@ -588,6 +656,22 @@ def main():
             print("\n  period = ISR duration + ~53 us (counter re-armed at ISR end), "
                   "so isr_mean_us sets the row rate;\n  isr_cpu_pct is the M0 share "
                   "inside the row ISR -- the ceiling on scanning and the main loop")
+        if a.sched:
+            print()
+            for k in ("slots_elapsed", "serviced_valid", "missed_slots", "pulses_emitted", "pulses_omitted",
+                      "latency_max_us", "elapsed_mean_us", "elapsed_max_us", "elapsed_samples"):
+                print(f"{k:24} {d[k]}")
+            if a.window:
+                print()
+                for k in ("win_secs", "win_slots_elapsed", "win_slots_per_s", "win_serviced_valid", "win_missed_slots",
+                          "win_pulses_emitted", "win_pulses_omitted", "win_elapsed_samples", "win_elapsed_mean_us", "win_cpu_pct"):
+                    print(f"{k:24} {d.get(k)}")
+            print("\n  the scheduler's record since the health reset (stage 2): the slot is fixed by CT16B4,"
+                  "\n  latency is the handler's entry from the slot boundary, elapsed its entry to exit;"
+                  "\n  missed slots are boundaries the handler did not service, omitted pulses the slots it"
+                  "\n  serviced too late to arm (or across a slot); a dark row is neither."
+                  "\n  elapsed_mean_us is cumulative and its sum wraps after 89 s of handler time (about"
+                  "\n  7.6 min of uptime at 52 us a slot): the win_ figures (--window) are the ones to quote")
 
 
 if __name__ == "__main__":

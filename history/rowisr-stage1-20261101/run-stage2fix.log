@@ -1,0 +1,77 @@
+[19:44:28] stage 0 run 'stage2fix' -> history/rowisr-stage1-20261101
+[19:44:28] board token 0x4849bde6
+[19:44:28] power mode 0 (stage 0, cap 255) -> Always on for the run
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+[19:44:29] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        unknown
+    pack         no fresh 5C reports
+    module 5C    last 75%, 4 s ago
+    vdd          3897 mV  (raw 2102, since boot 3897..3907 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    20.1 % of maximum
+    flags        on_batt done rgb_on linked
+[19:44:29] holds: 27 states x 48.0 s = 21.6 min
+[19:45:17]   hold dark         40.934 mA over 40 rows (sd 0.071), vcell 3809.8
+[19:46:05]   hold white 64     46.825 mA over 40 rows (sd 0.105), vcell 3809.1
+[19:46:53]   hold white 128    53.152 mA over 40 rows (sd 0.079), vcell 3806.6
+[19:47:41]   hold white 255    90.611 mA over 40 rows (sd 0.122), vcell 3796.7
+[19:48:29]   hold red 64       43.058 mA over 40 rows (sd 0.132), vcell 3809.6
+[19:49:17]   hold red 128      45.75 mA over 40 rows (sd 0.08), vcell 3808.7
+[19:50:05]   hold red 255      61.766 mA over 40 rows (sd 0.094), vcell 3804.5
+[19:50:53]   hold green 64     42.878 mA over 40 rows (sd 0.045), vcell 3809.0
+[19:51:41]   hold green 128    44.762 mA over 40 rows (sd 0.044), vcell 3808.8
+[19:52:29]   hold green 255    55.895 mA over 40 rows (sd 0.068), vcell 3806.1
+[19:53:17]   hold blue 64      42.816 mA over 40 rows (sd 0.044), vcell 3809.4
+[19:54:05]   hold blue 128     44.538 mA over 40 rows (sd 0.057), vcell 3808.2
+[19:54:53]   hold blue 255     54.715 mA over 40 rows (sd 0.054), vcell 3806.8
+[19:55:41]   hold dark         40.952 mA over 40 rows (sd 0.049), vcell 3809.5
+[19:56:29]   hold blue 255     54.718 mA over 40 rows (sd 0.088), vcell 3804.8
+[19:57:17]   hold blue 128     44.519 mA over 40 rows (sd 0.065), vcell 3809.3
+[19:58:05]   hold blue 64      42.774 mA over 40 rows (sd 0.06), vcell 3809.2
+[19:58:53]   hold green 255    55.84 mA over 40 rows (sd 0.088), vcell 3806.3
+[19:59:41]   hold green 128    44.757 mA over 40 rows (sd 0.147), vcell 3808.5
+[20:00:29]   hold green 64     42.845 mA over 40 rows (sd 0.072), vcell 3808.7
+[20:01:17]   hold red 255      61.764 mA over 40 rows (sd 0.103), vcell 3803.9
+[20:02:05]   hold red 128      45.734 mA over 40 rows (sd 0.081), vcell 3808.6
+[20:02:53]   hold red 64       43.063 mA over 40 rows (sd 0.112), vcell 3808.6
+[20:03:41]   hold white 255    90.555 mA over 40 rows (sd 0.089), vcell 3796.2
+[20:04:29]   hold white 128    53.137 mA over 40 rows (sd 0.06), vcell 3805.3
+[20:05:17]   hold white 64     46.819 mA over 40 rows (sd 0.079), vcell 3807.3
+[20:06:06]   hold dark         40.942 mA over 40 rows (sd 0.129), vcell 3809.3
+[20:06:06] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+[20:06:06] done -> history/rowisr-stage1-20261101/stage2fix.json
+
+stage2fix: token 0x4849bde6, 2026-11-01 19:44:29
+  dark 40.943 mA; incremental mA by state (forward / back):
+    white 64   5.882 / 5.876
+    white 128  12.209 / 12.194
+    white 255  49.668 / 49.612
+    red 64     2.115 / 2.12
+    red 128    4.807 / 4.791
+    red 255    20.823 / 20.821
+    green 64   1.935 / 1.902
+    green 128  3.819 / 3.814
+    green 255  14.952 / 14.897
+    blue 64    1.873 / 1.831
+    blue 128   3.595 / 3.576
+    blue 255   13.772 / 13.775

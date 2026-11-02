@@ -1,0 +1,58 @@
+base (0x6f758b40) -> stage2 (0xf6a21a82); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3744.1 ->     3745.2   +0.03%  ok
+    mean us          195.9 ->       59.8  -69.47%  FAIL
+    cpu %             73.4 ->       22.4  -69.48%  FAIL
+    rows/row/s       208.0 ->      208.1   +0.05%  ok
+    max us           256.0 ->      144.0  -43.75%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms         11 ->      3  ok
+  window repaint:
+    ISR/s           3744.1 ->     3745.3   +0.03%  ok
+    mean us          195.9 ->       59.8  -69.47%  FAIL
+    cpu %             73.3 ->       22.4  -69.44%  FAIL
+    rows/row/s       208.0 ->      208.1   +0.05%  ok
+    max us           282.7 ->      144.0  -49.06%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms         17 ->      5  ok
+  window pcf:
+    ISR/s           3696.2 ->     3696.3   +0.00%  ok
+    mean us          195.8 ->       59.7  -69.51%  FAIL
+    cpu %             72.4 ->       22.1  -69.48%  FAIL
+    rows/row/s       205.3 ->      205.4   +0.05%  ok
+    max us           277.3 ->      117.3  -57.70%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms         12 ->      6  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [2, 3] -> [0, 0]   [[382, 384, 387] -> [5, 5, 5]]
+  incremental LED power (mA, dark subtracted), within 3%:
+    white 64   forward     4.561 ->    5.856  +28.39%  FAIL
+    white 128  forward    10.846 ->   12.020  +10.82%  FAIL
+    white 255  forward    48.113 ->   48.497   +0.80%  ok
+    red 64     forward     3.094 ->    1.731  -44.05%  FAIL
+    red 128    forward     5.695 ->    3.451  -39.40%  FAIL
+    red 255    forward    21.644 ->   13.640  -36.98%  FAIL
+    green 64   forward     2.689 ->    1.828  -32.02%  FAIL
+    green 128  forward     4.547 ->    3.584  -21.18%  FAIL
+    green 255  forward    15.626 ->   13.756  -11.97%  FAIL
+    blue 64    forward     2.639 ->    2.277  -13.72%  FAIL
+    blue 128   forward     4.351 ->    4.977  +14.39%  FAIL
+    blue 255   forward    14.453 ->   21.012  +45.38%  FAIL
+    blue 255   back       14.517 ->   20.981  +44.53%  FAIL
+    blue 128   back        4.392 ->    4.976  +13.30%  FAIL
+    blue 64    back        2.670 ->    2.307  -13.60%  FAIL
+    green 255  back       15.622 ->   13.786  -11.75%  FAIL
+    green 128  back        4.625 ->    3.586  -22.46%  FAIL
+    green 64   back        2.739 ->    1.845  -32.64%  FAIL
+    red 255    back       21.725 ->   13.634  -37.24%  FAIL
+    red 128    back        5.723 ->    3.436  -39.96%  FAIL
+    red 64     back        3.079 ->    1.680  -45.44%  FAIL
+    white 255  back       48.137 ->   48.466   +0.68%  ok
+    white 128  back       10.852 ->   11.949  +10.11%  FAIL
+    white 64   back        4.523 ->    5.817  +28.61%  FAIL
+  dark: 40.619 -> 40.938 mA
+RESULT: 28 metric(s) outside the gate

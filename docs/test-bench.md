@@ -812,6 +812,7 @@ dev build from the `row-isr` branch (`rgb/rowisr_diag.c`), driven by
 | `rowisr_diag.py hold MS` | The row ISR's NVIC line off for 1-10000 ms, everything else running: Q4, what a stall shows (a hot row or dark), by eye, camera or the INA228. The hold is marked on the Caps Lock LED's pin D15, high for its length, the rising edge in one critical section with the disable and the falling edge with the enable, for a probe. Timed by the 20 kHz tick; refused while a hold or skip runs, while the tick is stopped, or while Caps Lock is lit (no edge to mark); a tick stop (light sleep's bit 3, deep sleep) cancels it with the line released, counted apart, and the housekeeping task ends one the tick failed to end. The line is held through the driver's nesting hold, so a clock-chip transaction overlapping it keeps the line off until its own end: the status flags that hold as overlapped, not a measurement. |
 | `rowisr_diag.py skip MS` | The callback does its LED work and skips the key scan for MS ms (keys dead meanwhile): health page 4's callback metric with and without it attributes the scan's cost (stage 0b). Timed and refused as `hold` is. |
 | `rowisr_diag.py status` | The hold's and the skip's state, the counts (ended by the tick, by the backstop, cancelled), whether the row line is enabled now and the driver's hold depth, whether the last hold overlapped, and whether the boot's prime timed out (Bootmagic then scanned an empty matrix). |
+| `rowisr_diag.py record` | Stage 2: the handler's record's remainder (op 28 sub 5): the longest run of omissions, spurious invocations, omissions by the arm deadline and per mux row. The totals are health page 7: `ak820health.py --sched` (slots elapsed and serviced, pulses emitted and omitted, the handler's latency and elapsed in the scheduler's 48 MHz ticks, epoch losses). Both reset with the health counters. |
 | `rowisr_diag.py led INDEX R G B` / `led off` | One LED at one colour and every other dark, kept after every render: with a slow tagged slot sequence on the witness it settles Q6, which physical LED each mux pin drives. |
 
 Raw HID is exclusive on macOS: run it between a trial's reads, as the other
@@ -845,3 +846,21 @@ USB, so a run starts with a key press from JD (the charger pin wakes it
 too, but only for a second unless the data link is up before the 5 V goes,
 and relay 2 is the drain's). ⚠️ Never edit a running bash script: bash
 reads it as it goes.
+
+Three things the runner's first night taught (11-01, stage 2's bring-up):
+
+- **Dump the settings before touching the ladder.** The first version set
+  Always on and then dumped `settings-before.json`, so its `--live-only`
+  restore put Always on back on white at the end of two runs (a board in
+  Always on never sleeps on battery). The dump comes first now; if a run
+  from before 20:10 11-01 left Always on, dev op 14 sub 1 arg 2 puts
+  Power saver back (`history/rowisr-stage1-20261101/power_saver_back.sh`).
+- **A step's EXIT trap turns data off, and the idle board deep-sleeps
+  within a minute of that** (Power saver counts from the last key, not
+  from the data). The next step needs a key first, or must start inside
+  that minute. Check the board with `ioreg -p IOUSB -l -w0 | grep
+  '"idProduct" = 32777'` (`session.sh`'s `present`), not
+  `system_profiler`, which answered too slowly to catch it.
+- **Quote page 7's handler mean from a window:** `ak820health.py --sched
+  --window 60` takes two reads and reports the deltas; the cumulative sum
+  wraps after 89 s of handler time, about 7.6 minutes of uptime.

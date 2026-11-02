@@ -1,0 +1,86 @@
+[19:20:53] stage 0 run 'stage2' -> history/rowisr-stage1-20261101
+[19:20:53] board token 0xf6a21a82
+[19:20:53] power mode 2 (stage 0, cap 128) -> Always on for the run
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+[19:20:53] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        unknown
+    pack         no fresh 5C reports
+    module 5C    last 78%, 4 s ago
+    vdd          3897 mV  (raw 2105, since boot 3895..3901 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    9.3 % of maximum
+    flags        on_batt done rgb_on linked
+[19:20:53] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[19:21:17]   3745.2 ISR/s, mean 59.8 us, max 144.0 us, cpu 22.4%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 3 ms, uart overruns 0, timeouts 5
+[19:21:19] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[19:21:43]   3745.3 ISR/s, mean 59.8 us, max 144.0 us, cpu 22.4%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 5 ms, uart overruns 0, timeouts 5
+[19:21:45] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[19:22:10]   3696.3 ISR/s, mean 59.7 us, max 117.3 us, cpu 22.1%, rows 205.4/row/s; row_gap_max 9 ms, >=25 ms 0, loop gap 6 ms, uart overruns 0, timeouts 5
+[19:22:10] holds: 27 states x 48.0 s = 21.6 min
+[19:22:58]   hold dark         40.908 mA over 40 rows (sd 0.067), vcell 3812.5
+[19:23:46]   hold white 64     46.794 mA over 40 rows (sd 0.062), vcell 3810.5
+[19:24:34]   hold white 128    52.958 mA over 40 rows (sd 0.151), vcell 3809.5
+[19:25:22]   hold white 255    89.435 mA over 40 rows (sd 0.142), vcell 3800.0
+[19:26:10]   hold red 64       42.669 mA over 40 rows (sd 0.071), vcell 3811.4
+[19:26:58]   hold red 128      44.389 mA over 40 rows (sd 0.08), vcell 3810.6
+[19:27:46]   hold red 255      54.578 mA over 40 rows (sd 0.076), vcell 3807.9
+[19:28:34]   hold green 64     42.766 mA over 40 rows (sd 0.062), vcell 3812.1
+[19:29:22]   hold green 128    44.522 mA over 40 rows (sd 0.053), vcell 3810.5
+[19:30:10]   hold green 255    54.694 mA over 40 rows (sd 0.085), vcell 3808.1
+[19:30:58]   hold blue 64      43.215 mA over 40 rows (sd 0.049), vcell 3810.6
+[19:31:46]   hold blue 128     45.915 mA over 40 rows (sd 0.048), vcell 3809.7
+[19:32:34]   hold blue 255     61.95 mA over 40 rows (sd 0.083), vcell 3806.3
+[19:33:22]   hold dark         40.954 mA over 40 rows (sd 0.05), vcell 3811.6
+[19:34:10]   hold blue 255     61.919 mA over 40 rows (sd 0.14), vcell 3804.2
+[19:34:58]   hold blue 128     45.914 mA over 40 rows (sd 0.049), vcell 3809.8
+[19:35:46]   hold blue 64      43.245 mA over 40 rows (sd 0.046), vcell 3810.3
+[19:36:34]   hold green 255    54.724 mA over 40 rows (sd 0.122), vcell 3808.1
+[19:37:22]   hold green 128    44.524 mA over 40 rows (sd 0.13), vcell 3810.7
+[19:38:10]   hold green 64     42.783 mA over 40 rows (sd 0.12), vcell 3810.3
+[19:38:58]   hold red 255      54.572 mA over 40 rows (sd 0.238), vcell 3807.2
+[19:39:46]   hold red 128      44.374 mA over 40 rows (sd 0.195), vcell 3809.6
+[19:40:34]   hold red 64       42.618 mA over 40 rows (sd 0.179), vcell 3810.5
+[19:41:22]   hold white 255    89.404 mA over 40 rows (sd 0.171), vcell 3797.5
+[19:42:10]   hold white 128    52.887 mA over 40 rows (sd 0.185), vcell 3807.5
+[19:42:59]   hold white 64     46.755 mA over 40 rows (sd 0.119), vcell 3808.4
+[19:43:47]   hold dark         40.953 mA over 40 rows (sd 0.081), vcell 3810.3
+[19:43:47] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+[19:43:47] done -> history/rowisr-stage1-20261101/stage2.json
+
+stage2: token 0xf6a21a82, 2026-11-01 19:20:53
+  idle       3745.2 ISR/s  mean   59.8 us  max   144.0 us  cpu  22.4%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 3 ms  overruns 0  timeouts 5
+  repaint    3745.3 ISR/s  mean   59.8 us  max   144.0 us  cpu  22.4%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 5 ms  overruns 0  timeouts 5
+  pcf        3696.3 ISR/s  mean   59.7 us  max   117.3 us  cpu  22.1%  rows  205.4/row/s  row_gap_max 9 ms  >=25ms 0  loop_gap 6 ms  overruns 0  timeouts 5
+  dark 40.938 mA; incremental mA by state (forward / back):
+    white 64   5.856 / 5.817
+    white 128  12.02 / 11.949
+    white 255  48.497 / 48.466
+    red 64     1.731 / 1.68
+    red 128    3.451 / 3.436
+    red 255    13.64 / 13.634
+    green 64   1.828 / 1.845
+    green 128  3.584 / 3.586
+    green 255  13.756 / 13.786
+    blue 64    2.277 / 2.307
+    blue 128   4.977 / 4.976
+    blue 255   21.012 / 20.981

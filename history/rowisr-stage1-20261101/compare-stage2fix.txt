@@ -1,0 +1,31 @@
+base (0x6f758b40) -> stage2fix (0x4849bde6); the plan's gate: within 3% of stage 0
+  idle: only in base
+  repaint: only in base
+  pcf: only in base
+  incremental LED power (mA, dark subtracted), within 3%:
+    white 64   forward     4.561 ->    5.882  +28.96%  FAIL
+    white 128  forward    10.846 ->   12.209  +12.57%  FAIL
+    white 255  forward    48.113 ->   49.668   +3.23%  FAIL
+    red 64     forward     3.094 ->    2.115  -31.64%  FAIL
+    red 128    forward     5.695 ->    4.807  -15.59%  FAIL
+    red 255    forward    21.644 ->   20.823   -3.79%  FAIL
+    green 64   forward     2.689 ->    1.935  -28.04%  FAIL
+    green 128  forward     4.547 ->    3.819  -16.01%  FAIL
+    green 255  forward    15.626 ->   14.952   -4.31%  FAIL
+    blue 64    forward     2.639 ->    1.873  -29.03%  FAIL
+    blue 128   forward     4.351 ->    3.595  -17.38%  FAIL
+    blue 255   forward    14.453 ->   13.772   -4.71%  FAIL
+    blue 255   back       14.517 ->   13.775   -5.11%  FAIL
+    blue 128   back        4.392 ->    3.576  -18.58%  FAIL
+    blue 64    back        2.670 ->    1.831  -31.42%  FAIL
+    green 255  back       15.622 ->   14.897   -4.64%  FAIL
+    green 128  back        4.625 ->    3.814  -17.54%  FAIL
+    green 64   back        2.739 ->    1.902  -30.56%  FAIL
+    red 255    back       21.725 ->   20.821   -4.16%  FAIL
+    red 128    back        5.723 ->    4.791  -16.29%  FAIL
+    red 64     back        3.079 ->    2.120  -31.15%  FAIL
+    white 255  back       48.137 ->   49.612   +3.06%  FAIL
+    white 128  back       10.852 ->   12.194  +12.37%  FAIL
+    white 64   back        4.523 ->    5.876  +29.91%  FAIL
+  dark: 40.619 -> 40.943 mA
+RESULT: 24 metric(s) outside the gate

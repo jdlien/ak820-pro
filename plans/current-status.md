@@ -1,8 +1,42 @@
 # Current status
 
-Updated 2026-11-01, 18:20. The block below is where things stand, written to
+Updated 2026-11-01, 20:15. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-11-01 night — the row ISR's stage 2 is on white, and its first flash settled the pin order
+
+Stage 2 of [`ROW-ISR-PLAN.md`](ROW-ISR-PLAN.md), the hot path on direct
+registers (CT16B4 the slot scheduler, CT16B0/1/2 one-shot pulse timers,
+the ChibiOS PWM service gone), went on white at 19:20 after codex's two
+reviews (NOT READY on one P1 and twelve P2s, then READY TO FLASH; both
+dispositioned in the plan). **Its first frame was wrong in a way that
+answered the plan's open question Q6:** peach alphas and pink mods from
+the purple and blue theme, and at the boot default's near-white frame
+magenta on exactly the nine keys one row above an LED-less matrix position
+(A, X, C, V, N, M, `]`, PgDn, Right). The mux pins are R, B, G per key
+row, as `config.h` always said; the old driver submitted B, G, then the
+next row's R because its widths reached the LEDs one slot late, and stage
+2's one-shot restart has no such lag. Fixed (`2d5a5d3e7f`), plus the
+verify review's divide in the masked arm section (`b120a2069c`), flashed
+at 19:44 and the holds rerun. **White runs stage 2 (`b120a2069c`, token
+`0x4849bde6`) since 19:44**, in its standing state (Power saver put back by
+hand at 20:09: the runner's settings dump had been taken after its Always
+on, now fixed). Measured
+([`../history/rowisr-stage1-20261101/`](../history/rowisr-stage1-20261101/README.md)):
+the slot rate identical (3745/s), the handler's mean 60 µs against the
+callback's 196 and the CPU share 22% against 73%, no stall, the row gaps
+as before, the loop gap shorter; over 5.8 M slots 401 missed and 24
+pulses omitted, the worst entry latency 105 µs, no epoch loss. Light: at
+full scale within 1% of the base by total (white +3%, each single colour
+4-5% under), and the old driver turns out not to be additive across
+colours (its white 64 was 54% of the sum of its single colours; stage 2's
+is the sum within 1%), so the plan's 3% state-by-state gate cannot be met
+by any one scale: k stays 10 and the gate is restated. JD's eye on the
+colours and his theme's brightness is the open check. Next: the presser's
+bring-up (stage 0's short-tap baseline, stage 1's key gates, stage 2's
+deep sleep and scan-only), the witness's wires and the pulse gates, D3's
+USB long-silence detector, then stage 3.
 
 ## 2026-11-01 evening — the row ISR's stage 1 measured on white: it passes, with one fix
 

@@ -233,12 +233,23 @@ def run(a):
         if devhook(h, 6) is None:
             raise SystemExit("not a dev build: the repaint and PCF loads need HC_DEVHOOK")
         before = {"lighting": lp.read_lighting(h), "health": hp.read_health(h)}
+        pw = devhook(h, 14, [0])
+        before["power"] = {"mode": pw[4], "stage": pw[5], "val_cap": pw[6], "forced": pw[7]}
+    finally:
+        h.close()
+    # The settings and the lighting saved BEFORE the ladder is touched: the
+    # restore at the end replays settings-before.json's live record, power
+    # mode included, after the mode is put back. (A dump taken after the
+    # Always on put Always on back on white at the end of two runs, 11-01.)
+    json.dump(before["lighting"], open(os.path.join(a.out, "lighting-before.json"), "w"), indent=1)
+    subprocess.run([VENV_PY, os.path.join(ROOT, "hostagent", "ak820profiles.py"), "dump",
+                    os.path.join(a.out, "settings-before.json")], check=True)
+    h = hp.open_device()
+    try:
         # The power ladder (dev op 14: [4] mode, [5] stage, [6] the RGB value's
         # cap, [7] a forced stage): Power saver caps the value at 128 and the
         # ladder dims and darkens the board minutes after the last key, which
         # raw HID is not. Always on for the run, the mode put back at the end.
-        pw = devhook(h, 14, [0])
-        before["power"] = {"mode": pw[4], "stage": pw[5], "val_cap": pw[6], "forced": pw[7]}
         def ladder_settles():
             # the stage moves at the ladder's next pass, not in the reply
             for _ in range(20):
@@ -259,9 +270,6 @@ def run(a):
             f"-> Always on for the run" + (", stage forced active" if forced else ""))
     finally:
         h.close()
-    json.dump(before["lighting"], open(os.path.join(a.out, "lighting-before.json"), "w"), indent=1)
-    subprocess.run([VENV_PY, os.path.join(ROOT, "hostagent", "ak820profiles.py"), "dump",
-                    os.path.join(a.out, "settings-before.json")], check=True)
     battery = subprocess.run([VENV_PY, os.path.join(ROOT, "hostagent", "ak820battery.py")],
                              capture_output=True, text=True).stdout
     say("settings and lighting saved; battery:\n" + "\n".join("    " + l for l in battery.splitlines()[:8]))
@@ -276,15 +284,18 @@ def run(a):
 
     h = hp.open_device()
     try:
-        rec["windows"]["idle"] = window(h, "idle", a.window)
-        save()
-        time.sleep(2)
-        rec["windows"]["repaint"] = window(h, "repaint", a.window, load_repaint, "the debug page toggled once a second")
-        save()
-        time.sleep(2)
-        rec["windows"]["pcf"] = window(h, "pcf", a.window, load_pcf(a.window), "clock-chip transactions every 250-300 ms")
-        save()
-        if a.cleanup == "manual":
+        if a.skip_windows:
+            rec["notes"].append("the windows were skipped (--skip-windows)")
+        else:
+            rec["windows"]["idle"] = window(h, "idle", a.window)
+            save()
+            time.sleep(2)
+            rec["windows"]["repaint"] = window(h, "repaint", a.window, load_repaint, "the debug page toggled once a second")
+            save()
+            time.sleep(2)
+            rec["windows"]["pcf"] = window(h, "pcf", a.window, load_pcf(a.window), "clock-chip transactions every 250-300 ms")
+            save()
+        if a.cleanup == "manual" and not a.skip_windows:
             input("\n  >>> the cleanup window: press Enter, then within 10 s run Diagnostics > Write test > Cleanup on the board's menu: ")
             rec["windows"]["cleanup"] = window(h, "cleanup", a.window, None, "a forced consolidation, by hand")
             save()
@@ -419,6 +430,7 @@ def main():
     r.add_argument("--hold-s", type=float, default=40.0)
     r.add_argument("--settle-s", type=float, default=8.0)
     r.add_argument("--skip-holds", action="store_true")
+    r.add_argument("--skip-windows", action="store_true", help="the holds only (a scale calibration's re-run)")
     r.add_argument("--cleanup", choices=("skip", "manual"), default="skip")
     r.add_argument("--power-csv", default=DEFAULT_CSV)
     c = sub.add_parser("compare")

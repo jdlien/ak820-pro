@@ -1,0 +1,38 @@
+=== reflash from the bootloader (Fn+Esc check) 18:51:07 ===
+[18:51:11] bootloader on USB: 1
+firmware : ak820pro-builds/out/via-dev-b3270996d3-20261101-175317.bin
+built    : Nov  1 17:53:17 2026  (262144 bytes)  <- confirm this is your build
+
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[18:51:30] flash exit 0
+[18:51:37] token 0x991e7b11
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+[18:51:38] keymap restore exit 0
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[18:51:38] profiles restore exit 0
+lighting already matches the backup (effect 2, hue 178, sat 219, val 177, speed 231)
+[18:51:39] lighting restore exit 0
+after: power mode 2, lighting {'animation_index': 2, 'hue': 178, 'sat': 219, 'val': 177, 'speed': 231}
+[18:51:39] data off
+[18:51:39] daemon restarted

@@ -46,7 +46,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from ak820health import open_device  # noqa: E402
 
 SET_VALUE, CH, HC, OP = 0x07, 0x13, 0x76, 28
-USAGE = "usage: rowisr_diag.py regs [TIMER|all] [PAGE] | hold MS | skip MS | status | led INDEX R G B | led off  [--json]"
+USAGE = "usage: rowisr_diag.py regs [TIMER|all] [PAGE] | hold MS | skip MS | status | record | led INDEX R G B | led off  [--json]"
 
 
 def xfer(h, sub, args=b""):
@@ -134,7 +134,8 @@ def status_dict(r):
     return {"hold_active": bool(r[4]), "hold_ms_left": u16(r, 5), "row_was_on": bool(r[7]), "holds_done": u16(r, 8),
             "holds_backstopped": u16(r, 10), "holds_cancelled": u16(r, 12), "row_irq": r[14],
             "row_irq_enabled": bool(r[15]), "hold_depth": r[16], "last_hold_overlapped": bool(r[17]),
-            "prime_timed_out": bool(r[18]), "skip_active": bool(r[19]), "skip_ms_left": u16(r, 20)}
+            "prime_timed_out": bool(r[18]), "skip_active": bool(r[19]), "skip_ms_left": u16(r, 20),
+            "hw_fault": bool(r[22])}
 
 
 def print_status(r):
@@ -145,7 +146,8 @@ def print_status(r):
           f"the row line was {'on' if d['row_was_on'] else 'off'} when the last hold began"
           + (";  ⚠️ the last hold OVERLAPPED another holder (the clock chip's transaction): not a measurement" if d['last_hold_overlapped'] else ""))
     print(f"  row IRQ {d['row_irq']} is {'enabled' if d['row_irq_enabled'] else 'DISABLED'} now, hold depth {d['hold_depth']}"
-          + (";  ⚠️ the boot's prime TIMED OUT: Bootmagic scanned an empty matrix" if d['prime_timed_out'] else ""))
+          + (";  ⚠️ the boot's prime TIMED OUT: Bootmagic scanned an empty matrix" if d['prime_timed_out'] else "")
+          + (";  ⚠️ HW FAULT: a timer's reset never completed at init, nothing runs" if d['hw_fault'] else ""))
 
 
 def main():
@@ -156,7 +158,7 @@ def main():
         sys.exit(USAGE)
     cmd = args[0]
     ok = (cmd == "regs" and len(args) <= 3 and all(a == "all" or a.isdigit() for a in args[1:])) or \
-         (cmd in ("hold", "skip") and len(args) == 2 and args[1].isdigit()) or (cmd == "status" and len(args) == 1) or \
+         (cmd in ("hold", "skip") and len(args) == 2 and args[1].isdigit()) or (cmd in ("status", "record") and len(args) == 1) or \
          (cmd == "led" and (args[1:] == ["off"] or (len(args) == 5 and all(a.isdigit() for a in args[1:]))))
     if not ok:
         sys.exit(USAGE)   # before the board is opened: a typo must not cost a raw HID open
@@ -186,6 +188,22 @@ def main():
             else:
                 print(f"{'holding the row interrupt off' if cmd == 'hold' else 'skipping the scan'} for {ms} ms:")
                 print_status(r)
+        elif cmd == "record":   # op 28 sub 5: the handler's record's remainder (stage 2; page 7 has the totals)
+            r = xfer(h, 5, b"")[4:]   # past the reply's header (xfer returns the raw report; status_dict indexes from 4)
+            d = {"omit_run_max": r[0] | r[1] << 8, "spurious": r[2], "late_omit": r[3], "epoch_losses": r[4],
+                 "invalid_services": r[5], "elapsed_min_ticks": r[6] | r[7] << 8, "omit_row": list(r[8:8 + 18]),
+                 "serviced_lo16": r[26] | r[27] << 8}
+            d["elapsed_min_us"] = round(d["elapsed_min_ticks"] / 48.0, 2)
+            if as_json:
+                print(json.dumps(d))
+            else:
+                print(f"longest run of omissions {d['omit_run_max']}, spurious invocations {d['spurious']}, "
+                      f"omissions by the arm deadline {d['late_omit']}, epoch losses {d['epoch_losses']}, "
+                      f"invalid services {d['invalid_services']}, shortest handler {d['elapsed_min_us']} us, "
+                      f"services (low 16 bits) {d['serviced_lo16']}")
+                print("omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):")
+                for k in range(6):
+                    print(f"  key row {k}: R {d['omit_row'][3 * k]:3d}  B {d['omit_row'][3 * k + 1]:3d}  G {d['omit_row'][3 * k + 2]:3d}")
         elif cmd == "status":
             r = xfer(h, 2)
             print(json.dumps(status_dict(r))) if as_json else print_status(r)

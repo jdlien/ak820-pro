@@ -1,0 +1,25 @@
+blit_timeouts            0
+tx_sent                  4
+tx_timeouts              2
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          3
+scan_rate                835
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+slots_elapsed            55554
+serviced_valid           55238
+missed_slots             316
+pulses_emitted           53380
+pulses_omitted           15
+latency_max_us           103.08
+elapsed_mean_us          52.22
+elapsed_max_us           171.94
+elapsed_samples          55248
+
+  the scheduler's record since the health reset (stage 2): the slot is fixed by CT16B4,
+  latency is the handler's entry from the slot boundary, elapsed its entry to exit;
+  missed slots are boundaries the handler did not service, omitted pulses the slots it
+  serviced too late to arm (or across a slot); a dark row is neither

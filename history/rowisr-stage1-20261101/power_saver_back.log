@@ -1,0 +1,39 @@
+=== power saver back + windowed record, 20:09:08 ===
+before: mode 0 stage 0 cap 255 forced 255
+after:  mode 2 stage 3 cap 255 forced 255
+slots_elapsed            5822815
+serviced_valid           5822414
+missed_slots             401
+pulses_emitted           2896726
+pulses_omitted           24
+latency_max_us           104.88
+elapsed_mean_us          3.92
+elapsed_max_us           161.75
+elapsed_samples          5822427
+
+win_secs                 60.02
+win_slots_elapsed        224645
+win_slots_per_s          3742.8
+win_serviced_valid       224645
+win_missed_slots         0
+win_pulses_emitted       0
+win_pulses_omitted       0
+win_elapsed_samples      224645
+win_elapsed_mean_us      47.39
+win_cpu_pct              17.74
+
+  the scheduler's record since the health reset (stage 2): the slot is fixed by CT16B4,
+  latency is the handler's entry from the slot boundary, elapsed its entry to exit;
+  missed slots are boundaries the handler did not service, omitted pulses the slots it
+  serviced too late to arm (or across a slot); a dark row is neither.
+  elapsed_mean_us is cumulative and its sum wraps after 89 s of handler time (about
+  7.6 min of uptime at 52 us a slot): the win_ figures (--window) are the ones to quote
+longest run of omissions 1, spurious invocations 0, omissions by the arm deadline 14, epoch losses 0, invalid services 0, shortest handler 28.52 us, services (low 16 bits) 55525
+omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
+  key row 0: R   1  B   3  G   0
+  key row 1: R   2  B   0  G   0
+  key row 2: R   1  B   2  G   4
+  key row 3: R   0  B   0  G   0
+  key row 4: R   2  B   2  G   2
+  key row 5: R   1  B   0  G   4
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
