@@ -450,6 +450,33 @@ fn sleep_cmd(flags: &[&str]) -> Result<(), String> {
             }
         }
     }
+    // The link trace, where the firmware has one: op 15 with arg 0 only
+    // reads (an arm is 1, a disarm 2). The pages are read only when the ring
+    // is the trace's; the trace stops filling at 52 events, so a read between
+    // pages cannot tear it, except by a new wake, which the caller sees as
+    // a later wake in the next read.
+    let mut status = [0u8; 28];
+    status[..2].copy_from_slice(&[sd::OP_RXTAP, 0]);
+    if let Some(st) = ask(&status)? {
+        if st[4] == sd::RXTAP_TRACE {
+            let mut ring = Vec::with_capacity(208);
+            for page in 0..sd::RXTAP_PAGES {
+                let mut body = [0u8; 28];
+                body[..2].copy_from_slice(&[sd::OP_RXTAP_PAGE, page]);
+                let r = ask(&body)?.ok_or(format!("op 16 page {page} unhandled"))?;
+                if r[4] != page {
+                    return Err(format!("op 16 page {page} answered as page {}", r[4]));
+                }
+                ring.extend_from_slice(&r[6..32]);
+            }
+            match sd::LinkTrace::decode(&st[4..32], &ring)? {
+                Some(t) => print!("{}", t.render()),
+                None => println!("link     no trace"),
+            }
+        } else {
+            println!("link     no trace yet (no wake since the boot, or the bench's tap holds the ring)");
+        }
+    }
     report_drained(&drained);
     Ok(())
 }

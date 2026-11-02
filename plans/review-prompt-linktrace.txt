@@ -1,0 +1,15 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md, which explains the project; read the parts you need. Do not modify anything. Use git read commands inside qmk_firmware-ak820pro.
+
+Review a dev-only measurement build for black (gremlin's board): gremlin/linktrace, two commits on gremlin/ds-wake-fixes 0118d39e67e (black's current build, codex-cleared):
+- 34f02ab50e0: a cherry-pick of the audit's F-002 fix (QMK Command off, 53d589ac580), which build.sh now requires.
+- b5c2268296b: the link trace in keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c. See `git -C qmk_firmware-ak820pro show b5c2268296b`.
+
+Why: over BT on Windows, a key that wakes the board after a long sleep (30+ min) is lost: the host drops the BLE link in the sleep, and the link comes back about a second after the wake (plans/GREMLIN-RESULTS.md section 21, "The waking key was lost"). JD wants the board to hold the key up to ~1.5 s for the link and then send it, and to drop it as today past that. Before designing the hold, this build measures what the module does: after each deep sleep's wake, the first 52 link and TX-queue events, each a u16 of ms since the wake, a kind and an argument (frame type, a 5B's code, never a report's content), in the RX tap's 208-byte ring with no RAM of its own (the dev heap gap is exactly at its 128 B floor). The tap's bool becomes a mode: 0 off, 1 the bench's byte tap (HC_DEVHOOK op 15 arm, unchanged), 2 the trace, which starts in ch582_sleep_wake() (called from sleep.c's recovery_begin(), after the deep sleep's chSysUnlock()). Op 15's reply adds the slot and timer_read32() now.
+
+Check:
+1. Correctness and safety: every LT_* call site is main-loop context (the TX pump, ch582_send_command, the ACK, the parser's 5A and 5B cases, the wake); no ISR or locked caller of timer_read32() (QMK's platforms/chibios/timer.c); bounds of the ring writes (rxtap_slot, CH582_RXTAP_RING - 4); the mode's interplay with ops 15 and 16 (an arm, a disarm, a page read while the trace holds the ring); the non-dev build (the #else spellings; build.sh's daily must still pass and carry nothing new).
+2. That the trace changes no behaviour: no timing that matters to the radio (timer_read32() is a 64-bit divide on the M0; count the calls a wake can cost), no change to what is sent, ACKed, retried or dropped, no RAM.
+3. Whether the events recorded can answer the question: after a long-sleep wake over BT, does the module emit 5B 33/34 (link down) after the waking key's frames, and when does 5B 32 arrive? Is anything missing that the hold's design will need (for example the ACK of the waking report, the order of the key's press and release frames)?
+4. Anything else wrong.
+
+OUTPUT: findings ranked P1/P2/P3 with file:line evidence, then a verdict on flashing this onto black (it is going on now, as JD accepts for dev measurement builds; substantive fixes get a reflash). Be terse.

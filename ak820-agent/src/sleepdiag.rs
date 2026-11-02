@@ -299,9 +299,128 @@ impl Slot {
     }
 }
 
+/// The link trace (dev builds since 11-01, firmware `ch582f_ajazz.c`): after
+/// each deep sleep's wake, the radio link's and the TX queue's first events,
+/// in ms from the wake, in the RX tap's ring. Op 15 with arg 0 reads its
+/// status, op 16 its eight 26-byte pages. Frame types and times only.
+pub const OP_RXTAP: u8 = 15;
+pub const OP_RXTAP_PAGE: u8 = 16;
+pub const RXTAP_PAGES: u8 = 8;
+pub const RXTAP_TRACE: u8 = 2;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LinkTrace {
+    /// timer_read32() now, less the wake's: how long ago the trace began.
+    pub since_wake_ms: u32,
+    /// (ms from the wake, kind, argument)
+    pub events: Vec<(u16, u8, u8)>,
+}
+
+impl LinkTrace {
+    /// `status` is op 15's reply bytes 4..32; `ring` the pages' 26 bytes each,
+    /// in order. None when the ring is not the trace's (off, or the bench's tap).
+    pub fn decode(status: &[u8], ring: &[u8]) -> Result<Option<LinkTrace>, String> {
+        if status.len() < 13 {
+            return Err("short op 15 reply".into());
+        }
+        if status[0] != RXTAP_TRACE {
+            return Ok(None);
+        }
+        let t0 = u32le(status, 1);
+        let used = u16le(status, 7) as usize;
+        let now = u32le(status, 9);
+        if used % 4 != 0 || used > ring.len() {
+            return Err(format!("trace slot {used} does not fit the ring's {} bytes", ring.len()));
+        }
+        let events = ring[..used].chunks(4).map(|e| (u16::from_le_bytes([e[0], e[1]]), e[2], e[3])).collect();
+        Ok(Some(LinkTrace { since_wake_ms: now.wrapping_sub(t0), events }))
+    }
+
+    fn frame(arg: u8) -> String {
+        match arg {
+            0xA1 => "A1 keys".into(),
+            0xA3 => "A3 consumer".into(),
+            0x30 => "A6 30 (2.4G)".into(),
+            0x31..=0x33 => format!("A6 {arg:02X} (BT slot {})", arg - 0x30),
+            0x51 => "A6 51 (pair)".into(),
+            a => format!("{a:02X}"),
+        }
+    }
+
+    pub fn render(&self) -> String {
+        let mut o = format!(
+            "link     the trace from the last wake, {:.3} s before this read: {} events{}\n",
+            self.since_wake_ms as f64 / 1000.0,
+            self.events.len(),
+            if self.events.len() == 52 { " (full: the rest not kept)" } else { "" }
+        );
+        for &(t, kind, arg) in &self.events {
+            let what = match kind {
+                1 => format!(
+                    "wake, the link as the sleep left it: {}",
+                    match arg {
+                        0 => "idle".to_string(),
+                        1 => "linking".into(),
+                        2 => "pairing".into(),
+                        3 => "connected".into(),
+                        4 => "rejected".into(),
+                        a => format!("state {a}"),
+                    }
+                ),
+                2 => format!("queued   {}", Self::frame(arg)),
+                3 => format!("sent     {}", Self::frame(arg)),
+                4 => format!("resent   {}", Self::frame(arg)),
+                5 => format!("ACKed    {}", Self::frame(arg)),
+                6 => format!("gave up  {}", Self::frame(arg)),
+                7 => format!("lost, the queue full: {}", Self::frame(arg)),
+                8 => format!("merged   {}", Self::frame(arg)),
+                9 => format!(
+                    "5B {arg:02X}{}",
+                    match arg {
+                        0x31 => " (advertising)",
+                        0x32 => " (linked)",
+                        0x33 | 0x34 => " (link down, attempting)",
+                        0x36 => " (attempt abandoned)",
+                        _ => "",
+                    }
+                ),
+                10 => "5A taken for a missed 5B 32".into(),
+                k => format!("kind {k} {arg:02X}"),
+            };
+            let at = if t == 0xFFFF { ">65 s".to_string() } else { format!("{t} ms") };
+            o += &format!("  {at:>8}  {what}\n");
+        }
+        o
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn link_trace_decodes_and_renders() {
+        let mut st = [0u8; 28];
+        st[0] = RXTAP_TRACE;
+        st[1..5].copy_from_slice(&1000u32.to_le_bytes());
+        st[7..9].copy_from_slice(&12u16.to_le_bytes());
+        st[9..13].copy_from_slice(&4500u32.to_le_bytes());
+        let mut ring = [0u8; 208];
+        ring[..12].copy_from_slice(&[0, 0, 1, 3, 30, 0, 3, 0xA1, 0xD0, 0x07, 9, 0x32]);
+        let t = LinkTrace::decode(&st, &ring).unwrap().unwrap();
+        assert_eq!(t.since_wake_ms, 3500);
+        assert_eq!(t.events, vec![(0, 1, 3), (30, 3, 0xA1), (2000, 9, 0x32)]);
+        let r = t.render();
+        assert!(r.starts_with("link     the trace from the last wake, 3.500 s before this read: 3 events\n"), "{r}");
+        assert!(r.contains("wake, the link as the sleep left it: connected"), "{r}");
+        assert!(r.contains("    30 ms  sent     A1 keys"), "{r}");
+        assert!(r.contains("  2000 ms  5B 32 (linked)"), "{r}");
+        st[0] = 1;
+        assert_eq!(LinkTrace::decode(&st, &ring).unwrap(), None);
+        st[0] = RXTAP_TRACE;
+        st[7..9].copy_from_slice(&13u16.to_le_bytes());
+        assert!(LinkTrace::decode(&st, &ring).is_err());
+    }
 
     fn slot_bytes(fill: &[(usize, &[u8])]) -> [u8; 28] {
         let mut s = [0u8; 28];
