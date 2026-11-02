@@ -1,0 +1,178 @@
+{
+ "part": "enter",
+ "t0": "10:55:16",
+ "power_before": {
+  "mode": 2,
+  "stage": 0,
+  "cap": 128,
+  "forced": 255,
+  "battery": 1
+ },
+ "lighting_before": {
+  "animation_index": 2,
+  "hue": 178,
+  "sat": 219,
+  "val": 177,
+  "speed": 231
+ },
+ "keys_before": 49,
+ "record_before": {
+  "omit_run_max": 1,
+  "spurious": 1,
+  "late_omit": 31,
+  "epoch_losses": 3,
+  "invalid_services": 0,
+  "elapsed_min_us": 26.6,
+  "omit_row": [
+   8,
+   3,
+   4,
+   7,
+   0,
+   2,
+   4,
+   3,
+   5,
+   4,
+   1,
+   3,
+   5,
+   3,
+   3,
+   2,
+   3,
+   5
+  ],
+  "serviced_lo16": 45601
+ },
+ "power_active": {
+  "mode": 2,
+  "stage": 0,
+  "cap": 128,
+  "forced": 0,
+  "battery": 1
+ },
+ "window_lit": {
+  "win_secs": 15.01,
+  "win_slots_elapsed": 56176,
+  "win_serviced_valid": 56176,
+  "win_missed_slots": 0,
+  "win_pulses_emitted": 56176,
+  "win_pulses_omitted": 0,
+  "win_elapsed_samples": 56176,
+  "win_elapsed_mean_us": 52.47,
+  "win_slots_per_s": 3743.3,
+  "win_cpu_pct": 19.64,
+  "page7_after": {
+   "slots_elapsed": 8364286,
+   "serviced_valid": 8363100,
+   "pulses_emitted": 5434074,
+   "pulses_omitted": 65,
+   "elapsed_sum_ticks": 3190975235,
+   "elapsed_samples": 8363140,
+   "latency_max_ticks": 5034,
+   "elapsed_max_ticks": 9976,
+   "latency_max_us": 104.88,
+   "elapsed_max_us": 207.83,
+   "elapsed_mean_us": 7.95,
+   "missed_slots": 1186
+  }
+ },
+ "arm": {
+  "mask": 1,
+  "applied": 0,
+  "wfi": 0,
+  "scan_only": false
+ },
+ "power_dark": {
+  "mode": 2,
+  "stage": 2,
+  "cap": 255,
+  "forced": 2,
+  "battery": 1
+ },
+ "armed_dark": {
+  "mask": 1,
+  "applied": 1,
+  "wfi": 0,
+  "scan_only": true
+ },
+ "status_scan_only": {
+  "hold_active": false,
+  "hold_ms_left": 0,
+  "row_was_on": false,
+  "holds_done": 0,
+  "holds_backstopped": 0,
+  "holds_cancelled": 0,
+  "row_irq": 20,
+  "row_irq_enabled": true,
+  "hold_depth": 0,
+  "last_hold_overlapped": false,
+  "prime_timed_out": false,
+  "skip_active": false,
+  "skip_ms_left": 0,
+  "hw_fault": false
+ },
+ "window_scan_only": {
+  "win_secs": 15.01,
+  "win_slots_elapsed": 23998,
+  "win_serviced_valid": 23998,
+  "win_missed_slots": 0,
+  "win_pulses_emitted": 0,
+  "win_pulses_omitted": 0,
+  "win_elapsed_samples": 0,
+  "win_elapsed_mean_us": null,
+  "win_slots_per_s": 1599.1,
+  "page7_after": {
+   "slots_elapsed": 8390933,
+   "serviced_valid": 8389747,
+   "pulses_emitted": 5434459,
+   "pulses_omitted": 65,
+   "elapsed_sum_ticks": 3191947247,
+   "elapsed_samples": 8363525,
+   "latency_max_ticks": 5034,
+   "elapsed_max_ticks": 9976,
+   "latency_max_us": 104.88,
+   "elapsed_max_us": 207.83,
+   "elapsed_mean_us": 7.95,
+   "missed_slots": 1186
+  }
+ },
+ "record_scan_only": {
+  "omit_run_max": 1,
+  "spurious": 1,
+  "late_omit": 31,
+  "epoch_losses": 3,
+  "invalid_services": 0,
+  "elapsed_min_us": 26.6,
+  "omit_row": [
+   8,
+   3,
+   4,
+   7,
+   0,
+   2,
+   4,
+   3,
+   5,
+   4,
+   1,
+   3,
+   5,
+   3,
+   3,
+   2,
+   3,
+   5
+  ],
+  "serviced_lo16": 1149
+ },
+ "keys_after": 49,
+ "checks": {
+  "scan_only_in_force": true,
+  "slot_rate_1600": true,
+  "no_pulse": true,
+  "record_clean": true
+ },
+ "t_end": "10:55:49"
+}

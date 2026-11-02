@@ -66,10 +66,16 @@ stage 2 gate), so k stays 10 and the state-by-state 3% is restated.
 JD's eye, 20:45: the theme right on every key, and a uniform white with
 nothing over the nine holes at zero saturation; his lighting back from the
 backup at 21:13, once the wake-gate session's case 3 (two deep-sleep
-wakes on his key with the RGB lit, no reset) had released white. Owed:
-scan-only, the rest of deep sleep's wakes and the wake with the RGB dark
-(the review's bring-up list; case 3's two wakes count); the witness's
-pulse gates; D3's USB detector.** The runner learned two things on the way: the power ladder
+wakes on his key with the RGB lit, no reset) had released white.
+**Scan-only and the wake with the RGB dark measured 11-02 morning, both
+pass** (the history README, "Scan-only on white"): scan-only in force at
+1,599 slots/s with no pulse while the ladder was held dark, JD's key seen
+under it, the exit back to 3,743/s with pulses in the next window; a
+Power-saver deep sleep (118 s) woken by his key with the lights straight
+up in his theme by his eye, no reset, no stray, one epoch loss for the
+sleep as designed, the handler at 3,743/s and 52.5 µs after. Owed: deep
+sleep's wakes with the waking key kept (case 3's two and the 11-02 wake
+count as wakes only); the witness's pulse gates; D3's USB detector.** The runner learned two things on the way: the power ladder
 must be held at Always on for a run (Power saver caps the value and
 darkens an idle board, and raw HID is not activity), and a deep-sleeping
 board is not on USB (JD's key wakes it; the charger pin does too, for a
@@ -1059,7 +1065,16 @@ full-scale white; the gate is read as the four full-scale states' total
 within 3%, met, and the per-state figures are the record.** The witness
 measures the old pulse shapes if the difference ever matters; JD's eye on
 his theme (the purple and blue, val 177) decides whether a per-colour
-table is wanted. Gates: no PWM object or
+table is wanted. **Measured 11-02 morning** (the history README,
+"Scan-only on white"): scan-only on dev in force at 1,599 slots/s with no
+pulse while the ladder was held dark, JD's key seen under it, the exit by
+the RGB path back to 3,743/s with pulses in the next window and the
+lighting unchanged; a deep sleep entered with the RGB dark (Power saver's
+own ladder, 118 s asleep) woken by JD's key with the lights straight up in
+his theme by his eye, no reset, no stray, one epoch loss for the sleep as
+designed, the handler at 3,743/s and 52.5 µs in the 20 s after; the Rust
+decoder's page 7 read beside the Python's in the same read (finding 12).
+Gates: no PWM object or
 vector retained (the linker map); the LED part of the handler ≤ 10 µs and
 the complete handler within stage 0b's attribution; the callback metric
 drops accordingly; **the waveform witness** shows, at this clock, one pulse per
@@ -2175,3 +2190,24 @@ the bring-up's owed list beside the colour finding above.
   the 219 of the 20:10 dump: unexplained (a key after the check, or a
   wake re-applying a flushed record), in the backlog. White in its
   standing state since 21:13:45.
+- 11-01 22:39: scan-only's first attempt found white asleep (JD's
+  "pressed" had been from memory); data off, the daemon back.
+- 11-02 10:55-11:05: **scan-only on white, pass.** Light sleep's mask bit
+  0 (op 14 sub 3) with the stage forced LIGHTS_OFF (sub 2): in force 1.5 s
+  after the force, 1,599 slots/s, 0 missed, no pulse emitted or omitted,
+  the record unchanged; JD's key seen with scan-only in force at the read
+  (the one-run `scan_only_key.sh`, 11:04:26, after the first attempt's
+  "press now" handshake outlived the mask's 255 s limit); the exit by
+  forcing ACTIVE, 3,743/s with pulses in the next window, the lighting
+  read back unchanged, the force released. The handler does not sample
+  elapsed in scan-only (page 7's window mean is None there).
+- 11-02 11:07-11:10: **the wake with the RGB dark, pass.** Power saver's
+  own sleep at 11:07:30 (3.29 mA), JD's key at ~11:09:30, the lights
+  straight up in his theme by his eye; the read: slept 118 s, woke on the
+  key, 0 strays, no reset, the fourth sleep since the boot, one epoch loss
+  more (4, one per sleep), spurious 3 (two more around the sleep, benign),
+  the 20 s window 3,742.9/s, 0 missed, 52.47 µs; Hutch's Rust `ak820
+  health --sched --window 15` (ae72d2b) decoded the same page in the same
+  read. The record since the boot (15.4 h, 14.6 asleep): 10.42 M slots,
+  1,599 missed, 83 omitted, latency max 104.9 µs, elapsed max 207.8 µs,
+  no stall. White released 11:10:31 in its standing state.

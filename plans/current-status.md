@@ -1,8 +1,36 @@
 # Current status
 
-Updated 2026-11-01, 22:35. The block below is where things stand, written to
+Updated 2026-11-02, 11:20. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-11-02 morning — stage 2's scan-only and the wake with the RGB dark pass on white
+
+Two of the stage 2 bring-up's owed checks, each on one key from JD
+([`../history/rowisr-stage1-20261101/`](../history/rowisr-stage1-20261101/README.md),
+"Scan-only on white"). **Scan-only:** light sleep's mask bit 0 with the
+ladder held at LIGHTS_OFF put the row handler into scan-only within
+1.5 s: 1,599 slots a second (the 625 µs slot), no missed slot, no pulse
+emitted or omitted, the record unchanged; JD's key was seen with
+scan-only in force; forcing ACTIVE took it out at once, 3,743/s with
+pulses in the next window and the lighting unchanged. The first
+attempt's "press now" handshake outlived the mask's 255 s limit, so the
+check became one script that watches the key count itself. **The wake
+with the RGB dark:** Power saver's own deep sleep at 11:07:30, JD's key
+two minutes later, the lights straight up in his theme by his eye; the
+read after it: slept 118 s, woke on the key, no stray, no reset, one
+epoch loss for the sleep as designed, the handler at 3,743/s and 52.5 µs
+in the 20 s after. Hutch's Rust `ak820 health --sched --window`
+(`ae72d2b`) decoded page 7 on the board beside the Python. The record
+since the 19:44 boot (15.4 h, 14.6 asleep, 4 sleeps): 10.42 M slots,
+1,599 missed, 83 omitted, latency max 104.9 µs, elapsed max 207.8 µs,
+3 spurious invocations (benign by design), no stall. White in its
+standing state since 11:10:31; Hutch has it next for the long-sleep key
+test. Still owed on stage 2: deep sleep's wakes with the waking key kept,
+the witness's pulse gates and the long-gap injections (the presser and
+the witness's wires first), D3's USB long-silence detector. Next
+hands-free: D3's detector, the injection ops with the 32-bit generation,
+the warm windows.
 
 ## 2026-11-01 night — the row ISR's stage 2 is on white, and its first flash settled the pin order
 

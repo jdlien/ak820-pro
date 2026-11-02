@@ -148,8 +148,9 @@ cycle late), which stage 2's one-shot restart does not have, so the first
 build rendered every frame rotated. Light at full scale within 1% of the
 base by total; the old driver was not additive across colours (its white
 64 was 54% of the sum of its single colours), so no one scale matches it
-state by state. Owed on it: JD's eye on the colours, scan-only, deep
-sleep's wakes, the wake with the RGB dark, the witness's pulse gates.
+state by state. Owed on it: deep sleep's wakes with the waking key kept, the
+witness's pulse gates (JD's eye, scan-only and the wake with the RGB
+dark passed, 11-01 and 11-02 morning).
 **Before it, from 18:09 11-01: stage 1 plus the NO_LED fix,
 `b3270996d3`** (dev, token `0x991e7b11`): stage 1's A/B against the v0.3.0 candidate
 passed every hands-free gate within 1.3% once the fix was in both builds

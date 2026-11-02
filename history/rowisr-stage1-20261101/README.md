@@ -253,6 +253,74 @@ stray. Owed on it: scan-only, the rest of deep sleep's wakes and the wake
 with the RGB dark (the verify review's bring-up list); the witness's
 pulse gates.
 
+### Scan-only on white (11-02 morning, `scan_only_check.sh`, `scan_only_key.sh`)
+
+The dev build's light-sleep mask bit 0 (op 14 sub 3, `sleep.c`'s
+`light_task`) asks the row handler for scan-only while the RGB is dark;
+the stage forced to LIGHTS_OFF (op 14 sub 2) makes it dark. Measured over
+the data line with the daemon paused, the board awake on battery since
+the 19:44 boot (the lights dark on purpose for the minutes it took, which
+JD saw):
+
+| | lit, the ladder held ACTIVE | scan-only | lit again after the exit |
+|---|---|---|---|
+| slots a second (page 7, 10-15 s windows) | 3743.3 | 1598.9-1599.1 (the 625 µs slot) | 3742.8-3743.0 |
+| missed slots | 0 | 0 | 0 |
+| pulses emitted / omitted | 56,176 / 0 | 0 / 0 | 56,168-56,175 / 0 |
+| handler mean, CPU share | 52.5 µs, 19.6% | not sampled (the LED path samples) | 52.6 µs, 19.7% |
+
+The mask took the moment the stage went dark (`applied` 1 and scan-only
+in force 1.5 s after the force) and left the moment the stage was forced
+ACTIVE, the exit by the RGB path with the mask still set (`applied` 0,
+scan-only off, the lit rate and the pulses back in the next window, the
+columns taken back at once: no wrong-colour or stale row seen). **JD's
+key under scan-only (11:04:26, 74 s after the arm): the key count grew
+by one with scan-only in force at the read** (the sub-3 reply carries the
+state before its own set, so it says what was in force as the key was
+seen). The record was unchanged across both runs (spurious 1, epoch
+losses 3, invalid services 0, all from the night, below), the lighting
+read back unchanged (h178 s219 v177), the force released and Power saver
+read back at the end; `scan-only-key.json`, `scan-only-key.log`. The
+first attempt (`scan-only-enter.json`, `-exit.json`, `scan-only-check.log`,
+10:55-11:01) passed its entry and exit but could not place JD's keys
+inside the mask's 255 s limit (a byte of seconds; the "press now"
+handshake outlived it, and the mask had lapsed by the exit's read), so
+the one-run script watches the key count itself and re-arms the mask
+every 200 s. The night before, at 22:39, the same script found the board
+asleep: JD's "pressed" had been from memory.
+
+### The wake with the RGB dark (11-02, 11:07-11:10, `wake_read.sh`)
+
+After the scan-only check white idled in Power saver: dim at 60 s, dark at
+180 s, deep sleep at 11:07:30 (the logger: 3.29 mA), so the sleep began
+with the RGB dark, as every Power-saver sleep does. JD's key at about
+11:09:30, and by his eye the lights came straight up in his theme with
+nothing else first (the wake's dark-frame handling, the 10-24 fix, on
+stage 2's driver). The read inside the next minute (`wake-dark-read.json`,
+`wake-dark-read.log`): the deep-sleep record slept 118 counted s and woke
+on the key, 0 strays, no reset (the watchdog flags clear; uptime 2,955 s
+plus 52,590 s slept is the time since the 19:44 boot); the sleep page's
+fourth sleep since the boot; the row handler's record one epoch loss more
+(4, one per sleep, INVALID on entry as designed) and two more spurious
+invocations (3, below); the 20 s window 3,742.9 slots/s, 0 missed, 0
+omitted, 52.47 µs mean, 19.6% share: the handler as before the sleep.
+Hutch's Rust decoder (`ak820 health --sched --window 15`, `ae72d2b`) read
+the same page in the same read, its window 3,742.8/s and 52.46 µs: the
+parity check the stage 2 review's finding 12 asked for, done on a board.
+The key kept across the wake is not shown by this (the sleep record's
+`key_gain` counts only on a bench-armed sleep); that gate stays owed.
+
+**The record since the boot (19:44 11-01 to 11:10 11-02: 15.4 h, 14.6 of
+them asleep, 4 deep sleeps, case 3's two re-attaches, the holds and the
+scan-only runs):** 10.42 M slots, 1,599 missed (0.015%), 83 pulses
+omitted, the longest run of omissions 1, latency max 104.9 µs, elapsed
+max 207.8 µs (161.8 at 20:10 11-01: a longer run sometime in the night,
+unattributed), elapsed min 26.6 µs, epoch losses 4 (the sleeps), spurious
+invocations 3 (a second entry inside a slot already serviced, counted and
+left without a pulse, `rowisr.c`'s step 1; one in the night, two around
+the 11:07 sleep or its wake; benign by design, the count is the
+diagnostic), invalid services 0, no stall >= 25 ms, loop gap max 8 ms.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
@@ -261,6 +329,7 @@ pulse gates.
 - `fix_check.sh`, `fix_check.log`: the fix's flash and holds; `base_fix_check.sh`, `base_fix_check.log`: the base plus the fix, and stage 1 plus the fix back.
 - Stage 2: `flash-stage2.log`, `run-stage2.log`, `stage2.json`, `compare-stage2.txt`, `sched-after-stage2-flash.txt`, `health-after-stage2-flash.txt`, `sched-after-stage2-run.txt`, `record-after-stage2-run.txt` (its sub-5 fields misread by 4 bytes, see above); the fix: `flash-stage2fix.log`, `run-stage2fix.log`, `stage2fix.json`, `compare-stage2fix.txt`, `sched-after-stage2fix.txt`; `power_saver_back.sh`, `power_saver_back.log`, `settings-after-mode.json`; `lighting-restore.log`, the backup put back at 21:13.
 - `battery-before.txt`, `battery-after.txt`, `health-after-flash.txt`.
+- 11-02: `scan_only_check.sh` (enter/exit, the first attempt: `scan-only-enter.json`, `scan-only-exit.json`, `scan-only-check.log`), `scan_only_key.sh` (the one-run check: `scan-only-key.json`, `scan-only-key.log`), `wake_read.sh` (`wake-dark-read.json`, `wake-dark-read.log`).
 
 ## Lessons
 

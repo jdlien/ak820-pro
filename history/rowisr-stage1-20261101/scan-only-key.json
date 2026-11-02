@@ -1,0 +1,264 @@
+{
+ "t0": "11:03:00",
+ "power_before": {
+  "mode": 2,
+  "stage": 1,
+  "cap": 64,
+  "forced": 255,
+  "battery": 1
+ },
+ "lighting_before": {
+  "animation_index": 2,
+  "hue": 178,
+  "sat": 219,
+  "val": 177,
+  "speed": 231
+ },
+ "record_before": {
+  "omit_run_max": 1,
+  "spurious": 1,
+  "late_omit": 32,
+  "epoch_losses": 3,
+  "invalid_services": 0,
+  "elapsed_min_us": 26.6,
+  "omit_row": [
+   8,
+   3,
+   4,
+   7,
+   0,
+   2,
+   4,
+   3,
+   5,
+   5,
+   1,
+   3,
+   5,
+   3,
+   3,
+   2,
+   3,
+   5
+  ],
+  "serviced_lo16": 30722
+ },
+ "arm": {
+  "mask": 1,
+  "applied": 0,
+  "wfi": 0,
+  "scan_only": false
+ },
+ "armed_dark": {
+  "mask": 1,
+  "applied": 1,
+  "wfi": 0,
+  "scan_only": true
+ },
+ "power_dark": {
+  "mode": 2,
+  "stage": 2,
+  "cap": 255,
+  "forced": 2,
+  "battery": 1
+ },
+ "window_scan_only": {
+  "win_secs": 10.0,
+  "win_slots_elapsed": 15996,
+  "win_serviced_valid": 15996,
+  "win_missed_slots": 0,
+  "win_pulses_emitted": 0,
+  "win_pulses_omitted": 0,
+  "win_elapsed_samples": 0,
+  "win_elapsed_mean_us": null,
+  "win_slots_per_s": 1598.9,
+  "page7_after": {
+   "slots_elapsed": 9487626,
+   "serviced_valid": 9486405,
+   "pulses_emitted": 5808012,
+   "pulses_omitted": 66,
+   "elapsed_sum_ticks": 539442349,
+   "elapsed_samples": 9041791,
+   "latency_max_ticks": 5034,
+   "elapsed_max_ticks": 9976,
+   "latency_max_us": 104.88,
+   "elapsed_max_us": 207.83,
+   "elapsed_mean_us": 1.24,
+   "missed_slots": 1221
+  }
+ },
+ "keys_start": 213,
+ "key": {
+  "t": "11:04:26",
+  "after_s": 74.4,
+  "keys_delta": 1,
+  "light_at_key": {
+   "mask": 1,
+   "applied": 1,
+   "wfi": 0,
+   "scan_only": true
+  },
+  "power_at_key": {
+   "mode": 2,
+   "stage": 2,
+   "cap": 255,
+   "forced": 2,
+   "battery": 1
+  }
+ },
+ "record_after_key": {
+  "omit_run_max": 1,
+  "spurious": 1,
+  "late_omit": 32,
+  "epoch_losses": 3,
+  "invalid_services": 0,
+  "elapsed_min_us": 26.6,
+  "omit_row": [
+   8,
+   3,
+   4,
+   7,
+   0,
+   2,
+   4,
+   3,
+   5,
+   5,
+   1,
+   3,
+   5,
+   3,
+   3,
+   2,
+   3,
+   5
+  ],
+  "serviced_lo16": 37179
+ },
+ "window_scan_only_2": {
+  "win_secs": 10.0,
+  "win_slots_elapsed": 15997,
+  "win_serviced_valid": 15997,
+  "win_missed_slots": 0,
+  "win_pulses_emitted": 0,
+  "win_pulses_omitted": 0,
+  "win_elapsed_samples": 0,
+  "win_elapsed_mean_us": null,
+  "win_slots_per_s": 1599.1,
+  "page7_after": {
+   "slots_elapsed": 9622648,
+   "serviced_valid": 9621427,
+   "pulses_emitted": 5808012,
+   "pulses_omitted": 66,
+   "elapsed_sum_ticks": 539442349,
+   "elapsed_samples": 9041791,
+   "latency_max_ticks": 5034,
+   "elapsed_max_ticks": 9976,
+   "latency_max_us": 104.88,
+   "elapsed_max_us": 207.83,
+   "elapsed_mean_us": 1.24,
+   "missed_slots": 1221
+  }
+ },
+ "after_force_active": {
+  "light": {
+   "mask": 1,
+   "applied": 0,
+   "wfi": 0,
+   "scan_only": false
+  },
+  "power": {
+   "mode": 2,
+   "stage": 0,
+   "cap": 128,
+   "forced": 0,
+   "battery": 1
+  }
+ },
+ "window_exit": {
+  "win_secs": 15.01,
+  "win_slots_elapsed": 56175,
+  "win_serviced_valid": 56175,
+  "win_missed_slots": 0,
+  "win_pulses_emitted": 56175,
+  "win_pulses_omitted": 0,
+  "win_elapsed_samples": 56175,
+  "win_elapsed_mean_us": 52.59,
+  "win_slots_per_s": 3743.0,
+  "win_cpu_pct": 19.68,
+  "page7_after": {
+   "slots_elapsed": 9684355,
+   "serviced_valid": 9683129,
+   "pulses_emitted": 5869594,
+   "pulses_omitted": 66,
+   "elapsed_sum_ticks": 694932501,
+   "elapsed_samples": 9103392,
+   "latency_max_ticks": 5034,
+   "elapsed_max_ticks": 9976,
+   "latency_max_us": 104.88,
+   "elapsed_max_us": 207.83,
+   "elapsed_mean_us": 1.59,
+   "missed_slots": 1226
+  }
+ },
+ "record_exit": {
+  "omit_run_max": 1,
+  "spurious": 1,
+  "late_omit": 32,
+  "epoch_losses": 3,
+  "invalid_services": 0,
+  "elapsed_min_us": 26.6,
+  "omit_row": [
+   8,
+   3,
+   4,
+   7,
+   0,
+   2,
+   4,
+   3,
+   5,
+   5,
+   1,
+   3,
+   5,
+   3,
+   3,
+   2,
+   3,
+   5
+  ],
+  "serviced_lo16": 49358
+ },
+ "lighting_after": {
+  "animation_index": 2,
+  "hue": 178,
+  "sat": 219,
+  "val": 177,
+  "speed": 231
+ },
+ "checks": {
+  "scan_only_in_force": true,
+  "slot_rate_1600": true,
+  "no_pulse": true,
+  "key_seen_in_scan_only": true,
+  "exit_leaves_scan_only": true,
+  "lit_rate_back": true,
+  "record_clean": true,
+  "lighting_unchanged": true
+ },
+ "mask_off": {
+  "mask": 0,
+  "applied": 0,
+  "wfi": 0,
+  "scan_only": false
+ },
+ "power_final": {
+  "mode": 2,
+  "stage": 0,
+  "cap": 128,
+  "forced": 255,
+  "battery": 1
+ },
+ "t_end": "11:04:53"
+}
