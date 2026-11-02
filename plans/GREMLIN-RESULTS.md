@@ -2109,6 +2109,45 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     sleeps' ~720 s (counted x 1.118) is the time since the 10-31 flash
     within ~70 s. Case 2 passes. With case 3 on white (21:13 11-01,
     `history/wake-case3-20261101/`), only case 4 is left.
+- **The gate's case 4: gremlin's host sleep (S3), its resume, and the
+  keyboard's remote wake** (11-01 21:41-22:02, black, `0118d39e67e`, on
+  USB power, so no deep sleep: the driver's suspend and resume and the
+  dev build's light sleep). Five sleeps, from the System log's
+  Kernel-Power 42 and the resume's clock step (the 107 is the S3
+  artifact), the wake source from `powercfg /lastwake` (the
+  Power-Troubleshooter event stopped logging after 09-07):
+
+  | Sleep | Asleep | Black | Woken by |
+  |---|---|---|---|
+  | 1 | 21:41:05-21:43:18 | slider BT, on the power-switched hub (`05E3:0610`) | the power button: neither black's key nor the mouse (Bolt, behind the same hub) woke it |
+  | 2 | 21:47:32-21:51:35 | moved to a back USB-A port (the AMD chipset's root hub), the slider to cable by then | unclear: JD's key, by JD's account, but black came up from a cold power-on (RSTST `0x11`, a power loss, never firmware) within a few seconds of the wake and enumerated at 21:51:41; on cable it has no pack power, so the port's power went away in that sleep or the slider moved |
+  | 3 | 21:52:30-21:53:24 | slider cable, back port | the power button: JD's key did not wake it |
+  | 4 | 21:58:23-21:58:35 | the same | JD's Ctrl |
+  | 5 | 21:59:29-22:01:55 | the same | JD's key: a device, the CPU's PCIe root port `1022:14DB` `...&0&11`, which is the chipset's upstream port and so black's controller's path (the USB4 router, on `...&0&12`, also listed) |
+
+  - **The remote wake works**, on the back port in USB mode: sleeps 4
+    and 5 (5 attributed to black's path; the mouse was not touched).
+    Sleep 3's miss is unexplained: black had enumerated there 49 s
+    before, and when JD's key went in is not known. On the hub,
+    neither the keyboard nor the mouse woke the PC: a host-side path
+    limit, not the board's.
+  - **The host's resume:** after each, black stayed enumerated (no
+    absent in the daemon's log, only 3 s of "unresponsive" while
+    Windows resumed), and the raw-HID clock synced (21:43:20 at once;
+    after 3 and 5 the first write was aborted mid-resume and the next
+    periodic sync took). No reset in sleeps 1, 3, 4 and 5. Two cold
+    power-ons, both power losses (`PORRSTF`), not crashes: ~21:51:30 at
+    sleep 2's wake (above), and 22:03:14, the cable moved back to the
+    hub with the slider on cable (absent 22:02:57, present 22:03:16 on
+    `05E3:0610`).
+  - **JD:** "the first keystroke didn't really seem to register when
+    it came back": most likely Windows' lock screen, whose first key
+    raises the curtain and is not typed.
+  - On black's pre-F-007 build the remote wake fires on any key; on
+    v0.3.1 only when the keys go over USB (the slider on cable), as JD
+    ran it. This run tests the mechanism, not F-007's guard (Buzz).
+    Case 4 passes, and with it codex's gate: case 1 (10-31), 3 (white),
+    2 and 4 (11-01).
   - **The census** (slot 11): 34 handler entries, 0 USB, only CT16B1
     and CT16B3, the last CT16B3. At the unmask `INSTS` was 0 (no
     `BUS_SUSPEND` this time), `INTEN` had `BUS_IE`, `USB_IE` and

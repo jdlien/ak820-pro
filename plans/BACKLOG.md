@@ -287,7 +287,10 @@ codex's four USB cases; case 1, a plug-in after a cable-out wake, passed
 on black at 15:28 with both bits off at the wake as the driver left
 them (GREMLIN-RESULTS §21). Case 3 passed on white at 21:13 11-01
 (`history/wake-case3-20261101/`) and case 2, the cable's insertion
-waking the sleeping board, on black at 21:37 11-01 (§21). Case 4 left.
+waking the sleeping board, on black at 21:37 11-01 (§21), and case 4,
+gremlin's S3 with the key's remote wake (on a back port; the
+power-switched hub carries no wake for any device) and the host's
+resume, at 22:02 11-01 (§21). The gate is complete.
 
 
 ## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured

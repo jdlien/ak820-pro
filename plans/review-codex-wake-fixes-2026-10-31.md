@@ -65,7 +65,14 @@ once the hardware gate (4, below) passes.
    counted s, both bits off at the wake as the driver left them, the
    host's frames inside the recovery (no re-attach), enumerated 2 s
    after the plug-in and the clock synced over raw HID, with no reset.
-   Case 4 is left.
+
+   Case 4 passed on black at 22:02 11-01 (GREMLIN-RESULTS section 21):
+   gremlin's S3 woken by black's key in USB mode on a back port (twice;
+   one earlier key did not wake it, unexplained), and by the power
+   button with black staying enumerated and the clock syncing over raw
+   HID after; no reset in any host sleep. Through gremlin's
+   power-switched hub nothing woke the PC, the mouse included. **The
+   gate is complete.**
 
    Case 3 passed on white at 21:03-21:13 11-01, on the row ISR's stage 2
    (`b120a2069c`, v0.3.1's USB and sleep code), in two forms: data on to the
