@@ -52,7 +52,7 @@ shows the guard's or the frame counter's verdict (`record`, `usb`; health
 page 7). The host sees no replies meanwhile. `report` (subs 8 and 9) gives
 the last silence as the spin measured it and the extension's copied state
 before and 2 ms after it: a loss generation moved across it is one loss,
-the guard's if its last rejected gap moved too, otherwise the frame
+the guard's if its rejection count moved too, otherwise the frame
 counter's (compare `usb`'s counts); an unchanged generation with the
 extension's reading far short of the spin's is the alias past the guard,
 which the frame counter must catch on USB and nothing catches off it.
@@ -287,7 +287,7 @@ def main():
                 print(json.dumps(d))
             else:
                 verdict = ("no loss across it" if not d["gen_delta"] else
-                           f"a loss across it, the guard's (its rejected gap moved: {d['guard_gap1_ms']} ms)" if d["guard_rejected"] else
+                           f"a loss across it, the guard's (its count moved; the gap it rejected: {d['guard_gap1_ms']} ms)" if d["guard_rejected"] else
                            "a loss across it, not the guard's (the frame counter's or an exclusion's: see `usb`)")
                 print(f"the last silence: asked {d['us'] / 1000} ms, the spin measured {d['measured_ms']} ms ({d['ticks']} ticks), "
                       f"TC {d['tc0']} -> {d['tc1']}; the extension read {d['ext_delta_ms']} ms across it (its stamps {d['stamp0']} -> {d['stamp1']}), "

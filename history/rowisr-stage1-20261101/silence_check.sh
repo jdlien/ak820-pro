@@ -123,6 +123,13 @@ for ms, g in BATT_CASES:
                            "usb_after": b["usb"], "pass": ok})
     log(f"battery {ms} ms: measured {meas} ms; losses {d['epoch_losses']}, of them bus events {d['usb_events']}, the silence's own {own} "
         f"(expected {g}), frame rejects {d['usb_rejects']}, spurious {d['spurious']}; usb now {b['usb']['usb_state']} -> {'PASS' if ok else 'FAIL'}")
+# The health counters reset at the end (the row record with them): the next deep sleep and JD's key then show
+# whether the spurious invocations track a wake (wake_read.sh reads the record after it).
+h = hp.open_device()
+try:
+    hp.reset_counters(h); res["counters_reset_at"] = time.strftime("%H:%M:%S"); log("health counters reset (the row record with them)")
+finally:
+    h.close()
 res["t_end"] = time.strftime("%H:%M:%S")
 res["pass"] = all(c.get("pass") for c in res["usb"]) and all(c.get("pass") for c in res["battery"])
 json.dump(res, open(f"{D}/silence-check.json", "w"), indent=1)
