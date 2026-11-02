@@ -2278,4 +2278,8 @@ unchanged; the watchdog's timeout is not a guarantee, as the plan says.
   stopped, a rejection skipping the spurious check), all fixed with the
   P2s in the commit after `fdbad7e4a5` (dispositions above); the length in
   microseconds and the sub 8 report; dev heap gap 488 B. The verify
-  review asked.
+  review asked (`review-prompt-row-isr-usb-detector-verify.txt`).
+- 11-02 11:55: the silence's rising edge brought to a load, a branch and
+  a store after the mask (`53a432e7e6`, the disassembly checked); the
+  flash candidate `via-dev-53a432e7e6-20261102-115518.bin`, token
+  `0xe50c9e75`, heap gap 488 B; `row-isr` pushed.
