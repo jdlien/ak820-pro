@@ -64,10 +64,12 @@ the worst latency 105 µs, no epoch loss. Light at full scale within 1% of
 the base by total; the base is not additive across colours (below, the
 stage 2 gate), so k stays 10 and the state-by-state 3% is restated.
 JD's eye, 20:45: the theme right on every key, and a uniform white with
-nothing over the nine holes at zero saturation. Owed: scan-only, deep
-sleep's wakes and the wake with the RGB dark (the review's bring-up list;
-the wake-gate session's case 3 on white counts toward the wakes); the
-witness's pulse gates; D3's USB detector.** The runner learned two things on the way: the power ladder
+nothing over the nine holes at zero saturation; his lighting back from the
+backup at 21:13, once the wake-gate session's case 3 (two deep-sleep
+wakes on his key with the RGB lit, no reset) had released white. Owed:
+scan-only, the rest of deep sleep's wakes and the wake with the RGB dark
+(the review's bring-up list; case 3's two wakes count); the witness's
+pulse gates; D3's USB detector.** The runner learned two things on the way: the power ladder
 must be held at Always on for a run (Power saver caps the value and
 darkens an idle board, and raw HID is not activity), and a deep-sleeping
 board is not on USB (JD's key wakes it; the charger pin does too, for a
@@ -2164,3 +2166,12 @@ the bring-up's owed list beside the colour finding above.
   purple) and, with the saturation taken to zero by keys, a uniform
   white with no tint over the nine holes. Both visual gates pass; the
   lighting to be put back from the backup once white is free.
+- 11-01 21:13: the wake-gate session released white after its case 3
+  (two deep-sleep wakes on JD's key with the RGB lit, re-enumerated
+  within 4 s, no reset: they count toward stage 2's wakes;
+  `history/wake-case3-20261101/`). JD's lighting put back from the backup
+  (`lighting-restore.log`; hue 178, sat 219, val 177, speed 231 read
+  back). The board read sat 191 before the restore, neither JD's 0 nor
+  the 219 of the 20:10 dump: unexplained (a key after the check, or a
+  wake re-applying a flushed record), in the backlog. White in its
+  standing state since 21:13:45.

@@ -889,3 +889,17 @@ omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
 live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
 [20:10:09] data off
 [20:10:09] daemon restarted
+=== lighting restore after JD's white check, 21:13:40 ===
+backup: {"animation_index":2,"hue":178,"sat":219,"val":177,"speed":231}
+daemon paused
+data on
+board present after 4 s
+before:
+board : effect 2, hue 178, sat 191, val 177, speed 231
+backup: effect 2, hue 178, sat 219, val 177, speed 231   (DIFFERENT)
+lighting restored: effect 2, hue 178, sat 219, val 177, speed 231
+after:
+board : effect 2, hue 178, sat 219, val 177, speed 231
+backup: effect 2, hue 178, sat 219, val 177, speed 231   (same)
+data off
+daemon restarted 21:13:45

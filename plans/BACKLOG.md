@@ -25,6 +25,23 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## The saturation read 191 after a keyed change to 0 and two deep-sleep wakes (2026-11-01) -- unexplained, noted
+
+On white, JD took the saturation of his Alphas/Mods theme (hue 178, sat
+219, val 177) to zero from the keyboard at 20:45 (his layout's Fn+`,`;
+stage 2's uniform-white check, `history/rowisr-stage1-20261101/`). Two
+deep-sleep wakes on a key followed (the wake gate's case 3, 21:03-21:13).
+At 21:13 the lighting channel read sat 191, neither the 0 he saw nor the
+219 the 20:10 settings dump had held; the restore from
+`~/Documents/ak820pro-lighting.json` put 219 back
+(`history/rowisr-stage1-20261101/lighting-restore.log`). Candidates: a
+key after the check (JD was not asked at the time); a wake re-applying a
+flushed live record over the keys' change (the profiles' live record is
+applied before its commit since v0.3.0, so the order at a wake is worth
+reading); or the keyed change's deferred EEPROM flush against the sleep.
+Not chased. Ten minutes at a board settles it: `ak820lighting.py show`,
+a keyed change, a deep sleep and a key, `show` again.
+
 ## The firmware audit of 10-31 -- fixed on `audit-fixes` but for F-008, F-033, F-035 and the bench's F-045; for v0.3.0
 
 A multi-agent audit of the whole firmware ([`AUDIT-2026-10-31.md`](AUDIT-2026-10-31.md): 15 reviewers, 8 libFuzzer targets, a refute-then-test verifier per finding; the verifiers' harnesses on Buzz in `~/code/ak820pro-audit-20261031/`). 49 unique findings: 1 critical, 1 high, 16 medium, 26 low confirmed or plausible, 4 for the bench, 1 refuted. No memory-safety bug in the board's own code.

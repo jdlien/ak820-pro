@@ -1,0 +1,14 @@
+=== lighting restore after JD's white check, 21:13:40 ===
+backup: {"animation_index":2,"hue":178,"sat":219,"val":177,"speed":231}
+daemon paused
+data on
+board present after 4 s
+before:
+board : effect 2, hue 178, sat 191, val 177, speed 231
+backup: effect 2, hue 178, sat 219, val 177, speed 231   (DIFFERENT)
+lighting restored: effect 2, hue 178, sat 219, val 177, speed 231
+after:
+board : effect 2, hue 178, sat 219, val 177, speed 231
+backup: effect 2, hue 178, sat 219, val 177, speed 231   (same)
+data off
+daemon restarted 21:13:45

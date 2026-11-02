@@ -34,8 +34,11 @@ colours (its white 64 was 54% of the sum of its single colours; stage 2's
 is the sum within 1%), so the plan's 3% state-by-state gate cannot be met
 by any one scale: k stays 10 and the gate is restated. JD's eye at 20:45:
 the theme right on every key, and a uniform white with nothing over the
-nine holes at zero saturation (the lighting to be put back from the
-backup once the wake-gate session releases white). Next: the presser's
+nine holes at zero saturation, and his lighting back from the backup at
+21:13 once the wake-gate session's case 3 had released white (two
+deep-sleep wakes on his key with the RGB lit, no reset: they count toward
+stage 2's wakes; the board read sat 191 before the restore, unexplained,
+in the backlog). Next: the presser's
 bring-up (stage 0's short-tap baseline, stage 1's key gates, stage 2's
 deep sleep and scan-only), the witness's wires and the pulse gates, D3's
 USB long-silence detector, then stage 3.

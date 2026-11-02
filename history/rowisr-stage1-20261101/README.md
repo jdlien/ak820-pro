@@ -238,10 +238,20 @@ the wake-gate session held white:** the theme right on every key (the
 F row, the nav cluster, the arrows, the modifiers and the backslash blue,
 the alphas, numbers and punctuation purple, as his profile has them), and
 with the saturation taken to zero from the keyboard (his layout's Fn+`,`)
-a uniform white with no tint over the nine holes. The lighting is put back
-from the backup once white is free. Owed on it: scan-only, deep sleep's
-wakes (the wake-gate session's case 3 counts) and the wake with the RGB
-dark (the verify review's bring-up list); the witness's pulse gates.
+a uniform white with no tint over the nine holes. **The lighting went back
+from the backup at 21:13, once the wake-gate session had released white**
+(`lighting-restore.log`): hue 178, sat 219, val 177, speed 231 read back.
+Before the restore the board read sat 191, neither the 0 JD had taken it
+to by keys nor the 219 of the 20:10 dump; the two deep-sleep wakes of
+case 3 lay between. Unexplained (a key after the check, or a wake
+re-applying a flushed record over the keys' change, are the candidates),
+noted in the backlog, not chased. **The wake-gate session's case 3 on
+white (21:03-21:13, [`../wake-case3-20261101/`](../wake-case3-20261101/README.md))
+counts toward stage 2's deep-sleep wakes:** two deep-sleep wakes on JD's
+key with the RGB lit, re-enumerated within 4 s of the wake, no reset, no
+stray. Owed on it: scan-only, the rest of deep sleep's wakes and the wake
+with the RGB dark (the verify review's bring-up list); the witness's
+pulse gates.
 
 ## Files
 
@@ -249,7 +259,7 @@ dark (the verify review's bring-up list); the witness's pulse gates.
 - `settings-before.json`, `lighting-before.json`: the last run's dumps (restored); `settings-after-probe.json`.
 - `dark_probe.py` / `dark_probe2.py` and their logs: the probes; `dark_after_sleep.*`: the aborted slept-board test (its relay wake is the third charge); `peek.log`: an HC_PEEK attempt that found white asleep.
 - `fix_check.sh`, `fix_check.log`: the fix's flash and holds; `base_fix_check.sh`, `base_fix_check.log`: the base plus the fix, and stage 1 plus the fix back.
-- Stage 2: `flash-stage2.log`, `run-stage2.log`, `stage2.json`, `compare-stage2.txt`, `sched-after-stage2-flash.txt`, `health-after-stage2-flash.txt`, `sched-after-stage2-run.txt`, `record-after-stage2-run.txt` (its sub-5 fields misread by 4 bytes, see above); the fix: `flash-stage2fix.log`, `run-stage2fix.log`, `stage2fix.json`, `compare-stage2fix.txt`, `sched-after-stage2fix.txt`; `power_saver_back.sh`, `power_saver_back.log`, `settings-after-mode.json`.
+- Stage 2: `flash-stage2.log`, `run-stage2.log`, `stage2.json`, `compare-stage2.txt`, `sched-after-stage2-flash.txt`, `health-after-stage2-flash.txt`, `sched-after-stage2-run.txt`, `record-after-stage2-run.txt` (its sub-5 fields misread by 4 bytes, see above); the fix: `flash-stage2fix.log`, `run-stage2fix.log`, `stage2fix.json`, `compare-stage2fix.txt`, `sched-after-stage2fix.txt`; `power_saver_back.sh`, `power_saver_back.log`, `settings-after-mode.json`; `lighting-restore.log`, the backup put back at 21:13.
 - `battery-before.txt`, `battery-after.txt`, `health-after-flash.txt`.
 
 ## Lessons
