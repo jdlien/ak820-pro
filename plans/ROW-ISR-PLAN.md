@@ -2118,7 +2118,7 @@ race modelled; one P1 left, one new P2, documentation. Dispositions, in
 (gpt-6-astra, xhigh, read-only, on `9d702160c8`): the fifth verify's
 expiry case fixed, the wire byte and the documentation fixed, the
 three-state trust verified through every transition it modelled; one P1
-left. Disposition, in the commit after `9d702160c8`:
+left. Disposition, in `d5bdaa7c43`:
 
 | # | What remained | Disposition |
 |---|---|---|
@@ -2431,6 +2431,7 @@ left. Disposition, in the commit after `9d702160c8`:
 - 11-02 13:14-13:20: codex's sixth verify: NOT READY on one P1 (the
   refused re-prime discarded time without moving the generation, so an
   adopted baseline stayed continuous across it); fixed in one line (the
-  generation moves, the rejection counted) in the commit after
-  `9d702160c8`; D3's generation rule amended. A seventh verify asked,
-  with its own trace to re-run.
+  generation moves, the rejection counted) in `d5bdaa7c43`; D3's
+  generation rule amended. The flash candidate
+  `via-dev-d5bdaa7c43-20261102-131530.bin`, token `0xc80e0e19`, heap gap
+  464 B. A seventh verify asked, with its own trace to re-run.
