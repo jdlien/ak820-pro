@@ -50,6 +50,12 @@ Power saver); the A/B's record is `../history/rowisr-stage1-20261101/`.
   ever done to the mAh. No more are planned; a slept-board test wakes
   white with a key.
 
+- **v0.3.1's base is pinned, not released:** F-033's fix (`cfe6c2d3a5`,
+  measured on white: a dark frame 40.6 mA, `plans/BACKLOG.md`) is on
+  `ak820pro-jdlien` and in `deps.lock` since 18:36; the daily (token
+  `0x09c4964a`) and fpb (`0x64eafd40`) builds are clean, heap gap 2288 B,
+  and `scripts/audit_tests.sh` passes. The tag waits on the wake gate
+  below, so a fix it needs ships in the same release.
 - **Owed, unverified at the release:**
   - The clean-Windows install check: `scripts/sandbox-6b.ps1` can't run on
     gremlin, whose Windows Sandbox was left off on 09-16 (the RDP

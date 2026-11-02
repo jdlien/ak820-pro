@@ -1,0 +1,26 @@
+/* The AK820 Pro's driver configuration, copied from keyboards/a_jazz/ak820pro/config.h and keyboard.json (81 LEDs), for scripts/led_noled_test. */
+#pragma once
+#define SN32F2
+#define SN32F290
+#define RGB_MATRIX_SN32F2XX
+#define RGB_MATRIX_LED_COUNT 81
+#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 255
+#define RGB_MATRIX_HUE_STEP 1
+#define RGB_MATRIX_SAT_STEP 4
+#define RGB_MATRIX_VAL_STEP 2
+#define RGB_MATRIX_SPD_STEP 4
+#define RGB_MATRIX_LED_PROCESS_LIMIT 20
+#define SN32F2XX_RGB_PWM_FREQ 4800000
+#define SN32F2XX_RGB_MATRIX_ROW_PINS { A11, B4, B5, A8, A9, D8, D9, D10, D11, D12, D13, D16, D17, D18, C10, C11, C12, C13 }
+#define SN32F2XX_PWM_CONTROL   HARDWARE_PWM
+#define SN32F2XX_PWM_DIRECTION COL2ROW
+#define SN32F2XX_RGB_MATRIX_ROW_CHANNELS 3
+#define SN32F2XX_PWM_MULTI_TIMER
+#define SN32F2XX_DEEP_SLEEP
+#define SN32F2XX_PWM_COL_MAP { \
+    {&PWMD1, 4}, {&PWMD1, 5}, {&PWMD1, 8}, {&PWMD2, 1}, {&PWMD2, 2}, {&PWMD2, 3}, \
+    {&PWMD1, 6}, {&PWMD1, 7}, {&PWMD1, 9}, {&PWMD0, 1}, {&PWMD0, 0}, {&PWMD1, 10}, \
+    {&PWMD0, 3}, {&PWMD0, 2}, {&PWMD1, 11} }
+#define SN32F2XX_PWM_PFPA_CT16B0 0x3332
+#define SN32F2XX_PWM_PFPA_CT16B1 0x0F00
+#define SN32F2XX_PWM_PFPA_CT16B2 0x0000
