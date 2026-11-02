@@ -586,7 +586,9 @@ Each slot, in order:
      an exclusion flag, and no re-prime happens while any exclusion is
      active.
    - The extension carries a **loss generation**, a counter incremented at
-     every transition to INVALID and never otherwise. Every consumer
+     every transition to INVALID and at every later discard of time while
+     INVALID (a re-prime refused for its own gap of 8 ms or more, as
+     built 11-02), and never otherwise. Every consumer
      snapshot records it. An interval whose end generation differs from
      its start generation touched INVALID, whether or not an observer has
      re-primed in between, and is excluded from every statistic and
@@ -2110,6 +2112,18 @@ race modelled; one P1 left, one new P2, documentation. Dispositions, in
 | 5 (new P2) | `usb_unjudged` saturated at 255 and was ORed with the recovery flag in bit 7. | **Fixed:** seven-bit saturation. |
 | 8 (P3) | The gate still names the observers' stamps "in the record"; the detector's overview described only trusted starts. | **Fixed:** the gate's text says the stamps are the witness's; the overview names the recovery and the pending start. |
 
+### The detector's sixth verify review (11-02 13:14): NOT READY on one P1, fixed
+
+[`review-codex-row-isr-usb-detector-verify6-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-verify6-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `9d702160c8`): the fifth verify's
+expiry case fixed, the wire byte and the documentation fixed, the
+three-state trust verified through every transition it modelled; one P1
+left. Disposition, in the commit after `9d702160c8`:
+
+| # | What remained | Disposition |
+|---|---|---|
+| 1 (P1) | The refused re-prime discards time without moving the generation: a baseline the handler adopted after a frame-counter rejection (generation G) stays continuous with the VALID state after the discard (still G), and an interval across the discarded 2,048 ms, invisible modulo `FRMNO`, is accepted; one loss and one rejection where the version before counted two of each. | **Fixed.** A refused re-prime moves the generation and counts as the guard's rejection it is; the handler counts at most one loss per entry, so a sleep's refused first re-prime stays one loss and a second silence after an adopted rejection counts as the second silence it is. The epoch clock's rule now reads: the generation moves at every transition to INVALID and at every later discard of time. |
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2414,3 +2428,9 @@ race modelled; one P1 left, one new P2, documentation. Dispositions, in
   heap gap 464 B. A sixth verify asked (a first launch of it reviewed an
   unchanged tree by my mistake, an edit that had not applied; killed and
   relaunched on the real commit).
+- 11-02 13:14-13:20: codex's sixth verify: NOT READY on one P1 (the
+  refused re-prime discarded time without moving the generation, so an
+  adopted baseline stayed continuous across it); fixed in one line (the
+  generation moves, the rejection counted) in the commit after
+  `9d702160c8`; D3's generation rule amended. A seventh verify asked,
+  with its own trace to re-run.
