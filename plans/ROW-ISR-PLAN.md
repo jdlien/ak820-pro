@@ -2153,6 +2153,32 @@ one P1 left, in the same family. Disposition, in `5c0e6249d0`:
 |---|---|---|
 | 1 (P1) | A real exclusion's release moved the generation and took the frames' baseline anew but left the observer stamp as it was, so the first re-prime after the release imported up to 8 ms from before it (a short masked exclusion with no observation inside) and aged the frames' recovery out before its first frame; the baseline then read the frames as known stopped on a live bus, and a later alias passed unjudged. | **Fixed** as the model suggested: the release rebases the stamp to now, so the re-prime adds only the time since the release and the recovery ages only from its new baseline. |
 
+### The detector's ninth verify review (11-02 13:49): READY TO FLASH
+
+[`review-codex-row-isr-usb-detector-verify9-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-verify9-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `5c0e6249d0`): the eighth verify's
+P1 fixed, every earlier trace replayed with the right counts (two losses
+and one rejection of the right kind each), no new defect; the extension
+has only two additions and both are guarded; 210 adoption orderings,
+42,025 release-phase cases and 5,600 nominal injection cases passed in
+its model, outcomes judged from the observation gaps. **Verdict: READY TO
+FLASH for the bench's silence injections; no P1.** What stays accepted
+and deferred: the report does not retain the last-before/first-after
+observer pair (the witness's measurement); the marker's absolute timing
+bound is the ELF's instruction count until the witness measures it; the
+declared blind spot (a bus whose frames stop with no flag inside the
+4 ms before an aliasing silence) stands. The flash candidate:
+`via-dev-5c0e6249d0-20261102-134106.bin`, token `0x60d4a06b`, heap gap
+464 B. Nine codex rounds in all on this commit series, every finding in
+one family (discarded time surviving in a consumer's baseline); the
+invariants that closed it: wherever time is discarded the generation
+moves; a re-prime is itself a guarded observation; an exclusion's release
+rebases the stamp; the frames' freshness is tracked by both observers,
+never while excluded, and staled with a new baseline wherever time is
+discarded, never by the handler's own rejection; a stale's recovery lasts
+until a frame or 8 ms of guarded time; an interval that begins in a
+recovery is judged if it ends fresh and excluded without a loss if not.
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2480,3 +2506,8 @@ one P1 left, in the same family. Disposition, in `5c0e6249d0`:
   464 B. A ninth verify asked, with its traces
   to re-run and the question widened to any way discarded or unobserved
   time can enter the extension or age the recovery.
+- 11-02 13:49: codex's ninth verify: **READY TO FLASH** on `5c0e6249d0`
+  (token `0x60d4a06b`); the flash waits on JD's go and his key for the
+  wake-gate session's long-sleep letter test, then `preflash_read.sh`
+  (the wake ring), `flash.sh`, `silence_check.sh`, a sleep and his key,
+  `wake_read.sh`.
