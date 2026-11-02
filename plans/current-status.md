@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-01, 21:25. The block below is where things stand, written to
+Updated 2026-11-01, 22:35. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -86,31 +86,34 @@ Power saver); the A/B's record is `../history/rowisr-stage1-20261101/`.
   ever done to the mAh. No more are planned; a slept-board test wakes
   white with a key.
 
-- **v0.3.1's base is pinned, not released:** F-033's fix (`cfe6c2d3a5`,
-  measured on white: a dark frame 40.6 mA, `plans/BACKLOG.md`) is on
-  `ak820pro-jdlien` and in `deps.lock` since 18:36; the daily (token
-  `0x09c4964a`) and fpb (`0x64eafd40`) builds are clean, heap gap 2288 B,
-  and `scripts/audit_tests.sh` passes. The tag waits on the wake gate
-  below, so a fix it needs ships in the same release.
-- **Owed, unverified at the release:**
-  - The clean-Windows install check: `scripts/sandbox-6b.ps1` can't run on
-    gremlin, whose Windows Sandbox was left off on 09-16 (the RDP
-    black-screen fix). Turning it on needs an elevated feature install and a
-    reboot of JD's PC: JD's call.
-  - The wake fixes' hardware gate (codex cleared `70f7c1ea10e` for the
-    mainline on four USB cases passing): case 1 passed on black 10-31; case 2
-    (the cable's insertion waking the board) was running on black at 17:00;
-    **case 3 passed on white 21:03-21:13 11-01**, in both forms (data on to
-    the sleeping board, then a key: the recovery's re-attach, enumerated
-    3.8 s after the wake; data off, a key, data on 30 s later: enumerated
-    in 0.9 s), HID read after each, no reset (2 sleeps since the boot,
-    3287 s slept against the logger's 3282), on stage 2, which carries
-    v0.3.1's USB and sleep code unchanged
-    ([`../history/wake-case3-20261101/`](../history/wake-case3-20261101/README.md));
-    a host's attach does not wake a deep sleep (20.5 min, data on). Case 4
-    (host sleep and remote wake) unrun. v0.3.0 shipped before the gate
-    finished, on two boards' day of use with the same code. A failed case
-    means a v0.3.1.
+- **v0.3.1 is published** ([the Release](https://github.com/jdlien/ak820-pro/releases/tag/v0.3.1),
+  tagged at main `6cad24d` 22:25 11-01): the firmware `cfe6c2d3a5`
+  (v0.3.0 plus F-033's fix, measured on white: a dark frame 40.6 mA,
+  `plans/BACKLOG.md`) as the daily (token `0x09c4964a`) and fpb
+  (`0x64eafd40`) builds of 18:36, heap gap 2288 B; the agent 0.3.1, a
+  version bump only (`0da637a`); the assets and `via.json` unchanged since
+  v0.2.0 (their hashes match v0.3.0's). `ak820pro-jdlien` and `deps.lock`
+  have pointed at `cfe6c2d3a5` since 18:36.
+- **The wake fixes' hardware gate is complete** (codex cleared
+  `70f7c1ea10e` on four USB cases passing): case 1 on black 10-31; case 3
+  on white 21:03-21:13 11-01, in both forms (data on to the sleeping board,
+  then a key: the recovery's re-attach, enumerated 3.8 s after the wake;
+  data off, a key, data on 30 s later: enumerated in 0.9 s), on stage 2,
+  which carries v0.3.1's USB and sleep code unchanged
+  ([`../history/wake-case3-20261101/`](../history/wake-case3-20261101/README.md));
+  a host's attach does not wake a deep sleep (20.5 min, data on); cases 2
+  (21:37, the cable's insertion woke black on CHRG, both bits off at the
+  wake as the driver left them) and 4 (21:41-22:02, gremlin's S3 woken by
+  black's key on a back port in two of three tries, nothing through the
+  power-switched hub, the power button's resume with black kept) on black
+  (`plans/GREMLIN-RESULTS.md` section 21). No reset in any; case 4's two
+  cold power-ons were power losses on cable. Case 4 ran on black's
+  pre-F-007 build: the mechanism, not F-007's guard (the release notes
+  say so).
+- **Owed:** the clean-Windows install check: `scripts/sandbox-6b.ps1`
+  can't run on gremlin, whose Windows Sandbox was left off on 09-16 (the
+  RDP black-screen fix). Turning it on needs an elevated feature install
+  and a reboot of JD's PC: JD's call.
 - **After any `deps.lock` pin:** run `scripts/power_model.py` and commit
   `site/power/power.json`, which records the pinned firmware's sha; the
   power-page CI's `--check` fails otherwise (it did on `d90032a`).
