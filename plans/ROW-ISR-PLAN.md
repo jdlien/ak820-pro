@@ -2147,8 +2147,7 @@ finding fixed with both its traces (two losses each); 84 modelled
 rejection, guard, exclusion, re-prime and commit combinations kept the
 accounting; 5,600 nominal injection phase, cadence and order cases
 passed; no further surviving-baseline path across an unmarked discard;
-one P1 left, in the same family. Disposition, in the commit after
-`25fefd2cc3`:
+one P1 left, in the same family. Disposition, in `5c0e6249d0`:
 
 | # | What remained | Disposition |
 |---|---|---|
@@ -2476,6 +2475,8 @@ one P1 left, in the same family. Disposition, in the commit after
 - 11-02 13:39-13:45: codex's eighth verify: NOT READY on one P1 (the
   first re-prime after an exclusion's release imported pre-release time
   that aged the recovery out); fixed by rebasing the stamp at the release
-  in the commit after `25fefd2cc3`. A ninth verify asked, with its traces
+  in `5c0e6249d0`. The flash candidate
+  `via-dev-5c0e6249d0-20261102-134106.bin`, token `0x60d4a06b`, heap gap
+  464 B. A ninth verify asked, with its traces
   to re-run and the question widened to any way discarded or unobserved
   time can enter the extension or age the recovery.
