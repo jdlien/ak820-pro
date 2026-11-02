@@ -1153,8 +1153,9 @@ its edges. The measured length carries its uncertainty explicitly: the
 endpoint offsets above; the
 observation offsets of D3 case 2 at both ends, taken for the mode in
 force (the tick running, or stopped with the handler in scan-only) from
-the observers' own synchronized stamps in the record, never from a
-nominal period; and the capture clock's accuracy, **qualified, not
+the observers' own synchronized stamps on the witness (the record keeps
+the extension's reading and the spin's count, not the pair: D3 case 5,
+"As built"), never from a nominal period; and the capture clock's accuracy, **qualified, not
 assumed**, by timing a known one-second mark from the host over a minute
 before the run and recording the figure. CT16B5's rate is measured
 against the same qualified capture clock over the preceding minute. The
@@ -2093,6 +2094,22 @@ Dispositions, in `832e5db7d7`:
 | 6 (P2) | The report lacks the last-before/first-after observer pair. | **Accepted as dispositioned:** the witness's. |
 | 7 (P3) | The header calling the report the observation-gap verdict; the plan's "synchronized stamps in the record". | **Fixed** in the header (the record, not the report); the plan's stamps are noted in D3's "As built" as the witness's, owed with its wires. |
 
+### The detector's fifth verify review (11-02 12:56): NOT READY on one P1, fixed
+
+[`review-codex-row-isr-usb-detector-verify5-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-verify5-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `832e5db7d7`): the fourth verify's
+recovery case fixed (a pending start judged when it ends fresh, excluded
+when not; the earlier counterexample now counts two losses), the
+exclusion release fixed, the adoption and the double count fixed in every
+race modelled; one P1 left, one new P2, documentation. Dispositions, in
+the commit after `832e5db7d7`:
+
+| # | What remained | Disposition |
+|---|---|---|
+| 1 (P1) | The re-prime after an INVALID stretch added the raw gap since the last stamp without the guard: a long silence's wrap residue (2,048 ms leaves 300 ms) entered the extension and expired the recovery as if 8 ms had passed without a frame, and a following alias was accepted as healthy. | **Fixed.** The re-prime is itself a guarded observation: a gap of 8 ms or more does not re-prime (the frames' baseline is taken anew, since more time is discarded) and the next observation, a short gap on, does. No unguarded time enters the extension, so the recovery expires only on guarded time. |
+| 5 (new P2) | `usb_unjudged` saturated at 255 and was ORed with the recovery flag in bit 7. | **Fixed:** seven-bit saturation. |
+| 8 (P3) | The gate still names the observers' stamps "in the record"; the detector's overview described only trusted starts. | **Fixed:** the gate's text says the stamps are the witness's; the overview names the recovery and the pending start. |
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2389,3 +2406,7 @@ Dispositions, in `832e5db7d7`:
   on release only on a real transition. The flash candidate
   `via-dev-832e5db7d7-20261102-124514.bin`, token `0x476e5aec`, heap gap
   464 B. A fifth verify asked.
+- 11-02 12:56-13:02: codex's fifth verify: NOT READY on one P1 (the
+  re-prime's unguarded residue could expire the frames' recovery) and a
+  wire-byte P2; fixed (dispositions above): the re-prime a guarded
+  observation, the unjudged counter seven bits. A sixth verify asked.
