@@ -2139,6 +2139,21 @@ against the nominal model; one P1 left. Disposition, in `25fefd2cc3`:
 |---|---|---|
 | 1 (P1) | An exclusion entered while the extension was already INVALID (after a frame-counter rejection whose baseline the handler had adopted) discarded its time with the generation unchanged, since the invalidation helper bumped it only from VALID; the adopted baseline stayed continuous across the exclusion and a later alias was accepted. | **Fixed by the invariant:** wherever time is discarded the generation moves. An exclusion's entry bumps it unconditionally and a real exclusion's end bumps it too, beside the guard's rejection and the refused re-prime. The handler counts at most one loss per entry, so a sleep stays one loss. |
 
+### The detector's eighth verify review (11-02 13:39): NOT READY on one P1, fixed
+
+[`review-codex-row-isr-usb-detector-verify8-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-verify8-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `25fefd2cc3`): the seventh verify's
+finding fixed with both its traces (two losses each); 84 modelled
+rejection, guard, exclusion, re-prime and commit combinations kept the
+accounting; 5,600 nominal injection phase, cadence and order cases
+passed; no further surviving-baseline path across an unmarked discard;
+one P1 left, in the same family. Disposition, in the commit after
+`25fefd2cc3`:
+
+| # | What remained | Disposition |
+|---|---|---|
+| 1 (P1) | A real exclusion's release moved the generation and took the frames' baseline anew but left the observer stamp as it was, so the first re-prime after the release imported up to 8 ms from before it (a short masked exclusion with no observation inside) and aged the frames' recovery out before its first frame; the baseline then read the frames as known stopped on a live bus, and a later alias passed unjudged. | **Fixed** as the model suggested: the release rebases the stamp to now, so the re-prime adds only the time since the release and the recovery ages only from its new baseline. |
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2458,3 +2473,9 @@ against the nominal model; one P1 left. Disposition, in `25fefd2cc3`:
   `via-dev-25fefd2cc3-20261102-132754.bin`, token `0xefabb9ef`, heap gap
   464 B. An eighth verify asked, with the question put: any other place
   time is discarded without the generation moving.
+- 11-02 13:39-13:45: codex's eighth verify: NOT READY on one P1 (the
+  first re-prime after an exclusion's release imported pre-release time
+  that aged the recovery out); fixed by rebasing the stamp at the release
+  in the commit after `25fefd2cc3`. A ninth verify asked, with its traces
+  to re-run and the question widened to any way discarded or unobserved
+  time can enter the extension or age the recovery.
