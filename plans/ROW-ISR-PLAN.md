@@ -1134,7 +1134,7 @@ inner mask on the Win Lock indicator's pin, C15). **The endpoint
 contract:** for a silence of every interrupt, the op masks first and
 raises the marker inside the mask, and lowers the marker inside the
 mask before it unmasks, so the marked interval lies within the silence
-and is shorter than it by two stores, under 0.1 µs each; for a row-only
+and is shorter than it by a few instructions at each end (as built 11-02: nine instructions from the mask to the rising store, the pin's read, its mask and branch and the TC address, and one store before the unmask, the masked part its own function so the disassembly is the count; under 0.2 µs); for a row-only
 hold, each marker edge and its NVIC write with the barriers
 (`core_cm0.h:659`) sit together inside one short critical section, so
 nothing can preempt between the pair and their separation is the few
@@ -2020,6 +2020,22 @@ Also taken: step 6 and the exit take a time-only snapshot (the USB loads
 stay out of their sections). Not taken: the 13 s scope is the plan's and
 unchanged; the watchdog's timeout is not a guarantee, as the plan says.
 
+### The detector's verify review (11-02 12:04): NOT READY on 1, fixed
+
+[`review-codex-row-isr-usb-detector-verify-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-verify-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `ca5c82e2b9` and `53a432e7e6`): 2 and 3
+fixed; 1, 4, 5, 6 and 7 partly; one new P2. Dispositions, in
+`19dc250cf2`:
+
+| # | What remained | Disposition |
+|---|---|---|
+| 1 (P1) | The freshness rule uses the extension's time, and the guard's invalidation discards the gap without staling the freshness: a 20 ms rejected gap after the frames stop leaves a frozen `FRMNO` "fresh", and a 700 ms silence then passes. | **Fixed.** Every invalidation (the guard's, an exclusion's, the handler's own) stales the freshness (`frm_seen_ext = time_ext − 4 ms`), and only a frame seen moving afterwards restores it; the discarded time cannot stretch the window. The residual stays as named: SOFs stopping with no flag inside the 4 ms before an aliasing silence, with no invalidation between. |
+| new (P2) | Freshness was tracked only by the handler's snapshot: a row-only hold across a 2.048 s frame wrap could return to an equal `FRMNO` and be rejected as untrusted though the frames never stopped. | **Fixed.** The tick tracks `FRMNO` too (`frm_trackI` in `rowisr_time_observe`), so a hold the tick keeps VALID keeps the frames fresh; the handler's snapshot shares the tracker. |
+| 4 (P2) | `time_valid != 0` does not prove no tick invalidation since the snapshot: invalidated and re-primed, the old snapshot was labelled with the new generation and the scan-only and flash-skip commits could accept the next interval across discarded time; an aliasing interruption inside the handler entered the duration statistic. | **Fixed.** Adoption requires `time_gen == s1.gen` as well (the generation still the snapshot's); otherwise the tick's loss is the one, counted once at the next entry, and nothing is adopted. The exit takes the full snapshot and judges its own span by the frame counter before the duration sample is taken. |
+| 5 (P2) | The rising edge sat 24 instructions after the mask (the length arithmetic moved inside by the compiler); the plan's under-0.1 µs allowance unsupported. | **Fixed.** The masked part is its own `noinline` function: nine instructions from the mask to the rising store (the pin's read, its mask and branch, the TC address), one store before the unmask (the ELF, `silence_masked`). The contract is restated as a few instructions, under 0.2 µs. |
+| 6 (P2) | `rowisr_time_read` copies state without observing and lacks the stamp; the 200 µs wait is a scheduler sleep and does not cover scan-only's observation; the host attributed every generation move to the guard. | **Fixed as far as the record can:** the copy returns the last observer's stamp and the guard's last rejected gap (sub 9), the wait is 2 ms, and a loss is attributed to the guard only when its rejected gap moved, otherwise to the frame counter or an exclusion against sub 6's counts. The synchronized endpoint stamps of the plan are the witness's, still owed with its wires; the bench's length-based predictions are what the script checks, and the observation gap is what the report shows. |
+| 7 (P3) | The injection's doc kept the single-store wording and an under-0.1 ms offset claim against the plan's unbounded service latency. | **Fixed** as worded: the observers' offsets as D3 case 2 states them, the edges as a few instructions. |
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2283,3 +2299,12 @@ unchanged; the watchdog's timeout is not a guarantee, as the plan says.
   a store after the mask (`53a432e7e6`, the disassembly checked); the
   flash candidate `via-dev-53a432e7e6-20261102-115518.bin`, token
   `0xe50c9e75`, heap gap 488 B; `row-isr` pushed.
+- 11-02 12:04-12:10: codex's verify: NOT READY on 1 (the freshness rule
+  across a discarded gap), 2 and 3 fixed, the rest partly, one new P2 (a
+  row-only hold across a frame wrap). Fixed in `19dc250cf2` (dispositions
+  above): both observers track `FRMNO` and every invalidation stales it;
+  adoption only with the generation unchanged; the exit judges its own
+  span; the masked spin its own function (nine instructions to the rising
+  store, one before the unmask); the report's second page. The flash
+  candidate `via-dev-19dc250cf2-20261102-120904.bin`, token `0x625ec9ae`,
+  heap gap 472 B. A second verify asked.
