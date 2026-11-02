@@ -10,11 +10,13 @@ is the Python's, untouched, and can be pinned as a Rust test expectation.
 
     venv-win\\Scripts\\python.exe scripts\\health_oracle.py --page1 <32 hex> \\
         [--page2 <32 hex>] [--page3 <32 hex>] [--page4 <32 hex> --page4b <32 hex> --wall SECS]
+        [--page7 <32 hex> [--page7b <32 hex> --swall SECS]]
 
 Prints, in order: the text ak820health.py prints for the flags implied by the
-pages given (--stalls for page2, --rows for page3, --isr for page4 + page4b),
-a line "----", then json.dumps(d) for the same. --isr's wall-clock seconds
-are supplied rather than measured, so the run is deterministic.
+pages given (--stalls for page2, --rows for page3, --isr for page4 + page4b,
+--sched for page7, --sched --window for page7 + page7b), a line "----", then
+json.dumps(d) for the same. --isr's and --window's wall-clock seconds are
+supplied (--wall, --swall) rather than measured, so the run is deterministic.
 
 Needs no keyboard and enumerates nothing: open_device is replaced.
 """
@@ -30,8 +32,9 @@ import ak820health  # noqa: E402  (imports hid; run under venv-win)
 
 
 class FakeDevice:
-    """Answers each HC_* command with the captured reply for it; page 4 can
-    have two answers, served in order, for --isr's two reads.
+    """Answers each HC_* command with the captured reply for it; pages 4 and
+    7 can have two answers, served in order, for --isr's and --window's two
+    reads.
 
     The queues are SHARED with the caller's dict, not copied: read_isr()
     opens its own device per call, so a per-instance copy would hand the
@@ -70,6 +73,9 @@ def main():
     ap.add_argument("--page4")
     ap.add_argument("--page4b")
     ap.add_argument("--wall", type=float, default=2.0)
+    ap.add_argument("--page7")
+    ap.add_argument("--page7b")
+    ap.add_argument("--swall", type=float, default=15.0)
     a = ap.parse_args()
 
     argv = ["ak820health.py"]
@@ -81,6 +87,10 @@ def main():
         if not a.page4b:
             raise SystemExit("--isr needs two page-4 replies: --page4 and --page4b")
         argv.append("--isr")
+    if a.page7:
+        argv.append("--sched")
+        if a.page7b:
+            argv += ["--window", str(a.swall)]
 
     def make_pages():
         pages = {ak820health.HC_GET: [parse_hex(a.page1)]}
@@ -90,23 +100,32 @@ def main():
             pages[ak820health.HC_GET3] = [parse_hex(a.page3)]
         if a.page4:
             pages[ak820health.HC_GET4] = [parse_hex(a.page4), parse_hex(a.page4b)]
+        if a.page7:
+            pages[ak820health.HC_GET7] = [parse_hex(a.page7)] + ([parse_hex(a.page7b)] if a.page7b else [])
         return pages
 
     pages = make_pages()
     ak820health.open_device = lambda *args, **kwargs: FakeDevice(pages)
 
-    # --isr sleeps 2 s and measures the wall clock; make both deterministic.
+    # --isr sleeps 2 s and --window SECS, each measuring the wall clock; make
+    # both deterministic: the sleeps advance the clock by --wall and --swall,
+    # in the order main() runs them (--isr's first).
     import time
     clock = [0.0]
+    walls = []
 
     def monotonic():
         return clock[0]
 
     def sleep(s):
-        clock[0] += a.wall
+        clock[0] += walls.pop(0)
+
+    def make_walls():
+        walls[:] = ([a.wall] if a.page4 else []) + ([a.swall] if a.page7b else [])
 
     time.monotonic = monotonic
     time.sleep = sleep
+    make_walls()
 
     text = io.StringIO()
     with contextlib.redirect_stdout(text):
@@ -122,6 +141,7 @@ def main():
         pages2 = make_pages()
         ak820health.open_device = lambda *args, **kwargs: FakeDevice(pages2)
         clock[0] = 0.0
+        make_walls()
         ak820health.main()
     sys.stdout.write(js.getvalue())
 

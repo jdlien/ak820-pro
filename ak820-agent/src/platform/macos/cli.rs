@@ -14,7 +14,7 @@
 //! ak820 --version
 //! ak820 list                 the board's HID services, from the IORegistry; opens nothing
 //! ak820 info                 FC_INFO, exactly as `ak820ctl info` prints it
-//! ak820 health [--crash] [--stalls] [--rows] [--isr] [--json] [--raw]
+//! ak820 health [--crash] [--stalls] [--rows] [--isr] [--sched [--window SECS]] [--json] [--raw]
 //! ak820 lighting             the RGB values the board reports
 //! ak820 selftest             budget guard, idle drain, and recovery on one open
 //! ak820 clock [--raw] [--anyway]
@@ -69,7 +69,7 @@ pub fn main() -> ExitCode {
             _ => Err("lockchan anchor takes 1-200 frames".into()),
         },
         _ => {
-            eprintln!("usage: ak820 --version | list | info | health [--crash] [--stalls] [--rows] [--isr] [--json] [--raw] | lighting | selftest | clock [--raw] [--anyway] | probe [--seconds N] [--applescript] [--dylib PATH] | install [--in-place] [--clock] [--radio] [--lockchan] [--dylib PATH] | uninstall [--keep-bash-off] [--keep-timekeeper-off] | status | lockchan check | lockchan send [--repeat N] ARTIST TITLE | lockchan clear | lockchan anchor N");
+            eprintln!("usage: ak820 --version | list | info | health [--crash] [--stalls] [--rows] [--isr] [--sched [--window SECS]] [--json] [--raw] | lighting | selftest | clock [--raw] [--anyway] | probe [--seconds N] [--applescript] [--dylib PATH] | install [--in-place] [--clock] [--radio] [--lockchan] [--dylib PATH] | uninstall [--keep-bash-off] [--keep-timekeeper-off] | status | lockchan check | lockchan send [--repeat N] ARTIST TITLE | lockchan clear | lockchan anchor N");
             eprintln!("(install, uninstall and status change LaunchAgents and touch no board; lockchan send and clear write the board's LED report over BLE, a development check; every other command only reads the board)");
             return ExitCode::from(2);
         }
@@ -117,20 +117,28 @@ fn info() -> Result<(), String> {
 
 /// `ak820health.py`'s pages, as the Windows CLI prints them.
 fn health(flags: &[&str]) -> Result<(), String> {
-    use crate::health::{self, Page1, Page2, Page3, Page4};
+    use crate::health::{self, Page1, Page2, Page3, Page4, Page7};
 
     let mut crash_requested = false;
     let (mut stalls, mut rows, mut isr, mut json, mut raw) = (false, false, false, false, false);
-    for flag in flags {
+    let (mut sched, mut window) = (false, None::<f64>);
+    let mut it = flags.iter();
+    while let Some(flag) = it.next() {
         match *flag {
             "--crash" => crash_requested = true,
             "--stalls" => stalls = true,
             "--rows" => rows = true,
             "--isr" => isr = true,
+            "--sched" => sched = true,
+            "--window" => window = Some(health::window_secs(it.next().copied())?),
+            w if w.starts_with("--window=") => window = Some(health::window_secs(Some(&w["--window=".len()..]))?),
             "--json" => json = true,
             "--raw" => raw = true,
-            other => return Err(format!("health: unknown flag {other}; the flags are --crash --stalls --rows --isr --json --raw")),
+            other => return Err(format!("health: unknown flag {other}; the flags are --crash --stalls --rows --isr --sched --window SECS --json --raw")),
         }
+    }
+    if window.is_some() && !sched {
+        return Err("health: --window goes with --sched".to_string());
     }
     let mut drained = Vec::new();
     // One open per page, as the Python's `_txn` opens and closes per read.
@@ -176,8 +184,25 @@ fn health(flags: &[&str]) -> Result<(), String> {
     } else {
         None
     };
+    // Page 7 after page 4, as the Python reads it: once, or with `--window` a
+    // pair that far apart, the window's figures from the deltas.
+    let p7 = if sched {
+        let a = Page7::decode(&page(health::GET7, 7)?).map_err(|e| e.to_string())?;
+        match window {
+            Some(secs) => {
+                let t_a = std::time::Instant::now();
+                std::thread::sleep(std::time::Duration::from_secs_f64(secs));
+                let b = Page7::decode(&page(health::GET7, 7)?).map_err(|e| e.to_string())?;
+                let w = health::sched_window(&a, &b, t_a.elapsed().as_secs_f64());
+                Some((b, Some(w)))
+            }
+            None => Some((a, None)),
+        }
+    } else {
+        None
+    };
     if json {
-        println!("{}", health::render_json_with_vitals(health::render_json_with_crash(health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))), crash.as_ref()), p6.as_ref()));
+        println!("{}", health::render_json_with_vitals(health::render_json_with_crash(health::render_json_with_sched(health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))), p7.as_ref().map(|(p, w)| (p, w.as_ref()))), crash.as_ref()), p6.as_ref()));
     } else {
         print!("{}", health::render_page1(&p1));
         if let Some(p) = &crash { print!("{}", health::render_crash(p)); }
@@ -190,6 +215,9 @@ fn health(flags: &[&str]) -> Result<(), String> {
         }
         if let Some((_, rates)) = &p4 {
             print!("{}", health::render_isr(rates));
+        }
+        if let Some((p, w)) = &p7 {
+            print!("{}", health::render_sched(p, w.as_ref()));
         }
     }
     report_drained(&drained);

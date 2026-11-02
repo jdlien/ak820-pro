@@ -1,11 +1,12 @@
 //! The health channel (`0x13`): the firmware's counters, decoded and rendered
 //! as `hostagent/ak820health.py` decodes and renders them.
 //!
-//! Five pages, each `[SET_VALUE, HEALTH, command, version, 28 bytes]`, with
+//! Seven pages, each `[SET_VALUE, HEALTH, command, version, 28 bytes]`, with
 //! the 28 bytes laid out in `health.h`. A page exists per command because
 //! page 1's payload was already exactly full. ⚠️ **The version byte gates the
 //! layout**: page 2 was repacked at version 3, page 3 arrived at 4, page 4 at
-//! 5, page 5 (retained watchdog evidence) at 6. The Python refuses to parse an older board rather than silently
+//! 5, page 5 (retained watchdog evidence) at 6, page 6 at 7, page 7 (the row
+//! handler's record) at 9. The Python refuses to parse an older board rather than silently
 //! misread it. So does this.
 //!
 //! What this is for: the phase-5 gate says enough health reporting must land
@@ -32,6 +33,8 @@ pub const GET3: u8 = 0x06;
 pub const GET4: u8 = 0x07;
 pub const GET5: u8 = 0x08;
 pub const GET6: u8 = 0x09;
+/// Protocol 9: the row handler's record (the row ISR rewrite's stage 2).
+pub const GET7: u8 = 0x11;
 
 /// Why a page could not be decoded.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -305,6 +308,50 @@ pub fn render_json_with_vitals(mut json: String, p: Option<&Page6>) -> String {
             p.uptime_ms, p.build_token, p.msp_free, p.psp_free, p.blit_never_started, p.blit_stalled,
             p.blit_irq_lost, p.blit_unknown, p.blit_busy_waits, p.blit_retry_successes, p.blits_issued));
     }
+    json
+}
+
+/// Page 7's keys after `render_json`'s, as the Python's `d.update()` adds
+/// them after page 4's: the record, its derived figures, then the window's.
+pub fn render_json_with_sched(mut json: String, sched: Option<(&Page7, Option<&SchedWindow>)>) -> String {
+    let Some((p, w)) = sched else { return json };
+    let null = |v: Option<f64>| v.map_or("null".to_string(), pyfloat);
+    let mut items: Vec<(&str, String)> = vec![
+        ("slots_elapsed", p.slots_elapsed.to_string()),
+        ("serviced_valid", p.serviced_valid.to_string()),
+        ("pulses_emitted", p.pulses_emitted.to_string()),
+        ("pulses_omitted", p.pulses_omitted.to_string()),
+        ("elapsed_sum_ticks", p.elapsed_sum_ticks.to_string()),
+        ("elapsed_samples", p.elapsed_samples.to_string()),
+        ("latency_max_ticks", p.latency_max_ticks.to_string()),
+        ("elapsed_max_ticks", p.elapsed_max_ticks.to_string()),
+        ("latency_max_us", pyfloat(p.latency_max_us())),
+        ("elapsed_max_us", p.elapsed_max_us().map_or("\">1365 (clipped)\"".to_string(), pyfloat)),
+        ("elapsed_mean_us", null(p.elapsed_mean_us())),
+        ("missed_slots", p.missed_slots().to_string()),
+    ];
+    if let Some(w) = w {
+        items.extend([
+            ("win_secs", pyfloat(w.win_secs)),
+            ("win_slots_elapsed", w.win_slots_elapsed.to_string()),
+            ("win_serviced_valid", w.win_serviced_valid.to_string()),
+            ("win_missed_slots", w.win_missed_slots.to_string()),
+            ("win_pulses_emitted", w.win_pulses_emitted.to_string()),
+            ("win_pulses_omitted", w.win_pulses_omitted.to_string()),
+            ("win_elapsed_samples", w.win_elapsed_samples.to_string()),
+            ("win_elapsed_mean_us", null(w.win_elapsed_mean_us)),
+            ("win_slots_per_s", null(w.win_slots_per_s)),
+        ]);
+        if let Some(c) = w.win_cpu_pct {
+            items.push(("win_cpu_pct", pyfloat(c)));
+        }
+    }
+    json.pop();
+    for (k, v) in items {
+        let sep = if json.ends_with('{') { "" } else { ", " };
+        json.push_str(&format!("{sep}\"{k}\": {v}"));
+    }
+    json.push('}');
     json
 }
 
@@ -582,6 +629,130 @@ pub fn isr_rates(a: &Page4, b: &Page4, wall_s: f64, rows: u32) -> IsrRates {
     }
 }
 
+/// `--window SECS`: the seconds between `--sched`'s two page-7 reads. The
+/// window's elapsed sum is right only under 89 s of handler time, about 400 s
+/// at stage 2's 22%, so this takes at most 300.
+pub fn window_secs(arg: Option<&str>) -> Result<f64, String> {
+    let s = arg.ok_or("health: --window needs SECS")?;
+    match s.parse::<f64>() {
+        Ok(v) if v > 0.0 && v <= 300.0 => Ok(v),
+        _ => Err(format!("health: --window {s}: seconds, more than 0 and at most 300")),
+    }
+}
+
+/// The row handler's timers: CT16B4 and the pulse timers run at 48 MHz.
+pub const SCHED_HZ: f64 = 48_000_000.0;
+
+/// Page 7: `HC_GET7`, version 9 or later -- the row handler's record since
+/// the health reset (the row ISR rewrite's stage 2, `rgb/rowisr.c`;
+/// `plans/ROW-ISR-PLAN.md`, D10), in the scheduler's ticks. `"<6I2H"`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Page7 {
+    /// Reconstructed from the epoch clock.
+    pub slots_elapsed: u32,
+    pub serviced_valid: u32,
+    /// Pulses armed. A dark row emits nothing and omits nothing.
+    pub pulses_emitted: u32,
+    /// Slots left dark by a late arm or a preemption across a slot.
+    pub pulses_omitted: u32,
+    /// Wraps after 89 s of handler time (about 7.6 min of uptime at 52 us a
+    /// slot), so the cumulative mean is only good early; quote a window's.
+    pub elapsed_sum_ticks: u32,
+    pub elapsed_samples: u32,
+    pub latency_max_ticks: u16,
+    /// `0xFFFF` is clipped: over 1365 us.
+    pub elapsed_max_ticks: u16,
+}
+
+impl Page7 {
+    pub const NEEDS: u8 = 9;
+
+    pub fn decode(report: &[u8]) -> Result<Page7, Error> {
+        if report.len() < REPORT_LEN {
+            return Err(Error::Short);
+        }
+        if report[3] < Self::NEEDS {
+            return Err(Error::Version { have: report[3], page: 7, need: Self::NEEDS });
+        }
+        Ok(Page7 {
+            slots_elapsed: u32_at(report, 4),
+            serviced_valid: u32_at(report, 8),
+            pulses_emitted: u32_at(report, 12),
+            pulses_omitted: u32_at(report, 16),
+            elapsed_sum_ticks: u32_at(report, 20),
+            elapsed_samples: u32_at(report, 24),
+            latency_max_ticks: u16_at(report, 28),
+            elapsed_max_ticks: u16_at(report, 30),
+        })
+    }
+
+    pub fn latency_max_us(&self) -> f64 {
+        pyround(self.latency_max_ticks as f64 * (1e6 / SCHED_HZ), 2)
+    }
+
+    /// `None` when clipped; the Python prints `>1365 (clipped)`.
+    pub fn elapsed_max_us(&self) -> Option<f64> {
+        (self.elapsed_max_ticks != 0xFFFF).then(|| pyround(self.elapsed_max_ticks as f64 * (1e6 / SCHED_HZ), 2))
+    }
+
+    pub fn elapsed_mean_us(&self) -> Option<f64> {
+        (self.elapsed_samples != 0)
+            .then(|| pyround(self.elapsed_sum_ticks as f64 / self.elapsed_samples as f64 * (1e6 / SCHED_HZ), 2))
+    }
+
+    /// Boundaries the handler did not service, over the valid intervals. A
+    /// Python int: negative if the counts ever disagree that way.
+    pub fn missed_slots(&self) -> i64 {
+        self.slots_elapsed as i64 - self.serviced_valid as i64
+    }
+}
+
+/// `sched_window(A, B, secs)`: the record's growth between two page-7 reads,
+/// modulo 2^32, so the elapsed sum's wrap does not matter inside a window
+/// shorter than 89 s of handler time. The maxima are since the reset and are
+/// not windowed (codex, stage 2's verify review, finding 8).
+#[derive(Clone, Debug, PartialEq)]
+pub struct SchedWindow {
+    pub win_secs: f64,
+    pub win_slots_elapsed: u32,
+    pub win_serviced_valid: u32,
+    pub win_missed_slots: i64,
+    pub win_pulses_emitted: u32,
+    pub win_pulses_omitted: u32,
+    pub win_elapsed_samples: u32,
+    pub win_elapsed_mean_us: Option<f64>,
+    pub win_slots_per_s: Option<f64>,
+    /// The handler's share, snapshot to snapshot. Absent, not `None`, in the
+    /// Python's dict when it cannot be computed.
+    pub win_cpu_pct: Option<f64>,
+}
+
+pub fn sched_window(a: &Page7, b: &Page7, secs: f64) -> SchedWindow {
+    let us = 1e6 / SCHED_HZ;
+    let slots = b.slots_elapsed.wrapping_sub(a.slots_elapsed);
+    let serviced = b.serviced_valid.wrapping_sub(a.serviced_valid);
+    let sum = b.elapsed_sum_ticks.wrapping_sub(a.elapsed_sum_ticks);
+    let samples = b.elapsed_samples.wrapping_sub(a.elapsed_samples);
+    let mean = (samples != 0).then(|| pyround(sum as f64 / samples as f64 * us, 2));
+    let per_s = (secs > 0.0).then(|| pyround(slots as f64 / secs, 1));
+    let cpu = match (mean, per_s) {
+        (Some(m), Some(r)) if r != 0.0 => Some(pyround(m * r / 1e4, 2)),
+        _ => None,
+    };
+    SchedWindow {
+        win_secs: pyround(secs, 2),
+        win_slots_elapsed: slots,
+        win_serviced_valid: serviced,
+        win_missed_slots: slots as i64 - serviced as i64,
+        win_pulses_emitted: b.pulses_emitted.wrapping_sub(a.pulses_emitted),
+        win_pulses_omitted: b.pulses_omitted.wrapping_sub(a.pulses_omitted),
+        win_elapsed_samples: samples,
+        win_elapsed_mean_us: mean,
+        win_slots_per_s: per_s,
+        win_cpu_pct: cpu,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Rendering, as `ak820health.py` prints it
 // ---------------------------------------------------------------------------
@@ -710,6 +881,54 @@ pub fn render_isr(r: &IsrRates) -> String {
     }
     out.push_str(
         "\n  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;\n  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop\n",
+    );
+    out
+}
+
+fn elapsed_max_text(p: &Page7) -> String {
+    p.elapsed_max_us().map_or(">1365 (clipped)".to_string(), pyfloat)
+}
+
+/// The `--sched` block, and with `--window` the window's figures.
+pub fn render_sched(p: &Page7, w: Option<&SchedWindow>) -> String {
+    let mut out = String::from("\n");
+    for (k, v) in [
+        ("slots_elapsed", p.slots_elapsed.to_string()),
+        ("serviced_valid", p.serviced_valid.to_string()),
+        ("missed_slots", p.missed_slots().to_string()),
+        ("pulses_emitted", p.pulses_emitted.to_string()),
+        ("pulses_omitted", p.pulses_omitted.to_string()),
+        ("latency_max_us", pyfloat(p.latency_max_us())),
+        ("elapsed_mean_us", pyopt(p.elapsed_mean_us())),
+        ("elapsed_max_us", elapsed_max_text(p)),
+        ("elapsed_samples", p.elapsed_samples.to_string()),
+    ] {
+        out.push_str(&format!("{k:<24} {v}\n"));
+    }
+    if let Some(w) = w {
+        out.push('\n');
+        for (k, v) in [
+            ("win_secs", pyfloat(w.win_secs)),
+            ("win_slots_elapsed", w.win_slots_elapsed.to_string()),
+            ("win_slots_per_s", pyopt(w.win_slots_per_s)),
+            ("win_serviced_valid", w.win_serviced_valid.to_string()),
+            ("win_missed_slots", w.win_missed_slots.to_string()),
+            ("win_pulses_emitted", w.win_pulses_emitted.to_string()),
+            ("win_pulses_omitted", w.win_pulses_omitted.to_string()),
+            ("win_elapsed_samples", w.win_elapsed_samples.to_string()),
+            ("win_elapsed_mean_us", pyopt(w.win_elapsed_mean_us)),
+            ("win_cpu_pct", pyopt(w.win_cpu_pct)),
+        ] {
+            out.push_str(&format!("{k:<24} {v}\n"));
+        }
+    }
+    out.push_str(
+        "\n  the scheduler's record since the health reset (stage 2): the slot is fixed by CT16B4,\
+         \n  latency is the handler's entry from the slot boundary, elapsed its entry to exit;\
+         \n  missed slots are boundaries the handler did not service, omitted pulses the slots it\
+         \n  serviced too late to arm (or across a slot); a dark row is neither.\
+         \n  elapsed_mean_us is cumulative and its sum wraps after 89 s of handler time (about\
+         \n  7.6 min of uptime at 52 us a slot): the win_ figures (--window) are the ones to quote\n",
     );
     out
 }

@@ -1,0 +1,13 @@
+# Page 7 (HC_GET7, protocol 9) from white on the row ISR's stage 2 (b120a2069c),
+# 11-02 ~10:55, Blackberry's scan-only check (history/rowisr-stage1-20261101/
+# scan-only-enter.json): page7lit is the record after the lit window, page7scan
+# after the scan-only window (decoded there, re-packed "<6I2H" here). page7pre
+# is page7scan less that window's logged deltas (23998 slots, all serviced,
+# nothing emitted or sampled), the read before it. swall_scan is that window's
+# measured seconds; swall_lit is estimated from the slot counts (the lit
+# window's end to the scan-only window's end), an input to both decoders alike.
+page7pre 07 13 11 09 57 AB 7F 00 B5 A6 7F 00 5B EC 52 00 41 00 00 00 EF 3F 41 BE 05 9E 7F 00 AA 13 F8 26
+page7lit 07 13 11 09 FE A0 7F 00 5C 9C 7F 00 DA EA 52 00 41 00 00 00 03 6B 32 BE 84 9C 7F 00 AA 13 F8 26
+page7scan 07 13 11 09 15 09 80 00 73 04 80 00 5B EC 52 00 41 00 00 00 EF 3F 41 BE 05 9E 7F 00 AA 13 F8 26
+swall_scan 15.01
+swall_lit 15.71

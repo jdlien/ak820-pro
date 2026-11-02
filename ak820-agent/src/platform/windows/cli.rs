@@ -97,7 +97,7 @@ fn usage() {
          \x20 ak820 probe          what SMTC sees; needs no keyboard\n\
          \x20 ak820 lighting       RGB values read back off the board\n\
          \x20 ak820 health         the firmware's health counters, as ak820health.py prints them\n\
-         \x20   [--crash] [--stalls] [--rows] [--isr] [--json] [--raw]\n\
+         \x20   [--crash] [--stalls] [--rows] [--isr] [--sched [--window SECS]] [--json] [--raw]\n\
          \x20 ak820 sleep [--raw]  the deep sleep's dev records (dev builds): the last sleep, the wake\n\
          \x20                      ring, the last stray, the sleep kept through a reset, the wake's census\n\
          \x20 ak820 clock [--raw]  the RTC, as `ak820ctl clock --read` prints it;\n\
@@ -249,26 +249,34 @@ fn clock(flags: &[&str]) -> Result<(), String> {
 /// takeover comparison could not trust. `--raw` prints each page's 32 bytes
 /// as `pageN <hex>`, the form `scripts/health_oracle.py` consumes.
 fn health_cmd(flags: &[&str]) -> Result<(), String> {
-    use crate::health::{self, Page1, Page2, Page3, Page4};
+    use crate::health::{self, Page1, Page2, Page3, Page4, Page7};
     use crate::hid::exchange::REQUEST_TIMEOUT;
     use crate::proto::Channel;
 
     let mut crash_requested = false;
     let (mut stalls, mut rows, mut isr, mut json, mut raw) = (false, false, false, false, false);
-    for flag in flags {
+    let (mut sched, mut window) = (false, None::<f64>);
+    let mut it = flags.iter();
+    while let Some(flag) = it.next() {
         match *flag {
             "--crash" => crash_requested = true,
             "--stalls" => stalls = true,
             "--rows" => rows = true,
             "--isr" => isr = true,
+            "--sched" => sched = true,
+            "--window" => window = Some(health::window_secs(it.next().copied())?),
+            w if w.starts_with("--window=") => window = Some(health::window_secs(Some(&w["--window=".len()..]))?),
             "--json" => json = true,
             "--raw" => raw = true,
             other => {
                 return Err(format!(
-                    "health: unknown flag {other}; the flags are --crash --stalls --rows --isr --json --raw"
+                    "health: unknown flag {other}; the flags are --crash --stalls --rows --isr --sched --window SECS --json --raw"
                 ))
             }
         }
+    }
+    if window.is_some() && !sched {
+        return Err("health: --window goes with --sched".to_string());
     }
     contention_notice();
 
@@ -331,11 +339,28 @@ fn health_cmd(flags: &[&str]) -> Result<(), String> {
     } else {
         None
     };
+    // Page 7 after page 4, as the Python reads it: once, or with `--window` a
+    // pair that far apart, the window's figures from the deltas.
+    let p7 = if sched {
+        let a = Page7::decode(&page(health::GET7, 7)?).map_err(|e| e.to_string())?;
+        match window {
+            Some(secs) => {
+                let t_a = std::time::Instant::now();
+                std::thread::sleep(std::time::Duration::from_secs_f64(secs));
+                let b = Page7::decode(&page(health::GET7, 7)?).map_err(|e| e.to_string())?;
+                let w = health::sched_window(&a, &b, t_a.elapsed().as_secs_f64());
+                Some((b, Some(w)))
+            }
+            None => Some((a, None)),
+        }
+    } else {
+        None
+    };
 
     if json {
         println!(
             "{}",
-            health::render_json_with_vitals(health::render_json_with_crash(health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))), crash.as_ref()), p6.as_ref())
+            health::render_json_with_vitals(health::render_json_with_crash(health::render_json_with_sched(health::render_json(&p1, p2.as_ref(), p3.as_ref(), p4.as_ref().map(|(b, r)| (b, r))), p7.as_ref().map(|(p, w)| (p, w.as_ref()))), crash.as_ref()), p6.as_ref())
         );
     } else {
         print!("{}", health::render_page1(&p1));
@@ -349,6 +374,9 @@ fn health_cmd(flags: &[&str]) -> Result<(), String> {
         }
         if let Some((_, rates)) = &p4 {
             print!("{}", health::render_isr(rates));
+        }
+        if let Some((p, w)) = &p7 {
+            print!("{}", health::render_sched(p, w.as_ref()));
         }
     }
     report_drained(&drained);
