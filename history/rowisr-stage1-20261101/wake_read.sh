@@ -8,6 +8,8 @@
 # first); data off, the daemon back. Nothing on the board changes.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
+# An optional label names the JSON and keeps the earlier read ("wake-dark-read" by default).
+LABEL="${1:-wake-dark-read}"; export LABEL
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
@@ -18,7 +20,7 @@ for i in $(seq 1 15); do present && break; sleep 2; done
 present || { log "no board on USB (asleep? one key wakes it)"; exit 1; }
 log "board present"; sleep 2
 venv/bin/python - <<'PY'
-import sys, time, json
+import sys, time, json, os
 sys.path.insert(0, "hostagent"); sys.path.insert(0, "scripts")
 import ak820health as hp, ak820battery as ba, deep_sleep as ds, rowisr_diag as rd
 from rowisr_baseline import devhook
@@ -45,7 +47,7 @@ try:
     log(f"page 7 maxima: latency {B['latency_max_us']} us, elapsed {B['elapsed_max_us']} us")
 finally:
     res["t_end"] = time.strftime("%H:%M:%S")
-    json.dump(res, open(f"{D}/wake-dark-read.json", "w"), indent=1)
+    json.dump(res, open(f"{D}/{os.environ.get('LABEL', 'wake-dark-read')}.json", "w"), indent=1)
     h.close()
 PY
 log "the Rust agent's page 7 (ae72d2b):"

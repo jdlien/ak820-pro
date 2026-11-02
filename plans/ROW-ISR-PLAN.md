@@ -724,6 +724,33 @@ Each slot, in order:
    excluded as unjudged without a loss of its own (op 28 sub 6 counts
    them), a silence inside it excluded with it.
 
+   **Measured (11-02 16:43-16:44, `5c0e6249d0` on white, `silence_check.sh`,
+   `history/rowisr-stage1-20261101/silence-check.log` and `.json`): 16 of
+   16 as predicted.** On USB: 5, 7.5 and 7.9 ms exact (no loss; 18, 28 and
+   29 slots missed; the extension read 7.2, 9.8 and 10.1 ms between the
+   report's stamps, the silence plus the 2 ms before the second); 8.1 ms
+   the guard's first rejection, its gap 8.117 ms, so the threshold sits
+   where the plan put it; 8.5, 20, 100 and 200 ms by the guard (gaps
+   8.528, 20.011, 100.064 and 200.043 ms); 350, 700 and 1,049 ms past the
+   guard (the tick's 349.5 ms alias) and rejected by the frame counter,
+   the last rejection's spans 1/351, 1/700 and 1/1,049 ms (the extension
+   saw a millisecond, the frames the silence); 1,000, 2,048 and 7,000 ms
+   by the guard (gaps 301.0, 300.4 and 9.5 ms, the predicted residues;
+   2,048 ms is the frame counter's own alias and the guard holds it). One
+   loss per rejected case and never two, no bus-event rejection, no
+   spurious invocation, and the spin's count within 3 µs of the asked
+   length on every case (5.003, 7.499, 7.899, 8.101 and 8.501 ms, the
+   rest exact to the microsecond). After a rejection the missed-slot count
+   is 0 and the invalid services 1-4: the re-prime re-bases the slot
+   count, as designed. With the data cut (armed with a 5 s delay, the
+   silence on battery with the bus suspended, the data back on for the
+   read): 20 ms two losses, the suspend's bus event and the guard's own;
+   350 ms one loss, the bus event's alone, the silence undetected, the
+   declared limit. The record before the set, 44 s after the boot: one
+   loss and one invalid service from the boot or the restores (the
+   guard's last gap 155.7 ms), unattributed. The witness's edges are
+   still the owed measurement of the lengths themselves.
+
    Deep sleep re-primes by the first tick after wake, and the handler
    treats everything before it as INVALID, so the order of the wake hooks
    (`sleep.c:604`) does not matter. `matrix_init_custom()` primes before
@@ -2511,3 +2538,17 @@ recovery is judged if it ends fresh and excluded without a loss if not.
   wake-gate session's long-sleep letter test, then `preflash_read.sh`
   (the wake ring), `flash.sh`, `silence_check.sh`, a sleep and his key,
   `wake_read.sh`.
+- 11-02 16:40-16:45: **the detector is on white.** JD's go and his key
+  at 16:40. `preflash_read.sh` at 16:41 read the `b120a2069c` run's last
+  record (21 h, 6 sleeps, 3 spurious invocations, no stall) and the wake
+  ring: the coordinator's 11:31 self-wake was the strays backstop (wake
+  #4: 1,000 strays in one counted second with the column ports' GPIO
+  interrupts pending and no key; the board awake 3 s and asleep again
+  until the key); passed to the coordinator, who found the sleep loop
+  never clears the port lines' NVIC pending bits and gave it to Warren
+  (`BACKLOG.md`, "A stray-wake storm"). `flash.sh` 16:42:25-16:42:47
+  (token `0x60d4a06b` read back, every backup restored and verified).
+  `silence_check.sh` 16:43:24-16:44:17: 16 of 16 as predicted (D3 case
+  5, "Measured"); the health counters reset at its end. `wake_watch.sh`
+  armed on the power logger: white's own sleep, JD's next key, then
+  `wake_read.sh` at once (the spurious count across one wake, alone).

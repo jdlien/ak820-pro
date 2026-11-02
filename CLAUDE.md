@@ -111,7 +111,7 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-11-01)
+## Current state (2026-11-02)
 
 **Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-22
 — RESUME HERE"). **Feature-complete for JD's board.** What's left:
@@ -135,10 +135,23 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 19:44 11-01: the row ISR's stage 2, the hot path on
+**On white since 16:42 11-02: stage 2 plus D3's USB frame-counter
+detector and the all-interrupt silence injection, `5c0e6249d0`** (dev,
+token `0x60d4a06b`, `row-isr`, heap gap 464 B; nine codex rounds, the
+closing invariant "wherever time is discarded the loss generation moves";
+`plans/ROW-ISR-PLAN.md`, D3 case 5): the silence set passed 16 of 16 as
+predicted (`history/rowisr-stage1-20261101/`, `silence_check.sh`: 5-7.9 ms
+exact, 8.1-200 ms the guard, 350/700/1,049 ms the frame counter past the
+tick's 349.5 ms alias, 1,000/2,048/7,000 ms the guard; with the data cut
+350 ms undetected, the declared limit). Dev op 28 subs 6-9
+(`scripts/rowisr_diag.py usb|silence|report`). Owed on it: the wake read
+after JD's next key (`wake_watch.sh` on the power logger), then stage 2's
+list below.
+**Before it, from 19:44 11-01: the row ISR's stage 2, the hot path on
 direct registers, `b120a2069c`** (dev, token `0x4849bde6`, the branch
 `row-isr`, `plans/ROW-ISR-PLAN.md`, the record in
-`history/rowisr-stage1-20261101/`): CT16B4 schedules the 267 µs slot,
+`history/rowisr-stage1-20261101/`; 21 h on white: 6 sleeps, 3 spurious
+invocations, no stall): CT16B4 schedules the 267 µs slot,
 CT16B0/1/2 fire one clean pulse per slot, the handler's mean 60 µs against
 the old callback's 196 (page 4), the CPU share 22% against 73, no stall,
 the row gaps as before. ⚠️ **Its first flash (19:20) settled the mux pin

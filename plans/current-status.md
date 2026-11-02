@@ -1,8 +1,43 @@
 # Current status
 
-Updated 2026-11-02, 11:20. The block below is where things stand, written to
+Updated 2026-11-02, 16:50. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-11-02 afternoon — D3's USB frame-counter detector is on white, its silence set 16 of 16
+
+The long-silence detector of [`ROW-ISR-PLAN.md`](ROW-ISR-PLAN.md) (D3
+case 5: the entry snapshot's USB frame counter against the tick
+extension, modulo 2,048 ms, within 3 ms plus 0.2%; a bus-event
+generation from a hook at the head of `usb_main.c`'s event callback;
+three trust states at each end, the bus up, the frames fresh within
+4 ms, a recovery pending after a stale) and the all-interrupt silence
+injection (op 28 subs 6-9, `scripts/rowisr_diag.py usb|silence|report`)
+went through nine codex rounds, each a real hole of one family,
+discarded time surviving in a consumer's baseline, closed by one
+invariant, wherever time is discarded the loss generation moves, and
+onto white at 16:42 on JD's go (`row-isr` `5c0e6249d0`, token
+`0x60d4a06b`, heap gap 464 B). **The silence set passed 16 of 16 as
+predicted** ([`../history/rowisr-stage1-20261101/`](../history/rowisr-stage1-20261101/README.md),
+"The detector flash and the silence set"): 5, 7.5 and 7.9 ms exact;
+8.1 ms the guard's first rejection at a gap of 8.117 ms; 8.5 to 200 ms
+the guard; 350, 700 and 1,049 ms past the tick's 349.5 ms alias and
+caught by the frame counter; 1,000, 2,048 and 7,000 ms the guard at the
+predicted residues; one loss per rejected case and never two; with the
+data cut, 20 ms the guard's loss beside the suspend's and 350 ms
+undetected, the declared limit. Before the flash, the last read of
+stage 2's 21 h run (6 sleeps, 3 spurious invocations, no stall) and the
+wake ring, which named the coordinator's 11:31 self-wake as the strays
+backstop: one GPIO line left pending in the NVIC, every later WFI
+returning at once (Warren's path, [`BACKLOG.md`](BACKLOG.md), "A
+stray-wake storm"). The health counters are reset; `wake_watch.sh`
+waits on the power logger for JD's next key (white slept on its own at
+16:46:47) and reads the record at once, the spurious count across one
+wake alone; white stays with that run until the read. Still owed on
+stage 2: deep sleep's wakes with the waking key kept, the witness's
+pulse gates and the long-gap injections (the presser and the witness's
+wires first: JD's hands). Next hands-free: the injection ops with the
+32-bit generation, the warm windows.
 
 ## 2026-11-02 morning — stage 2's scan-only and the wake with the RGB dark pass on white
 

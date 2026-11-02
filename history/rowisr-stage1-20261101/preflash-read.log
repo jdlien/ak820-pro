@@ -1,0 +1,17 @@
+[16:41:02] daemon paused
+[16:41:02] data on
+[16:41:02] board present
+[16:41:04] uptime 3181 s, timer ms 3181407; sleep page {'wake': 'key', 'valid': ['pcf', 'acq_done', 'reattach', 'slept'], 'flags': 75, 'open': [], 'sleeps': 6, 'slept_total_s': 72233, 'pcf_s': 18548, 'counted_s': 15396, 'acq_step_ms': 101, 'pll_loops': 86, 'strays': 0, 'blocked': [], 'timed_out': []}
+[16:41:04] deep-sleep record {'state': 0, 'reason': 'key', 'blocked': 0, 'flags': 75, 'slept': True, 'pcf': True, 'usb_back_20s': False, 'pll_ceiling': False, 'bound': False, 'reattach': True, 'secs': 15396, 'strays': 0, 'p0': 0, 'p2': 256, 'p1': 0, 'pll_loops': 86, 'key_gain': 0, 'seq': 6, 'timed_out': []}
+[16:41:04] wake #0: key, flags 0x40, slept 2693 counted s, strays 0, pins p0 0x0 p1 0x0 p2 0x4000, at timer ms 1555049 (1626 s of awake time ago)
+[16:41:04] wake #0: none, flags 0x00, slept 0 counted s, strays 0, pins p0 0x0 p1 0x0 p2 0x0, at timer ms 0 (3181 s of awake time ago)
+[16:41:04] wake #0: none, flags 0x00, slept 0 counted s, strays 0, pins p0 0x0 p1 0x0 p2 0x0, at timer ms 0 (3181 s of awake time ago)
+[16:41:04] wake #1: key, flags 0x40, slept 55 counted s, strays 0, pins p0 0x0 p1 0x0 p2 0x4000, at timer ms 2007530 (1174 s of awake time ago)
+[16:41:04] wake #2: key, flags 0x40, slept 40918 counted s, strays 0, pins p0 0x10 p1 0x0 p2 0x0, at timer ms 2187634 (994 s of awake time ago)
+[16:41:04] wake #3: key, flags 0x40, slept 118 counted s, strays 0, pins p0 0x0 p1 0x0 p2 0x4000, at timer ms 2946508 (235 s of awake time ago)
+[16:41:04] wake #4: strays, flags 0x40, slept 911 counted s, strays 1000, pins p0 0x0 p1 0x0 p2 0x0, at timer ms 3126646 (55 s of awake time ago)
+[16:41:04] wake #5: key, flags 0x40, slept 15396 counted s, strays 0, pins p0 0x0 p1 0x0 p2 0x100, at timer ms 3129751 (52 s of awake time ago)
+[16:41:04] stray diag {'seq': 4, 'same_s': 1000, 'first_s': 911, 'ispr': '0xa0000000', 'icsr': '0x42d000', 'vectpending': 45, 'pendsv': False, 'pendst': False, 'ie_outside': [], 'mis_outside': [], 'iser_not_wake_set': False, 'last_n': 1000, 'last_ispr': '0xa0000000', 'last': {'icsr': '0x42d000', 'vectpending': 45, 'pendsv': False, 'pendst': False}}
+[16:41:04] row record {'omit_run_max': 1, 'spurious': 3, 'late_omit': 45, 'epoch_losses': 6, 'invalid_services': 0, 'serviced_lo16': 60285}; page 7 losses/spurious as above; wdt_fired False
+[16:41:04] data off
+[16:41:04] daemon restarted

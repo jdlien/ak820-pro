@@ -321,6 +321,73 @@ left without a pulse, `rowisr.c`'s step 1; one in the night, two around
 the 11:07 sleep or its wake; benign by design, the count is the
 diagnostic), invalid services 0, no stall >= 25 ms, loop gap max 8 ms.
 
+### The detector flash and the silence set (11-02, 16:40-16:44, `preflash_read.sh`, `flash.sh`, `silence_check.sh`)
+
+JD's key and his go at 16:40. **The last read of the `b120a2069c` run
+(`preflash_read.sh`, 16:41, `preflash-read.json`, `preflash-read.log`):**
+21 h on white (19:44 11-01 to 16:42 11-02), 53 min of it awake, 6 deep
+sleeps (72,233 s, 20.1 h); 11.14 M slots, 2,095 missed (0.019%), 108
+pulses omitted, the longest run of omissions 1, latency max 106.9 µs,
+elapsed max 208.3 µs, epoch losses 6 (one per sleep), spurious
+invocations 3 (unchanged across the last two sleeps), invalid services
+0, no stall >= 25 ms, loop gap max 8 ms, 302 key presses. The wake ring
+(op 24 slots 0-7) named the coordinator session's 11:31 self-wake: wake
+#4, reason strays, 1,000 strays inside one counted second 911 s into the
+sleep (about 1,095 s by the PCF), no key pin, the column ports' GPIO
+interrupts (IRQ 29 and 31) pending in ISPR with nothing enabled outside
+the wake set; the board awake 3.1 s and asleep again until JD's key
+(15,396 counted s). The sleep loop never clears the port lines' NVIC
+pending bits, so one pending line makes every later WFI return at once:
+one event, counted a thousand times (the coordinator's reading of the
+code; Warren's path, `plans/BACKLOG.md`, "A stray-wake storm").
+
+**The flash (`flash-detector.log`, 16:42:25-16:42:47):**
+`via-dev-5c0e6249d0-20261102-134106.bin`; the keymap (720 B over 4
+layers), the profiles and the live settings restored and read back, the
+lighting through the live record, the battery log saved, the token
+`0x60d4a06b` read back at 16:43:24; the clock left to the daemon.
+
+**The silence set (`silence-check.log`, `silence-check.json`,
+16:43:24-16:44:17): 16 of 16 as the plan predicted.** Over the data
+line with the daemon paused, a silence of every interrupt from the
+housekeeping task (op 28 sub 7) at each length, and the record's deltas
+across it (the spin's own count of CT16B5 is the length column):
+
+| asked (ms) | the spin's count (ms) | losses | by | missed slots | invalid services |
+|---|---|---|---|---|---|
+| 5 | 5.003 | 0 | exact | 18 | 0 |
+| 7.5 | 7.499 | 0 | exact | 28 | 0 |
+| 7.9 | 7.899 | 0 | exact | 29 | 0 |
+| 8.1 | 8.101 | 1 | the guard, gap 8.117 | 0 | 2 |
+| 8.5 | 8.501 | 1 | the guard, gap 8.528 | 0 | 2 |
+| 20 | 20.000 | 1 | the guard, gap 20.011 | 0 | 2 |
+| 100 | 100.000 | 1 | the guard, gap 100.064 | 0 | 4 |
+| 200 | 200.000 | 1 | the guard, gap 200.043 | 0 | 4 |
+| 350 | 350.000 | 1 | the frame counter, spans 1/351 | 0 | 1 |
+| 700 | 700.000 | 1 | the frame counter, spans 1/700 | 0 | 1 |
+| 1,049 | 1,049.003 | 1 | the frame counter, spans 1/1,049 | 0 | 1 |
+| 1,000 | 1,000.000 | 1 | the guard, gap 301.0 | 0 | 4 |
+| 2,048 | 2,048.000 | 1 | the guard, gap 300.4 | 13 | 4 |
+| 7,000 | 7,000.000 | 1 | the guard, gap 9.5 | 0 | 2 |
+
+No spurious invocation and no bus-event rejection in any case, and each
+report named the run it came from. 350, 700 and 1,049 ms are the tick's
+349.5 ms aliases: the guard saw a millisecond and the frame counter the
+silence (the spans column: the extension's ms against the frames').
+2,048 ms is the frame counter's own alias, held by the guard. The 13
+slots missed around the 2,048 ms case (the only rejected case with any)
+are unattributed. With the data cut (the silence armed with a 5 s delay,
+the data off, the silence on battery with the bus suspended, the data
+back on for the read): 20 ms two losses (the suspend's bus event and
+the guard's own), 350 ms one loss (the bus event's alone) with the
+silence undetected, the declared limit. Before the set, 44 s after the
+boot, the record held one loss and one invalid service (the guard's
+last gap 155.7 ms; the boot or the restores, unattributed). The health
+counters were reset at 16:44:17, white slept on its own at 16:46:47
+(3.9 mA on the logger); the next read (`wake_watch.sh` waiting on the
+logger for JD's key, then `wake_read.sh wake-detector-read`) is the
+spurious count across one wake, alone.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
@@ -330,6 +397,7 @@ diagnostic), invalid services 0, no stall >= 25 ms, loop gap max 8 ms.
 - Stage 2: `flash-stage2.log`, `run-stage2.log`, `stage2.json`, `compare-stage2.txt`, `sched-after-stage2-flash.txt`, `health-after-stage2-flash.txt`, `sched-after-stage2-run.txt`, `record-after-stage2-run.txt` (its sub-5 fields misread by 4 bytes, see above); the fix: `flash-stage2fix.log`, `run-stage2fix.log`, `stage2fix.json`, `compare-stage2fix.txt`, `sched-after-stage2fix.txt`; `power_saver_back.sh`, `power_saver_back.log`, `settings-after-mode.json`; `lighting-restore.log`, the backup put back at 21:13.
 - `battery-before.txt`, `battery-after.txt`, `health-after-flash.txt`.
 - 11-02: `scan_only_check.sh` (enter/exit, the first attempt: `scan-only-enter.json`, `scan-only-exit.json`, `scan-only-check.log`), `scan_only_key.sh` (the one-run check: `scan-only-key.json`, `scan-only-key.log`), `wake_read.sh` (`wake-dark-read.json`, `wake-dark-read.log`).
+- 11-02 afternoon: `preflash_read.sh` (`preflash-read.json`, `preflash-read.log`), `flash-detector.log`, `silence_check.sh` (`silence-check.json`, `silence-check.log`), `wake_watch.sh` (the logger-driven wake read: `wake-detector-read.json`, `wake-detector-read.log`); `wake_read.sh` takes an optional label since 16:45 so a second read keeps the first's JSON.
 
 ## Lessons
 
@@ -343,6 +411,10 @@ diagnostic), invalid services 0, no stall >= 25 ms, loop gap max 8 ms.
   step was added to it (after its useful work; the EXIT trap still ran).
 - The link's counters count since the boot; compare their growth per
   window, not the totals, across a flash.
+- Across a rejected gap the missed-slot count reads 0 by design (the
+  re-prime re-bases the slot count and the invalid services carry it);
+  compare losses and invalid services there, missed slots only across an
+  accepted one.
 - "Harmless" out-of-bounds reads are not: the plan's and the audit's note
   on `led_state[255]` cost 1.3 mA at dark on one layout and an unknowable
   phantom on the other.
