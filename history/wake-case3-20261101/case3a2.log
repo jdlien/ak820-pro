@@ -1,0 +1,12 @@
+[21:02:20] daemon paused 
+[21:02:20] waiting for white asleep (< 6 mA, 4 rows)
+[21:02:21] asleep; data on
+[21:02:52] not on USB in 30 s (3.295 mA); WAITING FOR A KEY on white (data left on)
+[21:03:51] awake at 21:03:51 (46.15 mA); waiting for USB
+[21:03:55] on USB 3.8 s after the wake: {'plane_name': 2.13, 'plane_pid': 2.13, 'class_pid': 2.13}
+[21:03:57] uptime 1562 s (-3235 s against a boot at 2026-11-01 19:44:00); wdt fired last boot False
+[21:03:57] record: {"state": 0, "reason": "key", "blocked": 0, "flags": 91, "slept": true, "pcf": true, "usb_back_20s": true, "pll_ceiling": false, "bound": false, "reattach": true, "secs": 2693, "strays": 0, "p0": 0, "p2": 16384, "p1": 0, "pll_loops": 87, "key_gain": 0, "seq": 1, "timed_out": []}
+[21:03:57] case 3 a FAIL (slept, a host's frames after the wake, no reset since the flash, HID read)
+[21:03:57] data off
+[21:03:57] daemon restarted 
+[21:03:57] wrote /Users/jdlien/code/ak820-pro/history/wake-case3-20261101/case3a-210357.json

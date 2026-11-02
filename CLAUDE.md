@@ -122,7 +122,8 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
 **Since 18:36 11-01 `ak820pro-jdlien` and `deps.lock` are at `cfe6c2d3a5`**:
 v0.3.0 plus F-033's fix (the row ISR's `NO_LED` read, ~1.3 mA on a dark
-frame), v0.3.1's base, not tagged until the wake gate's USB cases are in.
+frame), v0.3.1's base, not tagged until the wake gate's USB cases are in
+(case 3 passed on white 21:13 11-01; cases 2 and 4 open).
 **v0.3.0, released 11-01 from `4c7395a4c6`**: the 10-31 firmware audit's
 fixes (41 of its 44 confirmed findings; `plans/AUDIT-2026-10-31.md`,
 `plans/BACKLOG.md`'s audit section) and the battery readout's Icon only,

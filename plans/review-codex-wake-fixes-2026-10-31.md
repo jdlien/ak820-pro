@@ -59,5 +59,14 @@ once the hardware gate (4, below) passes.
    Case 1 passed on black at 15:28 10-31 (GREMLIN-RESULTS section 21):
    both bits off at the wake as the driver left them, then the cable's
    plug-in ~20 s later enumerated and raw HID worked. Case 2 on black
-   once its pack charges; case 3 Buzz's session on white; case 4 JD's
-   call.
+   once its pack charges; case 4 JD's call.
+
+   Case 3 passed on white at 21:03-21:13 11-01, on the row ISR's stage 2
+   (`b120a2069c`, v0.3.1's USB and sleep code), in two forms: data on to the
+   sleeping board and then a key (no frames in 3 s, the recovery's
+   re-attach, enumerated 3.8 s after the wake, the 20 s frames flag
+   latched), and data off, a key, data on 30 s later (enumerated in 0.9 s).
+   HID was read after each, with no reset (2 sleeps since the boot, 3287 s
+   slept against the logger's 3282). The bits are inferred from enumeration
+   as in case 1: this build cannot read `CFG`
+   ([`../history/wake-case3-20261101/`](../history/wake-case3-20261101/README.md)).

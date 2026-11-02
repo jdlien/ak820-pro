@@ -1,0 +1,66 @@
+{
+ "variant": "b",
+ "start": "2026-11-01 21:05:28",
+ "data_off": 1793588728.336429,
+ "woke_at": 1793589150.5,
+ "data_on": 1793589180.505235,
+ "bus_first_seen_s": {
+  "plane_name": 0.9,
+  "plane_pid": 0.9,
+  "class_pid": 0.9
+ },
+ "bus_looks": {
+  "plane_name": true,
+  "plane_pid": true,
+  "class_pid": true
+ },
+ "board": {
+  "uptime_s": 2043.435,
+  "record": {
+   "state": 0,
+   "reason": "key",
+   "blocked": 0,
+   "flags": 75,
+   "slept": true,
+   "pcf": true,
+   "usb_back_20s": false,
+   "pll_ceiling": false,
+   "bound": false,
+   "reattach": true,
+   "secs": 55,
+   "strays": 0,
+   "p0": 0,
+   "p2": 16384,
+   "p1": 0,
+   "pll_loops": 87,
+   "key_gain": 0,
+   "seq": 2,
+   "timed_out": []
+  },
+  "sleep_page": {
+   "wake": "key",
+   "valid": [
+    "pcf",
+    "acq_done",
+    "reattach",
+    "slept"
+   ],
+   "flags": 75,
+   "open": [],
+   "sleeps": 2,
+   "slept_total_s": 3287,
+   "pcf_s": 66,
+   "counted_s": 55,
+   "acq_step_ms": 172,
+   "pll_loops": 87,
+   "strays": 0,
+   "blocked": [],
+   "timed_out": []
+  },
+  "wdt_fired_last_boot": false,
+  "wdt_degraded": false
+ },
+ "asleep_since_boot_s": 3282.1,
+ "uptime_vs_flash_s": -19.5,
+ "pass": false
+}

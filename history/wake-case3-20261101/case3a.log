@@ -1,0 +1,8 @@
+[20:17:42] daemon paused 
+[20:17:42] waiting for white asleep (< 6 mA, 4 rows)
+[20:17:43] asleep; data on
+[20:18:14] not on USB in 30 s (3.355 mA); WAITING FOR A KEY on white (data left on)
+[20:38:14] STOPPED: no key within the wait
+[20:38:14] data off
+[20:38:14] daemon restarted 
+[20:38:14] wrote /Users/jdlien/code/ak820-pro/history/wake-case3-20261101/case3a-203814.json

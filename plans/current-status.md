@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-01, 20:15. The block below is where things stand, written to
+Updated 2026-11-01, 21:25. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -100,9 +100,17 @@ Power saver); the A/B's record is `../history/rowisr-stage1-20261101/`.
   - The wake fixes' hardware gate (codex cleared `70f7c1ea10e` for the
     mainline on four USB cases passing): case 1 passed on black 10-31; case 2
     (the cable's insertion waking the board) was running on black at 17:00;
-    case 3 (uhubctl on white) and case 4 (host sleep and remote wake) unrun.
-    v0.3.0 shipped before the gate finished, on two boards' day of use with
-    the same code. A failed case means a v0.3.1.
+    **case 3 passed on white 21:03-21:13 11-01**, in both forms (data on to
+    the sleeping board, then a key: the recovery's re-attach, enumerated
+    3.8 s after the wake; data off, a key, data on 30 s later: enumerated
+    in 0.9 s), HID read after each, no reset (2 sleeps since the boot,
+    3287 s slept against the logger's 3282), on stage 2, which carries
+    v0.3.1's USB and sleep code unchanged
+    ([`../history/wake-case3-20261101/`](../history/wake-case3-20261101/README.md));
+    a host's attach does not wake a deep sleep (20.5 min, data on). Case 4
+    (host sleep and remote wake) unrun. v0.3.0 shipped before the gate
+    finished, on two boards' day of use with the same code. A failed case
+    means a v0.3.1.
 - **After any `deps.lock` pin:** run `scripts/power_model.py` and commit
   `site/power/power.json`, which records the pinned firmware's sha; the
   power-page CI's `--check` fails otherwise (it did on `d90032a`).
