@@ -712,7 +712,13 @@ Each slot, in order:
    data cut (the declared limit); 1,000, 2,048 and 7,000 ms INVALID by the
    guard (residues 301, 300 and 9.5 ms). Each bus event (the data cut's
    suspend, the reconnection's reset) is one loss by design. The witness's
-   edges are still owed for the lengths; the spin's count stands in.
+   edges are still owed for the lengths; the spin's count stands in, and
+   the observers' synchronized stamps the long-gap gates name come with
+   the witness too (the reviews' 6, deferred). After a stale (the guard's
+   rejected gap, an exclusion's end) the frames are in recovery until one
+   is seen moving, 8 ms at most: an interval with both ends inside it is
+   excluded as unjudged without a loss of its own (op 28 sub 6 counts
+   them), a silence inside it excluded with it.
 
    Deep sleep re-primes by the first tick after wake, and the handler
    treats everything before it as INVALID, so the order of the wake hooks
@@ -2070,6 +2076,23 @@ partly. Dispositions, in `e81e8770e0`:
 | 6 (P2) | The report's copies are not the last-before/first-after observation pair; the 2 ms wait is a scheduler delay. | **Accepted as dispositioned twice:** the observation pair is the witness's measurement; the report shows the extension's reading and the spin's count. |
 | 7 (P3) | "Staled by every invalidation" against the deliberate `false`; the decoder's wording of the attribution; the plan's "offsets recorded by the report". | **Fixed** as worded: staled where time is discarded, never by the handler's rejection; the attribution by the guard's count; the offsets the witness's. |
 
+### The detector's fourth verify review (11-02 12:40): NOT READY on one P1, fixed
+
+[`review-codex-row-isr-usb-detector-verify4-2026-11-02-raw.md`](review-codex-row-isr-usb-detector-verify4-2026-11-02-raw.md)
+(gpt-6-astra, xhigh, read-only, on `e81e8770e0`): the third verify's two
+P1s fixed (the frozen-frame exclusion model stays untrusted; the
+rejection path counts once in every interleaving modelled); one P1 left
+in how a recovery baseline is consumed; one new P2; 5, 6 and 7 as before.
+Dispositions, in `832e5db7d7`:
+
+| # | What remained | Disposition |
+|---|---|---|
+| 1 (P1) | A service after a stale commits a VALID baseline whose frames are not yet trusted; the next interval is then not judged by the frames (the start untrusted) yet enters the valid statistics, so a second aliasing silence inside it is accepted and lost. The exclusion's end opens the same window. | **Fixed.** The trust byte becomes three: the bus up, the frames fresh, a stale's recovery pending (no frame seen since the stale, 8 ms at most). An interval that began with the frames expected (fresh or in a recovery: its start `FRMNO` is real either way) is judged if it ends fresh, rejected if the bus went down or an event was serviced or the frames stopped inside, and excluded without a loss of its own (counted as unjudged) when both ends lie inside a recovery with no frame yet: the stale's loss covers it, and a silence inside is excluded with it, never healthy. The blind spot stays the bus down or the frames known stopped at the start. |
+| 4 (new P2) | Clearing an already-clear exclusion staled healthy frames (`od_set_lock_mode` calls the release unconditionally), which could reject the next interval as the frames stopping. | **Fixed.** The stale on release needs a real transition from a nonzero mask to zero. |
+| 5 (P2) | The absolute bound unverified on hardware. | **Accepted:** the ELF fixes the instruction placement; the witness measures the rest. |
+| 6 (P2) | The report lacks the last-before/first-after observer pair. | **Accepted as dispositioned:** the witness's. |
+| 7 (P3) | The header calling the report the observation-gap verdict; the plan's "synchronized stamps in the record". | **Fixed** in the header (the record, not the report); the plan's stamps are noted in D3's "As built" as the witness's, owed with its wires. |
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2358,3 +2381,11 @@ partly. Dispositions, in `e81e8770e0`:
   `via-dev-e81e8770e0-20261102-123158.bin`, token `0xaaf08765`, heap gap
   472 B. A fourth verify asked, with the interleavings question put
   directly.
+- 11-02 12:40-12:47: codex's fourth verify: NOT READY on one P1 (a
+  recovery baseline's next interval unjudged yet VALID) and a new P2
+  (clearing a clear exclusion staled the frames); fixed in `832e5db7d7`
+  (dispositions above): the bus, the freshness and a bounded recovery as
+  three states, an unjudged interval excluded without a loss, the stale
+  on release only on a real transition. The flash candidate
+  `via-dev-832e5db7d7-20261102-124514.bin`, token `0x476e5aec`, heap gap
+  464 B. A fifth verify asked.
