@@ -910,6 +910,17 @@ The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
     At 11:40 11-02 (`charge_mah` 504.17), 2691-2719 mAh since FULL, 32-33%
     of R4's 4011.6 left. The board read 36% on 11-01, which agrees; the
     uncorrected count would say 38-39% today.
+  - **Three more restarts on 11-03, each a QT Py unplug** while the
+    presser was built on it. The REPL's soft reboots did not restart it.
+    The segments:
+    - 564.346 at 23:52:19;
+    - 13.136 from 00:33:04 to 00:51:39;
+    - 28.480 from 01:28:32 to 02:06:55;
+    - the count from 02:11:22 on.
+    The gaps add ~22 mAh (±5): white awake 1380 s of them by its uptime,
+    at 27-47 mA, the rest asleep at ~3.4. The scale is right after each:
+    asleep 3.25 mA at 02:11:22. **So from 02:11:22 11-03, mAh since FULL
+    = `charge_mah` + 2829 (±18)**; at 02:14 that is ~1180 mAh left, 29%.
   - Its anomaly is visible in a day's mean asleep current, which a check
     on the logger should look at: an INA228 that silently resets at its
     defaults keeps recording plausible numbers.

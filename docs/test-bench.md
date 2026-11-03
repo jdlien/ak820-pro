@@ -660,7 +660,7 @@ pack; a weak link; and the first key after a long idle, the baseline for
 every standby design. The relay's contact life (millions at signal current)
 is not a concern at that scale.
 
-## The key presser: two optocouplers on an RP2040 (10-31: written, not yet built)
+## The key presser: two optocouplers on an RP2040 (10-31: written; 11-03: built on the logger's QT Py, both channels pressing)
 
 The wake rig's successor, planned in
 [`plans/ROW-ISR-PLAN.md`](../plans/ROW-ISR-PLAN.md) ("The key-press rig")
@@ -732,6 +732,47 @@ which the old rig put at ~10 ms. `deep_sleep.py`, `deep_cycles.py`,
 `ladder_sleep.py` and `ladder_check.py --rig` still press through relay 1,
 which presses nothing since 10-23; moving them to the presser is a later
 edit, once a channel is proven.
+
+**Built 11-03, on the logger's QT Py** (JD's call: the drain logs on, the
+presser's own code not yet installed). The PC817Cs and their 330 Ω
+resistors sit on a perfboard stacked on the QT Py. Each output goes through
+a 2-pin connector to a gutted-switch plug.
+- **As wired, the channels are crossed against the plan.** A0 is the
+  yellow channel, on (3,14), PgDn. A1 is the blue, on (0,13), Delete. (3,14) replaced the plan's low key in column 13,
+  which would have cost JD his Down arrow. The two rows still differ;
+  the shared column is tested from (0,13) alone.
+- **The contact check passed at 02:13** (`scripts/presser_repl_check.sh`;
+  how it works is in its header). With hands off, A0 and A1 gave 5/5 each,
+  one press a pulse. MI (GPIO4) gave 0, and nothing pressed itself at idle.
+  A real press of A1 played JD's music at 02:03.
+- **The output is polarized**, unlike the relay's dry contact. The
+  phototransistor conducts collector (pin 4) to emitter (pin 3) only, and
+  the matrix's current runs from the column, through the switch and its
+  diode, into the driven-low row. So reversed it passes nothing and harms
+  nothing; the 2-pin connector makes the swap a flip.
+- **The plug must be pushed fully into the hot-swap socket.** It is stiff,
+  and a half-seated plug fails silently. Bridging the plug's leads by hand
+  is the quick check (JD's music toggles).
+- **A cold joint on the yellow opto's pin 2 (ground)** left A0 dead. Its
+  leg reached MI through the tape under the perfboard instead, so a pulse
+  on MI pressed the key now and then. Resoldered 02:11. ⚠️ The perfboard
+  rests on the QT Py's 5V/GND/3V3/MO/MI row with only tape between them:
+  insulate it properly.
+- **The QT Py froze or failed to start three times** during the work
+  (00:17, ~00:30, 01:24 11-03): a steady light or none, nothing on the
+  hub's port, and the sensors' LEDs still lit. A full unplug restarted it
+  each time, once only at the hub end. Unproven between a short under the
+  perfboard (above) and back-power from the sensors over the STEMMA bus.
+  Each unplug restarts the drain's charge count (`plans/current-status.md`).
+- **The keymap, since 02:16 11-03:** (0,13) is F19 and (3,14) F20 on
+  both base layers. F19 is what the Mac's F19 listener and
+  `keydrop_test.py` watch. With the plugs in, JD can only press these keys
+  with tweezers, so the agents may remap them as the tests need. His
+  keymap before is `~/Documents/ak820pro-keymap-before-presser-20261103.json`
+  (Play on (0,13), End on (3,14)).
+- **Bring-up still owed:** the presser's own `code.py` (it replaces the
+  logger's, so it ends the drain's logging), the dwell map, and the
+  witness.
 
 ## The waveform witness: the PIO on the presser's board (11-01: written, not yet on a board)
 
