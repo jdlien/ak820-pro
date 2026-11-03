@@ -1,0 +1,2 @@
+loop_gap_max_ms          4
+row_gap_max_ms           3  (row 2)

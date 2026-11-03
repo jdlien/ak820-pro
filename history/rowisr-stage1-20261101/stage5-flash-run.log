@@ -1,0 +1,122 @@
+[12:47:25] daemon paused
+[12:47:29] data on
+[12:47:33] board present, token before: 0x4215c3e2
+[12:47:33] flash: ak820pro-builds/out/via-dev-078216ec89-20261103-122923.bin
+firmware : ak820pro-builds/out/via-dev-078216ec89-20261103-122923.bin
+built    : Nov  3 12:29:23 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  3 12:47:33 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 0, val 255, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  3 12:47:33 2026  (83 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s0 v255 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  3 12:47:33 2026  (2705 bytes)
+
+== dumping the battery log ==
+# 30 entries (log v8, one per 900 s), newest 582 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261103-124733-preflash.csv  Nov  3 12:47:33 2026  (3652 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s0 v255 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[12:48:03] token after the flash: 0x7c425589 (want 0x7c425589)
+[12:48:18] the ladder held at Always on (the lights stay on for the window and the light gate); a relight press
+[12:48:33] health counters reset
+[12:48:33] the warm window: 300 s, white lit at JD's full white, nothing touching it
+[12:53:33] page 4 (the handler) and page 7 (the scheduler) after 300 s
+loop_gap_max_ms          4
+isr_per_s                7999.0
+isr_mean_us              50.0
+isr_min_us               32.0
+isr_max_us               117.3
+isr_cpu_pct              40.0
+  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;
+  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop
+blit_timeouts            0
+tx_sent                  73
+tx_timeouts              25
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          4
+scan_rate                580
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+slots_elapsed            2417753
+serviced_valid           2417753
+missed_slots             0
+longest run of omissions 1, spurious invocations 0, omissions by the arm deadline 255, epoch losses 0, invalid services 0, shortest handler 29.1 us, elapsed samples dropped for a boundary inside the handler 1 (stage 5a: the kept samples are the boundary-free services)
+omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
+  key row 0: R 255  B   1  G   8
+  key row 1: R 255  B   9  G   5
+  key row 2: R 255  B   3  G  10
+  key row 3: R 255  B   7  G   2
+  key row 4: R 255  B   2  G   4
+  key row 5: R 255  B   4  G   1
+loop_gap_max_ms          4
+row_gap_max_ms           3  (row 2)
+[12:53:35] the light: the lit draw over the last 120 s at full white: 92.12 mA (4b: 92.1 lit, 31.1 dark, 61.0 incremental; within 5% is 58.0-64.1 incremental, 89.1-95.2 lit)
+[12:53:35] the presser's short-tap gate
+[12:56:32] logger logging again (a new power.csv row)
+[12:56:33] A1 x100 at 25 ms with A0 held: key_presses +101 (expected 101), raw_edges +202 (expected 202), dwell actual 25054-25421 us, row_gap_max 3 ms -> PASS, at the scan key0 100/100 (want 100/100), key1 1/1 (want 1/1), elsewhere 0
+RESULT: 6 of 7 batches exact
+[12:56:34] done -> history/rowisr-stage1-20261101/presser-gate-stage5.json
+[12:56:34] data off
+[12:56:34] daemon restarted
+[12:56:34] the ladder back to Power saver; the standing state
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/Users/jdlien/code/ak820-pro/scripts/rowisr_baseline.py", line 70, in devhook
+    h.write(bytes([0] + pay + [0] * (32 - len(pay))))
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jdlien/code/ak820-pro/venv/lib/python3.15/site-packages/hid/__init__.py", line 203, in write
+    return self.__hidcall(hidapi.hid_write, self.__dev, data, len(data))
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jdlien/code/ak820-pro/venv/lib/python3.15/site-packages/hid/__init__.py", line 194, in __hidcall
+    raise HIDException(err)
+hid.HIDException: IOHIDDeviceSetReport failed: (0xE00002ED) (iokit/common) device not responding
+[12:56:36] data off
+Bootstrap failed: 5: Input/output error
+Try re-running the command as root for richer errors.
+[12:56:36] daemon back: the standing state

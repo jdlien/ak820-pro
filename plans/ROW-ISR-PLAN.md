@@ -3195,3 +3195,51 @@ quantization, above the largest new tolerance of 28.389 ms.
   `stage5_gates.sh TOKEN`: the UART and ACK counts around a presser
   batch, `deep_wake_presser.sh 5`, the silence set, the camera gate with
   the studio lights off from the Mac. Waiting on M4's end on white.
+- 11-03 12:47-12:57: **stage 5c on white** (`stage5_flash.sh`, the flash
+  at 12:47:24, the token `0x7c425589`, the window 12:49-12:54 at JD's full
+  white with the ladder held; `history/rowisr-stage1-20261101/
+  stage5-flash-run.log`, `health-isr-stage5.txt`, `health-sched-stage5.txt`,
+  `record-stage5.txt`, `light-stage5.txt`, `presser-gate-stage5.json`).
+  **The field 444 Hz** (page 4: 7,999 services a second). **The light
+  exact**: 92.12 mA lit against 4b's 92.1 (61.0 mA incremental, within
+  0.1%), so the scale 300/64 stands. **The handler 50.0 us mean, 32 min,
+  117 max, 40.0% CPU** (page 4, inclusive; page 7's lifetime elapsed sum
+  wraps at 89 s of handler time, so its mean is a window figure only).
+  `row_gap_max` 3 ms (the gate ≤ 4), `loop_gap_max` 4 ms, no missed
+  slot, no epoch loss, no spurious invocation. **Omissions 2,311 of
+  2,417,753 (0.096%), every one by the arm deadline and every one a red
+  slot** (the per-row table: R saturated on every key row, B and G 1-10):
+  the scan slot (colour 0) carries the key scan before the arm and the
+  entry latency reaches 72.8 us, so a late entry on a scan slot passes
+  80 us. The presser gate 6 of 7 exact, the one off the 8 ms dwell at 88
+  of 100 (72 of 100 on stage 3: the debounce boundary, now with a 2.25 ms
+  matrix), raw_edges exact throughout. tx_timeouts 25 of 73 sent on the
+  data line with the daemon paused (4b's night: 1,646; the radio kinds
+  come with the gates chain). Two bench lessons: the presser gate's
+  1,900 F19/F20 presses land in whatever is in front on an unlocked Buzz
+  (JD's beeps and a crashing Xcode at 12:54), so the gate runs with Buzz
+  locked from now on (`PRESSER=no` on the runner); and the gate's trap
+  restores the standing state, so the runner's own restore after it found
+  no board (the ladder stayed at Always on until 12:58, put back by hand).
+  **Stage 5d built, `6a9fc0fcfe`, token `0x717d9b6a`**: the terminal
+  1,535 (a 32 us window, 1.28x over the full width 1,195; the deadline
+  90.5 us) and the settle 24 ticks (0.5 us; stage 3's sweep was exact at
+  0), two literals the #if guards, flashed at 13:01 without a codex round
+  for the same window.
+- 11-03 13:02-13:08: **stage 5d on white** (`stage5d-flash-run.log`,
+  `health-isr-stage5d.txt`, `health-sched-stage5d.txt`, `record-stage5d.txt`,
+  `light-stage5d.txt`): the same window. **Omissions 89 of 2,417,188
+  (0.0037%), 26x fewer**, every one by the arm deadline still, the red
+  slots 3-23 a key row and the others 1-4: the latency tail past the new
+  90.5 us deadline, about one slot in 3.4 s (one row-colour dark for one
+  2.25 ms field: not visible). The handler 49.5 us mean, 32 min, 117 max,
+  39.6% CPU; the light 92.32 mA (within 0.2% of 4b); `row_gap_max` 3 ms;
+  no missed slot, no loss, no spurious. tx_timeouts 35 of 73 sent (25 on
+  5c's window): to be read with the gates chain's radio kinds. **5d is
+  the stage 5 candidate**; the residual omissions are the plan's "zero in
+  quiet runs" gate not met to the letter (the clock's display runs in a
+  "quiet" window), for codex's and JD's judgment: the next step down is
+  the terminal 1,279 (1.07x headroom, the deadline 95.8 us) or the scan
+  moved off the arm's path. The camera gate run alone on 5d at 13:09
+  (`stage5_gates.sh TOKEN LABEL 4`); the presser gates (1-3) wait for
+  Buzz locked.

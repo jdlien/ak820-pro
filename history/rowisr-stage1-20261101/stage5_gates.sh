@@ -8,12 +8,15 @@
 # and the camera gate at this cadence (camera_write_clip.sh: the lights on,
 # the ladder held, a forced write filmed, nothing in the writer's windows).
 # Each script leaves white in the standing state; this one ends there too.
-# Usage: stage5_gates.sh TOKEN [LABEL]
+# Usage: stage5_gates.sh TOKEN [LABEL] [STEPS] (STEPS the digits of the steps to
+# run, default 1234: 1 the UART counts with a presser batch, 2 the five wakes,
+# 3 the silence set, 4 the camera gate; 1-3 press keys into whatever is in
+# front on an unlocked Buzz, so they run with Buzz locked; 4 presses once).
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 D=history/rowisr-stage1-20261101
-WANT=${1:?token}; L=${2:-stage5}
+WANT=${1:?token}; L=${2:-stage5}; STEPS=${3:-1234}
 PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
 wake_on_data() {
@@ -26,6 +29,7 @@ wake_on_data() {
 }
 standing() { sleep 2; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "the standing state"; }
 
+case "$STEPS" in *1*)
 log "1. the UART and ACK counts awake at the new cadence: status, 200 presses at 25 ms, status"
 wake_on_data || { log "no board"; standing; exit 1; }
 sleep 3
@@ -35,14 +39,17 @@ sleep 3
 venv/bin/python scripts/overrun_diag.py status 2>&1 | tee "$D/overrun-$L-after.txt" | grep -iE "OE total|overrun|ack|timeout" | head -6
 "$HOME/Library/Application Support/ak820pro/bin/ak820" health 2>&1 | grep -iE "ack|overrun|uart|stall|ge_25" | head -8 | tee "$D/health-uart-$L.txt"
 standing
-
+;; esac
+case "$STEPS" in *2*)
 log "2. five ladder sleeps with presser wakes"
 "$D/deep_wake_presser.sh" 5 "$L" "$WANT" 2>&1 | tail -8
-
+;; esac
+case "$STEPS" in *3*)
 log "3. the silence set"
 "$D/silence_check.sh" 2>&1 | tail -20
 for f in silence-check.json silence-check.log; do [ -f "$D/$f" ] && cp "$D/$f" "$D/${f%.*}-$L.${f##*.}"; done
-
+;; esac
+case "$STEPS" in *4*)
 log "4. the camera gate at this cadence: the lights on, the ladder held, the write forced, filmed"
 wake_on_data || { log "no board for the camera"; standing; exit 1; }
 sleep 3
@@ -68,4 +75,5 @@ try: devhook(h, 14, [1, 2]); print("Power saver back")
 finally: h.close()
 PY
 standing
-log "stage 5's gates done"
+;; esac
+log "stage 5's gates done ($STEPS)"
