@@ -3062,3 +3062,17 @@ quantization, above the largest new tolerance of 28.389 ms.
   judgment (two silences within 2 ms as two, ~12 us a slot over stage
   2); stage 5, the 125 us cadence, coded off the board once the witness
   and the camera exist for its gates.
+- 11-03 10:05: **the camera run on stage 4b** (the README's "The camera
+  run"): JD filming at 240 fps on Hutch's relay; the control's 20 held
+  reads at 10:04:00 (dark frames expected), the daemon started at
+  10:04:07, its sync at 10:04:09 and the writer's unmasked write right
+  after (runs 52 to 53, boundary error 0, width 7, no miss). The board's
+  side met; **JD's verdict on the clip is the gate** (no dark frame after
+  10:04:08), to be recorded; the USB-powered case not filmed (relay 2).
+  White handed to Hutch at 10:04 for Warren's keep-alive M4. **Warren's
+  keep-alive cherry-picked onto `row-isr`** at Hutch's request
+  (`c043db65dd`, `a088b51c8b` from gremlin/keepalive; codex's verify
+  `review-codex-keepalive-2026-11-03.md`): the dev artifact
+  `via-dev-a088b51c8b-20261103-100249.bin`, token `0xcf3e1101`, heap gap
+  376 B (the floor 128); not flashed: the flash waits on JD's go after
+  M4, by Hutch.

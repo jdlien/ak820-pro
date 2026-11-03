@@ -966,6 +966,30 @@ hands-free gate; the camera's is JD's. White went back to the standing
 state at 09:36 for Warren's keep-alive measurements and JD's camera
 check.
 
+### The camera run on stage 4b (11-03, 10:04, `camera_runs.sh`): the control's held reads, then the writer's unmasked write, filmed by JD
+
+JD at the desk with the phone at 240 fps, the steps relayed by Hutch.
+The dev build has no direct forced-write op (`HC_RTCTEST` is the
+instrumented build's), so the write was the clock writer's own,
+triggered by the daemon's sync as it started, which the firmware admits
+on the data line only after 10 min without a key (pcf-unseen): white
+woken by one press at 09:50:13, held awake on the data line with the
+daemon paused, nothing touching it after. At 10:04:00.6 the positive
+control, 20 7-byte reads 100 ms apart on the short deadline (the row ISR
+held off through each: a ~2.6 ms gap in the scan, the dark frames JD saw
+after every sync before stage 4); at 10:04:07.2 the daemon started, synced
+at 10:04:09 (the board +87.2 ms off after four hours on BT, corrected to
++0.4 ms) and the writer ran its three transactions unmasked right after:
+**the writer's runs 52 -> 53, boundary error 0 ms, the bracket's width
+7 ms, no miss, STOP clear** (`camera-page4-before.txt`, `-after.txt`,
+`camera-runs.log`). The board's side of the gate is met: the write
+happened with the LEDs driven throughout. **JD's verdict on the clip
+(dark frames in the first two seconds, none after 10:04:08) is the
+gate itself**, recorded when he gives it. Only the bench's battery
+state was filmed (the data line on, no 5 V: the USB-powered case needs
+relay 2 and the drain says no). White back in the standing state at
+10:04:24 and handed to Hutch for Warren's keep-alive measurements.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

@@ -1,0 +1,17 @@
+[09:50:23.349] daemon paused (it is started at T+8 for the sync)
+[09:50:26.442] data on
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 52, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 188, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 51, 'reload_writes': 513, 'boundary_err_ms': -1, 'd_first_ms': 494, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+[09:50:26.536] waiting 814 s for T=10:04:00
+[10:04:00.559] T: the control, 20 held reads 100 ms apart (dark frames expected for ~2 s)
+{'left': 20, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 100, 'hi': 100}
+[10:04:03.196] the control done
+[10:04:07.218] T+8: the daemon started; its sync and the writer's unmasked write follow within seconds (no dark frame expected)
+[10:04:22.253] T+23: reading back
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 53, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 188, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 51, 'reload_writes': 538, 'boundary_err_ms': 0, 'd_first_ms': 494, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+2026-11-03 10:04:07 pause Rogue VHS - Innerglow (Instrumental)
+2026-11-03 10:04:07 board: unknown -> present
+2026-11-03 10:04:09 sync (enumerated): clock set (sub-second): before +87.2 ms, after +0.4 ms, rtt 1.9 ms, U ~1.3 ms, lead now 2.74 ms, bias sent
+2026-11-03 10:04:22 stop requested: exiting (the lock lights restored first, if owed)
+the writer's runs: 52 -> 53 (the write happened)
+[10:04:24.452] data off
+[10:04:24.462] daemon back: the standing state
