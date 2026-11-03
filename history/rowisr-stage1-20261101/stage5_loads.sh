@@ -28,12 +28,19 @@ wake_on_data() {
     for i in $(seq 1 15); do present && return 0; sleep 1; done
     return 1
 }
-ladder() { venv/bin/python - "$1" <<'PY'
-import sys; sys.path.insert(0,'scripts'); sys.path.insert(0,'hostagent')
+ladder() {   # the mode written and read back, once more if it did not take (5e's first window, 13:35)
+    venv/bin/python - "$1" <<'PY'
+import sys, time; sys.path.insert(0,'scripts'); sys.path.insert(0,'hostagent')
 import ak820health as hp
 from rowisr_baseline import devhook
-h = hp.open_device()
-try: devhook(h, 14, [1, int(sys.argv[1])])
+want = int(sys.argv[1]); h = hp.open_device()
+try:
+    for i in range(3):
+        devhook(h, 14, [1, want]); time.sleep(0.5)
+        got = devhook(h, 14, [0])[4]
+        if got == want: print(f"the ladder at mode {got} (try {i + 1})"); break
+        time.sleep(2)
+    else: print(f"the ladder did NOT take: mode {got}, wanted {want}")
 finally: h.close()
 PY
 }

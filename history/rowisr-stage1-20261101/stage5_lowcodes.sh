@@ -18,12 +18,19 @@ WANT=${1:?token}; L=${2:-stage5d}; VALUES=${3:-"0 1 2 4 8 16 32 64"}
 OUT="$HOME/Documents/ak820pro-phonecam/clips"; CROP=1650:670:110:30
 PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
-ladder() { venv/bin/python - "$1" <<'PY'
-import sys; sys.path.insert(0,'scripts'); sys.path.insert(0,'hostagent')
+ladder() {   # the mode written and read back, once more if it did not take (5e's first window, 13:35)
+    venv/bin/python - "$1" <<'PY'
+import sys, time; sys.path.insert(0,'scripts'); sys.path.insert(0,'hostagent')
 import ak820health as hp
 from rowisr_baseline import devhook
-h = hp.open_device()
-try: devhook(h, 14, [1, int(sys.argv[1])])
+want = int(sys.argv[1]); h = hp.open_device()
+try:
+    for i in range(3):
+        devhook(h, 14, [1, want]); time.sleep(0.5)
+        got = devhook(h, 14, [0])[4]
+        if got == want: print(f"the ladder at mode {got} (try {i + 1})"); break
+        time.sleep(2)
+    else: print(f"the ladder did NOT take: mode {got}, wanted {want}")
 finally: h.close()
 PY
 }
