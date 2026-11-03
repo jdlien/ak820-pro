@@ -2575,3 +2575,18 @@ recovery is judged if it ends fresh and excluded without a loss if not.
   common case by comparison, the colour counted, so the hot path has no
   divide; codex; a flash on JD's key; the windows again. White released
   at 20:45.
+- 11-02 20:50-20:57: **the trim built**: `234d2acf8b` (the judgment in
+  ticks through `usb_distance_ticks()`: the frames' span x 375 against
+  the extension's x 2, folded at 768,000, the tolerance 563 ticks plus
+  the span >> 9, no divide under a 2.048 s span; the record's worst and
+  last-rejection spans kept in ticks and converted to ms in
+  `rowisr_record_usb()`, the wire format unchanged; `boundaries_between()`
+  by comparison for 0 or 1; the colour counted beside `cur_row` with a
+  static assertion) and `a47c134079` (the worst field saturating). The
+  linked handler makes no library call; its five masked sections carry
+  no call; the divides remain only in the two fallbacks and the record
+  function. Candidate `via-dev-a47c134079-20261102-205641.bin`, token
+  `0x1a291156`, heap gap 464 B. Codex's verify asked
+  (`review-prompt-row-isr-trim.txt`): the ticks judgment against the ms
+  one under the frames' quantization at every bench length, the ranges,
+  the fast path, the colour invariant, the masked sections.
