@@ -88,6 +88,27 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
+**14:25: stage 5e on white (`739fe1b635`, token `0xf222e31c`) since
+13:34, the night's build.** 5c (12:47) and 5d (13:02) before it. Stage
+5's gates: the field 444 Hz; the light at full white 91.7-92.3 mA
+against 4b's 92.1, the dark hold 31.3, the value ladder linear in the
+byte over a 4.3 mA row-drive term; the handler ~50 us and ~40%
+(codex: the 20% target to revise); omissions 0.003% quiet (the latency
+tail, the USB handler's 80 us the lead) and 0.026% under mixed load
+(the gate 0.1%); `row_gap_max` 3 ms; the presser exact from 10 ms; the
+wakes 5 of 5 kept (spurious invocations at the wake noted); the silence
+set all pass; the camera gate met (the writes unmasked, no trace); the
+clock chip's transactions 7.5/6.1 ms; the low codes monotonic by
+camera with an AE lock. Codex's judgment: keep 125 us and 1,535, a
+small omission budget, release qualification after the operational
+gates. **White's pack hit 15% at 13:42 (the low cap); relay 2 ON since
+14:25 to charge for the per-colour and value-64 holds**, then white to
+Hutch asleep for Warren's M2/M3 and the night's soak. Open for JD: the
+every-eighth judgment (~8 us), the SRAM experiment (a daily flash by
+hand or a dev build with the overrun rings compiled out), the release
+tag after the nights on white and black. The record:
+`history/rowisr-stage1-20261101/README.md` ("Stage 5 on white" and
+after), the plan's log, `docs/leds.md` ("The row ISR rewrite").
 **13:02: stage 5d is on white, `6a9fc0fcfe`, token `0x717d9b6a`** (5c
 `078216ec89` from 12:47 to 13:01): the 444 Hz field, the light exact
 (92.3 mA at full white against 92.1), the handler 49.5 us and 39.6% CPU

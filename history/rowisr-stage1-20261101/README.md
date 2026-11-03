@@ -1457,6 +1457,22 @@ have their number: the base is ~4.3 mA while any LED is lit, the slope
 ~46 mA at full. The lowest codes (bytes 1-7) are below what the logger
 resolves and stay for the photodiode.
 
+**The low codes by camera with JD's exposure lock (14:22-14:24,
+`stage5_lowcodes.sh ... stage5e-lock`; `lowcodes-stage5e-lock.txt`):
+monotonic at the camera's resolution, the floor QMK's.** JD long-pressed
+the preview to lock AE/AF (14:17), and the lock held across the
+volume-key starts: the dark level 2.55 and the clips comparable. Over
+the dark: values 1, 2, 4, 8 all +0.35 to +0.39 (value 4 under value 2 by
+0.02, the noise), 16 +0.47, 32 +0.81, 64 +1.87. QMK's CIE curve maps
+values 1-8 to a byte of 0-1, 16 to ~1, 32 to ~3, 64 to ~12, so the sweep
+is the curve's floor and then the driver's bytes 1, 3, 12: a byte of 1
+(a 5-tick pulse, 0.1 us) lights measurably, and the three rise as the
+camera's gamma predicts for light in proportion to the byte (Y ~ L^0.45:
+1 : 1.6 : 3.1 against 1 : 1.7 : 4.0 measured, the last high by the
+byte estimates). No plateau the driver made; the gate's values 1-16 are
+one byte apart at most under the curve, which is stage 6's subject, not
+stage 5's.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

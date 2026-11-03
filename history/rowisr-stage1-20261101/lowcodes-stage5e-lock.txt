@@ -1,0 +1,8 @@
+0 2.553 /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_202246080.mp4
+1 2.905 /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_202300500.mp4
+2 2.928 /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_202314943.mp4
+4 2.905 /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_202329214.mp4
+8 2.944 /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_202343665.mp4
+16 3.018 /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_202357953.mp4
+32 3.358 /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_202412280.mp4
+64 4.418 /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_202426662.mp4

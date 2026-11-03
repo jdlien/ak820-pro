@@ -3355,6 +3355,13 @@ quantization, above the largest new tolerance of 28.389 ms.
   accounting hold: linear in the byte**, the CIE curve accounted for;
   the power model's base term measured. Bytes 1-7 stay for the
   photodiode. The clip sweep re-run with JD's AE lock (14:22).
+- 11-03 14:22-14:25: **the low codes by camera, with JD's AE/AF lock:
+  monotonic** (the README): values 1-8 share QMK's CIE floor (a byte of
+  0-1, +0.35 luma over dark, a 0.1 us pulse seen), 16, 32, 64 (bytes ~1,
+  3, 12) rise as the camera's gamma predicts for light linear in the
+  byte. **Relay 2 on at 14:25 for the charge** (JD at 14:05); the
+  per-colour and value-64 holds on battery when the pack is past the
+  cap, then white to Hutch asleep on 5e.
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake
