@@ -91,10 +91,11 @@ instruction from flash. **The cadence (`1d73bf3ed5`, the judgment every eighth s
 reverted on codex's P1**: a guard silence inside the eight-service
 interval hides an aliasing silence that follows it within 2 ms, which
 the per-service judgment catches; whether that must count as two is
-JD's call (~8 us a slot). **The safe half is built: `5bf8de959a`,
-token `0x5d2bb9f0`** (the exit snapshot time only, the elapsed sample
-kept honest by one read of the frame counter; ~10 us expected back),
-codex reviewing; then JD's go and key for `exit_on_usb.sh` (the flash,
+JD's call (~8 us a slot). **The safe half is built: `7e438dc9b5`,
+token `0xea0da873`** (the exit snapshot time only, the elapsed sample's
+verdict by the two spans and the bus-event generation, two loads, after
+codex's READY with two P2s on `5bf8de959a`; ~10 us expected back),
+codex verifying; then JD's go and key for `exit_on_usb.sh` (the flash,
 the sections, the silence set, the warm windows) (`history/rowisr-stage1-20261101/README.md`, "The cost
 diagnostic"). Also seen: two span rejections in the
 trim's run, 0 ms by the extension and 256 by the frames, a torn FRMNO

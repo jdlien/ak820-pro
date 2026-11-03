@@ -2713,3 +2713,16 @@ quantization, above the largest new tolerance of 28.389 ms.
   (`review-prompt-row-isr-exit.txt`); then JD's go and key:
   `exit_on_usb.sh` runs `exit_flash.sh` (the flash, two sections windows,
   readcost, `silence_check.sh`, `warm_windows.sh exit`).
+- 11-03 00:30: codex on `5bf8de959a`: **READY TO FLASH, no P1**
+  (`review-codex-row-isr-exit-2026-11-03-raw.md`); two P2s on the elapsed
+  sample's protection: a suspend inside the handler bumps `usb_gen` alone
+  and passed the two-frame cutoff; the cutoff discarded a healthy 3 ms
+  sample and accepted five lost wraps plus 300 ms of preemption. **Fixed
+  in `7e438dc9b5`** (token `0xea0da873`, heap gap 408 B, pushed): under
+  the exit's lock two loads beside the time snapshot, FRMNO and
+  `usb_gen`; the sample needs the bus-event generation unchanged and the
+  entry's modular span comparison; the bus state and the freshness stay
+  out. The vector 1,499 instructions, no call under a mask. Codex's
+  verify asked (`review-prompt-row-isr-exit2.txt`); then JD's go and key:
+  `exit_on_usb.sh` runs `exit_flash.sh` on it (the flash, two sections
+  windows, readcost, `silence_check.sh`, `warm_windows.sh exit`).
