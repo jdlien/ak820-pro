@@ -44,9 +44,11 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
   scripts/bench_power.py on    # both confirm on the bus (below)
   ```
 
-  HA accepts the call in about 0.2 s. Measured (with the Shortcuts, 10-08):
-  the hub was gone from USB within 1 s of "off". After "on", its first chip
-  was back in 3 s and all six main chips in 5 s.
+  The token is the Keychain item `home-assistant` (on Buzz since 11-03;
+  until then it was on Elysium only). HA accepts the call in about 0.2 s.
+  Measured (with the Shortcuts, 10-08): the hub was gone from USB within
+  1 s of "off". After "on", its first chip was back in 3 s and all six
+  main chips in 5 s.
 - ⚠️ **It cuts the whole hub.** Anything else plugged into it goes down too.
 - ⚠️ **The slider must be on BT or 2.4G, never cable, during a cut.** On
   cable, a cut is a cold power-off ([hardware.md](hardware.md), the slider
@@ -966,10 +968,21 @@ starts one. So:
   room only adds a constant and the gap stands out 15-30 noise widths
   either way. What the dark buys is a baseline that a light switching
   mid-clip cannot move: the room's lights follow a presence sensor, so
-  they can go off or on during a run. They are in Home Assistant, like
-  the outlet, but Buzz has no Home Assistant token yet (the Keychain item
-  `home-assistant` that `bench_power.py` reads was left on Elysium), so
-  nothing here switches them.
+  they can go off or on during a run.
+- **Lights out from the Mac: `scripts/studio_lights.py off`, then
+  `restore`** (`status` to look). `off` snapshots every Studio light into
+  `scene.ak820_bench_before`, then switches off each `light.*` in Home
+  Assistant's Studio area plus `switch.accent_lights`. `restore` turns the
+  scene back on. It never touches the presence sensor's configuration
+  switches or `switch.christmas_tree`, the bench's outlet, which is in the
+  Great Room anyway. Tested 11-03 11:45 with JD at the desk (the mmWave
+  presence "on"): all 42 Studio entities off within 2 s, and none came
+  back in 15 s, so the desk-presence automation did not fight it. The
+  frame's median luma fell from 25.3 to 3.2, white's own lights dark in
+  both (only the logger's LEDs left). `restore` brought back the same 20
+  entities, all of them within 5 s. Home Assistant's token is the
+  Keychain item `home-assistant` (on Buzz since 11-03), the same one
+  `bench_power.py` reads.
 
 **Traps, each met on 11-03:**
 - ⚠️ **No UI read while recording.** `uiautomator dump` waits for an idle
