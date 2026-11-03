@@ -132,7 +132,8 @@ def cmd_status(h):
                          restarts=u16(p4, o+5), maybe_stopped=p4[o+7], acq=ACQ[p4[o+8]] if p4[o+8] < 4 else p4[o+8],
                          acq_unc_ms=u16(p4, o+9), acq_step_ms=s16(p4, o+11), attempts=p4[o+13],
                          pcf_pending=p4[o+14], ref_state=p4[o+15], slews=u16(p4, o+16), reload_writes=u16(p4, o+18),
-                         boundary_err_ms=s16(p4, o+20), d_first_ms=u16(p4, o+22), stale=p4[o+24]))
+                         boundary_err_ms=s16(p4, o+20), d_first_ms=u16(p4, o+22), stale=p4[o+24],
+                         brk_width_ms=u16(p4, o+25), brk_fails=p4[o+27]))   # stage 4 of the row ISR rewrite: the bracket's width and misses
 
 
 def cmd_t01(h):

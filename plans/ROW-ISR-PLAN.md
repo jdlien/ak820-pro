@@ -2898,3 +2898,25 @@ quantization, above the largest new tolerance of 28.389 ms.
   wake gate ends**: the flash, the frame counter watched 10 min, the
   short-tap gate, the silence set with the ladder held, the warm
   windows, the boundary batches, then `soak_watch.sh` until the morning.
+- 11-03 04:40: **stage 4 built: `8a82367958`** (dev token `0xd6b5fd8a`,
+  the daily `0x56dfe2cf`, heap gap 408 B, pushed): D6 as specified. The
+  clock chip's transaction runs with the row ISR unmasked
+  (`ak820_i2c_xfer_begin/_end` no longer hold the row line; the system
+  lock contract and the dev `od_*` accounting unchanged), since stage 3's
+  scan writes no MODE; the writer's bracket keeps its width (the two
+  reads around the increment, ms) and counts the runs that never saw the
+  increment, on status page 4 [25..27] (`rtc_phase0.py status` decodes
+  them). The expected transaction: 2.6 ms grown by the handler's share,
+  ~3.3 ms at 27%, against the 10 ms deadline and the 5 ms one around
+  deep sleep. Codex asked (`review-prompt-row-isr-stage4.txt`): any
+  interrupt-side MODE writer left, the software I2C's tolerance of the
+  preemption, the deadlines, the bracket's width, the dev accounting,
+  what assumed the LEDs dark, the gates tonight. The runner
+  `stage4_flash.sh` (after stage 3b's gates): the flash, the clock
+  status pages, a burst of 300 PCF reads with 200 presses through it,
+  the stall counters and `i2c_max_cycles`, the stuck-bus test, the warm
+  windows, then `soak_watch_awake.sh` until the morning (data on, the
+  daemon syncing: the night of syncs, a read every 20 min). JD's camera
+  gate (a forced write with no dark frame) stays owed. Stage 3's wakes 4
+  of 4 so far (one more torn pair on the adjacent-read build inside
+  cycle 4: 25 rejections).
