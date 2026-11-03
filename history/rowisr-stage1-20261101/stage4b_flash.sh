@@ -85,6 +85,15 @@ venv/bin/python scripts/overrun_diag.py burst 20 --lo 40 --hi 80 2>&1 | tail -1;
 venv/bin/python scripts/overrun_diag.py burst stop 2>&1 | tail -1
 venv/bin/python hostagent/rtc_phase0.py status 2>&1 | grep 'page2\|page4' | tee "$D/rtc-status-stage4b-after-stuck.txt"
 venv/bin/python scripts/overrun_diag.py status 2>&1 | tee "$D/overrun-status-stage4b-after-stuck.txt" | grep -i 'kind\|pcf\|span' | head -8
+venv/bin/python - <<'PY'
+import sys; sys.path.insert(0, "hostagent"); sys.path.insert(0, "scripts")
+import ak820health as hp; from overrun_diag import op
+h = hp.open_device()
+try:
+    op(h, 20, [1]); print("op 22's per-kind spans zeroed after the injection (codex on 6b90f3b821: the healthy soak maxima must not carry the stuck test's 10 ms)")
+finally:
+    h.close()
+PY
 timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "standing state for the warm windows"
 log "three deep sleeps and wakes (the pre-sleep read and the wake's recovery on their 5 ms deadline with the handler running): page 2 before and after"
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; sleep 3; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; sleep 4

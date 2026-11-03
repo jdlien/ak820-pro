@@ -1,0 +1,23 @@
+**READY TO FLASH — stage 4b `6b90f3b821`, for the controlled bench run and soak. No P1 found.** Reviewed read-only; no builds, tests, edits, or board commands ran.
+
+1. **Pairing is sound, including failures.** The fallback LLD wraps each inner transfer with unconditional begin/end calls. Deadline aborts, NACKs, arbitration failures, and STOP failures return from the inner function into `_end()`; none bypasses it. HAL then updates its state and unlocks. The failure’s `i2cStop()`/`i2cStart()` occurs afterward, with the transaction’s hold already released. [LLD wrappers:538](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/lib/chibios-contrib/os/hal/lib/fallback/I2C/hal_i2c_lld.c:538), [rtc.c:309](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rtc/rtc.c:309)
+
+   `i2c_row_held` correctly records ownership independently of the timeout flag. Both hooks skip consistently in transaction-lock and byte modes; mode changes occur between transactions. All three `pcf_short_timeout` scopes clear it after their synchronous work returns. Deep sleep cannot intervene: its entry follows the completed `rtc_sleep_prepare()` call in the same thread. [sleep.c:995](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/sleep.c:995)
+
+2. **Dev hold nesting returns to the pre-stage-4 behavior for short transfers.** With both holders active, depth is two. If the tick expires the dev hold first, depth becomes one and the line stays disabled until I2C ends. If I2C ends first, the dev hold retains ownership. Only the last release restores the original enable state; pending interrupts are preserved. The depth changes are protected by the respective locks. Ordinary 10 ms transfers retain stage 4’s behavior. [rowisr.c:1272](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:1272)
+
+3. **The ordinary deadline has plausible margin, sufficient for this flash—not yet a measured worst-case guarantee.** Using your conservative 3.4 ms write baseline gives **6.8 ms at 2×**, or approximately **7.2 ms at 5.5/2.6×**. The calendar read is around **5.5 ms**, leaving useful room against 10 ms. These deadlines are checked during execution, so the final byte, STOP and restart can extend whole-call duration beyond them.
+
+   Tonight’s evidence should show:
+
+   - Actual W8 and other writer calls accumulating, with healthy op 22 whole-call maxima comfortably below 10 ms and **zero unexpected per-kind failures or `i2c_fail` growth**.
+   - Completed writer runs, STOP/maybe-stopped clear afterward, no new bracket failures, and no unexplained restart growth. Writer `restarts` counts missed release timing; it is **not** the I2C driver-restart counter. [rtc.c:1714](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rtc/rtc.c:1714)
+   - Clean short-deadline burst/wake results, preserved presses, and no pass ≥25 ms.
+
+   **Two measurement qualifications:** save the injection evidence, then reset the op 22 diagnostics before measuring healthy soak maxima; otherwise R7’s intentional ~10 ms timeout hides its healthy maximum. Op 20 sub 1 provides that reset; lifetime `i2c_max_cycles` remains contaminated. Also, op 23—including the twenty recovery reads—now exercises **held 5 ms reads**, so it establishes restart recovery but does not exercise ordinary unmasked R7 timing. USB syncs must produce actual PCF writes despite `pcf-unseen`.
+
+4. **“About twice” is right for the observed long-read timing, not an average or a proven tick-cost decomposition.** The strongest corroboration is the boot’s **successful R7 whole-call maximum of 5.611 ms, zero failures**, before the burst or injection. Thus this is not merely timeout cleanup inflating the number. [bench log:72](/Users/jdlien/code/ak820-pro/history/rowisr-stage1-20261101/stage4-flash-run.log:72)
+
+   The row’s 27% is elapsed occupancy and already includes tick preemption *inside* the handler. Tick service outside it, interrupt overhead and other service also consume time; adding the entire tick share to 27% would double-count overlapping intervals.
+
+   **Yes, update operative D6 and the stage-4 gate.** The timeline records the finding, but [D6:869](/Users/jdlien/code/ak820-pro/plans/ROW-ISR-PLAN.md:869) still predicts 3.1–3.25 ms and [stage 4:1276](/Users/jdlien/code/ak820-pro/plans/ROW-ISR-PLAN.md:1276) still requires ≤~3.5 ms. Explicitly supersede those with the measured ~5.5 ms read tail, the short-deadline hold exception, and measured per-kind margin for ordinary transfers. The 8-byte write’s ~7 ms remains an estimate until observed; repeat these gates at any faster row cadence.
