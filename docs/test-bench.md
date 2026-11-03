@@ -576,6 +576,12 @@ Since 11-03 it logs F20 too, the presser's (3,14), as `f20-down` and
 `f20-up`, so the parsers that read field 2 as F19's `down` or `up` skip it.
 ⚠️ An event tap sees every key: the callback matches F19 and F20 and returns
 every other event untouched, never stored. Keep it that way.
+**Since 13:26 11-03 it swallows F19 and F20 once logged** (an active tap,
+which needs Accessibility as well as Input Monitoring; JD granted it on Buzz
+then), so a presser batch reaches no app: a 12:54 batch's ~1,900 presses had
+beeped and driven Xcode on the Mac in use, and the presser's gates had to wait
+for a locked screen. Without the grant it asks once and listens only, and its
+start line in the log says which (`F19/F20 swallowed`).
 **On Buzz since 02:20 11-03.** JD's 10-16 grant was on Elysium, before
 the bench moved, so Buzz needed its own build and grant. At 02:21 the
 presser's ten pulses (`presser_repl_check.sh`) arrived on both sides: the
