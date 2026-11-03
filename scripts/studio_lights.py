@@ -6,11 +6,10 @@
     scripts/studio_lights.py restore   # the snapshot back, each light as it was
 
 Home Assistant over its REST API, with the token from the Keychain item
-`home-assistant` (or $HA_TOKEN), the same as bench_power.py. The Studio's
-lights come from HA's own area list, so a light added there is covered.
-Only `light.*` and the allow-listed switches below are ever switched: the
-presence sensor's configuration switches and the bench's outlet
-(switch.christmas_tree) are never touched.
+`home-assistant` (or $HA_TOKEN). The Studio's lights come from HA's own
+area list, so a light added there is covered. Only `light.*` and the
+allow-listed switches below are ever switched, so the presence sensor's
+configuration switches and anything outside the Studio are never touched.
 
 docs/test-bench.md ("The camera") says what a dark room does and does not
 buy a filmed gate.
@@ -25,7 +24,6 @@ import urllib.request
 HA_URL = os.environ.get("HA_URL", "https://ha.jdlien.ca")
 AREA = "Studio"
 SWITCHES = ["switch.accent_lights"]          # lights behind a switch, not a light entity
-NEVER = {"switch.christmas_tree"}            # the bench's hub power
 PRESENCE = "binary_sensor.seeedstudio_mmwave_kit_bf19cc_presence_information"
 SCENE_ID = "ak820_bench_before"
 
@@ -50,8 +48,8 @@ def call(path, data=None):
 
 def entities():
     names = call("/api/template", {"template": f"{{{{ area_entities('{AREA}') | select('match', 'light\\\\.') | list | tojson }}}}"})
-    found = [e for e in (names if isinstance(names, list) else json.loads(names)) if e not in NEVER]
-    return sorted(found) + [s for s in SWITCHES if s not in NEVER]
+    found = names if isinstance(names, list) else json.loads(names)
+    return sorted(found) + SWITCHES
 
 
 def states(ids):

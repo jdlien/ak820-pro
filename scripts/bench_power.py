@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Cut and restore the keyboard's USB power from the host (docs/test-bench.md).
 
+⚠️ RETIRED (by 11-03): the Acasis hub's brick is off the "Christmas Tree"
+outlet, which powers the household's tree again, so `off` and `on` refuse and
+switch nothing. The keyboard's 5 V is relay 2. `status` still reads the bus.
+The rest of this docstring describes how it worked.
+
 The keyboard's port on the Acasis hub is left switched ON (the hub remembers
 it across power cycles), and the hub's brick is on the "Christmas Tree"
 outlet, which Home Assistant switches (`switch.christmas_tree`; until
@@ -107,6 +112,9 @@ def main():
     if a.action == "status":
         print("present" if present() else "absent")
         return
+    sys.exit("refusing: the \"Christmas Tree\" outlet no longer powers the bench (retired by "
+             "11-03). It powers the household's tree again, and the keyboard's 5 V is relay 2 "
+             "(docs/test-bench.md, \"The USB relay\"). Nothing was switched.")
     t_req, t_ok, result = switch(a.action)
     line = (f"{a.action}: requested {stamp(t_req) if t_req else '-'}, "
             f"bus {stamp(t_ok) if t_ok else '-'}: {result}")

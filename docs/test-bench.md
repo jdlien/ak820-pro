@@ -28,28 +28,21 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
   without JD's hands. Since 11-03 the Mac also starts and stops the
   Pixel 8's 240 fps recordings and pulls the clips
   ([below](#the-camera-the-pixel-8-over-adb-11-03)).
-- **For the keyboard's charging, use the USB relay**
+- **The keyboard's power is the USB relay**
   ([below](#the-usb-relay-the-keyboards-charging-from-the-host), since 18:30
-  10-08). It cuts only the keyboard's 5 V, the keyboard stays on USB, and the
-  host switches it. The outlet is for cutting the whole hub.
-- The keyboard goes on JD's **Acasis 16-port hub**. The hub's power brick is
-  plugged into a **smart outlet named "Christmas Tree"**. Without its brick
-  the hub has no USB at all, so cutting the outlet cuts every port.
-- **Home Assistant switches the outlet** (`switch.christmas_tree`, since
-  2026-10-13; before that it was in Apple Home, and two Shortcuts switched it,
-  one of which once hung for 60 s). From a terminal:
-
-  ```sh
-  scripts/bench_power.py off   # the hub and everything on it lose power
-  scripts/bench_power.py on    # both confirm on the bus (below)
-  ```
-
-  The token is the Keychain item `home-assistant` (on Buzz since 11-03;
-  until then it was on Elysium only). HA accepts the call in about 0.2 s.
-  Measured (with the Shortcuts, 10-08): the hub was gone from USB within
-  1 s of "off". After "on", its first chip was back in 3 s and all six
-  main chips in 5 s.
-- ⚠️ **It cuts the whole hub.** Anything else plugged into it goes down too.
+  10-08). Relay 2 cuts only the keyboard's 5 V, the keyboard stays on USB,
+  and the host switches it.
+- **Retired: the "Christmas Tree" outlet** (by 11-03). The Acasis hub's
+  power brick is no longer on it, and it is back on its December job, so
+  nothing on the bench depends on it. ⚠️ **`scripts/bench_power.py on|off`
+  refuses since 11-03**: it would switch `switch.christmas_tree`, now the
+  household's tree, and then wait for a hub that no longer drops. The
+  sections below that cut the whole hub (the 10-08 measurements, "Confirm
+  every cut from the USB side", "An automated trial") are the record of
+  how it worked.
+- **Home Assistant** is still on the bench for the Studio's lights
+  (`scripts/studio_lights.py`, "The camera"). Its token is the Keychain
+  item `home-assistant` (on Buzz since 11-03; until then on Elysium only).
 - ⚠️ **The slider must be on BT or 2.4G, never cable, during a cut.** On
   cable, a cut is a cold power-off ([hardware.md](hardware.md), the slider
   section), and the battery log in RAM is lost ([battery.md](battery.md)).
@@ -58,8 +51,6 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
 - **By hand:** hold a port's button for more than 1 s. That cuts that port's
   5 V. A bus-powered device then drops off USB, but **the keyboard stays on USB
   over data alone** and simply stops charging (next section).
-- ⚠️ The outlet is named for what it powers in December. Check nothing else
-  is plugged into it before cutting it.
 
 ## The USB relay: the keyboard's charging, from the host
 
@@ -312,6 +303,10 @@ set them up, so they sat in the hub's reset state.
     uhubctl call with `timeout 20`.
 
 ## An automated trial
+
+⚠️ Retired with the outlet (by 11-03): `bench_power.py on|off` refuses, and
+relay 2 is the keyboard's power cut. What follows is how the outlet's trial
+worked.
 
 `scripts/bench_power.py on|off|status [--log CSV]` does steps 2 and 3:
 it asks Home Assistant, confirms on the bus, retries once, and logs both
@@ -974,15 +969,13 @@ starts one. So:
   `scene.ak820_bench_before`, then switches off each `light.*` in Home
   Assistant's Studio area plus `switch.accent_lights`. `restore` turns the
   scene back on. It never touches the presence sensor's configuration
-  switches or `switch.christmas_tree`, the bench's outlet, which is in the
-  Great Room anyway. Tested 11-03 11:45 with JD at the desk (the mmWave
+  switches or anything outside the Studio. Tested 11-03 11:45 with JD at the desk (the mmWave
   presence "on"): all 42 Studio entities off within 2 s, and none came
   back in 15 s, so the desk-presence automation did not fight it. The
   frame's median luma fell from 25.3 to 3.2, white's own lights dark in
   both (only the logger's LEDs left). `restore` brought back the same 20
   entities, all of them within 5 s. Home Assistant's token is the
-  Keychain item `home-assistant` (on Buzz since 11-03), the same one
-  `bench_power.py` reads.
+  Keychain item `home-assistant` (on Buzz since 11-03).
 
 **Traps, each met on 11-03:**
 - ⚠️ **No UI read while recording.** `uiautomator dump` waits for an idle
