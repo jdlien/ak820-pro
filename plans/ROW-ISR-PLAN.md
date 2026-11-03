@@ -2206,6 +2206,26 @@ discarded, never by the handler's own rejection; a stale's recovery lasts
 until a frame or 8 ms of guarded time; an interval that begins in a
 recovery is judged if it ends fresh and excluded without a loss if not.
 
+### The trim's verify review (11-02 21:04): READY TO FLASH
+
+`review-codex-row-isr-trim-2026-11-02-raw.md`, on `234d2acf8b` and
+`a47c134079` against `5c0e6249d0` with the ELF. No P1. Its model: the
+SOF's floor-or-ceiling quantization, CT16B5's, the old rounding to ms
+and the clocks' 0.09%; 4,875,002 healthy-interval cases through 13 s
+pass both judgments (the slot, scan-only's slot, hold-offs of a few
+ms), 2,326,362 alias cases are accepted by neither, and every bench
+length keeps its predicted outcome; within 13 s the closest lost-wrap
+coincidence is 49.152 ms, 36.436 ms after the clocks and the
+quantization, above the largest new tolerance of 28.389 ms.
+
+| # | Finding | Disposition |
+|---|---|---|
+| a | Not literally equivalent at the tolerance's edge: (600 ticks, 0 frames) the old accepts at 3 ms, the new rejects at 600 > 564; (56,157 ticks, 296 frames) the old rejects at 4 ms, the new accepts at 657 <= 672. Neither is a healthy interval under the envelope nor defeats the silence guarantee. | **Accepted as the new contract:** the tolerance is 563 ticks plus the span >> 9, in ticks; the plan's "3 ms plus 0.2%" stands as the description. |
+| b | The worst accepted distance's ceiling is now 350 ms (16 bits of ticks), and discarding the half tick can move its rounded report by 1 ms ((281, 3): 1 ms against the old 2). The ranges (the span x 2 at an hour 1,350,000,000; the fold 0-192,000; the tolerance up to 1,318,922; the conversions' numerator 1,350,000,187; the last span saturating at 65,535 ms) are safe. | **Accepted:** a diagnostic's precision; the worst distance of a healthy bus is a few ticks. |
+| c | The fast path equals the rounded division for 0 and 1 at both slots (12,816: 0-6,407 and 6,408-19,223; 30,000: 0-14,999 and 15,000-44,999), the fallback returns 2 at the threshold; the 32-bit numerator stays under 1,879,128,472 with a full 16-bit phase. | Correct. |
+| d | `cur_colour == cur_row % 3` and `key_row == cur_row / 3` hold from the zero initializers through the only writes, the adjacent rotation, the 17 -> 0 wrap, scan-only and the early returns; 100,000 rotations checked. | Correct. |
+| e | Only rowisr.c changed; `Vector90` makes no arithmetic-library call and no external call inside its five masked sections; the divides live in the two fallbacks and the unlocked record conversion; sub 6's offsets and units match `rowisr_diag.py` (a synthetic reply decoded). Qualification: the unchanged scan helper calls `_pal_lld_setpadmode` while masked (ELF 0x23eba, 0x23f0e), from before these commits. | Correct. The mode writes in the scan's masked section are stage 3's subject ("the scan without mode writes"): fixed pin modes, no call. Noted there. |
+
 ## Process log
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
@@ -2590,3 +2610,10 @@ recovery is judged if it ends fresh and excluded without a loss if not.
   (`review-prompt-row-isr-trim.txt`): the ticks judgment against the ms
   one under the frames' quantization at every bench length, the ranges,
   the fast path, the colour invariant, the masked sections.
+- 11-02 21:04: codex's verify: **READY TO FLASH**, no P1 ("The trim's
+  verify review"): 4.9 M healthy cases and 2.3 M alias cases agree with
+  the old judgment, every bench length's outcome kept; the edge cases of
+  the tolerance accepted as the contract; the scan helper's mode-write
+  call while masked noted for stage 3. The flash waits on JD's key and
+  his go, then `trim_flash.sh`: `flash.sh`, the token, `warm_windows.sh
+  trim` against stage 2's and the detector's windows.
