@@ -1,0 +1,24 @@
+the ladder at mode 0 (try 1)
+off at 14:07:56: 0 of 42 on: none
+[14:08:13] value 0: mean luma 34.287 (the clip's second second)
+[14:08:28] value 1: mean luma 9.492 (the clip's second second)
+[14:08:42] value 2: mean luma 8.980 (the clip's second second)
+[14:08:56] value 4: mean luma 8.982 (the clip's second second)
+[14:09:10] value 8: mean luma 8.931 (the clip's second second)
+[14:09:24] value 16: mean luma 8.140 (the clip's second second)
+[14:09:38] value 32: mean luma 9.384 (the clip's second second)
+[14:09:53] value 64: mean luma 10.147 (the clip's second second)
+restored: 23 of 42 on: light.gremlin_leds, light.studio, light.studio_ceiling_a, light.studio_ceiling_b, light.studio_ceiling_c, light.studio_floor_lamp_1, light.studio_floor_lamp_1_segment_001, light.studio_floor_lamp_1_segment_002, light.studio_floor_lamp_1_segment_003, light.studio_floor_lamp_1_segment_004, light.studio_floor_lamp_1_segment_005, light.studio_floor_lamp_1_segment_006, light.studio_floor_lamp_1_segment_007, light.studio_floor_lamp_1_segment_008, light.studio_floor_lamp_1_segment_009, light.studio_floor_lamp_1_segment_010, light.studio_floor_lamp_1_segment_011, light.studio_floor_lamp_1_segment_012, light.studio_floor_lamp_1_segment_013, light.studio_floor_lamp_1_segment_014, light.studio_floor_lamp_1_segment_015, light.studio_floor_lamp_2, switch.accent_lights
+[14:09:56] JD's lighting restored
+the ladder at mode 2 (try 1)
+[14:09:59] the standing state
+value -> luma (minus the dark level):
+    0:  34.287   +0.000  
+    1:   9.492  -24.795  
+    2:   8.980  -25.307  
+    4:   8.982  -25.305  
+    8:   8.931  -25.356  
+   16:   8.140  -26.147  
+   32:   9.384  -24.903  
+   64:  10.147  -24.140  
+monotonic: False

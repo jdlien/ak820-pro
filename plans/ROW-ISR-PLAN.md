@@ -3338,6 +3338,14 @@ quantization, above the largest new tolerance of 28.389 ms.
   camera next, then a 45 min charge through relay 2 to lift the cap for
   the per-colour and value-64 holds on battery (JD at 14:05: the ISR
   work before the drain), then the hand-over asleep.
+- 11-03 14:07-14:11: **the low codes by camera: no result** (the phone's
+  gain floats per clip in the dark: values 1-64 all read the same; the
+  README). The value ladder on the logger instead (solid white at 0, 8,
+  16, 32, 64, 128; `stage5_loads.sh TOKEN LABEL 4`). The dev build's RAM
+  listed for the SRAM experiment: the diagnostics' rings and taps ~1.5
+  KB, a measurement build would compile the overrun rings and the RX tap
+  out to hold a ~1 KB `.ramtext` (the README). The docs carry the
+  rewrite's figures (`docs/leds.md`, "The row ISR rewrite").
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake

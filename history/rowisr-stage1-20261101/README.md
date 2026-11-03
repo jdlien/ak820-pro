@@ -1396,6 +1396,28 @@ incremental on this build's own base is **60.4 mA (5e, 91.70 lit) and
 61.0 (5d, 92.32)** against 4b's 61.0: within 1%, the light gate at full
 white closed with its own dark reference.
 
+**The low codes by camera (14:07-14:10, `stage5_lowcodes.sh`): no
+result.** Solid white at values 0, 1, 2, 4, 8, 16, 32, 64, a 3 s clip
+each with the room dark: the value 0 clip read 34.3 (the lamps still
+fading at 14:08:00, four seconds after the off command) and values 1
+to 64 all 8.1-10.1, flat: in the dark the phone's exposure and gain
+float per clip and compress every level to the same luma, so the sweep
+says nothing about the codes (`lowcodes-stage5e.txt`; JD was also
+watching a video in the room). The low codes need a fixed-gain
+instrument: the photodiode on the plan's witness, or the logger for the
+codes it can resolve; the value ladder on the logger follows.
+
+**The dev build's RAM, for the SRAM experiment** (`nm --size-sort` on
+5e's ELF, 26,592 B of symbols): `log_buf` 12,960 B (the RAM battery
+log), `wear_leveling` 1,032, `fa_tab` 640, `scratch_buf` and `gq` 512
+each, `tx_q` 456, two rings of 448 and 320 (the overrun diagnostics),
+`tile.*` 390-160, `led_state` and `led_state_buf` 243 each, the ds-phase
+`wake_ring` 208 and the RX tap's 208, `dbg_text`/`dbg_shown` 198 each,
+`prof_ring` and `mon_ring` 160. The dev diagnostics' rings and taps are
+about 1.5 KB; a ~1 KB `.ramtext` for the handler's section 2 would need
+the overrun rings and the RX tap compiled out of that measurement build
+(the gap is 376 B; the daily's 2.3 KB holds it as is).
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
