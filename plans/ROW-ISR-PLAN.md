@@ -3027,3 +3027,12 @@ quantization, above the largest new tolerance of 28.389 ms.
   ms as two, ~8-12 us a slot: page 4 is 70.9-71.6 us against stage 2's
   59.8), and stage 5's instruments (the witness, the camera) before the
   cadence moves.
+- 11-03 05:40: the awake soak's first 20 min on stage 4b (`soak-stage4b.jsonl`,
+  read 2): the writer ran 5 times (runs_ok 5, restarts 0, release error
+  3 ms, boundary error 4 ms, the bracket's width 7 ms, no miss), and
+  the unmasked ordinary transactions' whole-call maxima per kind: the
+  7-byte read 5.47 ms (19 calls), **the 8-byte write 4.56 ms** (5), the
+  1-byte read 2.32 ms (263), the 1-byte write 1.64 ms (10), none failed
+  (`i2c_fail` still the stuck test's 1): about 2x margin under the 10 ms
+  deadline, as estimated. The frame counter 4.7 million judged, none
+  rejected. The soak runs on.
