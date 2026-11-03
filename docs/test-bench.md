@@ -958,6 +958,18 @@ starts one. So:
   phone's preview shows is brighter than what it records. The board's own
   LEDs and screen are bright enough. The room's lights showed no flicker
   in that clip: the per-frame brightness has no 120 Hz component.
+- **A dark room changes the percentages, not what the camera can see.**
+  White at full white, the keys cropped: with the room lit (11:10) the
+  keys' luma was 50.6 and a held read's gap 20-39% of it; dark (11:28,
+  the room's presence sensor), 24.8 and 39-79%. In luma levels both are
+  the same, the gap 10-20 and the noise 0.67-0.68 (scaled MAD), so the
+  room only adds a constant and the gap stands out 15-30 noise widths
+  either way. What the dark buys is a baseline that a light switching
+  mid-clip cannot move: the room's lights follow a presence sensor, so
+  they can go off or on during a run. They are in Home Assistant, like
+  the outlet, but Buzz has no Home Assistant token yet (the Keychain item
+  `home-assistant` that `bench_power.py` reads was left on Elysium), so
+  nothing here switches them.
 
 **Traps, each met on 11-03:**
 - ⚠️ **No UI read while recording.** `uiautomator dump` waits for an idle
