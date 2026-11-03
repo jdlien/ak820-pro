@@ -570,10 +570,11 @@ Since 11-03 it logs F20 too, the presser's (3,14), as `f20-down` and
 `f20-up`, so the parsers that read field 2 as F19's `down` or `up` skip it.
 ⚠️ An event tap sees every key: the callback matches F19 and F20 and returns
 every other event untouched, never stored. Keep it that way.
-⚠️ **Not installed on Buzz** (11-03: no app in `~/Applications`, no log).
-JD's 10-16 grant was on Elysium, before the bench moved. On Buzz it needs
-`scripts/build-f19-listener.sh`, then JD's Input Monitoring grant at its
-first start.
+**On Buzz since 02:20 11-03.** JD's 10-16 grant was on Elysium, before
+the bench moved, so Buzz needed its own build and grant. At 02:21 the
+presser's ten pulses (`presser_repl_check.sh`) arrived on both sides: the
+board counted 5 and 5, and the listener logged F20 down/up 5/5 (A0) and
+F19 down/up 5/5 (A1).
 ⚠️ **When the monitors sleep, this Mac locks, and from then on the listener
 registers no keypresses** until it is unlocked: keys at the lock screen go to
 the login window under secure input, which no listener sees.
