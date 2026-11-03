@@ -163,7 +163,8 @@ def status_dict(r):
             "row_irq_enabled": bool(r[15]), "hold_depth": r[16], "last_hold_overlapped": bool(r[17]),
             "prime_timed_out": bool(r[18]), "skip_active": bool(r[19]), "skip_ms_left": u16(r, 20),
             "hw_fault": bool(r[22]), "silence_armed": bool(r[23]), "silence_ms": u16(r, 24),
-            "silence_last_ticks": u32(r, 26), "silence_last_ms": round(u32(r, 26) / 187.5, 3), "silences_run": r[30]}
+            "silence_last_ticks": u32(r, 26), "silence_last_ms": round(u32(r, 26) / 187.5, 3), "silences_run": r[30],
+            "col_map_fault": bool(r[31])}   # stage 3: MATRIX_COL_PINS is not the order the scan's port reads assemble
 
 
 USB_STATES = {0: "uninit", 1: "stop", 2: "ready", 3: "selected", 4: "ACTIVE", 5: "SUSPENDED"}
@@ -286,7 +287,9 @@ def main():
                      "step 6 (the arm)", "exit snapshot", "exit judgment and the record"]
             try:
                 xfer(h, 11)   # reset
-            except SystemExit:
+            except SystemExit as e:
+                if "refused" not in str(e):
+                    raise
                 sys.exit("the sections are not compiled in: a build with ROWISR_SECTIONS=1 has them (rowisr.h; ~6 us a slot of commit)")
             time.sleep(10)
             o = xfer(h, 11)[4:]

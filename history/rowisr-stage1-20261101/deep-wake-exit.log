@@ -1,0 +1,74 @@
+[02:52:46] daemon paused
+[02:52:46] cycle 0: the baseline wake and read (no verdict)
+[02:52:58] white asleep (3.310 mA)
+[02:52:58] logger paused
+[02:53:05] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[02:53:05] QT Py soft-rebooted into its logger
+[02:53:05] logger back
+[02:53:07] logger logging again (a new power.csv row)
+[02:53:11] token 0x9e2d894a (want 0x9e2d894a)
+[02:53:11] cycle 0: {"t": "02:53:11", "press_to_present_s": 10.4, "key_presses": 1380, "raw_edges": 2800, "epoch_losses": 9, "spurious": 1, "invalid_services": 6, "usb_rejects": 2, "usb_events": 4, "loss_gen": 30}
+[02:53:11] data off; white sleeps in ~3 min
+[02:56:16] white asleep (3.505 mA)
+[02:56:16] logger paused
+[02:56:23] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[02:56:23] QT Py soft-rebooted into its logger
+[02:56:23] logger back
+[02:56:25] logger logging again (a new power.csv row)
+  File "<string>", line 1
+    import json,sys; d=json.load(sys.stdin); print(f"woke {d[\"press_to_present_s\"]} s after the press; key_presses {d[\"key_presses_delta\"]:+d} (want +1), losses {d[\"losses_delta\"]:+d}, spurious {d[\"spurious_delta\"]:+d}, frame rejects {d[\"usb_rejects\"]} events {d[\"usb_events\"]}")
+                                                              ^
+SyntaxError: unexpected character after line continuation character
+[02:56:28] cycle 1:  -> PASS
+[02:56:28] data off
+[02:59:33] white asleep (3.335 mA)
+[02:59:33] logger paused
+[02:59:40] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[02:59:41] QT Py soft-rebooted into its logger
+[02:59:41] logger back
+[02:59:43] logger logging again (a new power.csv row)
+  File "<string>", line 1
+    import json,sys; d=json.load(sys.stdin); print(f"woke {d[\"press_to_present_s\"]} s after the press; key_presses {d[\"key_presses_delta\"]:+d} (want +1), losses {d[\"losses_delta\"]:+d}, spurious {d[\"spurious_delta\"]:+d}, frame rejects {d[\"usb_rejects\"]} events {d[\"usb_events\"]}")
+                                                              ^
+SyntaxError: unexpected character after line continuation character
+[02:59:46] cycle 2:  -> PASS
+[02:59:46] data off
+[03:02:51] white asleep (3.725 mA)
+[03:02:51] logger paused
+[03:02:58] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[03:02:59] QT Py soft-rebooted into its logger
+[03:02:59] logger back
+[03:03:01] logger logging again (a new power.csv row)
+  File "<string>", line 1
+    import json,sys; d=json.load(sys.stdin); print(f"woke {d[\"press_to_present_s\"]} s after the press; key_presses {d[\"key_presses_delta\"]:+d} (want +1), losses {d[\"losses_delta\"]:+d}, spurious {d[\"spurious_delta\"]:+d}, frame rejects {d[\"usb_rejects\"]} events {d[\"usb_events\"]}")
+                                                              ^
+SyntaxError: unexpected character after line continuation character
+[03:03:04] cycle 3:  -> PASS
+[03:03:04] data off
+[03:06:09] white asleep (3.535 mA)
+[03:06:09] logger paused
+[03:06:15] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[03:06:16] QT Py soft-rebooted into its logger
+[03:06:16] logger back
+[03:06:18] logger logging again (a new power.csv row)
+  File "<string>", line 1
+    import json,sys; d=json.load(sys.stdin); print(f"woke {d[\"press_to_present_s\"]} s after the press; key_presses {d[\"key_presses_delta\"]:+d} (want +1), losses {d[\"losses_delta\"]:+d}, spurious {d[\"spurious_delta\"]:+d}, frame rejects {d[\"usb_rejects\"]} events {d[\"usb_events\"]}")
+                                                              ^
+SyntaxError: unexpected character after line continuation character
+[03:06:21] cycle 4:  -> PASS
+[03:06:21] data off
+[03:09:26] white asleep (3.325 mA)
+[03:09:26] logger paused
+[03:09:33] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100433 us
+[03:09:34] QT Py soft-rebooted into its logger
+[03:09:34] logger back
+[03:09:36] logger logging again (a new power.csv row)
+  File "<string>", line 1
+    import json,sys; d=json.load(sys.stdin); print(f"woke {d[\"press_to_present_s\"]} s after the press; key_presses {d[\"key_presses_delta\"]:+d} (want +1), losses {d[\"losses_delta\"]:+d}, spurious {d[\"spurious_delta\"]:+d}, frame rejects {d[\"usb_rejects\"]} events {d[\"usb_events\"]}")
+                                                              ^
+SyntaxError: unexpected character after line continuation character
+[03:09:39] cycle 5:  -> PASS
+[03:09:39] data off
+[03:09:39] RESULT: 5 of 5 wakes kept the key -> history/rowisr-stage1-20261101/deep-wake-exit.json
+[03:09:39] data off
+[03:09:39] daemon restarted

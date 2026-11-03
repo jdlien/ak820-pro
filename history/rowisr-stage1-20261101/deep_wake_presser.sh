@@ -39,10 +39,10 @@ wait_asleep() {   # three fresh rows under 6 mA; up to 7 min
     done
     log "white not asleep after 7 min (last row: $last)"; return 1
 }
-wake_and_read() {   # prints JSON of the cycle
+wake_and_read() {   # prints the cycle's JSON on stdout, one line; everything else to stderr
     local t_press t_up delay before="$1"
     t_press=$(python3 -c 'import time; print(time.time())')
-    venv/bin/python scripts/presser_repl.py pulse A1 100 || { log "the press failed"; return 1; }
+    venv/bin/python scripts/presser_repl.py pulse A1 100 >&2 || { log "the press failed"; return 1; }   # its log to stderr: this function's stdout is the cycle's JSON
     uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null
     for i in $(seq 1 40); do present && break; sleep 0.5; done
     present || { log "white NOT present 20 s after the press: no wake"; uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; return 2; }
@@ -85,7 +85,8 @@ for k in $(seq 1 "$N"); do
     echo "$cur" >> "$OUT"
     ok=$(echo "$cur" | python3 -c 'import json,sys; print("PASS" if json.load(sys.stdin)["pass"] else "FAIL")')
     [ "$ok" = PASS ] && pass=$((pass + 1))
-    log "cycle $k: $(echo "$cur" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(f"woke {d[\"press_to_present_s\"]} s after the press; key_presses {d[\"key_presses_delta\"]:+d} (want +1), losses {d[\"losses_delta\"]:+d}, spurious {d[\"spurious_delta\"]:+d}, frame rejects {d[\"usb_rejects\"]} events {d[\"usb_events\"]}")') -> $ok"
+    summ=$(echo "$cur" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("woke %.1f s after the press command (the REPL setup inside); key_presses %+d (want +1), losses %+d, spurious %+d, frame rejects %d, bus events %d" % (d["press_to_present_s"], d["key_presses_delta"], d["losses_delta"], d["spurious_delta"], d["usb_rejects"], d["usb_events"]))')
+    log "cycle $k: $summ -> $ok"
     prev=$cur
     uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"
 done

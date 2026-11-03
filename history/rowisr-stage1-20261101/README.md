@@ -686,6 +686,33 @@ locked XOR removes: on it the column must read exact. `row_gap_max`
 resets them now). An earlier launch found white asleep and stopped: the
 script now wakes it with one press first.
 
+### Deep sleep's wakes with the waking key kept, by the presser (11-03, 02:52-03:10, `deep_wake_presser.sh 5 exit`): 5 of 5
+
+The gate stage 1 and stage 2 owed, run with no hands: white left to
+sleep (Power saver, 3 min after the last key, the data line off; asleep
+at 3.3-3.7 mA on the logger), one press of A1 ((0,13), 100 ms), the data
+line on, white present within seconds, the counts read, the data line
+off again; a cycle 0 for the baseline read. The verdict is the board's
+`key_presses`, +1 a cycle (the Mac would lose the first key after a
+30 min sleep anyway, the module's link drop; these sleeps were 3 min).
+`deep-wake-exit.json`:
+
+| Cycle | woke | press command to present, s | key_presses | losses | spurious | frame rejects / bus events, since the reset |
+|---|---|---|---|---|---|---|
+| 1 | 02:56:28 | 10.3 | +1 | +2 | +0 | 2 / 5 |
+| 2 | 02:59:46 | 10.4 | +1 | +2 | +0 | 2 / 6 |
+| 3 | 03:03:04 | 10.4 | +1 | +2 | +0 | 2 / 7 |
+| 4 | 03:06:21 | 10.4 | +1 | +2 | +0 | 2 / 8 |
+| 5 | 03:09:39 | 10.4 | +1 | +2 | +0 | 2 / 9 |
+
+**Every waking key kept, no spurious invocation, two losses a sleep
+(the exclusion's entry and its end, by design), one bus event a cycle
+(the data line's reconnection), and the frame counter's rejections
+steady at 2 through the five sleeps** (the torn pair from before the
+run; none new). The "press command to present" column includes the
+REPL's ~7 s of setup before the pulse; the wake itself, from the
+earlier runs, is 3-4 s to the enumeration.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

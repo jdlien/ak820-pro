@@ -38,21 +38,26 @@ fi
 sleep 2
 T=$(token); log "token $T (want $WANT)"
 [ "$T" = "$WANT" ] || { log "not the expected build: stopping"; exit 1; }
+venv/bin/python -c "import sys; sys.path.insert(0, 'hostagent'); import ak820health as hp; hp.reset_counters()" && log "health counters reset (row_gap_max is this run's)"
+if venv/bin/python scripts/rowisr_diag.py rig --json >/dev/null 2>&1; then RIG=1; log "the rig's counters at the scan are available (stage 3, op 28 sub 12)"; else RIG=0; log "no rig counters on this build (before stage 3)"; fi
 echo "[" > "$OUT"; first=1
 run() {   # pin n dwell gap [--hold PIN]
     local pin=$1 n=$2 dwell=$3 gap=$4; shift 4
     local before after batch rc
     before=$(venv/bin/python scripts/presser_count.py) || { log "count failed"; return 1; }
+    [ "$RIG" = 1 ] && venv/bin/python scripts/rowisr_diag.py rig --json >/dev/null   # zeroed
     batch=$(venv/bin/python scripts/presser_repl.py batch "$pin" "$n" "$dwell" "$gap" "$@" 2>&1); rc=$?
     echo "$batch" | grep -v '^BATCH' 
     [ $rc = 0 ] || { log "presser run failed (rc $rc): stopping"; echo "]" >> "$OUT"; exit 2; }
     sleep 1.5
     after=$(venv/bin/python scripts/presser_count.py) || { log "count failed"; return 1; }
+    local rig=""; [ "$RIG" = 1 ] && rig=$(venv/bin/python scripts/rowisr_diag.py rig --json)
     [ $first = 1 ] || echo "," >> "$OUT"; first=0
-    BEFORE="$before" AFTER="$after" BATCH="$(echo "$batch" | grep '^BATCH')" python3 - "$pin" "$n" "$dwell" "$gap" "$*" >> "$OUT" <<'PY'
+    BEFORE="$before" AFTER="$after" RIG_JSON="$rig" BATCH="$(echo "$batch" | grep '^BATCH')" python3 - "$pin" "$n" "$dwell" "$gap" "$*" >> "$OUT" <<'PY'
 import json, os, sys, time
 pin, n, dwell, gap, extra = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), sys.argv[5]
 b, a = json.loads(os.environ["BEFORE"]), json.loads(os.environ["AFTER"])
+rig = json.loads(os.environ["RIG_JSON"]) if os.environ.get("RIG_JSON") else None
 kv = dict(t.split("=") for t in os.environ["BATCH"].split()[1:])
 hold = "--hold" in extra
 exp_kp, exp_re = n + (1 if hold else 0), 2 * n + (2 if hold else 0)
@@ -62,9 +67,22 @@ r = {"pin": pin, "n": n, "dwell_ms": dwell, "gap_ms": gap, "hold": extra.split()
      "dwell_us": {k[6:-3]: int(kv[k]) for k in ("dwell_min_us", "dwell_max_us", "dwell_mean_us")},
      "deltas": d, "expected": {"key_presses": exp_kp, "raw_edges": exp_re},
      "row_gap_max_ms_after": a.get("row_gap_max_ms"), "t": time.strftime("%H:%M:%S")}
-r["pass"] = d["key_presses"] == exp_kp and d["raw_edges"] == exp_re
+r["pass"] = d["key_presses"] == exp_kp   # the gate; raw_edges undercounts by design before stage 3 (the consume's XOR unlocked, BACKLOG.md), exact from it
+r["raw_edges_exact"] = d["raw_edges"] == exp_re
+rig_note = ""
+if rig:   # stage 3: the counts at the scan. A1 is key0 (0,13), A0 key1 (3,14); the pressed key n/n, a held key 1/1, the other 0/0, nothing elsewhere
+    pressed, held = ("key0" if pin == "A1" else "key1"), (("key0" if r["hold"] == "A1" else "key1") if hold else None)
+    want = {k: (n, n) if k == pressed else ((1, 1) if k == held else (0, 0)) for k in ("key0", "key1")}
+    got = {k: (rig[k]["presses"], rig[k]["releases"]) for k in ("key0", "key1")}
+    r["rig"] = {"got": {k: list(v) for k, v in got.items()}, "want": {k: list(v) for k, v in want.items()}, "other_presses": rig["other_presses"]}
+    r["rig_pass"] = got == want and rig["other_presses"] == 0
+    r["pass"] = r["pass"] and r["rig_pass"]
+    rig_note = (f", at the scan {pressed} {got[pressed][0]}/{got[pressed][1]} (want {n}/{n})"
+                + (f", {held} {got[held][0]}/{got[held][1]} (want 1/1)" if held else "") + f", elsewhere {rig['other_presses']}")
 print(json.dumps(r))
 verdict = "PASS" if r["pass"] else ("MISSING" if d["key_presses"] < exp_kp else "PHANTOM")
+verdict += "" if r["raw_edges_exact"] else f" (raw_edges {d['raw_edges'] - exp_re:+d}: the consume's undercount before stage 3)"
+verdict = verdict.replace(" ->", "") + rig_note
 print(f"[{r['t']}] {pin} x{n} at {dwell} ms{' with ' + r['hold'] + ' held' if hold else ''}: key_presses {d['key_presses']:+d} "
       f"(expected {exp_kp}), raw_edges {d['raw_edges']:+d} (expected {exp_re}), dwell actual "
       f"{r['dwell_us']['min']}-{r['dwell_us']['max']} us, row_gap_max {a.get('row_gap_max_ms')} ms -> {verdict}", file=sys.stderr)

@@ -2800,3 +2800,45 @@ quantization, above the largest new tolerance of 28.389 ms.
   the presser can settle tonight, the daily build's path. Deep sleep's
   wakes with the key kept run on the exit build meanwhile
   (`deep_wake_presser.sh 5 exit`).
+- 11-03 03:05: codex on stage 3 `cf7b61560d`
+  (`review-codex-row-isr-stage3-2026-11-03-raw.md`): **one P1**, the
+  settle's wait: an unsigned difference of T_SCHED's TC across the slot
+  reset read as enormous and ended the wait at once, so a late scan
+  could sample a few ticks after the select. **Fixed**: the elapsed time
+  taken modulo the period in force (`slot_ticks`), the wait bounded under
+  every period. P2s: the host's status decoder ignored [31]
+  (`col_map_fault`; added, before the review landed); the daily build's
+  unused `prev` (fixed in `8e9f9aaff2` by the daily build itself, which
+  the dev-only build had not run); two equal rig positions would let key
+  0 eat key 1's rises (refused now); `frmno_read`'s comment too
+  categorical (reworded: a bounded retry mitigation pending the scan's
+  qualification); the host's `sections` mislabelled a no-reply (narrowed
+  to the refusal). Its findings on the rest: the GPIO invariant holds on
+  every inspected path (deep sleep lowers the rows under the lock with
+  the scheduler stopped and raises them before its restart; quiesce
+  floats the LED pins on the bootloader route only); the bit assembly
+  matches keyboard.json; the locked consume keeps the matrix semantics
+  and the hook's new signature reaches every definition (the stock
+  driver's old one is excluded by rules.mk); `sleep_baseline.py` and
+  `sleep_sizing.py` still allow 98% of expected edges and must not
+  serve as stage 3's gate; the FRMNO scan perturbs the pass budget (kept
+  apart from the timing windows); the tear's signature fits the
+  rejection path's commit of the torn `s1` (0x0FF, 0x000, 0x100: 1,793
+  then 256), with a host SOF-number excursion not excluded by the spans
+  alone. Its gate table: tonight can establish the short-tap comparison
+  with the counts at the scan, the chords both ways at each colour, the
+  six-row fairness and `row_gap_max`, the night's stalls, resets,
+  phantoms and rejections; not the 1,000-press batches per transport and
+  stressor, the same-column chord (the plugs sit in different columns),
+  VIA's key tester, JD's eye, the witness. "After fixing the P1, I would
+  allow the controlled white-board dev flash to obtain these
+  measurements": a verify round on the fix, then `stage3_flash.sh`.
+- 11-03 03:10: **deep sleep's five wakes with the waking key kept, on
+  `f0ec5c68df`, 5 of 5** (`deep_wake_presser.sh 5 exit`, the README's
+  "Deep sleep's wakes"): key_presses +1 a cycle, spurious 0, two losses
+  a sleep (the exclusion's entry and end), one bus event a cycle (the
+  data line's reconnection), the frame counter's rejections steady at 2
+  across the five (no new torn pair). The gate stage 1 and 2 owed is
+  met, hands-free. Stage 3's fix `3673b234f0` (token `0x0a2f280e`, heap
+  gap 408 B, the daily variant 2,656 B, pushed) is with codex for a
+  verify round; `stage3_flash.sh` points at it.
