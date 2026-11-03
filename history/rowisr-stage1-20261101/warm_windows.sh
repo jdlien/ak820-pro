@@ -8,12 +8,16 @@
 # with the daemon paused, no relay; the runner holds the ladder and puts the
 # mode back (checked here: Power saver, 2). Data off and the daemon back by
 # the trap. Everything to warm-windows.log, detector.json, compare-detector.txt.
+# Usage: warm_windows.sh [LABEL] [TOKEN]: the label names the runner's JSON and the
+# compare (detector, 0x60d4a06b by default; the trim's run is `trim 0x1a291156`,
+# compared against stage 2's and the detector's windows).
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 D=history/rowisr-stage1-20261101
 A="$HOME/Library/Application Support/ak820pro/bin/ak820"
+LABEL=${1:-detector}; WANT=${2:-0x60d4a06b}
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
 token() { "$A" health --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["vitals"]["build_token"])' 2>/dev/null; }
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; log "daemon paused"
@@ -22,21 +26,22 @@ uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
 for i in $(seq 1 15); do present && break; sleep 2; done
 present || { log "no board on USB (asleep? one key wakes it)"; exit 1; }
 log "board present"; sleep 2
-T=$(token); log "token $T (want 0x60d4a06b)"
-[ "$T" = "0x60d4a06b" ] || { log "not the detector build: stopping"; exit 1; }
+T=$(token); log "token $T (want $WANT)"
+[ "$T" = "$WANT" ] || { log "not the expected build: stopping"; exit 1; }
 log "page-7 window before (20 s)"
-venv/bin/python hostagent/ak820health.py --sched --window 20 > "$D/sched-window-detector-before.txt" 2>&1
-grep -E 'win_(slots_per_s|elapsed_mean_us|cpu_pct|missed_slots|pulses_omitted)' "$D/sched-window-detector-before.txt"
-venv/bin/python scripts/rowisr_diag.py record > "$D/record-detector-before.txt" 2>&1; log "record before: $(tr '\n' ' ' < "$D/record-detector-before.txt" | cut -c1-300)"
+venv/bin/python hostagent/ak820health.py --sched --window 20 > "$D/sched-window-$LABEL-before.txt" 2>&1
+grep -E 'win_(slots_per_s|elapsed_mean_us|cpu_pct|missed_slots|pulses_omitted)' "$D/sched-window-$LABEL-before.txt"
+venv/bin/python scripts/rowisr_diag.py record > "$D/record-$LABEL-before.txt" 2>&1; log "record before: $(tr '\n' ' ' < "$D/record-$LABEL-before.txt" | cut -c1-300)"
 log "the runner's windows (idle, repaint, pcf), holds skipped"
-venv/bin/python scripts/rowisr_baseline.py run --label detector --out "$D" --skip-holds --cleanup skip 2>&1 | tee "$D/run-detector.log"
+venv/bin/python scripts/rowisr_baseline.py run --label "$LABEL" --out "$D" --skip-holds --cleanup skip 2>&1 | tee "$D/run-$LABEL.log"
 rc=${PIPESTATUS[0]}; log "runner exit $rc"
-venv/bin/python scripts/rowisr_baseline.py compare "$D/stage2.json" "$D/detector.json" 2>&1 | tee "$D/compare-detector.txt"
+venv/bin/python scripts/rowisr_baseline.py compare "$D/stage2.json" "$D/$LABEL.json" 2>&1 | tee "$D/compare-$LABEL.txt"
+[ "$LABEL" = detector ] || venv/bin/python scripts/rowisr_baseline.py compare "$D/detector.json" "$D/$LABEL.json" 2>&1 | tee "$D/compare-$LABEL-vs-detector.txt"
 log "page-7 window after (20 s)"
-venv/bin/python hostagent/ak820health.py --sched --window 20 > "$D/sched-window-detector-after.txt" 2>&1
-grep -E 'win_(slots_per_s|elapsed_mean_us|cpu_pct|missed_slots|pulses_omitted)' "$D/sched-window-detector-after.txt"
-venv/bin/python scripts/rowisr_diag.py record > "$D/record-detector-after.txt" 2>&1; log "record after: $(tr '\n' ' ' < "$D/record-detector-after.txt" | cut -c1-300)"
-venv/bin/python scripts/rowisr_diag.py usb > "$D/usb-detector-after.txt" 2>&1; log "usb after: $(tr '\n' ' ' < "$D/usb-detector-after.txt" | cut -c1-400)"
+venv/bin/python hostagent/ak820health.py --sched --window 20 > "$D/sched-window-$LABEL-after.txt" 2>&1
+grep -E 'win_(slots_per_s|elapsed_mean_us|cpu_pct|missed_slots|pulses_omitted)' "$D/sched-window-$LABEL-after.txt"
+venv/bin/python scripts/rowisr_diag.py record > "$D/record-$LABEL-after.txt" 2>&1; log "record after: $(tr '\n' ' ' < "$D/record-$LABEL-after.txt" | cut -c1-300)"
+venv/bin/python scripts/rowisr_diag.py usb > "$D/usb-$LABEL-after.txt" 2>&1; log "usb after: $(tr '\n' ' ' < "$D/usb-$LABEL-after.txt" | cut -c1-400)"
 venv/bin/python - <<'PY'
 import sys, time
 sys.path.insert(0, "hostagent"); sys.path.insert(0, "scripts")
