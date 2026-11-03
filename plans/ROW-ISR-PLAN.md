@@ -865,12 +865,22 @@ locked; the reviewer found no other interrupt-side mode writer). `ak820_i2c_xfer
 and `_end()` stop disabling the row interrupt; the dev-build `od_*`
 accounting stays; HAL's unlock and relock contract, the bus admission and
 the recovery arbitration stay. The scan runs through the transaction and
-the board stays lit. The transaction grows by the handler's share: at
-16-20% occupancy, 2.6 / (1 − 0.16..0.20) = **3.1-3.25 ms** (Q3 asks the
-bracket's tolerance; the 10 ms deadline is far, the 5 ms one around deep
-sleep is the one to check). Under today's handler it would be 2.6 / 0.27 ≈
-9.6 ms, which is why this is stage 4, after the hot path. In the interim
-stages the hold-off follows the interrupt to its new vector.
+the board stays lit. The transaction grows by the handler's share: the
+plan's first estimate was 2.6 / (1 − 0.16..0.20) = 3.1-3.25 ms. **Measured
+on white (11-03, stage 4 `c2bc29c745`): a 7-byte read runs to ~5.5 ms,
+about twice its 2.6 ms** (the boot's successful maximum 5.6 ms; the row
+handler's 27% plus the 20 kHz tick's service outside it and the other
+interrupts), so the 5 ms deadline around deep sleep cut 5 of a burst of
+300 such reads. **As built (stage 4b, `6b90f3b821`): the transactions on
+the short deadline, the pre-sleep read and the wake's recovery (and the
+dev burst that mimics them), keep the hold-off, where the board is dark
+or waking anyway; the ordinary 10 ms transactions run unmasked and lit,
+the writer's 8-byte write estimated ~7 ms at the same stretch, the night's
+soak to measure it by op 22's per-kind whole-call maxima.** Under the old
+handler it would have been 2.6 / 0.27 ≈ 9.6 ms, which is why this is
+stage 4, after the hot path. Any faster row cadence (stage 5) repeats
+these measurements. In the interim stages the hold-off followed the
+interrupt to its new vector.
 
 `pcf-unseen`'s deferral on USB stays until the camera shows nothing at a
 forced write; then a follow-up retires it so the clock chip is written at
@@ -1273,8 +1283,12 @@ without keeping the width (`rtc/rtc.c:1668`) and the page carries the
 release and boundary errors and the acquisition uncertainty but not the
 width (`rtc/rtc.c:2285`), so the gate below has nothing to read without
 it. Gates: a forced PCF write filmed shows no dark frame, on USB and off;
-`i2c_max_cycles` ≤ ~3.5 ms and the 5 ms path around deep sleep inside its
-budget; the bracket's width and the release error at baseline (Q3);
+the ordinary transactions' whole-call maxima (op 22, per kind) with margin
+under 10 ms and no failure of their own (the first draft's ≤ ~3.5 ms is
+superseded by the measured ~5.5 ms read tail; `i2c_max_cycles` is a
+lifetime maximum the stuck test contaminates, so capture it before the
+injection), the 5 ms paths held off as before (stage 4b); the bracket's
+width and the release error at baseline (Q3);
 stuck-bus injection and the restart pass with no pass ≥ 25 ms; a night of
 syncs settled every time; UART overruns and refused bytes at baseline;
 sleep and wake cycles under load. Then the follow-up: retire `pcf-unseen`'s
@@ -2985,3 +2999,16 @@ quantization, above the largest new tolerance of 28.389 ms.
   write at ~2x against 10 ms is the night's question). Stage 4's three
   wakes are running first (the recovery's failures under the unmasked
   transaction, page 2 before and after).
+- 11-03 05:02: codex on stage 4b `6b90f3b821`: **READY TO FLASH** for the
+  controlled run and the soak
+  (`review-codex-row-isr-stage4b-2026-11-03-raw.md`): the hold's pairing
+  sound through every failure path (the LLD's wrappers bracket every
+  transfer; the release precedes the driver's restart), the dev hold's
+  nesting as before stage 4 for the short transfers, the 10 ms margin
+  plausible (a write ~6.8-7.2 ms at the measured stretch) and to be
+  shown by the soak's per-kind maxima with `i2c_fail` flat; two
+  qualifications taken: op 22's spans zeroed after the stuck test (op 20
+  sub 1) so the soak's maxima are the healthy ones, and the burst now
+  exercises held reads only. D6 and stage 4's gate superseded with the
+  measured ~5.5 ms tail and the short-deadline exception (above). The
+  flash queued behind stage 4's wakes.
