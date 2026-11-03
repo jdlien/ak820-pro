@@ -1,0 +1,38 @@
+[04:56:15] daemon paused
+[04:56:16] cycle 0: the baseline wake and read (no verdict)
+[04:56:16] white awake already (data was on?)
+[04:56:16] logger paused
+[04:56:22] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100433 us
+[04:56:23] QT Py soft-rebooted into its logger
+[04:56:23] logger back
+[04:56:25] logger logging again (a new power.csv row)
+[04:56:28] token 0x8a213e0e (want 0x8a213e0e)
+[04:56:28] cycle 0: {"t": "04:56:28", "press_to_present_s": 10.3, "key_presses": 1, "raw_edges": 2, "epoch_losses": 2, "spurious": 0, "invalid_services": 2, "usb_rejects": 0, "usb_events": 2, "loss_gen": 4}
+[04:56:28] data off; white sleeps in ~3 min
+[04:59:31] white asleep (3.525 mA)
+[04:59:31] logger paused
+[04:59:38] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:59:39] QT Py soft-rebooted into its logger
+[04:59:39] logger back
+[04:59:41] logger logging again (a new power.csv row)
+[04:59:44] cycle 1: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 3 -> PASS
+[04:59:44] data off
+[05:02:49] white asleep (3.810 mA)
+[05:02:49] logger paused
+[05:02:56] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[05:02:56] QT Py soft-rebooted into its logger
+[05:02:56] logger back
+[05:02:58] logger logging again (a new power.csv row)
+[05:03:02] cycle 2: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 4 -> PASS
+[05:03:02] data off
+[05:06:07] white asleep (3.345 mA)
+[05:06:07] logger paused
+[05:06:14] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100402 us
+[05:06:14] QT Py soft-rebooted into its logger
+[05:06:14] logger back
+[05:06:16] logger logging again (a new power.csv row)
+[05:06:19] cycle 3: woke 10.3 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 5 -> PASS
+[05:06:19] data off
+[05:06:19] RESULT: 3 of 3 wakes kept the key -> history/rowisr-stage1-20261101/deep-wake-stage4.json
+[05:06:20] data off
+[05:06:20] daemon restarted

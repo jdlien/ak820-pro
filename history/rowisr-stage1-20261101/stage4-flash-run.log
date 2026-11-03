@@ -1,0 +1,276 @@
+[04:52:25] the stage 3b soak watch stopped
+[04:52:27] daemon paused
+[04:52:30] data on
+[04:52:34] board present, token before: 0x4326ec84
+[04:52:34] flash: ak820pro-builds/out/via-dev-c2bc29c745-20261103-043642.bin
+firmware : ak820pro-builds/out/via-dev-c2bc29c745-20261103-043642.bin
+built    : Nov  3 04:36:42 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  3 04:52:35 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 177, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  3 04:52:35 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  3 04:52:35 2026  (2707 bytes)
+
+== dumping the battery log ==
+# 1 entries (log v8, one per 900 s), newest 336 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261103-045235-preflash.csv  Nov  3 04:52:35 2026  (343 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[04:53:05] token after the flash: 0x8a213e0e (want 0x8a213e0e)
+[04:53:25] the clock status pages after the boot
+page1: {'ver': 2, 'cnt': 7759, 'period_active': 33600, 'period_nominal': 33600, 'flags': 4, 'last_host_offset_ms': 359, 'sof_bias_ppm': 0, 'ref_state': 2, 'sync_age_min': 255, 'sof_epoch': 1, 'sof_frames_total': 34575}
+page2: {'stale_count': 0, 'i2c_fail': 0, 'deferred': 0, 'i2c_max_cycles': 183, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 2, 'lat_mean': 0, 'lat_n': 34, 'd_zero': 0, 'd_reject': 1, 'sizeof_time_t': 8, 'usb': 3}
+page3 deltas: [1027, 1028, 1028, 1028, 1028, 1028, 1028, 1028, 1028, 1028, 1028, 1028, 1028, 1028]
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 359, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 1, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[04:53:25] health counters reset
+  seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 0
+  PCF read 1 (4 B)       45 (0 failed); longest masked 0.005 ms, whole call 2.373 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 90
+  PCF read 7 (10 B)       2 (0 failed); longest masked 0.005 ms, whole call 5.611 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 4
+[04:53:26] a burst of 300 PCF reads (40-80 ms apart, ~18 s) with 200 presses of A1 at 25 ms through it
+{'left': 300, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 40, 'hi': 80}
+[04:53:26] logger paused
+[04:53:52] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 25 ms, actual min 25054 max 25482 mean 25119 us, gap 75 ms, total 20049 ms
+[04:53:52] QT Py soft-rebooted into its logger
+[04:53:52] logger back
+[04:53:54] logger logging again (a new power.csv row)
+presses through the PCF burst: key_presses +200 (want 200), raw_edges +400 (want 400), row_gap_max 5 ms -> PASS
+stalls after: {'count_ge_10ms': 0, 'count_ge_25ms': 0, 'flash_gap_max_ms': 0, 'blit_gap_max_ms': 0, 'i2c_gap_max_ms': 0, 'count_ge_25ms_nonflash': 0, 'loop_gap_max_mark': 'none', 'row_gap_max_ms': 5, 'raw_edges': 400, 'cooked_changes': 400, 'row_gap_max_row': 3}
+page2: {'stale_count': 0, 'i2c_fail': 5, 'deferred': 0, 'i2c_max_cycles': 184, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 65, 'd_zero': 0, 'd_reject': 1, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 359, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 2, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[04:53:57] the stuck-bus test (op 23 sub 5): the transfer into its deadline and the restart
+stall counters' change across the stuck test: {"count_ge_10ms": 1, "count_ge_25ms": 0, "passes": 1123, "flash_writes": 0, "flash_gap_max_ms": 0, "blit_gap_max_ms": 0, "i2c_gap_max_ms": 0, "count_ge_25ms_nonflash": 0, "key_presses": 0, "loop_gap_max_mark": ["none", "none"]}
+page2: {'stale_count': 0, 'i2c_fail': 6, 'deferred': 0, 'i2c_max_cycles': 331, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 67, 'd_zero': 0, 'd_reject': 1, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 359, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 2, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[04:53:59] ordinary reads after the stuck test: a burst of 20 (the bus must be back)
+{'left': 20, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 40, 'hi': 80}
+{'left': 0, 'done': 20, 'failed': 0, 'exposure_ms': 1293, 'active': False, 'skipped': 0, 'lo': 40, 'hi': 80}
+page2: {'stale_count': 0, 'i2c_fail': 6, 'deferred': 0, 'i2c_max_cycles': 331, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 70, 'd_zero': 0, 'd_reject': 1, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 359, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 3, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+  seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 1; receiver-off intervals 0
+  PCF read 1 (4 B)       45 (0 failed); longest masked 0.005 ms, whole call 2.373 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 90
+  PCF read 7 (10 B)     323 (6 failed); longest masked 0.005 ms, whole call 10.144 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 646
+  OE #0 26 s ago (board second 44): act 0x0 kind 1 drain unlocked; last span 0.0 ms, USB 0.08, timer 0.016
+[04:54:03] standing state for the warm windows
+[04:54:03] daemon paused
+[04:54:06] data on
+[04:54:08] board present
+[04:54:10] token 0x8a213e0e (want 0x8a213e0e)
+[04:54:10] page-7 window before (20 s)
+win_slots_per_s          3745.4
+win_missed_slots         0
+win_pulses_omitted       0
+win_elapsed_mean_us      58.95
+win_cpu_pct              22.08
+[04:54:30] record before: longest run of omissions 1, spurious invocations 0, omissions by the arm deadline 1, epoch losses 1, invalid services 1, shortest handler 48.35 us, services (low 16 bits) 46377 omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):   key row 0: R   0  B   0  G   0   key row 1
+[04:54:30] the runner's windows (idle, repaint, pcf), holds skipped
+[04:54:30] stage 0 run 'stage4' -> history/rowisr-stage1-20261101
+[04:54:30] board token 0x8a213e0e
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[04:54:31] power mode 2 (stage 0, cap 128) -> Always on for the run
+[04:54:31] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        22.9 %
+    pack           3800 mV  (estimate 5C 73)
+    module 5C    last 73%, 0 s ago
+    vdd          3900 mV  (raw 2095, since boot 3896..3903 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    9.3 % of maximum
+    flags        on_batt done rgb_on linked
+[04:54:31] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[04:54:55]   3745.3 ISR/s, mean 70.9 us, max 122.7 us, cpu 26.6%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 3 ms, uart overruns 0, timeouts 7
+[04:54:57] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[04:55:21]   3745.2 ISR/s, mean 70.9 us, max 144.0 us, cpu 26.6%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 5 ms, uart overruns 0, timeouts 9
+[04:55:23] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[04:55:47]   3745.3 ISR/s, mean 70.9 us, max 122.7 us, cpu 26.5%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 8 ms, uart overruns 0, timeouts 9
+[04:55:47] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[04:55:48] done -> history/rowisr-stage1-20261101/stage4.json
+
+stage4: token 0x8a213e0e, 2026-11-03 04:54:31
+  idle       3745.3 ISR/s  mean   70.9 us  max   122.7 us  cpu  26.6%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 3 ms  overruns 0  timeouts 7
+  repaint    3745.2 ISR/s  mean   70.9 us  max   144.0 us  cpu  26.6%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 5 ms  overruns 0  timeouts 9
+  pcf        3745.3 ISR/s  mean   70.9 us  max   122.7 us  cpu  26.5%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 8 ms  overruns 0  timeouts 9
+[04:55:48] runner exit 0
+stage2 (0xf6a21a82) -> stage4 (0x8a213e0e); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.2 ->     3745.3   +0.00%  ok
+    mean us           59.8 ->       70.9  +18.56%  FAIL
+    cpu %             22.4 ->       26.6  +18.75%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      122.7  -14.79%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.3 ->     3745.2   -0.00%  ok
+    mean us           59.8 ->       70.9  +18.56%  FAIL
+    cpu %             22.4 ->       26.6  +18.75%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      144.0   +0.00%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3696.3 ->     3745.3   +1.33%  ok
+    mean us           59.7 ->       70.9  +18.76%  FAIL
+    cpu %             22.1 ->       26.5  +19.91%  FAIL
+    rows/row/s       205.4 ->      208.1   +1.31%  ok
+    max us           117.3 ->      122.7   +4.60%  
+    row_gap_max ms       9 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      8  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [0, 0] -> [2, 0]   [[5, 5, 5] -> [7, 9, 9]]
+RESULT: 6 metric(s) outside the gate
+detector (0x60d4a06b) -> stage4 (0x8a213e0e); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.3 ->     3745.3   +0.00%  ok
+    mean us           78.8 ->       70.9  -10.03%  FAIL
+    cpu %             29.5 ->       26.6   -9.83%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           133.3 ->      122.7   -7.95%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.4 ->     3745.2   -0.01%  ok
+    mean us           78.8 ->       70.9  -10.03%  FAIL
+    cpu %             29.5 ->       26.6   -9.83%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           165.3 ->      144.0  -12.89%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3694.7 ->     3745.3   +1.37%  ok
+    mean us           78.8 ->       70.9  -10.03%  FAIL
+    cpu %             29.1 ->       26.5   -8.93%  FAIL
+    rows/row/s       205.3 ->      208.1   +1.36%  ok
+    max us           160.0 ->      122.7  -23.31%  
+    row_gap_max ms       9 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      8  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [7, 4] -> [2, 0]   [[62, 69, 73] -> [7, 9, 9]]
+RESULT: 6 metric(s) outside the gate
+[04:55:48] page-7 window after (20 s)
+win_slots_per_s          3745.1
+win_missed_slots         0
+win_pulses_omitted       0
+win_elapsed_mean_us      58.95
+win_cpu_pct              22.08
+[04:56:08] record after: longest run of omissions 0, spurious invocations 0, omissions by the arm deadline 0, epoch losses 0, invalid services 0, shortest handler 51.88 us, services (low 16 bits) 35740 omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):   key row 0: R   0  B   0  G   0   key row 1
+[04:56:08] usb after: frame counter: 166964 intervals judged, 0 rejected on the spans, 0 rejected for a bus event or the frames stopping, 0 excluded unjudged in a stale's recovery; the worst accepted distance 1 ms; the last rejection's spans 0 ms by the extension, 0 by the frames   now: USB ACTIVE, frames trusted, FRMNO 1082, bus-event generation 10; the extension VALID, loss generation 2, exclusions 0x00 
+[04:56:08] power after the run: mode 2 stage 1 cap 64 forced 255
+[04:56:08] done
+[04:56:08] data off
+[04:56:08] daemon restarted
+[04:56:08] three deep sleeps and wakes (the pre-sleep read and the wake's recovery on their 5 ms deadline with the handler running): page 2 before and after
+page2: {'stale_count': 0, 'i2c_fail': 6, 'deferred': 0, 'i2c_max_cycles': 331, 'window_rejects': 2, 'ref_transitions': 5, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 203, 'd_zero': 5, 'd_reject': 4, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 359, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 6, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[04:56:15] daemon paused
+[04:56:16] cycle 0: the baseline wake and read (no verdict)
+[04:56:16] white awake already (data was on?)
+[04:56:16] logger paused
+[04:56:22] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100433 us
+[04:56:23] QT Py soft-rebooted into its logger
+[04:56:23] logger back
+[04:56:25] logger logging again (a new power.csv row)
+[04:56:28] token 0x8a213e0e (want 0x8a213e0e)
+[04:56:28] cycle 0: {"t": "04:56:28", "press_to_present_s": 10.3, "key_presses": 1, "raw_edges": 2, "epoch_losses": 2, "spurious": 0, "invalid_services": 2, "usb_rejects": 0, "usb_events": 2, "loss_gen": 4}
+[04:56:28] data off; white sleeps in ~3 min
+[04:59:31] white asleep (3.525 mA)
+[04:59:31] logger paused
+[04:59:38] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:59:39] QT Py soft-rebooted into its logger
+[04:59:39] logger back
+[04:59:41] logger logging again (a new power.csv row)
+[04:59:44] cycle 1: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 3 -> PASS
+[04:59:44] data off
+[05:02:49] white asleep (3.810 mA)
+[05:02:49] logger paused
+[05:02:56] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[05:02:56] QT Py soft-rebooted into its logger
+[05:02:56] logger back
+[05:02:58] logger logging again (a new power.csv row)
+[05:03:02] cycle 2: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 4 -> PASS
+[05:03:02] data off
+[05:06:07] white asleep (3.345 mA)
+[05:06:07] logger paused
+[05:06:14] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100402 us
+[05:06:14] QT Py soft-rebooted into its logger
+[05:06:14] logger back
+[05:06:16] logger logging again (a new power.csv row)
+[05:06:19] cycle 3: woke 10.3 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 5 -> PASS
+[05:06:19] data off
+[05:06:19] RESULT: 3 of 3 wakes kept the key -> history/rowisr-stage1-20261101/deep-wake-stage4.json
+[05:06:20] data off
+[05:06:20] daemon restarted
+page2: {'stale_count': 0, 'i2c_fail': 6, 'deferred': 0, 'i2c_max_cycles': 331, 'window_rejects': 6, 'ref_transitions': 6, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 763, 'd_zero': 538, 'd_reject': 10, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 660, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 1, 'slews': 0, 'reload_writes': 9, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[05:06:27] the awake soak starts (data on, the daemon syncing; a read every 20 min)
+[05:06:35] read 1: key_presses 4, row_gap_max 6 ms, losses 9, spurious 0, frame counter judged 265095 rejected 0 last [0, 0]; clock: i2c_max_cycles 331 fails 6 runs_ok 0 restarts 0 release_err 0 boundary_err 0 bracket width 0 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 1; receiver-off intervals 3;  PCF read 1 (4 B)      178 (0 failed); longest masked 0.005 ms, whole call 2.373 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 356;  PCF read 7 (10 B)     435 (6 failed); longest masked 0.005 m

@@ -873,6 +873,52 @@ The soak watch began at 04:51 (`soak_watch.sh stage3b`: a press and a
 read every 20 min, white sleeping between), and stage 4's flash took
 over at 04:52.
 
+### Stage 4 on white (11-03, 04:52-05:07, `stage4_flash.sh`, `c2bc29c745`): the transaction unmasked runs a read to 5.5 ms, so the 5 ms paths keep the hold-off (stage 4b)
+
+D6 as first built: the clock chip's transaction with the row ISR running
+through it (no `sn32f2xx_row_irq_hold` in `ak820_i2c_xfer_begin/_end`),
+the writer's bracket width on status page 4. Flashed 04:52:34-04:53:05
+(token 0x4326ec84 to 0x8a213e0e), the pages read 20 s after the boot
+(`rtc-status-stage4-0.txt`: `i2c_max_cycles` already 183 ILRC cycles,
+~5.5 ms, from the boot's reads under the restores' flash writes;
+`overrun-status-stage4-0.txt`, op 22's per-kind whole calls: a 1-byte
+read 2.37 ms, a 7-byte read 5.61 ms, none failed).
+
+**The burst with presses through it** (`burst-presses-stage4.txt`,
+`rtc-status-stage4-burst.txt`): 300 7-byte PCF reads 40-80 ms apart
+(dev op 23, which runs them on the deep sleep's 5 ms deadline) with 200
+presses of A1 at 25 ms running through them: **the presses exact**
+(key_presses +200, raw_edges +400, `row_gap_max` 5 ms, the delivery
+under I2C load with the handler running through every transaction),
+**but 5 of the 300 reads failed** (`i2c_fail` 0 to 5; op 22's "PCF read
+7" 323 calls, 6 failed with the stuck test's one; `i2c_max_cycles` 184,
+~5.5 ms, the deadline's edge). Every burst of 10-19 (1,000 reads each,
+with the hold-off) had none. So with the handler (27% of the CPU) and
+the 20 kHz tick preempting the bit-banged transfer, a 7-byte read runs to
+~5.5 ms, about twice its 2.6 ms and not the plan's 3.1-3.6, and the 5 ms
+deadline cuts the slowest: the pre-sleep read and the wake's recovery
+would fail the same way. **The stuck-bus test** (`stuck-stage4.txt`,
+`rtc-status-stage4-stuck.txt`): the transfer ran into its 10 ms deadline
+(`i2c_max_cycles` 331, 9.85 ms; one pass >= 10 ms, none >= 25) and the
+driver restarted; 20 ordinary reads after it, none failed. **The warm
+windows** (`stage4.json`, `compare-stage4.txt`): 70.9 us a slot, 26.6%
+CPU (stage 3b's 71.6), the frame counter clean (166,964 judged, none
+rejected). **Three sleeps and wakes** (`deep-wake-stage4.json`,
+`rtc-status-stage4-before-wakes.txt`, `-after-wakes.txt`): every key
+kept, `i2c_fail` unchanged at 6 and `stale_count` 0 across the three
+pre-sleep reads and three recoveries on the 5 ms deadline (six
+transactions; the burst's rate says one in sixty fails).
+
+**Stage 4b** (`6b90f3b821`): the transactions on the short deadline
+(`pcf_short_timeout`: the pre-sleep read, the wake's recovery, the dev
+burst that mimics them) keep the hold-off, where the board is dark or
+waking anyway; the ordinary 10 ms transactions stay unmasked and lit, the
+writer's 8-byte write estimated ~7 ms at the measured stretch and the
+night's awake soak to show it (op 22's per-kind maxima every 20 min,
+`i2c_fail` to stay flat, the writer's runs and brackets). Codex READY;
+flashed at 05:08. The camera gate, a forced write with no dark frame on
+USB and off, stays JD's; `pcf-unseen`'s deferral stays until it passes.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

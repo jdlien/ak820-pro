@@ -1,0 +1,2 @@
+page2: {'stale_count': 0, 'i2c_fail': 5, 'deferred': 0, 'i2c_max_cycles': 184, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 65, 'd_zero': 0, 'd_reject': 1, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 359, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 2, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
