@@ -1,0 +1,8 @@
+- **P1:** None found.
+- **P2:** Original bug fixed: [sleep.c:748](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:748) snapshots activity before triggering it. Normal ladder inactivity ensures the wake trigger differs, even within the wake’s millisecond. Boot and input-free CHARGE/stray wakes cause no false reset.
+- **P3:** Original notice bug fixed on normal recovery. [sleep.c:1052](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:1052) requires changed activity and clears the flag before delivery; the closed display step prevents rearming.
+- **P3 — Existing bench-only hole remains:** Input followed by an armed sleep before the next ladder sleep bypasses the reset in [sleep.c:372](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:372). [sleep.c:1011](C:/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro/keyboards/a_jazz/ak820pro/sleep.c:1011) sleeps directly; its wake replaces the snapshot, losing that input’s reset. Old absence can therefore shorten subsequent keep-alives.
+
+Verified exact parent `6cbbb8df653`, **sleep.c only**, and manifest-matching dev BIN/ELF. Heap gap **136 B**, passing the [128 B floor](C:/Users/jdlien/code/ak820-pro/build.sh:214) by 8 B.
+
+**Verdict: approve flashing `3b04a983a24` onto black for normal Windows dev use**, with the bench caveat above. Static verification via hash-checked Git objects: Git execution was blocked. Nothing modified, rebuilt, or flashed.

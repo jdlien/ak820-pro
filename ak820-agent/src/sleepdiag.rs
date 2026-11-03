@@ -22,7 +22,9 @@ fn u32le(b: &[u8], i: usize) -> u32 {
     u32::from_le_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]])
 }
 
-/// `SLEEP_WAKE_*`; 2 is the cap or the backstop.
+/// `SLEEP_WAKE_*`; 2 is the cap or the backstop, 7 the BT keep-alive's cap
+/// (firmware since 11-03: a ladder sleep with a BT link up wakes after ~25
+/// real minutes so the module never ends the link).
 pub fn reason(r: u8) -> String {
     match r {
         0 => "none".into(),
@@ -32,6 +34,7 @@ pub fn reason(r: u8) -> String {
         4 => "blocked".into(),
         5 => "knob".into(),
         6 => "charge".into(),
+        7 => "keep-alive".into(),
         r => format!("reason_{r}"),
     }
 }

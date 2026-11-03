@@ -1,0 +1,7 @@
+Read only files inside C:\Users\jdlien\code\ak820-pro; do not search or list anything outside it. AGENTS.md points at CLAUDE.md, which explains the project; read the parts you need. Do not modify anything. Use git read commands inside qmk_firmware-ak820pro.
+
+Verify one fix commit: 3b04a983a24 on gremlin/keepalive in qmk_firmware-ak820pro, on 6cbbb8df653, which you reviewed (your review is plans/review-codex-keepalive-raw.md). See `git -C qmk_firmware-ak820pro show 3b04a983a24`. It answers your P2 (the absence's reset missed a trigger in the wake's own millisecond) and P3 (input during a keep-alive's own recovery lost the "use left" notice): recovery_begin now notes QMK's last_input_activity_time() before its key/knob triggers, ka_cap() resets the absence when it has changed, and a keep-alive wake whose absence reaches RC_LONG_SLEEP_S owes the notice, given by sleep_task at the first input before the next sleep (cleared at the next sleep entry and the next wake).
+
+Check: that P2 and P3 are fixed; that the timestamp test cannot misfire (boot, before any wake, a CHARGE or stray wake with no input, the bench arm's sleeps, a trigger that writes the same value it held); that the owed notice cannot fire without input or fire twice; that nothing else moved (sleep.c only); the dev build's RAM (heap gap now 136 B, floor 128).
+
+OUTPUT: findings ranked P1/P2/P3 with file:line evidence, then a verdict on flashing 3b04a983a24 onto black (dev, Windows). Be terse.
