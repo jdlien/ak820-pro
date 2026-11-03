@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-03, 11:35. The block below is where things stand, written to
+Updated 2026-11-03, 12:40. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -72,7 +72,22 @@ cost the LEDs one slot's light on two or three rows (an open item in
 11:32:43 and handed to Hutch for M4; `pcf-unseen`'s deferral
 retirement is unblocked, JD's call. The keep-alive artifact rebuilt
 with Hutch's battery-icon commit: `via-dev-8355011389-20261103-110611.bin`,
-token `0x0ec277e2`, not flashed. **Owed to JD:** the camera gate on
+token `0x0ec277e2`, not flashed.
+**12:35: stage 5 built and reviewed, waiting on white.** JD's word "push
+ahead to the next step" (the 125 us cadence, today; a go for stage 5
+builds on white). Stage 5a (`4294a3befd`: the handler cheaper, the
+exit's and the arm's extension snapshots replaced by the scheduler's
+counter, the column loop unrolled with a Q6 multiply), 5b
+(`2c11b9ff01`: `ROWISR_CADENCE_US 125` in config.h) and 5c
+(`078216ec89`: codex's P2s, the width rounded and the scale 300/64 on
+the measured duty, the dropped elapsed samples counted; the comments
+`22bad4ea79`), reviewed READY twice (`plans/ROW-ISR-PLAN.md`'s log).
+**The flash candidate: `via-dev-078216ec89-20261103-122923.bin`, token
+`0x7c425589`**, after Hutch's M4 ends (~13:11 by Buzz's clock):
+`stage5_flash.sh` (the flash, the cost window, the light, the presser
+gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
+set, the camera gate). The fallback for the night is `8355011389`
+(`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch. **Owed to JD:** the camera gate on
 4b (a forced PCF write with no dark frame, on USB and off; `pcf-unseen`'s
 deferral stays until it passes); his eye on the light and the keys; the
 plan's open question (two silences within 2 ms counted as two, the
