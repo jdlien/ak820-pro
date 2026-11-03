@@ -3149,3 +3149,32 @@ quantization, above the largest new tolerance of 28.389 ms.
   and the record, the light at JD's full white against the logger's
   61.0 mA incremental on 4b, the presser gate). White is Hutch's for M4
   until it ends; 5a measured first for the attribution, then 5b.
+- 11-03 12:26 (Buzz's clock): codex on 5a and 5b: **READY TO FLASH, no
+  P1, three P2s** (`review-codex-row-isr-stage5-2026-11-03-raw.md`): (B)
+  the kept elapsed samples are the boundary-free services and a crossing
+  after the arm drops its sample uncounted, so the comment overstated it
+  and the CPU figures off that mean are no longer whole-handler; (C) the
+  width floored (byte 1 at 4 against D4's rounded 5) and the "same light"
+  reference wrong: the measured 267 us duty at k = 10 scaled by 125/267
+  is 4.6817, not D4's 4.845 (the stage-0 slot and field); (F/G) page 4's
+  hooks sit inside the port's prologue and epilogue, the sections' labels
+  and the settle's documented ceiling stale. The notes: the hardware
+  crossed check is sound (a match between IC and the TC read omits
+  conservatively, as before); the terminal bounds and D8's arithmetic
+  pass; the byte plane and the accumulator indices agree; nothing at
+  6,000 ticks breaks; the 80 us deadline is against the arm, not the
+  whole handler, and the saving to expect is "low teens" plus the loop's,
+  so 125 us is worth trying but the 20% share is unproven; the first
+  measurements named (page 4's mean and max with page 7's elapsed max
+  and counts, op 28's late_omit, omission run and per-row distribution,
+  row_gap_max; late_omit saturates at 255, reset between runs). **All
+  three fixed in stage 5c, `078216ec89`**: the width rounded (+32 >> 6,
+  exact at 640/64) and 125's scale 300/64 = 4.6875 with the logger's hold
+  the arbiter; the exit's comment honest and the dropped samples counted
+  (`elapsed_crossed`, op 28 sub 5 [26..27] in place of the services' low
+  16 bits, which page 7 carries); the labels and the clamp's docs. The
+  dev artifact `via-dev-078216ec89-20261103-122923.bin`, token
+  `0x7c425589`, heap gap 368 B: **the flash candidate for stage 5**, 5a's
+  separate flash dropped for speed (its attribution comes from 5c's page
+  4 against 4b's 71.6 us, the loop's and the exit's savings together).
+  Codex's verify asked (`review-prompt-row-isr-stage5-verify.txt`).

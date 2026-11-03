@@ -258,7 +258,7 @@ def main():
             r = xfer(h, 5, b"")[4:]   # past the reply's header (xfer returns the raw report; status_dict indexes from 4)
             d = {"omit_run_max": r[0] | r[1] << 8, "spurious": r[2], "late_omit": r[3], "epoch_losses": r[4],
                  "invalid_services": r[5], "elapsed_min_ticks": r[6] | r[7] << 8, "omit_row": list(r[8:8 + 18]),
-                 "serviced_lo16": r[26] | r[27] << 8}
+                 "elapsed_crossed": r[26] | r[27] << 8}
             d["elapsed_min_us"] = round(d["elapsed_min_ticks"] / 48.0, 2)
             if as_json:
                 print(json.dumps(d))
@@ -266,7 +266,7 @@ def main():
                 print(f"longest run of omissions {d['omit_run_max']}, spurious invocations {d['spurious']}, "
                       f"omissions by the arm deadline {d['late_omit']}, epoch losses {d['epoch_losses']}, "
                       f"invalid services {d['invalid_services']}, shortest handler {d['elapsed_min_us']} us, "
-                      f"services (low 16 bits) {d['serviced_lo16']}")
+                      f"elapsed samples dropped for a boundary inside the handler {d['elapsed_crossed']} (stage 5a: the kept samples are the boundary-free services)")
                 print("omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):")
                 for k in range(6):
                     print(f"  key row {k}: R {d['omit_row'][3 * k]:3d}  B {d['omit_row'][3 * k + 1]:3d}  G {d['omit_row'][3 * k + 2]:3d}")
@@ -286,7 +286,7 @@ def main():
                       f"over a RAM word's, a timer's {max(d['ct16b5_tc'] - d['ram'], 0)}")
         elif cmd == "sections":   # op 28 sub 11: the handler's sections since the last read, HCLK ticks summed; two reads make a window
             names = ["entry snapshot", "step 1 and the frame counter's judgment", "steps 2-5 (mux rows, scan, match registers)",
-                     "step 6 (the arm)", "exit snapshot", "exit judgment and the record"]
+                     "step 6 (the arm)", "the exit's elapsed sample (stage 5a)", "the stamps' own overhead (the exit's verdict and record until 5a)"]
             try:
                 xfer(h, 11)   # reset
             except SystemExit as e:
