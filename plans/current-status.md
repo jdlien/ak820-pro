@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-03, 09:40. The block below is where things stand, written to
+Updated 2026-11-03, 10:27. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -46,9 +46,19 @@ every 20 min to `soak-stage4b.jsonl`) **ran 4 h 16 min clean and ended
 at 09:35**: the writer 52 runs settled with no restart, the 8-byte write
 4.64 ms worst and the 7-byte read 5.47 against the 10 ms deadline, none
 failed, 57.7 million frame-counter intervals judged and none rejected,
-no pass >= 25 ms, no watchdog event. White is back in the standing state
-(data off, the daemon running) and free for Warren's keep-alive
-measurements and JD's camera check, in JD's order. **Owed to JD:** the camera gate on
+no pass >= 25 ms, no watchdog event. White went back to the standing state
+(data off, the daemon running). **10:04, the camera run on 4b**
+(`camera_runs.sh`): JD filming at 240 fps on Hutch's relay; a control of
+20 held clock-chip reads (dark frames expected), then the daemon's sync
+at 10:04:09 and the writer's unmasked write right after (its runs 52 to
+53, the bracket settled); the board's side met, **JD's verdict on the
+clip (no dark frame after 10:04:08) is the gate**, pending. White handed
+to Hutch at 10:04 for Warren's keep-alive measurement M4. **Warren's
+keep-alive is cherry-picked onto `row-isr`** (`c043db65dd`,
+`a088b51c8b`; the dev artifact `via-dev-a088b51c8b-20261103-100249.bin`,
+token `0xcf3e1101`, heap gap 376 B), not flashed: its flash waits on
+JD's go after M4. JD is at the bench from 10:25 with a slow-motion
+camera on a tripod (a Pixel 8 at 1/8, 240 fps) for the filmed gates. **Owed to JD:** the camera gate on
 4b (a forced PCF write with no dark frame, on USB and off; `pcf-unseen`'s
 deferral stays until it passes); his eye on the light and the keys; the
 plan's open question (two silences within 2 ms counted as two, the
