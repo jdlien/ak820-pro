@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## The first key after a long sleep takes ~2.4 s to register on the Mac (2026-11-02) -- the module's 30 min idle disconnect, measured; a keep-alive wake is the idea, not built
+## The first key after a long sleep takes ~2.4 s to register on the Mac (2026-11-02) -- the module's 30 min idle disconnect, measured; accepted as how Bluetooth works, the keep-alive wake pinned for later if it annoys
 
 Seen at 22:36 11-02 on white, Bluetooth, after a 1 h 52 min sleep: "a few
 seconds before keystrokes registered", like the Nuphy. The Mac's own log
@@ -44,7 +44,7 @@ sleeps under 30 min, every one with its link kept and its first key
 through at once (22:44:48 11-02: a 3 min sleep, "instantly registered").
 Not a firmware fault, and not the row ISR's: the firmware never held
 reports on the link state nor re-selected after the module's own drop.
-- **The idea: a keep-alive wake.** Asleep, wake every ~25 min of counted
+- **The idea, pinned 23:00 11-02 for later (the current behaviour accepted; to explore if it turns out to annoy): a keep-alive wake.** Asleep, wake every ~25 min of counted
   seconds (the ILRC runs ~13% slow asleep, so ~28 real minutes, inside
   the 30), send the module one poll, and sleep again with nothing lit and
   no recovery beyond the clock's slept time. About a second at ~27 mA

@@ -64,13 +64,13 @@ bench trial's reads, as the other bench scripts do.
 """
 import json
 import os
-import sys
+import sys, time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "hostagent"))
 from ak820health import open_device  # noqa: E402
 
 SET_VALUE, CH, HC, OP = 0x07, 0x13, 0x76, 28
-USAGE = "usage: rowisr_diag.py regs [TIMER|all] [PAGE] | hold MS | skip MS | status | record | usb | silence MS [DELAY] | report | led INDEX R G B | led off  [--json]"
+USAGE = "usage: rowisr_diag.py regs [TIMER|all] [PAGE] | hold MS | skip MS | status | record | usb | silence MS [DELAY] | report | readcost | sections | led INDEX R G B | led off  [--json]"
 
 
 def xfer(h, sub, args=b""):
@@ -215,7 +215,7 @@ def main():
         sys.exit(USAGE)
     cmd = args[0]
     ok = (cmd == "regs" and len(args) <= 3 and all(a == "all" or a.isdigit() for a in args[1:])) or \
-         (cmd in ("hold", "skip") and len(args) == 2 and args[1].isdigit()) or (cmd in ("status", "record", "usb", "report") and len(args) == 1) or \
+         (cmd in ("hold", "skip") and len(args) == 2 and args[1].isdigit()) or (cmd in ("status", "record", "usb", "report", "readcost", "sections") and len(args) == 1) or \
          (cmd == "silence" and 2 <= len(args) <= 3 and all(a.replace(".", "", 1).isdigit() for a in args[1:])) or \
          (cmd == "led" and (args[1:] == ["off"] or (len(args) == 5 and all(a.isdigit() for a in args[1:]))))
     if not ok:
@@ -265,6 +265,34 @@ def main():
         elif cmd == "status":
             r = xfer(h, 2)
             print(json.dumps(status_dict(r))) if as_json else print_status(r)
+        elif cmd == "readcost":   # op 28 sub 10: HCLK cycles a read, the loop included (a RAM word is the loop alone)
+            o = xfer(h, 10)[4:]
+            d = {"frmno": u16(o, 0), "insts": u16(o, 2), "cfg": u16(o, 4), "ct16b5_tc": u16(o, 6), "ram": u16(o, 8),
+                 "trials": o[10], "reads": u16(o, 11)}
+            if as_json:
+                print(json.dumps(d))
+            else:
+                print(f"HCLK cycles a read, the loop included, the least of {d['trials']} trials of {d['reads']} reads: "
+                      f"USB FRMNO {d['frmno']}, USB INSTS {d['insts']}, USB CFG {d['cfg']}, CT16B5 TC {d['ct16b5_tc']}, a RAM word {d['ram']}; "
+                      f"so a USB register read costs about {max(d['frmno'] - d['ram'], 0)} cycles ({max(d['frmno'] - d['ram'], 0) / 48:.2f} us) "
+                      f"over a RAM word's, a timer's {max(d['ct16b5_tc'] - d['ram'], 0)}")
+        elif cmd == "sections":   # op 28 sub 11: the handler's sections since the last read, HCLK ticks summed; two reads make a window
+            names = ["entry snapshot", "step 1 and the frame counter's judgment", "steps 2-5 (mux rows, scan, match registers)",
+                     "step 6 (the arm)", "exit snapshot", "exit judgment and the record"]
+            xfer(h, 11)   # reset
+            time.sleep(10)
+            o = xfer(h, 11)[4:]
+            n = u32(o, 0)
+            sums = [u32(o, 4 + 4 * i) for i in range(6)]
+            d = {"services": n, "sections_us": [round(x / n / 48.0, 2) if n else None for x in sums],
+                 "total_us": round(sum(sums) / n / 48.0, 2) if n else None, "names": names}
+            if as_json:
+                print(json.dumps(d))
+            else:
+                print(f"{n} full services in 10 s; the handler's sections, mean us (HCLK ticks / 48):")
+                for nm, us in zip(names, d["sections_us"]):
+                    print(f"  {us:8.2f}  {nm}")
+                print(f"  {d['total_us']:8.2f}  total, entry hook to exit hook less the hooks themselves")
         elif cmd == "usb":   # op 28 sub 6
             d = usb_dict(xfer(h, 6))
             if as_json:

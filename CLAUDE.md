@@ -135,7 +135,20 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 16:42 11-02: stage 2 plus D3's USB frame-counter
+**On white since 23:19 11-02: the trim, `a47c134079`** (dev, token
+`0x1a291156`, heap gap 464 B, `row-isr`): the detector build below with
+no software divide on the slot. Its warm windows: 80.0 us a slot against
+the detector's 78.8 and stage 2's 59.8, so the divides were not the cost
+(stage 2's vector had five divide calls and was fast); the suspects are
+the six USB register reads a slot and the 20 kHz tick's. The cost
+diagnostic `95ef5cbc5d` (token `0xda2a24d5`, dev only: the handler's
+sections stamped, op 28 sub 11, and a register read timed, sub 10) is
+built for the next key and go (`history/rowisr-stage1-20261101/`,
+"The trim's flash"). Also that night: the first key after a sleep over
+30 min takes ~2.4 s on the Mac, the module's own link drop
+([docs/wireless.md](docs/wireless.md), "The module ends the link"), not
+the firmware's; accepted, a keep-alive wake pinned in `BACKLOG.md`.
+**Before it, from 16:42 11-02: stage 2 plus D3's USB frame-counter
 detector and the all-interrupt silence injection, `5c0e6249d0`** (dev,
 token `0x60d4a06b`, `row-isr`, heap gap 464 B; nine codex rounds, the
 closing invariant "wherever time is discarded the loss generation moves";

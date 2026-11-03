@@ -466,6 +466,53 @@ across the pcf window and the restores, 1,249 missed in 166 k slots (the
 clock chip's hold-off, by design). The runner put Power saver back;
 white was dark at stage 3 by the end and released at 20:44:55.
 
+### The trim's flash and its windows (11-02, 23:19-23:22, `trim_on_wake.sh`, `trim_flash.sh`): no gain, the divides were not the cost
+
+JD's go came at 23:03 with white asleep, so a watcher on the power logger
+(`trim_on_wake.sh`: two samples over 20 mA, above the Mac's lock-light
+bursts into the sleeping module at ~14 mA) caught his key at 23:19:18
+(46.3 mA) and ran `trim_flash.sh`: the token before 0x60d4a06b, the flash
+23:19:23-23:19:52 with its backups and restores, the token after
+0x1a291156, then `warm_windows.sh trim 0x1a291156`.
+
+| Window, page 4 | stage 2 | detector | the trim |
+|---|---|---|---|
+| idle, mean us | 59.8 | 78.8 | 80.0 |
+| idle, CPU % | 22.4 | 29.5 | 29.9 |
+| repaint, mean us | 59.8 | 78.8 | 80.0 |
+| pcf, mean us | 59.7 | 78.8 | 79.9 |
+| page 7, `win_elapsed_mean_us` | 52.5 | 63.3 | 63.9 |
+
+Against the detector every gate is within tolerance (+1.5%); against
+stage 2 the same six metrics fail. **The two divides were not the cost.**
+Stage 2's own vector, rebuilt from `b120a2069c` for the comparison
+(`stage2.elf`), calls `__udivsi3` twice, `__aeabi_uldivmod` twice and
+`__aeabi_uidivmod` once: stage 2 had divides on every slot and was the
+fast one. The vector grew from 945 to 1,449 instructions and the 20 kHz
+tick's `rowisr_time_observe` from 49 to 145, but the slot's common path
+through the new code is on the order of 150 instructions, not the 900
+cycles the 19 us are. What remains is the reads themselves: the handler
+reads three USB registers at the entry snapshot and three at the exit
+(FRMNO, CFG, INSTS), and the tick reads FRMNO every 50 us at priority 2,
+preempting the handler at 3 about 1.3 times a slot; at ~2 us a read that
+is the whole 19, and the growth splits the way the reads do (10.8 us
+inside page 7, where the entry's reads are; 8.2 outside, where the
+exit's are). Measured next: `95ef5cbc5d` (token 0xda2a24d5, heap gap
+408 B) stamps T_SCHED's TC at seven points of the handler (op 28 sub 11)
+and times 256 masked reads of each register (sub 10,
+`rowisr_diag.py readcost | sections`).
+
+**Two span rejections in the record** (165,641 judged; the detector run
+had none in 165 k, the silence check none in 171 k): the last with 0 ms
+by the extension and 256 by the frames, two entry snapshots 267 us apart
+whose frame numbers differed by 256. A torn read of the 11-bit FRMNO at a
+0x0FF to 0x100 carry fits exactly (the low byte still 0xFF with bit 8
+already set); a real jump of 256 frames in 267 us cannot happen. Each
+costs one epoch loss and one or two invalid services, nothing the LEDs
+see. If it recurs, the fix is to read FRMNO until two reads agree; noted
+in the plan. ACK timeouts 8/10/13 since the boot across the three windows
+(the detector run's 62/69/73): the module's, as before.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
@@ -477,8 +524,14 @@ white was dark at stage 3 by the end and released at 20:44:55.
 - 11-02: `scan_only_check.sh` (enter/exit, the first attempt: `scan-only-enter.json`, `scan-only-exit.json`, `scan-only-check.log`), `scan_only_key.sh` (the one-run check: `scan-only-key.json`, `scan-only-key.log`), `wake_read.sh` (`wake-dark-read.json`, `wake-dark-read.log`).
 - 11-02 afternoon: `preflash_read.sh` (`preflash-read.json`, `preflash-read.log`), `flash-detector.log`, `silence_check.sh` (`silence-check.json`, `silence-check.log`), `wake_watch.sh` (the logger-driven wake read: `wake-detector-read.json`, `wake-detector-read.log`); `wake_read.sh` takes an optional label since 16:45 so a second read keeps the first's JSON.
 - 11-02 evening: `warm_windows.sh` (`warm-windows.log`, `run-detector.log`, `detector.json`, `compare-detector.txt`, `sched-window-detector-before.txt` and `-after.txt`, `record-detector-before.txt` and `-after.txt`, `usb-detector-after.txt`).
+- 11-02 night: `trim_on_wake.sh` and `trim_flash.sh` (`trim-on-wake.log`, `flash-trim.log`, `run-trim.log`, `trim.json`, `compare-trim.txt`, `compare-trim-vs-detector.txt`, the `-trim-` windows and records); `diag_on_wake.sh` and `diag_flash.sh` for the cost diagnostic (`95ef5cbc5d`): `readcost-diag.txt`, `sections-diag-1.txt`, `sections-diag-2.json`, `sched-window-diag.txt`, `record-diag.txt`, `usb-diag.txt`.
 
 ## Lessons
+
+- **A theory that matches the magnitude is still a theory.** Five software
+  divides at 100-200 cycles each added up to the 19 us on paper, and the
+  build without them cost the same; stage 2's own vector had divides and
+  was fast. Stamp the sections before trimming anything.
 
 - A runner on this board must hold the power ladder off (Always on) and
   put the mode back: Power saver caps the value and darkens an idle board,

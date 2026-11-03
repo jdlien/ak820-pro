@@ -68,8 +68,24 @@ row ISR, and a sleep under 30 min keeps the link and the first key
 instant (22:44:48, a 3 min sleep). Written up in
 [`../docs/wireless.md`](../docs/wireless.md) ("The module ends the
 link") and `BACKLOG.md` ("The first key after a long sleep"), with the
-keep-alive wake as the idea, ~0.02 mA. The trim's flash still waits on
-JD's go.
+keep-alive wake as the idea, ~0.02 mA; accepted, pinned.
+
+**23:19, the trim flashed: no gain.** On JD's go (23:03) a watcher on the
+logger caught his key at 23:19:18 and `trim_flash.sh` put `a47c134079`
+(token `0x1a291156`) on white and ran the warm windows: 80.0 us a slot
+against the detector's 78.8 and stage 2's 59.8. The divides were not the
+cost: stage 2's own vector, rebuilt for the comparison, had five divide
+calls and was the fast one. The handler's new code cannot execute the
+900 cycles; the reads can: six USB register reads a slot (FRMNO, CFG,
+INSTS at each snapshot) and the 20 kHz tick's FRMNO read preempting it.
+**The cost diagnostic `95ef5cbc5d` (token `0xda2a24d5`) is built and
+pushed**, dev only: the handler's sections stamped (op 28 sub 11) and 256
+masked reads of each register timed in HCLK cycles (sub 10). Codex's
+review runs; **the flash waits on JD's key and his go** (`diag_on_wake.sh`
+then `diag_flash.sh`: the flash, `readcost`, two `sections` windows, a
+page-7 window, the records, ~2 min). Also seen: two span rejections in the
+trim's run, 0 ms by the extension and 256 by the frames, a torn FRMNO
+read at a carry by the look of it; a read-until-equal if it recurs.
 
 ## 2026-11-02 morning — stage 2's scan-only and the wake with the RGB dark pass on white
 

@@ -2617,3 +2617,26 @@ quantization, above the largest new tolerance of 28.389 ms.
   call while masked noted for stage 3. The flash waits on JD's key and
   his go, then `trim_flash.sh`: `flash.sh`, the token, `warm_windows.sh
   trim` against stage 2's and the detector's windows.
+- 11-02 22:36-23:00: JD's first key after a 1 h 52 min sleep took a few
+  seconds to register. From the Mac's log: the module ends the Bluetooth
+  link 30:00 after the last traffic it saw, and the rebuild at the next key
+  takes the Mac 2.4 s (`docs/wireless.md`, "The module ends the link";
+  `BACKLOG.md`, "The first key after a long sleep"). Not the row ISR's;
+  accepted, the keep-alive wake pinned.
+- 11-02 23:03: JD's go for the trim. White asleep: `trim_on_wake.sh`
+  caught his key at 23:19:18, `trim_flash.sh` flashed `a47c134079`
+  (token `0x1a291156`) 23:19:23-23:19:52 and ran the windows: **80.0 us a
+  slot, the detector's 78.8, stage 2's 59.8: no gain, the divides were
+  not the cost** (the README's "The trim's flash"). Stage 2's rebuilt
+  vector had five divide calls itself. The record's two span rejections
+  (0 ms by the extension, 256 by the frames) look like a torn FRMNO read
+  at a carry; a read-until-equal is the fix if it recurs.
+- 11-02 23:36: the cost diagnostic `95ef5cbc5d` (token `0xda2a24d5`, heap
+  gap 408 B, dev only): T_SCHED's TC stamped at seven points of the
+  handler, the six sections summed (op 28 sub 11), and 256 masked reads of
+  each USB register, CT16B5's TC and a RAM word timed in HCLK cycles (sub
+  10; `rowisr_diag.py readcost | sections`). The hypothesis: the six USB
+  register reads a slot plus the tick's, at ~2 us each. Codex's review
+  asked (`review-prompt-row-isr-diag.txt`); the flash waits on JD's key
+  and his go (`diag_on_wake.sh`, `diag_flash.sh`), one flash and two
+  minutes of reads.
