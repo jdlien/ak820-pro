@@ -566,8 +566,14 @@ signature; JD granted it on 10-16. Start it with `open -a "$HOME/Applications/AK
 (`open`, so the grant is the app's, not the shell's), stop it with
 `pkill -x ak820-f19-listener`. It logs F19 down and up only, with the
 event's own timestamp on the wall clock, to `~/Library/Logs/ak820pro/f19.log`.
-⚠️ An event tap sees every key: the callback matches F19 and returns every
-other event untouched, never stored. Keep it that way.
+Since 11-03 it logs F20 too, the presser's (3,14), as `f20-down` and
+`f20-up`, so the parsers that read field 2 as F19's `down` or `up` skip it.
+⚠️ An event tap sees every key: the callback matches F19 and F20 and returns
+every other event untouched, never stored. Keep it that way.
+⚠️ **Not installed on Buzz** (11-03: no app in `~/Applications`, no log).
+JD's 10-16 grant was on Elysium, before the bench moved. On Buzz it needs
+`scripts/build-f19-listener.sh`, then JD's Input Monitoring grant at its
+first start.
 ⚠️ **When the monitors sleep, this Mac locks, and from then on the listener
 registers no keypresses** until it is unlocked: keys at the lock screen go to
 the login window under secure input, which no listener sees.

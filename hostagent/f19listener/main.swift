@@ -4,11 +4,15 @@
 // latency against the press, both on this Mac's clock.
 //
 // ⚠️ It sees every key event (a listen-only event tap needs Input Monitoring),
-// so it is written not to be a keylogger: F19 is matched inside the callback and
-// every other event is returned untouched, never stored, never written.
+// so it is written not to be a keylogger: F19 and F20 are matched inside the
+// callback and every other event is returned untouched, never stored, never
+// written.
 //
-// One line per F19 event, appended to ~/Library/Logs/ak820pro/f19.log:
+// One line per F19 or F20 event, appended to ~/Library/Logs/ak820pro/f19.log:
 //   <unix time of the event, s> <down|up> <event timestamp, ns since boot>
+//   <unix time of the event, s> <f20-down|f20-up> <event timestamp, ns since boot>
+// F20 (11-03) is the presser's second channel, (3,14). Its own token keeps
+// it out of every parser that takes field 2 as "down" or "up" for F19.
 // The unix time is the event's own timestamp mapped onto the wall clock (the
 // callback's lag does not count). Started by `open` (so TCC sees this app, not
 // whatever shell started it); built and signed by scripts/build-f19-listener.sh.
@@ -20,6 +24,7 @@ import IOKit.hid
 // context, and main.swift's top-level variables count as context.
 enum Rig {
     static let f19: Int64 = 0x50   // kVK_F19
+    static let f20: Int64 = 0x5A   // kVK_F20
     static var tap: CFMachPort?
     static let out: FileHandle = {
         let dir = (NSHomeDirectory() as NSString).appendingPathComponent("Library/Logs/ak820pro")
@@ -63,11 +68,12 @@ let callback: CGEventTapCallBack = { _, type, event, _ in
                         Date().timeIntervalSince1970, type.rawValue))
         return Unmanaged.passUnretained(event)
     }
-    if (type == .keyDown || type == .keyUp)
-        && event.getIntegerValueField(.keyboardEventKeycode) == Rig.f19 {
+    let code = event.getIntegerValueField(.keyboardEventKeycode)
+    if (type == .keyDown || type == .keyUp) && (code == Rig.f19 || code == Rig.f20) {
         let ts = event.timestamp
+        let edge = type == .keyDown ? "down" : "up"
         Rig.note(String(format: "%.6f %@ %llu", Rig.wallTime(ofEventNs: ts),
-                    type == .keyDown ? "down" : "up", ts))
+                    code == Rig.f19 ? edge : "f20-" + edge, ts))
     }
     return Unmanaged.passUnretained(event)
 }
