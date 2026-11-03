@@ -469,7 +469,8 @@ never fell far enough to fire):
 ### The panel
 
 - **Battery row:** the level (`85%`; `85.9%` with `BATTERY_SHOW_TENTHS`), an outline, and a
-  fill that is green above 50%, amber 21-50%, red at 20% and below (rounded up,
+  fill that is green above 33%, amber 16-33%, red at 15% and below (since 11-03,
+  where the low cap starts saving the lights; 50/20 before) (rounded up,
   so a few percent never reads as empty). **`Low`** with a red sliver under
   0.5% on battery (below ~3.43 V on the fitted curve). While the level is unknown: **`Charge`** charging, **`USB`** on USB,
   blank on battery. **`No Batt`** and a red cross with no pack. A yellow **bolt**

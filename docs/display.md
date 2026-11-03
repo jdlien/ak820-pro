@@ -396,7 +396,8 @@ through a curve. What it means and how it is estimated:
 [battery.md](battery.md). This section is only how it is drawn.
 
 Icon bottom-left (white outline + independent fill), text right-aligned to
-`PANEL_WIDTH - 4`. Fill green >50%, amber 21-50%, red ≤20%, rounded up so 3%
+`PANEL_WIDTH - 4`. Fill green >33%, amber 16-33%, red ≤15% (since 11-03;
+50/20 before), rounded up so 3%
 doesn't read as dead. **Charging does not recolour anything**: a yellow 9×14
 bolt beside the icon carries it (`CHRG` low AND `STDBY` high —
 full-and-plugged-in is "done", no bolt), so "15% and charging" stays readable.
