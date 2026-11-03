@@ -1,0 +1,34 @@
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_170117461.mp4: 1856 frames, 1920x1080, file rate 30000/1001 (avg 167040000/5572741), duration 61.92 s in the file; at 240 fps captured that is 7.73 s of real time
+YAVG median 67.7, scaled MAD 0.25, min 60.7, max 68.2; a dip is below 65.7 (3% under the median)
+dips: 22 (+6 in the clip's first 0.5 s, the camera settling, not counted)
+  frame     5 (  0.021 s real,   0.167 s in the file): 1 frame(s), min YAVG 65.1 = 4% under the median  [settling]
+  frame    13 (  0.054 s real,   0.434 s in the file): 1 frame(s), min YAVG 65.6 = 3% under the median  +33.3 ms after the previous  [settling]
+  frame    20 (  0.083 s real,   0.669 s in the file): 1 frame(s), min YAVG 65.4 = 3% under the median  +29.2 ms after the previous  [settling]
+  frame    28 (  0.117 s real,   0.933 s in the file): 1 frame(s), min YAVG 65.5 = 3% under the median  +33.3 ms after the previous  [settling]
+  frame    43 (  0.179 s real,   1.434 s in the file): 1 frame(s), min YAVG 65.3 = 4% under the median  +62.5 ms after the previous  [settling]
+  frame    58 (  0.242 s real,   1.935 s in the file): 1 frame(s), min YAVG 65.5 = 3% under the median  +62.5 ms after the previous  [settling]
+  frame   171 (  0.713 s real,   5.705 s in the file): 1 frame(s), min YAVG 60.9 = 10% under the median  +470.8 ms after the previous
+  frame   196 (  0.817 s real,   6.539 s in the file): 1 frame(s), min YAVG 62.6 = 7% under the median  +104.2 ms after the previous
+  frame   221 (  0.921 s real,   7.373 s in the file): 2 frame(s), min YAVG 62.5 = 8% under the median  +104.2 ms after the previous
+  frame   230 (  0.958 s real,   7.674 s in the file): 1 frame(s), min YAVG 65.6 = 3% under the median  +37.5 ms after the previous
+  frame   247 (  1.029 s real,   8.240 s in the file): 1 frame(s), min YAVG 60.8 = 10% under the median  +70.8 ms after the previous
+  frame   272 (  1.133 s real,   9.074 s in the file): 1 frame(s), min YAVG 60.9 = 10% under the median  +104.2 ms after the previous
+  frame   297 (  1.238 s real,   9.908 s in the file): 1 frame(s), min YAVG 60.7 = 10% under the median  +104.2 ms after the previous
+  frame   322 (  1.342 s real,  10.742 s in the file): 1 frame(s), min YAVG 61.2 = 10% under the median  +104.2 ms after the previous
+  frame   347 (  1.446 s real,  11.576 s in the file): 1 frame(s), min YAVG 62.4 = 8% under the median  +104.2 ms after the previous
+  frame   372 (  1.550 s real,  12.411 s in the file): 2 frame(s), min YAVG 64.0 = 5% under the median  +104.2 ms after the previous
+  frame   397 (  1.654 s real,  13.247 s in the file): 2 frame(s), min YAVG 64.1 = 5% under the median  +104.2 ms after the previous
+  frame   422 (  1.758 s real,  14.079 s in the file): 2 frame(s), min YAVG 63.3 = 6% under the median  +104.2 ms after the previous
+  frame   448 (  1.867 s real,  14.946 s in the file): 1 frame(s), min YAVG 61.3 = 10% under the median  +108.3 ms after the previous
+  frame   473 (  1.971 s real,  15.780 s in the file): 1 frame(s), min YAVG 61.6 = 9% under the median  +104.2 ms after the previous
+  frame   498 (  2.075 s real,  16.614 s in the file): 2 frame(s), min YAVG 63.2 = 7% under the median  +104.2 ms after the previous
+  frame   523 (  2.179 s real,  17.448 s in the file): 2 frame(s), min YAVG 64.2 = 5% under the median  +104.2 ms after the previous
+  frame   549 (  2.288 s real,  18.315 s in the file): 1 frame(s), min YAVG 62.3 = 8% under the median  +108.3 ms after the previous
+  frame   574 (  2.392 s real,  19.149 s in the file): 1 frame(s), min YAVG 61.6 = 9% under the median  +104.2 ms after the previous
+  frame   599 (  2.496 s real,  19.984 s in the file): 1 frame(s), min YAVG 61.4 = 9% under the median  +104.2 ms after the previous
+  frame   624 (  2.600 s real,  20.818 s in the file): 1 frame(s), min YAVG 62.1 = 8% under the median  +104.2 ms after the previous
+  frame   649 (  2.704 s real,  21.651 s in the file): 1 frame(s), min YAVG 61.7 = 9% under the median  +104.2 ms after the previous
+  frame   654 (  2.725 s real,  21.817 s in the file): 1 frame(s), min YAVG 65.7 = 3% under the median  +20.8 ms after the previous
+profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
+  ....#####......#...#...#...#...#..#.################################################################
+wrote history/rowisr-stage1-20261101/camera-control-2x-luma.csv

@@ -1,0 +1,67 @@
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_172843990.mp4: 5200 frames, 1920x1080, file rate 30000/1001 (avg 29250000/975839), duration 173.48 s in the file; at 240 fps captured that is 21.67 s of real time
+YAVG median 24.8, scaled MAD 0.68, min 4.3, max 26.2; a dip is below 22.1 (11% under the median)
+dips: 58 (+3 in the clip's first 0.5 s, the camera settling, not counted)
+  frame     5 (  0.021 s real,   0.167 s in the file): 1 frame(s), min YAVG 22.0 = 12% under the median  [settling]
+  frame    73 (  0.304 s real,   2.435 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +283.3 ms after the previous  [settling]
+  frame    88 (  0.367 s real,   2.936 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +62.5 ms after the previous  [settling]
+  frame   141 (  0.588 s real,   4.704 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +220.8 ms after the previous
+  frame   209 (  0.871 s real,   6.972 s in the file): 1 frame(s), min YAVG 21.9 = 12% under the median  +283.3 ms after the previous
+  frame   262 (  1.092 s real,   8.741 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +220.8 ms after the previous
+  frame   330 (  1.375 s real,  11.009 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +283.3 ms after the previous
+  frame   413 (  1.721 s real,  13.778 s in the file): 1 frame(s), min YAVG 21.9 = 12% under the median  +345.8 ms after the previous
+  frame   428 (  1.783 s real,  14.279 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +62.5 ms after the previous
+  frame   496 (  2.067 s real,  16.547 s in the file): 1 frame(s), min YAVG 21.7 = 12% under the median  +283.3 ms after the previous
+  frame   579 (  2.413 s real,  19.316 s in the file): 1 frame(s), min YAVG 21.9 = 12% under the median  +345.8 ms after the previous
+  frame   647 (  2.696 s real,  21.586 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +283.3 ms after the previous
+  frame   662 (  2.758 s real,  22.083 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +62.5 ms after the previous
+  frame   664 (  2.767 s real,  22.152 s in the file): 1 frame(s), min YAVG 5.3 = 79% under the median  +8.3 ms after the previous
+  frame   689 (  2.871 s real,  22.986 s in the file): 1 frame(s), min YAVG 8.8 = 64% under the median  +104.2 ms after the previous
+  frame   696 (  2.900 s real,  23.220 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +29.2 ms after the previous
+  frame   711 (  2.962 s real,  23.720 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +62.5 ms after the previous
+  frame   714 (  2.975 s real,  23.820 s in the file): 2 frame(s), min YAVG 12.2 = 51% under the median  +12.5 ms after the previous
+  frame   739 (  3.079 s real,  24.654 s in the file): 2 frame(s), min YAVG 11.9 = 52% under the median  +104.2 ms after the previous
+  frame   745 (  3.104 s real,  24.854 s in the file): 1 frame(s), min YAVG 21.7 = 13% under the median  +25.0 ms after the previous
+  frame   764 (  3.183 s real,  25.488 s in the file): 2 frame(s), min YAVG 11.9 = 52% under the median  +79.2 ms after the previous
+  frame   789 (  3.288 s real,  26.322 s in the file): 2 frame(s), min YAVG 13.5 = 45% under the median  +104.2 ms after the previous
+  frame   814 (  3.392 s real,  27.158 s in the file): 2 frame(s), min YAVG 15.1 = 39% under the median  +104.2 ms after the previous
+  frame   826 (  3.442 s real,  27.557 s in the file): 1 frame(s), min YAVG 21.7 = 12% under the median  +50.0 ms after the previous
+  frame   839 (  3.496 s real,  27.990 s in the file): 2 frame(s), min YAVG 11.7 = 53% under the median  +54.2 ms after the previous
+  frame   864 (  3.600 s real,  28.824 s in the file): 2 frame(s), min YAVG 12.9 = 48% under the median  +104.2 ms after the previous
+  frame   889 (  3.704 s real,  29.658 s in the file): 2 frame(s), min YAVG 11.7 = 53% under the median  +104.2 ms after the previous
+  frame   914 (  3.808 s real,  30.493 s in the file): 2 frame(s), min YAVG 10.9 = 56% under the median  +104.2 ms after the previous
+  frame   917 (  3.821 s real,  30.593 s in the file): 1 frame(s), min YAVG 21.9 = 12% under the median  +12.5 ms after the previous
+  frame   939 (  3.913 s real,  31.326 s in the file): 2 frame(s), min YAVG 11.8 = 52% under the median  +91.7 ms after the previous
+  frame   964 (  4.017 s real,  32.161 s in the file): 2 frame(s), min YAVG 11.6 = 53% under the median  +104.2 ms after the previous
+  frame   989 (  4.121 s real,  32.994 s in the file): 2 frame(s), min YAVG 8.2 = 67% under the median  +104.2 ms after the previous
+  frame  1015 (  4.229 s real,  33.862 s in the file): 1 frame(s), min YAVG 8.3 = 67% under the median  +108.3 ms after the previous
+  frame  1040 (  4.333 s real,  34.696 s in the file): 1 frame(s), min YAVG 7.5 = 70% under the median  +104.2 ms after the previous
+  frame  1065 (  4.438 s real,  35.530 s in the file): 1 frame(s), min YAVG 7.7 = 69% under the median  +104.2 ms after the previous
+  frame  1090 (  4.542 s real,  36.364 s in the file): 1 frame(s), min YAVG 8.8 = 65% under the median  +104.2 ms after the previous
+  frame  1115 (  4.646 s real,  37.198 s in the file): 2 frame(s), min YAVG 12.8 = 49% under the median  +104.2 ms after the previous
+  frame  1140 (  4.750 s real,  38.032 s in the file): 2 frame(s), min YAVG 15.3 = 39% under the median  +104.2 ms after the previous
+  frame  1596 (  6.650 s real,  53.245 s in the file): 2 frame(s), min YAVG 14.0 = 44% under the median  +1900.0 ms after the previous
+  frame  1657 (  6.904 s real,  55.280 s in the file): 2 frame(s), min YAVG 15.1 = 39% under the median  +254.2 ms after the previous
+  frame  1718 (  7.158 s real,  57.315 s in the file): 2 frame(s), min YAVG 15.2 = 39% under the median  +254.2 ms after the previous
+  frame  1780 (  7.417 s real,  59.384 s in the file): 1 frame(s), min YAVG 7.5 = 70% under the median  +258.3 ms after the previous
+  frame  1841 (  7.671 s real,  61.419 s in the file): 1 frame(s), min YAVG 6.7 = 73% under the median  +254.2 ms after the previous
+  frame  2489 ( 10.371 s real,  83.037 s in the file): 1 frame(s), min YAVG 7.9 = 68% under the median  +2700.0 ms after the previous
+  frame  2550 ( 10.625 s real,  85.072 s in the file): 1 frame(s), min YAVG 6.0 = 76% under the median  +254.2 ms after the previous
+  frame  2611 ( 10.879 s real,  87.107 s in the file): 1 frame(s), min YAVG 4.3 = 82% under the median  +254.2 ms after the previous
+  frame  2672 ( 11.133 s real,  89.142 s in the file): 1 frame(s), min YAVG 5.7 = 77% under the median  +254.2 ms after the previous
+  frame  3487 ( 14.529 s real, 116.332 s in the file): 2 frame(s), min YAVG 9.8 = 61% under the median  +3395.8 ms after the previous
+  frame  3548 ( 14.783 s real, 118.367 s in the file): 2 frame(s), min YAVG 13.1 = 47% under the median  +254.2 ms after the previous
+  frame  3609 ( 15.037 s real, 120.404 s in the file): 2 frame(s), min YAVG 15.1 = 39% under the median  +254.2 ms after the previous
+  frame  3670 ( 15.292 s real, 122.437 s in the file): 2 frame(s), min YAVG 14.0 = 43% under the median  +254.2 ms after the previous
+  frame  3732 ( 15.550 s real, 124.506 s in the file): 1 frame(s), min YAVG 8.0 = 68% under the median  +258.3 ms after the previous
+  frame  3793 ( 15.804 s real, 126.540 s in the file): 1 frame(s), min YAVG 6.3 = 75% under the median  +254.2 ms after the previous
+  frame  3816 ( 15.900 s real, 127.308 s in the file): 1 frame(s), min YAVG 22.0 = 11% under the median  +95.8 ms after the previous
+  frame  3853 ( 16.054 s real, 128.542 s in the file): 2 frame(s), min YAVG 8.1 = 67% under the median  +154.2 ms after the previous
+  frame  3915 ( 16.312 s real, 130.611 s in the file): 1 frame(s), min YAVG 7.1 = 72% under the median  +258.3 ms after the previous
+  frame  3976 ( 16.567 s real, 132.646 s in the file): 1 frame(s), min YAVG 8.8 = 64% under the median  +254.2 ms after the previous
+  frame  4037 ( 16.821 s real, 134.681 s in the file): 1 frame(s), min YAVG 6.2 = 75% under the median  +254.2 ms after the previous
+  frame  4098 ( 17.075 s real, 136.717 s in the file): 1 frame(s), min YAVG 5.3 = 79% under the median  +254.2 ms after the previous
+  frame  4159 ( 17.329 s real, 138.751 s in the file): 1 frame(s), min YAVG 6.9 = 72% under the median  +254.2 ms after the previous
+  frame  4878 ( 20.325 s real, 162.738 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +2995.8 ms after the previous
+profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
+  ...+......+...........++++++++..+...+++++++++++.+...+++++++++++++++.............+++++++++++++.++++++
+wrote history/rowisr-stage1-20261101/camera-write1-luma.csv

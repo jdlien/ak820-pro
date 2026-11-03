@@ -1,0 +1,171 @@
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 54, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 51, 'reload_writes': 578, 'boundary_err_ms': 2, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+power mode (0 = Always on, needed): 0
+[10:54:03.754] waiting 442 s to start the clip 5 s before T=11:01:30
+[10:59:22] cancelled: it would have recorded at 11:01:25 with the phone not at 1/8x
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 54, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 51, 'reload_writes': 593, 'boundary_err_ms': 2, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+power mode (0 = Always on, needed): 0
+[11:02:18.272] waiting 187 s to start the clip 5 s before T=11:05:30
+[11:05:25.285] the clip starts (22 s)
+[11:05:30.301] T: the control, 20 held reads 100 ms apart (dips expected for 2 s)
+raw HID interface busy or absent (is VIA holding it? close the usevia.app tab)
+[11:06:06.525] T+6: the daemon started; its sync and the writer's unmasked write follow within seconds (no dip expected)
+[11:06:06.534] the recording's end (rc 0)
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_170528915.mp4: 5200 frames at 240.0 fps = 21.667 s real
+keys 22.436 s apart on the phone; the frames span 21.667; gap 0.770 s
+start key on the Mac's clock: 1793725526.720 (the file name's stamp is the phone's clock, +1.994 s from the Mac's)
+deleted PXL_20261103_170528915.mp4 from the phone (180.7 MB; the Mac's copy is /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_170528915.mp4)
+[11:06:11.564] the daemon paused again
+2026-11-03 11:06:06 pause Rogue VHS - Innerglow (Instrumental)
+2026-11-03 11:06:06 board: unknown -> present
+2026-11-03 11:06:08 sync (enumerated): clock set (sub-second): before -45.0 ms, after -0.3 ms, rtt 2.0 ms, U ~1.0 ms, lead now 2.74 ms, bias sent
+2026-11-03 11:06:09 stop requested: exiting (the lock lights restored first, if owed)
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 55, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 51, 'reload_writes': 598, 'boundary_err_ms': -1, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+the writer's runs: 54 -> 55 (the write happened)
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_170528915.mp4: 5200 frames, 1920x1080, file rate 30000/1001 (avg 468000000/15613243), duration 173.48 s in the file; at 240 fps captured that is 21.67 s of real time
+YAVG median 51.8, scaled MAD 6.23, min 45.4, max 67.4; a dip is below 26.9 (48% under the median)
+dips: 0
+profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
+  #########################################+++#++++++++++++++++++++++++#+++++######+++++++++++++++++++
+wrote history/rowisr-stage1-20261101/camera-gate-luma.csv
+[11:08:25.094] T=11:10:14: the clip at T-5, the burst at T, the daemon at T+6, the stop at T+17; waiting
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 55, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 51, 'reload_writes': 605, 'boundary_err_ms': -1, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+power mode (0 = Always on, needed): 0
+[11:10:09.223] T-5: the clip starts (22 s)
+[11:10:14.245] T: the control, 20 held reads 100 ms apart (dips expected for 2 s)
+[11:10:14.306] the burst armed (try 1): {'left': 20, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 100, 'hi': 100}
+[11:10:20.324] T+6: the daemon started; its sync and the writer's unmasked write follow within seconds (no dip expected)
+[11:10:39] gate2 cancelled: ak820-pro-a3 took the phone for JD's settings clip
+[11:13:40.356] T=11:20:00: the clip at T-5, the burst at T, the daemon at T+6, the stop at T+17; waiting
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 57, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 55, 'reload_writes': 629, 'boundary_err_ms': -1, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+power mode (0 = Always on, needed): 0
+[11:19:55.488] T-5: the clip starts (22 s)
+[11:20:00.510] T: the control, 20 held reads 100 ms apart (dips expected for 2 s)
+[11:20:00.577] the burst armed (try 1): {'left': 20, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 100, 'hi': 100}
+[11:20:06.596] T+6: the daemon started; its sync and the writer's unmasked write follow within seconds (no dip expected)
+Bootstrap failed: 5: Input/output error
+Try re-running the command as root for richer errors.
+[11:20:26.345] the recording's end (rc 0)
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_171959217.mp4: 5200 frames at 240.0 fps = 21.667 s real
+keys 22.427 s apart on the phone; the frames span 21.667; gap 0.760 s
+start key on the Mac's clock: 1793726397.004 (the file name's stamp is the phone's clock, +2.007 s from the Mac's)
+deleted PXL_20261103_171959217.mp4 from the phone (180.6 MB; the Mac's copy is /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_171959217.mp4)
+[11:20:30.384] the daemon paused again
+2026-11-03 11:14:28 sync (enumerated): clock set (sub-second): before -14.6 ms, after -14.7 ms, rtt 2.9 ms, U ~0.8 ms, lead now 2.85 ms, bias sent (sl
+2026-11-03 11:19:29 sync (periodic): clock set (sub-second): before -4.8 ms, after -4.9 ms, rtt 2.0 ms, U ~1.2 ms, lead now 2.81 ms, bias sent (slewin
+2026-11-03 11:19:29 bias hold: P 32529 -> 32522 since the last sync (loop still moving); residual -4.8 ms not learned
+2026-11-03 11:20:28 stop requested: exiting (the lock lights restored first, if owed)
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 57, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 55, 'reload_writes': 630, 'boundary_err_ms': -1, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+the writer's runs: 57 -> 57 (NO WRITE: the deferral still held, or the sync did not land)
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_171959217.mp4: 5200 frames, 1920x1080, file rate 30000/1001 (avg 130000/4337), duration 173.48 s in the file; at 240 fps captured that is 21.67 s of real time
+YAVG median 50.4, scaled MAD 2.48, min 20.1, max 52.9; a dip is below 40.4 (20% under the median)
+dips: 18
+  frame   664 (  2.767 s real,  22.152 s in the file): 1 frame(s), min YAVG 32.1 = 36% under the median
+  frame   689 (  2.871 s real,  22.986 s in the file): 1 frame(s), min YAVG 36.2 = 28% under the median  +104.2 ms after the previous
+  frame   714 (  2.975 s real,  23.820 s in the file): 1 frame(s), min YAVG 35.0 = 31% under the median  +104.2 ms after the previous
+  frame   790 (  3.292 s real,  26.356 s in the file): 1 frame(s), min YAVG 39.8 = 21% under the median  +316.7 ms after the previous
+  frame   815 (  3.396 s real,  27.190 s in the file): 1 frame(s), min YAVG 36.9 = 27% under the median  +104.2 ms after the previous
+  frame   840 (  3.500 s real,  28.023 s in the file): 1 frame(s), min YAVG 35.1 = 30% under the median  +104.2 ms after the previous
+  frame   865 (  3.604 s real,  28.857 s in the file): 1 frame(s), min YAVG 30.5 = 39% under the median  +104.2 ms after the previous
+  frame   890 (  3.708 s real,  29.691 s in the file): 1 frame(s), min YAVG 36.7 = 27% under the median  +104.2 ms after the previous
+  frame   915 (  3.812 s real,  30.526 s in the file): 1 frame(s), min YAVG 35.7 = 29% under the median  +104.2 ms after the previous
+  frame   940 (  3.917 s real,  31.360 s in the file): 1 frame(s), min YAVG 34.2 = 32% under the median  +104.2 ms after the previous
+  frame   965 (  4.021 s real,  32.194 s in the file): 1 frame(s), min YAVG 36.2 = 28% under the median  +104.2 ms after the previous
+  frame   990 (  4.125 s real,  33.028 s in the file): 1 frame(s), min YAVG 35.3 = 30% under the median  +104.2 ms after the previous
+  frame  1041 (  4.338 s real,  34.729 s in the file): 1 frame(s), min YAVG 39.2 = 22% under the median  +212.5 ms after the previous
+  frame  1066 (  4.442 s real,  35.563 s in the file): 1 frame(s), min YAVG 39.0 = 23% under the median  +104.2 ms after the previous
+  frame  1091 (  4.546 s real,  36.397 s in the file): 1 frame(s), min YAVG 39.9 = 21% under the median  +104.2 ms after the previous
+  frame  1116 (  4.650 s real,  37.231 s in the file): 1 frame(s), min YAVG 31.7 = 37% under the median  +104.2 ms after the previous
+  frame  1141 (  4.754 s real,  38.065 s in the file): 1 frame(s), min YAVG 31.5 = 38% under the median  +104.2 ms after the previous
+  frame  3120 ( 13.000 s real, 104.088 s in the file): 2080 frame(s), min YAVG 20.1 = 60% under the median  +8245.8 ms after the previous
+profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
+  #+++###++#++..+.......+####+##+##+#+#++##+#+#+++#++#+++#++++........................................
+wrote history/rowisr-stage1-20261101/camera-gate3-luma.csv
+nohup: history/rowisr-stage1-20261101/camera_write_clip.sh: Permission denied
+[11:25:12.121] T=11:28:45: the clip at T-5, the control at T, the markers from T+4, the wrong set at T+5.5, the right set at T+9, the stop at T+17; waiting
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 57, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 55, 'reload_writes': 644, 'boundary_err_ms': -1, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+power mode (0 = Always on, needed): 0
+[11:28:40.259] T-5: the clip starts (22 s)
+[11:28:45.281] T: the control, 20 held reads 100 ms apart
+[11:28:45.345] the control armed (try 1)
+[11:28:49.017] T+4: the markers, 40 held reads 250 ms apart (10 s)
+[11:28:49.083] markers: {'left': 40, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 250, 'hi': 250}
+[11:28:50.510] T+5.5: the first sync (ak820ctl's transaction, the host's time): the clock chip's write pending, admitted at once by the burst, unmasked
+clock set (sub-second): before +4.8 ms, after +5.1 ms, rtt 2.0 ms, U ~1.2 ms, lead now 2.60 ms, bias sent (slewing)
+[11:28:54.011] T+9: the second sync: a second write
+clock set (sub-second): before -0.2 ms, after +0.5 ms, rtt 1.9 ms, U ~1.0 ms, lead now 2.39 ms, bias sent (slewing)
+[11:29:11.256] the recording's end (rc 0)
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_172843990.mp4: 5200 frames at 240.0 fps = 21.667 s real
+keys 22.451 s apart on the phone; the frames span 21.667; gap 0.784 s
+start key on the Mac's clock: 1793726921.760 (the file name's stamp is the phone's clock, +2.020 s from the Mac's)
+deleted PXL_20261103_172843990.mp4 from the phone (180.7 MB; the Mac's copy is /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_172843990.mp4)
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 3, 'runs_ok': 59, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 57, 'reload_writes': 649, 'boundary_err_ms': 2, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
+the writer's runs: 57 -> 59 (the writes happened)
+offset board-host -1.2 ms  rtt 3.0 ms  flags 0x05  ref_state 2  sync_age 0 min  last_host_offset 1 ms
+sof_epoch 30  sof_frames_total 19811122  bias_in_use 27 ppm
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_172843990.mp4: 5200 frames, 1920x1080, file rate 30000/1001 (avg 29250000/975839), duration 173.48 s in the file; at 240 fps captured that is 21.67 s of real time
+YAVG median 24.8, scaled MAD 0.68, min 4.3, max 26.2; a dip is below 22.1 (11% under the median)
+dips: 58 (+3 in the clip's first 0.5 s, the camera settling, not counted)
+  frame     5 (  0.021 s real,   0.167 s in the file): 1 frame(s), min YAVG 22.0 = 12% under the median  [settling]
+  frame    73 (  0.304 s real,   2.435 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +283.3 ms after the previous  [settling]
+  frame    88 (  0.367 s real,   2.936 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +62.5 ms after the previous  [settling]
+  frame   141 (  0.588 s real,   4.704 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +220.8 ms after the previous
+  frame   209 (  0.871 s real,   6.972 s in the file): 1 frame(s), min YAVG 21.9 = 12% under the median  +283.3 ms after the previous
+  frame   262 (  1.092 s real,   8.741 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +220.8 ms after the previous
+  frame   330 (  1.375 s real,  11.009 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +283.3 ms after the previous
+  frame   413 (  1.721 s real,  13.778 s in the file): 1 frame(s), min YAVG 21.9 = 12% under the median  +345.8 ms after the previous
+  frame   428 (  1.783 s real,  14.279 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +62.5 ms after the previous
+  frame   496 (  2.067 s real,  16.547 s in the file): 1 frame(s), min YAVG 21.7 = 12% under the median  +283.3 ms after the previous
+  frame   579 (  2.413 s real,  19.316 s in the file): 1 frame(s), min YAVG 21.9 = 12% under the median  +345.8 ms after the previous
+  frame   647 (  2.696 s real,  21.586 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +283.3 ms after the previous
+  frame   662 (  2.758 s real,  22.083 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +62.5 ms after the previous
+  frame   664 (  2.767 s real,  22.152 s in the file): 1 frame(s), min YAVG 5.3 = 79% under the median  +8.3 ms after the previous
+  frame   689 (  2.871 s real,  22.986 s in the file): 1 frame(s), min YAVG 8.8 = 64% under the median  +104.2 ms after the previous
+  frame   696 (  2.900 s real,  23.220 s in the file): 1 frame(s), min YAVG 21.8 = 12% under the median  +29.2 ms after the previous
+  frame   711 (  2.962 s real,  23.720 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +62.5 ms after the previous
+  frame   714 (  2.975 s real,  23.820 s in the file): 2 frame(s), min YAVG 12.2 = 51% under the median  +12.5 ms after the previous
+  frame   739 (  3.079 s real,  24.654 s in the file): 2 frame(s), min YAVG 11.9 = 52% under the median  +104.2 ms after the previous
+  frame   745 (  3.104 s real,  24.854 s in the file): 1 frame(s), min YAVG 21.7 = 13% under the median  +25.0 ms after the previous
+  frame   764 (  3.183 s real,  25.488 s in the file): 2 frame(s), min YAVG 11.9 = 52% under the median  +79.2 ms after the previous
+  frame   789 (  3.288 s real,  26.322 s in the file): 2 frame(s), min YAVG 13.5 = 45% under the median  +104.2 ms after the previous
+  frame   814 (  3.392 s real,  27.158 s in the file): 2 frame(s), min YAVG 15.1 = 39% under the median  +104.2 ms after the previous
+  frame   826 (  3.442 s real,  27.557 s in the file): 1 frame(s), min YAVG 21.7 = 12% under the median  +50.0 ms after the previous
+  frame   839 (  3.496 s real,  27.990 s in the file): 2 frame(s), min YAVG 11.7 = 53% under the median  +54.2 ms after the previous
+  frame   864 (  3.600 s real,  28.824 s in the file): 2 frame(s), min YAVG 12.9 = 48% under the median  +104.2 ms after the previous
+  frame   889 (  3.704 s real,  29.658 s in the file): 2 frame(s), min YAVG 11.7 = 53% under the median  +104.2 ms after the previous
+  frame   914 (  3.808 s real,  30.493 s in the file): 2 frame(s), min YAVG 10.9 = 56% under the median  +104.2 ms after the previous
+  frame   917 (  3.821 s real,  30.593 s in the file): 1 frame(s), min YAVG 21.9 = 12% under the median  +12.5 ms after the previous
+  frame   939 (  3.913 s real,  31.326 s in the file): 2 frame(s), min YAVG 11.8 = 52% under the median  +91.7 ms after the previous
+  frame   964 (  4.017 s real,  32.161 s in the file): 2 frame(s), min YAVG 11.6 = 53% under the median  +104.2 ms after the previous
+  frame   989 (  4.121 s real,  32.994 s in the file): 2 frame(s), min YAVG 8.2 = 67% under the median  +104.2 ms after the previous
+  frame  1015 (  4.229 s real,  33.862 s in the file): 1 frame(s), min YAVG 8.3 = 67% under the median  +108.3 ms after the previous
+  frame  1040 (  4.333 s real,  34.696 s in the file): 1 frame(s), min YAVG 7.5 = 70% under the median  +104.2 ms after the previous
+  frame  1065 (  4.438 s real,  35.530 s in the file): 1 frame(s), min YAVG 7.7 = 69% under the median  +104.2 ms after the previous
+  frame  1090 (  4.542 s real,  36.364 s in the file): 1 frame(s), min YAVG 8.8 = 65% under the median  +104.2 ms after the previous
+  frame  1115 (  4.646 s real,  37.198 s in the file): 2 frame(s), min YAVG 12.8 = 49% under the median  +104.2 ms after the previous
+  frame  1140 (  4.750 s real,  38.032 s in the file): 2 frame(s), min YAVG 15.3 = 39% under the median  +104.2 ms after the previous
+  frame  1596 (  6.650 s real,  53.245 s in the file): 2 frame(s), min YAVG 14.0 = 44% under the median  +1900.0 ms after the previous
+  frame  1657 (  6.904 s real,  55.280 s in the file): 2 frame(s), min YAVG 15.1 = 39% under the median  +254.2 ms after the previous
+  frame  1718 (  7.158 s real,  57.315 s in the file): 2 frame(s), min YAVG 15.2 = 39% under the median  +254.2 ms after the previous
+  frame  1780 (  7.417 s real,  59.384 s in the file): 1 frame(s), min YAVG 7.5 = 70% under the median  +258.3 ms after the previous
+  frame  1841 (  7.671 s real,  61.419 s in the file): 1 frame(s), min YAVG 6.7 = 73% under the median  +254.2 ms after the previous
+  frame  2489 ( 10.371 s real,  83.037 s in the file): 1 frame(s), min YAVG 7.9 = 68% under the median  +2700.0 ms after the previous
+  frame  2550 ( 10.625 s real,  85.072 s in the file): 1 frame(s), min YAVG 6.0 = 76% under the median  +254.2 ms after the previous
+  frame  2611 ( 10.879 s real,  87.107 s in the file): 1 frame(s), min YAVG 4.3 = 82% under the median  +254.2 ms after the previous
+  frame  2672 ( 11.133 s real,  89.142 s in the file): 1 frame(s), min YAVG 5.7 = 77% under the median  +254.2 ms after the previous
+  frame  3487 ( 14.529 s real, 116.332 s in the file): 2 frame(s), min YAVG 9.8 = 61% under the median  +3395.8 ms after the previous
+  frame  3548 ( 14.783 s real, 118.367 s in the file): 2 frame(s), min YAVG 13.1 = 47% under the median  +254.2 ms after the previous
+  frame  3609 ( 15.037 s real, 120.404 s in the file): 2 frame(s), min YAVG 15.1 = 39% under the median  +254.2 ms after the previous
+  frame  3670 ( 15.292 s real, 122.437 s in the file): 2 frame(s), min YAVG 14.0 = 43% under the median  +254.2 ms after the previous
+  frame  3732 ( 15.550 s real, 124.506 s in the file): 1 frame(s), min YAVG 8.0 = 68% under the median  +258.3 ms after the previous
+  frame  3793 ( 15.804 s real, 126.540 s in the file): 1 frame(s), min YAVG 6.3 = 75% under the median  +254.2 ms after the previous
+  frame  3816 ( 15.900 s real, 127.308 s in the file): 1 frame(s), min YAVG 22.0 = 11% under the median  +95.8 ms after the previous
+  frame  3853 ( 16.054 s real, 128.542 s in the file): 2 frame(s), min YAVG 8.1 = 67% under the median  +154.2 ms after the previous
+  frame  3915 ( 16.312 s real, 130.611 s in the file): 1 frame(s), min YAVG 7.1 = 72% under the median  +258.3 ms after the previous
+  frame  3976 ( 16.567 s real, 132.646 s in the file): 1 frame(s), min YAVG 8.8 = 64% under the median  +254.2 ms after the previous
+  frame  4037 ( 16.821 s real, 134.681 s in the file): 1 frame(s), min YAVG 6.2 = 75% under the median  +254.2 ms after the previous
+  frame  4098 ( 17.075 s real, 136.717 s in the file): 1 frame(s), min YAVG 5.3 = 79% under the median  +254.2 ms after the previous
+  frame  4159 ( 17.329 s real, 138.751 s in the file): 1 frame(s), min YAVG 6.9 = 72% under the median  +254.2 ms after the previous
+  frame  4878 ( 20.325 s real, 162.738 s in the file): 1 frame(s), min YAVG 22.1 = 11% under the median  +2995.8 ms after the previous
+profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
+  ...+......+...........++++++++..+...+++++++++++.+...+++++++++++++++.............+++++++++++++.++++++
+wrote history/rowisr-stage1-20261101/camera-write1-luma.csv

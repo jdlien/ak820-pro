@@ -983,12 +983,178 @@ at 10:04:09 (the board +87.2 ms off after four hours on BT, corrected to
 **the writer's runs 52 -> 53, boundary error 0 ms, the bracket's width
 7 ms, no miss, STOP clear** (`camera-page4-before.txt`, `-after.txt`,
 `camera-runs.log`). The board's side of the gate is met: the write
-happened with the LEDs driven throughout. **JD's verdict on the clip
-(dark frames in the first two seconds, none after 10:04:08) is the
-gate itself**, recorded when he gives it. Only the bench's battery
+happened with the LEDs driven throughout. Only the bench's battery
 state was filmed (the data line on, no 5 V: the USB-powered case needs
 relay 2 and the drain says no). White back in the standing state at
 10:04:24 and handed to Hutch for Warren's keep-alive measurements.
+⚠️ **The clip is void: the lights were off.** The power log reads
+31 mA through the run (awake and dark; lit it is 49-54 mA): Power
+saver's ladder turns the RGB off 3 min after the last key, and the
+wake press was 14 min before. A dark board cannot show a dark frame,
+in the control or in the write. Found by the Mac-driven run below.
+
+### The camera from the Mac (11-03, 10:47-10:51, `camera_control_clip.sh`): the first clip dark, the ladder held, the control's 20 reads measured at 5-7%
+
+The phone now films from the Mac over adb (`scripts/phonecam.py`,
+`docs/test-bench.md`, "The camera"): start and stop stamped on both
+clocks, the clip pulled and deleted from the phone, 240 fps real time
+as frames / 240, the first frame ~0.74 s after the start key. And the
+clip is judged by measurement, not by eye: `scripts/clip_dips.py` takes
+every frame's mean luma (ffprobe's signalstats) over a crop of the keys
+and lists the frames well below the median. One 8 s clip each, the
+burst (dev op 23: 20 held 7-byte reads 100 ms apart, the row ISR held
+off through each) fired 3 s after the record command.
+
+- **10:47, `control`: nothing.** 1,840 frames, the keys' luma flat
+  (median 90.6, scaled MAD 0.26, min 89.2: no frame 2% under), the
+  burst done on the board (20 of 20, 1,989 ms first to last). The power
+  log said why: 31 mA, the lights off since 10:32, three minutes after
+  the 10:29 wake press. The 10:04 run above was filmed in the same
+  state. So: **the ladder held at Always on (dev op 14 [1,0], mode 2
+  before) and a relight press at 10:50:36** (53.7 mA after).
+- **10:50, `control2`: all 20 reads, each one frame.** The keys'
+  luma (crop 990:410:260:100) median 133.9, scaled MAD 0.40 (0.3%);
+  the burst's reads at frames 194 to 671, **25 frames (104.2 ms)
+  apart, 5-7% under the median in one frame each**, two of them
+  straddling a frame boundary as 3.6-3.8% in each of two; 13 to 26
+  MADs below the noise; outside the burst no frame 2% under
+  (`camera-control2-dips.txt`, `-luma.csv`). Luma is the best channel
+  (the dip 25.7 MADs; Cb 11.8, saturation 11.7, Cr nothing), so the
+  finder stays on luma. **Where the light goes is the keys' own glow:**
+  the difference between the dip frame 445 and its neighbour, amplified
+  ten times, is the ring of light around every keycap and nothing else
+  (`camera-control2-dipdiff.jpg`, the frame `camera-control2-frame445.jpg`).
+  The dip is shallow because the room is lit (the keys' luma 134 of 255
+  against the bench's 11 in the test-bench doc's clip) and the caps are
+  opaque: a ~2.6 ms gap in a 4.17 ms frame removes most of the LED light
+  in that frame, and the LEDs are about a tenth of the crop's luma. Ample:
+  the finder's default depth is 3%, ten times the noise.
+
+So the camera sees a ~3 ms dark gap at this framing, in room light, with
+the keys cropped; and the lights must be on and the ladder held for any
+filmed gate on battery.
+
+- **11:01, `control-2x`: JD's 2x zoom and a lower exposure, as good,
+  framed better.** The Pixel 8 has no second lens on this mode: 2x is a
+  crop of the main sensor. The keys fill the frame (crop 1650:670:110:30,
+  the screen and the knob in it), the median luma 67.7 (the exposure
+  lowered by hand), the file still 240 fps (`com.android.capture.fps`;
+  the UI check for 1/8x fails while the exposure panel is open, so the
+  file's tag is the check). The 20 reads at 25 frames apart, **depth
+  6.8% mean (3.1 to 10.3) against a noise of 0.37%, depth/noise 18.7
+  against the 1x crop's 18.9** (5.5% mean against 0.29%): neither an
+  improvement nor a regression for the luma gate, and the better framing
+  for anything spatial. Two things to know at 2x: the camera settles its
+  exposure over the clip's first quarter second (six 3% dips in the
+  first 60 frames, now listed apart by `clip_dips.py` and not counted),
+  and the baseline's tail reaches the 3% threshold twice in 1,800 frames
+  (frames 230 and 654, 3.0-3.1% under, where the real dips are 5-10%):
+  read an event's depth, not just its presence.
+
+### The gate clip from the Mac (11-03, 11:05 on, `camera_gate_clip.sh`): two spoiled runs, the control at 100% white, and the LCD's blits seen on the LEDs
+
+One 22 s clip holding the control (the burst at T) and then the
+daemon started at T+6, its sync ~2 s later and the writer's unmasked
+write right after; page 4 before and after. Two runs before the one
+that counts:
+
+- **11:05, `gate`: spoiled three ways.** The burst got `raw HID
+  interface busy or absent` at 11:05:30 (no holder found: nothing of
+  mine open since 11:02:18, Hutch's and the camera session's tools off
+  white, the power steady at 51.7 mA, so no drop; unexplained), the
+  script then ran late so the daemon started at 11:06:06 after the clip
+  had ended (the write did happen, runs 54 to 55, off camera), and from
+  11:05:34 JD's arm and watch sat over the keys (the frame's luma down
+  25%). The script rewritten on the wall clock (the clip T-5 to T+17,
+  the burst at T retried on a busy interface, the daemon at T+6).
+- **11:10, `gate2`: the control at 100% white, but no write.** JD had
+  set white to full white by hand at about 11:07:50 (54 to 92 mA), a
+  key press that restarted the firmware's 10-min no-key clock, so the
+  daemon's sync at 11:10:22 left the write deferred (runs 55 to 55).
+  The control, though, is now unmistakable: **the 20 reads 20-39%
+  under the keys' luma (median 50.6) against 1.3% noise**, the whole
+  board losing light at once, every row
+  (`camera-gate2-controldip-diff.jpg`; `camera-gate2-dips.txt`,
+  `-luma.csv`). At full white every slot's pulse fills its slot, so a
+  gap takes the whole field's light, where at JD's blue 177 it took a
+  tenth.
+- **Seen in that clip: the LCD's blits cost the LEDs a slot.** Besides
+  the control, 5-6% single-frame dips on two or three key rows at a
+  time, not the whole board (`camera-gate2-scrolldip-diff.jpg`,
+  `-secondsdip-diff.jpg`): about once a second before the daemon
+  started (the clock's seconds redraw: frames 164, 436, 670) and in a
+  ~71 ms lattice after it (the now-playing text's scroll, every 283,
+  221 or 62 ms at the 5% threshold, many more just under: the profile
+  line is '+' throughout). The row ISR's record read at 11:14 has its
+  omissions spread evenly over every row and colour (16-25 each, 224
+  by the arm deadline since the last reset, epoch losses 19), so this
+  is not a row dropped but a slot started late: at 100% the pulse is
+  the slot's full width and a late start is truncated by the next
+  slot, which the blue clips at value 177 could not show (a short
+  pulse fits a late slot). SPI0's DMA shares priority 3 with the row
+  ISR (`docs/leds.md`). Invisible to the eye (5% of one 4 ms frame),
+  counted as an open item for the plan: measure the handler's latency
+  with page 7 reset before and after a scroll, and whether stage 5's
+  cadence changes it.
+- **11:20, `gate3`: the control again, no write, the room light off.**
+  The script's daemon start failed (`Bootstrap failed: 5`): the daemon
+  was already running, put back at 11:14:25 after the record read, after
+  the script's own bootout at 11:13:40; so no `sync (enumerated)` at
+  T+8 and runs 57 to 57 (the periodic sync at 11:19:29 had written
+  before the T-20 read: 55 to 57 between 11:14:23 and 11:19:40). And
+  at 11:20:09 the room light went off (the frame's luma 51 to 24 over
+  0.17 s, white's draw unchanged at 92 mA), which the finder's MAD
+  swallowed into a 20% threshold: 18 of the 20 reads over it. The
+  daemon's sync is a poor trigger for a filmed write: it needs a
+  whole-second change or the 10-min no-key rule, and a start fails if
+  the daemon is up.
+
+### The gate met from the Mac (11-03, 11:28:45, `camera_write_clip.sh write1`): two unmasked writes filmed at 240 fps in a dark room, no trace
+
+**The write forced on cue.** With the daemon paused, `ak820ctl clock`
+runs the same protocol-2 transaction the daemon does; its acceptance
+marks the clock chip stale (`pcf_sync_host_accepted`), and a dev op 23
+burst running at the time admits the writer at once (`pcf_start_ok()`
+returns true while a burst is active, and the burst steps only between
+the writer's runs: `!pcf_pending && ps_state == PS_IDLE && burst_step()`),
+so neither the 10-min rule nor the daemon is needed. In one 22 s clip
+(5,200 frames, the room dark since 11:20, white at JD's full white, 92
+mA): the control at T (20 held reads 100 ms apart), the markers from
+T+4 (40 held reads 250 ms apart, 10 s), a sync at T+5.5 (before
++4.8 ms) and another at T+9 (before -0.2 ms), each followed by the
+writer's unmasked run: **runs 57 to 59, both writes happened**, the
+board -1.2 ms off after (`camera-write1-record.log`, `-page4-*.txt`,
+`camera-gate-run.log`).
+
+**What the clip shows** (`camera-write1-dips.txt`, `-luma.csv`; the
+keys' luma median 24.8, scaled MAD 0.68 = 2.7%, the finder's floor 4
+MADs = 11%):
+- the control's 20 reads at frames 664 to 1140, 25 frames apart,
+  **39-79% under** (the LEDs are nearly all the light now);
+- the markers at 61 frames (254 ms) from frame 1596, **with two gaps
+  where the burst waited for the writer: frames 1842-2488 (2.7 s, from
+  the first sync at frame ~1917) and 2673-3486 (3.4 s, from the second
+  at ~2757)**: the writer's runs, each bracketed by a marker before
+  and after, the second boundary wait included;
+- **inside those two windows, nothing**: no event at the 11% floor,
+  and at a 3% floor the windows match the clip's quiet stretches in
+  every figure: 15.6% and 16.7% of frames under 3% against 15.7% in
+  the quiet tail (the camera's 240 Hz beating against the LED scan,
+  a3's "one row under half its glow about every 7th frame"), the
+  minimum 22.2 (11% under) in all three, the mean 24.78 against 24.79.
+  The LCD-blit dips (11-13%) appear 17 times outside the windows and
+  not inside them (the clock's redraw is quiet while the writer owns
+  the chip, it seems).
+
+**Verdict: the camera gate of stage 4 is met.** A held 7-byte read's
+~2.6 ms gap takes 39-82% of a frame's light; the writer's three
+unmasked transactions, run twice, take none that the clip can see. The
+bench's battery state only (the data line on, no 5 V): the USB-powered
+case runs the same transaction on the same path and was not filmed
+(relay 2 is the drain's). Scripts: `camera_write_clip.sh LABEL HH:MM:SS
+[CROP]`; the phone needs no hands (`scripts/phonecam.py`, the camera
+session's lock since 11:30), white needs its lights on and the ladder
+held, and nothing in the frame.
 
 ## Files
 

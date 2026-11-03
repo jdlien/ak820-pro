@@ -1282,7 +1282,7 @@ exposed** on the RTC status page: today the writer computes its edge
 without keeping the width (`rtc/rtc.c:1668`) and the page carries the
 release and boundary errors and the acquisition uncertainty but not the
 width (`rtc/rtc.c:2285`), so the gate below has nothing to read without
-it. Gates: a forced PCF write filmed shows no dark frame, on USB and off;
+it. Gates: a forced PCF write filmed shows no dark frame, on USB and off (**met 11-03 11:28** for the bench's battery state with the data line on: two writes forced by `ak820ctl clock` under a dev burst, filmed from the Mac at 240 fps in a dark room, nothing in the writer's windows down to the clip's 3% floor where a held read is 39-82%; the 5 V case runs the same path and was not filmed, relay 2 being the drain's; `history/rowisr-stage1-20261101/README.md`, "The gate met from the Mac");
 the ordinary transactions' whole-call maxima (op 22, per kind) with margin
 under 10 ms and no failure of their own (the first draft's ≤ ~3.5 ms is
 superseded by the measured ~5.5 ms read tail; `i2c_max_cycles` is a
@@ -3076,3 +3076,50 @@ quantization, above the largest new tolerance of 28.389 ms.
   `via-dev-a088b51c8b-20261103-100249.bin`, token `0xcf3e1101`, heap gap
   376 B (the floor 128); not flashed: the flash waits on JD's go after
   M4, by Hutch.
+- 11-03 10:47-11:03: **the camera from the Mac, and the 10:04 clip void**
+  (the README's "The camera from the Mac"). The phone is driven over adb
+  now (`scripts/phonecam.py`, test-bench "The camera") and a clip is
+  judged by measurement (`scripts/clip_dips.py`: every frame's mean luma
+  over the keys, the frames under the median listed), not by eye. The
+  first Mac-driven control clip was flat, and the power log said why:
+  31 mA, the lights off, Power saver's ladder having turned them off
+  3 min after the wake press, as at 10:04 too, so **the 10:04 clip is
+  void** (a dark board cannot show a dark frame) and JD's verdict on it
+  is moot. With the ladder held at Always on (dev op 14 [1,0]) and a
+  relight press at 10:50:36: **all 20 held reads show, one frame each, 25
+  frames apart, 5-7% under the keys' luma against 0.3% noise**, the lost
+  light the glow ring around every keycap (`camera-control2-dipdiff.jpg`).
+  JD's 2x zoom and a lower exposure measured as good (depth/noise 18.7
+  against 18.9) with the keys filling the frame, so 2x stays. **Lesson:**
+  any filmed gate on battery needs the lights on and the ladder held, and
+  the file's `capture.fps` tag is the 1/8x check (the UI check fails
+  behind the exposure panel). The gate clip (the control, then the
+  daemon's unmasked write, in one 22 s clip) armed for 11:05:30 with the
+  board idle since 10:50:36. Hutch's battery-icon commit `c43b104157`
+  cherry-picked onto `row-isr` as `8355011389` and the dev artifact
+  rebuilt, not flashed.
+- 11-03 11:05-11:32: **the camera gate met** (the README's "The gate met
+  from the Mac"). Three runs on the daemon's sync as the trigger failed
+  for three different reasons (a `raw HID busy` with no holder found, an
+  arm in the frame, JD's hand change to full white restarting the 10-min
+  no-key rule, a daemon start that failed because it was up, the room
+  light going off mid-clip), so the write was forced instead: with the
+  daemon paused, `ak820ctl clock` (the same protocol-2 transaction)
+  marks the chip stale and a sparse dev op 23 burst admits the writer at
+  once (`pcf_start_ok()` is true while a burst runs; the burst steps only
+  between the writer's runs, so the marker lattice's gaps are the
+  writer's windows, bracketed). `camera_write_clip.sh write1` at
+  11:28:45: runs 57 to 59, the control's 20 reads 39-79% deep, the two
+  writer windows (2.7 s and 3.4 s) with nothing at the 11% floor and,
+  at 3%, the same figures as the quiet stretches (15.6/16.7% of frames
+  against 15.7%, the minimum 22.2 in all, the mean 24.78 against 24.79).
+  **Found on the way:** the LCD's blits (the clock's seconds redraw, the
+  now-playing scroll at ~14 Hz) cost the LEDs one slot's light on two or
+  three rows at a time (5-6% of a frame at blue 177, 11-13% at full
+  white in a dark room), the omissions spread evenly over the rows, so a
+  slot started late rather than dropped (SPI0's DMA shares priority 3):
+  invisible to the eye, an open item: the handler's latency with page 7
+  reset around a scroll, and whether stage 5's cadence changes it. White
+  back in the standing state at 11:32:43 (Power saver, data off, the
+  daemon up; JD's full white left as he set it) and handed to Hutch for
+  M4. `pcf-unseen`'s deferral retirement is now unblocked: JD's call.

@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-03, 10:27. The block below is where things stand, written to
+Updated 2026-11-03, 11:35. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -58,7 +58,21 @@ keep-alive is cherry-picked onto `row-isr`** (`c043db65dd`,
 `a088b51c8b`; the dev artifact `via-dev-a088b51c8b-20261103-100249.bin`,
 token `0xcf3e1101`, heap gap 376 B), not flashed: its flash waits on
 JD's go after M4. JD is at the bench from 10:25 with a slow-motion
-camera on a tripod (a Pixel 8 at 1/8, 240 fps) for the filmed gates. **Owed to JD:** the camera gate on
+camera on a tripod (a Pixel 8 at 1/8, 240 fps) for the filmed gates.
+**11:28: the camera gate is met**, from the Mac (the phone over adb,
+`scripts/phonecam.py`; the clip measured by `scripts/clip_dips.py`):
+two clock-chip writes forced by `ak820ctl clock` under a dev burst,
+filmed at full white in a dark room, nothing in the writer's windows
+where a held read is 39-82% of a frame's light
+(`history/rowisr-stage1-20261101/README.md`, "The gate met from the
+Mac"). The 10:04 clip was void (the lights were off: Power saver's
+ladder, 3 min after the last key). Found on the way: the LCD's blits
+cost the LEDs one slot's light on two or three rows (an open item in
+`plans/ROW-ISR-PLAN.md`). White back in the standing state at
+11:32:43 and handed to Hutch for M4; `pcf-unseen`'s deferral
+retirement is unblocked, JD's call. The keep-alive artifact rebuilt
+with Hutch's battery-icon commit: `via-dev-8355011389-20261103-110611.bin`,
+token `0x0ec277e2`, not flashed. **Owed to JD:** the camera gate on
 4b (a forced PCF write with no dark frame, on USB and off; `pcf-unseen`'s
 deferral stays until it passes); his eye on the light and the keys; the
 plan's open question (two silences within 2 ms counted as two, the

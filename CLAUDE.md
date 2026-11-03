@@ -146,8 +146,10 @@ with the row ISR running through them, the 5 ms ones still held off (a
 7-byte read stretches to ~5.5 ms unmasked). Flashed and gated hands-free
 on JD's advance go for the night with the presser (every short-tap,
 chord, settle, silence and wake gate exact; page 4 71.6 us a slot); the
-night's awake soak runs to the morning; JD's camera gate (a forced PCF
-write, no dark frame) is owed before `pcf-unseen`'s deferral goes
+night's awake soak ran clean to 09:35; **the camera gate met at 11:28
+11-03 from the Mac** (two forced clock-chip writes filmed at 240 fps, no
+trace; `history/rowisr-stage1-20261101/README.md`, "The gate met from
+the Mac"), so `pcf-unseen`'s deferral retirement is JD's call
 (`plans/current-status.md`, the 11-03 night block;
 `history/rowisr-stage1-20261101/README.md`).
 **Before it, from 02:27 11-03: the exit-only build, `f0ec5c68df`** (dev,

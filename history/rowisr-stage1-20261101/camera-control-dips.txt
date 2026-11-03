@@ -1,0 +1,6 @@
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_164735168.mp4: 1840 frames, 1920x1080, file rate 30000/1001 (avg 9200000/306919), duration 61.38 s in the file; at 240 fps captured that is 7.67 s of real time
+YAVG median 90.6, scaled MAD 0.26, min 89.2, max 91.2; a dip is below 81.6 (10% under the median)
+dips: 0
+profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
+  ####################################################################################################
+wrote history/rowisr-stage1-20261101/camera-control-luma.csv

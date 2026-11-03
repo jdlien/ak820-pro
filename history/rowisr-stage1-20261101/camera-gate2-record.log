@@ -1,0 +1,7 @@
+phone - mac: +1995.6 ms (round trip 43 ms)
+start: phone 1793725812.668 -> 1793725813.009 (341 ms on the phone), mac 1793725810.616 -> 1793725811.037
+stop: phone 1793725835.056 -> 1793725835.307 (251 ms on the phone), mac 1793725833.043 -> 1793725833.338
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_171012883.mp4: 5184 frames at 240.0 fps = 21.600 s real
+keys 22.388 s apart on the phone; the frames span 21.600; gap 0.788 s
+start key on the Mac's clock: 1793725810.673 (the file name's stamp is the phone's clock, +1.996 s from the Mac's)
+deleted PXL_20261103_171012883.mp4 from the phone (180.0 MB; the Mac's copy is /Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_171012883.mp4)

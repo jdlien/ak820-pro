@@ -1,0 +1,24 @@
+/Users/jdlien/Documents/ak820pro-phonecam/clips/PXL_20261103_171959217.mp4: 5200 frames, 1920x1080, file rate 30000/1001 (avg 130000/4337), duration 173.48 s in the file; at 240 fps captured that is 21.67 s of real time
+YAVG median 50.4, scaled MAD 2.48, min 20.1, max 52.9; a dip is below 40.4 (20% under the median)
+dips: 18
+  frame   664 (  2.767 s real,  22.152 s in the file): 1 frame(s), min YAVG 32.1 = 36% under the median
+  frame   689 (  2.871 s real,  22.986 s in the file): 1 frame(s), min YAVG 36.2 = 28% under the median  +104.2 ms after the previous
+  frame   714 (  2.975 s real,  23.820 s in the file): 1 frame(s), min YAVG 35.0 = 31% under the median  +104.2 ms after the previous
+  frame   790 (  3.292 s real,  26.356 s in the file): 1 frame(s), min YAVG 39.8 = 21% under the median  +316.7 ms after the previous
+  frame   815 (  3.396 s real,  27.190 s in the file): 1 frame(s), min YAVG 36.9 = 27% under the median  +104.2 ms after the previous
+  frame   840 (  3.500 s real,  28.023 s in the file): 1 frame(s), min YAVG 35.1 = 30% under the median  +104.2 ms after the previous
+  frame   865 (  3.604 s real,  28.857 s in the file): 1 frame(s), min YAVG 30.5 = 39% under the median  +104.2 ms after the previous
+  frame   890 (  3.708 s real,  29.691 s in the file): 1 frame(s), min YAVG 36.7 = 27% under the median  +104.2 ms after the previous
+  frame   915 (  3.812 s real,  30.526 s in the file): 1 frame(s), min YAVG 35.7 = 29% under the median  +104.2 ms after the previous
+  frame   940 (  3.917 s real,  31.360 s in the file): 1 frame(s), min YAVG 34.2 = 32% under the median  +104.2 ms after the previous
+  frame   965 (  4.021 s real,  32.194 s in the file): 1 frame(s), min YAVG 36.2 = 28% under the median  +104.2 ms after the previous
+  frame   990 (  4.125 s real,  33.028 s in the file): 1 frame(s), min YAVG 35.3 = 30% under the median  +104.2 ms after the previous
+  frame  1041 (  4.338 s real,  34.729 s in the file): 1 frame(s), min YAVG 39.2 = 22% under the median  +212.5 ms after the previous
+  frame  1066 (  4.442 s real,  35.563 s in the file): 1 frame(s), min YAVG 39.0 = 23% under the median  +104.2 ms after the previous
+  frame  1091 (  4.546 s real,  36.397 s in the file): 1 frame(s), min YAVG 39.9 = 21% under the median  +104.2 ms after the previous
+  frame  1116 (  4.650 s real,  37.231 s in the file): 1 frame(s), min YAVG 31.7 = 37% under the median  +104.2 ms after the previous
+  frame  1141 (  4.754 s real,  38.065 s in the file): 1 frame(s), min YAVG 31.5 = 38% under the median  +104.2 ms after the previous
+  frame  3120 ( 13.000 s real, 104.088 s in the file): 2080 frame(s), min YAVG 20.1 = 60% under the median  +8245.8 ms after the previous
+profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
+  #+++###++#++..+.......+####+##+##+#+#++##+#+#+++#++#+++#++++........................................
+wrote history/rowisr-stage1-20261101/camera-gate3-luma.csv

@@ -1,0 +1,1 @@
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 2, 'runs_ok': 57, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 8, 'acq_step_ms': 29, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 55, 'reload_writes': 629, 'boundary_err_ms': -1, 'd_first_ms': 495, 'stale': 0, 'brk_width_ms': 7, 'brk_fails': 0}
