@@ -3178,3 +3178,20 @@ quantization, above the largest new tolerance of 28.389 ms.
   separate flash dropped for speed (its attribution comes from 5c's page
   4 against 4b's 71.6 us, the loop's and the exit's savings together).
   Codex's verify asked (`review-prompt-row-isr-stage5-verify.txt`).
+- 11-03 12:33: codex's verify of 5c: **READY TO FLASH, no P1**
+  (`review-codex-row-isr-stage5-verify-2026-11-03-raw.md`). The
+  rounding exhaustive over 256 bytes (ties up, strictly increasing,
+  1,195 and 2,550 under the terminals, the scale 0.125% above
+  10 x 125/267); the counter incremented exactly on the dropped path,
+  reset with the record, decoded right. Open: (P2) the health clients'
+  `win_cpu_pct` (`ak820health.py --sched`, `health.rs`) multiply page
+  7's boundary-free mean by the slot rate, so **the CPU gate is read off
+  page 4 (`--isr`: entries a second times the inclusive mean, the port's
+  wrapper outside it)**, page 7's figure labelled boundary-free; two
+  comments corrected in a comments-only commit (`22bad4ea79`: the
+  cadence note's 310/64, sub 5's "every service": page 7 exports the
+  valid services, so the total's low word is no longer on the wire). The
+  flash artifact stays `078216ec89`'s (`0x7c425589`). The gates chain
+  `stage5_gates.sh TOKEN`: the UART and ACK counts around a presser
+  batch, `deep_wake_presser.sh 5`, the silence set, the camera gate with
+  the studio lights off from the Mac. Waiting on M4's end on white.
