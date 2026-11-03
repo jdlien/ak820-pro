@@ -2685,3 +2685,31 @@ quantization, above the largest new tolerance of 28.389 ms.
   windows, readcost, `silence_check.sh`, `warm_windows.sh cadence`).
   Expected: ~17 us back, the handler near 63 us; the silence set 16 of
   16 with the judged counts an eighth.
+- 11-03 00:22: codex on the cadence `1d73bf3ed5`: **P1, blocks the flash**
+  (`review-codex-row-isr-cadence-2026-11-03-raw.md`): a generation change
+  inside an eight-service interval (a guard silence, re-primed by a
+  non-judging service) makes the judged interval non-continuous, so an
+  aliasing silence that follows it inside the same 2 ms is never judged,
+  and a guard rejection after an unjudged alias discards that alias too;
+  the per-service judgment catches both. Its P2s: the slot statistics
+  credited before a late verdict (slots_elapsed, serviced_valid,
+  latency_max; the recovery intervals' too); the elapsed sample's
+  underflow when six wraps and a short phase reconstruct negative; the
+  silence report's `wait_ms(2)` before a deferred verdict. **Accepted:
+  the cadence reverted** (`6b0f73c4a3`). Whether two pathological
+  silences within 2 ms must count as two is the plan's scope and JD's
+  call; the cost of counting them separately is ~8 us a slot (the entry
+  snapshot's USB part and the judgment on seven services of eight). Hutch's
+  option for later: run section 2 (the mux rows, the scan and the match
+  registers, 37.9 us, ~1 KB) from `.ramtext` as `ds_deep_wfi` does; the
+  dev build's 408 B gap cannot hold it, the daily's 2.3 KB could.
+- 11-03 00:25: **the safe half built: `5bf8de959a`** (token `0x5d2bb9f0`,
+  heap gap 408 B, pushed): the exit's snapshot time only plus one read of
+  FRMNO, the elapsed sample dropped when more than two frames passed
+  across the handler (a wrap lost inside it; off USB the frames stand
+  still and the check is void, the blind spot as before) or when it
+  reconstructs negative; the entry's per-service snapshot and judgment
+  untouched. Expected ~10 us back (the old exit's 14.5 us). Codex asked
+  (`review-prompt-row-isr-exit.txt`); then JD's go and key:
+  `exit_on_usb.sh` runs `exit_flash.sh` (the flash, two sections windows,
+  readcost, `silence_check.sh`, `warm_windows.sh exit`).
