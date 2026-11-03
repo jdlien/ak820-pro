@@ -88,8 +88,12 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**14:25: stage 5e on white (`739fe1b635`, token `0xf222e31c`) since
-13:34, the night's build.** 5c (12:47) and 5d (13:02) before it. Stage
+**15:15: white handed to Hutch for the night on stage 5e
+(`739fe1b635`, token `0xf222e31c`), asleep in the standing state, the
+pack at 31% after a 40 min charge (relay 2 off).** The SRAM trial (5f,
+`12f2c14cad`) measured no gain and is closed (`ROWISR_RAMTEXT 0`); the
+per-colour holds and the value ladder are in the README. **Stage 5e on
+white since 13:34** (5f from 14:31 to 15:06), the night's build. 5c (12:47) and 5d (13:02) before it. Stage
 5's gates: the field 444 Hz; the light at full white 91.7-92.3 mA
 against 4b's 92.1, the dark hold 31.3, the value ladder linear in the
 byte over a 4.3 mA row-drive term; the handler ~50 us and ~40%

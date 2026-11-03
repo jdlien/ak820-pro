@@ -3396,6 +3396,24 @@ quantization, above the largest new tolerance of 28.389 ms.
   charge with the holds. The 20% target's last lever is the
   every-eighth judgment (~8 us), JD's call; codex's revision of the
   target stands.
+- 11-03 15:05-15:15: **the evening** (the README's "The evening on
+  white"): relay 2 off after ~340 mAh (the battery page 31.3%), 5e back
+  on white (`0xf222e31c`), the full-white draw 90.5 mA after the charge
+  (92.3 before: the regulator's ~2% with the pack's voltage), the
+  per-colour and value-64 holds read against the drive accounting (red
+  65.8, green 61.7, blue 59.2, white-64 47.1, white-255 90.6 mA; on JD's
+  Alphas/Mods, so a pure colour is 41% of the maximum, the mods at their
+  second colour), white handed to Hutch at 15:15 asleep in the standing
+  state for Warren's M2/M3. **Stage 5 as it stands**: met: the field,
+  the light (full white within 2% across three builds, the scale linear
+  in the byte, the accounting exact), the row gaps, the presser's taps,
+  the wakes, the silence set, the camera gate, the mixed-load omissions,
+  the clock chip's transactions; revised by codex: the 20% share (~40%
+  measured, the SRAM trial no gain, the every-eighth judgment the last
+  lever, JD's call); not to the letter: zero quiet omissions (0.003%,
+  the latency tail). Owed: the night on white (asleep, Warren's), an
+  awake soak on 5e, black's night, the docs' remainder, the merge and
+  the tag.
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake

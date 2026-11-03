@@ -1513,6 +1513,44 @@ flash, the rings at full size), 5e is the night's build. What is left
 for the 20% target is the every-eighth judgment (~8 us, JD's call) and
 nothing cheap; codex's revision of the target stands.
 
+### The evening on white (11-03, 15:05-15:13, `stage5_evening.sh`): the charge, 5e back, the colour holds, the hand-over
+
+Relay 2 on from 14:25:15 to 15:05:16 (0.55 A, about 340 mAh back; the
+battery page 31.3% after, the cap off). 5e flashed back over the trial
+at 15:06 (token `0xf222e31c`); a 120 s lit window on battery: the
+handler 52.4 us, 41.9%; **the full-white draw 90.51 mA after the charge
+(90.62 in the hold), 92.3 before it**: the pack's voltage moves the
+regulator's draw by ~2%, so the light gate's comparisons are at like
+charge states (`stage5-evening-run.log`, `health-isr-stage5e-night.txt`,
+`light-stage5e-night.txt`). **The per-colour and value-64 holds**
+(`holds-stage5e.txt`; 45 s each, the logger's mean over 30 s, the drive
+accounting read with each):
+
+| hold | mA | over the screen-on dark (41.9) | the drive accounting |
+|---|---|---|---|
+| red (h0 s255 v255) | 65.81 | +23.9 | 40.9% |
+| green (h85) | 61.71 | +19.8 | 41.3% |
+| blue (h170) | 59.16 | +17.3 | 41.3% |
+| white, value 64 | 47.12 | +5.2 | 4.6% |
+| white, value 255 | 90.62 | +48.7 | 100.0% |
+
+A caveat: the holds ran on JD's Alphas/Mods effect (the script sets the
+hue, the saturation and the value, not the effect), so each "colour" is
+the alphas at that colour plus the mods at the effect's second colour,
+which is why a pure colour reads 41% of the maximum rather than 33%.
+The accounting is still the x axis the light should be linear in: white
+64 and 255 sit on the ladder's line (4.3 + 46 x share: 6.4 and 50.3
+against 5.2 and 48.7), and the colours spread about it, red above (23.9
+against the line's 23.1) and blue below (17.3), the LEDs' own per-colour
+currents, which `battery.c`'s model carries per colour (the per-colour
+RGB model of 10-19). The plan's gate against stage 0's holds wants the
+same holds on the Solid effect at a matched charge state; what is
+settled today is the scale and the accounting (the ladder), the
+full-white draw within 2% across three builds and two charge states, and
+the colours' spread for the model's refit (stage 7). JD's lighting
+restored from the dump taken before the holds; the standing state at
+15:13:21; white handed to Hutch for Warren's M2/M3 overnight on 5e.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

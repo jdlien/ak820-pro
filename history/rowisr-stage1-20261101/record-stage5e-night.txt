@@ -1,0 +1,8 @@
+longest run of omissions 1, spurious invocations 0, omissions by the arm deadline 22, epoch losses 0, invalid services 0, shortest handler 29.75 us, elapsed samples dropped for a boundary inside the handler 4 (stage 5a: the kept samples are the boundary-free services)
+omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
+  key row 0: R   0  B   2  G   0
+  key row 1: R   3  B   0  G   0
+  key row 2: R   0  B   2  G   0
+  key row 3: R   5  B   1  G   1
+  key row 4: R   0  B   1  G   1
+  key row 5: R   3  B   0  G   3

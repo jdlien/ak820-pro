@@ -1,0 +1,43 @@
+[15:05:16] relay 2 off: the board on battery again
+relay 1 off (key), relay 2 off (power)
+[15:05:31] the pack: 2026-11-03 15:05:30,3648.828,3.375,3826.250
+[15:05:31] 5e back on white
+[15:05:32] daemon paused
+[15:05:35] data on
+[15:05:45] white not on USB: asleep, one press to wake it
+[15:05:45] logger paused
+[15:05:52] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100402 us
+[15:05:53] QT Py soft-rebooted into its logger
+[15:05:53] logger back
+[15:05:55] logger logging again (a new power.csv row)
+[15:05:58] board present, token before: 0x08ddac91
+[15:05:58] flash: ak820pro-builds/out/via-dev-739fe1b635-20261103-132623.bin
+[15:06:29] token after the flash: 0xf222e31c (want 0xf222e31c)
+[15:06:44] the ladder held at Always on (the lights stay on for the window and the light gate); a relight press
+[15:06:58] health counters reset
+[15:06:58] the warm window: 120 s, white lit at JD's full white, nothing touching it
+[15:08:58] page 4 (the handler) and page 7 (the scheduler) after 120 s
+isr_mean_us              52.4
+isr_cpu_pct              41.9
+  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;
+  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop
+[15:09:00] the light: the lit draw over the last 120 s at full white: 90.51 mA (4b: 92.1 lit, 31.1 dark, 61.0 incremental; within 5% is 58.0-64.1 incremental, 8
+[15:09:00] the ladder back to Power saver; the standing state
+[15:09:02] data off
+[15:09:02] daemon back: the standing state
+[15:09:02] the presser's gate skipped (PRESSER=no): run presser_gate.sh stage5e-night 0xf222e31c with Buzz locked
+[15:09:02] the battery page
+supply       battery  (battery)
+level        31.3 %
+led drive    4.6 % of maximum
+[15:09:12] the per-colour and value-64 holds
+[15:09:12] 3. the per-colour and value-64 holds through the lighting channel (JD's lighting restored after)
+[15:10:17] hold red (h0 s255 v255): 65.81 mA; the drive accounting (D8, led_pm): 40.9 % of maximum (expect white255 100, red/green/blue 33.3, white64 25.1)
+[15:11:02] hold green (h85 s255 v255): 61.71 mA; the drive accounting (D8, led_pm): 41.3 % of maximum (expect white255 100, red/green/blue 33.3, white64 25.1)
+[15:11:48] hold blue (h170 s255 v255): 59.16 mA; the drive accounting (D8, led_pm): 41.3 % of maximum (expect white255 100, red/green/blue 33.3, white64 25.1)
+[15:12:33] hold white64 (h0 s0 v64): 47.12 mA; the drive accounting (D8, led_pm): 4.6 % of maximum (expect white255 100, red/green/blue 33.3, white64 25.1)
+[15:13:18] hold white255 (h0 s0 v255): 90.62 mA; the drive accounting (D8, led_pm): 100.0 % of maximum (expect white255 100, red/green/blue 33.3, white64 25.1)
+[15:13:18] JD's lighting restored from the dump taken before the holds
+[15:13:21] the standing state
+[15:13:21] stage 5's load and light holds done (3)
+[15:13:21] the evening's bench done: white in the standing state on 5e
