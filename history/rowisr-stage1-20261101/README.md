@@ -943,6 +943,29 @@ vitals and stalls, page 2 and 4 and op 22's per-kind whole-call maxima:
 first read: 170 1-byte reads at 1.76 ms whole-call max, 19 7-byte reads,
 none failed, the frame counter 232,279 judged and none rejected.
 
+**The soak's end, 09:35 (4 h 16 min awake, the daemon syncing the clock
+every 5 min; `soak-stage4b.jsonl` reads 1-13, the final reads in
+`stage4b-flash-run.log`, `health-stage4b-soak-end.txt`):** the frame
+counter **57,670,167 intervals judged, none rejected on the spans** (6
+for bus events: the data line's cycles), no loss and no spurious
+invocation since the wakes (9 and 2), 124 omissions by the arm deadline
+(the held reads' hold-offs and the runner's); the clock chip's
+**writer 52 runs, 0 restarts, the release error 2 ms, the boundary error
+-1 ms, the bracket's width 6-7 ms, no miss**, 51 slews; the unmasked
+ordinary transactions' whole-call maxima: **the 8-byte write 4.64 ms (52
+calls), the 7-byte read 5.47 ms (19), the 1-byte read 2.38 ms (1,109),
+the 1-byte write 1.70 ms (104), none failed** (`i2c_fail` 1, the stuck
+test's); the health counters over 10.4 million passes: one pass >= 10 ms
+(the stuck test's own), **none >= 25 ms**, the loop gap's maximum 12 ms
+and the I2C gap's 9 ms (the stuck test), no watchdog event; three UART
+overruns in the night, none during a clock transaction, 1,646 ACK
+timeouts on the BT link over the four hours (its long-standing rate).
+So the ordinary transactions run unmasked at about half the 10 ms
+deadline with the writer settling every time, which is stage 4b's
+hands-free gate; the camera's is JD's. White went back to the standing
+state at 09:36 for Warren's keep-alive measurements and JD's camera
+check.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

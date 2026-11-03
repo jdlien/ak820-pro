@@ -3047,3 +3047,18 @@ quantization, above the largest new tolerance of 28.389 ms.
   (839), the 1-byte write 1.701 ms (74),
   none failed; three UART overruns in the night, none during a clock
   transaction. The soak runs on until JD is up.
+- 11-03 09:36: **the awake soak on stage 4b ended clean at 09:35**
+  (4 h 16 min; the README's "Stage 4b on white", the soak's end): 57.7
+  million intervals judged and none rejected on the spans; the writer 52
+  runs, 0 restarts, the bracket's width 6-7 ms, no miss; the 8-byte write
+  4.64 ms worst unmasked, the 7-byte read 5.47, none failed; one pass
+  >= 10 ms (the stuck test's), none >= 25 ms, no watchdog event; three
+  UART overruns, none during a transaction. **Stage 4b's hands-free
+  gates are met; the camera gate (a forced write with no dark frame, on
+  USB and off) is JD's, and `pcf-unseen` stays until it passes.** White
+  back in the standing state and handed to JD's order (Hutch, 09:38:
+  Warren's keep-alive measurements M2/M4 on this build, JD's camera
+  check before or after). Next for this plan: JD's call on the per-slot
+  judgment (two silences within 2 ms as two, ~12 us a slot over stage
+  2); stage 5, the 125 us cadence, coded off the board once the witness
+  and the camera exist for its gates.

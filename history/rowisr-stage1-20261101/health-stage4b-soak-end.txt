@@ -1,0 +1,1 @@
+stalls: {'count_ge_10ms': 1, 'count_ge_25ms': 0, 'count_ge_25ms_nonflash': 0, 'passes': 10426345, 'loop_gap_max_ms': 12, 'loop_gap_max_mark': 'none', 'flash_writes': 1, 'i2c_gap_max_ms': 9, 'wdt_fired_last_boot': False, 'wdt_consecutive_resets': 0, 'tx_timeouts': 1646, 'tx_drops': 0, 'rx_malformed': 0, 'key_presses': 205}

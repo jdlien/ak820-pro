@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-03, 05:25. The block below is where things stand, written to
+Updated 2026-11-03, 09:40. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -42,9 +42,13 @@ on 4b; page 4's handler mean 71.6 us a slot at 26.8% CPU (the detector
 2.6 (the handler and the 20 kHz tick), so the deep sleep's 5 ms reads
 timed out at 1.7% in a burst; 4b keeps the hold-off for those alone. The
 night's soak (`soak_watch_awake.sh`, data on, the daemon syncing, a read
-every 20 min to `soak-stage4b.jsonl`) is the test of the ordinary
-transactions' margin under 10 ms (op 22's per-kind maxima, `i2c_fail`
-flat, the writer's runs and brackets). **Owed to JD:** the camera gate on
+every 20 min to `soak-stage4b.jsonl`) **ran 4 h 16 min clean and ended
+at 09:35**: the writer 52 runs settled with no restart, the 8-byte write
+4.64 ms worst and the 7-byte read 5.47 against the 10 ms deadline, none
+failed, 57.7 million frame-counter intervals judged and none rejected,
+no pass >= 25 ms, no watchdog event. White is back in the standing state
+(data off, the daemon running) and free for Warren's keep-alive
+measurements and JD's camera check, in JD's order. **Owed to JD:** the camera gate on
 4b (a forced PCF write with no dark frame, on USB and off; `pcf-unseen`'s
 deferral stays until it passes); his eye on the light and the keys; the
 plan's open question (two silences within 2 ms counted as two, the

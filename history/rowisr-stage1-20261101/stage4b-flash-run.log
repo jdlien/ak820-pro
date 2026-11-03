@@ -1,0 +1,154 @@
+[05:07:17] the stage 3b soak watch stopped
+[05:07:19] daemon paused
+[05:07:22] data on
+[05:07:24] board present, token before: 0x8a213e0e
+[05:07:24] flash: ak820pro-builds/out/via-dev-6b90f3b821-20261103-045632.bin
+firmware : ak820pro-builds/out/via-dev-6b90f3b821-20261103-045632.bin
+built    : Nov  3 04:56:32 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  3 05:07:24 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 177, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  3 05:07:24 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  3 05:07:24 2026  (2707 bytes)
+
+== dumping the battery log ==
+# 0 entries (log v8, one per 900 s), newest 0 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261103-050725-preflash.csv  Nov  3 05:07:25 2026  (6 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[05:07:55] token after the flash: 0x4215c3e2 (want 0x4215c3e2)
+[05:08:15] the clock status pages after the boot
+page1: {'ver': 2, 'cnt': 27648, 'period_active': 33600, 'period_nominal': 33600, 'flags': 4, 'last_host_offset_ms': 1009, 'sof_bias_ppm': 0, 'ref_state': 2, 'sync_age_min': 255, 'sof_epoch': 0, 'sof_frames_total': 33896}
+page2: {'stale_count': 0, 'i2c_fail': 0, 'deferred': 0, 'i2c_max_cycles': 185, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 34, 'd_zero': 0, 'd_reject': 0, 'sizeof_time_t': 8, 'usb': 3}
+page3 deltas: [1028, 1027, 1028, 1028, 1027, 1028, 1028, 1027, 1028, 1027, 1028, 1027, 1027, 1028]
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 1009, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 1, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[05:08:15] health counters reset
+  seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 0
+  PCF read 1 (4 B)        7 (0 failed); longest masked 0.005 ms, whole call 2.368 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 14
+  PCF read 7 (10 B)       2 (0 failed); longest masked 0.005 ms, whole call 5.659 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 4
+[05:08:15] a burst of 300 PCF reads (40-80 ms apart, ~18 s) with 200 presses of A1 at 25 ms through it
+{'left': 300, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 40, 'hi': 80}
+[05:08:15] logger paused
+[05:08:41] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 25 ms, actual min 25054 max 25482 mean 25119 us, gap 75 ms, total 20049 ms
+[05:08:42] QT Py soft-rebooted into its logger
+[05:08:42] logger back
+[05:08:44] logger logging again (a new power.csv row)
+presses through the PCF burst: key_presses +200 (want 200), raw_edges +400 (want 400), row_gap_max 9 ms -> PASS
+stalls after: {'count_ge_10ms': 0, 'count_ge_25ms': 0, 'flash_gap_max_ms': 0, 'blit_gap_max_ms': 0, 'i2c_gap_max_ms': 0, 'count_ge_25ms_nonflash': 0, 'loop_gap_max_mark': 'none', 'row_gap_max_ms': 9, 'raw_edges': 400, 'cooked_changes': 400, 'row_gap_max_row': 3}
+page2: {'stale_count': 0, 'i2c_fail': 0, 'deferred': 0, 'i2c_max_cycles': 185, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 66, 'd_zero': 0, 'd_reject': 0, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 1009, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 2, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[05:08:47] the stuck-bus test (op 23 sub 5): the transfer into its deadline and the restart
+stall counters' change across the stuck test: {"count_ge_10ms": 1, "count_ge_25ms": 0, "passes": 1102, "flash_writes": 0, "flash_gap_max_ms": 0, "blit_gap_max_ms": 0, "i2c_gap_max_ms": 0, "count_ge_25ms_nonflash": 0, "key_presses": 0, "loop_gap_max_mark": ["none", "none"]}
+page2: {'stale_count': 0, 'i2c_fail': 1, 'deferred': 0, 'i2c_max_cycles': 330, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 68, 'd_zero': 0, 'd_reject': 0, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 1009, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 3, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[05:08:49] ordinary reads after the stuck test: a burst of 20 (the bus must be back)
+{'left': 20, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 40, 'hi': 80}
+{'left': 0, 'done': 20, 'failed': 0, 'exposure_ms': 1194, 'active': False, 'skipped': 0, 'lo': 40, 'hi': 80}
+page2: {'stale_count': 0, 'i2c_fail': 1, 'deferred': 0, 'i2c_max_cycles': 330, 'window_rejects': 0, 'ref_transitions': 1, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 71, 'd_zero': 0, 'd_reject': 0, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 1009, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 3, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+  seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 0
+  PCF read 1 (4 B)        7 (0 failed); longest masked 0.005 ms, whole call 2.368 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 14
+  PCF read 7 (10 B)     323 (1 failed); longest masked 0.005 ms, whole call 10.112 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 646
+op 22's per-kind spans zeroed after the injection (codex on 6b90f3b821: the healthy soak maxima must not carry the stuck test's 10 ms)
+[05:08:52] standing state for the warm windows
+[05:08:52] three deep sleeps and wakes (the pre-sleep read and the wake's recovery on their 5 ms deadline with the handler running): page 2 before and after
+page2: {'stale_count': 0, 'i2c_fail': 1, 'deferred': 0, 'i2c_max_cycles': 330, 'window_rejects': 0, 'ref_transitions': 3, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 79, 'd_zero': 0, 'd_reject': 0, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 9, 'acq_step_ms': 1009, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 3, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[05:09:00] daemon paused
+[05:09:00] cycle 0: the baseline wake and read (no verdict)
+[05:09:00] white awake already (data was on?)
+[05:09:00] logger paused
+[05:09:06] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[05:09:07] QT Py soft-rebooted into its logger
+[05:09:07] logger back
+[05:09:09] logger logging again (a new power.csv row)
+[05:09:12] token 0x4215c3e2 (want 0x4215c3e2)
+[05:09:12] cycle 0: {"t": "05:09:12", "press_to_present_s": 10.2, "key_presses": 201, "raw_edges": 402, "epoch_losses": 2, "spurious": 2, "invalid_services": 2, "usb_rejects": 0, "usb_events": 2, "loss_gen": 3}
+[05:09:12] data off; white sleeps in ~3 min
+[05:12:15] white asleep (3.640 mA)
+[05:12:15] logger paused
+[05:12:22] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100463 us
+[05:12:23] QT Py soft-rebooted into its logger
+[05:12:23] logger back
+[05:12:25] logger logging again (a new power.csv row)
+[05:12:28] cycle 1: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 3 -> PASS
+[05:12:28] data off
+[05:15:33] white asleep (3.305 mA)
+[05:15:33] logger paused
+[05:15:40] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100067 us
+[05:15:40] QT Py soft-rebooted into its logger
+[05:15:40] logger back
+[05:15:42] logger logging again (a new power.csv row)
+[05:15:46] cycle 2: woke 10.3 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 4 -> PASS
+[05:15:46] data off
+[05:18:51] white asleep (3.495 mA)
+[05:18:51] logger paused
+[05:18:58] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[05:18:58] QT Py soft-rebooted into its logger
+[05:18:58] logger back
+[05:19:00] logger logging again (a new power.csv row)
+[05:19:04] cycle 3: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 5 -> PASS
+[05:19:04] data off
+[05:19:04] RESULT: 3 of 3 wakes kept the key -> history/rowisr-stage1-20261101/deep-wake-stage4b.json
+[05:19:04] data off
+[05:19:04] daemon restarted
+page2: {'stale_count': 0, 'i2c_fail': 1, 'deferred': 0, 'i2c_max_cycles': 330, 'window_rejects': 2, 'ref_transitions': 5, 'lat_min': 0, 'lat_max': 3, 'lat_mean': 0, 'lat_n': 639, 'd_zero': 177, 'd_reject': 5, 'sizeof_time_t': 8, 'usb': 3}
+page4: {'pcf_state': 'IDLE', 'stop_asserted': 0, 'release_err_ms': 0, 'runs_ok': 0, 'restarts': 0, 'maybe_stopped': 0, 'acq': 'DONE', 'acq_unc_ms': 7, 'acq_step_ms': 797, 'attempts': 0, 'pcf_pending': 0, 'ref_state': 2, 'slews': 0, 'reload_writes': 6, 'boundary_err_ms': 0, 'd_first_ms': 490, 'stale': 0, 'brk_width_ms': 0, 'brk_fails': 0}
+[05:19:11] the awake soak starts (data on, the daemon syncing; a read every 20 min)
+[05:19:19] read 1: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 232279 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 0 restarts 0 release_err 0 boundary_err 0 bracket width 0 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 3;  PCF read 1 (4 B)      170 (0 failed); longest masked 0.005 ms, whole call 1.76 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 340;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 ms
+[05:39:23] read 2: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 4743971 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 5 restarts 0 release_err 3 boundary_err 4 bracket width 7 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 3;  PCF read 1 (4 B)      263 (0 failed); longest masked 0.005 ms, whole call 2.32 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 526;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 ms
+[05:59:28] read 3: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 9253406 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 9 restarts 0 release_err 3 boundary_err 0 bracket width 7 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 3;  PCF read 1 (4 B)      335 (0 failed); longest masked 0.005 ms, whole call 2.325 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 670;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 m
+[06:19:32] read 4: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 13760982 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 13 restarts 0 release_err 2 boundary_err -1 bracket width 7 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 3;  PCF read 1 (4 B)      407 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 814;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 m
+[06:39:37] read 5: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 18268626 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 17 restarts 0 release_err 2 boundary_err 0 bracket width 6 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 3;  PCF read 1 (4 B)      479 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 958;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 m
+[06:59:41] read 6: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 22776392 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 21 restarts 0 release_err 3 boundary_err -1 bracket width 7 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 3;  PCF read 1 (4 B)      551 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 1102;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 
+[07:19:46] read 7: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 27283847 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 25 restarts 0 release_err 2 boundary_err -1 bracket width 7 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 3;  PCF read 1 (4 B)      623 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 1246;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 
+[07:39:50] read 8: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 31791212 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 29 restarts 0 release_err 3 boundary_err -1 bracket width 7 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 3; receiver-off intervals 3;  PCF read 1 (4 B)      695 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 1390;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 
+[07:59:55] read 9: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 36298366 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 33 restarts 0 release_err 3 boundary_err -1 bracket width 6 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 3; receiver-off intervals 3;  PCF read 1 (4 B)      767 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 1534;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 
+[08:19:59] read 10: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 40805691 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 37 restarts 0 release_err 3 boundary_err -1 bracket width 7 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 3; receiver-off intervals 3;  PCF read 1 (4 B)      839 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 1678;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 
+[08:40:04] read 11: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 45313031 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 41 restarts 0 release_err 2 boundary_err 0 bracket width 6 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 3; receiver-off intervals 3;  PCF read 1 (4 B)      911 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 1822;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 
+[09:00:08] read 12: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 49820481 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 45 restarts 0 release_err 2 boundary_err 1 bracket width 7 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 3; receiver-off intervals 3;  PCF read 1 (4 B)      983 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 1966;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 
+[09:20:13] read 13: key_presses 204, row_gap_max 11 ms, losses 9, spurious 2, frame counter judged 54327549 rejected 0 last [0, 0]; clock: i2c_max_cycles 330 fails 1 runs_ok 49 restarts 0 release_err 2 boundary_err -1 bracket width 6 misses 0; kinds:   seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 3; receiver-off intervals 3;  PCF read 1 (4 B)     1055 (0 failed); longest masked 0.005 ms, whole call 2.379 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 2110;  PCF read 7 (10 B)      19 (0 failed); longest masked 0.005 
