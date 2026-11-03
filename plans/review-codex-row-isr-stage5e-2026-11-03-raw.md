@@ -1,0 +1,13 @@
+**READY TO FLASH**
+
+1. **note — [rowisr.c:1207](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:1207), [rowisr.c:1636](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:1636):** Deferred publication is safe. No return lies between acquisition and publication; crossed, late and dark paths all publish once when `scanned` is true. The consumer cannot execute midway through this ISR, its lock excludes publication, and a pending row interrupt cannot re-enter the active handler.
+
+2. **note — [rowisr.c:838](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:838), [health.c:106](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/health.c:106):** The offset is **not constant**: preemption and conditional paths vary it. Reported gaps change by the difference between successive publication delays. `row_samples` remains exact; no debounce or runtime control consumes these timestamps. Diagnostics can shift, including the [sleep-sizing gate’s 8 ms threshold](/Users/jdlien/code/ak820-pro/scripts/sleep_sizing.py:165). Preserve an acquisition timestamp if exact acquisition-gap semantics are required.
+
+3. **note — [rowisr.c:215](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:215):** Verified all 256 entries in the archived 5e ELF: exact rounded formula, strictly increasing, range 0–1195, below terminal 1535. The table occupies 512 bytes in flash `.rodata`; indexing and `uint16_t` storage are safe.
+
+4. **note — [rowisr.c:1189](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:1189):** No new helper call executes under a mask, and publication follows unmasking. However, generated code does not uniformly shrink: the ordinary lit, valid, one-boundary arm path without adoption or a new latency maximum grows **82 → 84 instructions**, including the mask pair. Its new `BL` is an internal long branch. This is instruction-count evidence, not measured duration. Removing `serviced` preserves page 7’s `serviced_valid`.
+
+5. **note — [rowisr.c:1115](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:1115):** One premise correction: the refusing flash-program guard performs **no scan**, unchanged from 5d. Scan-only retains immediate sample-and-publish.
+
+Read-only source and archived-ELF inspection; no builds or board access.

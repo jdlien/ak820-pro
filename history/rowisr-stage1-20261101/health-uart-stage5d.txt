@@ -1,0 +1,2 @@
+msp_free                 624 bytes (interrupt stack; paint watermark)
+blit_stalled             0

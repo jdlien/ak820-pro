@@ -3286,3 +3286,27 @@ quantization, above the largest new tolerance of 28.389 ms.
   arm keeping the electrical scan before it, the terminal 1,279 last.
   The 8 ms presser result is the debounce boundary as recorded, 10 ms
   the reliable dwell; it was 5c's run, so 5d's settle gets the chain's.
+- 11-03 13:25-13:30: **stage 5e built and verified**: `739fe1b635`
+  (token `0xf222e31c`, heap gap 376 B), codex's three cheap items: the
+  width as a 512 B flash table of the rounded formula (every entry
+  checked in the ELF, 0-1,195 strictly increasing under 1,535),
+  `rec.serviced` gone (unread since 5c), the scan's bookkeeping
+  (`scan_publish`: the row's sample time, the publish, the rig's note)
+  behind the arm with the electrical scan (`scan_key_row_sample`) kept
+  before it. Codex's verify: **READY TO FLASH**
+  (`review-codex-row-isr-stage5e-2026-11-03-raw.md`); its notes: the
+  deferred publish is safe (no return between the sample and the
+  publish, the consume's lock excludes it); the row's sample time now
+  carries a varying publication delay (diagnostics only: `row_gap_max`
+  and the sleep-sizing gate's 8 ms threshold can shift by the delay's
+  difference; `row_samples` exact); the ordinary arm path's masked
+  section is 82 to 84 instructions, an internal branch; the
+  flash-program guard scans nothing, as before. 5d's UART step (13:14):
+  OE 0 before and after a 200-press batch, the longest handlers USB 80
+  us, the system timer 16, UART2 11, the tick's longest gap 107 us under
+  the batch; the clock chip's transactions longer under the faster ISR
+  (the 7-byte read 7.5 ms, the 8-byte write 6.1, against 5.5 and 4.6 on
+  4b; the 10 ms deadline's margin a quarter; the 5 ms paths held, as
+  before). The night's build: 5e, after its own window and presser gate
+  (the listener swallows F19/F20 since 13:26), if 5d's wakes and silence
+  set pass.
