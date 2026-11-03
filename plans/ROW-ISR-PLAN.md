@@ -2959,3 +2959,29 @@ quantization, above the largest new tolerance of 28.389 ms.
   sections' commit out, the exit-only verdict, the spaced reads: 80.2
   to 71.6; stage 2's 59.8 plus the per-slot judgment). `soak_watch.sh`
   started, then stage 4's flash took white at 04:52.
+- 11-03 04:58: **stage 4 on white (`c2bc29c745`, 04:53): the unmasked
+  transaction is too slow for the 5 ms deadline.** The burst of 300
+  7-byte reads with 200 presses through it (dev op 23, on the deep
+  sleep's 5 ms deadline): the presses exact (200/200, 400 edges,
+  `row_gap_max` 5 ms), **5 of the 300 reads failed** (`i2c_fail` 0 to 5;
+  op 22's "PCF read 7" 323 calls, 6 failed with the stuck test's;
+  `i2c_max_cycles` 184 ILRC cycles, ~5.5 ms, the boot's maximum 183
+  already) where every burst of 10-19 (1,000 reads each, held off) had
+  none: with the handler (27%) and the 20 kHz tick preempting the
+  bit-bang a 7-byte read runs to ~5.5 ms, twice its 2.6 ms, not the
+  plan's 3.1-3.6, and the deadline cuts the slowest. The stuck test ran
+  into its 10 ms deadline and restarted as designed (one pass >= 10 ms,
+  none >= 25), 20 ordinary reads after it clean; the warm windows 70.9
+  us a slot (stage 3b's 71.6); the frame counter clean (166,964 judged,
+  none rejected). **Stage 4b built: `6b90f3b821`** (dev token
+  `0x4215c3e2`, heap gap 400 B, pushed): the hold-off kept for the
+  transactions on the short deadline alone (`pcf_short_timeout`: the
+  pre-sleep read, the wake's recovery, the dev burst), where the board
+  is dark or waking anyway; the ordinary 10 ms transactions unmasked and
+  lit. Codex asked (`review-prompt-row-isr-stage4b.txt`); its runner
+  `stage4b_flash.sh` (the burst with presses, the stuck test, three
+  wakes with page 2 before and after, then the awake soak with op 22's
+  per-kind whole-call maxima read every 20 min: the writer's 8-byte
+  write at ~2x against 10 ms is the night's question). Stage 4's three
+  wakes are running first (the recovery's failures under the unmasked
+  transaction, page 2 before and after).

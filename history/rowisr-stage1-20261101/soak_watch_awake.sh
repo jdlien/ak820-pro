@@ -35,7 +35,8 @@ while true; do
         r=$(venv/bin/python scripts/rowisr_diag.py record --json 2>/dev/null); u=$(venv/bin/python scripts/rowisr_diag.py usb --json 2>/dev/null)
         c=$(venv/bin/python scripts/presser_count.py 2>/dev/null); v=$("$A" health --json 2>/dev/null)
         p=$(venv/bin/python hostagent/rtc_phase0.py status 2>/dev/null | grep 'page2\|page4' | tr '\n' ' ')
-        R="$r" U="$u" C="$c" V="$v" P="$p" python3 - "$n" >> "$OUT" <<'PY'
+        k=$(venv/bin/python scripts/overrun_diag.py status 2>/dev/null | grep 'PCF ' | tr '\n' ';')
+        R="$r" U="$u" C="$c" V="$v" P="$p" K="$k" python3 - "$n" >> "$OUT" <<'PY'
 import json, os, sys, time, re
 r, u, c, v = (json.loads(os.environ[k]) if os.environ.get(k) else {} for k in ("R", "U", "C", "V"))
 p = os.environ.get("P", "")
@@ -46,12 +47,14 @@ d = {"t": time.strftime("%Y-%m-%d %H:%M:%S"), "read": int(sys.argv[1]),
      "epoch_losses": r.get("epoch_losses"), "spurious": r.get("spurious"), "invalid_services": r.get("invalid_services"), "late_omit": r.get("late_omit"),
      "usb_checked": u.get("usb_checked"), "usb_rejects": u.get("usb_rejects"), "usb_events": u.get("usb_events"), "usb_last": [u.get("usb_last_dt_ms"), u.get("usb_last_df_ms")],
      "clock": {k: grab(k) for k in ("i2c_fail", "i2c_max_cycles", "stale_count", "release_err_ms", "runs_ok", "restarts", "boundary_err_ms", "d_first_ms", "brk_width_ms", "brk_fails", "slews")},
-     "vitals": v.get("vitals") if v else None, "stalls": v.get("stalls") if v else None}
+     "vitals": v.get("vitals") if v else None, "stalls": v.get("stalls") if v else None,
+     "pcf_kinds": os.environ.get("K", "")}
 print(json.dumps(d))
 ck = d["clock"]
 print(f"[{time.strftime('%H:%M:%S')}] read {d['read']}: key_presses {d['key_presses']}, row_gap_max {d['row_gap_max_ms']} ms, losses {d['epoch_losses']}, spurious {d['spurious']}, "
       f"frame counter judged {d['usb_checked']} rejected {d['usb_rejects']} last {d['usb_last']}; clock: i2c_max_cycles {ck['i2c_max_cycles']} fails {ck['i2c_fail']} "
-      f"runs_ok {ck['runs_ok']} restarts {ck['restarts']} release_err {ck['release_err_ms']} boundary_err {ck['boundary_err_ms']} bracket width {ck['brk_width_ms']} misses {ck['brk_fails']}", file=sys.stderr)
+      f"runs_ok {ck['runs_ok']} restarts {ck['restarts']} release_err {ck['release_err_ms']} boundary_err {ck['boundary_err_ms']} bracket width {ck['brk_width_ms']} misses {ck['brk_fails']}; "
+      f"kinds: {d['pcf_kinds'][:300]}", file=sys.stderr)
 PY
     else
         log "read $n: white not on USB"
