@@ -40,7 +40,7 @@ import json, os, sys, time, re
 r, u, c, v = (json.loads(os.environ[k]) if os.environ.get(k) else {} for k in ("R", "U", "C", "V"))
 p = os.environ.get("P", "")
 def grab(key):
-    m = re.search(key + r"[=:] *'?([-\w.]+)", p); return m.group(1) if m else None
+    m = re.search(r"'" + key + r"': *'?([-\w.]+)", p); return m.group(1) if m else None   # rtc_phase0.py prints a dict: 'key': value
 d = {"t": time.strftime("%Y-%m-%d %H:%M:%S"), "read": int(sys.argv[1]),
      "key_presses": c.get("key_presses"), "raw_edges": c.get("raw_edges"), "row_gap_max_ms": c.get("row_gap_max_ms"),
      "epoch_losses": r.get("epoch_losses"), "spurious": r.get("spurious"), "invalid_services": r.get("invalid_services"), "late_omit": r.get("late_omit"),

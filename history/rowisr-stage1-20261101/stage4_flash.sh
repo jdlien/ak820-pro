@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stage 4's flash on white (11-03, 8a82367958, token 0xd6b5fd8a: the clock
+# Stage 4's flash on white (11-03, c2bc29c745 = 8a82367958 plus codex's notes, token 0x8a213e0e: the clock
 # chip's transaction with the row ISR unmasked, the bracket's width on status
 # page 4) and its hands-free gates: the flash (white woken by the presser if
 # asleep), the clock status pages before anything, a burst of 300 PCF reads
@@ -15,8 +15,8 @@ set -u
 cd "$(dirname "$0")/../.." || exit 1
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 D=history/rowisr-stage1-20261101
-ART=ak820pro-builds/out/via-dev-8a82367958-20261103-042543.bin
-WANT=0xd6b5fd8a
+ART=ak820pro-builds/out/via-dev-c2bc29c745-20261103-043642.bin
+WANT=0x8a213e0e
 A="$HOME/Library/Application Support/ak820pro/bin/ak820"
 PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
@@ -46,6 +46,7 @@ sleep 20   # the boot's acquisition settles
 log "the clock status pages after the boot"
 venv/bin/python hostagent/rtc_phase0.py status 2>&1 | tee "$D/rtc-status-stage4-0.txt"
 venv/bin/python -c "import sys; sys.path.insert(0, 'hostagent'); import ak820health as hp; hp.reset_counters()" && log "health counters reset"
+venv/bin/python scripts/overrun_diag.py status 2>&1 | tee "$D/overrun-status-stage4-0.txt" | grep -i 'kind\|pcf\|span' | head -8
 log "a burst of 300 PCF reads (40-80 ms apart, ~18 s) with 200 presses of A1 at 25 ms through it"
 venv/bin/python scripts/overrun_diag.py burst 300 --lo 40 --hi 80 2>&1 | tail -2
 before=$(venv/bin/python scripts/presser_count.py)
@@ -79,7 +80,19 @@ d = {k: (s1[k] - s0[k]) if isinstance(s1[k], int) and isinstance(s0.get(k), int)
 print("stall counters' change across the stuck test:", json.dumps(d))
 PY
 venv/bin/python hostagent/rtc_phase0.py status 2>&1 | grep 'page2\|page4' | tee "$D/rtc-status-stage4-stuck.txt"
+log "ordinary reads after the stuck test: a burst of 20 (the bus must be back)"
+venv/bin/python scripts/overrun_diag.py burst 20 --lo 40 --hi 80 2>&1 | tail -1; sleep 3
+venv/bin/python scripts/overrun_diag.py burst stop 2>&1 | tail -1
+venv/bin/python hostagent/rtc_phase0.py status 2>&1 | grep 'page2\|page4' | tee "$D/rtc-status-stage4-after-stuck.txt"
+venv/bin/python scripts/overrun_diag.py status 2>&1 | tee "$D/overrun-status-stage4-after-stuck.txt" | grep -i 'kind\|pcf\|span' | head -8
 timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "standing state for the warm windows"
 "$D/warm_windows.sh" stage4 "$WANT" 2>&1 | tee "$D/warm-windows-stage4.log"
+log "three deep sleeps and wakes (the pre-sleep read and the wake's recovery on their 5 ms deadline with the handler running): page 2 before and after"
+launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; sleep 3; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; sleep 4
+venv/bin/python hostagent/rtc_phase0.py status 2>&1 | grep 'page2\|page4' | tee "$D/rtc-status-stage4-before-wakes.txt"
+timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1
+"$D/deep_wake_presser.sh" 3 stage4 "$WANT" 2>&1 | tee "$D/deep-wake-stage4.log"
+launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; sleep 3; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; sleep 4
+venv/bin/python hostagent/rtc_phase0.py status 2>&1 | grep 'page2\|page4' | tee "$D/rtc-status-stage4-after-wakes.txt"
 log "the awake soak starts (data on, the daemon syncing; a read every 20 min)"
 exec "$D/soak_watch_awake.sh" stage4 "$WANT"

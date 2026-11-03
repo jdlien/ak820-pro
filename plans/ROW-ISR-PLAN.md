@@ -2927,3 +2927,23 @@ quantization, above the largest new tolerance of 28.389 ms.
   harmless by construction) and one more torn pair on the adjacent-read
   build inside cycle 4. **Stage 3b (`67a4ccf2b3`, the spaced reads)
   flashing at 04:31** by `stage3b_flash.sh`.
+- 11-03 04:50: codex on stage 4 `8a82367958`: **READY TO FLASH** for the
+  controlled dev flash, no P1
+  (`review-codex-row-isr-stage4-2026-11-03-raw.md`): no interrupt-side
+  writer of MODE, CFG or whole DATA left (the row handler, the tick, USB,
+  UART2, SPI0's DMA, the RTC, the encoder, the lock LEDs, sleep: all by
+  BSET/BCLR or peripheral registers); the fallback I2C has one absolute
+  deadline, no per-bit limit, and its edge order survives preemption;
+  the PCF8563's interface watchdog is 1-2 s (the clone's to confirm).
+  Corrections taken: the transaction is ~3.6 ms at stage 3's 27%
+  occupancy, not 3.1-3.3 (a 3.4 ms transfer scales to ~4.7), so both
+  5 ms paths (the pre-sleep read, the wake's recovery) are exposed and
+  measured, not assumed; the bracket's width is now the previous read's
+  START to this read's end (the conservative span; midpoint-to-end was
+  no bound); `i2c_max_cycles` is a lifetime maximum, so the healthy
+  figure is captured before the stuck-bus injection; the soak logger's
+  parse of `rtc_phase0.py`'s dict fixed; the stuck test followed by
+  ordinary reads; three sleeps and wakes with page 2 before and after.
+  The comments in rtc.c, rowisr.c and rowisr.h brought up to date
+  (`c2bc29c745`, dev token `0x8a213e0e`, heap gap 400 B, the daily `0xe2ad758d`; the flash candidate for stage 4, queued behind stage 3b's gates). JD's camera gate stays owed; `pcf-unseen`
+  stays until it passes.
