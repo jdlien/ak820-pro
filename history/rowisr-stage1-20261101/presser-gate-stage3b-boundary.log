@@ -1,0 +1,58 @@
+[04:48:33] daemon paused
+[04:48:36] data on
+[04:48:47] white not on USB: asleep, one press to wake it
+[04:48:47] logger paused
+[04:48:54] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:48:54] QT Py soft-rebooted into its logger
+[04:48:54] logger back
+[04:48:56] logger logging again (a new power.csv row)
+[04:48:57] white awake
+[04:48:59] token 0x4326ec84 (want 0x4326ec84)
+[04:48:59] health counters reset (row_gap_max is this run's)
+[04:48:59] the rig's counters at the scan are available (stage 3, op 28 sub 12)
+[04:48:59] logger paused
+[04:49:15] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8483 mean 8132 us, gap 92 ms, total 10026 ms
+[04:49:16] QT Py soft-rebooted into its logger
+[04:49:16] logger back
+[04:49:18] logger logging again (a new power.csv row)
+[04:49:19] A1 x100 at 8 ms: key_presses +72 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8483 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:49:20] logger paused
+[04:49:35] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8453 mean 8118 us, gap 92 ms, total 10026 ms
+[04:49:36] QT Py soft-rebooted into its logger
+[04:49:36] logger back
+[04:49:38] logger logging again (a new power.csv row)
+[04:49:40] A1 x100 at 8 ms: key_presses +73 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8453 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:49:40] logger paused
+[04:49:56] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8453 mean 8105 us, gap 92 ms, total 10024 ms
+[04:49:56] QT Py soft-rebooted into its logger
+[04:49:56] logger back
+[04:49:58] logger logging again (a new power.csv row)
+[04:50:00] A1 x100 at 8 ms: key_presses +71 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8453 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:50:00] logger paused
+[04:50:16] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 10 ms, actual min 10040 max 10437 mean 10074 us, gap 90 ms, total 10021 ms
+[04:50:16] QT Py soft-rebooted into its logger
+[04:50:16] logger back
+[04:50:18] logger logging again (a new power.csv row)
+[04:50:20] A1 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10437 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:50:20] logger paused
+[04:50:36] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 10 ms, actual min 10040 max 10437 mean 10073 us, gap 90 ms, total 10022 ms
+[04:50:37] QT Py soft-rebooted into its logger
+[04:50:37] logger back
+[04:50:39] logger logging again (a new power.csv row)
+[04:50:40] A1 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10437 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:50:40] logger paused
+[04:50:56] A0 (yellow, (3,14) PgDn/F20): 100 presses, dwell asked 8 ms, actual min 8056 max 8453 mean 8133 us, gap 92 ms, total 10026 ms
+[04:50:57] QT Py soft-rebooted into its logger
+[04:50:57] logger back
+[04:50:59] logger logging again (a new power.csv row)
+[04:51:01] A0 x100 at 8 ms: key_presses +69 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8453 us, row_gap_max 5 ms -> MISSING, at the scan key1 100/100 (want 100/100), elsewhere 0
+[04:51:01] logger paused
+[04:51:17] A0 (yellow, (3,14) PgDn/F20): 100 presses, dwell asked 10 ms, actual min 10040 max 10437 mean 10079 us, gap 90 ms, total 10022 ms
+[04:51:17] QT Py soft-rebooted into its logger
+[04:51:17] logger back
+[04:51:19] logger logging again (a new power.csv row)
+[04:51:21] A0 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10437 us, row_gap_max 5 ms -> PASS, at the scan key1 100/100 (want 100/100), elsewhere 0
+RESULT: 3 of 7 batches exact
+[04:51:21] done -> history/rowisr-stage1-20261101/presser-gate-stage3b-boundary.json
+[04:51:21] data off
+[04:51:21] daemon restarted

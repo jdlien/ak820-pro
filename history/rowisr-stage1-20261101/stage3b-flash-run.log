@@ -1,0 +1,363 @@
+[04:31:24] daemon paused
+[04:31:27] data on
+[04:31:31] board present, token before: 0x0a2f280e
+[04:31:31] flash: ak820pro-builds/out/via-dev-67a4ccf2b3-20261103-041520.bin
+firmware : ak820pro-builds/out/via-dev-67a4ccf2b3-20261103-041520.bin
+built    : Nov  3 04:15:20 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  3 04:31:32 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 177, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  3 04:31:32 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  3 04:31:32 2026  (2707 bytes)
+
+== dumping the battery log ==
+# 5 entries (log v8, one per 900 s), newest 259 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261103-043132-preflash.csv  Nov  3 04:31:32 2026  (802 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[04:32:02] token after the flash: 0x4326ec84 (want 0x4326ec84)
+[04:32:07] the frame counter watched for 10 min (the record now, then after)
+[04:32:07] health counters reset
+frame counter: 146 intervals judged, 0 rejected on the spans, 0 rejected for a bus event or the frames stopping, 0 excluded unjudged in a stale's recovery; the worst accepted distance 1 ms; the last rejection's spans 0 ms by the extension, 0 by the frames
+  now: USB ACTIVE, frames trusted, FRMNO 480, bus-event generation 4; the extension VALID, loss generation 1, exclusions 0x00
+frame counter: 2247661 intervals judged, 0 rejected on the spans, 0 rejected for a bus event or the frames stopping, 0 excluded unjudged in a stale's recovery; the worst accepted distance 1 ms; the last rejection's spans 0 ms by the extension, 0 by the frames
+  now: USB ACTIVE, frames trusted, FRMNO 481, bus-event generation 4; the extension VALID, loss generation 1, exclusions 0x00
+longest run of omissions 0, spurious invocations 0, omissions by the arm deadline 0, epoch losses 0, invalid services 0, shortest handler 49.5 us, services (low 16 bits) 19586
+omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
+  key row 0: R   0  B   0  G   0
+  key row 1: R   0  B   0  G   0
+  key row 2: R   0  B   0  G   0
+  key row 3: R   0  B   0  G   0
+  key row 4: R   0  B   0  G   0
+  key row 5: R   0  B   0  G   0
+[04:42:08] standing state for the gates (each pauses and restores on its own)
+[04:42:08] daemon paused
+[04:42:11] data on
+[04:42:22] white not on USB: asleep, one press to wake it
+[04:42:22] logger paused
+[04:42:28] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:42:29] QT Py soft-rebooted into its logger
+[04:42:29] logger back
+[04:42:31] logger logging again (a new power.csv row)
+[04:42:32] white awake
+[04:42:34] token 0x4326ec84 (want 0x4326ec84)
+[04:42:34] health counters reset (row_gap_max is this run's)
+[04:42:34] the rig's counters at the scan are available (stage 3, op 28 sub 12)
+[04:42:34] logger paused
+[04:43:00] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 25 ms, actual min 25054 max 25482 mean 25117 us, gap 75 ms, total 20049 ms
+[04:43:01] QT Py soft-rebooted into its logger
+[04:43:01] logger back
+[04:43:03] logger logging again (a new power.csv row)
+[04:43:04] A1 x200 at 25 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 25054-25482 us, row_gap_max 5 ms -> PASS, at the scan key0 200/200 (want 200/200), elsewhere 0
+[04:43:04] logger paused
+[04:43:31] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15098 us, gap 85 ms, total 20058 ms
+[04:43:31] QT Py soft-rebooted into its logger
+[04:43:31] logger back
+[04:43:33] logger logging again (a new power.csv row)
+[04:43:35] A1 x200 at 15 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 15045-15441 us, row_gap_max 5 ms -> PASS, at the scan key0 200/200 (want 200/200), elsewhere 0
+[04:43:35] logger paused
+[04:44:01] A0 (yellow, (3,14) PgDn/F20): 200 presses, dwell asked 25 ms, actual min 25054 max 25482 mean 25118 us, gap 75 ms, total 20048 ms
+[04:44:01] QT Py soft-rebooted into its logger
+[04:44:01] logger back
+[04:44:03] logger logging again (a new power.csv row)
+[04:44:05] A0 x200 at 25 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 25054-25482 us, row_gap_max 5 ms -> PASS, at the scan key1 200/200 (want 200/200), elsewhere 0
+[04:44:05] logger paused
+[04:44:21] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 12 ms, actual min 12054 max 12451 mean 12149 us, gap 88 ms, total 10028 ms
+[04:44:22] QT Py soft-rebooted into its logger
+[04:44:22] logger back
+[04:44:24] logger logging again (a new power.csv row)
+[04:44:25] A1 x100 at 12 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 12054-12451 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:44:25] logger paused
+[04:44:41] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 10 ms, actual min 10040 max 10406 mean 10071 us, gap 90 ms, total 10022 ms
+[04:44:42] QT Py soft-rebooted into its logger
+[04:44:42] logger back
+[04:44:44] logger logging again (a new power.csv row)
+[04:44:45] A1 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10406 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:44:45] logger paused
+[04:45:01] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8483 mean 8130 us, gap 92 ms, total 10027 ms
+[04:45:02] QT Py soft-rebooted into its logger
+[04:45:02] logger back
+[04:45:04] logger logging again (a new power.csv row)
+[04:45:06] A1 x100 at 8 ms: key_presses +75 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8483 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:45:06] logger paused
+[04:45:12] A0 held (yellow, (3,14) PgDn/F20)
+[04:45:22] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 25 ms, actual min 25054 max 25390 mean 25115 us, gap 75 ms, total 10025 ms
+[04:45:23] A0 released
+[04:45:23] QT Py soft-rebooted into its logger
+[04:45:23] logger back
+[04:45:25] logger logging again (a new power.csv row)
+[04:45:27] A1 x100 at 25 ms with A0 held: key_presses +101 (expected 101), raw_edges +202 (expected 202), dwell actual 25054-25390 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), key1 1/1 (want 1/1), elsewhere 0
+RESULT: 6 of 7 batches exact
+[04:45:27] done -> history/rowisr-stage1-20261101/presser-gate-stage3b.json
+[04:45:27] data off
+[04:45:27] daemon restarted
+[04:45:34] silence_check.sh starts (16 cases, the ladder held through the data cuts)
+Boot-out failed: 3: No such process
+[04:45:34] daemon paused
+[04:45:35] data on
+[04:45:35] board present
+[04:45:37] before: record {'spurious': 0, 'late_omit': 0, 'epoch_losses': 1, 'invalid_services': 1, 'serviced_lo16': 28147} usb {'usb_checked': 670028, 'usb_rejects': 0, 'usb_events': 1, 'usb_worst_ms': 1, 'usb_last_dt_ms': 0, 'usb_last_df_ms': 0, 'loss_gen': 5, 'usb_gen': 16, 'usb_state': 'ACTIVE', 'usb_trusted_now': True, 'frmno': 716, 'time_valid': True, 'time_excl': 0, 'guard_last_gap_ticks': 29257, 'guard_last_gap_ms': 156.037, 'frames_fresh': True, 'usb_unjudged': 0, 'recovery_pending': False}
+[04:45:38] 5 ms: measured 5.003 ms; losses 0 (expected 0), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 18, omitted 1, judged 3430; the extension read 7.147 ms across it, generation +0; last rejection spans 0/0 ms -> PASS
+[04:45:39] 7.5 ms: measured 7.499 ms; losses 0 (expected 0), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 28, omitted 1, judged 3430; the extension read 9.813 ms across it, generation +0; last rejection spans 0/0 ms -> PASS
+[04:45:39] 7.9 ms: measured 7.899 ms; losses 0 (expected the gap decides), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 29, omitted 0, judged 3423; the extension read 10.181 ms across it, generation +0; last rejection spans 0/0 ms -> PASS
+[04:45:40] 8.1 ms: measured 8.101 ms; losses 1 (expected the gap decides), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3425; the extension read 2.139 ms across it, generation +1 (the guard: its gap 8.128 ms); last rejection spans 0/0 ms -> PASS
+[04:45:41] 8.5 ms: measured 8.501 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 1, judged 3431; the extension read 2.149 ms across it, generation +1 (the guard: its gap 8.549 ms); last rejection spans 0/0 ms -> PASS
+[04:45:42] 20 ms: measured 20.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 1, judged 3425; the extension read 2.165 ms across it, generation +1 (the guard: its gap 20.032 ms); last rejection spans 0/0 ms -> PASS
+[04:45:43] 100 ms: measured 100.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3431; the extension read 2.123 ms across it, generation +1 (the guard: its gap 100.059 ms); last rejection spans 0/0 ms -> PASS
+[04:45:44] 200 ms: measured 200.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 1, judged 3421; the extension read 2.16 ms across it, generation +1 (the guard: its gap 200.091 ms); last rejection spans 0/0 ms -> PASS
+[04:45:46] 350 ms: measured 350.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 1, judged 3432; the extension read 2.624 ms across it, generation +1; last rejection spans 1/350 ms -> PASS
+[04:45:47] 700 ms: measured 700.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3427; the extension read 3.163 ms across it, generation +1; last rejection spans 1/700 ms -> PASS
+[04:45:49] 1049 ms: measured 1049.003 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 1, judged 3432; the extension read 2.779 ms across it, generation +1; last rejection spans 1/1049 ms -> PASS
+[04:45:51] 1000 ms: measured 1000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 1, judged 3423; the extension read 2.272 ms across it, generation +1 (the guard: its gap 300.997 ms); last rejection spans 1/1049 ms -> PASS
+[04:45:54] 2048 ms: measured 2048.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 1, spurious 0, missed slots 14, omitted 1, judged 3400; the extension read 2.133 ms across it, generation +1 (the guard: its gap 300.411 ms); last rejection spans 1/1049 ms -> PASS
+[04:46:02] 7000 ms: measured 7000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 1, judged 3447; the extension read 2.293 ms across it, generation +1 (the guard: its gap 9.531 ms); last rejection spans 1/1049 ms -> PASS
+[04:46:02] the power ladder held at Always on for the data cuts (mode 2 before)
+[04:46:02] data off; the 20 ms silence fires in 5 s on battery
+[04:46:11] data on
+[04:46:15] battery 20 ms: measured 20.0 ms; losses 2, of them bus events 1, the silence's own 1 (expected 1), frame rejects 0, spurious 0; usb now ACTIVE -> PASS
+[04:46:15] data off; the 350 ms silence fires in 5 s on battery
+[04:46:23] data on
+[04:46:28] battery 350 ms: measured 350.0 ms; losses 1, of them bus events 1, the silence's own 0 (expected 0), frame rejects 0, spurious 0; usb now ACTIVE -> PASS
+[04:46:28] Power saver put back
+[04:46:28] health counters reset (the row record with them)
+[04:46:28] ALL PASS
+[04:46:28] data off
+[04:46:28] daemon restarted
+[04:46:28] daemon paused
+[04:46:31] data on
+[04:46:33] board present
+[04:46:35] token 0x4326ec84 (want 0x4326ec84)
+[04:46:35] page-7 window before (20 s)
+win_slots_per_s          3745.4
+win_missed_slots         0
+win_pulses_omitted       0
+win_elapsed_mean_us      59.77
+win_cpu_pct              22.39
+[04:46:55] record before: longest run of omissions 1, spurious invocations 0, omissions by the arm deadline 1, epoch losses 1, invalid services 1, shortest handler 48.96 us, services (low 16 bits) 38778 omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):   key row 0: R   1  B   0  G   0   key row 1
+[04:46:55] the runner's windows (idle, repaint, pcf), holds skipped
+[04:46:55] stage 0 run 'stage3b' -> history/rowisr-stage1-20261101
+[04:46:55] board token 0x4326ec84
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[04:46:56] power mode 2 (stage 1, cap 64) -> Always on for the run
+[04:46:56] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        23.9 %
+    pack           3800 mV  (estimate 5C 73)
+    module 5C    last 73%, 0 s ago
+    vdd          3901 mV  (raw 2100, since boot 3895..3907 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    2.1 % of maximum
+    flags        on_batt done rgb_on linked
+[04:46:56] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[04:47:20]   3745.4 ISR/s, mean 71.6 us, max 122.7 us, cpu 26.8%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 3 ms, uart overruns 0, timeouts 76
+[04:47:22] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[04:47:46]   3745.3 ISR/s, mean 71.6 us, max 149.3 us, cpu 26.8%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 5 ms, uart overruns 0, timeouts 78
+[04:47:48] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[04:48:12]   3692.7 ISR/s, mean 71.7 us, max 122.7 us, cpu 26.5%, rows 205.1/row/s; row_gap_max 9 ms, >=25 ms 0, loop gap 6 ms, uart overruns 0, timeouts 78
+[04:48:12] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[04:48:12] done -> history/rowisr-stage1-20261101/stage3b.json
+
+stage3b: token 0x4326ec84, 2026-11-03 04:46:56
+  idle       3745.4 ISR/s  mean   71.6 us  max   122.7 us  cpu  26.8%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 3 ms  overruns 0  timeouts 76
+  repaint    3745.3 ISR/s  mean   71.6 us  max   149.3 us  cpu  26.8%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 5 ms  overruns 0  timeouts 78
+  pcf        3692.7 ISR/s  mean   71.7 us  max   122.7 us  cpu  26.5%  rows  205.1/row/s  row_gap_max 9 ms  >=25ms 0  loop_gap 6 ms  overruns 0  timeouts 78
+[04:48:12] runner exit 0
+stage2 (0xf6a21a82) -> stage3b (0x4326ec84); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.2 ->     3745.4   +0.01%  ok
+    mean us           59.8 ->       71.6  +19.73%  FAIL
+    cpu %             22.4 ->       26.8  +19.64%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      122.7  -14.79%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.3 ->     3745.3   +0.00%  ok
+    mean us           59.8 ->       71.6  +19.73%  FAIL
+    cpu %             22.4 ->       26.8  +19.64%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      149.3   +3.68%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3696.3 ->     3692.7   -0.10%  ok
+    mean us           59.7 ->       71.7  +20.10%  FAIL
+    cpu %             22.1 ->       26.5  +19.91%  FAIL
+    rows/row/s       205.4 ->      205.1   -0.15%  ok
+    max us           117.3 ->      122.7   +4.60%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      6  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [0, 0] -> [2, 0]   [[5, 5, 5] -> [76, 78, 78]]
+RESULT: 6 metric(s) outside the gate
+detector (0x60d4a06b) -> stage3b (0x4326ec84); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.3 ->     3745.4   +0.00%  ok
+    mean us           78.8 ->       71.6   -9.14%  FAIL
+    cpu %             29.5 ->       26.8   -9.15%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           133.3 ->      122.7   -7.95%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.4 ->     3745.3   -0.00%  ok
+    mean us           78.8 ->       71.6   -9.14%  FAIL
+    cpu %             29.5 ->       26.8   -9.15%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           165.3 ->      149.3   -9.68%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3694.7 ->     3692.7   -0.05%  ok
+    mean us           78.8 ->       71.7   -9.01%  FAIL
+    cpu %             29.1 ->       26.5   -8.93%  FAIL
+    rows/row/s       205.3 ->      205.1   -0.10%  ok
+    max us           160.0 ->      122.7  -23.31%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      6  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [7, 4] -> [2, 0]   [[62, 69, 73] -> [76, 78, 78]]
+RESULT: 6 metric(s) outside the gate
+[04:48:13] page-7 window after (20 s)
+win_slots_per_s          3745.7
+win_missed_slots         0
+win_pulses_omitted       0
+win_elapsed_mean_us      59.77
+win_cpu_pct              22.39
+[04:48:33] record after: longest run of omissions 1, spurious invocations 1, omissions by the arm deadline 13, epoch losses 0, invalid services 0, shortest handler 49.83 us, services (low 16 bits) 34517 omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):   key row 0: R   3  B   1  G   2   key row 
+[04:48:33] usb after: frame counter: 165780 intervals judged, 0 rejected on the spans, 0 rejected for a bus event or the frames stopping, 0 excluded unjudged in a stale's recovery; the worst accepted distance 1 ms; the last rejection's spans 0 ms by the extension, 0 by the frames   now: USB ACTIVE, frames trusted, FRMNO 715, bus-event generation 29; the extension VALID, loss generation 20, exclusions 0x00 
+[04:48:33] power after the run: mode 2 stage 1 cap 64 forced 255
+[04:48:33] done
+[04:48:33] data off
+[04:48:33] daemon restarted
+[04:48:33] daemon paused
+[04:48:36] data on
+[04:48:47] white not on USB: asleep, one press to wake it
+[04:48:47] logger paused
+[04:48:54] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:48:54] QT Py soft-rebooted into its logger
+[04:48:54] logger back
+[04:48:56] logger logging again (a new power.csv row)
+[04:48:57] white awake
+[04:48:59] token 0x4326ec84 (want 0x4326ec84)
+[04:48:59] health counters reset (row_gap_max is this run's)
+[04:48:59] the rig's counters at the scan are available (stage 3, op 28 sub 12)
+[04:48:59] logger paused
+[04:49:15] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8483 mean 8132 us, gap 92 ms, total 10026 ms
+[04:49:16] QT Py soft-rebooted into its logger
+[04:49:16] logger back
+[04:49:18] logger logging again (a new power.csv row)
+[04:49:19] A1 x100 at 8 ms: key_presses +72 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8483 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:49:20] logger paused
+[04:49:35] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8453 mean 8118 us, gap 92 ms, total 10026 ms
+[04:49:36] QT Py soft-rebooted into its logger
+[04:49:36] logger back
+[04:49:38] logger logging again (a new power.csv row)
+[04:49:40] A1 x100 at 8 ms: key_presses +73 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8453 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:49:40] logger paused
+[04:49:56] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8453 mean 8105 us, gap 92 ms, total 10024 ms
+[04:49:56] QT Py soft-rebooted into its logger
+[04:49:56] logger back
+[04:49:58] logger logging again (a new power.csv row)
+[04:50:00] A1 x100 at 8 ms: key_presses +71 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8453 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:50:00] logger paused
+[04:50:16] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 10 ms, actual min 10040 max 10437 mean 10074 us, gap 90 ms, total 10021 ms
+[04:50:16] QT Py soft-rebooted into its logger
+[04:50:16] logger back
+[04:50:18] logger logging again (a new power.csv row)
+[04:50:20] A1 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10437 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:50:20] logger paused
+[04:50:36] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 10 ms, actual min 10040 max 10437 mean 10073 us, gap 90 ms, total 10022 ms
+[04:50:37] QT Py soft-rebooted into its logger
+[04:50:37] logger back
+[04:50:39] logger logging again (a new power.csv row)
+[04:50:40] A1 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10437 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:50:40] logger paused
+[04:50:56] A0 (yellow, (3,14) PgDn/F20): 100 presses, dwell asked 8 ms, actual min 8056 max 8453 mean 8133 us, gap 92 ms, total 10026 ms
+[04:50:57] QT Py soft-rebooted into its logger
+[04:50:57] logger back
+[04:50:59] logger logging again (a new power.csv row)
+[04:51:01] A0 x100 at 8 ms: key_presses +69 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8453 us, row_gap_max 5 ms -> MISSING, at the scan key1 100/100 (want 100/100), elsewhere 0
+[04:51:01] logger paused
+[04:51:17] A0 (yellow, (3,14) PgDn/F20): 100 presses, dwell asked 10 ms, actual min 10040 max 10437 mean 10079 us, gap 90 ms, total 10022 ms
+[04:51:17] QT Py soft-rebooted into its logger
+[04:51:17] logger back
+[04:51:19] logger logging again (a new power.csv row)
+[04:51:21] A0 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10437 us, row_gap_max 5 ms -> PASS, at the scan key1 100/100 (want 100/100), elsewhere 0
+RESULT: 3 of 7 batches exact
+[04:51:21] done -> history/rowisr-stage1-20261101/presser-gate-stage3b-boundary.json
+[04:51:21] data off
+[04:51:21] daemon restarted
+[04:51:21] the soak watch starts
+[04:51:30] read 1: key_presses 585, raw_edges 1400, row_gap_max 5 ms, losses 1, spurious 0, invalid 1, late omits 0, frame counter judged 549333 rejected 0 events 1 last [0, 0]

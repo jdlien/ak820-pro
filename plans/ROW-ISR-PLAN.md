@@ -2947,3 +2947,15 @@ quantization, above the largest new tolerance of 28.389 ms.
   The comments in rtc.c, rowisr.c and rowisr.h brought up to date
   (`c2bc29c745`, dev token `0x8a213e0e`, heap gap 400 B, the daily `0xe2ad758d`; the flash candidate for stage 4, queued behind stage 3b's gates). JD's camera gate stays owed; `pcf-unseen`
   stays until it passes.
+- 11-03 04:51: **stage 3b on white: the spaced reads hold** (the
+  README's "Stage 3b on white"): 2,247,661 intervals judged in 10 min
+  and none rejected (the adjacent-read build: ~4), none after the whole
+  run either; the short-tap gate exact at 25-10 ms with the chord, the
+  scan exact on every batch; the 8 ms boundary 72 +/- 2 of 100 over six
+  batches (the old scan's one batch 76: the same boundary, debounce's
+  against the main loop's pass); **the silence set 16 of 16** with the
+  ladder held through the data cuts (the battery 20 ms case back to its
+  two losses); **page 4's mean 71.6 us a slot, CPU 26.8%** (the
+  sections' commit out, the exit-only verdict, the spaced reads: 80.2
+  to 71.6; stage 2's 59.8 plus the per-slot judgment). `soak_watch.sh`
+  started, then stage 4's flash took white at 04:52.

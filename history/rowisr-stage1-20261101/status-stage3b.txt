@@ -1,0 +1,4 @@
+hold idle; scan skip idle
+  ended by the tick 0, by the backstop 0, cancelled by a tick stop 0; the row line was off when the last hold began
+  row IRQ 20 is enabled now, hold depth 0
+  silence none armed; run 0, the last measured 0.0 ms (0 CT16B5 ticks)

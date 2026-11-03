@@ -1,0 +1,60 @@
+[04:42:08] daemon paused
+[04:42:11] data on
+[04:42:22] white not on USB: asleep, one press to wake it
+[04:42:22] logger paused
+[04:42:28] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:42:29] QT Py soft-rebooted into its logger
+[04:42:29] logger back
+[04:42:31] logger logging again (a new power.csv row)
+[04:42:32] white awake
+[04:42:34] token 0x4326ec84 (want 0x4326ec84)
+[04:42:34] health counters reset (row_gap_max is this run's)
+[04:42:34] the rig's counters at the scan are available (stage 3, op 28 sub 12)
+[04:42:34] logger paused
+[04:43:00] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 25 ms, actual min 25054 max 25482 mean 25117 us, gap 75 ms, total 20049 ms
+[04:43:01] QT Py soft-rebooted into its logger
+[04:43:01] logger back
+[04:43:03] logger logging again (a new power.csv row)
+[04:43:04] A1 x200 at 25 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 25054-25482 us, row_gap_max 5 ms -> PASS, at the scan key0 200/200 (want 200/200), elsewhere 0
+[04:43:04] logger paused
+[04:43:31] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15098 us, gap 85 ms, total 20058 ms
+[04:43:31] QT Py soft-rebooted into its logger
+[04:43:31] logger back
+[04:43:33] logger logging again (a new power.csv row)
+[04:43:35] A1 x200 at 15 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 15045-15441 us, row_gap_max 5 ms -> PASS, at the scan key0 200/200 (want 200/200), elsewhere 0
+[04:43:35] logger paused
+[04:44:01] A0 (yellow, (3,14) PgDn/F20): 200 presses, dwell asked 25 ms, actual min 25054 max 25482 mean 25118 us, gap 75 ms, total 20048 ms
+[04:44:01] QT Py soft-rebooted into its logger
+[04:44:01] logger back
+[04:44:03] logger logging again (a new power.csv row)
+[04:44:05] A0 x200 at 25 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 25054-25482 us, row_gap_max 5 ms -> PASS, at the scan key1 200/200 (want 200/200), elsewhere 0
+[04:44:05] logger paused
+[04:44:21] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 12 ms, actual min 12054 max 12451 mean 12149 us, gap 88 ms, total 10028 ms
+[04:44:22] QT Py soft-rebooted into its logger
+[04:44:22] logger back
+[04:44:24] logger logging again (a new power.csv row)
+[04:44:25] A1 x100 at 12 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 12054-12451 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:44:25] logger paused
+[04:44:41] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 10 ms, actual min 10040 max 10406 mean 10071 us, gap 90 ms, total 10022 ms
+[04:44:42] QT Py soft-rebooted into its logger
+[04:44:42] logger back
+[04:44:44] logger logging again (a new power.csv row)
+[04:44:45] A1 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10406 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:44:45] logger paused
+[04:45:01] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8483 mean 8130 us, gap 92 ms, total 10027 ms
+[04:45:02] QT Py soft-rebooted into its logger
+[04:45:02] logger back
+[04:45:04] logger logging again (a new power.csv row)
+[04:45:06] A1 x100 at 8 ms: key_presses +75 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8483 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[04:45:06] logger paused
+[04:45:12] A0 held (yellow, (3,14) PgDn/F20)
+[04:45:22] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 25 ms, actual min 25054 max 25390 mean 25115 us, gap 75 ms, total 10025 ms
+[04:45:23] A0 released
+[04:45:23] QT Py soft-rebooted into its logger
+[04:45:23] logger back
+[04:45:25] logger logging again (a new power.csv row)
+[04:45:27] A1 x100 at 25 ms with A0 held: key_presses +101 (expected 101), raw_edges +202 (expected 202), dwell actual 25054-25390 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), key1 1/1 (want 1/1), elsewhere 0
+RESULT: 6 of 7 batches exact
+[04:45:27] done -> history/rowisr-stage1-20261101/presser-gate-stage3b.json
+[04:45:27] data off
+[04:45:27] daemon restarted

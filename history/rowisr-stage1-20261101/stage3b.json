@@ -1,0 +1,305 @@
+{
+ "label": "stage3b",
+ "when": "2026-11-03 04:46:56",
+ "token": "0x4326ec84",
+ "health_version": 9,
+ "lighting": {
+  "animation_index": 2,
+  "hue": 178,
+  "sat": 219,
+  "val": 177,
+  "speed": 231
+ },
+ "battery": "supply       battery  (battery)\nlevel        23.9 %\npack           3800 mV  (estimate 5C 73)\nmodule 5C    last 73%, 0 s ago\nvdd          3901 mV  (raw 2100, since boot 3895..3907 mV)  -- the rail, not the pack\ncharger pins CHRG high, STDBY low\nled drive    2.1 % of maximum\nflags        on_batt done rgb_on linked\npower mode   Always on, stage active\ndraw         165.2 mW now, average 142.8 mW over 14 min\ntime left    26 h 04 min  (young: under an hour of average)\ncount        counting; band 15.1..29.7 %; energy since FULL 35.0 mWh\n",
+ "power_before": {
+  "mode": 2,
+  "stage": 1,
+  "val_cap": 64,
+  "forced": 255
+ },
+ "ladder_forced": false,
+ "window_s": 24.0,
+ "windows": {
+  "idle": {
+   "name": "idle",
+   "secs": 24.01,
+   "isr": {
+    "isr_dt_s": 24.012,
+    "isr_per_s": 3745.4,
+    "isr_mean_us": 71.6,
+    "isr_min_us": 58.7,
+    "isr_max_us": 122.7,
+    "isr_cpu_pct": 26.8,
+    "row_samples_per_row_per_s": 208.1,
+    "timebase_vs_wall": 1.0
+   },
+   "page4_before": {
+    "isr_entries": 786,
+    "isr_ticks_sum": 10620,
+    "isr_ticks_min": 11,
+    "isr_ticks_max": 23,
+    "st_freq": 187500,
+    "uptime_ms": 877625,
+    "row_samples_total": 262
+   },
+   "page4_after": {
+    "isr_entries": 90721,
+    "isr_ticks_sum": 1218755,
+    "isr_ticks_min": 11,
+    "isr_ticks_max": 23,
+    "st_freq": 187500,
+    "uptime_ms": 901637,
+    "row_samples_total": 30240
+   },
+   "end": {
+    "health": {
+     "blit_timeouts": 0,
+     "tx_sent": 2137,
+     "tx_timeouts": 76,
+     "tx_drops": 0,
+     "rx_malformed": 0,
+     "loop_gap_max_ms": 3,
+     "scan_rate": 738,
+     "wdt_consecutive_resets": 0,
+     "flags": 0,
+     "version": 9,
+     "wdt_fired_last_boot": false,
+     "wdt_degraded": false
+    },
+    "stalls": {
+     "count_ge_10ms": 0,
+     "count_ge_25ms": 0,
+     "passes": 18116,
+     "flash_writes": 1,
+     "flash_gap_max_ms": 3,
+     "blit_gap_max_ms": 0,
+     "i2c_gap_max_ms": 0,
+     "count_ge_25ms_nonflash": 0,
+     "key_presses": 0,
+     "loop_gap_max_mark": "none"
+    },
+    "rows": {
+     "row_samples": [
+      5042,
+      5042,
+      5042,
+      5042,
+      5041,
+      5042
+     ],
+     "row_gap_max_ms": 5,
+     "raw_edges": 0,
+     "consumes": 18118,
+     "cooked_changes": 0,
+     "row_gap_max_row": 0,
+     "matrix_rows": 6
+    },
+    "link": {
+     "sent": 2137,
+     "timeouts": 76,
+     "queue_full": 0,
+     "giveups": 0,
+     "replaced": 0,
+     "uart_overrun": 0,
+     "uart_framing": 0,
+     "uart_parity": 0
+    }
+   },
+   "daemon_syncs_during": 0
+  },
+  "repaint": {
+   "name": "repaint",
+   "secs": 24.01,
+   "isr": {
+    "isr_dt_s": 24.012,
+    "isr_per_s": 3745.3,
+    "isr_mean_us": 71.6,
+    "isr_min_us": 58.7,
+    "isr_max_us": 149.3,
+    "isr_cpu_pct": 26.8,
+    "row_samples_per_row_per_s": 208.1,
+    "timebase_vs_wall": 1.0
+   },
+   "page4_before": {
+    "isr_entries": 794,
+    "isr_ticks_sum": 10665,
+    "isr_ticks_min": 11,
+    "isr_ticks_max": 20,
+    "st_freq": 187500,
+    "uptime_ms": 903875,
+    "row_samples_total": 264
+   },
+   "page4_after": {
+    "isr_entries": 90726,
+    "isr_ticks_sum": 1218822,
+    "isr_ticks_min": 11,
+    "isr_ticks_max": 28,
+    "st_freq": 187500,
+    "uptime_ms": 927887,
+    "row_samples_total": 30242
+   },
+   "end": {
+    "health": {
+     "blit_timeouts": 0,
+     "tx_sent": 2142,
+     "tx_timeouts": 78,
+     "tx_drops": 0,
+     "rx_malformed": 0,
+     "loop_gap_max_ms": 5,
+     "scan_rate": 659,
+     "wdt_consecutive_resets": 0,
+     "flags": 0,
+     "version": 9,
+     "wdt_fired_last_boot": false,
+     "wdt_degraded": false
+    },
+    "stalls": {
+     "count_ge_10ms": 0,
+     "count_ge_25ms": 0,
+     "passes": 16647,
+     "flash_writes": 0,
+     "flash_gap_max_ms": 0,
+     "blit_gap_max_ms": 5,
+     "i2c_gap_max_ms": 0,
+     "count_ge_25ms_nonflash": 0,
+     "key_presses": 0,
+     "loop_gap_max_mark": "blit"
+    },
+    "rows": {
+     "row_samples": [
+      5042,
+      5042,
+      5042,
+      5042,
+      5042,
+      5042
+     ],
+     "row_gap_max_ms": 5,
+     "raw_edges": 0,
+     "consumes": 16648,
+     "cooked_changes": 0,
+     "row_gap_max_row": 1,
+     "matrix_rows": 6
+    },
+    "link": {
+     "sent": 2142,
+     "timeouts": 78,
+     "queue_full": 0,
+     "giveups": 0,
+     "replaced": 0,
+     "uart_overrun": 0,
+     "uart_framing": 0,
+     "uart_parity": 0
+    }
+   },
+   "daemon_syncs_during": 0,
+   "load": {
+    "kind": "repaint",
+    "toggles": 24
+   }
+  },
+  "pcf": {
+   "name": "pcf",
+   "secs": 24.01,
+   "isr": {
+    "isr_dt_s": 24.005,
+    "isr_per_s": 3692.7,
+    "isr_mean_us": 71.7,
+    "isr_min_us": 26.7,
+    "isr_max_us": 122.7,
+    "isr_cpu_pct": 26.5,
+    "row_samples_per_row_per_s": 205.1,
+    "timebase_vs_wall": 1.0
+   },
+   "page4_before": {
+    "isr_entries": 791,
+    "isr_ticks_sum": 10620,
+    "isr_ticks_min": 11,
+    "isr_ticks_max": 22,
+    "st_freq": 187500,
+    "uptime_ms": 930122,
+    "row_samples_total": 264
+   },
+   "page4_after": {
+    "isr_entries": 89435,
+    "isr_ticks_sum": 1201695,
+    "isr_ticks_min": 5,
+    "isr_ticks_max": 23,
+    "st_freq": 187500,
+    "uptime_ms": 954127,
+    "row_samples_total": 29811
+   },
+   "end": {
+    "health": {
+     "blit_timeouts": 0,
+     "tx_sent": 2147,
+     "tx_timeouts": 78,
+     "tx_drops": 0,
+     "rx_malformed": 0,
+     "loop_gap_max_ms": 6,
+     "scan_rate": 743,
+     "wdt_consecutive_resets": 0,
+     "flags": 0,
+     "version": 9,
+     "wdt_fired_last_boot": false,
+     "wdt_degraded": false
+    },
+    "stalls": {
+     "count_ge_10ms": 0,
+     "count_ge_25ms": 0,
+     "passes": 17853,
+     "flash_writes": 0,
+     "flash_gap_max_ms": 0,
+     "blit_gap_max_ms": 0,
+     "i2c_gap_max_ms": 0,
+     "count_ge_25ms_nonflash": 0,
+     "key_presses": 0,
+     "loop_gap_max_mark": "none"
+    },
+    "rows": {
+     "row_samples": [
+      4971,
+      4971,
+      4970,
+      4970,
+      4970,
+      4971
+     ],
+     "row_gap_max_ms": 9,
+     "raw_edges": 0,
+     "consumes": 17855,
+     "cooked_changes": 0,
+     "row_gap_max_row": 3,
+     "matrix_rows": 6
+    },
+    "link": {
+     "sent": 2147,
+     "timeouts": 78,
+     "queue_full": 0,
+     "giveups": 0,
+     "replaced": 0,
+     "uart_overrun": 0,
+     "uart_framing": 0,
+     "uart_parity": 0
+    }
+   },
+   "daemon_syncs_during": 0,
+   "load": {
+    "kind": "pcf_burst",
+    "n_asked": 106,
+    "at_stop": {
+     "left": 0,
+     "done": 93,
+     "failed": 0,
+     "exposure_ms": 23654,
+     "active": false
+    }
+   }
+  }
+ },
+ "holds": [],
+ "notes": [
+  "the cleanup window was skipped (no HID trigger for the write test's Cleanup; --cleanup manual)",
+  "the INA228 holds were skipped (--skip-holds)"
+ ]
+}

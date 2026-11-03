@@ -821,6 +821,58 @@ detector build (11-02 19:06, "spurious 1 across the wake") and never
 across a silence; harmless by construction (nothing is reconstructed or
 armed on it), noted as the wake's.
 
+### Stage 3b on white (11-03, 04:32-04:51, `stage3b_flash.sh`, `67a4ccf2b3`): the spaced reads hold, the silence set 16 of 16, page 4 at 71.6 us
+
+The spaced frame-counter reads (twelve cycles between the two, twelve
+more before a third) flashed at 04:31:31-04:32:02 (token 0x0a2f280e to
+0x4326ec84), white woken by the presser.
+
+**The frame counter, 10 min with nothing injected**
+(`usb-stage3b-10min.txt`, `record-stage3b-10min.txt`): **2,247,661
+intervals judged, none rejected**; losses 0, invalid 0, spurious 0,
+omissions 0. The adjacent-read build rejected ~4 in the same time (23
+in its first hour). After the whole run (the runner's windows, the
+silence set, the gates): 165,780 more judged since the set's reset,
+none rejected, the record's last rejection 0/0 since the boot. The tear
+is beaten by the spacing.
+
+**The short-tap gate** (`presser-gate-stage3b.json`): the same seven
+batches as stage 3's first run, exact at 25, 15, 12 and 10 ms on both
+channels and with the chord (every press and release counted at the
+scan, `raw_edges` exact, nothing elsewhere, `row_gap_max` 5 ms); **75 of
+100 at 8 ms**. **The boundary batches** (`presser-gate-stage3b-boundary.json`):
+A1 at 8 ms 72, 73 and 71 of 100, A0 at 8 ms 69; A1 at 10 ms 100 and 100,
+A0 at 10 ms 100, the scan exact in all seven. So stage 3's 8 ms figure
+is **72 +/- 2 of 100 over six batches** (69, 75, 72, 73, 71, 69) against
+the old scan's one batch of 76: the same boundary, set by debounce
+against the main loop's pass, not by the scan, which counted every
+press on every batch.
+
+**The silence set** (`silence-check-stage3b.log`, `.json`): **16 of 16**
+as predicted, the ladder held at Always on through the two data cuts
+and put back; the battery 20 ms case at its two losses (the suspend's
+bus event and the guard's own) with no frame rejection, the case the
+exit-only build failed through the torn read; 350 ms on battery one
+loss (the bus event's), the silence undetected, the declared limit.
+
+**The warm windows** (`stage3b.json`, `compare-stage3b.txt`,
+`compare-stage3b-vs-detector.txt`): **page 4's mean 71.6 us a slot in all
+three windows, CPU 26.8%** (the detector 78.8 and 29.5; the trim, the
+diagnostic and the exit-only build 80.0-80.2 with the sections' commit
+in; stage 2 59.8 and 22.4); the handler's max 122.7, 149.3 and 122.7 us;
+rows 208.1/s; `row_gap_max` 5, 5 and 9 ms; no stall. The compare's
+"FAIL" lines are its +/-3% band on a 9% improvement over the detector
+and a 20% rise over stage 2: what remains over stage 2 is the
+per-slot judgment, the plan's open question for JD (two silences within
+2 ms as two, ~8 us). The record after the runner: losses 0, invalid 0,
+spurious 1, omissions by the arm deadline 13 (the pcf window's
+hold-offs; the trim's 37 and the exit-only build's 43 after their
+runners), no missed slot.
+
+The soak watch began at 04:51 (`soak_watch.sh stage3b`: a press and a
+read every 20 min, white sleeping between), and stage 4's flash took
+over at 04:52.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
