@@ -3243,3 +3243,18 @@ quantization, above the largest new tolerance of 28.389 ms.
   moved off the arm's path. The camera gate run alone on 5d at 13:09
   (`stage5_gates.sh TOKEN LABEL 4`); the presser gates (1-3) wait for
   Buzz locked.
+- 11-03 13:09-13:11: **the camera gate at 125 us met on 5d** (the
+  README's "The camera gate at 125 us"): the studio lights off from the
+  Mac, two forced writes (runs 0 to 2) filmed, the control 23-67% deep,
+  the writer's two windows (1.7 s and 3.4 s) with nothing in them; two
+  11-12% frames before the second sync are the seconds redraw's omitted
+  slots (5d's residual), not the writer's. JD saw the control's flicker
+  and asked; the lights off are the signal, as he suggested at 11:40.
+  Stage 5's gates met so far: the field 444 Hz, the light within 0.4%,
+  `row_gap_max` 3 ms, no missed slot, the presser exact to 10 ms, the
+  camera gate; not met: the handler's 20% share (39.6%) and zero quiet
+  omissions (87 in 300 s). Owed: the presser gates with Buzz locked
+  (the UART counts with the gap monitor to name the 75 us interferer,
+  five wakes, the silence set), codex's judgment on the two misses
+  (`review-prompt-row-isr-stage5-gates.txt`), the night's soak with
+  Warren's M2/M3 on 5d.

@@ -1,0 +1,38 @@
+[13:08:58] 4. the camera gate at this cadence: the lights on, the ladder held, the write forced, filmed
+the ladder held at Always on
+off at 13:09:37: 0 of 42 on: none
+[13:09:41] the clip at T-5, T=13:10:56
+  frame  1522 (  6.342 s real,  50.778 s in the file): 2 frame(s), min YAVG 22.3 = 30% under the median  +1500.0 ms after the previous
+  frame  1584 (  6.600 s real,  52.845 s in the file): 1 frame(s), min YAVG 10.5 = 67% under the median  +258.3 ms after the previous
+  frame  1645 (  6.854 s real,  54.880 s in the file): 1 frame(s), min YAVG 11.9 = 62% under the median  +254.2 ms after the previous
+  frame  1706 (  7.108 s real,  56.915 s in the file): 2 frame(s), min YAVG 15.7 = 50% under the median  +254.2 ms after the previous
+  frame  1767 (  7.362 s real,  58.950 s in the file): 2 frame(s), min YAVG 23.0 = 27% under the median  +254.2 ms after the previous
+  frame  2165 (  9.021 s real,  72.228 s in the file): 1 frame(s), min YAVG 9.0 = 72% under the median  +1658.3 ms after the previous
+  frame  2226 (  9.275 s real,  74.263 s in the file): 1 frame(s), min YAVG 13.5 = 57% under the median  +254.2 ms after the previous
+  frame  2287 (  9.529 s real,  76.298 s in the file): 2 frame(s), min YAVG 17.8 = 44% under the median  +254.2 ms after the previous
+  frame  2348 (  9.783 s real,  78.333 s in the file): 2 frame(s), min YAVG 22.1 = 30% under the median  +254.2 ms after the previous
+  frame  2409 ( 10.037 s real,  80.368 s in the file): 2 frame(s), min YAVG 21.5 = 32% under the median  +254.2 ms after the previous
+  frame  2470 ( 10.292 s real,  82.403 s in the file): 2 frame(s), min YAVG 22.4 = 29% under the median  +254.2 ms after the previous
+  frame  2502 ( 10.425 s real,  83.470 s in the file): 2 frame(s), min YAVG 27.8 = 12% under the median  +133.3 ms after the previous
+  frame  2508 ( 10.450 s real,  83.671 s in the file): 3 frame(s), min YAVG 28.1 = 11% under the median  +25.0 ms after the previous
+  frame  2531 ( 10.546 s real,  84.438 s in the file): 2 frame(s), min YAVG 20.7 = 35% under the median  +95.8 ms after the previous
+  frame  2592 ( 10.800 s real,  86.473 s in the file): 2 frame(s), min YAVG 22.4 = 29% under the median  +254.2 ms after the previous
+  frame  3408 ( 14.200 s real, 113.696 s in the file): 2 frame(s), min YAVG 18.1 = 43% under the median  +3400.0 ms after the previous
+  frame  3469 ( 14.454 s real, 115.731 s in the file): 2 frame(s), min YAVG 17.2 = 46% under the median  +254.2 ms after the previous
+  frame  3530 ( 14.708 s real, 117.769 s in the file): 2 frame(s), min YAVG 17.8 = 44% under the median  +254.2 ms after the previous
+  frame  3591 ( 14.963 s real, 119.801 s in the file): 2 frame(s), min YAVG 21.2 = 33% under the median  +254.2 ms after the previous
+  frame  3652 ( 15.217 s real, 121.837 s in the file): 2 frame(s), min YAVG 21.7 = 31% under the median  +254.2 ms after the previous
+  frame  3713 ( 15.471 s real, 123.871 s in the file): 2 frame(s), min YAVG 12.8 = 60% under the median  +254.2 ms after the previous
+  frame  3775 ( 15.729 s real, 125.940 s in the file): 1 frame(s), min YAVG 13.5 = 57% under the median  +258.3 ms after the previous
+  frame  3836 ( 15.983 s real, 127.975 s in the file): 2 frame(s), min YAVG 14.9 = 53% under the median  +254.2 ms after the previous
+  frame  3897 ( 16.238 s real, 130.010 s in the file): 2 frame(s), min YAVG 18.0 = 43% under the median  +254.2 ms after the previous
+  frame  3958 ( 16.492 s real, 132.045 s in the file): 2 frame(s), min YAVG 22.5 = 29% under the median  +254.2 ms after the previous
+  frame  4019 ( 16.746 s real, 134.080 s in the file): 2 frame(s), min YAVG 17.7 = 44% under the median  +254.2 ms after the previous
+  frame  4080 ( 17.000 s real, 136.115 s in the file): 2 frame(s), min YAVG 16.2 = 49% under the median  +254.2 ms after the previous
+profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
+  #############..........######.....+##++++...#.....+++++++++++++++...+......+...+++++++++++++++++++++
+wrote history/rowisr-stage1-20261101/camera-write-stage5d-luma.csv
+restored: 21 of 42 on: light.gremlin_leds, light.studio, light.studio_ceiling_a, light.studio_ceiling_b, light.studio_ceiling_c, light.studio_floor_lamp_1_segment_001, light.studio_floor_lamp_1_segment_002, light.studio_floor_lamp_1_segment_003, light.studio_floor_lamp_1_segment_004, light.studio_floor_lamp_1_segment_005, light.studio_floor_lamp_1_segment_006, light.studio_floor_lamp_1_segment_007, light.studio_floor_lamp_1_segment_008, light.studio_floor_lamp_1_segment_009, light.studio_floor_lamp_1_segment_010, light.studio_floor_lamp_1_segment_011, light.studio_floor_lamp_1_segment_012, light.studio_floor_lamp_1_segment_013, light.studio_floor_lamp_1_segment_014, light.studio_floor_lamp_1_segment_015, switch.accent_lights
+Power saver back
+[13:11:38] the standing state
+[13:11:38] stage 5's gates done (4)

@@ -1237,6 +1237,27 @@ own trap had already taken the board off the data line, so the ladder
 stayed at Always on until 12:58 (put back by hand); the runner now puts
 it back before the gate and the gate is optional (`PRESSER=no`).
 
+**The camera gate at 125 us (13:09-13:11, `stage5_gates.sh 0x717d9b6a
+stage5d 4`): met.** The studio lights off from the Mac at 13:09:37
+(`scripts/studio_lights.py off`, the 42 Studio entities; JD saw the
+control's flicker from the next room's dark), the ladder held, one
+relight press, `camera_write_clip.sh write-stage5d 13:10:56`: the
+control's 20 held reads at frames 684-1162, 25 frames apart, **23-67%
+under the keys' luma** (median 31.6); the markers at 61 frames from
+1522 with the two gaps that are the writer's runs, **frames 1767-2165
+(the first sync at 13:11:01.5) and 2592-3408 (the second at 13:11:05)**,
+the writer's runs 0 to 2 since the boot's reset; **inside the two
+windows nothing but the markers' own second frames**: no frame 8%
+under, the 3% figures (2.0% and 6.7% of frames) below the quiet tail's
+18.8%, the minimum 23.0 and 22.4 being the markers' tails. Two 11-12%
+single-frame events at 10.43 and 10.45 s (13:11:04.3), between two
+markers and before the second sync, are the LCD's seconds redraw
+costing a slot each (5d's residual omissions, one in 3.4 s: at 125 us a
+late slot is omitted whole, 5.5% of a field, so two in one frame read
+11%), not the writer's. The lights restored at 13:11:38
+(`camera-write-stage5d-dips.txt`, `-luma.csv`, `-page4-*.txt`,
+`stage5d-gates-camera.log`).
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
