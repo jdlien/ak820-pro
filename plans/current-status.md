@@ -78,12 +78,19 @@ cost: stage 2's own vector, rebuilt for the comparison, had five divide
 calls and was the fast one. The handler's new code cannot execute the
 900 cycles; the reads can: six USB register reads a slot (FRMNO, CFG,
 INSTS at each snapshot) and the 20 kHz tick's FRMNO read preempting it.
-**The cost diagnostic `95ef5cbc5d` (token `0xda2a24d5`) is built and
-pushed**, dev only: the handler's sections stamped (op 28 sub 11) and 256
-masked reads of each register timed in HCLK cycles (sub 10). Codex's
-review runs; **the flash waits on JD's key and his go** (`diag_on_wake.sh`
-then `diag_flash.sh`: the flash, `readcost`, two `sections` windows, a
-page-7 window, the records, ~2 min). Also seen: two span rejections in the
+**The cost diagnostic `95ef5cbc5d` (token `0xda2a24d5`) went on white
+at 00:06 11-03** (JD's go 23:50, his key 00:06:22; the watcher on USB
+presence, the logger off the bench for the presser rig) and answered it:
+**a register read is free** (11 cycles a loop iteration for the USB
+registers and a RAM word alike), and **the handler's sections** over
+37,000 services are entry snapshot 7.3 us, step 1 and the judgment 9.6,
+steps 2-5 37.9, the arm 10.9, exit snapshot 5.8, exit judgment and
+record 8.7, total 80.2: the detector's four sections 31 us with no hot
+spot, the instruction count of its bookkeeping at 3-5 cycles an
+instruction from flash. **Next: the judgment every eighth slot and no
+exit judgment**, the same alias guarantee at 2 ms attribution, for codex
+and then JD's go (`history/rowisr-stage1-20261101/README.md`, "The cost
+diagnostic"). Also seen: two span rejections in the
 trim's run, 0 ms by the extension and 256 by the frames, a torn FRMNO
 read at a carry by the look of it; a read-until-equal if it recurs.
 

@@ -135,7 +135,15 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 23:19 11-02: the trim, `a47c134079`** (dev, token
+**On white since 00:06 11-03: the cost diagnostic, `95ef5cbc5d`** (dev,
+token `0xda2a24d5`, heap gap 408 B, `row-isr`): the trim below plus the
+handler's sections stamped (op 28 sub 11) and a register read timed
+(sub 10). It answered the 19 us: a register read is free, and the
+detector's four sections (both snapshots, both judgments) are 31 us of
+bookkeeping with no hot spot, at 3-5 cycles an instruction from flash;
+the remedy is the judgment every eighth slot and no exit judgment, next
+(`history/rowisr-stage1-20261101/README.md`, "The cost diagnostic").
+**Before it, from 23:19 11-02: the trim, `a47c134079`** (dev, token
 `0x1a291156`, heap gap 464 B, `row-isr`): the detector build below with
 no software divide on the slot. Its warm windows: 80.0 us a slot against
 the detector's 78.8 and stage 2's 59.8, so the divides were not the cost

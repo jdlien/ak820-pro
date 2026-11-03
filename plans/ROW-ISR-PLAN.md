@@ -2652,3 +2652,15 @@ quantization, above the largest new tolerance of 28.389 ms.
   seven TC reads and the tick's preemptions land in whichever section
   they interrupt; the total is stamp 0 to stamp 6, the hooks and the
   commit outside it.
+- 11-03 00:06: the cost diagnostic flashed on JD's go (23:50) and key
+  (00:06:22), the watcher on USB presence since the power logger left
+  the bench for the presser rig. **A register read is free** (11 cycles a
+  loop iteration for FRMNO, INSTS, CFG and a RAM word alike; the timer
+  12). **The sections, mean us over 37,474 services: entry snapshot
+  7.33, step 1 and the judgment 9.56, steps 2-5 37.89, the arm 10.88,
+  exit snapshot 5.79, exit judgment and record 8.74, total 80.20.** The
+  detector's four sections are 31.4 us with no hot spot: the instruction
+  count of the bookkeeping every slot, at 3-5 cycles an instruction from
+  flash on this core (the README's "The cost diagnostic"). The record
+  clean, 283,631 judged and none rejected. The remedy is structural: the
+  judgment every eighth slot, no exit judgment; designed next.

@@ -513,6 +513,65 @@ see. If it recurs, the fix is to read FRMNO until two reads agree; noted
 in the plan. ACK timeouts 8/10/13 since the boot across the three windows
 (the detector run's 62/69/73): the module's, as before.
 
+### The cost diagnostic (11-03, 00:06-00:08, `diag_on_usb.sh`, `diag_flash.sh`): the reads are free, the sections say it is the instruction count
+
+JD's go at 23:50 with white asleep and the power logger about to leave the
+bench for the presser rig's soldering, so the watcher used USB presence
+instead (`diag_on_usb.sh`: the daemon paused, the data line on, a
+sleeping board does not enumerate and a woken one does within seconds).
+His key came at 00:06:22; the flash 00:06:24-00:06:57 (token before
+0x1a291156, after 0xda2a24d5), then the readings over the data line.
+
+**A register read costs nothing** (`readcost-diag.txt`, op 28 sub 10: 256
+masked reads of one register, the least of 8 trials, in HCLK cycles a
+read with the loop's own six instructions included): USB FRMNO 11, USB
+INSTS 11, USB CFG 11, CT16B5's TC 12, a RAM word 11. The USB block's
+registers read as fast as RAM; the second theory was wrong too.
+
+**The handler's sections** (`sections-diag-1.txt`, `-2.json`, op 28 sub
+11: T_SCHED's TC stamped at seven points, the six deltas summed over the
+services that reached the exit; two 10 s windows of 37,474 and 37,487
+services, identical to 0.03 us):
+
+| Section | mean us |
+|---|---|
+| 0: the entry snapshot (the lock, the flag, `take_snapI`) | 7.33 |
+| 1: step 1's checks and the frame counter's judgment | 9.56 |
+| 2: steps 2 to 5 (the mux rows, the scan, the match registers) | 37.89 |
+| 3: step 6, the arm | 10.88 |
+| 4: the exit snapshot | 5.79 |
+| 5: the exit judgment and the record | 8.74 |
+| total, stamp 0 to stamp 6 | 80.20 |
+
+Page 7's window read 64.6 us and 24.2% CPU with the stamps in; page 4
+since the boot 85.7 us (284,619 entries, 4,575,099 ticks; the boot's
+first seconds and the restores' USB traffic in it). The record was clean:
+epoch losses 1 and invalid services 1 (the boot's), spurious 0; the frame
+counter judged 283,631 intervals with none rejected, so the trim run's
+two 256-frame rejections did not recur here (one in a few hundred
+thousand, or rarer).
+
+**What it means.** The four sections that are the detector's, both
+snapshots and both judgments, sum to 31.4 us, with no single hot spot:
+7, 10, 6 and 9. Stage 2 had a smaller version of each (its entry snapshot
+without the frames and the bus, its step 1 without the judgment, its
+exit without the judgment), and the growth of 19-20 us is spread across
+all four. Since the reads are free, the cost is the instruction count:
+the bookkeeping the detector runs every slot (two snapshots of 20 bytes
+with the bus state from three registers and the freshness, the validity
+conditions, two calls to `boundaries_between`, two to
+`usb_distance_ticks`, the record's updates, the 20-byte copy into
+`last_snap`) is a few hundred instructions, and on this core, fetching
+from flash with wait states and no cache, an instruction costs 3-5
+cycles: section 2, stage 2's own LED and scan work of ~300 instructions,
+takes 1,819 cycles. The 20 kHz tick at priority 2 lands in whichever
+section it interrupts and inflates every one by the same share. The
+remedy is structural, not a trim: judge the frame counter every eighth
+slot (2 ms, the same alias guarantee, the attribution coarser by 2 ms)
+and drop the exit judgment (the next entry's judgment covers an aliasing
+silence inside the handler; one elapsed sample is what it protected).
+Designed next, in the plan.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
