@@ -578,7 +578,9 @@ brightness / RTC trim persisted. LED row-flash artifact and stray-glyph bug
 fixed. BT at 0.042 ACK timeouts/frame (BT-mode typing burst). **2026-09-03:
 the matrix publish fix** — the driver scans every row every ISR cycle, and the
 worst per-key sampling gap fell from ~169 ms to ~5 ms
-([docs/hardware.md](docs/hardware.md)). The row ISR measures 3,876/s with a
+([docs/hardware.md](docs/hardware.md)). (Through v0.3.1; the row ISR rewrite
+on white since 11-03 runs 8,000/s at ~50 µs and ~40%: [docs/leds.md](docs/leds.md),
+"The row ISR rewrite".) The old row ISR measures 3,876/s with a
 188 µs body (160 µs LED-only, 261 µs with the row scan) — **72.8% of the CPU** —
 not the 18,750/s the timer implies, because it re-arms its counter at its end;
 so the LED field rate is ~215 Hz and the main loop ~335 Hz. Health page 4
@@ -810,7 +812,7 @@ wired mode. `Fn`+`P` (pair) is unbound by default.
   just read**: `IC = 0x3F` after a `RIS` read was the lost-completion bug.
   Bitfield writes to `IC` are read-modify-writes too.
   → [display.md](docs/display.md)
-- ⚠️ **SPI0 and the RGB row ISR share priority 3.** The row ISR's ~188 µs
+- ⚠️ **SPI0 and the RGB row ISR share priority 3.** The row ISR's ~188 µs (~50 on the rewrite)
   sets when DMA handlers run; changing either moves which transfer sizes are
   exposed to races. → [leds.md](docs/leds.md)
 - ⚠️ **The last SRAM write before a loop that never writes again is lost at a

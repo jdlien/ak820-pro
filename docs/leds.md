@@ -297,8 +297,69 @@ field rate   slot gap   fringe @200 deg/s
    121 Hz     2755 µs        33.1'    stock
   1046 Hz      320 µs         3.8'    the timer's arithmetic — never real
    215 Hz     1550 µs        18.6'    MEASURED 2026-09-03 (health page 4)
+   444 Hz      750 µs         9.0'    MEASURED 2026-11-03: the row ISR rewrite's stage 5 (below)
   4000 Hz       83 µs         1.0'    ~invisible — needs ~4x, past this M0
 ```
+
+## The row ISR rewrite (11-01 to 11-03, the `row-isr` branch; on white since 13:02 11-03)
+
+Everything above this heading describes the driver as it shipped through
+v0.3.1: the PWM callback at 3,876/s and 72.8% of the CPU, the 215 Hz
+field. [`plans/ROW-ISR-PLAN.md`](../plans/ROW-ISR-PLAN.md) replaces it
+stage by stage, and
+[`history/rowisr-stage1-20261101/README.md`](../history/rowisr-stage1-20261101/README.md)
+carries every measurement. As built (stage 5e, `739fe1b635`):
+
+- **The slot is fixed by hardware.** CT16B4 schedules a **125 µs slot**
+  (6,000 HCLK ticks; stages 2-4 ran the measured old slot, 267 µs) and
+  CT16B0/1/2 fire one one-shot pulse per slot, their terminal match
+  (1,535 ticks, a 32 µs window) parking every column off between pulses,
+  so a stall of any length is dark by hardware. 18 mux rows (R, B, G per
+  key row) make a **444 Hz field**, 2.25 ms between a key's colours
+  (4.8 ms before). The widths are the bytes times 4.6875 (a 512 B flash
+  table), the same duty as 10 ticks at 267 µs: the full-white draw is
+  91.7-92.3 mA on white against 92.1 before, the dark board 31.3.
+- **The handler's cost.** 8,000 services a second, **~50 µs mean, 32 min,
+  ~115-128 max, about 40% of the core between page 4's hooks**
+  (preemption included, the port's wrapper outside); the plan's 20%
+  target is not met and was revised by codex's judgment, the old driver
+  having run the board at 73%. What remains is the silence detector's
+  per-service bookkeeping (~17 µs; judging every eighth slot would save
+  ~8), the key scan on every third slot (~15 µs), the fifteen match
+  registers, and flash wait states on every instruction (the hot section
+  in SRAM would halve them, which only the daily build's 2.3 KB gap can
+  hold).
+- **Omissions, not stretches.** A slot whose arm would come later than
+  90.5 µs into it is omitted (one row-colour dark for one field) and
+  counted, per row and colour, never replayed. Quiet: 78-87 in 300 s
+  (0.003%), the latency tail past the deadline, most on the scan slots;
+  under mixed load (the daemon's text, a clock-chip burst, a presser
+  batch) 0.026%, the gate being 0.1%. A dev build's op 28 reads the
+  record (`scripts/rowisr_diag.py record`), page 7 the totals
+  (`ak820health.py --sched`; its elapsed mean is a boundary-free
+  population and its lifetime sum wraps at 89 s of handler time: use
+  page 4 for the cost).
+- **The priorities are unchanged**: UART2 0, SysTick 0, USB 1, the 20 kHz
+  tick 2, the row ISR with SPI0 and SPI1 at 3; the warning above about
+  SPI0's shared priority stands, with the handler now ~50 µs instead of
+  ~188. The USB handler's 80 µs is the measured lead among what delays
+  the handler's entry (latency max 75 µs quiet, 86 under key reports).
+- **The clock chip's transactions run with the row ISR unmasked** (stage
+  4b): the ordinary 10 ms ones stretch to 7.5 ms (the 7-byte read) and
+  6.1 (the 8-byte write) at this cadence; the 5 ms ones (the pre-sleep
+  read, the wake's recovery, the dev burst) keep the hold-off. Filmed at
+  240 fps with the room dark: a held read is a 23-79% dip of a frame, the
+  unmasked write leaves none.
+- **The key scan** is one `BCLR`, a 0.5 µs settle, two port reads and one
+  `BSET` inside the slot, no mode writes (stage 3); every third slot
+  scans a key row, so the matrix is read every 2.25 ms; the presser's
+  taps register exactly from 10 ms, 82-88 of 100 at 8 ms (the debounce's
+  5 ms boundary, 72 before).
+- **The LCD's blits cost a slot.** With the board at full white in a dark
+  room, the clock's seconds redraw and the now-playing scroll show as
+  5-13% single-frame dips on two or three key rows: a slot started late
+  (SPI0's completion at priority 3), invisible to the eye, open in the
+  plan.
 
 **⚠️ Colour choice is a free 2×, bigger than any achievable frequency
 change.** Slot order is R → B → G: white/warm-white spans the full cycle

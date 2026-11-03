@@ -803,6 +803,11 @@ timer — sets the rate. Health page 4 (firmware `d457105af7`, weak
 `ak820health.py --isr`) measures it directly. 20 s idle after `--reset`, host
 agents stopped:
 
+> **Superseded on white by the row ISR rewrite (11-03):** 8,000 services a
+> second at a 125 µs slot, ~50 µs mean, ~40% of the core, the 444 Hz
+> field; the table below is the driver through v0.3.1
+> ([leds.md](leds.md), "The row ISR rewrite").
+
 | | measured |
 |---|---|
 | ISR entries | **3,876/s** |
