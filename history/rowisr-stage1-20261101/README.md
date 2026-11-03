@@ -1156,6 +1156,87 @@ case runs the same transaction on the same path and was not filmed
 session's lock since 11:30), white needs its lights on and the ladder
 held, and nothing in the frame.
 
+### Stage 5 on white (11-03, 12:47 on, `stage5_flash.sh`): the 125 us cadence, the light exact, the handler 50 us, the scan slots' omissions found and cut 26x
+
+JD's word at 11:40: push ahead to the cadence, today. The plan's gate for
+it is the handler's cost (≤ 20% at 8,000 slots a second), so **stage 5a**
+(`4294a3befd`) first made the handler cheaper at the old cadence: the
+exit's extension snapshot and its verdict by the two spans replaced by
+the scheduler's counter against step 1's (a sample kept when no boundary
+passed between the two reads), step 6's crossed check read off the
+hardware (the flag, or the counter below step 1's) instead of the
+extension's reconstruction, the fifteen match registers unrolled with the
+colour's byte plane chosen once and the width a Q6 multiply and shift
+(the flash scale table gone until stage 6's curve), and the cadence a
+compile-time switch (`ROWISR_CADENCE_US`: the slot, the terminal and the
+scale together). **Stage 5b** (`2c11b9ff01`) set 125 us; **5c**
+(`078216ec89`) took codex's P2s (the width rounded, the scale 300/64 on
+the measured 267 us duty, the dropped elapsed samples counted); **5d**
+(`6a9fc0fcfe`) the window 1,535 and the settle 0.5 us. Two codex
+reviews, READY both (`plans/review-codex-row-isr-stage5-*`); 5d's two
+literals went without one. Each flash: the board woken by the presser,
+the flash hands-free, the ladder held at Always on, a relight press, the
+counters reset, 300 s lit at JD's full white (sat 0, value 255) with
+nothing touching the board, then page 4, page 7, the record, the rows
+and the logger's mean over the last 120 s.
+
+| | 4b (267 us) | 5c (`0x7c425589`, 12:49-12:54) | 5d (`0x717d9b6a`, 13:02-13:07) |
+|---|---|---|---|
+| services a second (page 4) | 3,745 | 7,999 | 7,997 |
+| handler mean / min / max, us (page 4, inclusive) | 71.6 / - / - | 50.0 / 32.0 / 117.3 | 49.5 / 32.0 / 117.3 |
+| CPU share in the row ISR | 26.8% | 40.0% | 39.6% |
+| lit draw at full white, mA (31.1 dark) | 92.1 | 92.12 | 92.32 |
+| pulses omitted | 0 | 2,311 of 2,417,753 (0.096%) | 87 of 2,417,188 (0.0037%) |
+| omissions by the arm deadline | 0 | all (saturated) | all (89) |
+| per key row R / B / G | - | 255 / 1-9 / 1-10 | 3-23 / 2-4 / 1-3 |
+| latency max, us (page 7) | - | 72.8 | 74.9 |
+| `row_gap_max`, ms | 12 (a wake) | 3 | 3 |
+| missed slots, losses, spurious | 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+| tx_sent / tx_timeouts over the window | - | 73 / 25 | 73 / 35 |
+
+**What the numbers say.**
+- **The field is 444 Hz and the light is the same to a decimal**: 92.12
+  and 92.32 mA against 92.1, the 61 mA incremental within 0.4%, so the
+  scale 300/64 (the measured duty at k = 10 scaled by 125/267) stands and
+  D4's 4.845 would have been 3.5% bright.
+- **The handler is cheaper in absolute terms (71.6 to 50 us) and dearer
+  in share (26.8% to 40%)**: at twice the rate, 5a's savings (the exit,
+  the arm's reconstruction, the loop) bought 22 us of 72, not the 47 the
+  plan's 20% asks. The old callback driver ran at 73% and the board
+  worked; this is the plan's target missed, not an operational limit.
+  What is left is the detector's per-service bookkeeping (~17 us, the
+  every-eighth judgment is JD's call at ~8), the scan (~15 us on a third
+  of the slots), the fifteen writes and the port's wrapper; and the flash
+  wait states on every instruction, which `.ramtext` would halve for the
+  daily build's 2.3 KB gap, not the dev build's 368 B.
+- **5c's omissions were one cause**: every omitted pulse a red slot, the
+  one that carries the key scan before the arm, and every one by the
+  deadline: a late entry (the latency tail at 73 us) on a scan slot passed
+  80 us. 5d's window 1,535 (1.28x over the full width) moved the deadline
+  to 90.5 us and the settle to 0.5 us (stage 3's sweep was exact at 0):
+  **26x fewer, 87 in 300 s, one slot in 3.4 s**, one row-colour dark for
+  one 2.25 ms field, which no eye sees. The residual is the latency tail
+  past 90 us plus a scan slot; the entry latency reaches 75 us with the
+  daemon paused, so something at priority 3 or above runs that long
+  (the LCD's seconds redraw is the suspect, as the LCD-blit dips were):
+  the gap monitor (dev op 24-25) can name it in the next window. The
+  plan's "zero in quiet runs" is not met to the letter; the next literal
+  down is 1,279 (1.07x headroom, 95.8 us), or the scan off the arm's path.
+- **The scan is faster, not slower**: the presser's 8 ms dwell registered
+  88 of 100 on 5c against 72 on stage 3 (the debounce's boundary against a
+  2.25 ms matrix instead of 4.8), 10 and 12 ms exact, raw_edges exact in
+  every batch (`presser-gate-stage5.json`).
+- **tx_timeouts** 25 and 35 of 73 frames in a window on the data line
+  with the daemon paused: the module's link idle while USB carries the
+  keys; the radio kinds and the ACK rate come with the gates chain's UART
+  step, which waits for Buzz locked (the presser keys into the front app
+  otherwise: 12:54's lesson, JD's beeps and Xcode).
+
+The runner's first run restored the ladder after the presser gate, whose
+own trap had already taken the board off the data line, so the ladder
+stayed at Always on until 12:58 (put back by hand); the runner now puts
+it back before the gate and the gate is optional (`PRESSER=no`).
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

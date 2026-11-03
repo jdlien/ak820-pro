@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-03, 12:40. The block below is where things stand, written to
+Updated 2026-11-03, 13:12. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -87,7 +87,20 @@ the measured duty, the dropped elapsed samples counted; the comments
 `stage5_flash.sh` (the flash, the cost window, the light, the presser
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
-(`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch. **Owed to JD:** the camera gate on
+(`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
+**13:02: stage 5d is on white, `6a9fc0fcfe`, token `0x717d9b6a`** (5c
+`078216ec89` from 12:47 to 13:01): the 444 Hz field, the light exact
+(92.3 mA at full white against 92.1), the handler 49.5 us and 39.6% CPU
+(the plan's 20% missed; the old driver's 73%), `row_gap_max` 3 ms, 5c's
+0.096% omissions (all red slots: the scan slot past the 80 us deadline)
+cut 26x by 5d's window 1,535 and 0.5 us settle to 87 in 300 s, the
+presser 6 of 7 exact (8 ms at 88 of 100, better than 72). The record:
+`history/rowisr-stage1-20261101/README.md`, "Stage 5 on white". Owed on
+5d: the camera gate (13:09, running), the presser gates (the UART
+counts, five wakes, the silence set: `stage5_gates.sh 0x717d9b6a
+stage5d 123`, with Buzz LOCKED: the presser keys into the front app),
+codex's and JD's judgment on the residual omissions, the night's soak
+with Warren's M2/M3. **Owed to JD:** the camera gate on
 4b (a forced PCF write with no dark frame, on USB and off; `pcf-unseen`'s
 deferral stays until it passes); his eye on the light and the keys; the
 plan's open question (two silences within 2 ms counted as two, the

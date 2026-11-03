@@ -135,7 +135,16 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 05:08 11-03: stage 4b of the row ISR rewrite,
+**On white since 13:02 11-03: stage 5d of the row ISR rewrite, the 125 us
+cadence, `6a9fc0fcfe`** (dev, token `0x717d9b6a`, heap gap 368 B,
+`row-isr`; the keep-alive and the battery icon's colours in it): the
+444 Hz field, the light exact at full white, the handler 49.5 us and
+39.6% CPU, 87 omissions in 300 s (the scan slots past the 90.5 us arm
+deadline; 5c's 2,047 window omitted 2,311), the presser exact to 10 ms;
+owed: the camera gate, the presser gates with Buzz locked, the soak
+(`plans/ROW-ISR-PLAN.md`'s log, `history/rowisr-stage1-20261101/README.md`,
+"Stage 5 on white").
+**Before it, from 05:08 11-03: stage 4b of the row ISR rewrite,
 `6b90f3b821`** (dev, token `0x4215c3e2`, heap gap 400 B, `row-isr`):
 stage 3's scan without mode writes (BSET/BCLR only, two port reads, the
 settle on the scheduler's counter, the consume's XOR under its lock, the
