@@ -3036,3 +3036,14 @@ quantization, above the largest new tolerance of 28.389 ms.
   (`i2c_fail` still the stuck test's 1): about 2x margin under the 10 ms
   deadline, as estimated. The frame counter 4.7 million judged, none
   rejected. The soak runs on.
+- 11-03 08:20: **the awake soak's first three hours on stage 4b, clean**
+  (`soak-stage4b.jsonl`, read 10): the frame counter 40,805,691 intervals
+  judged and none rejected; no loss, no spurious invocation and no stall
+  since the wakes; the writer 37 runs, 0 restarts, the release
+  error 3 ms, the boundary error -1 ms, the bracket's width
+  7 ms, no miss; the unmasked transactions' whole-call maxima: the
+  8-byte write 4.64 ms (37 calls), the 7-byte read
+  5.472 ms (19), the 1-byte read 2.379 ms
+  (839), the 1-byte write 1.701 ms (74),
+  none failed; three UART overruns in the night, none during a clock
+  transaction. The soak runs on until JD is up.
