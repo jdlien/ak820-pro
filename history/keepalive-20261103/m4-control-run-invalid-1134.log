@@ -1,0 +1,30 @@
+[11:34:08] daemon paused (no lock-light frames)
+[11:34:08] data off
+[11:34:08] baseline: one press to wake white (a sleeping board does not wake on the data line), then the counts
+[11:34:08] logger paused
+[11:34:15] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100067 us
+[11:34:15] QT Py soft-rebooted into its logger
+[11:34:15] logger back
+[11:34:17] logger logging again (a new power.csv row)
+[11:34:23] baseline: {"count_ge_10ms": 1, "count_ge_25ms": 0, "passes": 14056711, "flash_writes": 5, "flash_gap_max_ms": 7, "blit_gap_max_ms": 5, "i2c_gap_max_ms": 9, "count_ge_25ms_nonflash": 0, "key_presses": 219, "loop_gap_max_mark": "none", "row_gap_max_ms": 12, "raw_edges": 438, "consumes": 14056713, "cooked_changes": 438, "row_gap_max_row": 0, "matrix_rows": 6}
+[11:37:24] white asleep (3.505 mA)
+[11:37:24] trial 1: asleep since 11:37:20; waiting for the module's drop (reason 719, up to 40 min)
+[11:53:25] trial 1: drop 2026-11-03 11:53:03.017
+[11:54:25] logger paused
+[11:54:32] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[11:54:32] QT Py soft-rebooted into its logger
+[11:54:32] logger back
+[11:54:34] logger logging again (a new power.csv row)
+[11:54:56] trial 1: {"trial": 1, "asleep_epoch": 1793727440, "drop": "2026-11-03 11:53:03.017", "locked_at_press": false, "press_done_epoch": 1793728472.0, "f19_down_epoch": 1793728471.696477, "f19_after_press_s": -0.3, "bt_ready": null, "key_presses_delta": 2, "verdict": "ARRIVED"}
+[11:57:42] white asleep (3.540 mA)
+[11:57:42] trial 2: asleep since 11:57:38; waiting for the module's drop (reason 719, up to 40 min)
+[11:58:14] trial 2: drop 2026-11-03 11:57:44.062
+[11:59:14] logger paused
+[11:59:21] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[11:59:21] QT Py soft-rebooted into its logger
+[11:59:21] logger back
+[11:59:23] logger logging again (a new power.csv row)
+[11:59:45] trial 2: ,{"trial": 2, "asleep_epoch": 1793728658, "drop": "2026-11-03 11:57:44.062", "locked_at_press": false, "press_done_epoch": 1793728761.0, "f19_down_epoch": 1793728760.630401, "f19_after_press_s": -0.37, "bt_ready": "2026-11-03 11:59:30.367", "key_presses_delta": 1, "verdict": "ARRIVED"}
+[11:59:45] done -> history/keepalive-20261103/m4-control.json
+[11:59:45] data off
+[11:59:45] daemon restarted

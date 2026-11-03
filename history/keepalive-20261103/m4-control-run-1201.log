@@ -1,0 +1,20 @@
+[12:01:51] daemon paused (no lock-light frames)
+[12:01:51] data off
+[12:01:51] baseline: one press to wake white (a sleeping board does not wake on the data line), then the counts
+[12:01:51] logger paused
+[12:01:58] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[12:01:59] QT Py soft-rebooted into its logger
+[12:01:59] logger back
+[12:02:01] logger logging again (a new power.csv row)
+[12:02:07] baseline: {"count_ge_10ms": 1, "count_ge_25ms": 0, "passes": 14614261, "flash_writes": 5, "flash_gap_max_ms": 7, "blit_gap_max_ms": 5, "i2c_gap_max_ms": 9, "count_ge_25ms_nonflash": 0, "key_presses": 223, "loop_gap_max_mark": "none", "row_gap_max_ms": 12, "raw_edges": 446, "consumes": 14614262, "cooked_changes": 446, "row_gap_max_row": 0, "matrix_rows": 6}
+[12:05:07] white asleep (3.350 mA)
+[12:05:07] trial 1: asleep since 12:05:02; waiting for the module's drop (reason 719, up to 40 min)
+[12:45:13] trial 1: drop NOT SEEN in 40 min
+[12:46:13] logger paused
+[12:46:19] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[12:46:20] QT Py soft-rebooted into its logger
+[12:46:20] logger back
+[12:46:22] logger logging again (a new power.csv row)
+[12:46:44] trial 1: {"trial": 1, "asleep_epoch": 1793729102, "drop": null, "locked_at_press": false, "press_done_epoch": 1793731579.0, "f19_down_epoch": null, "f19_after_press_s": null, "bt_ready": null, "key_presses_delta": 1, "verdict": "LOST"}
+[12:47:02] data off
+[12:47:02] daemon restarted

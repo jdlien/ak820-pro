@@ -1,0 +1,12 @@
+[10:05:10] daemon paused (no lock-light frames)
+[10:05:10] data off
+[10:05:10] baseline: one press to wake white (a sleeping board does not wake on the data line), then the counts
+[10:05:10] logger paused
+[10:05:17] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[10:05:18] QT Py soft-rebooted into its logger
+[10:05:18] logger back
+[10:05:20] logger logging again (a new power.csv row)
+[10:05:26] baseline: {"count_ge_10ms": 1, "count_ge_25ms": 0, "passes": 11124650, "flash_writes": 1, "flash_gap_max_ms": 3, "blit_gap_max_ms": 4, "i2c_gap_max_ms": 9, "count_ge_25ms_nonflash": 0, "key_presses": 207, "loop_gap_max_mark": "none", "row_gap_max_ms": 12, "raw_edges": 414, "consumes": 11124652, "cooked_changes": 414, "row_gap_max_row": 0, "matrix_rows": 6}
+[10:08:27] white asleep (3.320 mA)
+[10:08:27] trial 1: asleep since 10:08:22; waiting for the module's drop (reason 719, up to 40 min)
+[10:24:17] stopped by Hutch for Blackberry's filmed gates (JD at the bench); trial 1 not run; daemon restored, data left off

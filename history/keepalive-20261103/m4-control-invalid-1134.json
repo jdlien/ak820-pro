@@ -1,0 +1,4 @@
+[
+{"trial": 1, "asleep_epoch": 1793727440, "drop": "2026-11-03 11:53:03.017", "locked_at_press": false, "press_done_epoch": 1793728472.0, "f19_down_epoch": 1793728471.696477, "f19_after_press_s": -0.3, "bt_ready": null, "key_presses_delta": 2, "verdict": "ARRIVED"}
+,{"trial": 2, "asleep_epoch": 1793728658, "drop": "2026-11-03 11:57:44.062", "locked_at_press": false, "press_done_epoch": 1793728761.0, "f19_down_epoch": 1793728760.630401, "f19_after_press_s": -0.37, "bt_ready": "2026-11-03 11:59:30.367", "key_presses_delta": 1, "verdict": "ARRIVED"}
+]
