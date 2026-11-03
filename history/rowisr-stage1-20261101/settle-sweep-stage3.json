@@ -1,0 +1,39 @@
+[
+{"t": "03:42:59", "colour": "JD's lighting", "settle_ticks": 96, "settle_us": 2.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:43:22", "colour": "JD's lighting", "settle_ticks": 48, "settle_us": 1.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:43:45", "colour": "JD's lighting", "settle_ticks": 24, "settle_us": 0.5, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:44:08", "colour": "JD's lighting", "settle_ticks": 12, "settle_us": 0.25, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:44:31", "colour": "JD's lighting", "settle_ticks": 6, "settle_us": 0.125, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:44:54", "colour": "JD's lighting", "settle_ticks": 3, "settle_us": 0.062, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:45:17", "colour": "JD's lighting", "settle_ticks": 0, "settle_us": 0.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:45:41", "colour": "solid red", "settle_ticks": 96, "settle_us": 2.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:46:04", "colour": "solid red", "settle_ticks": 24, "settle_us": 0.5, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:46:27", "colour": "solid red", "settle_ticks": 6, "settle_us": 0.125, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:46:50", "colour": "solid red", "settle_ticks": 0, "settle_us": 0.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:47:14", "colour": "solid green", "settle_ticks": 96, "settle_us": 2.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:47:37", "colour": "solid green", "settle_ticks": 24, "settle_us": 0.5, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:48:00", "colour": "solid green", "settle_ticks": 6, "settle_us": 0.125, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:48:23", "colour": "solid green", "settle_ticks": 0, "settle_us": 0.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:48:47", "colour": "solid blue", "settle_ticks": 96, "settle_us": 2.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:49:10", "colour": "solid blue", "settle_ticks": 24, "settle_us": 0.5, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:49:33", "colour": "solid blue", "settle_ticks": 6, "settle_us": 0.125, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+,
+{"t": "03:49:56", "colour": "solid blue", "settle_ticks": 0, "settle_us": 0.0, "key_presses": 101, "scan": {"key0": [100, 100], "key1": [1, 1]}, "other_presses": 0, "idle_presses": 0, "pass": true}
+]

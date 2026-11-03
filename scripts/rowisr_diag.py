@@ -209,6 +209,8 @@ def print_status(r):
           + (";  ⚠️ HW FAULT: a timer's reset never completed at init, nothing runs" if d['hw_fault'] else ""))
     print(f"  silence {'ARMED, ' + str(d['silence_ms']) + ' ms' if d['silence_armed'] else 'none armed'}; "
           f"run {d['silences_run']}, the last measured {d['silence_last_ms']} ms ({d['silence_last_ticks']} CT16B5 ticks)")
+    if r[31]:
+        print("  ** col_map_fault: MATRIX_COL_PINS is not the order the scan's port reads assemble (stage 3): the matrix reads WRONG")
 
 
 def main():

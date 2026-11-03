@@ -22,19 +22,19 @@ PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
 token() { "$A" health --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["vitals"]["build_token"])' 2>/dev/null; }
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; log "daemon paused"
-uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
+timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
 for i in $(seq 1 15); do present && break; sleep 2; done
-present || { log "no board on USB (asleep? one key wakes it)"; uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; exit 1; }
+present || { log "no board on USB (asleep? one key wakes it)"; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; exit 1; }
 sleep 2; log "board present, token before: $(token)"
 log "flash: $ART"
 ./flash.sh "$ART" < /dev/null 2>&1 | tee "$D/flash-exit.log"
-[ "${PIPESTATUS[0]}" = 0 ] || { log "flash FAILED"; uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; exit 1; }
+[ "${PIPESTATUS[0]}" = 0 ] || { log "flash FAILED"; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; exit 1; }
 sleep 5
 for i in $(seq 1 40); do present && break; sleep 1; done
 present || { log "no board after the flash"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; exit 1; }
 sleep 3
 T=$(token); log "token after the flash: $T (want $WANT)"
-[ "$T" = "$WANT" ] || { log "token mismatch"; uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; exit 1; }
+[ "$T" = "$WANT" ] || { log "token mismatch"; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; launchctl bootstrap "gui/$UID" "$PL" 2>&1; exit 1; }
 sleep 10
 log "sections, window 1 (10 s)"
 venv/bin/python scripts/rowisr_diag.py sections | tee "$D/sections-exit-1.txt"

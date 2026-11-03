@@ -24,7 +24,7 @@ present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
 token() { "$A" health --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["vitals"]["build_token"])' 2>/dev/null; }
 counts() { venv/bin/python scripts/presser_count.py; }
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; log "daemon paused"
-trap 'uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
+trap 'timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
 wait_asleep() {   # three fresh rows under 6 mA; up to 7 min
     local t0=$(date +%s) n=0 last=""
     while [ $(( $(date +%s) - t0 )) -lt 420 ]; do
@@ -43,9 +43,9 @@ wake_and_read() {   # prints the cycle's JSON on stdout, one line; everything el
     local t_press t_up delay before="$1"
     t_press=$(python3 -c 'import time; print(time.time())')
     venv/bin/python scripts/presser_repl.py pulse A1 100 >&2 || { log "the press failed"; return 1; }   # its log to stderr: this function's stdout is the cycle's JSON
-    uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null
+    timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null
     for i in $(seq 1 40); do present && break; sleep 0.5; done
-    present || { log "white NOT present 20 s after the press: no wake"; uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; return 2; }
+    present || { log "white NOT present 20 s after the press: no wake"; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; return 2; }
     t_up=$(python3 -c 'import time; print(time.time())')
     sleep 2
     local c r u
@@ -68,7 +68,7 @@ if b:
 print(json.dumps(d))
 PY
 }
-uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null
+timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null
 echo "[" > "$OUT"
 log "cycle 0: the baseline wake and read (no verdict)"
 present && log "white awake already (data was on?)"
@@ -76,7 +76,7 @@ if ! present; then wait_asleep || exit 1; fi
 prev=$(wake_and_read "") || exit 1
 T=$(token); log "token $T (want $WANT)"; [ "$T" = "$WANT" ] || { log "not the expected build: stopping"; exit 1; }
 log "cycle 0: $prev"
-uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off; white sleeps in ~3 min"
+timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off; white sleeps in ~3 min"
 pass=0
 for k in $(seq 1 "$N"); do
     wait_asleep || break
@@ -88,7 +88,7 @@ for k in $(seq 1 "$N"); do
     summ=$(echo "$cur" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("woke %.1f s after the press command (the REPL setup inside); key_presses %+d (want +1), losses %+d, spurious %+d, frame rejects %d, bus events %d" % (d["press_to_present_s"], d["key_presses_delta"], d["losses_delta"], d["spurious_delta"], d["usb_rejects"], d["usb_events"]))')
     log "cycle $k: $summ -> $ok"
     prev=$cur
-    uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"
+    timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"
 done
 echo "]" >> "$OUT"
 log "RESULT: $pass of $N wakes kept the key -> $OUT"

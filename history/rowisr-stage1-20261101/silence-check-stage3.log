@@ -1,0 +1,25 @@
+Boot-out failed: 3: No such process
+[04:12:43] daemon paused
+[04:12:43] data on
+[04:12:43] board present
+[04:12:45] before: record {'spurious': 0, 'late_omit': 3, 'epoch_losses': 22, 'invalid_services': 22, 'serviced_lo16': 47654} usb {'usb_checked': 13346407, 'usb_rejects': 20, 'usb_events': 2, 'usb_worst_ms': 1, 'usb_last_dt_ms': 0, 'usb_last_df_ms': 256, 'loss_gen': 24, 'usb_gen': 18, 'usb_state': 'ACTIVE', 'usb_trusted_now': True, 'frmno': 1123, 'time_valid': True, 'time_excl': 0, 'guard_last_gap_ticks': 29193, 'guard_last_gap_ms': 155.696, 'frames_fresh': True, 'usb_unjudged': 0, 'recovery_pending': False}
+[04:12:46] 5 ms: measured 5.003 ms; losses 0 (expected 0), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 18, omitted 0, judged 3415; the extension read 7.099 ms across it, generation +0; last rejection spans 0/256 ms -> PASS
+[04:12:47] 7.5 ms: measured 7.499 ms; losses 0 (expected 0), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 28, omitted 0, judged 3452; the extension read 9.755 ms across it, generation +0; last rejection spans 0/256 ms -> PASS
+[04:12:48] 7.9 ms: measured 7.899 ms; losses 0 (expected the gap decides), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 29, omitted 0, judged 3447; the extension read 10.165 ms across it, generation +0; last rejection spans 0/256 ms -> PASS
+[04:12:49] 8.1 ms: measured 8.101 ms; losses 1 (expected the gap decides), frame rejects 0 (expected 0), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3446; the extension read 2.192 ms across it, generation +1 (the guard: its gap 8.133 ms); last rejection spans 0/256 ms -> PASS
+[04:12:50] 8.5 ms: measured 8.501 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3430; the extension read 2.101 ms across it, generation +1 (the guard: its gap 8.555 ms); last rejection spans 0/256 ms -> PASS
+[04:12:50] 20 ms: measured 20.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3421; the extension read 2.123 ms across it, generation +1 (the guard: its gap 20.037 ms); last rejection spans 0/256 ms -> PASS
+[04:12:51] 100 ms: measured 100.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 5, spurious 0, missed slots 0, omitted 0, judged 3445; the extension read 2.293 ms across it, generation +1 (the guard: its gap 100.053 ms); last rejection spans 0/256 ms -> PASS
+[04:12:53] 200 ms: measured 200.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3428; the extension read 2.08 ms across it, generation +1 (the guard: its gap 200.069 ms); last rejection spans 0/256 ms -> PASS
+[04:12:54] 350 ms: measured 350.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3450; the extension read 2.672 ms across it, generation +1; last rejection spans 1/351 ms -> PASS
+[04:12:56] 700 ms: measured 700.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3449; the extension read 3.179 ms across it, generation +1; last rejection spans 1/700 ms -> PASS
+[04:12:58] 1049 ms: measured 1049.003 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3447; the extension read 2.624 ms across it, generation +1; last rejection spans 1/1049 ms -> PASS
+[04:12:59] 1000 ms: measured 1000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 0, judged 3436; the extension read 2.171 ms across it, generation +1 (the guard: its gap 301.008 ms); last rejection spans 1/1049 ms -> PASS
+[04:13:02] 2048 ms: measured 2048.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3449; the extension read 2.128 ms across it, generation +1 (the guard: its gap 300.459 ms); last rejection spans 1/1049 ms -> PASS
+[04:13:10] 7000 ms: measured 7000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3440; the extension read 2.293 ms across it, generation +1 (the guard: its gap 9.531 ms); last rejection spans 1/1049 ms -> PASS
+[04:13:10] data off; the 20 ms silence fires in 5 s on battery
+[04:13:19] data on
+[04:13:50] no board after the data on
+raw HID interface not found (board unplugged?)
+[04:13:50] data off
+[04:13:50] daemon restarted

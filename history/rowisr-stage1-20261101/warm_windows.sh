@@ -21,10 +21,15 @@ LABEL=${1:-detector}; WANT=${2:-0x60d4a06b}
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
 token() { "$A" health --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["vitals"]["build_token"])' 2>/dev/null; }
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; log "daemon paused"
-trap 'uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
-uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
-for i in $(seq 1 15); do present && break; sleep 2; done
-present || { log "no board on USB (asleep? one key wakes it)"; exit 1; }
+trap 'timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
+sleep 3; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"   # the pause: an on right after another script's off hung uhubctl twice on 11-03 (26 and 22 min)
+for i in $(seq 1 5); do present && break; sleep 2; done
+if ! present; then   # asleep: one press of the presser wakes it (11-03)
+    log "white not on USB: asleep, one press to wake it"
+    venv/bin/python scripts/presser_repl.py pulse A1 100 || exit 1
+    for i in $(seq 1 15); do present && break; sleep 1; done
+    present || { log "no board on USB after the wake press"; exit 1; }
+fi
 log "board present"; sleep 2
 T=$(token); log "token $T (want $WANT)"
 [ "$T" = "$WANT" ] || { log "not the expected build: stopping"; exit 1; }

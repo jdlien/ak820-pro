@@ -1,0 +1,1 @@
+FRMNO back to back: 16776704 reads, 23544 steps of +1, 48 other steps, 4560 ms left; pairs kept: 0x7ff -> 0x700, 0x700 -> 0x000, 0x1ff -> 0x100  (a torn read looks like 0x0ff -> 0x000; a preemption like 0x123 -> 0x126)

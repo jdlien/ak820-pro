@@ -16,7 +16,7 @@
 # presser-gate-LABEL.json and presser-gate-LABEL.log.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
-LABEL=${1:-exit}; WANT=${2:-0x9e2d894a}
+LABEL=${1:-exit}; WANT=${2:-0x9e2d894a}; MODE=${3:-full}   # full: the seven batches; boundary: 8 and 10 ms repeated (300 and 200 presses)
 D=history/rowisr-stage1-20261101
 OUT="$D/presser-gate-$LABEL.json"
 A="$HOME/Library/Application Support/ak820pro/bin/ak820"
@@ -25,8 +25,8 @@ log() { echo "[$(date +%H:%M:%S)] $*"; }
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
 token() { "$A" health --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["vitals"]["build_token"])' 2>/dev/null; }
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; log "daemon paused"
-trap 'uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
-uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
+trap 'timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
+sleep 3; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"   # the pause: an on right after another script's off hung uhubctl twice on 11-03 (26 and 22 min)
 for i in $(seq 1 5); do present && break; sleep 2; done
 if ! present; then   # asleep: one press of A1 wakes it (the Power saver ladder sleeps 3 min after the last key)
     log "white not on USB: asleep, one press to wake it"
@@ -88,13 +88,19 @@ print(f"[{r['t']}] {pin} x{n} at {dwell} ms{' with ' + r['hold'] + ' held' if ho
       f"{r['dwell_us']['min']}-{r['dwell_us']['max']} us, row_gap_max {a.get('row_gap_max_ms')} ms -> {verdict}", file=sys.stderr)
 PY
 }
-run A1 200 25 75
-run A1 200 15 85
-run A0 200 25 75
-run A1 100 12 88
-run A1 100 10 90
-run A1 100 8 92
-run A1 100 25 75 --hold A0
+if [ "$MODE" = boundary ]; then
+    run A1 100 8 92; run A1 100 8 92; run A1 100 8 92
+    run A1 100 10 90; run A1 100 10 90
+    run A0 100 8 92; run A0 100 10 90
+else
+    run A1 200 25 75
+    run A1 200 15 85
+    run A0 200 25 75
+    run A1 100 12 88
+    run A1 100 10 90
+    run A1 100 8 92
+    run A1 100 25 75 --hold A0
+fi
 echo "]" >> "$OUT"
 python3 - "$OUT" <<'PY'
 import json, sys

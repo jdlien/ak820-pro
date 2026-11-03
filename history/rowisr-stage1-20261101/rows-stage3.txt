@@ -1,0 +1,1 @@
+row samples in 20 s: [4163, 4164, 4164, 4163, 4163, 4163]; spread 1 (want <= 1); row_gap_max 10 ms on row 1; raw_edges 0 consumes 35358

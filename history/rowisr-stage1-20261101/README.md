@@ -713,6 +713,90 @@ run; none new). The "press command to present" column includes the
 REPL's ~7 s of setup before the pulse; the wake itself, from the
 earlier runs, is 3-4 s to the enumeration.
 
+### Stage 3 on white (11-03, 03:12 on, `stage3_flash.sh`, `3673b234f0`): the scan without mode writes, the presser's gates exact, the frame counter's tear seen
+
+The flash at 03:11:45-03:12:16 (the token before 0x0a2f280e's predecessor
+0x9e2d894a, after 0x0a2f280e), white woken by the presser, the status
+clean (`status-stage3.json`: no column-map fault, no hardware fault, the
+prime complete, the row line enabled, the settle 96 ticks).
+
+**The frame counter's tear, seen directly** (`frmscan-stage3.txt`, op 28
+sub 14, 25 s of back-to-back reads from the housekeeping task): 16,776,704
+reads, 23,544 steps of +1, **48 other steps, the pairs kept 0x7FF -> 0x700,
+0x700 -> 0x000, 0x1FF -> 0x100**. FRMNO updates in two steps at a byte
+carry, the low byte first, and a read between the steps returns the torn
+value; 48 such reads over the ~92 byte carries in the scan, each tear two
+"other" steps, so about a quarter of the carries were caught with reads
+some 0.35-0.5 us apart: a torn state of roughly 4-6 HCLK cycles, one
+12 MHz USB clock. That is the hardware fact behind the 0/256 ms
+rejections. The first stage 3 build read the register twice back to back
+(a third time on disagreement), and its first hour still logged **23
+rejections where 3 were expected** (the silence set's 350, 700 and 1,049
+ms), the last at spans 0/256: two adjacent loads can both land inside a
+4-6 cycle torn state and agree. The fix in `67a4ccf2b3`: the two reads
+twelve cycles apart (and the third, after a disagreement, twelve more);
+flashed next.
+
+**Six-row fairness** (`rows-stage3.txt`, 20 s): 4,163, 4,164, 4,164,
+4,163, 4,163, 4,163 samples a row, the spread 1 (208.2 a row a second);
+`raw_edges` 0 over 35,358 consumes with nothing pressed.
+
+**The short-tap gate with the counts at the scan**
+(`presser-gate-stage3.json`, 03:13-03:16; the counters reset first, so
+`row_gap_max` is the run's):
+
+| Batch | dwell, actual (us) | key_presses | raw_edges | at the scan (presses/releases) | elsewhere | row_gap_max |
+|---|---|---|---|---|---|---|
+| A1 (0,13) x200 | 25 ms, 25,054-25,482 | 200 of 200 | **400 of 400** | 200/200 | 0 | 5 ms |
+| A1 x200 | 15 ms, 15,045-15,502 | 200 of 200 | 400 of 400 | 200/200 | 0 | 5 ms |
+| A0 (3,14) x200 | 25 ms, 25,054-25,451 | 200 of 200 | 400 of 400 | 200/200 | 0 | 5 ms |
+| A1 x100 | 12 ms, 12,054-12,451 | 100 of 100 | 200 of 200 | 100/100 | 0 | 5 ms |
+| A1 x100 | 10 ms, 10,040-10,437 | 100 of 100 | 200 of 200 | 100/100 | 0 | 5 ms |
+| A1 x100 | 8 ms, 8,056-8,453 | **69 of 100** | 200 of 200 | 100/100 | 0 | 5 ms |
+| A1 x100 at 25 ms, A0 held | 25 ms | 101 of 101 | 202 of 202 | 100/100, A0 1/1 | 0 | 5 ms |
+
+Every press and release reached the matrix (the scan's own count) and
+every transition reached debounce (`raw_edges` exact now, the consume's
+undercount gone), nothing pressed itself anywhere, the chord clean, the
+worst row gap 5 ms. At 8 ms, 69 of 100 against the old scan's 76: the
+scan saw all 100 and debounce dropped 31, so the loss is debounce's
+against the main loop's ~3 ms pass (sym_defer_pk reports a key only once
+its raw state has held 5 ms across the loop's checks, and an 8 ms press
+can release before the check that would have reported it), the same
+mechanism on both builds; 69 against 76 is inside one batch's noise and
+the boundary batches are repeated on the next flash to say more.
+
+**Q1's settle sweep** (`settle-sweep-stage3.json`, 03:42-03:50, the chord:
+A0 held, 100 presses of A1 at 15 ms; the counts at the scan and after
+debounce; 1.5 s idle at each setting first): **19 of 19 exact**, with
+JD's lighting at 96, 48, 24, 12, 6, 3 and 0 ticks and solid red, green and
+blue at full at 96, 24, 6 and 0: no phantom, no miss, no idle press at
+any setting, down to no settle at all. A pressed column falls through its
+diode into the driven-low row faster than the handler can read it, and
+the unpressed ones were left high by the terminal match with nothing to
+rise through, as D3 step 3 argued. The default stays 96 ticks (2 us, 0.67
+us a slot averaged over the three slots): all of it margin. The sweep
+was delayed 26 min by a hung `uhubctl` (below).
+
+**The silence set** (`silence-check-stage3.log`, 04:12): the fourteen
+USB cases exactly as on the detector and the exit-only build (5, 7.5 and
+7.9 ms exact; 8.1 ms the guard at 8.133 ms; 8.5, 20, 100 and 200 ms the
+guard; 350, 700 and 1,049 ms the frame counter at 1/351, 1/700 and
+1/1,049; 1,000, 2,048 and 7,000 ms the guard at 301.0, 300.5 and 9.5 ms).
+**The two battery cases did not run**: the last key was 23 min back, so
+the ladder deep-slept the board the moment the data line went off for
+the first cut, and the set's runner found no board after it (the script
+now holds the ladder at Always on through the cuts, and wakes a sleeping
+board with one press first, as every runner does now). **The warm
+windows did not run** for the same sleep (the runner wakes it now). Both
+go on the next flash.
+
+**Two hangs of `uhubctl`** (03:16-03:42 and 03:50-04:12): an `-a on`
+issued within a second of another script's `-a off` on the same port
+never returned, twice, 26 and 22 min lost each time with white awake and
+lit; killed by hand, the on had taken effect. Every runner now pauses 3 s
+before its first on and bounds every `uhubctl` with `timeout 20`.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

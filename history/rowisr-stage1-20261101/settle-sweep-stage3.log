@@ -1,0 +1,51 @@
+[03:16:13] daemon paused
+history/rowisr-stage1-20261101/settle_sweep.sh: line 33: 57416 Terminated: 15          uhubctl -l 3-1.3.4 -p 2 -a on -e > /dev/null
+[03:42:33] data on
+[03:42:35] token 0x0a2f280e (want 0x0a2f280e)
+[03:42:54] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15144 us, gap 85 ms, total 10033 ms
+[03:42:59] JD's lighting, settle 96 ticks (2.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:43:17] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15472 mean 15138 us, gap 85 ms, total 10033 ms
+[03:43:22] JD's lighting, settle 48 ticks (1.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:43:40] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15101 us, gap 85 ms, total 10029 ms
+[03:43:45] JD's lighting, settle 24 ticks (0.5 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:44:03] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15140 us, gap 85 ms, total 10033 ms
+[03:44:08] JD's lighting, settle 12 ticks (0.25 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:44:26] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15686 mean 15117 us, gap 85 ms, total 10032 ms
+[03:44:31] JD's lighting, settle 6 ticks (0.125 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:44:49] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15094 us, gap 85 ms, total 10028 ms
+[03:44:54] JD's lighting, settle 3 ticks (0.062 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:45:12] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15148 us, gap 85 ms, total 10033 ms
+[03:45:17] JD's lighting, settle 0 ticks (0.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:45:17] lighting: Solid red at full
+[03:45:36] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15094 us, gap 85 ms, total 10029 ms
+[03:45:41] solid red, settle 96 ticks (2.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:45:59] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15472 mean 15147 us, gap 85 ms, total 10033 ms
+[03:46:04] solid red, settle 24 ticks (0.5 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:46:22] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15097 us, gap 85 ms, total 10029 ms
+[03:46:27] solid red, settle 6 ticks (0.125 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:46:45] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15143 us, gap 85 ms, total 10033 ms
+[03:46:50] solid red, settle 0 ticks (0.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:46:50] lighting: Solid green at full
+[03:47:09] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15150 us, gap 85 ms, total 10034 ms
+[03:47:14] solid green, settle 96 ticks (2.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:47:32] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15134 us, gap 85 ms, total 10032 ms
+[03:47:37] solid green, settle 24 ticks (0.5 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:47:55] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15132 us, gap 85 ms, total 10032 ms
+[03:48:00] solid green, settle 6 ticks (0.125 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:48:18] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15135 us, gap 85 ms, total 10033 ms
+[03:48:23] solid green, settle 0 ticks (0.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:48:23] lighting: Solid blue at full
+[03:48:43] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15144 us, gap 85 ms, total 10033 ms
+[03:48:47] solid blue, settle 96 ticks (2.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:49:05] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15147 us, gap 85 ms, total 10033 ms
+[03:49:10] solid blue, settle 24 ticks (0.5 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:49:28] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15146 us, gap 85 ms, total 10032 ms
+[03:49:33] solid blue, settle 6 ticks (0.125 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:49:51] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15113 us, gap 85 ms, total 10030 ms
+[03:49:56] solid blue, settle 0 ticks (0.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+RESULT: 19 of 19 exact; the shortest exact setting per colour: JD's lighting 0, solid red 0, solid green 0, solid blue 0
+[03:49:56] done -> history/rowisr-stage1-20261101/settle-sweep-stage3.json
+[03:49:56] settle back to 96
+[03:49:56] JD's lighting restored
+[03:49:56] data off
+[03:49:56] daemon restarted

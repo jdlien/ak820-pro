@@ -27,10 +27,10 @@ launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; log "daemon paused"
 restore_all() {
     venv/bin/python scripts/rowisr_diag.py settle 96 >/dev/null 2>&1 && log "settle back to 96"
     venv/bin/python hostagent/ak820lighting.py restore "$HOME/Documents/ak820pro-lighting.json" >/dev/null 2>&1 && log "JD's lighting restored"
-    uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"
+    timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"
 }
 trap restore_all EXIT
-uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
+sleep 3; timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"   # the pause: an on right after another script's off hung uhubctl twice on 11-03 (26 and 22 min)
 for i in $(seq 1 5); do present && break; sleep 2; done
 if ! present; then
     log "white not on USB: asleep, one press to wake it"

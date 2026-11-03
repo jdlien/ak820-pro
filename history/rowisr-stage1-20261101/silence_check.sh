@@ -16,10 +16,15 @@ log() { echo "[$(date +%H:%M:%S)] $*"; }
 PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; log "daemon paused"
-trap 'uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
-uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
-for i in $(seq 1 15); do present && break; sleep 2; done
-present || { log "no board on USB (asleep? one key wakes it)"; exit 1; }
+trap 'timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
+timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on"
+for i in $(seq 1 5); do present && break; sleep 2; done
+if ! present; then   # asleep: one press of the presser wakes it (11-03)
+    log "white not on USB: asleep, one press to wake it"
+    venv/bin/python scripts/presser_repl.py pulse A1 100 || exit 1
+    for i in $(seq 1 15); do present && break; sleep 1; done
+    present || { log "no board on USB after the wake press"; exit 1; }
+fi
 log "board present"; sleep 2
 venv/bin/python - <<'PY'
 import sys, time, json, subprocess
@@ -84,10 +89,19 @@ finally:
     h.close()
 
 # The data cut: armed with the 5 s delay, data off at once, the silence on battery with the bus suspended, data on, read back.
-def uhub(state): subprocess.run(["uhubctl", "-l", "3-1.3.4", "-p", "2", "-a", state, "-e"], capture_output=True)
+def uhub(state): subprocess.run(["timeout", "20", "uhubctl", "-l", "3-1.3.4", "-p", "2", "-a", state, "-e"], capture_output=True)
 def present():
     return subprocess.run("ioreg -p IOUSB -l -w0 | grep -q '\"idProduct\" = 32777'", shell=True).returncode == 0
 BATT_CASES = [(20, 1), (350, 0)]   # (ms, the silence's own expected losses: the guard's; the bus events' are subtracted)
+# The ladder held at Always on through the data cuts: with the last key more than 3 min back, the board deep-sleeps the
+# moment the data line goes off (stage 3's run, 04:13 11-03: both battery cases lost); Power saver put back after.
+from rowisr_baseline import devhook
+h = hp.open_device()
+try:
+    pw = devhook(h, 14, [0]); mode_before = pw[4]
+    devhook(h, 14, [1, 0]); log(f"the power ladder held at Always on for the data cuts (mode {mode_before} before)")
+finally:
+    h.close()
 for ms, g in BATT_CASES:
     h = hp.open_device()
     try:
@@ -127,6 +141,7 @@ for ms, g in BATT_CASES:
 # whether the spurious invocations track a wake (wake_read.sh reads the record after it).
 h = hp.open_device()
 try:
+    devhook(h, 14, [1, 2]); log("Power saver put back")
     hp.reset_counters(h); res["counters_reset_at"] = time.strftime("%H:%M:%S"); log("health counters reset (the row record with them)")
 finally:
     h.close()

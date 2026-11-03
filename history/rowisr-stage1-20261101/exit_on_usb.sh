@@ -13,13 +13,13 @@ PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>&1; log "daemon paused"
-uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on; waiting for white to wake (its USB presence), up to 90 min"
+timeout 20 uhubctl -l 3-1.3.4 -p 2 -a on -e >/dev/null; log "data on; waiting for white to wake (its USB presence), up to 90 min"
 n=0
 while ! present; do
     n=$((n + 1))
     if [ "$n" -ge 2700 ]; then
         log "no wake in 90 min: giving up"
-        uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"
+        timeout 20 uhubctl -l 3-1.3.4 -p 2 -a off -e >/dev/null; log "data off"
         launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"
         exit 1
     fi

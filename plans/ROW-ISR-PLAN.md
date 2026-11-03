@@ -2842,3 +2842,42 @@ quantization, above the largest new tolerance of 28.389 ms.
   met, hands-free. Stage 3's fix `3673b234f0` (token `0x0a2f280e`, heap
   gap 408 B, the daily variant 2,656 B, pushed) is with codex for a
   verify round; `stage3_flash.sh` points at it.
+- 11-03 03:12: codex's verify of `3673b234f0`: **READY TO FLASH** for the
+  controlled dev flash on white
+  (`review-codex-row-isr-stage3-verify-2026-11-03-raw.md`): the settle
+  fix right for both periods (one TC read a loop, the elapsed time modulo
+  12,816 or 30,000; no early sample, no stuck loop; the wait's bound is
+  settle plus one iteration without preemption, longer with it, never
+  shorter), the rig refusal and sentinels right, the daily no-op safe,
+  the vector's instructions unchanged but for the settle. One leftover
+  fixed: the status printout now warns on `col_map_fault`. **Stage 3
+  flashed on white at 03:12** (`stage3_flash.sh`, token `0x0a2f280e`):
+  the FRMNO scan, the six-row fairness, the short-tap gate with the
+  counts at the scan, Q1's settle sweep (the chord at JD's lighting,
+  then solid red, green and blue), the silence set, the warm windows,
+  five wakes, in that order.
+- 11-03 04:20: **stage 3's first run on white** (`3673b234f0`, 03:12
+  on; the README's "Stage 3 on white"): the status clean; **the frame
+  counter's tear seen directly** (sub 14: 48 torn reads in 16.8 million,
+  0x7FF -> 0x700 -> 0x000, 0x1FF -> 0x100: the register updates in two
+  steps at a byte carry, the torn state ~4-6 HCLK cycles, one USB clock),
+  and the adjacent double read did not beat it (23 rejections in the
+  first hour where 3 were expected, the last at 0/256): **`67a4ccf2b3`
+  spaces the two reads twelve cycles apart**, built (token `0x4326ec84`),
+  codex asked (`review-prompt-row-isr-stage3-frmno.txt`). **The gates
+  that ran: six-row fairness within one; the short-tap gate exact at 25,
+  15, 12 and 10 ms on both channels and with the chord, every press and
+  release counted at the scan and `raw_edges` exact (the undercount
+  gone), nothing elsewhere, `row_gap_max` 5 ms; 69 of 100 at 8 ms (the
+  old scan 76: the scan saw all 100, debounce against the main loop's
+  pass dropped them, to be re-sampled); Q1's sweep 19 of 19 exact at
+  every setting from 96 ticks to none under JD's lighting and solid red,
+  green and blue (the default stays 2 us, all margin); the silence set's
+  fourteen USB cases exact.** Not run: the two battery cases and the warm
+  windows (the ladder slept the board at the first data cut, 23 min past
+  the last key; the runners now hold the ladder or wake it); deep sleep's
+  wakes running. Two `uhubctl` hangs cost 48 min (an on within a second
+  of an off; every runner now pauses 3 s and bounds it with a timeout).
+  Next: `stage3b_flash.sh` (the spaced reads; a 10 min frame-counter
+  watch, the short-tap gate, the silence set with the hold, the warm
+  windows, the boundary batches, then `soak_watch.sh` until the morning).
