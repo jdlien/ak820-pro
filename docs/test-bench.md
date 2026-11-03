@@ -186,8 +186,9 @@ install it.
   - `on` at 13:11:29.28: back 0.7 s later, with no hang;
   - the board stayed on battery and linked throughout.
 - **Check the port map first** (`uhubctl -l 3-1.3.4`, status only) after any
-  re-cabling, and run it under a timeout: an `-a on` once hung on macOS.
-  macOS has no `timeout`; `perl -e 'alarm 10; exec @ARGV' uhubctl …` works.
+  re-cabling, and run it under a timeout: an `-a on` hangs on macOS at times
+  (below, "what it can and cannot do"). Buzz has `/usr/bin/timeout`; on a
+  Mac without it, `perl -e 'alarm 10; exec @ARGV' uhubctl …` works.
   ⚠️ On 10-15 that status call printed nothing within 10 s, with the keyboard
   still on port 2 (`ioreg`: `AK820 PRO@00142000`). Recheck before a trial
   relies on the data cut.
@@ -299,6 +300,12 @@ set them up, so they sat in the hub's reset state.
   hub, including whichever one the keyboard is on.
 - On macOS, an `-a on` for a USB2 port with a device on it hung *after* it
   had worked. Run uhubctl under a timeout.
+  - ⚠️ **Twice more on Buzz, the night of 11-03** (white, port 2 of
+    `3-1.3.4`): each an `-a on` sent within a second of another script's
+    `-a off`. Both sat idle, 26 and 22 min, with the on already in effect
+    (white back on USB, awake and lit), until killed by hand. The bench's
+    runners since pause 3 s before their first `-a on` and bound every
+    uhubctl call with `timeout 20`.
 
 ## An automated trial
 
