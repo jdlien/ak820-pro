@@ -1,0 +1,7 @@
+[
+{"t": "05:12:28", "press_to_present_s": 10.4, "key_presses": 202, "raw_edges": 404, "epoch_losses": 4, "spurious": 2, "invalid_services": 3, "usb_rejects": 0, "usb_events": 3, "loss_gen": 6, "key_presses_delta": 1, "losses_delta": 2, "spurious_delta": 0, "pass": true}
+,
+{"t": "05:15:46", "press_to_present_s": 10.3, "key_presses": 203, "raw_edges": 406, "epoch_losses": 6, "spurious": 2, "invalid_services": 4, "usb_rejects": 0, "usb_events": 4, "loss_gen": 9, "key_presses_delta": 1, "losses_delta": 2, "spurious_delta": 0, "pass": true}
+,
+{"t": "05:19:03", "press_to_present_s": 10.4, "key_presses": 204, "raw_edges": 408, "epoch_losses": 8, "spurious": 2, "invalid_services": 5, "usb_rejects": 0, "usb_events": 5, "loss_gen": 12, "key_presses_delta": 1, "losses_delta": 2, "spurious_delta": 0, "pass": true}
+]

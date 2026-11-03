@@ -1,8 +1,60 @@
 # Current status
 
-Updated 2026-11-02, 20:55. The block below is where things stand, written to
+Updated 2026-11-03, 05:25. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-11-03 night — stages 3 and 4 of the row ISR rewrite went onto white hands-free; stage 4b is on it with the night's soak
+
+JD's advance go at 02:25 ("continue development autonomously, pressing
+keys, measuring power draw, etc and flashing builds as you see fit"), the
+presser built on the logger's QT Py (A1 = (0,13) Delete = F19, A0 =
+(3,14) PgDn = F20), driven from the logger's REPL by
+`scripts/presser_repl.py`; every flash of the night woken, pressed and
+read with no hand on the board. The record, run by run:
+[`../history/rowisr-stage1-20261101/README.md`](../history/rowisr-stage1-20261101/README.md),
+from "The exit-only build's flash" on; the plan's process log from
+02:27.
+
+**On white since 05:08: stage 4b, `row-isr` `6b90f3b821`** (dev, token
+`0x4215c3e2`, heap gap 400 B): stage 3's scan without mode writes (the
+key row selected and deselected by BSET/BCLR alone, the columns as two
+port reads, the settle on the scheduler's counter, the consume's XOR under
+its lock, the rig's keys counted at the scan), the frame counter read
+twice twelve cycles apart (the register tears at a byte carry, seen
+directly: 48 torn reads in 16.8 million), the sections opt-in, and the
+clock chip's transaction with the row ISR running through it for the
+ordinary 10 ms transactions while the 5 ms ones (the pre-sleep read, the
+wake's recovery) keep the hold-off. **What passed tonight:** the exit-only
+build (6.6 us back by the stamps); the short-tap gate exact at 25, 15, 12
+and 10 ms on both channels and with a cross-row chord, every press and
+release counted at the scan and `raw_edges` exact (the consume's
+undercount gone); the 8 ms boundary 72 +/- 2 of 100 over six batches
+against the old scan's 76, the scan exact on all of them (debounce's
+against the main loop's pass); Q1's settle sweep 19 of 19 exact from 2 us
+down to no settle under JD's lighting and solid red, green and blue (the
+default stays 2 us, all margin); six-row fairness within one; the silence
+set 16 of 16 on stage 3b; deep sleep's wakes with the waking key kept 5
+of 5 on the exit build, 5 of 5 on stage 3, 3 of 3 on stage 4 and 3 of 3
+on 4b; page 4's handler mean 71.6 us a slot at 26.8% CPU (the detector
+78.8, the sections' commit had hidden the exit-only saving). **What stage
+4 taught:** unmasked, a 7-byte clock read stretches to ~5.5 ms, twice its
+2.6 (the handler and the 20 kHz tick), so the deep sleep's 5 ms reads
+timed out at 1.7% in a burst; 4b keeps the hold-off for those alone. The
+night's soak (`soak_watch_awake.sh`, data on, the daemon syncing, a read
+every 20 min to `soak-stage4b.jsonl`) is the test of the ordinary
+transactions' margin under 10 ms (op 22's per-kind maxima, `i2c_fail`
+flat, the writer's runs and brackets). **Owed to JD:** the camera gate on
+4b (a forced PCF write with no dark frame, on USB and off; `pcf-unseen`'s
+deferral stays until it passes); his eye on the light and the keys; the
+plan's open question (two silences within 2 ms counted as two, the
+per-slot judgment's ~12 us over stage 2); stage 5 waits on the witness
+and the camera. Bench lessons of the night in the README's sections: an
+`uhubctl -a on` within a second of another script's `-a off` hangs
+(every runner pauses 3 s and bounds it), the ladder deep-sleeps the board
+at a data cut when the last key is more than 3 min back (hold it or wake
+it), a REPL soft reboot of the logger's QT Py does not restart the
+drain's count.
 
 ## 2026-11-02 afternoon — D3's USB frame-counter detector is on white, its silence set 16 of 16
 

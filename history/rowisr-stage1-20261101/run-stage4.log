@@ -1,0 +1,45 @@
+[04:54:30] stage 0 run 'stage4' -> history/rowisr-stage1-20261101
+[04:54:30] board token 0x8a213e0e
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[04:54:31] power mode 2 (stage 0, cap 128) -> Always on for the run
+[04:54:31] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        22.9 %
+    pack           3800 mV  (estimate 5C 73)
+    module 5C    last 73%, 0 s ago
+    vdd          3900 mV  (raw 2095, since boot 3896..3903 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    9.3 % of maximum
+    flags        on_batt done rgb_on linked
+[04:54:31] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[04:54:55]   3745.3 ISR/s, mean 70.9 us, max 122.7 us, cpu 26.6%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 3 ms, uart overruns 0, timeouts 7
+[04:54:57] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[04:55:21]   3745.2 ISR/s, mean 70.9 us, max 144.0 us, cpu 26.6%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 5 ms, uart overruns 0, timeouts 9
+[04:55:23] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[04:55:47]   3745.3 ISR/s, mean 70.9 us, max 122.7 us, cpu 26.5%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 8 ms, uart overruns 0, timeouts 9
+[04:55:47] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[04:55:48] done -> history/rowisr-stage1-20261101/stage4.json
+
+stage4: token 0x8a213e0e, 2026-11-03 04:54:31
+  idle       3745.3 ISR/s  mean   70.9 us  max   122.7 us  cpu  26.6%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 3 ms  overruns 0  timeouts 7
+  repaint    3745.2 ISR/s  mean   70.9 us  max   144.0 us  cpu  26.6%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 5 ms  overruns 0  timeouts 9
+  pcf        3745.3 ISR/s  mean   70.9 us  max   122.7 us  cpu  26.5%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 8 ms  overruns 0  timeouts 9

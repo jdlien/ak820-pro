@@ -1,0 +1,2 @@
+presses through the PCF burst: key_presses +200 (want 200), raw_edges +400 (want 400), row_gap_max 9 ms -> PASS
+stalls after: {'count_ge_10ms': 0, 'count_ge_25ms': 0, 'flash_gap_max_ms': 0, 'blit_gap_max_ms': 0, 'i2c_gap_max_ms': 0, 'count_ge_25ms_nonflash': 0, 'loop_gap_max_mark': 'none', 'row_gap_max_ms': 9, 'raw_edges': 400, 'cooked_changes': 400, 'row_gap_max_row': 3}

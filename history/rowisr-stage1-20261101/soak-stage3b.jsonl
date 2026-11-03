@@ -1,0 +1,1 @@
+{"t": "2026-11-03 04:51:30", "read": 1, "woke": false, "key_presses": 585, "raw_edges": 1400, "row_gap_max_ms": 5, "epoch_losses": 1, "spurious": 0, "invalid_services": 1, "late_omit": 0, "usb_checked": 549333, "usb_rejects": 0, "usb_events": 1, "usb_last": [0, 0], "vitals": {"build_token": "0x4326ec84", "uptime_s": null, "resets": null, "wdt_resets": null}, "stalls": null}

@@ -3012,3 +3012,18 @@ quantization, above the largest new tolerance of 28.389 ms.
   exercises held reads only. D6 and stage 4's gate superseded with the
   measured ~5.5 ms tail and the short-deadline exception (above). The
   flash queued behind stage 4's wakes.
+- 11-03 05:19: **stage 4b on white (`6b90f3b821`, 05:07)**: the held
+  burst of 300 clean with the presses exact through it, the stuck test
+  one failure of its own with the restart and 20 clean reads after, three
+  wakes with the key kept and no recovery failure, the frame counter
+  clean (the README's "Stage 4b on white"). **The awake soak runs until
+  the morning** (`soak_watch_awake.sh stage4b`, a read every 20 min; the
+  night's question: the writer's 8-byte write at the measured stretch
+  against 10 ms, op 22's "PCF write" maximum, `i2c_fail` flat, the
+  writer's runs and brackets settling). **Owed to JD in the morning:**
+  the camera gate (a forced PCF write with no dark frame, on USB and
+  off; `pcf-unseen`'s deferral stays until it passes), his eye on the
+  light and the keys, the plan's open question (two silences within 2
+  ms as two, ~8-12 us a slot: page 4 is 70.9-71.6 us against stage 2's
+  59.8), and stage 5's instruments (the witness, the camera) before the
+  cadence moves.

@@ -135,7 +135,22 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 02:27 11-03: the exit-only build, `f0ec5c68df`** (dev,
+**On white since 05:08 11-03: stage 4b of the row ISR rewrite,
+`6b90f3b821`** (dev, token `0x4215c3e2`, heap gap 400 B, `row-isr`):
+stage 3's scan without mode writes (BSET/BCLR only, two port reads, the
+settle on the scheduler's counter, the consume's XOR under its lock, the
+rig's keys counted at the scan, op 28 subs 12-14), the frame counter read
+twice twelve cycles apart (it tears at a byte carry), the sections
+opt-in (`ROWISR_SECTIONS`), and the clock chip's ordinary transactions
+with the row ISR running through them, the 5 ms ones still held off (a
+7-byte read stretches to ~5.5 ms unmasked). Flashed and gated hands-free
+on JD's advance go for the night with the presser (every short-tap,
+chord, settle, silence and wake gate exact; page 4 71.6 us a slot); the
+night's awake soak runs to the morning; JD's camera gate (a forced PCF
+write, no dark frame) is owed before `pcf-unseen`'s deferral goes
+(`plans/current-status.md`, the 11-03 night block;
+`history/rowisr-stage1-20261101/README.md`).
+**Before it, from 02:27 11-03: the exit-only build, `f0ec5c68df`** (dev,
 token `0x9e2d894a`, heap gap 408 B, `row-isr`): the diagnostic below with
 the exit snapshot time only and the elapsed sample's verdict by the two
 spans and the bus-event generation; flashed on JD's advance go for the

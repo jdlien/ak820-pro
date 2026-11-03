@@ -1,0 +1,7 @@
+OE observed 0 (+0 in the drain's re-reads), bytes refused 0; lock unlocked, UART2 at 0; RX tap 0 bytes (disarmed)
+  seen with: a PCF transaction 0, a flash write 0, a sleep 0, the depth probe 0, none 0; receiver-off intervals 0
+  longest handlers: USB 0.08 ms, system timer 0.016 ms, UART2 0.011 ms
+  gap monitor off: 0 ticks, gaps >= 128 us 0, >= 197 us 0, >= 347 us 0; longest 0.0 ms
+  PCF read 1 (4 B)        7 (0 failed); longest masked 0.005 ms, whole call 2.368 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 14
+  PCF read 7 (10 B)       2 (0 failed); longest masked 0.005 ms, whole call 5.659 ms; spans >= 1.0 ms 0, >= 1.4 ms 0 of 4
+  burst: 0 done, 0 failed, 0 left, 0 skipped passes, 0 ms first to last (40-80 ms gaps)

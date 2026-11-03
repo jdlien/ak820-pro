@@ -919,6 +919,30 @@ night's awake soak to show it (op 22's per-kind maxima every 20 min,
 flashed at 05:08. The camera gate, a forced write with no dark frame on
 USB and off, stays JD's; `pcf-unseen`'s deferral stays until it passes.
 
+### Stage 4b on white (11-03, 05:07-05:19, `stage4b_flash.sh`, `6b90f3b821`): the burst clean, the stuck test as designed, three wakes kept, the awake soak on
+
+The hold-off kept for the 5 ms transactions alone. Flashed
+05:07:24-05:07:55 (token 0x8a213e0e to 0x4215c3e2). **The burst with
+presses through it** (`burst-presses-stage4b.txt`,
+`rtc-status-stage4b-burst.txt`): 300 held 7-byte reads, **none failed**
+(`i2c_fail` 0), the 200 presses exact (key_presses +200, raw_edges +400),
+`row_gap_max` 9 ms during the held reads (each a ~2.6 ms gap in the scan,
+as before stage 4; the plan's gate judges the hold-off's windows apart).
+**The stuck test** (`stuck-stage4b.txt`): one failure, its own, the 10 ms
+deadline (`i2c_max_cycles` 330), one pass >= 10 ms and none >= 25, 20
+ordinary reads after it clean; op 22's spans zeroed after it so the
+night's maxima are the healthy ones. **Three sleeps and wakes**
+(`deep-wake-stage4b.json`): every key kept, `i2c_fail` unchanged at 1,
+`stale_count` 0 (the held pre-sleep reads and recoveries). Two spurious
+invocations across the held burst and the first wake, counted and
+harmless. **The awake soak** started at 05:19 (`soak_watch_awake.sh
+stage4b`: data on, the daemon syncing the clock every 5 min, a read
+every 20 min of the handler's record, the frame counter, the health
+vitals and stalls, page 2 and 4 and op 22's per-kind whole-call maxima:
+`soak-stage4b.jsonl`, the summary lines in `stage4b-flash-run.log`). Its
+first read: 170 1-byte reads at 1.76 ms whole-call max, 19 7-byte reads,
+none failed, the frame counter 232,279 judged and none rejected.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
