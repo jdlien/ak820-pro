@@ -65,7 +65,9 @@ reads.
 - **The ~62 s bursts before 19:20 were not wakes.** From 17:45 to 19:20 the
   logger shows ~14.5 mA for ~10 s every ~62 s. That is the radio module's
   level; the MCU awake draws 27 mA or more. They stopped after the 19:44
-  flash, with the daemon running or paused. Their cause is open.
+  flash, with the daemon running or paused. Their cause, found 11-02: the
+  Mac's lock-light frames into the sleeping board, one burst a minute
+  ([`docs/wireless.md`](../../docs/wireless.md), "The module ends the link").
 - **The row ISR session's 20:07:15 "no board on USB" was a host-side miss.**
   The kernel log shows white's interfaces starting at 20:06:11.55, 0.5 s
   after the data came on. The check was `system_profiler SPUSBDataType |

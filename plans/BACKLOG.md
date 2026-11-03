@@ -1185,17 +1185,23 @@ columns are edge sensed. Its cost is small: a 3 s wake, about one sleep in
 on. While a source is asserted it pends again. That is the shape for
 codex, not a decision.
 
-**Not at a radio link drop, as far as white's logger shows** (1 Hz, so a
-pulse under a second is invisible). One lead was that the radio module's
-bursts couple onto the columns. Those bursts are ~14.5 mA for ~10 s every
-~62 s, taken for relink attempts. Two things go against that lead:
+**Not at a link drop, and not at a lock-light burst, as far as the logs
+show.** One lead was that radio activity couples onto the columns. Two
+kinds were checked: the link's loss, and the ~14.5 mA bursts of ~10 s
+every ~62 s, which are the Mac's lock-light frames into the board
+(docs/wireless.md, "The module ends the link"). White's logger is 1 Hz,
+so a pulse under a second is invisible to it.
+- **White's link was up.** The Mac's log has white's drops at 22:56:28
+  11-01 and 12:09:55 11-02, and none near 11:31.
 - **No burst came before the stray.** The logger read 3.25 and 3.84 mA at
-  11:31:02-03, and the MCU was awake at 11:31:04-06. That episode's first
-  burst came at 11:31:07, the second the MCU slept again. It ran 11 bursts
-  to 11:40:05, then stopped.
+  11:31:02-03, and the MCU was awake at 11:31:04-06. The episode's first
+  burst came at 11:31:07, the second the MCU slept again; the daemon sent
+  a clock frame at 11:31:14. The bursts followed the wake. They ran to
+  11:40:05.
 - **Two episodes began inside the night's deep sleep with no stray:**
   21:27:47 and 21:47:57 11-01, each from ~3.4 mA. The ring's only stray
-  since the 19:44 boot is #4.
+  since the 19:44 boot is #4. This agrees with 10-20's test: 80 frames
+  into 10 sleeps, no stray.
 
 Black's ring at its next replug is the other check: is there a stray near
 its link's loss at ~11:50 11-02?
