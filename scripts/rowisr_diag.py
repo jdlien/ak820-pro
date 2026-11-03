@@ -11,6 +11,9 @@ stage 1 of plans/ROW-ISR-PLAN.md (rgb/rowisr_diag.c in the firmware).
     venv/bin/python scripts/rowisr_diag.py usb                       the USB frame counter's record and the clocks' state (D3 case 5)
     venv/bin/python scripts/rowisr_diag.py silence MS [DELAY]        a silence of every interrupt, 1..8000 ms (fractions allowed: 7.5), after DELAY ms (200)
     venv/bin/python scripts/rowisr_diag.py report                    the last silence's report: the spin's length, the extension's reading across it
+    venv/bin/python scripts/rowisr_diag.py rig [R0 C0 R1 C1]         the rig's keys counted at the scan since the last read (stage 3); sets the positions first if given
+    venv/bin/python scripts/rowisr_diag.py settle [TICKS]            the column settle after the row select, HCLK ticks (96 = 2 us); sets it if given (Q1's sweep)
+    venv/bin/python scripts/rowisr_diag.py frmscan [MS]              FRMNO read back to back for MS ms (arms), or the scan's state so far
     ... --json                                                       the reply as JSON, decoded
 
 `regs` reads a timer's registers as they stand (TIMER 0-5, CT16Bn; PAGE 0 is
@@ -70,7 +73,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from ak820health import open_device  # noqa: E402
 
 SET_VALUE, CH, HC, OP = 0x07, 0x13, 0x76, 28
-USAGE = "usage: rowisr_diag.py regs [TIMER|all] [PAGE] | hold MS | skip MS | status | record | usb | silence MS [DELAY] | report | readcost | sections | led INDEX R G B | led off  [--json]"
+USAGE = "usage: rowisr_diag.py regs [TIMER|all] [PAGE] | hold MS | skip MS | status | record | usb | silence MS [DELAY] | report | readcost | sections | rig [R0 C0 R1 C1] | settle [TICKS] | frmscan [MS] | led INDEX R G B | led off  [--json]"
 
 
 def xfer(h, sub, args=b""):
@@ -217,7 +220,9 @@ def main():
     ok = (cmd == "regs" and len(args) <= 3 and all(a == "all" or a.isdigit() for a in args[1:])) or \
          (cmd in ("hold", "skip") and len(args) == 2 and args[1].isdigit()) or (cmd in ("status", "record", "usb", "report", "readcost", "sections") and len(args) == 1) or \
          (cmd == "silence" and 2 <= len(args) <= 3 and all(a.replace(".", "", 1).isdigit() for a in args[1:])) or \
-         (cmd == "led" and (args[1:] == ["off"] or (len(args) == 5 and all(a.isdigit() for a in args[1:]))))
+         (cmd == "led" and (args[1:] == ["off"] or (len(args) == 5 and all(a.isdigit() for a in args[1:])))) or \
+         (cmd == "rig" and (len(args) == 1 or (len(args) == 5 and all(a.isdigit() for a in args[1:])))) or \
+         (cmd in ("settle", "frmscan") and (len(args) == 1 or (len(args) == 2 and args[1].isdigit())))
     if not ok:
         sys.exit(USAGE)   # before the board is opened: a typo must not cost a raw HID open
     h = open_device()
@@ -279,7 +284,10 @@ def main():
         elif cmd == "sections":   # op 28 sub 11: the handler's sections since the last read, HCLK ticks summed; two reads make a window
             names = ["entry snapshot", "step 1 and the frame counter's judgment", "steps 2-5 (mux rows, scan, match registers)",
                      "step 6 (the arm)", "exit snapshot", "exit judgment and the record"]
-            xfer(h, 11)   # reset
+            try:
+                xfer(h, 11)   # reset
+            except SystemExit:
+                sys.exit("the sections are not compiled in: a build with ROWISR_SECTIONS=1 has them (rowisr.h; ~6 us a slot of commit)")
             time.sleep(10)
             o = xfer(h, 11)[4:]
             n = u32(o, 0)
@@ -295,6 +303,37 @@ def main():
                 for nm, us in zip(names, d["sections_us"]):
                     print(f"  {us:8.2f}  {nm}")
                 print(f"  {d['total_us']:8.2f}  total, stamp 0 to stamp 6: the ISR hooks and the sums' own commit lie outside, page 4 includes them")
+        elif cmd == "rig":   # op 28 sub 12: the rig's keys counted at the scan; the read zeroes the counts
+            pos = bytes(int(a) for a in args[1:]) if len(args) == 5 else bytes([0xFF, 0xFF, 0xFF, 0xFF])
+            o = xfer(h, 12, pos)[4:]
+            d = {"key0": {"row": o[10], "col": o[11], "presses": u16(o, 0), "releases": u16(o, 2)},
+                 "key1": {"row": o[12], "col": o[13], "presses": u16(o, 4), "releases": u16(o, 6)},
+                 "other_presses": u16(o, 8)}
+            if as_json:
+                print(json.dumps(d))
+            else:
+                print(f"since the last read: ({d['key0']['row']},{d['key0']['col']}) {d['key0']['presses']} presses, {d['key0']['releases']} releases; "
+                      f"({d['key1']['row']},{d['key1']['col']}) {d['key1']['presses']} presses, {d['key1']['releases']} releases; "
+                      f"presses on every other key {d['other_presses']}")
+        elif cmd == "settle":   # op 28 sub 13: the column settle, HCLK ticks
+            t = int(args[1]) if len(args) == 2 else 0xFFFF
+            o = xfer(h, 13, bytes([t & 0xFF, t >> 8]))[4:]
+            d = {"settle_ticks": u16(o, 0), "settle_us": round(u16(o, 0) / 48.0, 3)}
+            print(json.dumps(d) if as_json else f"the column settle: {d['settle_ticks']} HCLK ticks ({d['settle_us']} us){' (set)' if t != 0xFFFF else ''}")
+        elif cmd == "frmscan":   # op 28 sub 14: FRMNO read back to back
+            ms = int(args[1]) if len(args) == 2 else 0
+            o = xfer(h, 14, bytes([ms & 0xFF, ms >> 8]))[4:]
+            d = {"reads": u32(o, 0), "plus1": u32(o, 4), "other": u32(o, 8), "ms_left": u16(o, 12),
+                 "pairs": [[u16(o, 15 + 4 * i), u16(o, 17 + 4 * i)] for i in range(min(o[14], 3))]}
+            d["same"] = d["reads"] - d["plus1"] - d["other"]
+            if as_json:
+                print(json.dumps(d))
+            elif ms:
+                print(f"FRMNO scan armed for {ms} ms (3 ms a pass from the housekeeping task); read it back with `frmscan`")
+            else:
+                print(f"FRMNO back to back: {d['reads']} reads, {d['plus1']} steps of +1, {d['other']} other steps, {d['ms_left']} ms left; "
+                      f"pairs kept: {', '.join(f'0x{p[0]:03x} -> 0x{p[1]:03x}' for p in d['pairs']) or 'none'}"
+                      + ("  (a torn read looks like 0x0ff -> 0x000; a preemption like 0x123 -> 0x126)" if d["other"] else ""))
         elif cmd == "usb":   # op 28 sub 6
             d = usb_dict(xfer(h, 6))
             if as_json:

@@ -1,0 +1,51 @@
+[02:39:48] daemon paused
+[02:39:48] data on
+[02:39:52] token 0x9e2d894a (want 0x9e2d894a)
+[02:39:52] logger paused
+[02:40:19] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 25 ms, actual min 25054 max 25482 mean 25088 us, gap 75 ms, total 20045 ms
+[02:40:19] QT Py soft-rebooted into its logger
+[02:40:19] logger back
+[02:40:21] logger logging again (a new power.csv row)
+[02:40:23] A1 x200 at 25 ms: key_presses +200 (expected 200), raw_edges +399 (expected 400), dwell actual 25054-25482 us, row_gap_max 10 ms -> PHANTOM
+[02:40:23] logger paused
+[02:40:49] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15107 us, gap 85 ms, total 20059 ms
+[02:40:49] QT Py soft-rebooted into its logger
+[02:40:49] logger back
+[02:40:51] logger logging again (a new power.csv row)
+[02:40:53] A1 x200 at 15 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 15045-15441 us, row_gap_max 10 ms -> PASS
+[02:40:53] logger paused
+[02:41:19] A0 (yellow, (3,14) PgDn/F20): 200 presses, dwell asked 25 ms, actual min 25054 max 25451 mean 25116 us, gap 75 ms, total 20049 ms
+[02:41:19] QT Py soft-rebooted into its logger
+[02:41:19] logger back
+[02:41:21] logger logging again (a new power.csv row)
+[02:41:23] A0 x200 at 25 ms: key_presses +200 (expected 200), raw_edges +399 (expected 400), dwell actual 25054-25451 us, row_gap_max 10 ms -> PHANTOM
+[02:41:23] logger paused
+[02:41:39] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 12 ms, actual min 12054 max 12451 mean 12149 us, gap 88 ms, total 10029 ms
+[02:41:40] QT Py soft-rebooted into its logger
+[02:41:40] logger back
+[02:41:42] logger logging again (a new power.csv row)
+[02:41:43] A1 x100 at 12 ms: key_presses +100 (expected 100), raw_edges +199 (expected 200), dwell actual 12054-12451 us, row_gap_max 10 ms -> PHANTOM
+[02:41:43] logger paused
+[02:41:59] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 10 ms, actual min 10040 max 10559 mean 10081 us, gap 90 ms, total 10024 ms
+[02:42:00] QT Py soft-rebooted into its logger
+[02:42:00] logger back
+[02:42:02] logger logging again (a new power.csv row)
+[02:42:03] A1 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10559 us, row_gap_max 10 ms -> PASS
+[02:42:03] logger paused
+[02:42:19] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8453 mean 8123 us, gap 92 ms, total 10026 ms
+[02:42:20] QT Py soft-rebooted into its logger
+[02:42:20] logger back
+[02:42:22] logger logging again (a new power.csv row)
+[02:42:23] A1 x100 at 8 ms: key_presses +76 (expected 100), raw_edges +199 (expected 200), dwell actual 8056-8453 us, row_gap_max 10 ms -> MISSING
+[02:42:23] logger paused
+[02:42:30] A0 held (yellow, (3,14) PgDn/F20)
+[02:42:40] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 25 ms, actual min 25054 max 25451 mean 25087 us, gap 75 ms, total 10021 ms
+[02:42:41] A0 released
+[02:42:41] QT Py soft-rebooted into its logger
+[02:42:41] logger back
+[02:42:43] logger logging again (a new power.csv row)
+[02:42:45] A1 x100 at 25 ms with A0 held: key_presses +101 (expected 101), raw_edges +202 (expected 202), dwell actual 25054-25451 us, row_gap_max 10 ms -> PASS
+RESULT: 3 of 7 batches exact
+[02:42:45] done -> history/rowisr-stage1-20261101/presser-gate-exit.json
+[02:42:45] data off
+[02:42:45] daemon restarted

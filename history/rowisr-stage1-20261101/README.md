@@ -651,6 +651,41 @@ The record after the runner (`record-exit-after.txt`): losses 0, invalid
 runner: the pcf window's hold-offs; 1 before the runner in 20,293
 services). The frame counter after: 165,610 judged, none rejected.
 
+### The presser's short-tap baseline on the exit-only build (11-03, 02:37-02:43, `presser_gate.sh exit`): exact to 10 ms, the boundary at 8
+
+The scan's gate counted at the board, the first run of the rig the plan
+asked for ("The key-press rig"): batches pressed from the logger's REPL
+(`scripts/presser_repl.py`, the dwell on the QT Py's clock, ~1 ms
+resolution, the actual min and max reported), the counts read before and
+after each over the data line with the daemon paused (`presser_count.py`:
+health page 2's `key_presses`, after debounce, and page 3's `raw_edges`,
+before it; a press is one key_press and two raw edges). The board woke
+from its deep sleep on the script's own first press. The old scan (stage
+2's, the interim scanner with its mode writes) on `f0ec5c68df`
+(`presser-gate-exit.json`, `.log`):
+
+| Batch | dwell asked, actual (us) | key_presses | raw_edges |
+|---|---|---|---|
+| A1 (0,13) x200, 75 ms gap | 25 ms, 25,054-25,482 | 200 of 200 | 399 of 400 |
+| A1 x200 | 15 ms, 15,045-15,441 | 200 of 200 | 400 of 400 |
+| A0 (3,14) x200 | 25 ms, 25,054-25,451 | 200 of 200 | 399 of 400 |
+| A1 x100 | 12 ms, 12,054-12,451 | 100 of 100 | 199 of 200 |
+| A1 x100 | 10 ms, 10,040-10,559 | 100 of 100 | 200 of 200 |
+| A1 x100 | 8 ms, 8,056-8,453 | **76 of 100** | 199 of 200 |
+| A1 x100 at 25 ms with A0 held | 25 ms | 101 of 101 | 202 of 202 |
+
+**Every press of 10 ms or more registered, on both channels and with a
+cross-row key held** (the chord: A0's own press and release counted once,
+no phantom on either column, no leak); **at 8 ms a quarter are lost**,
+the debounce boundary (sym_defer_pk, 5 ms, a row sampled every 800 us):
+the old rig put it near 10 ms, and this is the number stage 3 must not
+worsen. `raw_edges` short by one in three of the batches is the consume's
+known undercount (the unlocked compare, BACKLOG.md), which stage 3's
+locked XOR removes: on it the column must read exact. `row_gap_max`
+10 ms through the run (the counters not reset before it; the script
+resets them now). An earlier launch found white asleep and stopped: the
+script now wakes it with one press first.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

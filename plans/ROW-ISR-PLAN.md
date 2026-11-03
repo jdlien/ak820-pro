@@ -2765,3 +2765,38 @@ quantization, above the largest new tolerance of 28.389 ms.
   (`presser_gate.sh exit`: 200 at 25 and 15 ms, the 8-12 ms boundary,
   a cross-row chord, counted at the board), deep sleep's wakes with the
   key kept, and stage 3's code.
+- 11-03 02:43: **the presser's short-tap baseline on `f0ec5c68df`**
+  (`presser_gate.sh exit`, the README's "The presser's short-tap
+  baseline"): key_presses exact at 25, 15, 12 and 10 ms dwell on both
+  channels and with A0 held through 100 presses of A1 (101 of 101, no
+  phantom, raw_edges 202 exact); 76 of 100 at 8 ms, the debounce boundary
+  the old rig put near 10 ms: stage 3's number to beat or match.
+  raw_edges one short in three batches, the consume's undercount stage 3
+  removes.
+- 11-03 02:49: **stage 3 built: `cf7b61560d`** (token `0x4d34c491`, heap
+  gap 408 B, pushed): D3 step 3 as specified. The key row selected by one
+  BCLR and deselected by one BSET (`palClearLine`/`palSetLine`), the
+  interim scanner's `gpio_set_pin_output` (a read-modify-write of the
+  port's MODE on every scan) gone from the hot path, so the handler
+  writes no MODE, CFG or whole DATA register; the columns read as two
+  port words (GPIOA, GPIOC) assembled in MATRIX_COL_PINS order
+  (`columns_read`), the pin table checked against that order at init
+  (op 28 sub 2 [31]); the settle after the select timed on T_SCHED's TC,
+  96 ticks (2 us), a dev knob (sub 13, 0..4800) for Q1's sweep; the rig's
+  keys' rising and falling edges and every other key's presses counted at
+  the scan (dev sub 12); the consume's XOR taken under its lock with the
+  copy and handed to `input_note_consume(diff, rows)`, so `raw_edges` is
+  exact; `frmno_read()` (two reads, a third if they differ) at every
+  FRMNO read of the detector, for the torn read behind the 0/256 ms
+  rejections, and a dev scan of the register (sub 14, 3 ms a pass from
+  the housekeeping task) to see the tear; the sections opt-in
+  (`ROWISR_SECTIONS`, off). Vector90 1,475 instructions (from 1,509), no
+  setpadmode call, one local outlined tail under a mask (the compiler's);
+  `matrix_scan_custom` calls only the hook. Codex asked
+  (`review-prompt-row-isr-stage3.txt`): the invariant's every path (the
+  rows high at every scan, deep sleep's entry and exit), the bit
+  assembly, the settle loop, the locked XOR, the counters' races, the
+  torn-read reading, the scan's slices, the sections' macros, which gates
+  the presser can settle tonight, the daily build's path. Deep sleep's
+  wakes with the key kept run on the exit build meanwhile
+  (`deep_wake_presser.sh 5 exit`).
