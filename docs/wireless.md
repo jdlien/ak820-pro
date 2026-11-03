@@ -258,6 +258,58 @@ against a hundred over BT the same day:
 - Each wake sends 9 frames with 4 ACK timeouts, every cycle; BT sends 8-9
   with 3-7.
 
+## The module ends the link 30 min after the last thing it hears (measured 2026-11-02)
+
+Six drops of white's link in two days, from the Mac's own log
+(`log show`, `bluetoothd`, the device `AK820 5.1-1`), each with reason 719
+(the remote's end), and each exactly 30:00 after the last activity the
+module saw:
+
+| The drop | 30:00 before it | What that was |
+|---|---|---|
+| 11-01 20:40:05.4 | 20:10:05 | the board's sleep (the logger's first asleep sample 20:10:11) |
+| 11-01 22:56:28.7 | 22:26:29 | the Mac's last lock-light burst into the sleeping board (22:26:29-38) |
+| 11-02 12:09:55.4 | 11:39:55 | the last burst (11:39:56-40:05) |
+| 11-02 17:15:47.8 | 16:45:48 | the sleep (16:45:53) |
+| 11-02 19:50:06.6 | 19:20:07 | a title frame (the daemon's `sent title` at 19:20:09; the burst 19:20:07-21) |
+| 11-02 21:14:52.3 | 20:44:52 | the sleep (the data cut 20:44:55, asleep 20:44:57) |
+
+So the rule is the module's own, not the firmware's: **the link ends 30 min
+after the last traffic it saw from either side**. Awake, the board's
+battery poll every 5 s feeds it, so the link never drops while the board is
+awake, whatever the typing (the three sleep cases above drop 5-6 s short of
+30:00 after the first asleep sample: the last poll). Asleep, only the Mac's
+lock-light frames feed it (one burst a minute while music plays on an
+unlocked Mac, the ~1.6 mA of `BACKLOG.md`'s item), and after 30 min of
+silence the module ends the link and goes idle: it does not advertise again
+until the next key.
+
+**What the first key after a drop costs, on the Mac** (the wake of
+22:36:55.8 after a 1 h 52 min sleep; the power logger's sample puts the key
+at ±0.1 s):
+
+| After the key | What happened |
+|---|---|
+| +0.5 s | the Mac's first connection attempt completes and drops at once (reason 762, "Retrying") |
+| +0.6 s | the retry connects (interval 30 ms, then 15) |
+| +1.2 s | encryption up, "Le link ... is ready" |
+| +1.9 s | GATT init done, the HID service found |
+| +2.4 s | macOS creates the keyboard device (`IOHIDUserDevice`, `AppleUserHIDEventDriver`; "Matched Local Keyboard ... AK820 5.1-1") |
+
+Keys pressed in those 2.4 s go nowhere: first there is no link, then no
+device. The module's part is the first ~0.5 s (its advertising starts on
+the key; the Mac was already scanning for it, in `Connecting` 39 s); the
+rest is macOS. The same two days held dozens of shorter sleeps, and the log
+shows exactly six link rebuilds, one per drop above: a sleep under 30 min,
+or any sleep while the Mac's frames keep coming, keeps the link, and the
+first key then passes straight through (48-64 ms on the bench, above). The
+firmware neither holds reports on the link state nor re-selects after a
+drop of the module's own (`ch582f_ajazz.c`, `5B 36`); it never did.
+**Before deep sleep (10-19) the board was always awake, so the link never
+dropped and every first key was instant; the 30 min drop and the 2.4 s
+rebuild came with the sleep.** The keep-alive idea is in `BACKLOG.md`
+("The first key after a long sleep").
+
 ## Host switch: clear the outgoing host's report first
 
 `bt_ui_mode_slider()` calls `clear_keyboard()` before routing flips (analysis

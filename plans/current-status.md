@@ -57,6 +57,20 @@ wires first: JD's hands). Next hands-free: the injection ops with the
 32-bit generation, the warm windows (the handler's mean under the
 detector at a held lighting state among them).
 
+**22:36, the slow first key.** After a 1 h 52 min sleep the first key on
+white took a few seconds to register on the Mac. Measured from the Mac's
+log, not the board: the module ends the Bluetooth link 30:00 after the
+last traffic it saw (six drops in two days, each to the second), and the
+rebuild at the next key takes the Mac 2.4 s, the keys in between lost.
+Awake, the 5 s battery poll keeps the link; asleep, only the Mac's
+lock-light frames do; so this came with deep sleep on 10-19, not with the
+row ISR, and a sleep under 30 min keeps the link and the first key
+instant (22:44:48, a 3 min sleep). Written up in
+[`../docs/wireless.md`](../docs/wireless.md) ("The module ends the
+link") and `BACKLOG.md` ("The first key after a long sleep"), with the
+keep-alive wake as the idea, ~0.02 mA. The trim's flash still waits on
+JD's go.
+
 ## 2026-11-02 morning — stage 2's scan-only and the wake with the RGB dark pass on white
 
 Two of the stage 2 bring-up's owed checks, each on one key from JD

@@ -514,6 +514,14 @@ frames; the 10-31 audit, F-008). Anything already in UART2's input queue at the
 admission holds the sleep off (F-020), so a frame in the pass that sleeps is
 taken by the next one.
 
+⚠️ **The module ends the BLE link 30 min after the last traffic it saw from
+either side** (measured 11-02, [wireless.md](wireless.md), "The module
+ends the link"): awake, the 5 s battery poll keeps it up; asleep, nothing
+does but the Mac's lock-light frames, so after 30 min of silent sleep the
+first key rebuilds the link, and on the Mac that takes ~2.4 s, the keys in
+between lost. A sleep under 30 min keeps the link and the first key passes
+straight through.
+
 **The wake's recovery** (`recovery_task`), each step closing on its own; the
 page's `open` bits show which are still running:
 1. **input**: the waking key counted (or the knob's detent), or 50 ms; only

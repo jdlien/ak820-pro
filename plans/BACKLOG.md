@@ -25,6 +25,47 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
+## The first key after a long sleep takes ~2.4 s to register on the Mac (2026-11-02) -- the module's 30 min idle disconnect, measured; a keep-alive wake is the idea, not built
+
+Seen at 22:36 11-02 on white, Bluetooth, after a 1 h 52 min sleep: "a few
+seconds before keystrokes registered", like the Nuphy. The Mac's own log
+has the whole chain ([`../docs/wireless.md`](../docs/wireless.md), "The
+module ends the link"): the module ends the link itself 30:00 after the
+last traffic it saw from either side (six drops in two days, each to the
+second), and after that it sits idle until a key; then the Mac connects at
++0.6 s, has the link ready at +1.2 s and the keyboard device at +2.4 s,
+and the keys in between are lost. Awake, the board's 5 s battery poll
+feeds the module's timer, so the link never drops while the board is
+awake; asleep, only the Mac's lock-light frames do (while music plays on
+an unlocked Mac, at the ~1.6 mA of the item below). So **this came with
+deep sleep (10-19)**, not with anything since: before it the board was
+always awake and the link never dropped. The same two days held dozens of
+sleeps under 30 min, every one with its link kept and its first key
+through at once (22:44:48 11-02: a 3 min sleep, "instantly registered").
+Not a firmware fault, and not the row ISR's: the firmware never held
+reports on the link state nor re-selected after the module's own drop.
+- **The idea: a keep-alive wake.** Asleep, wake every ~25 min of counted
+  seconds (the ILRC runs ~13% slow asleep, so ~28 real minutes, inside
+  the 30), send the module one poll, and sleep again with nothing lit and
+  no recovery beyond the clock's slept time. About a second at ~27 mA
+  every 28 min: ~0.02 mA on the 3.2 mA floor, for a link that never drops
+  and a first key at 48-64 ms after any absence, as before deep sleep.
+  The 24 h backstop (`DS_BACKSTOP_S`) is the shape to copy. To prove
+  first, on the bench: that one poll from a board that then sleeps again
+  restarts the module's 30 min (the awake evidence says the poll is what
+  feeds it; a wake that sends nothing would tell the two apart), and that
+  the Mac keeps a link idle for hours as it did before 10-19. 2.4G
+  untested: the dongle may hold its own link differently.
+- **Not worth doing instead:** a faster advertising start at the wake
+  (the earlier note under "Connected over BT but no typing") buys at most
+  the module's ~0.5 s of the 2.4; the rest is macOS's encryption, GATT
+  init and device creation, the same for every BLE keyboard, the Nuphy
+  included.
+- **What it is not:** the deep sleep's wake itself (the waking key is
+  counted within 50 ms and reaches the Mac in 48-64 ms when the link is
+  up), the row ISR, or the lock-light channel (its frames keep the link,
+  they do not drop it).
+
 ## The saturation read 191 after a keyed change to 0 and two deep-sleep wakes (2026-11-01) -- unexplained, noted
 
 On white, JD took the saturation of his Alphas/Mods theme (hue 178, sat
