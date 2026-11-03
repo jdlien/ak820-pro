@@ -3319,6 +3319,16 @@ quantization, above the largest new tolerance of 28.389 ms.
   per-colour and value-64 holds wait for a charge; the cost window
   re-run under the cap, the dark hold, the mixed-load window and the
   low codes next; the drain runs to the cut, uncharged, as JD wants.
+- 11-03 13:54-13:59: **5e's lit window under the cap** (a keep-lit press
+  every 100 s: below 15% the ladder takes Power saver's timings whatever
+  the mode, `power.c`'s `low`): the handler 52.3 us mean and 41.8%
+  (lit-dimmed, with the presses), 78 omissions in 2.56 M slots (R 43,
+  B 17, G 18; 5d: 87, 61/15/13), latency max 86 us with the presses'
+  USB reports (75 quiet). **The trims are in the noise**: the omissions'
+  tail is set by what preempts the handler (the USB handler's 80 us the
+  lead), not by the handler's own length; red's share fell with the
+  scan's bookkeeping moved. 5e stays the night's build. Next: the
+  mixed-load window and the dark hold, the low codes, the hand-over.
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake

@@ -1358,6 +1358,25 @@ cap); the dark hold, the mixed-load window and the low codes (values
 handler's work does not depend on the widths, only a dark row skips
 the arm).
 
+**5e's lit window under the cap (13:54-13:59, `stage5_window.sh
+0xf222e31c stage5e-lit 300`, `LIT_MIN=45`, a keep-lit press every 100 s;
+`health-isr-stage5e-lit.txt`, `health-sched-stage5e-lit.txt`,
+`record-stage5e-lit.txt`):** 8,000.5 services a second; **the handler
+52.3 us mean, 32.0 min, 128.0 max, 41.8%** (the 2 s pair at the end,
+the board dimmed under the cap at 51 mA, a press 100 s before);
+2,563,920 slots over the 320 s with the presses, **78 omitted
+(0.0030%), all by the deadline: R 43, B 17, G 18**; latency max 86.0 us
+(74.9 on 5d's quiet window: the keep-lit presses' USB reports raise
+the tail); elapsed max 102; no missed slot, no loss, no spurious;
+`row_gap_max` 3 ms. **So 5e's trims are in the noise**: the mean 52.3
+against 5d's 49.5 (different conditions: the cap, the dim, the
+presses), the omissions 78 against 87 with red's share down from 69%
+to 55% (the scan's bookkeeping behind the arm did take a little off the
+scan slots), and the tail set by what preempts the handler, not by its
+own length: the USB handler's 80 us is the lead. 5e stays the night's
+build (reviewed, no regression; its presser gate passed; the sleep path
+is 5d's).
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
