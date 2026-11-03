@@ -1,0 +1,11 @@
+[
+{"t": "04:17:59", "press_to_present_s": 10.4, "key_presses": 2891, "raw_edges": 5844, "epoch_losses": 37, "spurious": 0, "invalid_services": 48, "usb_rejects": 23, "usb_events": 4, "loss_gen": 41, "key_presses_delta": 1, "losses_delta": 2, "spurious_delta": 0, "pass": true}
+,
+{"t": "04:21:16", "press_to_present_s": 10.3, "key_presses": 2892, "raw_edges": 5846, "epoch_losses": 39, "spurious": 0, "invalid_services": 49, "usb_rejects": 23, "usb_events": 5, "loss_gen": 44, "key_presses_delta": 1, "losses_delta": 2, "spurious_delta": 0, "pass": true}
+,
+{"t": "04:24:34", "press_to_present_s": 10.3, "key_presses": 2893, "raw_edges": 5848, "epoch_losses": 41, "spurious": 0, "invalid_services": 50, "usb_rejects": 23, "usb_events": 6, "loss_gen": 47, "key_presses_delta": 1, "losses_delta": 2, "spurious_delta": 0, "pass": true}
+,
+{"t": "04:27:52", "press_to_present_s": 10.4, "key_presses": 2894, "raw_edges": 5850, "epoch_losses": 45, "spurious": 0, "invalid_services": 53, "usb_rejects": 25, "usb_events": 7, "loss_gen": 52, "key_presses_delta": 1, "losses_delta": 4, "spurious_delta": 0, "pass": true}
+,
+{"t": "04:31:09", "press_to_present_s": 10.4, "key_presses": 2895, "raw_edges": 5852, "epoch_losses": 47, "spurious": 1, "invalid_services": 54, "usb_rejects": 25, "usb_events": 8, "loss_gen": 55, "key_presses_delta": 1, "losses_delta": 2, "spurious_delta": 1, "pass": false}
+]

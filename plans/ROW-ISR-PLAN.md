@@ -2920,3 +2920,10 @@ quantization, above the largest new tolerance of 28.389 ms.
   gate (a forced write with no dark frame) stays owed. Stage 3's wakes 4
   of 4 so far (one more torn pair on the adjacent-read build inside
   cycle 4: 25 rejections).
+- 11-03 04:31: **deep sleep's five wakes on stage 3: every key kept**
+  (`deep_wake_presser.sh 5 stage3`, the README's "Deep sleep's wakes on
+  stage 3"); two losses a sleep, one bus event a cycle; one spurious
+  invocation at the fifth wake (seen once before, 11-02's wake read;
+  harmless by construction) and one more torn pair on the adjacent-read
+  build inside cycle 4. **Stage 3b (`67a4ccf2b3`, the spaced reads)
+  flashing at 04:31** by `stage3b_flash.sh`.

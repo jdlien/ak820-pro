@@ -1,0 +1,264 @@
+[03:11:40] daemon paused
+[03:11:41] data on
+[03:11:45] board present, token before: 0x9e2d894a
+[03:11:45] flash: ak820pro-builds/out/via-dev-3673b234f0-20261103-030608.bin
+firmware : ak820pro-builds/out/via-dev-3673b234f0-20261103-030608.bin
+built    : Nov  3 03:06:08 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  3 03:11:45 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 177, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  3 03:11:45 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  3 03:11:45 2026  (2707 bytes)
+
+== dumping the battery log ==
+# 2 entries (log v8, one per 900 s), newest 887 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261103-031145-preflash.csv  Nov  3 03:11:45 2026  (463 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[03:12:16] token after the flash: 0x0a2f280e (want 0x0a2f280e)
+  File "<string>", line 1
+    import json,sys; d=json.load(sys.stdin); print(f"status: col_map_fault {d[\"col_map_fault\"]}, hw_fault {d[\"hw_fault\"]}, prime_timed_out {d[\"prime_timed_out\"]}")
+                                                                               ^
+SyntaxError: unexpected character after line continuation character
+[03:12:21] the column settle in force: the column settle: 96 HCLK ticks (2.0 us)
+[03:12:21] FRMNO scan, 30 s
+FRMNO scan armed for 30000 ms (3 ms a pass from the housekeeping task); read it back with `frmscan`
+FRMNO back to back: 16776704 reads, 23544 steps of +1, 48 other steps, 4560 ms left; pairs kept: 0x7ff -> 0x700, 0x700 -> 0x000, 0x1ff -> 0x100  (a torn read looks like 0x0ff -> 0x000; a preemption like 0x123 -> 0x126)
+[03:12:57] the six row counts over 20 s
+row samples in 20 s: [4163, 4164, 4164, 4163, 4163, 4163]; spread 1 (want <= 1); row_gap_max 10 ms on row 1; raw_edges 0 consumes 35358
+[03:13:17] standing state for the gates (each pauses and restores on its own)
+[03:13:17] daemon paused
+[03:13:18] data on
+[03:13:20] token 0x0a2f280e (want 0x0a2f280e)
+[03:13:20] health counters reset (row_gap_max is this run's)
+[03:13:20] the rig's counters at the scan are available (stage 3, op 28 sub 12)
+[03:13:20] logger paused
+[03:13:46] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 25 ms, actual min 25054 max 25482 mean 25115 us, gap 75 ms, total 20049 ms
+[03:13:47] QT Py soft-rebooted into its logger
+[03:13:47] logger back
+[03:13:49] logger logging again (a new power.csv row)
+[03:13:50] A1 x200 at 25 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 25054-25482 us, row_gap_max 5 ms -> PASS, at the scan key0 200/200 (want 200/200), elsewhere 0
+[03:13:50] logger paused
+[03:14:16] A1 (blue, (0,13) Delete/F19): 200 presses, dwell asked 15 ms, actual min 15045 max 15502 mean 15092 us, gap 85 ms, total 20056 ms
+[03:14:17] QT Py soft-rebooted into its logger
+[03:14:17] logger back
+[03:14:19] logger logging again (a new power.csv row)
+[03:14:20] A1 x200 at 15 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 15045-15502 us, row_gap_max 5 ms -> PASS, at the scan key0 200/200 (want 200/200), elsewhere 0
+[03:14:21] logger paused
+[03:14:47] A0 (yellow, (3,14) PgDn/F20): 200 presses, dwell asked 25 ms, actual min 25054 max 25451 mean 25101 us, gap 75 ms, total 20047 ms
+[03:14:47] QT Py soft-rebooted into its logger
+[03:14:47] logger back
+[03:14:49] logger logging again (a new power.csv row)
+[03:14:51] A0 x200 at 25 ms: key_presses +200 (expected 200), raw_edges +400 (expected 400), dwell actual 25054-25451 us, row_gap_max 5 ms -> PASS, at the scan key1 200/200 (want 200/200), elsewhere 0
+[03:14:51] logger paused
+[03:15:07] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 12 ms, actual min 12054 max 12451 mean 12090 us, gap 88 ms, total 10023 ms
+[03:15:07] QT Py soft-rebooted into its logger
+[03:15:07] logger back
+[03:15:09] logger logging again (a new power.csv row)
+[03:15:11] A1 x100 at 12 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 12054-12451 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[03:15:11] logger paused
+[03:15:27] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 10 ms, actual min 10040 max 10437 mean 10069 us, gap 90 ms, total 10022 ms
+[03:15:28] QT Py soft-rebooted into its logger
+[03:15:28] logger back
+[03:15:30] logger logging again (a new power.csv row)
+[03:15:31] A1 x100 at 10 ms: key_presses +100 (expected 100), raw_edges +200 (expected 200), dwell actual 10040-10437 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), elsewhere 0
+[03:15:31] logger paused
+[03:15:47] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 8 ms, actual min 8056 max 8453 mean 8099 us, gap 92 ms, total 10024 ms
+[03:15:48] QT Py soft-rebooted into its logger
+[03:15:48] logger back
+[03:15:50] logger logging again (a new power.csv row)
+[03:15:51] A1 x100 at 8 ms: key_presses +69 (expected 100), raw_edges +200 (expected 200), dwell actual 8056-8453 us, row_gap_max 5 ms -> MISSING, at the scan key0 100/100 (want 100/100), elsewhere 0
+[03:15:51] logger paused
+[03:15:58] A0 held (yellow, (3,14) PgDn/F20)
+[03:16:08] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 25 ms, actual min 25054 max 25451 mean 25097 us, gap 75 ms, total 10022 ms
+[03:16:09] A0 released
+[03:16:09] QT Py soft-rebooted into its logger
+[03:16:09] logger back
+[03:16:11] logger logging again (a new power.csv row)
+[03:16:13] A1 x100 at 25 ms with A0 held: key_presses +101 (expected 101), raw_edges +202 (expected 202), dwell actual 25054-25451 us, row_gap_max 5 ms -> PASS, at the scan key0 100/100 (want 100/100), key1 1/1 (want 1/1), elsewhere 0
+RESULT: 6 of 7 batches exact
+[03:16:13] done -> history/rowisr-stage1-20261101/presser-gate-stage3.json
+[03:16:13] data off
+[03:16:13] daemon restarted
+[03:16:13] daemon paused
+history/rowisr-stage1-20261101/settle_sweep.sh: line 33: 57416 Terminated: 15          uhubctl -l 3-1.3.4 -p 2 -a on -e > /dev/null
+[03:42:33] data on
+[03:42:35] token 0x0a2f280e (want 0x0a2f280e)
+[03:42:54] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15144 us, gap 85 ms, total 10033 ms
+[03:42:59] JD's lighting, settle 96 ticks (2.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:43:17] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15472 mean 15138 us, gap 85 ms, total 10033 ms
+[03:43:22] JD's lighting, settle 48 ticks (1.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:43:40] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15101 us, gap 85 ms, total 10029 ms
+[03:43:45] JD's lighting, settle 24 ticks (0.5 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:44:03] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15140 us, gap 85 ms, total 10033 ms
+[03:44:08] JD's lighting, settle 12 ticks (0.25 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:44:26] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15686 mean 15117 us, gap 85 ms, total 10032 ms
+[03:44:31] JD's lighting, settle 6 ticks (0.125 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:44:49] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15094 us, gap 85 ms, total 10028 ms
+[03:44:54] JD's lighting, settle 3 ticks (0.062 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:45:12] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15148 us, gap 85 ms, total 10033 ms
+[03:45:17] JD's lighting, settle 0 ticks (0.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:45:17] lighting: Solid red at full
+[03:45:36] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15094 us, gap 85 ms, total 10029 ms
+[03:45:41] solid red, settle 96 ticks (2.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:45:59] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15472 mean 15147 us, gap 85 ms, total 10033 ms
+[03:46:04] solid red, settle 24 ticks (0.5 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:46:22] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15097 us, gap 85 ms, total 10029 ms
+[03:46:27] solid red, settle 6 ticks (0.125 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:46:45] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15143 us, gap 85 ms, total 10033 ms
+[03:46:50] solid red, settle 0 ticks (0.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:46:50] lighting: Solid green at full
+[03:47:09] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15150 us, gap 85 ms, total 10034 ms
+[03:47:14] solid green, settle 96 ticks (2.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:47:32] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15134 us, gap 85 ms, total 10032 ms
+[03:47:37] solid green, settle 24 ticks (0.5 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:47:55] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15132 us, gap 85 ms, total 10032 ms
+[03:48:00] solid green, settle 6 ticks (0.125 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:48:18] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15135 us, gap 85 ms, total 10033 ms
+[03:48:23] solid green, settle 0 ticks (0.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:48:23] lighting: Solid blue at full
+[03:48:43] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15144 us, gap 85 ms, total 10033 ms
+[03:48:47] solid blue, settle 96 ticks (2.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:49:05] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15147 us, gap 85 ms, total 10033 ms
+[03:49:10] solid blue, settle 24 ticks (0.5 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:49:28] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15146 us, gap 85 ms, total 10032 ms
+[03:49:33] solid blue, settle 6 ticks (0.125 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+[03:49:51] A1 (blue, (0,13) Delete/F19): 100 presses, dwell asked 15 ms, actual min 15045 max 15441 mean 15113 us, gap 85 ms, total 10030 ms
+[03:49:56] solid blue, settle 0 ticks (0.0 us): key_presses +101 (want 101); at the scan (0,13) 100/100, (3,14) held 1/1, elsewhere 0, idle 0 -> PASS
+RESULT: 19 of 19 exact; the shortest exact setting per colour: JD's lighting 0, solid red 0, solid green 0, solid blue 0
+[03:49:56] done -> history/rowisr-stage1-20261101/settle-sweep-stage3.json
+[03:49:56] settle back to 96
+[03:49:56] JD's lighting restored
+[03:49:56] data off
+[03:49:56] daemon restarted
+history/rowisr-stage1-20261101/stage3_flash.sh: line 64: 83195 Terminated: 15          uhubctl -l 3-1.3.4 -p 2 -a on -e > /dev/null
+[04:12:42] silence_check.sh starts (16 cases)
+Boot-out failed: 3: No such process
+[04:12:43] daemon paused
+[04:12:43] data on
+[04:12:43] board present
+[04:12:45] before: record {'spurious': 0, 'late_omit': 3, 'epoch_losses': 22, 'invalid_services': 22, 'serviced_lo16': 47654} usb {'usb_checked': 13346407, 'usb_rejects': 20, 'usb_events': 2, 'usb_worst_ms': 1, 'usb_last_dt_ms': 0, 'usb_last_df_ms': 256, 'loss_gen': 24, 'usb_gen': 18, 'usb_state': 'ACTIVE', 'usb_trusted_now': True, 'frmno': 1123, 'time_valid': True, 'time_excl': 0, 'guard_last_gap_ticks': 29193, 'guard_last_gap_ms': 155.696, 'frames_fresh': True, 'usb_unjudged': 0, 'recovery_pending': False}
+[04:12:46] 5 ms: measured 5.003 ms; losses 0 (expected 0), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 18, omitted 0, judged 3415; the extension read 7.099 ms across it, generation +0; last rejection spans 0/256 ms -> PASS
+[04:12:47] 7.5 ms: measured 7.499 ms; losses 0 (expected 0), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 28, omitted 0, judged 3452; the extension read 9.755 ms across it, generation +0; last rejection spans 0/256 ms -> PASS
+[04:12:48] 7.9 ms: measured 7.899 ms; losses 0 (expected the gap decides), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 29, omitted 0, judged 3447; the extension read 10.165 ms across it, generation +0; last rejection spans 0/256 ms -> PASS
+[04:12:49] 8.1 ms: measured 8.101 ms; losses 1 (expected the gap decides), frame rejects 0 (expected 0), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3446; the extension read 2.192 ms across it, generation +1 (the guard: its gap 8.133 ms); last rejection spans 0/256 ms -> PASS
+[04:12:50] 8.5 ms: measured 8.501 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3430; the extension read 2.101 ms across it, generation +1 (the guard: its gap 8.555 ms); last rejection spans 0/256 ms -> PASS
+[04:12:50] 20 ms: measured 20.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3421; the extension read 2.123 ms across it, generation +1 (the guard: its gap 20.037 ms); last rejection spans 0/256 ms -> PASS
+[04:12:51] 100 ms: measured 100.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 5, spurious 0, missed slots 0, omitted 0, judged 3445; the extension read 2.293 ms across it, generation +1 (the guard: its gap 100.053 ms); last rejection spans 0/256 ms -> PASS
+[04:12:53] 200 ms: measured 200.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3428; the extension read 2.08 ms across it, generation +1 (the guard: its gap 200.069 ms); last rejection spans 0/256 ms -> PASS
+[04:12:54] 350 ms: measured 350.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3450; the extension read 2.672 ms across it, generation +1; last rejection spans 1/351 ms -> PASS
+[04:12:56] 700 ms: measured 700.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3449; the extension read 3.179 ms across it, generation +1; last rejection spans 1/700 ms -> PASS
+[04:12:58] 1049 ms: measured 1049.003 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3447; the extension read 2.624 ms across it, generation +1; last rejection spans 1/1049 ms -> PASS
+[04:12:59] 1000 ms: measured 1000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 0, judged 3436; the extension read 2.171 ms across it, generation +1 (the guard: its gap 301.008 ms); last rejection spans 1/1049 ms -> PASS
+[04:13:02] 2048 ms: measured 2048.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3449; the extension read 2.128 ms across it, generation +1 (the guard: its gap 300.459 ms); last rejection spans 1/1049 ms -> PASS
+[04:13:10] 7000 ms: measured 7000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3440; the extension read 2.293 ms across it, generation +1 (the guard: its gap 9.531 ms); last rejection spans 1/1049 ms -> PASS
+[04:13:10] data off; the 20 ms silence fires in 5 s on battery
+[04:13:19] data on
+[04:13:50] no board after the data on
+raw HID interface not found (board unplugged?)
+[04:13:50] data off
+[04:13:50] daemon restarted
+[04:13:50] daemon paused
+[04:13:53] data on
+[04:14:24] no board on USB (asleep? one key wakes it)
+[04:14:24] data off
+[04:14:24] daemon restarted
+[04:14:24] deep sleep's wakes start (5 cycles, ~25 min)
+[04:14:24] daemon paused
+[04:14:24] cycle 0: the baseline wake and read (no verdict)
+[04:14:29] white asleep (3.320 mA)
+[04:14:29] logger paused
+[04:14:35] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:14:36] QT Py soft-rebooted into its logger
+[04:14:36] logger back
+[04:14:38] logger logging again (a new power.csv row)
+[04:14:41] token 0x0a2f280e (want 0x0a2f280e)
+[04:14:41] cycle 0: {"t": "04:14:41", "press_to_present_s": 10.4, "key_presses": 2890, "raw_edges": 5842, "epoch_losses": 35, "spurious": 0, "invalid_services": 47, "usb_rejects": 23, "usb_events": 3, "loss_gen": 38}
+[04:14:41] data off; white sleeps in ~3 min
+[04:17:46] white asleep (3.755 mA)
+[04:17:46] logger paused
+[04:17:53] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:17:53] QT Py soft-rebooted into its logger
+[04:17:53] logger back
+[04:17:55] logger logging again (a new power.csv row)
+[04:17:59] cycle 1: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 23, bus events 4 -> PASS
+[04:17:59] data off
+[04:21:04] white asleep (3.815 mA)
+[04:21:04] logger paused
+[04:21:11] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:21:11] QT Py soft-rebooted into its logger
+[04:21:11] logger back
+[04:21:13] logger logging again (a new power.csv row)
+[04:21:16] cycle 2: woke 10.3 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 23, bus events 5 -> PASS
+[04:21:17] data off
+[04:24:22] white asleep (3.320 mA)
+[04:24:22] logger paused
+[04:24:28] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:24:29] QT Py soft-rebooted into its logger
+[04:24:29] logger back
+[04:24:31] logger logging again (a new power.csv row)
+[04:24:34] cycle 3: woke 10.3 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 23, bus events 6 -> PASS
+[04:24:34] data off
+[04:27:39] white asleep (3.350 mA)
+[04:27:39] logger paused
+[04:27:46] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100067 us
+[04:27:46] QT Py soft-rebooted into its logger
+[04:27:46] logger back
+[04:27:48] logger logging again (a new power.csv row)
+[04:27:52] cycle 4: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +4, spurious +0, frame rejects 25, bus events 7 -> PASS
+[04:27:52] data off
+[04:30:57] white asleep (3.300 mA)
+[04:30:57] logger paused
+[04:31:04] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[04:31:04] QT Py soft-rebooted into its logger
+[04:31:04] logger back
+[04:31:06] logger logging again (a new power.csv row)
+[04:31:09] cycle 5: woke 10.4 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +1, frame rejects 25, bus events 8 -> FAIL
+[04:31:09] data off
+[04:31:09] RESULT: 4 of 5 wakes kept the key -> history/rowisr-stage1-20261101/deep-wake-stage3.json
+[04:31:10] data off
+[04:31:10] daemon restarted

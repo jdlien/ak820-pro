@@ -797,6 +797,30 @@ never returned, twice, 26 and 22 min lost each time with white awake and
 lit; killed by hand, the on had taken effect. Every runner now pauses 3 s
 before its first on and bounds every `uhubctl` with `timeout 20`.
 
+### Deep sleep's wakes on stage 3 (11-03, 04:14-04:31, `deep_wake_presser.sh 5 stage3`): every key kept, one spurious invocation at a wake
+
+The same gate on `3673b234f0` (`deep-wake-stage3.json`), the board
+asleep at 3.3-3.8 mA before each press:
+
+| Cycle | woke | key_presses | losses | spurious | frame rejects / bus events, since the gate's reset |
+|---|---|---|---|---|---|
+| 1 | 04:17:59 | +1 | +2 | +0 | 23 / 4 |
+| 2 | 04:21:16 | +1 | +2 | +0 | 23 / 5 |
+| 3 | 04:24:34 | +1 | +2 | +0 | 23 / 6 |
+| 4 | 04:27:52 | +1 | +4 | +0 | 25 / 7 |
+| 5 | 04:31:09 | +1 | +2 | +1 | 25 / 8 |
+
+**Every waking key kept (5 of 5), two losses a sleep by design, one bus
+event a cycle.** Two things beside it: **cycle 4 added two
+frame-counter rejections** (23 to 25), the adjacent-read build's torn
+pair again (the spaced reads of `67a4ccf2b3` flash next); and **cycle 5
+counted one spurious invocation** (an entry inside an epoch already
+serviced, counted and left before any verdict), which the script's
+verdict calls a FAIL. The same was seen once across a wake on the
+detector build (11-02 19:06, "spurious 1 across the wake") and never
+across a silence; harmless by construction (nothing is reconstructed or
+armed on it), noted as the wake's.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
