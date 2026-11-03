@@ -3123,3 +3123,29 @@ quantization, above the largest new tolerance of 28.389 ms.
   back in the standing state at 11:32:43 (Power saver, data off, the
   daemon up; JD's full white left as he set it) and handed to Hutch for
   M4. `pcf-unseen`'s deferral retirement is now unblocked: JD's call.
+- 11-03 12:00-12:30: **stage 5 built, in two commits on `row-isr`**, on
+  JD's word "push ahead to the next step" (the 125 us cadence, today).
+  The plan's own gate for the cadence is the handler's cost (≤ 20% at
+  8,000 slots a second: ≤ 25 us), against 71.6 us on 4b, so **stage 5a**
+  (`4294a3befd`, the old cadence) takes the cost diagnostic's three
+  biggest items that are not the detector's: the exit's extension
+  snapshot and its verdict (14.5 us) become one read of the scheduler's
+  counter against step 1's, kept when no boundary passed inside (the
+  flag clear, the counter not reset); step 6's crossed check reads the
+  hardware (the flag, or the counter below step 1's) instead of the
+  extension's reconstruction; the fifteen match registers are unrolled
+  with the colour's byte plane chosen once and the width a Q6 multiply
+  (`ROWISR_WIDTH`), the flash table gone until stage 6. The cadence is a
+  switch (`ROWISR_CADENCE_US`): the slot, the terminal (4,095 / 2,047)
+  and the scale (640/64 = 10 / 310/64 = 4.84375, D4's 4.845) move
+  together, D8's conversion in Q6. **Stage 5b** (`config.h`,
+  `ROWISR_CADENCE_US 125`): the dev artifact
+  `via-dev-4294a3befd-dirty-20261103-122013.bin`, token `0xd7523308`,
+  heap gap 376 B; 5a's `via-dev-8355011389-dirty-20261103-121859.bin`,
+  token `0x61eee41b`. The per-service frame judgment is kept (codex's
+  P1 of 00:22 stands; the every-eighth remedy is ~8 us, JD's call).
+  Codex asked on both (`review-prompt-row-isr-stage5.txt`); the runner
+  `stage5_flash.sh ART WANT LABEL` (the flash, a warm window for page 4
+  and the record, the light at JD's full white against the logger's
+  61.0 mA incremental on 4b, the presser gate). White is Hutch's for M4
+  until it ends; 5a measured first for the attribution, then 5b.
