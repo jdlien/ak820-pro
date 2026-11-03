@@ -2726,3 +2726,16 @@ quantization, above the largest new tolerance of 28.389 ms.
   verify asked (`review-prompt-row-isr-exit2.txt`); then JD's go and key:
   `exit_on_usb.sh` runs `exit_flash.sh` on it (the flash, two sections
   windows, readcost, `silence_check.sh`, `warm_windows.sh exit`).
+- 11-03 00:34: codex's verify of `7e438dc9b5`: **READY TO FLASH, no P1,
+  both P2s fixed** (`review-codex-row-isr-exit2-2026-11-03-raw.md`); one
+  P2 left: off USB the frames stand still, so the span comparison would
+  discard a healthy handler past 3 ms (none has been seen past 0.21 ms).
+  **Fixed as prescribed in `f0ec5c68df`** (token `0x9e2d894a`, heap gap
+  408 B, pushed): the comparison gated on the bus up at the entry, as the
+  entry judges; the generation checks stay. The vector 1,509
+  instructions, no call under a mask, the modulo's divide inlined onto
+  the slow paths. **The flash candidate.** It waits on JD's go and key:
+  `exit_on_usb.sh` runs `exit_flash.sh` (the flash, two sections windows,
+  readcost, `silence_check.sh`, `warm_windows.sh exit 0x9e2d894a`);
+  expected ~10 us back, near 70 us a slot, the silence set 16 of 16. White
+  is Hutch's for the presser's contact test meanwhile (00:35).

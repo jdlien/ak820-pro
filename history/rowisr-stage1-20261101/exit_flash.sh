@@ -1,5 +1,5 @@
 #!/bin/bash
-# The exit-only build's flash on white (11-03, 7e438dc9b5, token 0xea0da873:
+# The exit-only build's flash on white (11-03, f0ec5c68df, token 0x9e2d894a:
 # the exit snapshot time only, the duration sample kept honest by the frame
 # counter alone; the cadence 1d73bf3ed5 reverted on codex's P1) and its
 # checks: the daemon paused, data on, the token read (the cost diagnostic,
@@ -7,7 +7,7 @@
 # token after; the handler's sections (op 28 sub 11, two 10 s windows) and
 # readcost while the board is fresh from the boot; silence_check.sh (the 16
 # cases, its two battery cases inside 3 min of the boot so the ladder cannot
-# sleep the board through them); then warm_windows.sh exit 0xea0da873
+# sleep the board through them); then warm_windows.sh exit 0x9e2d894a
 # against stage 2's and the detector's windows (its own trap puts data off
 # and the daemon back). One key from JD wakes white first; his go starts it
 # (exit_on_usb.sh).
@@ -15,8 +15,8 @@ set -u
 cd "$(dirname "$0")/../.." || exit 1
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 D=history/rowisr-stage1-20261101
-ART=ak820pro-builds/out/via-dev-7e438dc9b5-20261103-003231.bin
-WANT=0xea0da873
+ART=ak820pro-builds/out/via-dev-f0ec5c68df-20261103-003613.bin
+WANT=0x9e2d894a
 A="$HOME/Library/Application Support/ak820pro/bin/ak820"
 PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 present() { ioreg -p IOUSB -l -w0 | grep -q '"idProduct" = 32777'; }
