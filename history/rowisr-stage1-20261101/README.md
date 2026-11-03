@@ -1290,6 +1290,45 @@ measured: codex). The lights restored at 13:11:38
 (`camera-write-stage5d-dips.txt`, `-luma.csv`, `-page4-*.txt`,
 `stage5d-gates-camera.log`).
 
+**The presser gates on 5d (13:14-13:33, `stage5_gates.sh 0x717d9b6a
+stage5d 123`; `stage5d-gates-123.log`).**
+- **The UART step:** OE 0 before and after a 200-press batch at 25 ms
+  (`overrun-stage5d-before.txt`, `-after.txt`), the longest handlers USB
+  80 us, the system timer 16, UART2 11; the 20 kHz tick's gap monitor
+  through the batch: 634,596 ticks, no gap >= 128 us, the longest 107 us,
+  the main loop in the module's code at it; the clock chip's kinds under
+  the faster ISR: the 7-byte read's whole call 7.5 ms and the 8-byte
+  write's 6.1 (5.5 and 4.6 on 4b), the 4-byte read 3.1, the 3-byte write
+  2.2, none failed, every masked span 5 us; the margin to the 10 ms
+  deadline is a quarter now, the 5 ms paths held as before.
+- **Five ladder sleeps with presser wakes** (`deep-wake-stage5d.json`):
+  **the waking key kept 5 of 5** (key_presses +1 each, raw_edges +2),
+  each wake 10.2 s from the press command to the enumeration (the REPL's
+  setup inside; 10.3-10.4 on 4b), losses +2 each (the sleep's exclusion
+  and the bus event, as on 4b and stage 4), no frame rejection; **the
+  script's FAIL on two cycles is spurious invocations at the wake, 1 and
+  2** (3 in 5 wakes; 0 in 3 on 4b, 1 in 5 on stage 3): an invocation
+  inside an epoch already serviced, which counts and leaves (D3 step 1),
+  harmless by design, more frequent at 6,000 ticks: the restart from 0
+  at the wake and the first boundary are closer. Noted, not a loss.
+- **The silence set: ALL PASS** (`silence-check-stage5d.json`): on USB
+  100, 200 ms by the guard (losses 1, frame rejects 0); 350, 700, 1,049
+  ms past the guard and rejected by the frame counter (1 each); 1,000,
+  2,048, 7,000 ms by the guard; the spin's count exact (1049.003 at
+  worst); on battery 20 ms two losses (the bus event's and the guard's),
+  350 ms the bus event's alone, the declared limit; omissions 2-9 a case
+  (the silence's own missed slots are counted apart: missed 0). The
+  injections' marker on the Win Lock pin and the parked LEDs: JD saw the
+  Win Lock light and the keys alternate at 13:32 and asked.
+
+**Stage 5d's gates, then:** met: the field, the light at full white, the
+row gaps, the presser's taps (5c's run), the camera gate, the UART step
+(no overruns), the wakes (the key kept 5 of 5), the silence set; not to
+the letter: the handler's share (39.6%), zero quiet omissions (87 in
+300 s), and the spurious invocations at the wake (3 in 5) as a note.
+Owed: the mixed-load window, the dark hold and the per-colour holds, the
+low codes by camera (`stage5_loads.sh`, `stage5_lowcodes.sh`), on 5e.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

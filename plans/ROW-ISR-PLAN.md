@@ -3310,3 +3310,12 @@ quantization, above the largest new tolerance of 28.389 ms.
   before). The night's build: 5e, after its own window and presser gate
   (the listener swallows F19/F20 since 13:26), if 5d's wakes and silence
   set pass.
+- 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
+  presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
+  on 4b), the script's two FAILs being spurious invocations at the wake
+  (3 in 5 wakes against 0 in 3 on 4b: harmless by design, more frequent
+  at 6,000 ticks, noted); the silence set ALL PASS (the guard and the
+  frame counter as predicted, the battery cases at the declared limit).
+  **5e flashed at 13:35 for the night** (`stage5_flash.sh ... stage5e
+  300 yes`: the window, the light, the presser gate with the listener
+  swallowing F19/F20), then the loads and the low codes on it.

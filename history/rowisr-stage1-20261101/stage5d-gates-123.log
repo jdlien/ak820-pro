@@ -1,0 +1,40 @@
+[13:14:32] 1. the UART and ACK counts awake at the new cadence: status, 200 presses at 25 ms, status
+{'on': True, 'max_ms': 0.0, 'n_128us': 0, 'n_197us': 0, 'n_347us': 0, 'ticks': 0, 'max_ctx': 'ch582', 'max_act': 0, 'seq': 0}
+[13:15:26] logger back
+[13:15:28] logger logging again (a new power.csv row)
+  gap monitor on: 634596 ticks, gaps >= 128 us 0, >= 197 us 0, >= 347 us 0; longest 0.107 ms
+  burst: 25 done, 0 failed, 0 left, 0 skipped passes, 10666 ms first to last (250-250 ms gaps)
+msp_free                 624 bytes (interrupt stack; paint watermark)
+blit_stalled             0
+[13:15:33] the standing state
+[13:15:33] 2. five ladder sleeps with presser wakes
+[13:32:01] QT Py soft-rebooted into its logger
+[13:32:01] logger back
+[13:32:03] logger logging again (a new power.csv row)
+[13:32:07] cycle 5: woke 10.2 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +2, frame rejects 0, bus events 8 -> FAIL
+[13:32:07] data off
+[13:32:07] RESULT: 3 of 5 wakes kept the key -> history/rowisr-stage1-20261101/deep-wake-stage5d.json
+[13:32:07] data off
+[13:32:07] daemon restarted
+[13:32:07] 3. the silence set
+[13:32:16] 100 ms: measured 100.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 9, judged 7315; the extension read 2.165 ms across it, generation +1 (the guard: its gap 100.043 ms); last rejection spans 0/0 ms -> PASS
+[13:32:17] 200 ms: measured 200.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 5, spurious 0, missed slots 0, omitted 9, judged 7312; the extension read 2.128 ms across it, generation +1 (the guard: its gap 200.069 ms); last rejection spans 0/0 ms -> PASS
+[13:32:19] 350 ms: measured 350.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 3, judged 7318; the extension read 2.629 ms across it, generation +1; last rejection spans 1/351 ms -> PASS
+[13:32:20] 700 ms: measured 700.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 5, judged 7306; the extension read 3.152 ms across it, generation +1; last rejection spans 1/700 ms -> PASS
+[13:32:22] 1049 ms: measured 1049.003 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 2, judged 7325; the extension read 2.624 ms across it, generation +1; last rejection spans 1/1050 ms -> PASS
+[13:32:24] 1000 ms: measured 1000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 7, spurious 0, missed slots 0, omitted 6, judged 7355; the extension read 2.245 ms across it, generation +1 (the guard: its gap 301.003 ms); last rejection spans 1/1050 ms -> PASS
+[13:32:27] 2048 ms: measured 2048.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 2, judged 7336; the extension read 2.069 ms across it, generation +1 (the guard: its gap 300.4 ms); last rejection spans 1/1050 ms -> PASS
+[13:32:35] 7000 ms: measured 7000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 8, spurious 0, missed slots 0, omitted 2, judged 7278; the extension read 2.139 ms across it, generation +1 (the guard: its gap 9.552 ms); last rejection spans 1/1050 ms -> PASS
+[13:32:35] the power ladder held at Always on for the data cuts (mode 2 before)
+[13:32:35] data off; the 20 ms silence fires in 5 s on battery
+[13:32:44] data on
+[13:32:48] battery 20 ms: measured 20.0 ms; losses 2, of them bus events 1, the silence's own 1 (expected 1), frame rejects 0, spurious 0; usb now ACTIVE -> PASS
+[13:32:48] data off; the 350 ms silence fires in 5 s on battery
+[13:32:56] data on
+[13:33:00] battery 350 ms: measured 350.0 ms; losses 1, of them bus events 1, the silence's own 0 (expected 0), frame rejects 0, spurious 0; usb now ACTIVE -> PASS
+[13:33:00] Power saver put back
+[13:33:00] health counters reset (the row record with them)
+[13:33:00] ALL PASS
+[13:33:00] data off
+[13:33:00] daemon restarted
+[13:33:00] stage 5's gates done (123)
