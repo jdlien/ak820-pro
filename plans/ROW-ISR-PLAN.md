@@ -3386,6 +3386,16 @@ quantization, above the largest new tolerance of 28.389 ms.
   loop, the flash table loads, the call), judged by page 4's mean over
   5e's variation at matched conditions and the omissions over equal
   exposure. The window ran on USB power during the charge (14:31).
+- 11-03 14:37: **5f measured: no gain** (the README's "Stage 5f"): the
+  handler 51.7 us mean and 41.4% against 5d's 49.5 and 5e's 52.3, inside
+  the windows' variation; the maximum 106.7, 50 omissions in 300 s. The
+  flash fetch is not where the section's time goes, or not as the
+  sections said; SRAM moves none of the stores and loads. **The trial
+  closed: `ROWISR_RAMTEXT` 0** (the same code inline in flash, the
+  rings at full size), **5e the night's build**, flashed back after the
+  charge with the holds. The 20% target's last lever is the
+  every-eighth judgment (~8 us), JD's call; codex's revision of the
+  target stands.
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake
