@@ -1329,6 +1329,35 @@ the letter: the handler's share (39.6%), zero quiet omissions (87 in
 Owed: the mixed-load window, the dark hold and the per-colour holds, the
 low codes by camera (`stage5_loads.sh`, `stage5_lowcodes.sh`), on 5e.
 
+### Stage 5e on white (11-03, 13:34 on, `stage5_flash.sh ... stage5e 300 yes`): the trims, the presser gate, the pack at 15% and the low cap
+
+5e (`739fe1b635`, token `0xf222e31c`) flashed at 13:34:08 for the night.
+**Its lit draw at full white before anything else: 91.70 mA** (the
+logger, 13:35:10-13:37:40, 151 rows; 5d 92.32, 4b 92.1: the width table
+is the same scale). **The presser gate: 6 of 7 exact**, 8 ms at 82 of
+100 (88 on 5c, 72 on stage 3: the debounce boundary), 10 ms and up
+exact, raw_edges exact, the rig's count at the scan 100 of 100 with A0
+held (`presser-gate-stage5e.json`). **Its first cost window is void:**
+the ladder's hold at Always on had not taken (the mode written, not
+read back; a race with the flash's settings restore is the suspect,
+5d's run having worked by timing), so Power saver turned the lights off
+at 13:37:54 and page 4's 2 s pair at 13:40 measured a dark handler
+(49.4 us, 39.5%: not comparable; `health-isr-stage5e.txt`), the record
+25 omissions over 2.9 lit minutes (`record-stage5e.txt`: R 2-4, B 0-2,
+G 0-3 a key row; 1,374,332 pulses emitted of 2,417,278 slots; one
+missed slot), the light 31.24 (dark). `stage5_window.sh` now reads the
+mode back (three tries) and checks the lit draw at the start and at
+200 s. **Then the pack:** the battery page read 14.9% at 13:47 (vcell
+3,715 mV; the count's band 10-20%), so the firmware's low cap
+(`LOW_CAP_PM` 150) has held the lights down since about 13:42: "full
+white" draws 55 mA. Today's full-white hours at 92 mA spent it; the
+drain runs to the RGB cut as JD wants, uncharged. So: the per-colour
+and value-64 holds wait for a charge (capped, they would measure the
+cap); the dark hold, the mixed-load window and the low codes (values
+1-64, under the cap) run now; the cost window runs under the cap (the
+handler's work does not depend on the widths, only a dark row skips
+the arm).
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

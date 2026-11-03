@@ -3310,6 +3310,15 @@ quantization, above the largest new tolerance of 28.389 ms.
   before). The night's build: 5e, after its own window and presser gate
   (the listener swallows F19/F20 since 13:26), if 5d's wakes and silence
   set pass.
+- 11-03 13:34-13:52: **5e on white** (the README's "Stage 5e on white"):
+  the lit draw at full white 91.70 mA before anything else (the width
+  table is the same scale), the presser gate 6 of 7 exact (8 ms at 82),
+  the first cost window void (the ladder's hold had not taken: the
+  scripts read the mode back now), then **white's pack at 14.9%, the low
+  cap on the lights since ~13:42** (55 mA at full white): the
+  per-colour and value-64 holds wait for a charge; the cost window
+  re-run under the cap, the dark hold, the mixed-load window and the
+  low codes next; the drain runs to the cut, uncharged, as JD wants.
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake

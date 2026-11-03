@@ -42,14 +42,14 @@ present || { venv/bin/python scripts/presser_repl.py pulse A1 100 >/dev/null 2>&
 present || { log "no board"; standing; exit 1; }
 sleep 2; T=$(token); log "token $T (want $WANT)"; [ "$T" = "$WANT" ] || { log "token mismatch"; standing; exit 1; }
 ladder 0 || { standing; exit 1; }
-venv/bin/python scripts/presser_repl.py pulse A1 100 >/dev/null 2>&1; sleep 8
-P0=$(power_mean 5); log "the lit draw at the start: $P0 mA"
-python3 -c "import sys; sys.exit(0 if float('$P0') >= 60 else 1)" || { log "the board is not lit: the window is void"; ladder 2; standing; exit 1; }
+venv/bin/python scripts/presser_repl.py pulse A1 100 >/dev/null 2>&1; sleep 12   # the logger pauses around a press: its rows straddle the relight
+P0=$(power_mean 2); log "the lit draw at the start: $P0 mA (the last two rows)"
+python3 -c "import sys; sys.exit(0 if float('$P0') >= ${LIT_MIN:-60} else 1)" || { log "the board is not lit: the window is void"; ladder 2; standing; exit 1; }
 venv/bin/python -c "import sys; sys.path.insert(0, 'hostagent'); import ak820health as hp; hp.reset_counters()" && log "health counters reset"
 log "the window: $W s lit"
 sleep $((W > 200 ? 200 : W))
 P1=$(power_mean 5); log "the lit draw at 200 s: $P1 mA"
-python3 -c "import sys; sys.exit(0 if float('$P1') >= 60 else 1)" || { log "the lights went off inside the window: void"; ladder 2; standing; exit 1; }
+python3 -c "import sys; sys.exit(0 if float('$P1') >= ${LIT_MIN:-60} else 1)" || { log "the lights went off inside the window: void"; ladder 2; standing; exit 1; }
 [ "$W" -gt 200 ] && sleep $((W - 200))
 log "page 4, page 7, the record, the rows, the light after $W s"
 "$A" health --isr 2>&1 | tee "$D/health-isr-$L.txt" | grep -E "isr_" | head -5

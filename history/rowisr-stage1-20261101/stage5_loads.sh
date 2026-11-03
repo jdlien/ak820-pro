@@ -89,7 +89,9 @@ json.dump(d, open(sys.argv[5], 'w'))
 PY
     venv/bin/python hostagent/ak820lighting.py restore "/tmp/hold-$name.json" >/dev/null 2>&1 || log "the hold $name's restore failed"
     sleep 45
-    M=$(power_mean 30); log "hold $name (h$hue s$sat v$val): $M mA"; echo "$name $M" >> "$D/holds-$L.txt"
+    M=$(power_mean 30); DRV=$(venv/bin/python hostagent/ak820battery.py 2>/dev/null | grep -oE "led drive +[0-9.]+ %" | grep -oE "[0-9.]+ %" | head -1)
+    log "hold $name (h$hue s$sat v$val): $M mA; the drive accounting (D8, led_pm): $DRV of maximum (expect white255 100, red/green/blue 33.3, white64 25.1)"
+    echo "$name $M ${DRV:-?}" >> "$D/holds-$L.txt"
 done
 venv/bin/python hostagent/ak820lighting.py restore "$D/lighting-before-holds-$L.json" >/dev/null 2>&1; log "JD's lighting restored from the dump taken before the holds"
 venv/bin/python hostagent/ak820lighting.py show 2>&1 | head -5
