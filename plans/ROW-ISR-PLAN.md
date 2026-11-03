@@ -2881,3 +2881,20 @@ quantization, above the largest new tolerance of 28.389 ms.
   Next: `stage3b_flash.sh` (the spaced reads; a 10 min frame-counter
   watch, the short-tap gate, the silence set with the hold, the warm
   windows, the boundary batches, then `soak_watch.sh` until the morning).
+- 11-03 04:32: codex's verify of `67a4ccf2b3`: **READY TO FLASH** for the
+  controlled dev flash
+  (`review-codex-row-isr-stage3-frmno-2026-11-03-raw.md`): the spacing
+  sound under the measured tear (two reads twelve cycles apart cannot
+  both sit in a torn state of six or fewer; a disagreement's third read
+  is past the update either way, old or new both settled; every call is
+  masked, so no preemption stretches the sequence across a SOF); the
+  cost 24 nops a slot and 12 a tick normally (0.5 us a slot, 0.25 a
+  tick, ~0.7 points of CPU), up to 48 in a section that also stales;
+  the step 6 ceiling untouched; a cheaper construction would need
+  assumptions the evidence does not give. The count correction: 1,501
+  executable instructions in Vector90 against 1,364 (the 1,621/1,475
+  were disassembly rows with literal pools). Deep sleep's wakes on
+  stage 3 passed 2 of 2 so far; **`stage3b_flash.sh` launches when the
+  wake gate ends**: the flash, the frame counter watched 10 min, the
+  short-tap gate, the silence set with the ladder held, the warm
+  windows, the boundary batches, then `soak_watch.sh` until the morning.
