@@ -872,6 +872,7 @@ scripts/phonecam.py start      # or one key at a time, stamped on both clocks
 scripts/phonecam.py stop
 scripts/phonecam.py pull       # the newest clip to ~/Downloads (--out DIR, --delete)
 scripts/phonecam.py teardown   # the screen times out again
+scripts/phonecam.py status     # who holds the phone, and whether it is recording
 ```
 
 Every start and stop is appended to
@@ -881,6 +882,29 @@ fills, so `record` deletes its clip from the phone once the Mac's copy
 matches it in size (`--keep` keeps it). It deletes through the media
 index (`content delete`), so the gallery keeps no ghost and nothing goes
 to a trash. `pull` touches the phone only with `--delete`.
+
+**Sharing the phone between sessions (11-03).** One volume key from
+anyone else ends your recording, and a stop key with nothing recording
+starts one. So:
+- **`record`, `setup` and `start` take a flock** on
+  `~/Documents/ak820pro-phonecam/phone.lock`, held to the end of the
+  command. If the lock is taken, they refuse and name the holder: "the
+  phone is busy: pid N, `record 8`, since 11:30:30". It is flock, never a
+  POSIX record lock, because on macOS the two never see each other.
+- **`start` leaves a hold** in `phone.hold` until its `stop`: the caller's
+  pid, an optional `--owner` name (or `PHONECAM_OWNER`), and the time.
+  While it lives, `record`, `setup` and another `start` refuse. A `stop`
+  under a different owner refuses too, unless `--force`. A hold lives
+  while its pid does, or for 10 min.
+- **The camera's own state decides the key.** `start` and `record` refuse
+  while the camera is recording, by hand or otherwise. `stop` refuses with
+  no hold, and refuses to press while the camera is not recording.
+  Recording means a `.pending-<expiry>-_PXL_<id>.mp4` in `DCIM/Camera`
+  written in the last 3 s. The camera writes that file through a clip and
+  renames it to the `PXL_` name at the stop (seen live, 11-03), and the
+  3 s rule ignores one a crash left behind.
+- **`status` only looks.** It shows the lock, the hold and the camera's
+  state, and never holds the lock.
 
 **Set up once on each Mac.**
 - Install adb with `brew install --cask android-platform-tools`. Buzz has
@@ -918,7 +942,8 @@ to a trash. `pull` touches the phone only with `--delete`.
   on the phone. The volume key is the Pixel camera's shutter by default.
 - ⚠️ **The first frame comes about 0.74 s after the start key.** In each
   clip the frames span less time than the keys' interval: by 0.710 to
-  0.766 s across five clips (mean 0.740). Which end loses the time was
+  0.766 s across five clips (mean 0.740), and 0.710 to 0.773 s across
+  the day's eleven, the gate runs' included. Which end loses the time was
   not measured. The logcat points to the start: the camera's high-speed
   burst request comes 0.64 s after the key command, and preview alone is
   back 0.3 s after the stop key. So start a recording at least 1.5 s

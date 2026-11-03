@@ -7,6 +7,7 @@
     scripts/phonecam.py start | stop     # one key each, stamped on both clocks
     scripts/phonecam.py pull [NAME]      # the newest clip, or NAME, to --out (--delete)
     scripts/phonecam.py teardown         # screen timeout back on
+    scripts/phonecam.py status           # who holds the phone, and is it recording
 
 docs/test-bench.md ("The camera") has the measurements behind each step.
 
@@ -14,7 +15,7 @@ Every start and stop appends one JSON line to ~/Documents/ak820pro-phonecam/
 stamps.jsonl, with the Mac's time around the command and the phone's on
 either side of the key. A clip's frames are 240 a second of real time, so
 the record step also prints the gap between the keys' interval and the
-frames' span. On 11-03 that gap was 0.710 to 0.766 s across five clips.
+frames' span. On 11-03 that gap was 0.710 to 0.773 s across eleven clips.
 
 Rules this follows, each learned on 11-03:
 - no UI dump while recording: uiautomator waits for an idle screen, and the
@@ -24,9 +25,18 @@ Rules this follows, each learned on 11-03:
   reported, not retried;
 - the phone's storage fills, so record deletes its clip from the phone
   once the Mac's copy matches it in size (--keep to keep it). pull leaves
-  the phone alone unless --delete.
+  the phone alone unless --delete;
+- one volume key from anyone else stops your recording. So record, setup
+  and start take a flock on phone.lock (flock, never a POSIX record lock:
+  on macOS the two never see each other), and refuse, naming the holder,
+  if it is taken. start leaves phone.hold behind (who, since when) until
+  its stop; a hold lives while its process does, or 10 min. And the
+  camera's own state decides the key: start and record refuse while it
+  is recording, and stop refuses while it is not, since that key would
+  start a recording instead.
 """
 import argparse
+import fcntl
 import json
 import os
 import re
@@ -39,6 +49,74 @@ CAM = "/sdcard/DCIM/Camera"
 PKG = "com.google.android.GoogleCamera"
 LOGDIR = os.path.expanduser("~/Documents/ak820pro-phonecam")
 STAMPS = os.path.join(LOGDIR, "stamps.jsonl")
+LOCKDIR = os.environ.get("PHONECAM_LOCKDIR", LOGDIR)  # the override is for tests
+LOCK = os.path.join(LOCKDIR, "phone.lock")  # flock: one phone command at a time
+HOLD = os.path.join(LOCKDIR, "phone.hold")  # a start's claim until its stop
+HOLD_MAX_S = 600
+
+
+def describe(info):
+    if not info:
+        return "an unknown holder"
+    since = info.get("since", 0)
+    who = f"pid {info.get('pid', '?')}"
+    if info.get("owner"):
+        who = f"{info['owner']} ({who})"
+    return (f"{who}, `{info.get('cmd', '?')}`, since {time.strftime('%H:%M:%S', time.localtime(since))} "
+            f"({time.time() - since:.0f} s ago)")
+
+
+def take_lock(what):
+    """flock phone.lock for the rest of this process, or refuse naming its holder."""
+    os.makedirs(LOCKDIR, exist_ok=True)
+    fd = os.open(LOCK, os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        try:
+            info = json.loads(os.pread(fd, 4096, 0) or b"{}")
+        except ValueError:
+            info = {}
+        sys.exit(f"the phone is busy: {describe(info)} holds {LOCK}")
+    os.ftruncate(fd, 0)
+    os.pwrite(fd, json.dumps({"pid": os.getpid(), "cmd": what, "since": time.time()}).encode(), 0)
+    return fd
+
+
+def pid_alive(pid):
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except PermissionError:
+        return True
+    except (ProcessLookupError, TypeError, ValueError):
+        return False
+
+
+def read_hold():
+    try:
+        with open(HOLD) as f:
+            return json.load(f)
+    except (FileNotFoundError, ValueError):
+        return None
+
+
+def hold_live(h):
+    return pid_alive(h.get("pid")) or time.time() - h.get("since", 0) < HOLD_MAX_S
+
+
+def refuse_if_held(what, owner=None):
+    """A live hold that is not ours refuses; a stale one is cleared with a note."""
+    h = read_hold()
+    if not h:
+        return
+    if owner and h.get("owner") == owner:
+        return
+    if hold_live(h):
+        sys.exit(f"the phone is held by {describe(h)}: a start whose stop has not come, so "
+                 f"`{what}` could end its recording. Its holder runs stop; stop --force ends it")
+    print(f"note: cleared a stale hold by {describe(h)}")
+    os.remove(HOLD)
 
 
 def adb(*args, timeout=30, check=True):
@@ -96,6 +174,18 @@ def awake_unlocked():
 def clips():
     out = sh(f"ls -t {CAM} | grep -E '^PXL_.*\\.mp4$'")
     return [l.strip() for l in out.splitlines() if l.strip()]
+
+
+def recording():
+    """The camera is recording while a .pending- file in the Camera folder is being written.
+
+    The camera writes .pending-<expiry>-_PXL_<id>.mp4 as it records and
+    renames it at the stop (11-03). A crash could leave one behind, so
+    only one written in the last 3 s counts.
+    """
+    ages = sh(f"now=$(date +%s); for f in {CAM}/.pending-*; do "
+              f"[ -e \"$f\" ] && echo $((now - $(stat -c %Y \"$f\"))); done; true")
+    return any(int(a) <= 3 for a in ages.split() if a.lstrip("-").isdigit())
 
 
 def offset_ms(n=15):
@@ -169,7 +259,11 @@ def delete_from_phone(name, local_path):
 
 
 def cmd_setup(args):
+    _lock = take_lock("setup")
+    refuse_if_held("setup")
     require_device()
+    if recording():
+        sys.exit("the camera is recording: setup's UI reads would stretch the clip; stop it first")
     sh("settings put global stay_on_while_plugged_in 3")  # AC | USB
     sh("input keyevent KEYCODE_WAKEUP")
     awake, unlocked = awake_unlocked()
@@ -212,14 +306,42 @@ def check_ready():
         sys.exit("the camera is not in front, awake and unlocked: run setup first")
 
 
+def owner_of(args):
+    return args.owner or os.environ.get("PHONECAM_OWNER")
+
+
 def cmd_start(args):
+    _lock = take_lock("start")
+    refuse_if_held("start")
     check_ready()
+    if recording():
+        sys.exit("the camera is already recording: a start key would stop it")
+    hold = {"pid": os.getppid(), "owner": owner_of(args), "cmd": "start", "since": time.time()}
+    with open(HOLD, "w") as f:
+        json.dump(hold, f)
+    print(f"holding the phone for {describe(hold)} until stop")
     press("start")
 
 
 def cmd_stop(args):
+    _lock = take_lock("stop")
+    h = read_hold()
+    if h and h.get("owner") and h.get("owner") != owner_of(args) and not args.force:
+        sys.exit(f"the hold belongs to {describe(h)}, not to you: stop --force ends it anyway")
     require_device()
+    if not h and not args.force:
+        if recording():
+            sys.exit("the camera is recording, but not from a phonecam start (by hand?): "
+                     "stop --force stops it")
+        sys.exit("nothing to stop: no hold, and a stop key could start a recording")
+    if not recording():
+        if h:
+            os.remove(HOLD)
+        sys.exit("the camera is not recording: a stop key would start a recording, so none was sent"
+                 + (f" (cleared {describe(h)}'s hold)" if h else ""))
     press("stop")
+    if h:
+        os.remove(HOLD)
 
 
 def cmd_pull(args):
@@ -232,8 +354,34 @@ def cmd_pull(args):
         delete_from_phone(name, path)
 
 
+def cmd_status(args):
+    fd = os.open(LOCK, os.O_RDWR | os.O_CREAT, 0o644) if os.path.isdir(LOCKDIR) else None
+    if fd is None:
+        print("lock: free (no lock directory yet)")
+    else:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(fd, fcntl.LOCK_UN)  # a look only: never hold it past this line
+            print("lock: free")
+        except BlockingIOError:
+            try:
+                info = json.loads(os.pread(fd, 4096, 0) or b"{}")
+            except ValueError:
+                info = {}
+            print(f"lock: held by {describe(info)}")
+    h = read_hold()
+    print("hold: none" if not h else f"hold: {describe(h)}{'' if hold_live(h) else ' (stale)'}")
+    require_device()
+    print("camera:", "recording" if recording() else "not recording",
+          "| in front" if camera_focused() else "| NOT in front")
+
+
 def cmd_record(args):
+    _lock = take_lock(f"record {args.seconds:g}")
+    refuse_if_held("record")
     check_ready()
+    if recording():
+        sys.exit("the camera is already recording (not through phonecam): a start key would stop it")
     before = set(clips())
     off, rtt, _ = offset_ms()
     print(f"phone - mac: {off:+.1f} ms (round trip {rtt:.0f} ms)")
@@ -262,8 +410,14 @@ def main():
     sub.add_parser("setup").set_defaults(fn=cmd_setup)
     sub.add_parser("teardown").set_defaults(fn=cmd_teardown)
     sub.add_parser("offset").set_defaults(fn=cmd_offset)
-    sub.add_parser("start").set_defaults(fn=cmd_start)
-    sub.add_parser("stop").set_defaults(fn=cmd_stop)
+    sub.add_parser("status").set_defaults(fn=cmd_status)
+    p = sub.add_parser("start")
+    p.add_argument("--owner", help="name the hold (or PHONECAM_OWNER); stop then needs the same")
+    p.set_defaults(fn=cmd_start)
+    p = sub.add_parser("stop")
+    p.add_argument("--owner")
+    p.add_argument("--force", action="store_true", help="end another owner's hold")
+    p.set_defaults(fn=cmd_stop)
     p = sub.add_parser("pull")
     p.add_argument("name", nargs="?")
     p.add_argument("--out", default=os.path.expanduser("~/Downloads"))
