@@ -956,8 +956,38 @@ none failed, the frame counter 232,279 judged and none rejected.
 - 11-02 evening: `warm_windows.sh` (`warm-windows.log`, `run-detector.log`, `detector.json`, `compare-detector.txt`, `sched-window-detector-before.txt` and `-after.txt`, `record-detector-before.txt` and `-after.txt`, `usb-detector-after.txt`).
 - 11-02 night: `trim_on_wake.sh` and `trim_flash.sh` (`trim-on-wake.log`, `flash-trim.log`, `run-trim.log`, `trim.json`, `compare-trim.txt`, `compare-trim-vs-detector.txt`, the `-trim-` windows and records); `diag_on_wake.sh` and `diag_flash.sh` for the cost diagnostic (`95ef5cbc5d`): `readcost-diag.txt`, `sections-diag-1.txt`, `sections-diag-2.json`, `sched-window-diag.txt`, `record-diag.txt`, `usb-diag.txt`.
 
+- 11-03, the presser's night (JD's advance go; every run hands-free): `../../scripts/presser_repl.py` (the presser from the logger's REPL: `pulse`, `batch`, `hold`, `--hold`), `../../scripts/presser_count.py`; `exit_on_usb.sh` and `exit_flash.sh` (`exit-on-usb.log`, `flash-exit.log`, `sections-exit-*`, `readcost-exit.txt`, `silence-check-exit.*`, `exit.json`, `compare-exit*.txt`, the `-exit-` windows and records); `presser_gate.sh LABEL TOKEN [boundary]` (`presser-gate-*.json/.log`: `exit`, `stage3`, `stage3b`, `stage3b-boundary`); `deep_wake_presser.sh N LABEL TOKEN` (`deep-wake-*.json/.log`: `exit`, `stage3`, `stage4`, `stage4b`); `settle_sweep.sh` (`settle-sweep-stage3.json/.log`); `stage3_flash.sh` (`stage3-flash-run.log`, `status-stage3.json`, `frmscan-stage3.txt`, `rows-stage3.txt`, `silence-check-stage3.log`); `stage3b_flash.sh` (`stage3b-flash-run.log`, `usb-stage3b-*.txt`, `record-stage3b-*.txt`, `silence-check-stage3b.*`, `stage3b.json`, `compare-stage3b*.txt`); `stage4_flash.sh` and `stage4b_flash.sh` (`stage4*-flash-run.log`, `rtc-status-stage4*-*.txt`, `overrun-status-stage4*-*.txt`, `burst-presses-stage4*.txt`, `stuck-stage4*.txt`, `stage4.json`, `compare-stage4*.txt`); `soak_watch.sh` (`soak-stage3b.jsonl`, white sleeping between reads) and `soak_watch_awake.sh` (`soak-stage4.jsonl`, `soak-stage4b.jsonl`: the night's reads, one JSON line each). The codex reviews: `../../plans/review-codex-row-isr-{exit,exit2,stage3,stage3-verify,stage3-frmno,stage4,stage4b}-2026-11-03-raw.md`.
+
 ## Lessons
 
+- **The presser turns the scan's gates into counts, and a night runs
+  itself.** One press from the logger's REPL wakes a deep-sleeping board
+  (it enumerates ~4 s later with the data line on), so a runner can flash,
+  gate and sleep white with nobody at the bench; the counts at the scan
+  (op 28 sub 12) say what the matrix saw, `raw_edges` what reached
+  debounce, `key_presses` what left it, and the three together place a
+  miss (the 8 ms boundary is debounce's, the scan exact).
+- **A hardware register can tear.** FRMNO updates low byte first over a
+  few cycles at a byte carry; two adjacent loads can both land in it, so
+  "read until two agree" needs the reads spaced past the tear (twelve
+  cycles here). Measure a tear with back-to-back reads before trusting a
+  retry.
+- **Preemption doubles a bit-banged transfer, not "plus the handler's
+  share".** The clock chip's 2.6 ms read ran to 5.5 ms with the handler
+  and the tick through it; a deadline sized for the masked transfer then
+  cuts the slowest. Measure the whole call per kind (op 22) before moving
+  a deadline or a mask.
+- **`uhubctl -a on` within a second of another script's `-a off` hangs**
+  (twice, 26 and 22 min, the on in effect): pause 3 s and run it under
+  `timeout 20`.
+- **The ladder sleeps the board the moment the data line goes off** when
+  the last key is more than 3 min back (the data line holds an awake board
+  awake, nothing more): hold the ladder at Always on across a data cut
+  (dev op 14 sub 1 arg 0, and 2 to put Power saver back) or wake it with a
+  press first.
+- **A `pkill -f NAME` kills any waiter whose command line names NAME**:
+  the two launchers that waited on `soak_watch*` died at the runner's
+  first line (harmless: the runner had already started).
 - **A theory that matches the magnitude is still a theory.** Five software
   divides at 100-200 cycles each added up to the 19 us on paper, and the
   build without them cost the same; stage 2's own vector had divides and
