@@ -1,0 +1,23 @@
+**READY TO FLASH — no P1 blockers found in this dev-only change.** Three P2s:
+
+1. **Section durations can silently alias a whole slot** — [rowisr.c:844](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:844). The subtraction is correct only when each interval is **shorter than `slot_ticks`**. Higher-priority preemption has no enforced bound; a pair can span multiple resets. Even one reset with elapsed time ≥267 µs can produce a nonnegative difference and lose a period. `sec_commit()` runs regardless of `crossed` or `dur_ok`. Fix: reconstruct boundaries using coherent extended-time/TC stamps, or reject and count samples whose duration cannot be established as shorter than one slot.
+
+2. **Sub 10 reports zero reads instead of 256** — [rowisr_diag.c:408](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr_diag.c:408). `[15..16]` is `00 00`; the `01` lands at `[17]`. Fix: `data[14] = 8; put16(&data[15], 256u);`, leaving `[17]` zero. The five measured costs remain correctly placed and decoded.
+
+3. **An empty sections window crashes the text output** — [rowisr_diag.py:294](/Users/jdlien/code/ak820-pro/scripts/rowisr_diag.py:294). With zero full services, such as throughout scan-only, the calculated values are `None`, then formatted with `.2f`. Fix: print “no full services” when `n == 0`. JSON already handles this.
+
+The remaining checks:
+
+- **Scheduler reset:** yes. [SCHED_MCTRL](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:126) sets MR9 IE and RST, with STOP clear. [Initialization](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:1217) installs it with PRE=0 and HCLK selected. Precisely, MR9 is **`slot_ticks - 1`**, programmed by `sched_set_period()`, so adding `slot_ticks` is the correct modulus subject to P2 #1.
+
+- **Stamp storage and reset:** safe. Every path reaching `sec_commit()` overwrites all seven stamps; spurious, cadence-change, scan-only and flash-guard returns commit none. CT16B4 cannot preempt itself. [The thread-side copy/reset](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/rowisr.c:850) is atomic against it: this [ARMv6-M port](/Users/jdlien/code/ak820-pro/qmk_firmware-ak820pro-rowisr/lib/chibios/os/common/ports/ARMv6-M/chcore.h:503) globally masks interrupts, including priority 3, and its IRQ intrinsics have compiler memory barriers.
+
+- **Masked sections:** all seven stamps are outside the lock/unlock pairs. `sec_commit()` follows stamp 6, after the exit snapshot’s unlock. This change adds no call inside those regions. The existing scan helpers still perform GPIO-mode operations under their own locks; the [plan already records that exception](/Users/jdlien/code/ak820-pro/plans/ROW-ISR-PLAN.md:2227).
+
+- **Read trials:** at 200 cycles per register read, 256 reads consume **51,200 cycles = 1.067 ms**, plus loop and timing overhead: approximately 1.1 ms per mask. Each trial unlocks separately, allowing pending observers to run; eight trials are not one continuous mask. This leaves substantial room below the 8 ms observation-gap guard, although surrounding interrupt latency is not bounded here. Missed slots and deadline omissions remain possible, as intended for this diagnostic. The volatile dereference requires every read. `0x4000A004` correctly equals `CT16_BASE(5) + CT_TC`; CT16B5 is configured free-running at HCLK/256.
+
+- **Wire/window/build:** both host commands correctly slice the raw report at `[4:]`. Sub 11’s count and six sums occupy exactly `[4..31]`. Its first read clears the accumulators; the second returns the intervening window. All additions are gated by `AK820_DEV_HOOKS`, including the prototype, diagnostics implementation and dispatch; the non-dev stamp/commit macros are no-ops.
+
+- **Interpretation:** seven added TC reads and their bookkeeping perturb timing; the intervals include instrumentation overhead. The priority-2 tick, including its FRMNO observation, is charged to whichever section it interrupts—even immediately after an unlock. Stamp 0 follows the entry hook; stamp 6 precedes **both `sec_commit()` and the exit hook**. Consequently, the host’s “entry hook to exit hook less the hooks themselves” label overstates coverage: the section total also excludes `sec_commit()`, which page 4 includes. Section 3 additionally includes pulse accounting after the arm’s unlock.
+
+Source review only; no builds, tests or board commands run.

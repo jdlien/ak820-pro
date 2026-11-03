@@ -2640,3 +2640,15 @@ quantization, above the largest new tolerance of 28.389 ms.
   asked (`review-prompt-row-isr-diag.txt`); the flash waits on JD's key
   and his go (`diag_on_wake.sh`, `diag_flash.sh`), one flash and two
   minutes of reads.
+- 11-02 23:50: codex on `95ef5cbc5d`: **READY TO FLASH, no P1**
+  (`review-codex-row-isr-diag-2026-11-02-raw.md`). Its P2s: (1) a section
+  longer than a slot would alias by a period (the sums are means over
+  ~37,000 services a window; one aliased sample is 0.007 us of mean;
+  accepted, noted); (2) sub 10's reads count is written one byte high
+  ([17] not [15..16]; the host side takes 256 when it reads 0; the
+  firmware's byte to fix with the next commit); (3) the host's text
+  output crashed on a window with no full services (fixed, `87f06f1`'s
+  follow-up). Its reading of the interpretation kept: the stamps' own
+  seven TC reads and the tick's preemptions land in whichever section
+  they interrupt; the total is stamp 0 to stamp 6, the hooks and the
+  commit outside it.

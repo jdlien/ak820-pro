@@ -268,7 +268,7 @@ def main():
         elif cmd == "readcost":   # op 28 sub 10: HCLK cycles a read, the loop included (a RAM word is the loop alone)
             o = xfer(h, 10)[4:]
             d = {"frmno": u16(o, 0), "insts": u16(o, 2), "cfg": u16(o, 4), "ct16b5_tc": u16(o, 6), "ram": u16(o, 8),
-                 "trials": o[10], "reads": u16(o, 11)}
+                 "trials": o[10], "reads": u16(o, 11) or 256}   # 95ef5cbc5d writes the 256 one byte high ([17]); the count is fixed anyway
             if as_json:
                 print(json.dumps(d))
             else:
@@ -288,11 +288,13 @@ def main():
                  "total_us": round(sum(sums) / n / 48.0, 2) if n else None, "names": names}
             if as_json:
                 print(json.dumps(d))
+            elif n == 0:
+                print("no full services in 10 s (scan-only, or the handler held off): nothing to divide")
             else:
                 print(f"{n} full services in 10 s; the handler's sections, mean us (HCLK ticks / 48):")
                 for nm, us in zip(names, d["sections_us"]):
                     print(f"  {us:8.2f}  {nm}")
-                print(f"  {d['total_us']:8.2f}  total, entry hook to exit hook less the hooks themselves")
+                print(f"  {d['total_us']:8.2f}  total, stamp 0 to stamp 6: the ISR hooks and the sums' own commit lie outside, page 4 includes them")
         elif cmd == "usb":   # op 28 sub 6
             d = usb_dict(xfer(h, 6))
             if as_json:
