@@ -87,9 +87,12 @@ registers and a RAM word alike), and **the handler's sections** over
 steps 2-5 37.9, the arm 10.9, exit snapshot 5.8, exit judgment and
 record 8.7, total 80.2: the detector's four sections 31 us with no hot
 spot, the instruction count of its bookkeeping at 3-5 cycles an
-instruction from flash. **Next: the judgment every eighth slot and no
-exit judgment**, the same alias guarantee at 2 ms attribution, for codex
-and then JD's go (`history/rowisr-stage1-20261101/README.md`, "The cost
+instruction from flash. **The remedy is built: `1d73bf3ed5`, token `0x01719c7f`** (the
+judgment every eighth service against its own baseline, the exit
+snapshot time only, the same alias guarantee at 2.1 ms attribution;
+~17 us expected back), codex reviewing; then JD's go and key for
+`cadence_on_usb.sh` (the flash, the sections, the silence set, the warm
+windows) (`history/rowisr-stage1-20261101/README.md`, "The cost
 diagnostic"). Also seen: two span rejections in the
 trim's run, 0 ms by the extension and 256 by the frames, a torn FRMNO
 read at a carry by the look of it; a read-until-equal if it recurs.

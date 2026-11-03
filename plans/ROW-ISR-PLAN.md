@@ -2664,3 +2664,24 @@ quantization, above the largest new tolerance of 28.389 ms.
   flash on this core (the README's "The cost diagnostic"). The record
   clean, 283,631 judged and none rejected. The remedy is structural: the
   judgment every eighth slot, no exit judgment; designed next.
+- 11-03 00:14: **the remedy built: `1d73bf3ed5`** (token `0x01719c7f`,
+  heap gap 384 B, pushed): the frame counter's judgment every eighth
+  service on the interval since the last judged one, against its own
+  baseline `usb_base`; the seven between take the time-only snapshot;
+  the exit snapshot time only and its judgment gone (the design comment
+  "The cadence"). The guarantee is the interval's, so every alias the
+  per-slot judgment caught this one catches, attributed to within 2.1 ms;
+  the exit's verdict protected one elapsed sample, now left short by a
+  wrap in that case. Sub 10's reads byte fixed. The vector 1,658
+  instructions; the modulo's divide inlined onto the slow path (a span
+  past 2.048 s); one `bl` inside the entry's masked section is the
+  compiler's outlined tail of the handler's own re-prime (`time_ext +=
+  gap; time_valid = 1`, then the TC), not a call: the rule's intent, no
+  external call under the mask, holds. Codex's review asked
+  (`review-prompt-row-isr-cadence.txt`): the guarantee case by case, the
+  two baselines' coherence, the exit's removal, the silence set's
+  expectations, the masked sections, the record. Then JD's go and key:
+  `cadence_on_usb.sh` runs `cadence_flash.sh` (the flash, two sections
+  windows, readcost, `silence_check.sh`, `warm_windows.sh cadence`).
+  Expected: ~17 us back, the handler near 63 us; the silence set 16 of
+  16 with the judged counts an eighth.
