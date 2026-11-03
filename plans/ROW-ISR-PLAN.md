@@ -3258,3 +3258,31 @@ quantization, above the largest new tolerance of 28.389 ms.
   five wakes, the silence set), codex's judgment on the two misses
   (`review-prompt-row-isr-stage5-gates.txt`), the night's soak with
   Warren's M2/M3 on 5d.
+- 11-03 13:21: **codex's judgment on stage 5**
+  (`review-codex-row-isr-stage5-gates-2026-11-03-raw.md`): keep 125 us
+  and the terminal 1,535, **revise the 20% target** (39.6% is the elapsed
+  share between the hooks, preemption in, the wrapper out; the release
+  evidence is delivery, overruns, the tick, stalls and omissions under
+  load), **allow a small omission budget** (about one isolated omission
+  in 3.4 s once the mixed-load and optical checks pass; "invisible" not
+  established by the count), and **withhold release qualification until
+  the operational gates close**. Corrections taken into the README: the
+  omissions are 61 R, 15 B, 13 G (red disproportionate, not alone); page
+  4's mean and share are a 2 s pair after the hold; the incremental
+  light subtracts 4b's dark reference (a dark hold on 5d owed, with the
+  per-colour, value-64 and low-code holds: code 1 is +6.8% of duty at
+  the bottom); the camera's 11-12% events were 2-3 frames and the
+  seconds-redraw attribution is plausible, not established; the
+  priority order is UART2 0, SysTick 0, USB 1, the tick 2, row/SPI 3, so
+  the tick's gap monitor cannot acquit the SPI completions; a 74.9 us
+  latency maximum may be several handlers stacked; 35 of 73 tx
+  timeouts stay unclassified until the radio kinds are read. Its
+  rankings: for the share, section 2 in SRAM on the daily build (~10
+  us), the cheap cuts (the width's x300 as `(75 b + 8) >> 4` or a flash
+  table; `rec.serviced++` unread), then the every-eighth judgment (~8
+  us, a diagnostic concession for production, JD's call); for the
+  omissions, find and shorten the interference, move the scan's
+  bookkeeping (the publish, the health and rig accounting) behind the
+  arm keeping the electrical scan before it, the terminal 1,279 last.
+  The 8 ms presser result is the debounce boundary as recorded, 10 ms
+  the reliable dwell; it was 5c's run, so 5d's settle gets the chain's.

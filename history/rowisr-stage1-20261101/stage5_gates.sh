@@ -34,9 +34,11 @@ log "1. the UART and ACK counts awake at the new cadence: status, 200 presses at
 wake_on_data || { log "no board"; standing; exit 1; }
 sleep 3
 venv/bin/python scripts/overrun_diag.py status 2>&1 | tee "$D/overrun-$L-before.txt" | grep -iE "OE total|overrun|ack|timeout" | head -6
+venv/bin/python scripts/overrun_diag.py mon zero >/dev/null 2>&1; venv/bin/python scripts/overrun_diag.py mon on 2>&1 | tail -1   # the 20 kHz tick's gap monitor: the worst gap and its ring name the interferers (the 75 us entry latency, stage 5d)
 venv/bin/python scripts/presser_repl.py batch A1 200 25 75 2>&1 | grep -v '^BATCH' | tail -2
 sleep 3
-venv/bin/python scripts/overrun_diag.py status 2>&1 | tee "$D/overrun-$L-after.txt" | grep -iE "OE total|overrun|ack|timeout" | head -6
+venv/bin/python scripts/overrun_diag.py status 2>&1 | tee "$D/overrun-$L-after.txt" | grep -iE "OE total|overrun|ack|timeout|gap|ring|worst" | head -14
+venv/bin/python scripts/overrun_diag.py mon off >/dev/null 2>&1
 "$HOME/Library/Application Support/ak820pro/bin/ak820" health 2>&1 | grep -iE "ack|overrun|uart|stall|ge_25" | head -8 | tee "$D/health-uart-$L.txt"
 standing
 ;; esac

@@ -1183,49 +1183,80 @@ and the logger's mean over the last 120 s.
 | | 4b (267 us) | 5c (`0x7c425589`, 12:49-12:54) | 5d (`0x717d9b6a`, 13:02-13:07) |
 |---|---|---|---|
 | services a second (page 4) | 3,745 | 7,999 | 7,997 |
-| handler mean / min / max, us (page 4, inclusive) | 71.6 / - / - | 50.0 / 32.0 / 117.3 | 49.5 / 32.0 / 117.3 |
-| CPU share in the row ISR | 26.8% | 40.0% | 39.6% |
+| handler mean / min / max, us (page 4, inclusive; the mean and the share from a 2 s pair taken after the hold, the extrema since the reset) | 71.6 / - / - | 50.0 / 32.0 / 117.3 | 49.5 / 32.0 / 117.3 |
+| elapsed share between the hooks (preemption in, the wrapper out) | 26.8% | 40.0% | 39.6% |
 | lit draw at full white, mA (31.1 dark) | 92.1 | 92.12 | 92.32 |
 | pulses omitted | 0 | 2,311 of 2,417,753 (0.096%) | 87 of 2,417,188 (0.0037%) |
-| omissions by the arm deadline | 0 | all (saturated) | all (89) |
-| per key row R / B / G | - | 255 / 1-9 / 1-10 | 3-23 / 2-4 / 1-3 |
+| omissions by the arm deadline | 0 | all (saturated) | all (89 at the record's later read) |
+| per key row R / B / G | - | 255 / 1-9 / 1-10 (R saturated; B 32, G 36 in all) | 3-23 / 2-4 / 1-3 (61 R, 15 B, 13 G) |
 | latency max, us (page 7) | - | 72.8 | 74.9 |
 | `row_gap_max`, ms | 12 (a wake) | 3 | 3 |
 | missed slots, losses, spurious | 0 | 0 / 0 / 0 | 0 / 0 / 0 |
 | tx_sent / tx_timeouts over the window | - | 73 / 25 | 73 / 35 |
 
 **What the numbers say.**
-- **The field is 444 Hz and the light is the same to a decimal**: 92.12
-  and 92.32 mA against 92.1, the 61 mA incremental within 0.4%, so the
-  scale 300/64 (the measured duty at k = 10 scaled by 125/267) stands and
-  D4's 4.845 would have been 3.5% bright.
+- **The field is 444 Hz and the full-white draw is the same to a
+  decimal**: 92.12 and 92.32 mA against 92.1. The 61 mA incremental
+  "within 0.4%" subtracts 4b's dark reference (31.1 mA), not a new dark
+  hold on 5d, and a changed CPU occupancy can move that base: a dark hold
+  on 5d is owed, and the gate's per-colour, value-64 and low-code holds
+  with it. Code 1 is 5 ticks at 125 us against 10 at 267: +6.8% of
+  cadence-normalized duty at the bottom, before the transistors (the
+  rounding, codex), which is the low-code gate's reason. The scale
+  300/64 (the measured duty at k = 10 scaled by 125/267) stands at full
+  white; D4's 4.845 would have been 3.5% bright.
 - **The handler is cheaper in absolute terms (71.6 to 50 us) and dearer
   in share (26.8% to 40%)**: at twice the rate, 5a's savings (the exit,
   the arm's reconstruction, the loop) bought 22 us of 72, not the 47 the
   plan's 20% asks. The old callback driver ran at 73% and the board
-  worked; this is the plan's target missed, not an operational limit.
-  What is left is the detector's per-service bookkeeping (~17 us, the
-  every-eighth judgment is JD's call at ~8), the scan (~15 us on a third
-  of the slots), the fifteen writes and the port's wrapper; and the flash
-  wait states on every instruction, which `.ramtext` would halve for the
-  daily build's 2.3 KB gap, not the dev build's 368 B.
-- **5c's omissions were one cause**: every omitted pulse a red slot, the
-  one that carries the key scan before the arm, and every one by the
-  deadline: a late entry (the latency tail at 73 us) on a scan slot passed
-  80 us. 5d's window 1,535 (1.28x over the full width) moved the deadline
+  worked; codex's judgment: a target to revise, not an operating limit,
+  the release evidence being delivery, overruns, the tick's regularity,
+  stalls and omissions under load. Its ranking of what is left: section
+  2 (the mux rows, the scan, the match registers) in SRAM on the daily
+  build (~10 us, low teens at best: the 5d vector is 3,404 B, the daily
+  gap 2.3 KB, the dev gap 368 B, so a section, not the handler); the
+  cheap instruction cuts (the width's x300 is five shift-adds a column,
+  `(75 b + 8) >> 4` or a flash table; `rec.serviced++` unread since 5c);
+  the every-eighth frame judgment (~8 us, 39.6% to ~33%, a real
+  diagnostic concession: the 00:22 counterexample loses a second
+  aliasing silence inside 1 ms at this cadence).
+- **5c's omissions had one dominant cause**: 2,243 of 2,311 red slots
+  (the record's R counters saturated at 255 a row; B 32 and G 36 in
+  all), the red slot being the one that carries the key scan before the
+  arm, and every omission by the deadline: a late entry (the latency
+  tail at 73 us), or a preemption after it, on a scan slot passed 80 us.
+  Red is disproportionately vulnerable, not alone (codex's correction). 5d's window 1,535 (1.28x over the full width) moved the deadline
   to 90.5 us and the settle to 0.5 us (stage 3's sweep was exact at 0):
-  **26x fewer, 87 in 300 s, one slot in 3.4 s**, one row-colour dark for
-  one 2.25 ms field, which no eye sees. The residual is the latency tail
-  past 90 us plus a scan slot; the entry latency reaches 75 us with the
-  daemon paused, so something at priority 3 or above runs that long
-  (the LCD's seconds redraw is the suspect, as the LCD-blit dips were):
-  the gap monitor (dev op 24-25) can name it in the next window. The
-  plan's "zero in quiet runs" is not met to the letter; the next literal
-  down is 1,279 (1.07x headroom, 95.8 us), or the scan off the arm's path.
+  **26x fewer, 87 in 300 s (61 R, 15 B, 13 G at the record's read), one
+  slot in 3.4 s**, one row-colour dark for one 2.25 ms field, which the
+  count alone does not prove invisible (a run of 1 globally does not
+  exclude the same row-colour on successive fields: codex). The residual
+  is a latency tail past 90 us: the entry latency reaches 74.9 us with
+  the daemon paused (a maximum, so possibly several handlers and masked
+  intervals stacked, not one 75 us interferer), and a prompt entry can
+  be preempted before its arm. The order on this board is UART2 0,
+  SysTick 0, USB 1, the 20 kHz tick 2, the row ISR with SPI0 and SPI1 at
+  3 (`mcuconf.h`, `docs/leds.md`): the SPI completions cannot be
+  preempted by the row handler, and the 20 kHz tick's gap monitor
+  (`overrun_diag.py mon`) cannot acquit them, since a priority-3 handler
+  delays the row while the tick stays regular. The plan's "zero in quiet
+  runs" is not met to the letter; codex's order of remedies: find and
+  shorten the interference; move the scan's bookkeeping (the publish,
+  the health and rig accounting) behind the arm, keeping the electrical
+  scan before it; the terminal 1,279 (5.3 us for 7% headroom) only if
+  the rest justifies it. Its judgment: keep 125 us and 1,535, accept
+  about one isolated omission in 3.4 s for release once the mixed-load
+  and optical checks pass.
 - **The scan is faster, not slower**: the presser's 8 ms dwell registered
-  88 of 100 on 5c against 72 on stage 3 (the debounce's boundary against a
-  2.25 ms matrix instead of 4.8), 10 and 12 ms exact, raw_edges exact in
-  every batch (`presser-gate-stage5.json`).
+  88 of 100 on 5c against 72 on stage 3, every closure reaching the
+  scanner and every transition the consumer (raw_edges exact), only
+  `process_record` missing 12: the debounce's boundary (5 ms,
+  `sym_defer_pk`, judged when the main loop consumes), where an ~8.1 ms
+  closure spans one 4.8 ms matrix period at 267 us and three or four
+  2.25 ms periods at 125, so the capture improves without the cadence
+  deriving the 88. 10 ms stays the demonstrated reliable dwell; 10 and 12
+  ms exact (`presser-gate-stage5.json`, 5c's run; 5d's settle has its own
+  presser gate in the chain).
 - **tx_timeouts** 25 and 35 of 73 frames in a window on the data line
   with the daemon paused: the module's link idle while USB carries the
   keys; the radio kinds and the ACK rate come with the gates chain's UART
@@ -1250,11 +1281,12 @@ the writer's runs 0 to 2 since the boot's reset; **inside the two
 windows nothing but the markers' own second frames**: no frame 8%
 under, the 3% figures (2.0% and 6.7% of frames) below the quiet tail's
 18.8%, the minimum 23.0 and 22.4 being the markers' tails. Two 11-12%
-single-frame events at 10.43 and 10.45 s (13:11:04.3), between two
-markers and before the second sync, are the LCD's seconds redraw
-costing a slot each (5d's residual omissions, one in 3.4 s: at 125 us a
-late slot is omitted whole, 5.5% of a field, so two in one frame read
-11%), not the writer's. The lights restored at 13:11:38
+events of two and three frames at 10.43 and 10.45 s (13:11:04.3),
+between two markers and before the second sync, are not the writer's
+(its windows are the lattice gaps); the seconds redraw costing omitted
+slots is the plausible cause, not an established one (the clip does not
+count omitted slots, and a slot's share of a frame's luma was not
+measured: codex). The lights restored at 13:11:38
 (`camera-write-stage5d-dips.txt`, `-luma.csv`, `-page4-*.txt`,
 `stage5d-gates-camera.log`).
 
