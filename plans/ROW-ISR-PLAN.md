@@ -3346,6 +3346,15 @@ quantization, above the largest new tolerance of 28.389 ms.
   KB, a measurement build would compile the overrun rings and the RX tap
   out to hold a ~1 KB `.ramtext` (the README). The docs carry the
   rewrite's figures (`docs/leds.md`, "The row ISR rewrite").
+- 11-03 14:12-14:21: **the value ladder on the logger** (the README):
+  with the Solid effect and keep-lit presses, white at 0-128 against
+  D8's drive accounting: a fixed 4.3 mA (the mux row's drive, selected
+  for the whole slot whatever the width) plus 46 mA per 100% of the
+  bytes' share, 50.4 at full white over the screen-on dark of 41.9
+  (the dark hold's 31.3 has the backlight off too). **D4's scale and D8's
+  accounting hold: linear in the byte**, the CIE curve accounted for;
+  the power model's base term measured. Bytes 1-7 stay for the
+  photodiode. The clip sweep re-run with JD's AE lock (14:22).
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake

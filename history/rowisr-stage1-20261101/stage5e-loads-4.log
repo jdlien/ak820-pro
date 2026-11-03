@@ -1,0 +1,19 @@
+[14:10:58] 4. the value ladder on the logger: solid white at 0, 8, 16, 32, 64, 128 (under the low cap's 128), 40 s each; linear in the value is the expectation (the camera's auto-gain made the clip sweep useless, 14:08)
+the ladder at mode 0 (try 1)
+[14:12:17] value 0: 41.87 mA, the drive accounting 0.0 % of maximum
+[14:12:57] value 8: 45.74 mA, the drive accounting 0.4 % of maximum
+[14:13:37] value 16: 46.08 mA, the drive accounting 0.7 % of maximum
+[14:14:18] value 32: 46.78 mA, the drive accounting 1.5 % of maximum
+[14:14:58] value 64: 31.28 mA, the drive accounting 0.0 % of maximum
+[14:15:38] value 128: 31.29 mA, the drive accounting 0.0 % of maximum
+[14:15:38] JD's lighting restored
+value -> mA over the dark base; per unit of value; the drive accounting (expect value/255):
+    0:  41.87 (dark)
+    8:  45.74  + 3.87 mA  123.36 mA at full by this step  drive 0.4 % (expect 3.1)
+   16:  46.08  + 4.21 mA  67.10 mA at full by this step  drive 0.7 % (expect 6.3)
+   32:  46.78  + 4.91 mA  39.13 mA at full by this step  drive 1.5 % (expect 12.5)
+   64:  31.28  +-10.59 mA  -42.19 mA at full by this step  drive 0.0 % (expect 25.1)
+  128:  31.29  +-10.58 mA  -21.08 mA at full by this step  drive 0.0 % (expect 50.2)
+the ladder at mode 2 (try 1)
+[14:15:41] the standing state
+[14:15:41] stage 5's load and light holds done (4)

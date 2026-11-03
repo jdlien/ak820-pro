@@ -98,18 +98,19 @@ venv/bin/python hostagent/ak820lighting.py show 2>&1 | head -5
 ladder 2; standing
 ;; esac
 case "$STEPS" in *4*)
-log "4. the value ladder on the logger: solid white at 0, 8, 16, 32, 64, 128 (under the low cap's 128), 40 s each; linear in the value is the expectation (the camera's auto-gain made the clip sweep useless, 14:08)"
+log "4. the value ladder on the logger: the Solid colour effect (JD's Alphas/Mods keeps the mods lit at their own colour, so its value 0 drew 41.9 mA, 14:12), white at 0, 32, 64, 96, 128 (the low cap's ceiling), a keep-lit press before each (below 15% the dim comes at 1 min and the lights off at 3), 40 s each; the gate: the incremental current linear in the drive accounting's share (the bytes are the CIE curve of the value, so the accounting is the byte, not the value)"
 wake_on_data || { log "no board"; standing; exit 1; }
 sleep 3; ladder 0; venv/bin/python scripts/presser_repl.py pulse A1 100 >/dev/null 2>&1; sleep 2
 venv/bin/python hostagent/ak820lighting.py dump "$D/lighting-before-ladder-$L.json" >/dev/null 2>&1 || cp ~/Documents/ak820pro-lighting.json "$D/lighting-before-ladder-$L.json"
 : > "$D/valueladder-$L.txt"
-for val in 0 8 16 32 64 128; do
+for val in 0 32 64 96 128; do
     python3 - "$D/lighting-before-ladder-$L.json" "$val" "/tmp/ladder-$val.json" <<'PY'
 import json, sys
-d = json.load(open(sys.argv[1])); d['hue'], d['sat'], d['val'] = 0, 0, int(sys.argv[2])
+d = json.load(open(sys.argv[1])); d['animation_index'], d['hue'], d['sat'], d['val'] = 1, 0, 0, int(sys.argv[2])   # 1: Solid colour
 json.dump(d, open(sys.argv[3], 'w'))
 PY
     venv/bin/python hostagent/ak820lighting.py restore "/tmp/ladder-$val.json" >/dev/null 2>&1 || log "value $val: the restore failed"
+    venv/bin/python scripts/presser_repl.py pulse A1 100 >/dev/null 2>&1   # keep-lit: the dim at 1 min under the cap
     sleep 40
     M=$(power_mean 25); DRV=$(venv/bin/python hostagent/ak820battery.py 2>/dev/null | grep -oE "led drive +[0-9.]+ %" | grep -oE "[0-9.]+" | head -1)
     log "value $val: $M mA, the drive accounting ${DRV:-?} % of maximum"; echo "$val $M ${DRV:-?}" >> "$D/valueladder-$L.txt"
@@ -120,10 +121,12 @@ import sys
 rows=[l.split() for l in open(sys.argv[1]) if l.strip()]
 pts=[(int(r[0]), float(r[1]), r[2]) for r in rows]
 dark=next((m for v,m,_ in pts if v==0), None)
-print("value -> mA over the dark base; per unit of value; the drive accounting (expect value/255):")
+print("value -> mA over the dark base against the drive accounting's share (the byte's), the mA per % of full (61 mA at 100% is the full-white reference):")
 for v,m,d in pts:
     if v==0: print(f"  {v:3d}: {m:6.2f} (dark)"); continue
-    inc=m-dark; print(f"  {v:3d}: {m:6.2f}  +{inc:5.2f} mA  {inc/v*255:5.2f} mA at full by this step  drive {d} % (expect {v/255*100:.1f})")
+    inc=m-dark
+    try: pct=float(d); per=inc/pct if pct else float('nan'); print(f"  {v:3d}: {m:6.2f}  +{inc:5.2f} mA  drive {pct:5.1f} %  -> {per*100:6.1f} mA at 100% by this step")
+    except ValueError: print(f"  {v:3d}: {m:6.2f}  +{inc:5.2f} mA  drive ?")
 PY
 ladder 2; standing
 ;; esac

@@ -1418,6 +1418,45 @@ about 1.5 KB; a ~1 KB `.ramtext` for the handler's section 2 would need
 the overrun rings and the RX tap compiled out of that measurement build
 (the gap is 376 B; the daily's 2.3 KB holds it as is).
 
+**The value ladder on the logger (14:12-14:21, `stage5_loads.sh ... 4`,
+`valueladder-stage5e.txt`, `-v2.txt`): the scale is linear in the byte
+over a fixed row-drive term.** The first run (JD's Alphas/Mods effect)
+was confounded twice: the effect keeps the mods at their own colour (so
+"value 0" drew 41.9 mA) and the cap's dim at 1 min and lights-off at 3
+landed on the later steps. The second run: the Solid effect, a keep-lit
+press before each step, white at 0, 32, 64, 96, 128 (the cap's ceiling),
+40 s each, read against the firmware's drive accounting (D8's `led_pm`,
+the bytes' share of the maximum; the bytes are QMK's CIE curve of the
+value, so value 32 is bytes of 3-4 and 1.5%):
+
+| value | mA | over value 0 | the drive accounting | mA at 100% by this step |
+|---|---|---|---|---|
+| 0 | 41.93 | - | 0.0% | - |
+| 32 | 46.76 | +4.83 | 1.5% | 322 |
+| 64 | 48.28 | +6.35 | 4.6% | 138 |
+| 96 | 50.88 | +8.95 | 10.2% | 88 |
+| 128 | 54.71 | +12.78 | 18.8% | 68 |
+
+Two things in it. **The "dark" with the Solid effect at value 0 is
+41.9 mA, not the dark hold's 31.3**: the hold's lights-off stage also
+turns the screen's backlight off (`screen_off_ms` equals
+`lights_off_ms` in every ladder), so the backlight at JD's 100% is the
+10.6 mA between them, and the LEDs' own incremental at full white is
+**50.4 mA** (92.3 - 41.9), the 61 against 4b's 61 being like against
+like (both darks had the screen off). **The increments fit a fixed
+term plus a line:** 4.3 mA at any lit value plus 46 mA per 100% of the
+bytes' share (64: 4.3 + 2.1 = 6.4 against 6.35; 96: 9.0 against 8.95;
+128: 12.9 against 12.78; 100%: 50.3 against 50.4). The fixed term is the
+mux row's drive: a lit row's transistor is selected for the whole slot
+whatever the pulse's width (F-033's phantom was this current on a dark
+row, fixed by not selecting it), so a short pulse costs the row's base
+current as a long one does. So the light (the pulse width) is linear in
+the byte as the table makes it, the accounting agrees with the bytes
+(the CIE curve included), and the power model's "dark and base terms"
+have their number: the base is ~4.3 mA while any LED is lit, the slope
+~46 mA at full. The lowest codes (bytes 1-7) are below what the logger
+resolves and stay for the photodiode.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

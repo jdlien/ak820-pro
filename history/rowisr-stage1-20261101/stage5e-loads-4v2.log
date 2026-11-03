@@ -1,0 +1,17 @@
+[14:16:41] 4. the value ladder on the logger: the Solid colour effect (JD's Alphas/Mods keeps the mods lit at their own colour, so its value 0 drew 41.9 mA, 14:12), white at 0, 32, 64, 96, 128 (the low cap's ceiling), a keep-lit press before each (below 15% the dim comes at 1 min and the lights off at 3), 40 s each; the gate: the incremental current linear in the drive accounting's share (the bytes are the CIE curve of the value, so the accounting is the byte, not the value)
+the ladder at mode 0 (try 1)
+[14:18:09] value 0: 41.93 mA, the drive accounting 0.0 % of maximum
+[14:18:59] value 32: 46.76 mA, the drive accounting 1.5 % of maximum
+[14:19:48] value 64: 48.28 mA, the drive accounting 4.6 % of maximum
+[14:20:37] value 96: 50.88 mA, the drive accounting 10.2 % of maximum
+[14:21:27] value 128: 54.71 mA, the drive accounting 18.8 % of maximum
+[14:21:27] JD's lighting restored
+value -> mA over the dark base against the drive accounting's share (the byte's), the mA per % of full (61 mA at 100% is the full-white reference):
+    0:  41.93 (dark)
+   32:  46.76  + 4.83 mA  drive   1.5 %  ->  322.0 mA at 100% by this step
+   64:  48.28  + 6.35 mA  drive   4.6 %  ->  138.0 mA at 100% by this step
+   96:  50.88  + 8.95 mA  drive  10.2 %  ->   87.7 mA at 100% by this step
+  128:  54.71  +12.78 mA  drive  18.8 %  ->   68.0 mA at 100% by this step
+the ladder at mode 2 (try 1)
+[14:21:30] the standing state
+[14:21:30] stage 5's load and light holds done (4)
