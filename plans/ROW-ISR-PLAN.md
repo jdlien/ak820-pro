@@ -2552,3 +2552,14 @@ recovery is judged if it ends fresh and excluded without a loss if not.
   5, "Measured"); the health counters reset at its end. `wake_watch.sh`
   armed on the power logger: white's own sleep, JD's next key, then
   `wake_read.sh` at once (the spurious count across one wake, alone).
+- 11-02 19:06: **the wake read.** White slept on its own at 16:46:47
+  (3.4 mA), JD's key at 19:05:58, `wake_watch.sh`'s read 6 s later: woke
+  on the key, 6,851 counted s, no stray, no reset; since the 16:44:17
+  reset epoch losses 2 (the data cut's bus event and the sleep, each by
+  design), invalid services 1, spurious 1 (0 across the sixteen
+  silences: the count tracks the wake, where CT16B4 restarts), no stall;
+  the window 3,743.5/s, 0 missed, 0 omitted, the mean 63.3 µs (52.5 on
+  stage 2 at 11:10, not separated from the lighting's content: the warm
+  windows). White released to the coordinator at 19:07. Owed on the
+  detector: the witness's edges for the lengths, and the handler's mean
+  under it at a held lighting state.

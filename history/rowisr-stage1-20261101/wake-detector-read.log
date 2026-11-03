@@ -1,0 +1,65 @@
+[19:05:59] daemon paused
+[19:05:59] data on
+[19:06:01] board present
+[19:06:04] uptime 187 s; deep-sleep record {'state': 0, 'reason': 'key', 'blocked': 0, 'flags': 87, 'slept': True, 'pcf': True, 'usb_back_20s': True, 'pll_ceiling': False, 'bound': False, 'reattach': False, 'secs': 6851, 'strays': 0, 'p0': 0, 'p2': 16, 'p1': 0, 'pll_loops': 119, 'key_gain': 0, 'seq': 1, 'timed_out': []}
+[19:06:04] sleep page {'wake': 'key', 'valid': ['pcf', 'acq_done', 'usb_sof', 'usb_20s', 'slept'], 'flags': 87, 'open': [], 'sleeps': 1, 'slept_total_s': 8405, 'pcf_s': 8405, 'counted_s': 6851, 'acq_step_ms': 398, 'pll_loops': 119, 'strays': 0, 'blocked': [], 'timed_out': []}
+[19:06:04] wdt_fired_last_boot False degraded False; stalls>=25 0; key_presses 17
+[19:06:04] row record {'omit_run_max': 1, 'spurious': 1, 'late_omit': 4, 'epoch_losses': 2, 'invalid_services': 1, 'elapsed_min_us': 33.79, 'omit_row': [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0], 'serviced_lo16': 53607}; power {'mode': 2, 'stage': 0, 'cap': 128, 'forced': 255, 'battery': 1}
+[19:06:24] 20 s window {'win_secs': 20.01, 'win_slots_elapsed': 74904, 'win_serviced_valid': 74904, 'win_missed_slots': 0, 'win_pulses_emitted': 74904, 'win_pulses_omitted': 0, 'win_elapsed_samples': 74904, 'win_elapsed_mean_us': 63.27, 'win_slots_per_s': 3743.5, 'win_cpu_pct': 23.69}
+[19:06:24] page 7 maxima: latency 82.48 us, elapsed 206.31 us
+[19:06:24] the Rust agent's page 7 (ae72d2b):
+blit_timeouts            0
+tx_sent                  85
+tx_timeouts              25
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          7
+scan_rate                745
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                206995
+build_token              0x60d4a06b
+msp_free                 568 bytes (interrupt stack; paint watermark)
+psp_free                 1240 bytes (main thread; paint watermark)
+blits_issued             318
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0
+
+slots_elapsed            512700
+serviced_valid           512555
+missed_slots             145
+pulses_emitted           512510
+pulses_omitted           6
+latency_max_us           82.48
+elapsed_mean_us          60.19
+elapsed_max_us           206.31
+elapsed_samples          512558
+
+win_secs                 15.01
+win_slots_elapsed        56187
+win_slots_per_s          3743.3
+win_serviced_valid       56187
+win_missed_slots         0
+win_pulses_emitted       56189
+win_pulses_omitted       0
+win_elapsed_samples      56187
+win_elapsed_mean_us      63.27
+win_cpu_pct              23.68
+
+  the scheduler's record since the health reset (stage 2): the slot is fixed by CT16B4,
+  latency is the handler's entry from the slot boundary, elapsed its entry to exit;
+  missed slots are boundaries the handler did not service, omitted pulses the slots it
+  serviced too late to arm (or across a slot); a dark row is neither.
+  elapsed_mean_us is cumulative and its sum wraps after 89 s of handler time (about
+  7.6 min of uptime at 52 us a slot): the win_ figures (--window) are the ones to quote
+[19:06:39] rust exit 0
+[19:06:39] data off
+[19:06:39] daemon restarted

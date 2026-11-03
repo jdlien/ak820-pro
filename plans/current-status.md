@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-02, 16:50. The block below is where things stand, written to
+Updated 2026-11-02, 19:10. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -30,14 +30,21 @@ stage 2's 21 h run (6 sleeps, 3 spurious invocations, no stall) and the
 wake ring, which named the coordinator's 11:31 self-wake as the strays
 backstop: one GPIO line left pending in the NVIC, every later WFI
 returning at once (Warren's path, [`BACKLOG.md`](BACKLOG.md), "A
-stray-wake storm"). The health counters are reset; `wake_watch.sh`
-waits on the power logger for JD's next key (white slept on its own at
-16:46:47) and reads the record at once, the spurious count across one
-wake alone; white stays with that run until the read. Still owed on
-stage 2: deep sleep's wakes with the waking key kept, the witness's
+stray-wake storm"). **The wake read after it (19:06):** white slept on
+its own at 16:46:47 and JD's key woke it at 19:05:58, the logger-driven
+watcher reading the record 6 s later: woke on the key, 2.3 h asleep,
+no stray, no reset; since the counter reset epoch losses 2 (the data
+cut's bus event and the sleep, each one by design), spurious
+invocations 1 and none across the sixteen silences, so the count
+tracks the wake, where the slot timer restarts; the window after it
+3,743.5 slots/s with nothing missed or omitted and the handler's mean
+63.3 µs (52.5 on stage 2 at 11:10, not yet separated from the
+lighting's content). White released at 19:07, in its standing state.
+Still owed on stage 2: deep sleep's wakes with the waking key kept, the witness's
 pulse gates and the long-gap injections (the presser and the witness's
 wires first: JD's hands). Next hands-free: the injection ops with the
-32-bit generation, the warm windows.
+32-bit generation, the warm windows (the handler's mean under the
+detector at a held lighting state among them).
 
 ## 2026-11-02 morning — stage 2's scan-only and the wake with the RGB dark pass on white
 

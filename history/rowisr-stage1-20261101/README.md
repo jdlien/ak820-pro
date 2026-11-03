@@ -388,6 +388,29 @@ counters were reset at 16:44:17, white slept on its own at 16:46:47
 logger for JD's key, then `wake_read.sh wake-detector-read`) is the
 spurious count across one wake, alone.
 
+**The wake read (`wake_watch.sh`, then `wake_read.sh wake-detector-read`,
+19:05:58-19:06:39, `wake-detector-read.json`, `wake-detector-read.log`,
+`wake-watch.log`):** white slept on its own at 16:46:47 and JD's key
+woke it at 19:05:58 (the logger: 3.4 mA to 48.5 mA), the watcher's read
+6 s later. The deep-sleep record: woke on the key (column bit p2 0x10),
+slept 6,851 counted s (8,405 by the PCF, 2.3 h), no stray, no reset, the
+first sleep since the boot. The row record since the 16:44:17 reset:
+epoch losses 2 (the data cut's suspend at 16:44:17, a bus event, and the
+sleep, each one by design), invalid services 1, spurious invocations 1,
+late omissions 4, no stall >= 25 ms, 17 key presses. So the spurious
+count tracks the sleep and wake and not the silences: 0 across the
+sixteen silences, 1 across this one sleep and wake, 3 across stage 2's
+six (two of them around the 11:07 sleep). A second entry inside a slot
+already serviced, at the wake where CT16B4 restarts, is the reading;
+counted and left without a pulse, the count stays the diagnostic. The
+20 s window after it: 3,743.5 slots/s, no slot missed, no pulse omitted,
+the handler's mean 63.3 µs (52.5 at the 11:10 read on stage 2, 60 at the
+11-01 measure; the detector's per-slot snapshot is the candidate for the
+difference, not separated from the lighting's content: the warm
+windows' job), CPU 23.7%; the maxima since the reset latency 82.5 µs,
+elapsed 206.3 µs. White back in its standing state at 19:06:39 and
+released.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

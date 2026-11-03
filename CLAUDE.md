@@ -144,9 +144,12 @@ predicted (`history/rowisr-stage1-20261101/`, `silence_check.sh`: 5-7.9 ms
 exact, 8.1-200 ms the guard, 350/700/1,049 ms the frame counter past the
 tick's 349.5 ms alias, 1,000/2,048/7,000 ms the guard; with the data cut
 350 ms undetected, the declared limit). Dev op 28 subs 6-9
-(`scripts/rowisr_diag.py usb|silence|report`). Owed on it: the wake read
-after JD's next key (`wake_watch.sh` on the power logger), then stage 2's
-list below.
+(`scripts/rowisr_diag.py usb|silence|report`). The wake read after JD's
+key (19:06): one sleep of 2.3 h, no stray, spurious 1 across the wake and
+0 across the silences, the window 3,743.5/s with nothing missed. Owed on
+it: the witness's edges for the lengths, the handler's mean under it at a
+held lighting state (63.3 µs in that window against stage 2's 52.5), then
+stage 2's list below.
 **Before it, from 19:44 11-01: the row ISR's stage 2, the hot path on
 direct registers, `b120a2069c`** (dev, token `0x4849bde6`, the branch
 `row-isr`, `plans/ROW-ISR-PLAN.md`, the record in
