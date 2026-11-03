@@ -59,11 +59,13 @@ class Repl:
         return o
 
     def wait_for(self, marker, t):
-        """Read until `marker` appears, for up to t seconds."""
+        """Read until `marker` appears and the REPL's prompt follows it (the
+        line complete), for up to t seconds."""
         end, buf = time.time() + t, b""
         while time.time() < end:
             buf += self.s.read(4096)
-            if marker in buf:
+            i = buf.find(marker)
+            if i >= 0 and b">>>" in buf[i:]:
                 return buf
             if b"Traceback" in buf:
                 raise SystemExit(f"REPL traceback: {buf!r}")
