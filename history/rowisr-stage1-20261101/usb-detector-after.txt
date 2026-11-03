@@ -1,0 +1,2 @@
+frame counter: 165533 intervals judged, 0 rejected on the spans, 0 rejected for a bus event or the frames stopping, 0 excluded unjudged in a stale's recovery; the worst accepted distance 1 ms; the last rejection's spans 0 ms by the extension, 0 by the frames
+  now: USB ACTIVE, frames trusted, FRMNO 1200, bus-event generation 25; the extension VALID, loss generation 25, exclusions 0x00

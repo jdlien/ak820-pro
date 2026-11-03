@@ -1,0 +1,32 @@
+stage2 (0xf6a21a82) -> detector (0x60d4a06b); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.2 ->     3745.3   +0.00%  ok
+    mean us           59.8 ->       78.8  +31.77%  FAIL
+    cpu %             22.4 ->       29.5  +31.70%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      133.3   -7.43%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.3 ->     3745.4   +0.00%  ok
+    mean us           59.8 ->       78.8  +31.77%  FAIL
+    cpu %             22.4 ->       29.5  +31.70%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      165.3  +14.79%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3696.3 ->     3694.7   -0.04%  ok
+    mean us           59.7 ->       78.8  +31.99%  FAIL
+    cpu %             22.1 ->       29.1  +31.67%  FAIL
+    rows/row/s       205.4 ->      205.3   -0.05%  ok
+    max us           117.3 ->      160.0  +36.40%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      6  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [0, 0] -> [7, 4]   [[5, 5, 5] -> [62, 69, 73]]
+RESULT: 6 metric(s) outside the gate

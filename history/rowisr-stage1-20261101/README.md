@@ -411,6 +411,61 @@ windows' job), CPU 23.7%; the maxima since the reset latency 82.5 µs,
 elapsed 206.3 µs. White back in its standing state at 19:06:39 and
 released.
 
+### The warm windows (11-02, 20:43-20:45, `warm_windows.sh`)
+
+The runner's three health windows on the detector build, the holds
+skipped (`warm-windows.log`, `run-detector.log`, `detector.json`,
+`compare-detector.txt`; the ladder held at Always on, JD's theme, the
+daemon paused), against stage 2's of 11-01 (`stage2.json`):
+
+| window (24 s) | stage 2 | the detector | change |
+|---|---|---|---|
+| idle, the handler's mean (page 4, µs) | 59.8 | 78.8 | +19.0 |
+| repaint (the debug page toggled each second) | 59.8 | 78.8 | +19.0 |
+| pcf (clock-chip transactions every 250-300 ms) | 59.7 | 78.8 | +19.1 |
+| CPU share, idle (%) | 22.4 | 29.5 | +7.1 points |
+| the handler's max (idle / repaint / pcf, µs) | 144 / 144 / 117 | 133 / 165 / 160 | |
+| slots/s, rows/row/s, row gap max, loop gap, stalls >= 25 ms | 3745 / 208.1 / 5 ms / 3 ms / 0 | the same | none |
+
+**So the detector costs the handler 19 µs a slot by page 4's hook,
+7 points of CPU.** Page 7's own elapsed shows +10.8 (52.5 at the 11:10
+read on stage 2; 63.3 at 19:06 and again at 20:43 here, the latter with
+the ladder at DIM, so the lighting level is not in it); the 8 µs between
+the two measures is not read from the code yet (page 4's hook brackets
+the whole vector). The shortest handler rose from 26.6 to 30.8 µs. The
+slot rate, the row rate, the row gaps, the loop gap and the stall count
+did not move, and the page 7 windows before and after missed and omitted
+nothing. The object tells where it goes: the handler (`Vector90` in
+`rowisr.o`) carries seven library divides, two of them the detector's and
+on every slot (the extension's span converted to ms for the judgment at
+step 1 and again at the exit, `(dext * 2 + 187) / 375`, `__aeabi_uidiv`
+each) and five from stage 2 (the colour from `cur_row % 3`, the
+boundaries-crossed count's `(dt + half) / slot_ticks` with its 64-bit
+path, `half = slot_ticks / 2`). The next commit judges in ticks (the
+frames' milliseconds times 187.5 against the extension's ticks, the
+tolerance in ticks), so the hot path carries no divide of the detector's,
+and the record's milliseconds are converted off it.
+
+The link in the windows: ACK timeouts grew 7 and 4 across the 24 s
+windows (62 to 73 since the boot, 148 to 167 sent) where stage 2's grew
+0. Not the handler's: the coordinator's reading across the same runner's
+windows on every build (timeouts per frames sent, idle to repaint and
+repaint to pcf: the base 2/5 and 3/5, stage 1 6/6 and 5/5, stage 2 0/6
+and 0/5, the detector 7/5 and 4/5) makes stage 2's zeros the outlier;
+the UART overrun count is 0 on every build and UART2 sits above the row
+interrupt, so a longer handler cannot delay a receive; and the cause is
+the module's bimodal ACK turnaround (`docs/wireless.md`, "The 50%
+tx_timeouts rate": about half the ACKs past the 10 ms deadline, a slow
+one taking two or three retries, the slow mode when the module is idle).
+Since the boot the detector reads 73 of 167, mostly wakes and 5 s polls
+(the doc's per-wake figure, 4 of 9, is the same); stage 2's whole run
+311 of 1,157 with typing keeping the module busy. The
+cumulative page 7 from the 16:44 reset to 20:43: 1.67 M slots, 583
+missed (0.035%), 40 omitted, latency max 89.6 µs, elapsed max 206.3 µs;
+across the pcf window and the restores, 1,249 missed in 166 k slots (the
+clock chip's hold-off, by design). The runner put Power saver back;
+white was dark at stage 3 by the end and released at 20:44:55.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
@@ -421,6 +476,7 @@ released.
 - `battery-before.txt`, `battery-after.txt`, `health-after-flash.txt`.
 - 11-02: `scan_only_check.sh` (enter/exit, the first attempt: `scan-only-enter.json`, `scan-only-exit.json`, `scan-only-check.log`), `scan_only_key.sh` (the one-run check: `scan-only-key.json`, `scan-only-key.log`), `wake_read.sh` (`wake-dark-read.json`, `wake-dark-read.log`).
 - 11-02 afternoon: `preflash_read.sh` (`preflash-read.json`, `preflash-read.log`), `flash-detector.log`, `silence_check.sh` (`silence-check.json`, `silence-check.log`), `wake_watch.sh` (the logger-driven wake read: `wake-detector-read.json`, `wake-detector-read.log`); `wake_read.sh` takes an optional label since 16:45 so a second read keeps the first's JSON.
+- 11-02 evening: `warm_windows.sh` (`warm-windows.log`, `run-detector.log`, `detector.json`, `compare-detector.txt`, `sched-window-detector-before.txt` and `-after.txt`, `record-detector-before.txt` and `-after.txt`, `usb-detector-after.txt`).
 
 ## Lessons
 

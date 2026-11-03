@@ -2563,3 +2563,15 @@ recovery is judged if it ends fresh and excluded without a loss if not.
   windows). White released to the coordinator at 19:07. Owed on the
   detector: the witness's edges for the lengths, and the handler's mean
   under it at a held lighting state.
+- 11-02 20:43-20:45: **the warm windows** (`warm_windows.sh`, the
+  runner's idle/repaint/pcf windows at Always on, the holds skipped,
+  against stage 2's): the detector costs the handler 19 µs a slot by page
+  4 (59.8 to 78.8 µs, CPU 22.4% to 29.5%), the slot and row rates, the
+  gaps and the stalls unchanged, page 7's windows clean. The object
+  shows two divides of the detector's on every slot (the span to ms at
+  step 1's judgment and the exit's) beside three of stage 2's on every
+  slot (the colour's `% 3`, the boundaries count's divide at step 1 and
+  at the exit). Next: the judgment in ticks, the boundaries count's
+  common case by comparison, the colour counted, so the hot path has no
+  divide; codex; a flash on JD's key; the windows again. White released
+  at 20:45.

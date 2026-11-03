@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-02, 19:10. The block below is where things stand, written to
+Updated 2026-11-02, 20:55. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -40,6 +40,17 @@ tracks the wake, where the slot timer restarts; the window after it
 3,743.5 slots/s with nothing missed or omitted and the handler's mean
 63.3 µs (52.5 on stage 2 at 11:10, not yet separated from the
 lighting's content). White released at 19:07, in its standing state.
+**The warm windows (20:43) separated it: the detector costs the handler
+19 µs a slot** by page 4's hook, 59.8 to 78.8 µs in the runner's idle,
+repaint and pcf windows at Always on, the CPU 22.4% to 29.5%, every
+rate, gap and stall count unchanged. The object says where: two library
+divides the detector put on every slot (the extension's span converted
+to milliseconds for the judgment at step 1 and at the exit) beside three
+that stage 2 already carried on every slot (the colour's modulo 3, the
+boundaries count at step 1 and the exit). Next, on the branch: the
+judgment in ticks and the other two by comparison and a counter, so the
+hot path has no divide; codex; one flash on JD's key; the windows again.
+White released at 20:45 in its standing state.
 Still owed on stage 2: deep sleep's wakes with the waking key kept, the witness's
 pulse gates and the long-gap injections (the presser and the witness's
 wires first: JD's hands). Next hands-free: the injection ops with the

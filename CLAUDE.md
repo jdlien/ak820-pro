@@ -147,9 +147,11 @@ tick's 349.5 ms alias, 1,000/2,048/7,000 ms the guard; with the data cut
 (`scripts/rowisr_diag.py usb|silence|report`). The wake read after JD's
 key (19:06): one sleep of 2.3 h, no stray, spurious 1 across the wake and
 0 across the silences, the window 3,743.5/s with nothing missed. Owed on
-it: the witness's edges for the lengths, the handler's mean under it at a
-held lighting state (63.3 µs in that window against stage 2's 52.5), then
-stage 2's list below.
+it: the witness's edges for the lengths, and its cost: the warm windows
+(20:43) put the detector at +19 µs a slot by page 4 (59.8 to 78.8, CPU
+22.4% to 29.5%), two divides per slot in the judgment beside stage 2's
+three; a trim commit with no divide on the hot path is next, then stage
+2's list below.
 **Before it, from 19:44 11-01: the row ISR's stage 2, the hot path on
 direct registers, `b120a2069c`** (dev, token `0x4849bde6`, the branch
 `row-isr`, `plans/ROW-ISR-PLAN.md`, the record in

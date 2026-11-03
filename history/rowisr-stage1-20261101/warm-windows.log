@@ -1,0 +1,103 @@
+Boot-out failed: 3: No such process
+[20:42:55] daemon paused
+[20:42:55] data on
+[20:42:55] board present
+[20:42:57] token 0x60d4a06b (want 0x60d4a06b)
+[20:42:57] page-7 window before (20 s)
+win_slots_per_s          3742.5
+win_missed_slots         0
+win_pulses_omitted       0
+win_elapsed_mean_us      63.27
+win_cpu_pct              23.68
+[20:43:18] record before: longest run of omissions 1, spurious invocations 1, omissions by the arm deadline 37, epoch losses 6, invalid services 4, shortest handler 30.75 us, services (low 16 bits) 26341 omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):   key row 0: R   2  B   1  G   1   key row 
+[20:43:18] the runner's windows (idle, repaint, pcf), holds skipped
+[20:43:18] stage 0 run 'detector' -> history/rowisr-stage1-20261101
+[20:43:18] board token 0x60d4a06b
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[20:43:18] power mode 2 (stage 1, cap 64) -> Always on for the run
+[20:43:18] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        28.1 %
+    pack           3826 mV  (estimate 5C 76)
+    module 5C    last 76%, 1 s ago
+    vdd          3900 mV  (raw 2099, since boot 3896..3910 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    2.1 % of maximum
+    flags        on_batt done rgb_on linked
+[20:43:18] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[20:43:42]   3745.3 ISR/s, mean 78.8 us, max 133.3 us, cpu 29.5%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 3 ms, uart overruns 0, timeouts 62
+[20:43:44] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[20:44:09]   3745.4 ISR/s, mean 78.8 us, max 165.3 us, cpu 29.5%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 5 ms, uart overruns 0, timeouts 69
+[20:44:11] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[20:44:35]   3694.7 ISR/s, mean 78.8 us, max 160.0 us, cpu 29.1%, rows 205.3/row/s; row_gap_max 9 ms, >=25 ms 0, loop gap 6 ms, uart overruns 0, timeouts 73
+[20:44:35] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[20:44:35] done -> history/rowisr-stage1-20261101/detector.json
+
+detector: token 0x60d4a06b, 2026-11-02 20:43:18
+  idle       3745.3 ISR/s  mean   78.8 us  max   133.3 us  cpu  29.5%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 3 ms  overruns 0  timeouts 62
+  repaint    3745.4 ISR/s  mean   78.8 us  max   165.3 us  cpu  29.5%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 5 ms  overruns 0  timeouts 69
+  pcf        3694.7 ISR/s  mean   78.8 us  max   160.0 us  cpu  29.1%  rows  205.3/row/s  row_gap_max 9 ms  >=25ms 0  loop_gap 6 ms  overruns 0  timeouts 73
+[20:44:35] runner exit 0
+stage2 (0xf6a21a82) -> detector (0x60d4a06b); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.2 ->     3745.3   +0.00%  ok
+    mean us           59.8 ->       78.8  +31.77%  FAIL
+    cpu %             22.4 ->       29.5  +31.70%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      133.3   -7.43%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.3 ->     3745.4   +0.00%  ok
+    mean us           59.8 ->       78.8  +31.77%  FAIL
+    cpu %             22.4 ->       29.5  +31.70%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      165.3  +14.79%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3696.3 ->     3694.7   -0.04%  ok
+    mean us           59.7 ->       78.8  +31.99%  FAIL
+    cpu %             22.1 ->       29.1  +31.67%  FAIL
+    rows/row/s       205.4 ->      205.3   -0.05%  ok
+    max us           117.3 ->      160.0  +36.40%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      6  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [0, 0] -> [7, 4]   [[5, 5, 5] -> [62, 69, 73]]
+RESULT: 6 metric(s) outside the gate
+[20:44:35] page-7 window after (20 s)
+win_slots_per_s          3743.6
+win_missed_slots         0
+win_pulses_omitted       0
+win_elapsed_mean_us      59.21
+win_cpu_pct              22.17
+[20:44:55] record after: longest run of omissions 1, spurious invocations 2, omissions by the arm deadline 48, epoch losses 0, invalid services 0, shortest handler 36.88 us, services (low 16 bits) 34256 omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):   key row 0: R   5  B   5  G   1   key row 
+[20:44:55] usb after: frame counter: 165533 intervals judged, 0 rejected on the spans, 0 rejected for a bus event or the frames stopping, 0 excluded unjudged in a stale's recovery; the worst accepted distance 1 ms; the last rejection's spans 0 ms by the extension, 0 by the frames   now: USB ACTIVE, frames trusted, FRMNO 1200, bus-event generation 25; the extension VALID, loss generation 25, exclusions 0x00 
+[20:44:55] power after the run: mode 2 stage 3 cap 255 forced 255
+[20:44:55] done
+[20:44:55] data off
+[20:44:55] daemon restarted
