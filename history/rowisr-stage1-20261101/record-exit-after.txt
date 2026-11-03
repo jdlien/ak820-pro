@@ -1,0 +1,8 @@
+longest run of omissions 1, spurious invocations 1, omissions by the arm deadline 43, epoch losses 0, invalid services 0, shortest handler 37.62 us, services (low 16 bits) 34322
+omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
+  key row 0: R   5  B   6  G   3
+  key row 1: R   2  B   6  G   7
+  key row 2: R   3  B   3  G   4
+  key row 3: R   5  B   6  G   4
+  key row 4: R   2  B   6  G   2
+  key row 5: R   3  B   6  G   3

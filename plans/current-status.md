@@ -91,13 +91,20 @@ instruction from flash. **The cadence (`1d73bf3ed5`, the judgment every eighth s
 reverted on codex's P1**: a guard silence inside the eight-service
 interval hides an aliasing silence that follows it within 2 ms, which
 the per-service judgment catches; whether that must count as two is
-JD's call (~8 us a slot). **The safe half is built and cleared: `f0ec5c68df`,
-token `0x9e2d894a`** (the exit snapshot time only, the elapsed sample's
-verdict by the two spans and the bus-event generation with the bus up,
-after codex's READY on `5bf8de959a` and its verify of `7e438dc9b5`,
-every P2 fixed; ~10 us expected back); then JD's go and key for `exit_on_usb.sh` (the flash,
-the sections, the silence set, the warm windows) (`history/rowisr-stage1-20261101/README.md`, "The cost
-diagnostic"). Also seen: two span rejections in the
+JD's call (~8 us a slot). **The safe half, `f0ec5c68df`,
+token `0x9e2d894a`, is on white since 02:27 11-03** (the exit snapshot
+time only, the elapsed sample's verdict by the two spans and the
+bus-event generation with the bus up, after codex's READY on
+`5bf8de959a` and its verify of `7e438dc9b5`, every P2 fixed), flashed on
+JD's advance go for the night and woken by the presser's own press: the
+sections read 73.6 us against the diagnostic's 80.2 (the 6.6 us the
+design said), page 4 still 80.2 because the dev build's section
+instrumentation costs the same ~6 us outside the stamps (compiled out
+next); the silence set 15 of 16, the one FAIL a pair of false
+frame-counter rejections at the spans 0/256 ms, a torn FRMNO read at a
+byte carry (seen twice on the trim too), fixed next by reading until two
+reads agree (`history/rowisr-stage1-20261101/README.md`, "The exit-only
+build's flash"). Also seen: two span rejections in the
 trim's run, 0 ms by the extension and 256 by the frames, a torn FRMNO
 read at a carry by the look of it; a read-until-equal if it recurs.
 

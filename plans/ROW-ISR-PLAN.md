@@ -2739,3 +2739,29 @@ quantization, above the largest new tolerance of 28.389 ms.
   readcost, `silence_check.sh`, `warm_windows.sh exit 0x9e2d894a`);
   expected ~10 us back, near 70 us a slot, the silence set 16 of 16. White
   is Hutch's for the presser's contact test meanwhile (00:35).
+- 11-03 02:27: **the exit-only build `f0ec5c68df` flashed on white** on
+  JD's advance go for the night (~02:25: "continue development
+  autonomously, pressing keys, measuring power draw, etc and flashing
+  builds as you see fit"; the presser built on the logger's QT Py, both
+  channels pressing, Hutch's contact check 02:13; white released 02:17),
+  woken by the presser's one press (A1, 100 ms; it enumerated 4 s later:
+  the first flash with no hand on the board). **The sections: 73.59 us
+  total against the diagnostic's 80.20** (exit snapshot 5.79 to 2.41,
+  exit judgment 8.74 to 6.67): the 6.6 us the design said. Page 4's warm
+  windows read 80.2 regardless (the trim's 80.0): the sections' own
+  commit, ~6 us after stamp 6, sits inside page 4's bracket and outside
+  the stamps, so the dev build's instrumentation hides the saving from
+  page 4; the next build compiles the sections out by default
+  (`ROWISR_SECTIONS`). Page 7's window 59.8 after the runner (the trim's
+  63.9). **The silence set 15 of 16**: the battery 20 ms case counted 4
+  losses, two of them frame-counter rejections at the spans 0/256 ms,
+  the trim run's signature (2 of 165,641 judged there, in ordinary
+  running): a torn read of FRMNO at a byte carry (0x0FF read as 0x000:
+  one tear, two rejections, two false losses), rare (four in ~600,000
+  tonight), harmless to keys and light, but a false loss is a false
+  silence. Next build: FRMNO read until two consecutive reads agree, and
+  a dev scan (sub 14) to see the tear. The README, "The exit-only
+  build's flash". Then the presser's short-tap baseline on this build
+  (`presser_gate.sh exit`: 200 at 25 and 15 ms, the 8-12 ms boundary,
+  a cross-row chord, counted at the board), deep sleep's wakes with the
+  key kept, and stage 3's code.

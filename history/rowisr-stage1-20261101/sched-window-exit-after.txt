@@ -1,0 +1,38 @@
+blit_timeouts            0
+tx_sent                  39
+tx_timeouts              20
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          6
+scan_rate                747
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+slots_elapsed            166445
+serviced_valid           165192
+missed_slots             1253
+pulses_emitted           89631
+pulses_omitted           76
+latency_max_us           79.81
+elapsed_mean_us          61.78
+elapsed_max_us           141.27
+elapsed_samples          165224
+
+win_secs                 20.01
+win_slots_elapsed        74878
+win_slots_per_s          3742.3
+win_serviced_valid       74878
+win_missed_slots         0
+win_pulses_emitted       0
+win_pulses_omitted       0
+win_elapsed_samples      74878
+win_elapsed_mean_us      59.84
+win_cpu_pct              22.39
+
+  the scheduler's record since the health reset (stage 2): the slot is fixed by CT16B4,
+  latency is the handler's entry from the slot boundary, elapsed its entry to exit;
+  missed slots are boundaries the handler did not service, omitted pulses the slots it
+  serviced too late to arm (or across a slot); a dark row is neither.
+  elapsed_mean_us is cumulative and its sum wraps after 89 s of handler time (about
+  7.6 min of uptime at 52 us a slot): the win_ figures (--window) are the ones to quote

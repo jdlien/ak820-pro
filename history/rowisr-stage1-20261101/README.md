@@ -572,6 +572,85 @@ and drop the exit judgment (the next entry's judgment covers an aliasing
 silence inside the handler; one elapsed sample is what it protected).
 Designed next, in the plan.
 
+### The exit-only build's flash (11-03, 02:26-02:30, `exit_on_usb.sh`, `exit_flash.sh`, the presser's wake): 6.6 us back by the stamps, page 4 blind to it through the sections' own commit
+
+JD's advance go for the night at ~02:25 (the presser built, Hutch's
+contact check passed, white released at 02:17). The watcher armed at
+02:26:13; the presser's one press of A1 ((0,13), 100.3 ms actual) at
+02:26:25 woke white from its deep sleep and it enumerated 4 s later: the
+first flash with no hand on the board. The flash 02:26:30-02:27:01 (token
+before 0xda2a24d5, after 0x9e2d894a), the readings over the data line,
+white back in the standing state at 02:30:25.
+
+**The sections** (`sections-exit-1.txt`, `-2.json`; two 10 s windows of
+37,454 and 37,456 services, identical to 0.01 us), against the cost
+diagnostic's:
+
+| Section | diagnostic, us | exit-only, us |
+|---|---|---|
+| 0: the entry snapshot | 7.33 | 7.28 |
+| 1: step 1's checks and the frame counter's judgment | 9.56 | 8.80 |
+| 2: steps 2 to 5 | 37.89 | 37.63 |
+| 3: step 6, the arm | 10.88 | 10.80 |
+| 4: the exit snapshot | 5.79 | 2.41 |
+| 5: the exit judgment and the record | 8.74 | 6.67 |
+| total, stamp 0 to stamp 6 | 80.20 | 73.59 |
+
+**6.6 us back**, where the design said: the exit snapshot 3.4 us lighter
+(time only, FRMNO and `usb_gen` beside it, against the full snapshot with
+its three USB registers and the freshness) and the exit judgment 2.1 us
+(the spans compared once, no bus or freshness verdict). The readcost
+unchanged (11, 11, 11, 14, 11 cycles).
+
+**The warm windows** (`exit.json`, `compare-exit.txt`,
+`compare-exit-vs-detector.txt`): page 4's mean **80.2 us** in all three
+windows, the trim's 80.0, the detector's 78.8, stage 2's 59.8; CPU
+30.0%; rows 208.1/s; `row_gap_max` 5, 5 and 9 ms; no stall. Page 4 saw
+none of the 6.6 us, and the arithmetic says why: page 4's hooks bracket
+the stamps plus what lies outside them, and this dev build still carries
+the sections' instrumentation, whose commit (six unwrapped subtractions
+and sums, ~70 instructions) runs after stamp 6 at 3-5 cycles an
+instruction: ~6 us a slot. The trim, with no sections, read 80.0; this
+build reads 73.6 by its stamps plus ~6 of commit plus the hooks: 80.2.
+So the saving is real by the handler's own stamps, and page 4 will show
+it only on a build whose sections are compiled out: the next build makes
+them opt-in (`ROWISR_SECTIONS`), off in the dev build JD runs. Page 7's
+window (entry snapshot to exit snapshot, no stamps' commit in it) read
+59.8 us after the runner against the trim's 63.9 and the diagnostic's
+64.6: the same saving, seen from inside.
+
+**The silence set** (`silence-check-exit.log`, `silence-check-exit.json`):
+**15 of 16 as predicted.** The fourteen USB cases exactly as on the
+detector (5, 7.5 and 7.9 ms exact; 8.1 ms the guard's first rejection at
+a gap of 8.123 ms; 8.5, 20, 100 and 200 ms the guard; 350, 700 and
+1,049 ms the frame counter, the spans 1/351, 1/700 and 1/1,050 ms;
+1,000, 2,048 and 7,000 ms the guard, the residues 301.0, 300.4 and
+9.5 ms; the spin within 3 us of the asked length on every case), and
+the battery 350 ms case (one loss, the bus event's). **The battery 20 ms
+case FAILED on the count: 4 losses, not 2** (the suspend's bus event, the
+guard's own, and **two frame-counter rejections whose last spans read 0 ms
+by the extension and 256 by the frames**: `usb_last_dt_ms` 0,
+`usb_last_df_ms` 256 in `usb_after`). That is the signature the trim run
+showed twice in ordinary running (`usb-trim-after.txt`: 2 of 165,641
+judged, the same 0/256) and the diagnostic and this run's own windows
+never (0 of 283,631; 0 of 165,610 after the runner): **a torn read of
+FRMNO at a byte carry.** One torn read explains a pair: 0x0FF read as
+0x000 while the carry into bit 8 is in flight gives that interval a
+frame span of -255 (1,793 modulo 2,048) and the next, from the torn
+baseline the re-prime adopted, +256; both rejected, two false losses.
+Rare (four in some 600,000 judged intervals tonight, the two of them in
+this case's window by chance) and harmless to the keys and the light,
+but a false loss is a false silence, so the next build reads FRMNO
+until two consecutive reads agree (one extra load, ~11 cycles, on the
+snapshot) and carries a dev scan (op 28 sub 14) that reads the register
+back to back for seconds and records every step other than 0 or +1
+with its pair of values, to see the tear itself.
+
+The record after the runner (`record-exit-after.txt`): losses 0, invalid
+0, spurious 1, omissions by the arm deadline 43 (the trim's 37 after its
+runner: the pcf window's hold-offs; 1 before the runner in 20,293
+services). The frame counter after: 165,610 judged, none rejected.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

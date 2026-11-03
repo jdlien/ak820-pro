@@ -1,0 +1,1 @@
+HCLK cycles a read, the loop included, the least of 8 trials of 256 reads: USB FRMNO 11, USB INSTS 11, USB CFG 11, CT16B5 TC 14, a RAM word 11; so a USB register read costs about 0 cycles (0.00 us) over a RAM word's, a timer's 3

@@ -1,0 +1,32 @@
+detector (0x60d4a06b) -> exit (0x9e2d894a); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.3 ->     3745.4   +0.00%  ok
+    mean us           78.8 ->       80.2   +1.78%  ok
+    cpu %             29.5 ->       30.0   +1.69%  ok
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           133.3 ->      133.3   +0.00%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.4 ->     3745.4   +0.00%  ok
+    mean us           78.8 ->       80.2   +1.78%  ok
+    cpu %             29.5 ->       30.0   +1.69%  ok
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           165.3 ->      170.7   +3.27%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3694.7 ->     3694.6   -0.00%  ok
+    mean us           78.8 ->       80.2   +1.78%  ok
+    cpu %             29.1 ->       29.6   +1.72%  ok
+    rows/row/s       205.3 ->      205.3   +0.00%  ok
+    max us           160.0 ->      133.3  -16.69%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      6  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [7, 4] -> [3, 2]   [[62, 69, 73] -> [15, 18, 20]]
+RESULT: every gate within tolerance

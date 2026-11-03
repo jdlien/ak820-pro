@@ -1,0 +1,246 @@
+[02:26:13] daemon paused
+[02:26:14] data on; waiting for white to wake (its USB presence), up to 90 min
+[02:26:28] white present on USB (awake); exit_flash.sh starts
+Boot-out failed: 3: No such process
+[02:26:28] daemon paused
+[02:26:28] data on
+[02:26:30] board present, token before: 0xda2a24d5
+[02:26:30] flash: ak820pro-builds/out/via-dev-f0ec5c68df-20261103-003613.bin
+firmware : ak820pro-builds/out/via-dev-f0ec5c68df-20261103-003613.bin
+built    : Nov  3 00:36:13 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  3 02:26:31 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 177, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  3 02:26:31 2026  (85 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  3 02:26:31 2026  (2707 bytes)
+
+== dumping the battery log ==
+# 9 entries (log v8, one per 900 s), newest 290 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261103-022631-preflash.csv  Nov  3 02:26:31 2026  (1284 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+[02:27:01] token after the flash: 0x9e2d894a (want 0x9e2d894a)
+[02:27:11] sections, window 1 (10 s)
+37454 full services in 10 s; the handler's sections, mean us (HCLK ticks / 48):
+      7.28  entry snapshot
+      8.80  step 1 and the frame counter's judgment
+     37.63  steps 2-5 (mux rows, scan, match registers)
+     10.80  step 6 (the arm)
+      2.41  exit snapshot
+      6.67  exit judgment and the record
+     73.59  total, stamp 0 to stamp 6: the ISR hooks and the sums' own commit lie outside, page 4 includes them
+[02:27:21] sections, window 2 (10 s)
+{"services": 37456, "sections_us": [7.28, 8.81, 37.61, 10.81, 2.42, 6.66], "total_us": 73.6, "names": ["entry snapshot", "step 1 and the frame counter's judgment", "steps 2-5 (mux rows, scan, match registers)", "step 6 (the arm)", "exit snapshot", "exit judgment and the record"]}
+[02:27:31] readcost (the fixed reads count)
+HCLK cycles a read, the loop included, the least of 8 trials of 256 reads: USB FRMNO 11, USB INSTS 11, USB CFG 11, CT16B5 TC 14, a RAM word 11; so a USB register read costs about 0 cycles (0.00 us) over a RAM word's, a timer's 3
+[02:27:31] silence_check.sh starts (16 cases; its own data cycles and trap)
+Boot-out failed: 3: No such process
+[02:27:31] daemon paused
+[02:27:31] data on
+[02:27:31] board present
+[02:27:34] before: record {'spurious': 0, 'late_omit': 4, 'epoch_losses': 1, 'invalid_services': 1, 'serviced_lo16': 49190} usb {'usb_checked': 178879, 'usb_rejects': 0, 'usb_events': 0, 'usb_worst_ms': 1, 'usb_last_dt_ms': 0, 'usb_last_df_ms': 0, 'loss_gen': 1, 'usb_gen': 4, 'usb_state': 'ACTIVE', 'usb_trusted_now': True, 'frmno': 1819, 'time_valid': True, 'time_excl': 0, 'guard_last_gap_ticks': 29192, 'guard_last_gap_ms': 155.691, 'frames_fresh': True, 'usb_unjudged': 0, 'recovery_pending': False}
+[02:27:34] 5 ms: measured 5.003 ms; losses 0 (expected 0), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 18, omitted 1, judged 3431; the extension read 7.253 ms across it, generation +0; last rejection spans 0/0 ms -> PASS
+[02:27:35] 7.5 ms: measured 7.499 ms; losses 0 (expected 0), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 28, omitted 1, judged 3415; the extension read 9.824 ms across it, generation +0; last rejection spans 0/0 ms -> PASS
+[02:27:36] 7.9 ms: measured 7.899 ms; losses 0 (expected the gap decides), frame rejects 0 (expected 0), bus-event rejects 0, invalid 0, spurious 0, missed slots 29, omitted 0, judged 3426; the extension read 10.149 ms across it, generation +0; last rejection spans 0/0 ms -> PASS
+[02:27:37] 8.1 ms: measured 8.101 ms; losses 1 (expected the gap decides), frame rejects 0 (expected 0), bus-event rejects 0, invalid 5, spurious 0, missed slots 0, omitted 1, judged 3404; the extension read 2.272 ms across it, generation +1 (the guard: its gap 8.123 ms); last rejection spans 0/0 ms -> PASS
+[02:27:38] 8.5 ms: measured 8.501 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 1, judged 3427; the extension read 2.112 ms across it, generation +1 (the guard: its gap 8.539 ms); last rejection spans 0/0 ms -> PASS
+[02:27:39] 20 ms: measured 20.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 1, judged 3429; the extension read 2.261 ms across it, generation +1 (the guard: its gap 20.043 ms); last rejection spans 0/0 ms -> PASS
+[02:27:40] 100 ms: measured 100.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3424; the extension read 2.117 ms across it, generation +1 (the guard: its gap 100.048 ms); last rejection spans 0/0 ms -> PASS
+[02:27:41] 200 ms: measured 200.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 1, judged 3427; the extension read 2.176 ms across it, generation +1 (the guard: its gap 200.075 ms); last rejection spans 0/0 ms -> PASS
+[02:27:43] 350 ms: measured 350.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3429; the extension read 2.672 ms across it, generation +1; last rejection spans 1/351 ms -> PASS
+[02:27:44] 700 ms: measured 700.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3428; the extension read 3.301 ms across it, generation +1; last rejection spans 1/700 ms -> PASS
+[02:27:46] 1049 ms: measured 1049.003 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 1, spurious 0, missed slots 0, omitted 0, judged 3419; the extension read 2.725 ms across it, generation +1; last rejection spans 1/1050 ms -> PASS
+[02:27:48] 1000 ms: measured 1000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 13, omitted 0, judged 3405; the extension read 2.192 ms across it, generation +1 (the guard: its gap 301.013 ms); last rejection spans 1/1050 ms -> PASS
+[02:27:51] 2048 ms: measured 2048.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 0, judged 3420; the extension read 2.208 ms across it, generation +1 (the guard: its gap 300.416 ms); last rejection spans 1/1050 ms -> PASS
+[02:27:59] 7000 ms: measured 7000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 1, judged 3406; the extension read 2.309 ms across it, generation +1 (the guard: its gap 9.536 ms); last rejection spans 1/1050 ms -> PASS
+[02:27:59] data off; the 20 ms silence fires in 5 s on battery
+[02:28:08] data on
+[02:28:12] battery 20 ms: measured 20.0 ms; losses 4, of them bus events 1, the silence's own 3 (expected 1), frame rejects 2, spurious 0; usb now ACTIVE -> FAIL
+[02:28:12] data off; the 350 ms silence fires in 5 s on battery
+[02:28:20] data on
+[02:28:24] battery 350 ms: measured 350.0 ms; losses 1, of them bus events 1, the silence's own 0 (expected 0), frame rejects 0, spurious 0; usb now ACTIVE -> PASS
+[02:28:24] health counters reset (the row record with them)
+[02:28:24] SOME FAIL
+[02:28:24] data off
+[02:28:24] daemon restarted
+[02:28:24] silence_check.sh exit 0
+[02:28:24] warm_windows.sh exit starts
+[02:28:24] daemon paused
+[02:28:25] data on
+[02:28:25] board present
+[02:28:27] token 0x9e2d894a (want 0x9e2d894a)
+[02:28:27] page-7 window before (20 s)
+win_slots_per_s          3742.2
+win_missed_slots         0
+win_pulses_omitted       0
+win_elapsed_mean_us      63.41
+win_cpu_pct              23.73
+[02:28:47] record before: longest run of omissions 1, spurious invocations 0, omissions by the arm deadline 1, epoch losses 1, invalid services 1, shortest handler 36.83 us, services (low 16 bits) 20293 omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):   key row 0: R   0  B   0  G   0   key row 1
+[02:28:47] the runner's windows (idle, repaint, pcf), holds skipped
+[02:28:47] stage 0 run 'exit' -> history/rowisr-stage1-20261101
+[02:28:47] board token 0x9e2d894a
+profiles and live settings saved to history/rowisr-stage1-20261101/settings-before.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[02:28:48] power mode 2 (stage 1, cap 64) -> Always on for the run
+[02:28:48] settings and lighting saved; battery:
+    supply       battery  (battery)
+    level        25.5 %
+    pack           3816 mV  (estimate 5C 75)
+    module 5C    last 75%, 4 s ago
+    vdd          3900 mV  (raw 2097, since boot 3895..3904 mV)  -- the rail, not the pack
+    charger pins CHRG high, STDBY low
+    led drive    3.7 % of maximum
+    flags        on_batt done rgb_on linked
+[02:28:48] window 'idle': 24.0 s  <- a 240 fps clip of the board now, if filming
+[02:29:12]   3745.4 ISR/s, mean 80.2 us, max 133.3 us, cpu 30.0%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 3 ms, uart overruns 0, timeouts 15
+[02:29:14] window 'repaint': 24.0 s (the debug page toggled once a second)  <- a 240 fps clip of the board now, if filming
+[02:29:38]   3745.4 ISR/s, mean 80.2 us, max 170.7 us, cpu 30.0%, rows 208.1/row/s; row_gap_max 5 ms, >=25 ms 0, loop gap 5 ms, uart overruns 0, timeouts 18
+[02:29:40] window 'pcf': 24.0 s (clock-chip transactions every 250-300 ms)  <- a 240 fps clip of the board now, if filming
+[02:30:05]   3694.6 ISR/s, mean 80.2 us, max 133.3 us, cpu 29.6%, rows 205.3/row/s; row_gap_max 9 ms, >=25 ms 0, loop gap 6 ms, uart overruns 0, timeouts 20
+[02:30:05] restoring the power mode, the lighting and the live settings
+live settings restored and flushed
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v177 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+[02:30:05] done -> history/rowisr-stage1-20261101/exit.json
+
+exit: token 0x9e2d894a, 2026-11-03 02:28:48
+  idle       3745.4 ISR/s  mean   80.2 us  max   133.3 us  cpu  30.0%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 3 ms  overruns 0  timeouts 15
+  repaint    3745.4 ISR/s  mean   80.2 us  max   170.7 us  cpu  30.0%  rows  208.1/row/s  row_gap_max 5 ms  >=25ms 0  loop_gap 5 ms  overruns 0  timeouts 18
+  pcf        3694.6 ISR/s  mean   80.2 us  max   133.3 us  cpu  29.6%  rows  205.3/row/s  row_gap_max 9 ms  >=25ms 0  loop_gap 6 ms  overruns 0  timeouts 20
+[02:30:05] runner exit 0
+stage2 (0xf6a21a82) -> exit (0x9e2d894a); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.2 ->     3745.4   +0.01%  ok
+    mean us           59.8 ->       80.2  +34.11%  FAIL
+    cpu %             22.4 ->       30.0  +33.93%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      133.3   -7.43%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.3 ->     3745.4   +0.00%  ok
+    mean us           59.8 ->       80.2  +34.11%  FAIL
+    cpu %             22.4 ->       30.0  +33.93%  FAIL
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           144.0 ->      170.7  +18.54%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3696.3 ->     3694.6   -0.05%  ok
+    mean us           59.7 ->       80.2  +34.34%  FAIL
+    cpu %             22.1 ->       29.6  +33.94%  FAIL
+    rows/row/s       205.4 ->      205.3   -0.05%  ok
+    max us           117.3 ->      133.3  +13.64%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      6  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [0, 0] -> [3, 2]   [[5, 5, 5] -> [15, 18, 20]]
+RESULT: 6 metric(s) outside the gate
+detector (0x60d4a06b) -> exit (0x9e2d894a); the plan's gate: within 3% of stage 0
+  window idle:
+    ISR/s           3745.3 ->     3745.4   +0.00%  ok
+    mean us           78.8 ->       80.2   +1.78%  ok
+    cpu %             29.5 ->       30.0   +1.69%  ok
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           133.3 ->      133.3   +0.00%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          3 ->      3  ok
+  window repaint:
+    ISR/s           3745.4 ->     3745.4   +0.00%  ok
+    mean us           78.8 ->       80.2   +1.78%  ok
+    cpu %             29.5 ->       30.0   +1.69%  ok
+    rows/row/s       208.1 ->      208.1   +0.00%  ok
+    max us           165.3 ->      170.7   +3.27%  
+    row_gap_max ms       5 ->      5  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          5 ->      5  ok
+  window pcf:
+    ISR/s           3694.7 ->     3694.6   -0.00%  ok
+    mean us           78.8 ->       80.2   +1.78%  ok
+    cpu %             29.1 ->       29.6   +1.72%  ok
+    rows/row/s       205.3 ->      205.3   +0.00%  ok
+    max us           160.0 ->      133.3  -16.69%  
+    row_gap_max ms       9 ->      9  ok
+    >=25 ms stalls       0 ->      0  ok
+    loop gap ms          6 ->      6  ok
+  link counters, growth from one window's end to the next (since-boot totals in brackets):
+    uart overruns   [0, 0] -> [0, 0]   [[0, 0, 0] -> [0, 0, 0]]
+    ack timeouts    [7, 4] -> [3, 2]   [[62, 69, 73] -> [15, 18, 20]]
+RESULT: every gate within tolerance
+[02:30:05] page-7 window after (20 s)
+win_slots_per_s          3742.3
+win_missed_slots         0
+win_pulses_omitted       0
+win_elapsed_mean_us      59.84
+win_cpu_pct              22.39
+[02:30:25] record after: longest run of omissions 1, spurious invocations 1, omissions by the arm deadline 43, epoch losses 0, invalid services 0, shortest handler 37.62 us, services (low 16 bits) 34322 omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):   key row 0: R   5  B   6  G   3   key row 
+[02:30:25] usb after: frame counter: 165610 intervals judged, 0 rejected on the spans, 0 rejected for a bus event or the frames stopping, 0 excluded unjudged in a stale's recovery; the worst accepted distance 1 ms; the last rejection's spans 0 ms by the extension, 0 by the frames   now: USB ACTIVE, frames trusted, FRMNO 1101, bus-event generation 18; the extension VALID, loss generation 18, exclusions 0x00 
+[02:30:25] power after the run: mode 2 stage 3 cap 255 forced 255
+[02:30:25] done
+[02:30:25] data off
+[02:30:25] daemon restarted
+[02:30:25] exit_flash.sh exit 0

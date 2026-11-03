@@ -1,0 +1,1 @@
+{"services": 37456, "sections_us": [7.28, 8.81, 37.61, 10.81, 2.42, 6.66], "total_us": 73.6, "names": ["entry snapshot", "step 1 and the frame counter's judgment", "steps 2-5 (mux rows, scan, match registers)", "step 6 (the arm)", "exit snapshot", "exit judgment and the record"]}

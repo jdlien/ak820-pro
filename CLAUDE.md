@@ -135,7 +135,20 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 00:06 11-03: the cost diagnostic, `95ef5cbc5d`** (dev,
+**On white since 02:27 11-03: the exit-only build, `f0ec5c68df`** (dev,
+token `0x9e2d894a`, heap gap 408 B, `row-isr`): the diagnostic below with
+the exit snapshot time only and the elapsed sample's verdict by the two
+spans and the bus-event generation; flashed on JD's advance go for the
+night, the board woken by the presser's own press. Its stamps read
+73.6 us a slot against 80.2 (page 4 still 80.2: the dev build's section
+instrumentation costs the same outside the stamps, compiled out next);
+the silence set 15 of 16, the FAIL a torn FRMNO read at a byte carry
+(two false losses; fixed next by reading until two reads agree)
+(`history/rowisr-stage1-20261101/README.md`, "The exit-only build's
+flash"). The presser (A1 = (0,13) Delete = F19, A0 = (3,14) PgDn = F20,
+pressed from the logger's REPL by `scripts/presser_repl.py`) runs the
+short-tap and wake gates hands-free.
+**Before it, from 00:06 11-03: the cost diagnostic, `95ef5cbc5d`** (dev,
 token `0xda2a24d5`, heap gap 408 B, `row-isr`): the trim below plus the
 handler's sections stamped (op 28 sub 11) and a register read timed
 (sub 10). It answered the 19 us: a register read is free, and the

@@ -1,0 +1,8 @@
+37454 full services in 10 s; the handler's sections, mean us (HCLK ticks / 48):
+      7.28  entry snapshot
+      8.80  step 1 and the frame counter's judgment
+     37.63  steps 2-5 (mux rows, scan, match registers)
+     10.80  step 6 (the arm)
+      2.41  exit snapshot
+      6.67  exit judgment and the record
+     73.59  total, stamp 0 to stamp 6: the ISR hooks and the sums' own commit lie outside, page 4 includes them
