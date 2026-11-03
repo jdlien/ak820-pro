@@ -25,7 +25,9 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
   `uhubctl` cuts its USB data; the power logger measures the pack; the
   lighting and the screen's backlight are set from the Mac; and a listener
   times every rig keystroke's arrival. Everything but the wiring runs
-  without JD's hands.
+  without JD's hands. Since 11-03 the Mac also starts and stops the
+  Pixel 8's 240 fps recordings and pulls the clips
+  ([below](#the-camera-the-pixel-8-over-adb-11-03)).
 - **For the keyboard's charging, use the USB relay**
   ([below](#the-usb-relay-the-keyboards-charging-from-the-host), since 18:30
   10-08). It cuts only the keyboard's 5 V, the keyboard stays on USB, and the
@@ -854,6 +856,102 @@ paths, the timeout (33 checks). The sampling itself is the plan's
 qualification on the board: with the probe on, `levels` shows the
 released column high, VIA's key tester no phantom, and the PWM waveform
 unchanged against an unprobed neighbour.
+
+## The camera: the Pixel 8 over adb (11-03)
+
+JD's Pixel 8 films the gates that need an eye on the LEDs or the screen,
+from its tripod in slow motion at 240 fps. The Mac drives it over USB: it
+keeps the phone awake, opens the camera in Slow Motion, starts and stops a
+recording, and pulls the clip. Once the phone is framed, a filmed gate
+needs no hands: the Mac starts the clip, sets off the event, and stops it.
+
+```sh
+scripts/phonecam.py setup      # awake on power, Camera open, Slow Motion at 1/8x
+scripts/phonecam.py record 5   # clock offset, start, 5 s, stop, pull, count, delete from the phone
+scripts/phonecam.py start      # or one key at a time, stamped on both clocks
+scripts/phonecam.py stop
+scripts/phonecam.py pull       # the newest clip to ~/Downloads (--out DIR, --delete)
+scripts/phonecam.py teardown   # the screen times out again
+```
+
+Every start and stop is appended to
+`~/Documents/ak820pro-phonecam/stamps.jsonl`: the Mac's time around the
+command, the phone's on either side of the key. The phone's storage
+fills, so `record` deletes its clip from the phone once the Mac's copy
+matches it in size (`--keep` keeps it). It deletes through the media
+index (`content delete`), so the gallery keeps no ghost and nothing goes
+to a trash. `pull` touches the phone only with `--delete`.
+
+**Set up once on each Mac.**
+- Install adb with `brew install --cask android-platform-tools`. Buzz has
+  had it since 11-03, at `/opt/homebrew/bin/adb`. Elysium used Android
+  Studio's `~/Library/Android/sdk/platform-tools/adb`.
+- Turn USB debugging on in the phone's Developer options.
+- The first `adb devices` from a new Mac says `unauthorized`. Unlock the
+  phone and tap Allow, with "Always allow from this computer" ticked.
+- Homebrew's ffmpeg and ffprobe read the clips.
+
+**What was measured (11-03, five clips recorded from the Mac):**
+- **The link.** The phone is on port 4 of the VIA USB3.1 hub at
+  `0x03200000`, which links to the Mac at 10 Gbps. The phone itself
+  negotiates 5 Gbps (`ioreg -p IOUSB -r -l -n "Pixel 8"`, `UsbLinkSpeed`).
+  As far as we know, 5 Gbps is the phone's own limit. A pull runs at
+  125-165 MB/s, about a third of what 5 Gbps carries, so the phone's side
+  sets the speed, not the link. A 5 s clip, about 42 MB, comes off in
+  0.3 s.
+- **A clip.** HEVC at 1080p, captured at 240 fps and stored to play at
+  29.97 fps (`com.android.capture.fps=240` in its tags). So real time is
+  frames / 240, and playback is 8x slow. A clip is about 8.4 MB a real
+  second, so the 74 GB free holds about 2.4 hours. The camera logs any
+  dropped frames as `CAM_geq: Video file encoded N frames, frame drop
+  listener saw N`; the clean clip dropped none.
+- **File names.** A name is the phone's clock in UTC
+  (`PXL_YYYYMMDD_HHMMSSmmm`). It is stamped when the app takes the key
+  (logcat: "Capture start time not available, using current time"), not
+  at the first frame.
+- ⚠️ **The phone's clock was 1.965 s fast**, with automatic time on. The
+  Mac was within 0.1 ms of `time.apple.com` and `time.google.com` by
+  `sntp`. Measure the offset every session: `phonecam.py offset` bounds
+  it to half adb's round trip, about ±25 ms (five runs agreed within
+  5 ms), and `record` measures it on its own.
+- **The key.** `cmd input keyevent KEYCODE_VOLUME_DOWN` takes 210-340 ms
+  on the phone. The volume key is the Pixel camera's shutter by default.
+- ⚠️ **The first frame comes about 0.74 s after the start key.** In each
+  clip the frames span less time than the keys' interval: by 0.710 to
+  0.766 s across five clips (mean 0.740). Which end loses the time was
+  not measured. The logcat points to the start: the camera's high-speed
+  burst request comes 0.64 s after the key command, and preview alone is
+  back 0.3 s after the stop key. So start a recording at least 1.5 s
+  before the event, and stop it 0.5 s after.
+- **Frame-exact timing needs a reference in the frame.** The key stamps
+  place a clip on the Mac's clock to about ±30 ms, mostly the gap's
+  spread, which is about ±7 frames. For better, film an event whose Mac
+  time is known; the board's own LEDs or screen, changed from the Mac,
+  are the natural one.
+- **Light.** At 240 fps an exposure lasts at most 1/240 s, so the bench
+  reads dark: mean luma 11 of 255 at 10:40 in the room's light. What the
+  phone's preview shows is brighter than what it records. The board's own
+  LEDs and screen are bright enough. The room's lights showed no flicker
+  in that clip: the per-frame brightness has no 120 Hz component.
+
+**Traps, each met on 11-03:**
+- ⚠️ **No UI read while recording.** `uiautomator dump` waits for an idle
+  screen, and the camera's screen never idles while it records. One read
+  held a 3 s clip open for 14.8 s. `phonecam.py` reads the UI only in
+  `setup`.
+- ⚠️ **The hub charges the phone as AC, not USB** (`dumpsys battery`: "AC
+  powered: true"). So `svc power stayon usb` alone lets the screen sleep.
+  `setup` sets `stay_on_while_plugged_in` to 3 (AC and USB), and
+  `teardown` puts back 0, the phone's setting before.
+- **Stay-awake stays on** until `teardown`. The screen dims itself when
+  idle, and this is a test phone, so burn-in from the camera's fixed
+  controls is accepted; run `teardown` if the phone goes back to daily
+  use.
+- **Unlock the phone once.** With the screen held on, it does not lock
+  again. `setup` refuses on a locked phone.
+- **The mode and the speed.** `setup` finds the Slow Motion chip by its
+  label in the UI dump, not by coordinates. It checks the speed (1/8x
+  against 1/4x), but the speed is set by hand.
 
 ## The row ISR's diagnostics: dev op 28 (11-01, built, not yet on a board)
 
