@@ -3362,6 +3362,30 @@ quantization, above the largest new tolerance of 28.389 ms.
   byte. **Relay 2 on at 14:25 for the charge** (JD at 14:05); the
   per-colour and value-64 holds on battery when the pack is past the
   cap, then white to Hutch asleep on 5e.
+- 11-03 14:26-14:35: **stage 5f, the SRAM trial, built and on white
+  during the charge**: `12f2c14cad` (token `0x08ddac91`, heap gap
+  424 B): the handler's hot section (D3 steps 3-5: the scan slot's
+  electrical scan, the fifteen match registers, the mux select) as
+  `rowisr_hot()` in `.ramtext` under `ROWISR_RAMTEXT` (config.h 1; the
+  flag off puts the same code inline in flash), as sleep.c's WFI; the
+  column loop rolled in SRAM (the unrolled one overflowed the RAM by
+  8 B); the dev diagnostics' rings shrunk under the flag (the OE ring 32
+  to 8, the gap monitor's 16 to 4) for the room. The ELF: `rowisr_hot`
+  at 0x20001394, 404 B, a `blx` from Vector90. Codex's verify
+  (`review-codex-row-isr-stage5f-2026-11-03-raw.md`): **NOT READY on
+  one P2, the host script**: `scripts/overrun_diag.py` paged the rings
+  at their old sizes and the firmware's refusal of page 4 (and the
+  monitor's page 2) exited it, so `status` would fail on a 5f build;
+  **fixed** (the pages read until the firmware refuses one, the
+  capacity what was read, both sizes served). Its notes: the extraction
+  behaviour-preserving and the store order kept; the placement, the
+  long call and the startup copy sound (52 B more software stack);
+  `g_led_config` is in SRAM already, `col_mr`, `width_lut`,
+  `key_row_pins`, `mux_sel` flash data; the reduced retention acceptable
+  for a trial; expect several us, not the ten first guessed (the rolled
+  loop, the flash table loads, the call), judged by page 4's mean over
+  5e's variation at matched conditions and the omissions over equal
+  exposure. The window ran on USB power during the charge (14:31).
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake

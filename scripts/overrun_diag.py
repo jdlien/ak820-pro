@@ -90,15 +90,20 @@ def mon(h, sub=0):
 
 
 def mon_ring(h, seq):
-    """The monitor's gaps of 197 us and over (op 26), the newest 16."""
+    """The monitor's gaps of 197 us and over (op 26), the newest 16 (4 on a
+    build with ROWISR_RAMTEXT, whose rings are smaller: the pages are read
+    until the firmware refuses one, and the capacity is what was read)."""
     slots = {}
     for page in range(8):
-        b = op(h, 26, [page])
+        try:
+            b = op(h, 26, [page])
+        except SystemExit:
+            break   # past the ring's last page on this build
         for j in range(2):
             e = b[10 * j:10 * j + 10]
             slots[2 * page + j] = {"seq": U16(e, 0), "secs": U32(e, 2), "gap_ms": ms(U16(e, 6)),
                                    "ctx": SCOPES[e[8]] if e[8] < len(SCOPES) else e[8], "act": e[9]}
-    return walk_back(slots, seq, 16)
+    return walk_back(slots, seq, len(slots)) if slots else []
 
 
 def rxtap(h, sub=0):
@@ -128,7 +133,10 @@ def ring(h, seq):
     for _ in range(3):
         slots = {}
         for page in range(16):
-            b = op(h, 21, [page])
+            try:
+                b = op(h, 21, [page])
+            except SystemExit:
+                break   # past the ring's last page: 4 pages on a ROWISR_RAMTEXT build (OD_RING 8), 16 otherwise
             for j in range(2):
                 e = b[14 * j:14 * j + 14]
                 slots[2 * page + j] = {"seq": U16(e, 0), "secs": U32(e, 2), "act": e[6], "kind": e[7] & 3,
@@ -137,7 +145,7 @@ def ring(h, seq):
                                        "st_max_ms": ms(U16(e, 12))}
         s_now = summary(h)
         if s_now["ring_seq"] == seq:
-            return walk_back(slots, seq, 32), s_now
+            return (walk_back(slots, seq, len(slots)) if slots else []), s_now
         seq = s_now["ring_seq"]
     sys.exit("the OE ring kept moving during its readout")
 
