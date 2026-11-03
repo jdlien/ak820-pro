@@ -1,0 +1,7 @@
+slots_elapsed            901904
+missed_slots             9037
+pulses_emitted           892662
+pulses_omitted           237
+latency_max_us           80.98
+  latency is the handler's entry from the slot boundary, elapsed its entry to exit;
+  missed slots are boundaries the handler did not service, omitted pulses the slots it

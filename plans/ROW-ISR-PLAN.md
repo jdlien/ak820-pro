@@ -3329,6 +3329,15 @@ quantization, above the largest new tolerance of 28.389 ms.
   lead), not by the handler's own length; red's share fell with the
   scan's bookkeeping moved. 5e stays the night's build. Next: the
   mixed-load window and the dark hold, the low codes, the hand-over.
+- 11-03 14:00-14:06: **the mixed-load window met** (237 omitted of
+  901,904, 0.026%, under the gate's 0.1%; the colours even under load;
+  the 9,037 missed slots the burst's held reads by design; the radio's
+  text channel 149 timeouts of 2,714 frames, no drop, no overrun) and
+  **the dark hold 31.28 mA**: the full-white incremental 60.4 (5e) and
+  61.0 (5d) against 4b's 61.0 on the build's own base. The low codes by
+  camera next, then a 45 min charge through relay 2 to lift the cap for
+  the per-colour and value-64 holds on battery (JD at 14:05: the ISR
+  work before the drain), then the hand-over asleep.
 - 11-03 13:15-13:33: **5d's wakes and silence set** (the README's "The
   presser gates on 5d"): the waking key kept 5 of 5 (losses +2 each as
   on 4b), the script's two FAILs being spurious invocations at the wake

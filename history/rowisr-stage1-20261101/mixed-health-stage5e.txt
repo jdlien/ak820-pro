@@ -1,0 +1,5 @@
+tx_sent                  2714
+tx_timeouts              149
+tx_drops                 0
+msp_free                 592 bytes (interrupt stack; paint watermark)
+blit_stalled             0

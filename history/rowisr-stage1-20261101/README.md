@@ -1377,6 +1377,25 @@ own length: the USB handler's 80 us is the lead. 5e stays the night's
 build (reviewed, no regression; its presser gate passed; the sleep path
 is 5d's).
 
+**The mixed-load window and the dark hold on 5e (14:00-14:06,
+`stage5_loads.sh 0xf222e31c stage5e 12`; `mixed-sched-stage5e.txt`,
+`mixed-record-stage5e.txt`, `mixed-overrun-stage5e.txt`,
+`mixed-health-stage5e.txt`, `dark-stage5e.txt`).** The mixed load: the
+daemon up (its sync, the now-playing text), a burst of 300 clock-chip
+reads 40-80 ms apart (dev op 23, the short deadline, the row ISR held
+off through each) and 200 presses at 25 ms through it, 113 s: 901,904
+slots, **237 pulses omitted (0.026%, the gate under 0.1%)**, the longest
+run 2, one spurious invocation, latency max 81 us, no loss; the
+colours even under load (key row 0: R 16, B 17, G 9); **9,037 missed
+slots (1.0%) are the burst's held reads**, each a ~3 ms hold-off of the
+scheduler's line (20-24 slots), by design, not the handler's. The radio
+channel with the daemon's text: 2,714 frames sent, 149 timeouts (5.5%),
+no drop, no overrun. **The dark hold: 31.28 mA** (the lights off by the
+ladder, the board awake on the data line; 4b 31.1), so the full-white
+incremental on this build's own base is **60.4 mA (5e, 91.70 lit) and
+61.0 (5d, 92.32)** against 4b's 61.0: within 1%, the light gate at full
+white closed with its own dark reference.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

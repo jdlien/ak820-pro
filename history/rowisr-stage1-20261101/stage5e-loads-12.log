@@ -1,0 +1,28 @@
+[13:59:55] 1. the mixed-load window: the daemon up, a 300-read burst, 200 presses, 120 s
+the ladder at mode 0 (try 1)
+[14:00:16] the daemon up (its sync, the text)
+{'left': 300, 'done': 0, 'failed': 0, 'exposure_ms': 0, 'active': True, 'skipped': 0, 'lo': 40, 'hi': 80}
+[14:01:07] logger logging again (a new power.csv row)
+[14:02:09] the window's end: page 7, the record, the UART kinds
+slots_elapsed            901904
+missed_slots             9037
+pulses_emitted           892662
+pulses_omitted           237
+latency_max_us           80.98
+  latency is the handler's entry from the slot boundary, elapsed its entry to exit;
+  missed slots are boundaries the handler did not service, omitted pulses the slots it
+longest run of omissions 2, spurious invocations 1, omissions by the arm deadline 206, epoch losses 0, invalid services 0, shortest handler 29.75 us, elapsed samples dropped for a boundary inside the handler 71 (stage 5a: the kept samples are the boundary-free services)
+omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
+  key row 0: R  16  B  17  G   9
+tx_sent                  2714
+tx_timeouts              149
+tx_drops                 0
+msp_free                 592 bytes (interrupt stack; paint watermark)
+blit_stalled             0
+the ladder at mode 2 (try 1)
+[14:02:12] the standing state
+[14:02:12] 2. the dark hold: Power saver's lights off at 3 min idle, the board awake on the data line; 240 s
+the ladder at mode 2 (try 1)
+[14:06:30] the dark draw on this build: 31.28 mA (4b: 31.1); lit at full white 92.32: incremental 61.04
+[14:06:32] the standing state
+[14:06:32] stage 5's load and light holds done (12)
