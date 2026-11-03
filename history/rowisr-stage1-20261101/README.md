@@ -1473,6 +1473,46 @@ byte estimates). No plateau the driver made; the gate's values 1-16 are
 one byte apart at most under the curve, which is stage 6's subject, not
 stage 5's.
 
+### Stage 5f, the SRAM trial (11-03, 14:31-14:37, `12f2c14cad`, token `0x08ddac91`): the hot section in SRAM buys nothing measurable
+
+Codex's first-ranked lever for the handler's share: the hot section (the
+scan slot's electrical scan, the fifteen match registers, the mux
+select) as `rowisr_hot()`, 404 B at 0x20001394 in `.ramtext` as sleep.c's
+WFI, a long call from the handler; the column loop rolled in SRAM (the
+unrolled one overflowed the RAM by 8 B), the dev diagnostics' rings
+shrunk for the room (the OE ring 32 to 8, the gap monitor's 16 to 4; the
+heap gap 424 B). Reviewed (`plans/review-codex-row-isr-stage5f-*`: the
+extraction behaviour-preserving, the placement sound; its P2, the host
+reader's page counts, fixed and tested on the build). Flashed on USB
+power during the charge and measured over the same 300 s window lit at
+full white, the daemon paused (`stage5f-flash-run.log`,
+`health-isr-stage5f.txt`, `health-sched-stage5f.txt`,
+`record-stage5f.txt`):
+
+| | 5d (battery, lit) | 5e (battery, cap, dimmed, presses) | 5f (USB power, lit) |
+|---|---|---|---|
+| services a second | 7,997 | 8,000 | 8,002 |
+| handler mean / min / max, us | 49.5 / 32.0 / 117.3 | 52.3 / 32.0 / 128.0 | 51.7 / 32.0 / 106.7 |
+| share between the hooks | 39.6% | 41.8% | 41.4% |
+| omissions in 300 s (R / B / G) | 87 (61 / 15 / 13) | 78 in 320 s (43 / 17 / 18) | 50 (22 / 13 / 15) |
+| latency max, us | 74.9 | 86.0 | - |
+
+**The mean did not move**: 51.7 against 49.5 and 52.3, inside the
+variation between windows (the conditions differ: the cap and the
+keep-lit presses on 5e, USB power on 5f). So the cost diagnostic's
+reading, "an instruction fetched from flash costs 3-5 cycles on this
+core", does not hold for this section as the saving it predicted:
+either the flash's fetch is faster for straight-line code than the
+diagnostic's sections suggested, or the section's time is in its
+stores and loads (the fifteen match registers, the table and index
+loads from flash, the port reads) rather than its fetch, and SRAM moves
+none of those. The omissions' 50 against 87 is the lower maximum
+(106.7 against 117.3) and USB power's quieter board, not a cost gain.
+**The trial is closed**: `ROWISR_RAMTEXT` is 0 (the same code inline in
+flash, the rings at full size), 5e is the night's build. What is left
+for the 20% target is the every-eighth judgment (~8 us, JD's call) and
+nothing cheap; codex's revision of the target stands.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
