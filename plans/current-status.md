@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-03, 23:45. The block below is where things stand, written to
+Updated 2026-11-04, 00:40. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -110,10 +110,12 @@ recorded in the plan's stage 6 with the per-colour floor calibration JD
 will do by eye (`devprobe`, the camera at the capless keys as the
 check): "The floor is measured first, per colour". The clock-sync
 comparison: 4b's night and 5g's evening the same within noise (the
-README's table); no old-ISR sample on the Mac. White runs 5g with the
-awake soak until 00:35 (clean through read 9, 23:14: losses 2 of the
-boot, 0 frame rejects of 10.0 million, the clock 33 runs good), then to
-Hutch asleep for Warren's M2/M3.**
+README's table); no old-ISR sample on the Mac. **The 5g soak ended
+00:35 clean** (4 h 1 min, 13 reads: losses 2 of the boot, 0 spurious,
+14.8 million frame intervals judged and 0 rejected, the clock 49 runs
+good and 0 restarts, 18,700 blits and no fault); **white is Hutch's
+since 00:35, asleep in the standing state on 5g** (3.47 mA, the pack
+28.7%) for Warren's M2/M3: claim it back before the 5h flash.**
 **Before it (20:40 11-03): white runs stage 5g (`row-isr`
 `4f19e6c31f`, token `0x34d7c5fb`) since 20:19 with the awake soak on it
 from 20:34 (`soak_watch_awake.sh stage5g`, a read every 20 min, JD

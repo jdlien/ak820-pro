@@ -2357,8 +2357,11 @@ one loss where the per-slot judgment counted two.
   pushed to `jdlien/row-isr`; the flash waits on JD's go.
   The clock-sync comparison for JD's 20:31 question: 4b's night and 5g's
   evening the same within noise (|before| mean 6.4 and 6.8 ms, p95 16;
-  rtt 2.1 and 2.3), no old-ISR periodic sample on the Mac. The soak
-  runs on to 00:35.
+  rtt 2.1 and 2.3), no old-ISR periodic sample on the Mac. **The soak
+  ended 00:35 clean** (4 h 1 min, 13 reads: losses 2 of the boot, 0
+  spurious, 14.8 M frame intervals judged and 0 rejected, the writer 49
+  runs and 0 restarts, 18,700 blits and no fault); white asleep in the
+  standing state to Hutch for Warren's M2/M3.
 
 - 11-03 19:36-20:36: **stage 5g, the every-eighth judgment, built,
   reviewed, flashed and measured** (the README's "Stage 5g on white"):

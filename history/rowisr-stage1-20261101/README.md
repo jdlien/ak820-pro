@@ -1628,6 +1628,19 @@ skipped tonight on JD's instruction (they run on tomorrow's build, which
 needs them anyway). White goes to Hutch asleep at about 00:35 for
 Warren's M2/M3.
 
+**The soak's result (20:34:15-00:35:19, 4 h 1 min, 13 reads,
+`soak_summary.py soak-stage5g.jsonl`): clean.** Losses 2 throughout (the
+boot's), spurious 0, invalid services 2 (the boot's), `row_gap_max`
+3 ms at every read; the frame counter judged 14,786,064 intervals and
+rejected none (2 bus events, the boot's); the clock chip's writer 49
+runs good, 0 restarts, `i2c_max_cycles` 251, 0 failures; 18,700 blits
+with no fault; `msp_free` 536, `psp_free` 936; the late omissions
+saturated at 255 by the second read (0.003% of 29 million slots, as 5e
+measured); the rig's keys 14 (JD's typing is not counted there). White
+asleep in the standing state at 00:35:24 (the data cut sleeps an idle
+board at once: 3.47 mA at 00:35:27, the pack 28.7%), the daemon running,
+relay 2 off; handed to Hutch for Warren's M2/M3.
+
 ### Stage 5h built overnight (11-03, 22:23-23:45, `a1a0c783d5` to `bde904e491`): the per-slot judgment back, the detector a dev-only flag, the floor probe's flavour; codex READY; waiting for the go
 
 JD's bedtime question (22:23): on white the lights dimmed by the value
@@ -1711,7 +1724,7 @@ reconnect):**
 | period | periodic syncs | before, mean / median / p95 / max (ms, absolute) | rtt mean / p95 (ms) | U mean (ms) |
 |---|---|---|---|---|
 | stage 4b's night, 05:08-09:35 | 39 | 6.4 / 5.2 / 16.0 / 20.0 | 2.06 / 2.60 | 1.17 |
-| stage 5g, 20:19-23:30 | 27 | 6.8 / 5.5 / 15.8 / 16.8 | 2.33 / 3.00 | 1.45 |
+| stage 5g, 20:19-00:35 | 37 | 6.3 / 4.4 / 15.8 / 16.8 | 2.33 / 3.00 | 1.44 |
 
 The same within noise: the residual between syncs is the RTC's drift
 over the 300 s (5-6 ms, 17-20 ppm), which the handler does not touch,

@@ -154,7 +154,9 @@ dev build's default, out of daily and fpb, `build.sh`'s check), the
 silence report's fixes kept, `ROWISR_K_Q6` overridable for stage 6's
 floor measurement; codex READY twice, its one P2 fixed. Owed on
 the flash: the window, the silence set, the five wakes, a daily build's
-soak. The dim end's plateaus (JD, 22:23) are QMK's CIE table before the
+soak. The 5g soak ended 00:35 11-04 clean (4 h, 0 losses past the
+boot's, 0 frame rejects of 14.8 M); white is Hutch's, asleep on 5g,
+for Warren's M2/M3. The dim end's plateaus (JD, 22:23) are QMK's CIE table before the
 byte: stage 6's D9, with the per-colour floor by eye (the README's
 "Stage 5h built overnight").
 **Before it, from 15:06 11-03 (and 13:34-14:31): stage 5e of the row ISR
