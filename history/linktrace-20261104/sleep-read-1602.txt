@@ -1,0 +1,68 @@
+USB seen 2026-11-04 16:02:04; LastArrivalDate 11/04/2026 16:02:04; read at 16:02:09; BT LastConnectedTime(raw) 11/04/2026 10:00:16
+last sleep: woke on key after 83203 counted s; flags pcf,acq,reattach,slept; strays 0; pins P0 0x0 P1 0x0 P2 0x40; pll_loops 104; keys gained 0; sleeps this boot 2; blocked 0x0000; timed out -
+ring[0]  sleep #0: woke on cap after 86400 counted s, at 46353931 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x0
+ring[1]  sleep #1: woke on key after 83203 counted s, at 46359134 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x40
+ring[2]  empty (next sleep #2)
+ring[3]  empty (next sleep #2)
+ring[4]  empty (next sleep #2)
+ring[5]  empty (next sleep #2)
+ring[6]  empty (next sleep #2)
+ring[7]  empty (next sleep #2)
+stray    none kept
+sleep     #1: woke on key after 83203 counted s; flags slept,returned; strays 0; pins P0 0x0 P1 0x0 P2 0x40; this boot's; boot RSTST 0x01
+inherited none (boot RSTST 0x01)
+census   sleep #1 [opened,closed]: 48 handler entries, 0 USB; seen CT16B1,CT16B3; last CT16B3; USB INSTS BUS_SUSPEND (0x40000000), CFG SIE_EN,DPPU_EN,VREG33_EN, INTEN BUSWK_IE,USB_IE,BUS_IE
+link     the trace from the last wake, 112.226 s before this read: 52 events (full: the rest not kept)
+      0 ms  wake, the link as the sleep left it: connected
+     16 ms  queued   A1 keys
+     18 ms  sent     A1 keys
+     30 ms  resent   A1 keys
+     46 ms  resent   A1 keys
+    105 ms  ACKed    A1 keys
+    117 ms  queued   A1 keys
+    119 ms  5B 32 (linked)
+    120 ms  5B 32 (linked)
+    128 ms  sent     A1 keys
+    136 ms  ACKed    A1 keys
+   4010 ms  queued   A1 keys
+   4012 ms  sent     A1 keys
+   4019 ms  ACKed    A1 keys
+   4075 ms  queued   A1 keys
+   4077 ms  sent     A1 keys
+   4083 ms  ACKed    A1 keys
+   6971 ms  queued   A1 keys
+   6973 ms  sent     A1 keys
+   6982 ms  ACKed    A1 keys
+   7019 ms  queued   A1 keys
+   7021 ms  sent     A1 keys
+   7027 ms  ACKed    A1 keys
+   7093 ms  queued   A1 keys
+   7094 ms  queued   A1 keys
+   7097 ms  sent     A1 keys
+   7103 ms  queued   A1 keys
+   7106 ms  ACKed    A1 keys
+   7106 ms  sent     A1 keys
+   7112 ms  ACKed    A1 keys
+   7112 ms  sent     A1 keys
+   7118 ms  ACKed    A1 keys
+   7192 ms  queued   A1 keys
+   7195 ms  sent     A1 keys
+   7201 ms  ACKed    A1 keys
+   7213 ms  queued   A1 keys
+   7215 ms  sent     A1 keys
+   7221 ms  ACKed    A1 keys
+   7268 ms  queued   A1 keys
+   7270 ms  sent     A1 keys
+   7276 ms  ACKed    A1 keys
+   7296 ms  queued   A1 keys
+   7298 ms  sent     A1 keys
+   7305 ms  ACKed    A1 keys
+   7330 ms  queued   A1 keys
+   7333 ms  sent     A1 keys
+   7339 ms  ACKed    A1 keys
+   7409 ms  queued   A1 keys
+   7411 ms  sent     A1 keys
+   7417 ms  ACKed    A1 keys
+   7454 ms  queued   A1 keys
+   7456 ms  sent     A1 keys
+

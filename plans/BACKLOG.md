@@ -93,8 +93,11 @@ reports on the link state nor re-selected after the module's own drop.
     would save at most ~0.06 mA, under 2% of the sleep draw and only in
     the 18 h, and the USB step is how a wake tells a cable-out board from
     a suspended host (codex), so skipping it needs its own validation.
-  - **Owed:** black on Windows (the dev build `3b04a983a24`, after its
-    link trace's letter test); 2.4G is untested.
+  - **Owed:** black on Windows. Its link trace's letter test came first
+    (16:00 11-04, GREMLIN-RESULTS §21: the waking key lost, sent 14 ms
+    before the module's link was back at 119 ms), then the keep-alive
+    went on at 16:04; its overnight cable-out run is next. 2.4G is
+    untested.
 
 ## The saturation read 191 after a keyed change to 0 and two deep-sleep wakes (2026-11-01) -- unexplained, noted
 
@@ -262,7 +265,11 @@ investigated.
 Again 10-31 14:12 on black after a 9 h deep sleep (JD: "I swear I
 lost a keystroke there"): the firmware counted the waking key inside
 50 ms, and Windows' last-connected stamp puts the link's return ~1 s
-after the wake (GREMLIN-RESULTS §21).
+after the wake (GREMLIN-RESULTS §21). The link trace (11-04, black)
+puts it at 0.12 s: the module's `5B 32` 119 ms after the wake (and
+Windows' stamp has the ms), with the waking key taken by the module
+14 ms before it and never typed. The keep-alive (the item on the
+first key after a long sleep) keeps the link instead.
 
 **If it recurs:** don't switch channels. Plug the cable in, slider on BT
 (the BT state survives that), and read `ak820 health`. Check raw input

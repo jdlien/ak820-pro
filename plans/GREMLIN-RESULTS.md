@@ -2166,3 +2166,45 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     lost, but only once the link has dropped" again. (The record's
     "keys gained" is counted only on an armed sleep; its 0 is the
     unfed run's.)
+- **The waking key's trace on Windows: sent before the link is back
+  (16:00 11-04).** Black on `gremlin/linktrace` `34f02ab50e0` (token
+  `0x1157913e`; codex: `review-codex-linktrace-2026-11-01.md`), the cable
+  out at the keyboard since 11:18:04 11-02, asleep on BT from ~11:21
+  (Power saver), its link dropped at ~11:51 (the module's 30 min). The
+  backstop woke it after 86,400 counted s (~27 h) and it slept again; JD
+  woke it with a letter in Notepad at ~16:00:17 11-04, 83,203 counted s
+  later: 169,603 counted s over ~189,560 real, 895 per mille (10-31's
+  1.118 real s to a counted one). **JD: the first keystroke was eaten,
+  the second went through.** The trace (`ak820 sleep` at 16:02:09, the
+  cable back in; `history/linktrace-20261104/sleep-read-1602.txt`), in ms
+  from the wake:
+  - 0, the link as the sleep left it: connected. The module's drop at
+    30 min reached no one (UART2 is not a deep-sleep wake source).
+  - The press queued at 16, sent at 18, resent at 30 and 46, ACKed by
+    the module at 105.
+  - `5B 32` (linked) at 119 and 120. Windows'
+    `DEVPKEY_Bluetooth_LastConnectedTime` reads 16:00:16.825 (the
+    six-hour shift undone; the stamp keeps the ms), the same moment.
+  - The release queued at 117, sent at 128, ACKed at 136.
+  - The second key at 4,010, ACKed in 7; typing from 6,971 (the ring
+    full at 52 events).
+
+  So on Windows the link is back ~0.12 s after the wake, not the ~1 s
+  that 10-31's whole-second stamps suggested, and the waking key still
+  goes first: the module takes it 14 ms before its link is up, and it
+  never types. Whether a key a few hundred ms later would type (the
+  host's HID ready after the link) the trace can't say. The keep-alive
+  takes the question away: it keeps the link, so the waking key goes
+  over a live one, as after a short sleep.
+  - The wake's record: woke on key, flags `pcf`, `acq`, `reattach`,
+    `slept`; 0 strays; no step timed out; PLL 104 loops; RSTST `0x01`.
+    The census: 48 handler entries, 0 USB, CT16B1 and CT16B3, `INSTS`
+    `BUS_SUSPEND`.
+  - **The battery:** 96% after ~52.7 h cable out (JD). If it left the
+    cable full on a 4000 mAh pack, that is ~3 mA: white's ~3.4 mA floor
+    within the gauge's 1% steps.
+  - **Then black got the keep-alive** (16:04, `gremlin/keepalive`
+    `3b04a983a24`, token `0xf7ddd286`; the profiles and keymap restored
+    and read back). Its overnight cable-out run on Windows is next,
+    with a PnP logger on black's BLE device (`IsConnected` and
+    `LastConnectedTime` every 30 s).
