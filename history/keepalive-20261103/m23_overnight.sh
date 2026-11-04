@@ -10,6 +10,7 @@ set -u
 cd "$(dirname "$0")/../.." || exit 1
 END=${1:-08:00}
 D=history/keepalive-20261103
+OUT=${OUT:-$D/m23-overnight.json}   # the JSON at the end; name it per run
 PL="$HOME/Library/LaunchAgents/com.jdlien.ak820pro.agent.plist"
 log() { echo "[$(date '+%m-%d %H:%M:%S')] $*"; }
 end_ep=$(date -j -v+1d -f '%H:%M:%S' "$END:00" +%s)
@@ -23,5 +24,5 @@ while [ "$(date +%s)" -lt "$end_ep" ]; do
     sleep 1800
     log "$(venv/bin/python $D/m23_read.py "$t0" 2>&1)"
 done
-venv/bin/python $D/m23_read.py "$t0" --json > "$D/m23-overnight.json"
-log "end: $(venv/bin/python $D/m23_read.py "$t0" 2>&1) -> $D/m23-overnight.json"
+venv/bin/python $D/m23_read.py "$t0" --json > "$OUT"
+log "end: $(venv/bin/python $D/m23_read.py "$t0" 2>&1) -> $OUT"
