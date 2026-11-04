@@ -2,8 +2,8 @@
 # The keep-alive's M4 with it (README.md, "The with-run"): does the waking key
 # reach the Mac after 30+ min asleep, the link held by the keep-alive alone?
 # One trial: the daemon paused (no lock-light frames), the data line off;
-# white asleep and no input for 30+ min (checked from power.csv: only the
-# keep-alive's ~5 s wakes since); wait (up to 60 min) for Buzz to be unlocked
+# white asleep and no input for 32+ min (checked from power.csv: only the
+# keep-alive's ~5 s wakes since); wait (up to 2 h) for Buzz to be unlocked
 # and white between wakes; one press of A1 ((0,13), F19, 100 ms); F19's arrival
 # from the F19 listener's log within 15 s; white's link events in bluetoothd
 # (none expected: the link is up); then the data line on and m4_with_read.py
@@ -27,11 +27,24 @@ asleep_now() { tail -n 3 "$PCSV" | awk -F, '$6 >= 6 {bad=1} END {exit bad}'; }
 launchctl bootout "gui/$UID/com.jdlien.ak820pro.agent" 2>/dev/null; log "daemon paused (no lock-light frames)"
 trap 'hub off; log "data off"; launchctl bootstrap "gui/$UID" "$PL" 2>&1; log "daemon restarted"' EXIT
 hub off; log "data off"
-# The last stretch awake longer than a keep-alive wake (> 15 s over 8 mA) is the last input's.
-last_long=$(tail -n 40000 "$PCSV" | awk -F, '$6 > 8 {if (!s) s = $2; e = $2; next} s {if (e - s > 15) L = e; s = 0} END {print int(L)}')
+# The last stretch awake longer than a keep-alive wake (> 15 s over 8 mA) is
+# the last input's; read again while waiting, since a key on white starts it over.
+last_long_end() { tail -n 40000 "$PCSV" | awk -F, '$6 > 8 {if (!s) s = $2; e = $2; next} s {if (e - s > 15) L = e; s = 0} END {print int(L)}'; }
+last_long=$(last_long_end)
 log "last long awake stretch ended $(date -r "$last_long" '+%m-%d %H:%M:%S')"
+# 32 min: past the module's drop (29:53 after the sleep in the control, its
+# 30 min from the last traffic) and the first keep-alive wake (~26 min after
+# the sleep on the default rate, which a reflash restores).
+MIN_IDLE_S=${MIN_IDLE_S:-1920}
 w0=$(date +%s)
-while { locked || ! asleep_now; } && [ $(( $(date +%s) - w0 )) -lt 3600 ]; do sleep 5; done
+while [ $(( $(date +%s) - w0 )) -lt 7200 ]; do
+    last_long=$(last_long_end)
+    ! locked && asleep_now && [ $(( $(date +%s) - last_long )) -ge "$MIN_IDLE_S" ] && break
+    sleep 5
+done
+if locked || [ $(( $(date +%s) - last_long )) -lt "$MIN_IDLE_S" ]; then
+    log "not ready after 2 h (Buzz locked, or white's last long wake under $((MIN_IDLE_S / 60)) min ago): no press"; exit 0
+fi
 lk=no; locked && lk=yes
 idle_min=$(( ($(date +%s) - last_long) / 60 ))
 log "pressing: Buzz locked=$lk, ${idle_min} min since the last long wake"
