@@ -117,15 +117,30 @@ handover at 00:35 (`m23-night-5g.log`, `m23-night-5g.json`):
 - Not read: the ring (op 24) and the sleep page, which need a wake. The
   logger's wakes stand in: every one at the expected spacing, none long.
 
-### M4 with the keep-alive: not yet run
+### M4 with the keep-alive, on stage 5h (09:20 11-04): the key arrives
 
-`m4_with.sh` (one trial: the daemon paused, white asleep and no input for
-30+ min, a press of A1 once Buzz is unlocked and white between wakes; F19's
-arrival, white's link events, then `m4_with_read.py`: the counts, the wake
-record's reason and `key_gain`, the last eight wakes, the sleep page).
-Started 08:10 11-04 with white 7.5 h without input; Buzz stayed locked, so
-it was stopped at 08:31 before its press for stage 5h's flash
-(`m4-with-stopped-0831.log`). Owed on 5h.
+`m4_with.sh` (one trial: the daemon paused, the data line off; white asleep
+and 32+ min since its last long wake, re-read while waiting; Buzz unlocked
+and white between wakes; one press of A1; F19's arrival, white's link events
+in bluetoothd, then `m4_with_read.py`: the counts, the wake record, the last
+eight wakes, the sleep page). On 5h (`bde904e491`, token `0xfeeeb2db`,
+flashed 08:33), handed over by Blackberry at 08:47 (`m4-with-5h-1.json`):
+
+- White asleep from 08:48:25; its keep-alive woke it at ~09:14 (the ring's
+  seq 1, reason 7, 1308 counted s: the default rate after the flash), so the
+  module's 30 min (~09:18) passed with the link up.
+- **The press at 09:20:33 (32 min after the sleep), Buzz unlocked: F19
+  reached the Mac in the same second, and white's device had no event in
+  bluetoothd.** The control lost this key (12:46 11-03, the link dropped
+  at 12:34). **M4: with the keep-alive, the first key after a long sleep
+  arrives.**
+- The wake record: reason key, 290 counted s against the PCF's 349 (the
+  sleep after the keep-alive's wake), the PCF's time, no strays, no step
+  timed out. `key_gain` reads 0: it is computed only for op 14's armed
+  sleeps (`arm_task`), not the ladder's, so F19's arrival is the evidence.
+- The first run (08:10, on 5g, white 7.5 h without input) was stopped
+  before its press: Buzz stayed locked until 5h's flash
+  (`m4-with-stopped-0831.log`).
 
 The read after: every ring entry reason 7 at ~1308 counted s (fewer once the
 rate is measured); no 719 for white's device. Past the bound, the last

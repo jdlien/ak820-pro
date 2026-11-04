@@ -1,0 +1,12 @@
+[08:47:51] daemon paused (no lock-light frames)
+[08:47:51] data off
+[08:47:51] last long awake stretch ended 11-04 08:38:53
+[09:20:26] pressing: Buzz locked=no, 32 min since the last long wake
+[09:20:26] logger paused
+[09:20:33] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100433 us
+[09:20:34] QT Py soft-rebooted into its logger
+[09:20:34] logger back
+[09:20:36] logger logging again (a new power.csv row)
+[09:20:58] verdict: ARRIVED -0.03 [] -> history/keepalive-20261103/m4-with-5h-1.json
+[09:20:58] data off
+[09:20:58] daemon restarted
