@@ -1,0 +1,22 @@
+[08:39:21] 3. the silence set
+[08:39:51] 100 ms: measured 100.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 6, spurious 0, missed slots 0, omitted 6, judged 7313; the extension read 2.101 ms across it, generation +1 (the guard: its gap 100.048 ms); last rejection spans 0/0 ms -> PASS
+[08:39:52] 200 ms: measured 200.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 3, spurious 0, missed slots 0, omitted 7, judged 7339; the extension read 2.08 ms across it, generation +1 (the guard: its gap 200.069 ms); last rejection spans 0/0 ms -> PASS
+[08:39:54] 350 ms: measured 350.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 5, judged 7278; the extension read 2.789 ms across it, generation +1; last rejection spans 1/351 ms -> PASS
+[08:39:55] 700 ms: measured 700.0 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 4, judged 7291; the extension read 3.2 ms across it, generation +1; last rejection spans 1/700 ms -> PASS
+[08:39:57] 1049 ms: measured 1049.003 ms; losses 1 (expected 1), frame rejects 1 (expected 1), bus-event rejects 0, invalid 2, spurious 0, missed slots 0, omitted 1, judged 7267; the extension read 2.677 ms across it, generation +1; last rejection spans 1/1050 ms -> PASS
+[08:39:59] 1000 ms: measured 1000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 6, spurious 0, missed slots 0, omitted 6, judged 7279; the extension read 2.213 ms across it, generation +1 (the guard: its gap 300.987 ms); last rejection spans 1/1050 ms -> PASS
+[08:40:02] 2048 ms: measured 2048.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 4, spurious 0, missed slots 0, omitted 4, judged 7307; the extension read 2.171 ms across it, generation +1 (the guard: its gap 300.405 ms); last rejection spans 1/1050 ms -> PASS
+[08:40:10] 7000 ms: measured 7000.0 ms; losses 1 (expected 1), frame rejects 0 (expected 0), bus-event rejects 0, invalid 8, spurious 0, missed slots 0, omitted 6, judged 7279; the extension read 2.283 ms across it, generation +1 (the guard: its gap 9.52 ms); last rejection spans 1/1050 ms -> PASS
+[08:40:10] the power ladder held at Always on for the data cuts (mode 2 before)
+[08:40:10] data off; the 20 ms silence fires in 5 s on battery
+[08:40:19] data on
+[08:40:23] battery 20 ms: measured 20.0 ms; losses 2, of them bus events 1, the silence's own 1 (expected 1), frame rejects 0, spurious 0; usb now ACTIVE -> PASS
+[08:40:23] data off; the 350 ms silence fires in 5 s on battery
+[08:40:31] data on
+[08:40:35] battery 350 ms: measured 350.0 ms; losses 1, of them bus events 1, the silence's own 0 (expected 0), frame rejects 0, spurious 0; usb now ACTIVE -> PASS
+[08:40:35] Power saver put back
+[08:40:35] health counters reset (the row record with them)
+[08:40:35] ALL PASS
+[08:40:36] data off
+[08:40:36] daemon restarted
+[08:40:36] stage 5's gates done (3)

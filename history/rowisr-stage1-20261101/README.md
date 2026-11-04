@@ -1641,7 +1641,7 @@ asleep in the standing state at 00:35:24 (the data cut sleeps an idle
 board at once: 3.47 mA at 00:35:27, the pack 28.7%), the daemon running,
 relay 2 off; handed to Hutch for Warren's M2/M3.
 
-### Stage 5h built overnight (11-03, 22:23-23:45, `a1a0c783d5` to `bde904e491`): the per-slot judgment back, the detector a dev-only flag, the floor probe's flavour; codex READY; waiting for the go
+### Stage 5h built overnight (11-03, 22:23-23:45, `a1a0c783d5` to `bde904e491`): the per-slot judgment back, the detector a dev-only flag, the floor probe's flavour; codex READY; flashed 11-04 (the next section)
 
 JD's bedtime question (22:23): on white the lights dimmed by the value
 keys hold from 1% to about 3%, step, hold to 5-6%, step. The cause is
@@ -1735,6 +1735,76 @@ the standing state), so against it the only figure is gremlin's Windows
 daemon of 09-06 (p95 21.0 ms), a different host. The answer: no
 measurable change.
 
+
+### Stage 5h on white (11-04, 08:32-08:47): the flash, the window at full white, the silence set; white to Hutch
+
+JD's go at 08:30. White came from Hutch at 08:31:38, asleep in the
+standing state: its M4 with-run (one press after 30+ min asleep) had
+waited since 08:10 for Buzz's unlock and was stopped before its press.
+The flash (`stage5_flash.sh ... stage5h 300 no`, `flash-stage5h-run.log`,
+`flash-stage5h.log`): the presser's A1 woke white at 08:32:37 (asleep
+since 00:36 but for the keep-alive's 18 wakes; op 24's sleep ring went
+unread, Hutch's choice, since a read is a wake), the write at 08:32:43,
+the token `0xfeeeb2db` read back at 08:33:13, the keymap, the profiles
+and the live settings restored. The lighting the flash put back is
+JD's Purple/Blue (Alphas/Mods, hue 178, sat 219, val 125,
+`lighting-5h-jd-choice.json`), not last night's white at 141, so the
+flash script's own 300 s window ran at it (08:33:43-08:38:43,
+`record-stage5h.txt`, `rows-stage5h.txt`, `health-sched-stage5h.txt`):
+the handler 51.2 us mean and 40.9% at 7,998 a second (max 112 us), 31
+omissions by the arm deadline in 2.42 million slots, 0 spurious, 0
+invalid services, 0 epoch losses, row gap 3 ms, loop gap 4 ms; the lit
+draw 49.4 mA is that setting's, not the reference's; the UART counts
+(72 sent, 38 timeouts) the same as 5e's flash window, the boot's
+pattern. The full-white window (`stage5h_window_fullwhite.sh`, the 5g
+script with the token and this morning's lighting restored after;
+08:41:20-08:47:19, `window-stage5h-run.log`, `health-isr-stage5h.txt`,
+`light-stage5h.txt`), the lit draw 91.57 mA at the start, 91.52 at
+200 s, 91.61 over the last 120 s (the gate 89.1-95.2):
+
+| build at full white | handler mean | CPU share | max | omitted in 300 s |
+|---|---|---|---|---|
+| 5e `739fe1b635`, the per-slot judgment | 52.3 us | 41.8% | 128 us | 87 |
+| 5g `4f19e6c31f`, every eighth with the snapshot kept | 52.1 us | 41.7% | 128 us | |
+| **5h `bde904e491`, the per-slot judgment behind the flag** | **52.8 us** | **42.2%** | **128 us** | **65** |
+
+So the per-slot judgment's return costs what 5g measured it at, inside
+a window's noise (5e's two windows read 49.4 and 52.3). Page 7 on the
+window: 2,565,849 slots, 0 missed, 65 pulses omitted (66 by the arm
+deadline), latency max 80 us, elapsed max 113.0 us, 7 elapsed samples
+dropped for a boundary inside the handler, 0 spurious, 0 invalid, 0
+epoch losses, the shortest handler 30.17 us; row gap 3 ms (row 5), loop
+gap 4 ms. The first run of that window (08:39:19,
+`window-stage5h-run-noboard.log`) found no board: the flash script's
+data cut had put white to sleep at once (the last key over 3 min back)
+and the 5g script's `on_data` had no wake press (on 5g it ran seconds
+after JD's typing). The rule, now in the script: a script that brings
+the data line up and finds no board presses one of the rig's keys
+(Delete or PgDn on the QT Py) and waits 15 s, as the gates script does.
+
+**The silence set** (`stage5_gates.sh 0xfeeeb2db stage5h 3`,
+08:39:21-08:40:36, `silence-check-stage5h.log` and `.json`): **10 of
+10.** On the data line 100, 200, 350, 700, 1,049, 1,000, 2,048 and
+7,000 ms each one loss; the frame counter's reject at 350, 700 and
+1,049 ms only (the rejection spans 1/351, 1/700, 1/1050 ms), the
+extension's guard at the others (its gap 100.0, 200.1, 301.0, 300.4
+and 9.5 ms); 0 spurious, 0 missed slots, 7,267-7,339 intervals judged
+in each, the extension reading 2.1-3.2 ms across each silence. On
+battery with the data cut: 20 ms two losses (the bus event's and the
+silence's own, as expected) and 350 ms one (the bus event's; the
+silence's own undetected, the declared blind spot); USB ACTIVE after
+each. The ladder held at Always on for the cuts and Power saver put
+back; the counters reset after.
+
+White went back to Hutch at 08:47:19 in the standing state on 5h (the
+lighting JD's Purple/Blue; asleep by the ladder from about 08:50) for
+its M4 with-run on 5h, which waits for JD's press at Buzz with white
+asleep 32+ min. Owed on 5h after it: the five wakes
+(`stage5_gates.sh 0xfeeeb2db stage5h 2`, about 20 min, each cycle
+waiting 3 min for the sleep) and the daily build's short soak
+(`via-daily-bde904e491-20261103-234032.bin`, `0xcaa61e41`, the
+release's handler figure, ~45 us expected): a daily build has no
+bootloader jump, so the return to dev is `Fn`+`Esc`, JD at the board.
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

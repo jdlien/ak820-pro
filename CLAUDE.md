@@ -135,7 +135,24 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 20:19 11-03: stage 5g of the row ISR rewrite,
+**On white since 08:33 11-04: stage 5h of the row ISR rewrite,
+`row-isr` `bde904e491`** (dev, token `0xfeeeb2db`, heap gap 368 B; the
+daily `0xcaa61e41`, 2656 B; the floor probe `devprobe` `0xefa1c31f`):
+the per-slot judgment back, the detector behind `ROWISR_USB_DETECT`
+(the dev build's default, out of daily and fpb, `build.sh`'s check),
+the silence report's fixes kept, `ROWISR_K_Q6` overridable for stage
+6's floor measurement; codex READY twice. Measured on the flash: the
+handler 52.8 us and 42.2% at full white (5g 52.1/41.7, 5e 52.3/41.8),
+the lit draw 91.6 mA, 0 spurious; the silence set 10 of 10. Owed: the
+five wakes (after Hutch's M4 with-run on it), a daily build's soak (JD
+at the board: the return to dev is `Fn`+`Esc`), then stage 6's floor
+evening with `devprobe`. **White is Hutch's since 08:47 11-04, in the
+standing state**, JD's lighting Purple/Blue (val 125). The 5g soak
+ended 00:35 11-04 clean (4 h, 0 losses past the boot's, 0 frame
+rejects of 14.8 M). The dim end's plateaus are QMK's CIE table before
+the byte: stage 6's D9, with the per-colour floor by eye (the README's
+"Stage 5h built overnight" and "Stage 5h on white").
+**Before it, from 20:19 11-03: stage 5g of the row ISR rewrite,
 `4f19e6c31f`** (dev, token `0x34d7c5fb`, heap gap 336 B, `row-isr`): 5e
 plus the frame counter's judgment every eighth service with the evidence
 kept at every one (three codex rounds, READY at 20:18). It measured
@@ -146,19 +163,6 @@ stay). The awake soak on it from 20:34 with JD typing, white to Hutch
 asleep at ~00:35. JD's eye at 444 Hz: the fringe all but gone, the
 screen's drawing about twice as fast (`plans/current-status.md`,
 `history/rowisr-stage1-20261101/README.md`, "Stage 5g on white").
-**Stage 5h is built and waits for JD's go (11-03 23:45): `row-isr`
-`bde904e491`** (dev token `0xfeeeb2db`, heap gap 368 B; the daily
-`0xcaa61e41`, 2656 B; the floor probe `devprobe` `0xefa1c31f`): the
-per-slot judgment back, the detector behind `ROWISR_USB_DETECT` (the
-dev build's default, out of daily and fpb, `build.sh`'s check), the
-silence report's fixes kept, `ROWISR_K_Q6` overridable for stage 6's
-floor measurement; codex READY twice, its one P2 fixed. Owed on
-the flash: the window, the silence set, the five wakes, a daily build's
-soak. The 5g soak ended 00:35 11-04 clean (4 h, 0 losses past the
-boot's, 0 frame rejects of 14.8 M); white is Hutch's, asleep on 5g,
-for Warren's M2/M3. The dim end's plateaus (JD, 22:23) are QMK's CIE table before the
-byte: stage 6's D9, with the per-colour floor by eye (the README's
-"Stage 5h built overnight").
 **Before it, from 15:06 11-03 (and 13:34-14:31): stage 5e of the row ISR
 rewrite, the 125 us cadence, `739fe1b635`** (dev, token `0xf222e31c`,
 heap gap 376 B, `row-isr`; the keep-alive and the battery icon's colours

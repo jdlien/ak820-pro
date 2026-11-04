@@ -1,0 +1,40 @@
+lighting restored: effect 2, hue 178, sat 0, val 255, speed 231
+[08:41:20] the full-white reference restored (val 255); the window
+[08:41:23] data on
+[08:41:25] token 0xfeeeb2db (want 0xfeeeb2db)
+the ladder at mode 0 (try 1)
+[08:41:47] the lit draw at the start: 91.57 mA (the last two rows)
+[08:41:47] health counters reset
+[08:41:47] the window: 300 s lit (a keep-lit press every 100 s: below 15% the lights go off 3 min after the last key whatever the ladder's mode, 13:52 11-03)
+[08:45:17] the lit draw at 200 s: 91.52 mA
+[08:47:06] page 4, page 7, the record, the rows, the light after 300 s
+isr_per_s                8002.0
+isr_mean_us              52.8
+isr_min_us               32.0
+isr_max_us               128.0
+isr_cpu_pct              42.2
+slots_elapsed            2565849
+missed_slots             0
+pulses_emitted           2565784
+pulses_omitted           65
+latency_max_us           80.0
+elapsed_max_us           113.02
+  latency is the handler's entry from the slot boundary, elapsed its entry to exit;
+  missed slots are boundaries the handler did not service, omitted pulses the slots it
+longest run of omissions 1, spurious invocations 0, omissions by the arm deadline 66, epoch losses 0, invalid services 0, shortest handler 30.17 us, elapsed samples dropped for a boundary inside the handler 7 (stage 5a: the kept samples are the boundary-free services)
+omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
+  key row 0: R   7  B   6  G   0
+  key row 1: R   8  B   0  G   3
+  key row 2: R   3  B   4  G   0
+  key row 3: R   7  B   0  G   2
+  key row 4: R   6  B  10  G   4
+  key row 5: R   2  B   1  G   3
+loop_gap_max_ms          4
+row_gap_max_ms           3  (row 5)
+[08:47:08] the lit draw over the last 120 s: 91.61 mA
+the ladder at mode 2 (try 1)
+[08:47:11] the standing state
+[08:47:11] the window done; JD's lighting choice back
+lighting restored: effect 2, hue 178, sat 219, val 125, speed 231
+[08:47:19] the standing state
+[08:47:19] all done

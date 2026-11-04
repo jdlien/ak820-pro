@@ -2362,6 +2362,21 @@ one loss where the per-slot judgment counted two.
   spurious, 14.8 M frame intervals judged and 0 rejected, the writer 49
   runs and 0 restarts, 18,700 blits and no fault); white asleep in the
   standing state to Hutch for Warren's M2/M3.
+- 11-04 08:30-08:50: **stage 5h flashed on white and gated** (the
+  README's "Stage 5h on white"). JD's go at 08:30; white from Hutch at
+  08:31:38, its M4 with-run stopped before the press. The flash at
+  08:33 (`0xfeeeb2db`); the window at full white 52.8 us, 42.2%, 8,002
+  a second, max 128, 65 omissions in 300 s, 0 spurious, 0 invalid, 0
+  epoch losses, the lit draw 91.6 mA (5g 52.1/41.7, 5e 52.3/41.8: the
+  per-slot judgment's return costs what 5g measured it at, inside a
+  window's noise); the silence set 10 of 10 (the frame counter's
+  rejects at 350, 700 and 1,049 ms, the guard at the rest, the two
+  battery silences as declared). White to Hutch at 08:47:19 for its M4
+  with-run on 5h; the five wakes after it; the daily build's soak when
+  JD is at the board (the return to dev is Fn+Esc). A bench lesson: a
+  script that brings the data line up after a data cut must press one
+  of the rig's keys when no board appears, since the cut sleeps an idle
+  board at once (the full-white window's first run found none).
 
 - 11-03 19:36-20:36: **stage 5g, the every-eighth judgment, built,
   reviewed, flashed and measured** (the README's "Stage 5g on white"):
