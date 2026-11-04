@@ -1,0 +1,30 @@
+Wed  4 Nov 2026 15:18:04 CST
+the dev build back on white (JD's go 15:2x): ak820pro-builds/out/via-dev-bfff926086-20261104-141323.bin
+asleep: one rig press
+white ABSENT
+firmware : ak820pro-builds/out/via-dev-bfff926086-20261104-141323.bin
+built    : Nov  4 14:13:23 2026  (262144 bytes)  <- confirm this is your build
+== already in the bootloader -- cannot dump ==
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+flash.sh exit 0
+token: 0x11e5314a (want 0x11e5314a)
+board : effect 2, hue 178, sat 219, val 125, speed 231
+level        unknown
+power mode   Power saver, stage active
+white absent: the standing state
+Wed  4 Nov 2026 15:19:14 CST

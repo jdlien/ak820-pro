@@ -1,0 +1,46 @@
+Wed  4 Nov 2026 17:12:24 CST
+=== build.sh devprobe (81622b7a43, the held key's ghost under the finger)
+      0	 251130	      0	 251130	  3d4fa	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 368 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-devprobe-81622b7a43-20261104-171246.bin  (token 0x88c264ca)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-devprobe-81622b7a43-20261104-171246.bin"   # dumps+restores the VIA keymap around the flash
+=== build.sh dev (81622b7a43, the held key's ghost under the finger)
+      0	 251130	      0	 251130	  3d4fa	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 368 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-81622b7a43-20261104-171308.bin  (token 0x3e869d88)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-81622b7a43-20261104-171308.bin"   # dumps+restores the VIA keymap around the flash
+=== build.sh daily (81622b7a43, the held key's ghost under the finger)
+      0	 215942	      0	 215942	  34b86	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 2656 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-81622b7a43-20261104-171329.bin  (token 0x0f740990)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-81622b7a43-20261104-171329.bin"   # dumps+restores the VIA keymap around the flash
+Wed  4 Nov 2026 17:13:30 CST
+Wed  4 Nov 2026 17:18:28 CST
+=== build.sh dev (245fcfe8e3, codex's notes)
+      0	 251118	      0	 251118	  3d4ee	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 368 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-245fcfe8e3-20261104-171851.bin  (token 0x154c76fb)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-245fcfe8e3-20261104-171851.bin"   # dumps+restores the VIA keymap around the flash
+=== build.sh devprobe (245fcfe8e3, codex's notes)
+      0	 251118	      0	 251118	  3d4ee	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 368 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-devprobe-245fcfe8e3-20261104-171914.bin  (token 0x82df55bc)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-devprobe-245fcfe8e3-20261104-171914.bin"   # dumps+restores the VIA keymap around the flash
+=== build.sh daily (245fcfe8e3, codex's notes)
+      0	 215922	      0	 215922	  34b72	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 2656 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-245fcfe8e3-20261104-171937.bin  (token 0xa462d003)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-245fcfe8e3-20261104-171937.bin"   # dumps+restores the VIA keymap around the flash
+Wed  4 Nov 2026 17:19:37 CST

@@ -1980,9 +1980,41 @@ logger cannot see, which is the camera's range.
 
 **White after it:** the standing state (the data line off, the daemon,
 the relay off) with the mode put back to Power saver, which the session's
-hold had set to Always on and the 12:35 restore had persisted; the
-devprobe build stays on (JD's lighting at a fifth of its light) until the
-dev build `0x11e5314a` or the daily `0xf6243273` goes on. White to Hutch.
+hold had set to Always on and the 12:35 restore had persisted (the
+board's live record and the backup file both verified); the dev build
+`0x11e5314a` back on at 15:19 on JD's go. White to Hutch, with a flash
+moratorium agreed for the drain's last 15% (about two days at his use):
+the flashes below ran over the data line alone, which feeds the pack
+nothing.
+
+**The held-key fix, the same evening (17:0x-17:20, `81622b7a43` and
+`245fcfe8e3`; codex READY, no P1 or P2, `review-codex-row-isr-stage6-heldkey-raw.md`).**
+First the dev build's own check, by camera and by eye, found nothing: at
+the dev scale a value of 1 is five ticks, and no key held showed a change
+on the bare LEDs (the clips in `heldkey/`, PgDn held by the rig for 3 s
+inside a 12 s clip, Esc held by JD: the capless points within noise), so
+the effect is about a tick's worth of light, a doubling at the probe's
+dimmest level and a fifth at five ticks. The slot order said which LED:
+the scan of key row k ran in the slot preparing mux row (k, R), a
+microsecond after step 2 deselected the previous slot's row (k-1, G), the
+only rail with its charge still on it, so a held key at (k, c) lit
+(k-1, c) green: the key above, the top row's in the bottom row. The fix
+scans the row before the one being prepared, whose green rail step 2
+just deselected, so the flash lands on the held key's own LED under the
+finger; each key row is still scanned once a field, one slot-triple
+later (codex: the sample's phase moves, the interval and the debounce do
+not; the flash-program guard's slot neither scans nor publishes, a
+comment put right). **JD's gate on the probe build, red at 1 tick:** the
+key above a held key no longer brightens, with a trace left on PgDn when
+the key under it is held; but **holding PgUp makes PgDn light up
+considerably more**, the knob and Right arrow nothing visible: the row
+BELOW. So the stored-charge picture is incomplete: at one tick the
+pulses are 21 ns and drain no rail, so every rail in the held key's
+column may still hold charge at its scan, and which LED shows depends on
+what the eye can see past the caps. Not chased further tonight (his
+call); the measurement is the camera on the probe build at 1 tick with
+a key held in a column of bare LEDs. The dev build `245fcfe8e3`
+(`0x154c76fb`) went back on at 17:20, white to the standing state.
 
 ## Files
 

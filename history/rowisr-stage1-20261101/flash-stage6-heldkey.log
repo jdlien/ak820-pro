@@ -1,0 +1,77 @@
+Wed  4 Nov 2026 17:15:16 CST
+the held-key fix's devprobe (81622b7a43, 0x88c264ca) on JD's go at 17:1x, codex's round still running
+white present
+firmware : ak820pro-builds/out/via-devprobe-81622b7a43-20261104-171246.bin
+built    : Nov  4 17:12:46 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+== dumping the battery log ==
+# 7 entries (log v8, one per 900 s), newest 676 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+flash.sh exit 0
+token: 0x88c264ca (want 0x88c264ca)
+Wed  4 Nov 2026 17:15:42 CST
+Wed  4 Nov 2026 17:19:37 CST
+the dev build back: ak820pro-builds/out/via-dev-245fcfe8e3-20261104-171851.bin (JD's gate on the probe build passed: the key above no longer brightens except a trace at 1 tick)
+white present
+firmware : ak820pro-builds/out/via-dev-245fcfe8e3-20261104-171851.bin
+built    : Nov  4 17:18:51 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+== dumping the battery log ==
+# 0 entries (log v8, one per 900 s), newest 0 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+flash.sh exit 0
+token: 0x154c76fb (want 0x154c76fb)
+board : effect 2, hue 178, sat 219, val 125, speed 231
+white absent: the standing state
+relay 1 off (key), relay 2 off (power)
+Wed  4 Nov 2026 17:20:08 CST

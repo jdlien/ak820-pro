@@ -1,0 +1,7 @@
+[15:57:12.513] press A0 3000 ms commanded
+[15:57:12.549] [15:57:12] logger paused
+[15:57:22.046] [15:57:22] A0 (yellow, (3,14) PgDn/F20): one press, asked 3000 ms, actual 3000091 us
+[15:57:22.549] [15:57:22] QT Py soft-rebooted into its logger
+[15:57:22.557] [15:57:22] logger back
+[15:57:24.564] [15:57:24] logger logging again (a new power.csv row)
+[15:57:24.571] press done

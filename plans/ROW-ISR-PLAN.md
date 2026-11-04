@@ -1380,12 +1380,18 @@ long as the light stays proportional to the width. What the eye cannot
 settle is that proportionality in the first few ticks (the LED still
 turning on), per colour: **the camera's pass is owed** (the exposure
 locked, pixel sums at 1, 2, 3, 4, 6, 8 ticks per colour, hands-free).
-Found on the way, a stage 6 fix: **a held key brightens the LEDs above
-and below it in its column** at the dim end (the scan pulls the key's
-column low through its diode a microsecond after the previous mux row's
-deselect, and that rail's stored charge lights the column's neighbour
-for the scan's microsecond: ~48 ticks' worth once a field, invisible at
-JD's Purple/Blue, 4-48x at 1-12 ticks). The instrument: the dev
+Found on the way, a stage 6 defect: **a held key brightens the LEDs
+above and below it in its column** at the dim end (about a tick's worth
+once a field: invisible at five ticks, a doubling at one). The scan
+pulls the key's column low through its diode a microsecond after the
+previous mux row's deselect, and a rail's stored charge lights the
+column's LED on that rail. **The fix of the same evening** (`81622b7a43`,
+`245fcfe8e3`, codex READY): the slot scans the row whose green rail it
+just deselected, so the main flash lands under the finger; JD's gate at
+1 tick: the key above no longer brightens, but PgDn lights considerably
+with PgUp held (the row below), so the picture is incomplete (at one
+tick no pulse drains a rail), left for the camera on the probe build
+with a held key in a column of bare LEDs. The instrument: the dev
 Diagnostics page Floor probe (Color, Ticks, Color R, Ticks R, Split; the
 knob captured by a click so a comparison needs no key press), in the
 Write test's place, and the host's `probe` and `led all|split`.

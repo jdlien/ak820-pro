@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-04, 15:15. The block below is where things stand, written to
+Updated 2026-11-04, 17:25. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -88,12 +88,15 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**RESUME HERE (15:15 11-04): stage 6's floor evening is done; white runs
-the `devprobe` build of `row-isr` `bfff926086`** (token `0x3b47b8a1`, heap
-gap 368 B: stage 5h plus the dev Diagnostics page **Floor probe** in the
-Write test's place, and sub 3's every-LED and split patterns; a byte is
-its pulse width in ticks on this flavour, so JD's Purple/Blue sits at a
-fifth of its light until the dev build goes back on, hands-free). The
+**RESUME HERE (17:25 11-04): stage 6's floor evening is done; white runs
+the dev build of `row-isr` `245fcfe8e3`** (token `0x154c76fb`, heap gap
+368 B: stage 5h plus the dev Diagnostics page **Floor probe** in the
+Write test's place, sub 3's every-LED and split patterns, and the
+held-key fix; the devprobe of the same commit is `0x82df55bc`, the daily
+`0xa462d003`). **A flash moratorium on white until the RGB cut** (the
+drain's last 15%, ~2 days): flashes over the data line feed the pack
+nothing, but the agreed rule is none; the work until then is off the
+board (D9's RAM ledger and design, the docs, black's night). The
 readings (the README's "Stage 6's floor by eye", `floor-eye.log`): every
 colour visible at one tick; the unit step lost at 6-7 ticks (red) and
 11-12 (green, blue); green the brightest at equal ticks; the split match
@@ -110,8 +113,11 @@ persisted by a restore: Power saver is put back with the standing state**
 20261104-141344.bin`, `0xf6243273`; the return needs JD's `Fn`+`Esc`);
 (2) the camera's linearity pass (the phone at the capless keys, the
 exposure locked, pixel sums at 1-8 ticks per colour; `led all` or the
-page); (3) the held-key fix (the scan after the match registers, or a
-gap after the deselect; JD's eye at 3 ticks with a key held is the gate);
+page); (3) the held-key ghost: the fix is in (`245fcfe8e3`, the slot scans the
+row whose rail it just deselected; codex READY), the key above no longer
+brightens, but a held PgUp lights PgDn at 1 tick (the row below), so the
+remainder is the camera's on the probe build, a held key in a column of
+bare LEDs, not chased further on JD's call;
 (4) D9's wide conversion with the floors, the eye's ratio and the gains
 above; (5) stage 7 as before. White is Blackberry's until the standing
 state is restored and Hutch told.
