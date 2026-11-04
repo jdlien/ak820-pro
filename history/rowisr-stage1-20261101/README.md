@@ -1823,8 +1823,19 @@ white on USB 10.1-10.2 s after the press command (the REPL's own setup
 inside that), the counts read: key presses +1 each (5 to 9), epoch
 losses +2 each (the data cut's suspend and the reconnect's reset, one
 loss apiece by design), spurious +0 (3 since the boot, all before the
-first cycle), frame rejects 0, invalid services +1 or +2 a cycle, bus
-events 4 to 8. White back to Hutch at 10:01 in the standing state.
+first cycle), frame rejects 0, bus events +1 a cycle, invalid services +1 a cycle
+(cycle 2 alone +2). The invalid count is by design: the one service
+whose interval spans the reconnect's reset is rejected by the frame
+counter (one loss, no statistics), and the wake's own first service is
+never counted, since both sleep hooks clear the handler's last snapshot
+(`sn32f2xx_sleep_enterI`, `sn32f2xx_sleep_exitI`: no interval to judge)
+even though the generation moved under it by the sleep's exclusion and
+its end, the cycle's other loss (`loss_gen` +3 a cycle, two of the
+three seen at one entry: losses +2). Cycle 2's extra invalid service
+came with no extra loss, so it was an interval the frame counter left
+unjudged (both ends in the frames' recovery) or an exclusion's, which
+the read does not separate. White back to Hutch at 10:01 in the
+standing state.
 That closes stage 5h's hands-free gates; what remains on it is the
 daily build's soak, JD at the board.
 ## Files
