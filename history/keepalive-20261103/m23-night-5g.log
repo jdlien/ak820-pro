@@ -1,0 +1,21 @@
+[11-04 00:36:22] daemon paused until 11-04 08:00
+[11-04 00:36:22] data off
+[00:36:29] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[11-04 00:36:31] start 1793774191: white sleeps on its ladder ~3 min after that press
+[11-04 01:06:33] 11-04 00:36:31 to 11-04 01:06:31 (0.5 h): floor 3.375 mA, mean 7.602 mA; 2 wakes, period 26.13 min, awake 93.0 s, 3777.4 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 01:36:35] 11-04 00:36:31 to 11-04 01:36:32 (1.0 h): floor 3.39 mA, mean 5.538 mA; 3 wakes, period 25.56 min, awake 5 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 02:06:37] 11-04 00:36:31 to 11-04 02:06:34 (1.5 h): floor 3.385 mA, mean 4.842 mA; 4 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 02:36:39] 11-04 00:36:31 to 11-04 02:36:36 (2.0 h): floor 3.38 mA, mean 4.492 mA; 5 wakes, period 24.98 min, awake 5 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 03:06:42] 11-04 00:36:31 to 11-04 03:06:39 (2.5 h): floor 3.375 mA, mean 4.279 mA; 6 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 03:36:45] 11-04 00:36:31 to 11-04 03:36:41 (3.0 h): floor 3.37 mA, mean 4.144 mA; 8 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 04:06:49] 11-04 00:36:31 to 11-04 04:06:45 (3.5 h): floor 3.375 mA, mean 4.048 mA; 9 wakes, period 24.98 min, awake 5 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 04:36:53] 11-04 00:36:31 to 11-04 04:36:49 (4.01 h): floor 3.375 mA, mean 3.976 mA; 10 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 05:06:58] 11-04 00:36:31 to 11-04 05:06:53 (4.51 h): floor 3.375 mA, mean 3.92 mA; 11 wakes, period 24.98 min, awake 5 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 05:37:04] 11-04 00:36:31 to 11-04 05:36:57 (5.01 h): floor 3.375 mA, mean 3.871 mA; 12 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 06:07:09] 11-04 00:36:31 to 11-04 06:07:03 (5.51 h): floor 3.37 mA, mean 3.834 mA; 14 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 06:37:16] 11-04 00:36:31 to 11-04 06:37:09 (6.01 h): floor 3.375 mA, mean 3.804 mA; 15 wakes, period 24.98 min, awake 5 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 07:07:22] 11-04 00:36:31 to 11-04 07:07:15 (6.51 h): floor 3.375 mA, mean 3.776 mA; 16 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 07:37:29] 11-04 00:36:31 to 11-04 07:37:22 (7.01 h): floor 3.375 mA, mean 3.752 mA; 17 wakes, period 24.98 min, awake 5 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 08:07:37] 11-04 00:36:31 to 11-04 08:07:29 (7.52 h): floor 3.375 mA, mean 3.734 mA; 18 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-04 08:07:52] end: 11-04 00:36:31 to 11-04 08:07:44 (7.52 h): floor 3.375 mA, mean 3.734 mA; 18 wakes, period 24.98 min, awake 5.0 s, 99.2 mA*s above the floor (medians); white's link: 0 disconnects, 0 events -> history/keepalive-20261103/m23-night-5g.json
+[11-04 08:07:52] daemon restarted

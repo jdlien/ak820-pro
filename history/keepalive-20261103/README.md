@@ -97,6 +97,36 @@ back for stage 5g at 19:36 (`m23-evening.json`):
   against Warren's estimate of 79 mA·s. With M1's held link, the keep-alive
   costs ~0.2 mA asleep, ~6% of the floor.
 
+### The night on stage 5g (00:36-08:07 11-04)
+
+`m23_overnight.sh 08:00` again (`OUT` names the JSON now), on 5g
+(`4f19e6c31f`, token `0x34d7c5fb`; its sleep path is 5e's), from Blackberry's
+handover at 00:35 (`m23-night-5g.log`, `m23-night-5g.json`):
+
+- **The link held all night: 7.5 h asleep, 0 events of white's device** in
+  bluetoothd (no disconnect, no reconnect).
+- **18 wakes**: the press's (00:36:31, 182 s awake), then the first
+  keep-alive at 01:05:41 (26:08 after the sleep at 00:39:33, the default
+  rate again: a reflash starts it over), then **every 24:58 to 07:46:21**,
+  none missed.
+- **Each keep-alive wake 4-6 s, peak 28.9-29.4 mA, 95-99.5 mA·s above the
+  3.375 mA floor (median 99.2)**, the evening's figure on 5e (98).
+- **Mean 3.734 mA over the 7.5 h**, the press's wake included; without it
+  ~3.72. Against M1's dropped-link 3.44, the keep-alive and the held link
+  cost ~0.3 mA, ~3 mAh a 10 h night.
+- Not read: the ring (op 24) and the sleep page, which need a wake. The
+  logger's wakes stand in: every one at the expected spacing, none long.
+
+### M4 with the keep-alive: not yet run
+
+`m4_with.sh` (one trial: the daemon paused, white asleep and no input for
+30+ min, a press of A1 once Buzz is unlocked and white between wakes; F19's
+arrival, white's link events, then `m4_with_read.py`: the counts, the wake
+record's reason and `key_gain`, the last eight wakes, the sleep page).
+Started 08:10 11-04 with white 7.5 h without input; Buzz stayed locked, so
+it was stopped at 08:31 before its press for stage 5h's flash
+(`m4-with-stopped-0831.log`). Owed on 5h.
+
 The read after: every ring entry reason 7 at ~1308 counted s (fewer once the
 rate is measured); no 719 for white's device. Past the bound, the last
 keep-alive comes at up to 18 h of absence, the sleep after it runs on the
