@@ -2362,7 +2362,7 @@ one loss where the per-slot judgment counted two.
   spurious, 14.8 M frame intervals judged and 0 rejected, the writer 49
   runs and 0 restarts, 18,700 blits and no fault); white asleep in the
   standing state to Hutch for Warren's M2/M3.
-- 11-04 08:30-08:50: **stage 5h flashed on white and gated** (the
+- 11-04 08:30-10:01: **stage 5h flashed on white and gated** (the
   README's "Stage 5h on white"). JD's go at 08:30; white from Hutch at
   08:31:38, its M4 with-run stopped before the press. The flash at
   08:33 (`0xfeeeb2db`); the window at full white 52.8 us, 42.2%, 8,002
@@ -2377,6 +2377,14 @@ one loss where the per-slot judgment counted two.
   script that brings the data line up after a data cut must press one
   of the rig's keys when no board appears, since the cut sleeps an idle
   board at once (the full-white window's first run found none).
+  Then (09:20) Hutch's M4 with-run on 5h ARRIVED: the rig's key 32 min
+  after the sleep reached the Mac in the same second, the link held by
+  the keep-alive, no strays. The five wakes (09:44-10:00,
+  `deep-wake-stage5h.json`): 5 of 5 kept the key, +2 epoch losses a
+  wake (the data cut's two bus events), 0 spurious, 0 frame rejects.
+  White to Hutch at 10:01. Stage 5h's hands-free gates are all met; the
+  daily build's soak (the release's handler figure) waits for JD at the
+  board.
 
 - 11-03 19:36-20:36: **stage 5g, the every-eighth judgment, built,
   reviewed, flashed and measured** (the README's "Stage 5g on white"):

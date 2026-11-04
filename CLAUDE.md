@@ -143,11 +143,13 @@ the per-slot judgment back, the detector behind `ROWISR_USB_DETECT`
 the silence report's fixes kept, `ROWISR_K_Q6` overridable for stage
 6's floor measurement; codex READY twice. Measured on the flash: the
 handler 52.8 us and 42.2% at full white (5g 52.1/41.7, 5e 52.3/41.8),
-the lit draw 91.6 mA, 0 spurious; the silence set 10 of 10. Owed: the
-five wakes (after Hutch's M4 with-run on it), a daily build's soak (JD
-at the board: the return to dev is `Fn`+`Esc`), then stage 6's floor
-evening with `devprobe`. **White is Hutch's since 08:47 11-04, in the
-standing state**, JD's lighting Purple/Blue (val 125). The 5g soak
+the lit draw 91.6 mA, 0 spurious; the silence set 10 of 10; the five
+wakes 5 of 5 kept the key (0 spurious, 0 frame rejects); Hutch's M4
+with-run on it ARRIVED (the rig's key on the Mac after 32 min asleep
+with the keep-alive). Owed: a daily build's soak (JD at the board: the
+return to dev is `Fn`+`Esc`), then stage 6's floor evening with
+`devprobe`. **White is Hutch's since 10:01 11-04, in the standing
+state**, JD's lighting Purple/Blue (val 125). The 5g soak
 ended 00:35 11-04 clean (4 h, 0 losses past the boot's, 0 frame
 rejects of 14.8 M). The dim end's plateaus are QMK's CIE table before
 the byte: stage 6's D9, with the per-colour floor by eye (the README's

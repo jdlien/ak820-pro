@@ -1,0 +1,10 @@
+[09:43:56] 2. five ladder sleeps with presser wakes
+[10:00:30] QT Py soft-rebooted into its logger
+[10:00:30] logger back
+[10:00:32] logger logging again (a new power.csv row)
+[10:00:35] cycle 5: woke 10.1 s after the press command (the REPL setup inside); key_presses +1 (want +1), losses +2, spurious +0, frame rejects 0, bus events 8 -> PASS
+[10:00:35] data off
+[10:00:35] RESULT: 5 of 5 wakes kept the key -> history/rowisr-stage1-20261101/deep-wake-stage5h.json
+[10:00:35] data off
+[10:00:35] daemon restarted
+[10:00:35] stage 5's gates done (2)

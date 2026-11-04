@@ -1736,7 +1736,7 @@ daemon of 09-06 (p95 21.0 ms), a different host. The answer: no
 measurable change.
 
 
-### Stage 5h on white (11-04, 08:32-08:47): the flash, the window at full white, the silence set; white to Hutch
+### Stage 5h on white (11-04, 08:32-10:01): the flash, the window at full white, the silence set, the five wakes; Hutch's M4 arrived
 
 JD's go at 08:30. White came from Hutch at 08:31:38, asleep in the
 standing state: its M4 with-run (one press after 30+ min asleep) had
@@ -1805,6 +1805,28 @@ waiting 3 min for the sleep) and the daily build's short soak
 (`via-daily-bde904e491-20261103-234032.bin`, `0xcaa61e41`, the
 release's handler figure, ~45 us expected): a daily build has no
 bootloader jump, so the return to dev is `Fn`+`Esc`, JD at the board.
+
+**Hutch's M4 with-run on 5h (09:20): ARRIVED.** White asleep from
+08:48:25 with the keep-alive holding the link, Buzz unlocked, no key;
+the rig's press at 09:20:33, 32 min after the sleep; F19 reached the
+Mac in the same second and white's link had no bluetoothd event; the
+wake ring on the board: a reason-7 wake at 1,308 counted s (the default
+rate after the flash) and the key's wake at 290 counted / 349 PCF s, no
+strays, nothing timed out; since the flash `count_ge_25ms` 0, row gap
+max 7 ms (Hutch's record, `history/keepalive-20261103/`).
+
+**The five wakes** (`stage5_gates.sh 0xfeeeb2db stage5h 2`, 09:44-10:00,
+`gates-stage5h-2.log`, `deep-wake-stage5h.json`; white asleep and
+untouched since 09:28:51 when they began): **5 of 5 kept the key.** Each
+cycle: the ladder's sleep 3 min after the last key, the rig's Delete,
+white on USB 10.1-10.2 s after the press command (the REPL's own setup
+inside that), the counts read: key presses +1 each (5 to 9), epoch
+losses +2 each (the data cut's suspend and the reconnect's reset, one
+loss apiece by design), spurious +0 (3 since the boot, all before the
+first cycle), frame rejects 0, invalid services +1 or +2 a cycle, bus
+events 4 to 8. White back to Hutch at 10:01 in the standing state.
+That closes stage 5h's hands-free gates; what remains on it is the
+daily build's soak, JD at the board.
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

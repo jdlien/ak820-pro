@@ -88,36 +88,38 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**RESUME HERE (08:50 11-04): white runs stage 5h since 08:33** (`row-isr`
+**RESUME HERE (10:05 11-04): white runs stage 5h since 08:33** (`row-isr`
 `bde904e491`, dev token `0xfeeeb2db`, heap gap 368 B; flashed on JD's
-08:30 go). Measured on it this morning (the README's "Stage 5h on
-white"): the full-white window 52.8 us and 42.2% at 8,002 a second
-(5g 52.1/41.7, 5e 52.3/41.8), the lit draw 91.6 mA (the gate
-89.1-95.2), 65 omissions in 300 s, 0 spurious, 0 invalid services,
-row gap 3 ms; the silence set 10 of 10. **White is Hutch's since
-08:47:19, in the standing state on 5h** (asleep by the ladder from
-about 08:50; the lighting JD's Purple/Blue, Alphas/Mods val 125,
+08:30 go) **and every hands-free gate on it is met** (the README's
+"Stage 5h on white"): the full-white window 52.8 us and 42.2% at 8,002
+a second (5g 52.1/41.7, 5e 52.3/41.8), the lit draw 91.6 mA (the gate
+89.1-95.2), 65 omissions in 300 s, 0 spurious, 0 invalid services, row
+gap 3 ms; the silence set 10 of 10; the five wakes 5 of 5 kept the key
+(0 spurious, 0 frame rejects, +2 losses a wake = the data cut's bus
+events); and Hutch's M4 with-run on it ARRIVED (the rig's key 32 min
+into a keep-alive-held sleep reached the Mac in the same second).
+**White is Hutch's since 10:01, in the standing state on 5h** (the
+lighting JD's Purple/Blue, Alphas/Mods val 125,
 `lighting-5h-jd-choice.json`, which the flash restored in place of
-last night's white at 141), for its M4 with-run on 5h: JD's press at
-Buzz with white asleep 32+ min and Buzz unlocked. Then, in order:
-(1) the five wakes, `history/rowisr-stage1-20261101/stage5_gates.sh
-0xfeeeb2db stage5h 2` (about 20 min, hands-free; white claimed from
-Hutch by message first); (2) the daily build's short soak
+last night's white at 141; claim it by message before any board
+contact). Next, in order: (1) the daily build's short soak
 (`via-daily-bde904e491-20261103-234032.bin`, `0xcaa61e41`: the
-release's handler figure, ~45 us expected; the flash from dev is
-hands-free, the return to dev is `Fn`+`Esc`, so JD at the board, or
-the daily left on for a stretch, his call); (3) stage 6's floor
-evening (`devprobe` `via-devprobe-bde904e491-20261103-234052.bin`,
+release's handler figure, ~45 us expected, the detector out; the flash
+from dev is hands-free, the return to dev is `Fn`+`Esc`, so JD at the
+board, or the daily left on for a stretch, his call); (2) stage 6's
+floor evening (`devprobe` `via-devprobe-bde904e491-20261103-234052.bin`,
 `0xefa1c31f`; the plan's "The floor is measured first, per colour":
 JD's eye in a dark room per colour, the camera at the capless keys,
-the logger); (4) black's night on the branch (Warren), the docs'
+the logger); (3) black's night on the branch (Warren), the docs'
 remainder (leds.md, hardware.md's table, sn32f299.md, the health
 pages, power.md's LED figures), the merge of `row-isr` onto
 `ak820pro-jdlien`, `deps.lock`, the daily and fpb builds, the tag and
-the release, the clean-Windows install check. The full-white window
-script (`stage5h_window_fullwhite.sh`) now presses the rig's Delete
-when the data line comes up with no board: its first run found none,
-the flash's data cut having slept white at once.**
+the release, the clean-Windows install check. Bench notes from the
+morning: the full-white window script (`stage5h_window_fullwhite.sh`)
+presses the rig's Delete when the data line comes up with no board
+(its first run found none, the flash's data cut having slept white at
+once); the F19 listener swallows the rig's F19/F20 since 13:26 11-03,
+so the presser gates no longer need Buzz locked, only white untouched.**
 **Before it (23:45 11-03): stage 5h was built, codex READY twice (no
 P1; its one P2 fixed; comment rot fixed), pushed, and waited for JD's go
 to flash on 11-04: `row-isr` `bde904e491` (dev
