@@ -1,0 +1,7 @@
+A verify round on your review of the Floor probe's split (plans/review-codex-row-isr-stage6-probe-split-raw.md: NOT READY on one P2, the row signature's two index bits). Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md. Run no builds. The fix is commit bfff926086 on row-isr in the worktree qmk_firmware-ak820pro-rowisr, over d39525bee3:
+
+  git -C qmk_firmware-ak820pro-rowisr diff d39525bee3..bfff926086 -- keyboards/a_jazz/ak820pro
+
+What it does: the N_PROW signature (menu/menu.c, row_sig's MENU_PROBE branch) now gives the two ticks rows bit 11 with bit 10 telling them apart and the ticks in bits 2-9, and the colour rows and Split bit 10 with a 2-bit code (1, 2, 3) in bits 8-9 and the colour or the switch in bits 2-3; the capture and lit bits in 1-0 as before; everything inside 0x0400-0x0FFF, never 0. The stale reply description in rowisr_diag.h names the split's bytes. The host test suite passes in both builds (no new case for the fast-navigation scenario: the helpers settle every repaint, as you noted).
+
+Check: every (row, value, capture, lit) of the five rows maps to a distinct signature, none 0, none shared with another row kind (the battery notes in 0x1000-0x1FFF, the clock rows in 0x2000-0x3FFF, RK_ITEM in 0x4000-0x7FFF, the rest above); the blank row's and the scheduler's lit bit (bit 0) conventions kept. Report anything wrong as P1/P2/P3 with file:line, then READY or NOT READY in one line.

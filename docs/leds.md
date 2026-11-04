@@ -213,7 +213,9 @@ PWM in its last state, which is untested; no guard is built.
 A dev build's Diagnostics → **Write test** page compared the two strategies
 by eye on JD's Solid near-white
 ([plans/BACKLOG.md](../plans/BACKLOG.md), "The LED blink at an
-internal-flash write"):
+internal-flash write"); the page was retired on 11-04, its question
+settled, and its menu slots went to the row ISR rewrite's **Floor probe**
+(stage 6's floor per colour, [plans/ROW-ISR-PLAN.md](../plans/ROW-ISR-PLAN.md)):
 
 | | Blank (item 3's guard) | Scan (straight through) |
 |---|---|---|

@@ -1,0 +1,42 @@
+Wed  4 Nov 2026 12:07:13 CST
+devprobe bbf5d6069e 0x9413cb17 from the bootloader JD entered by hand at ~12:05 (the data line brought up 12:06; the 08:32 backups used; the battery log since 08:32 not dumped: the bootloader cannot be read)
+firmware : ak820pro-builds/out/via-devprobe-bbf5d6069e-20261104-120302.bin
+built    : Nov  4 12:03:02 2026  (262144 bytes)  <- confirm this is your build
+
+== already in the bootloader -- cannot dump ==
+   using existing backup from Nov  4 08:32:43 2026  (1952 bytes)
+   (if you have changed the keymap since, Ctrl-C, leave the
+    bootloader by replugging, and re-run to capture it)
+
+   lighting: using existing backup from Nov  4 08:32:43 2026  (85 bytes)
+
+   profiles: using existing backup from Nov  4 08:32:43 2026  (2707 bytes)
+
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+flash.sh exit 0
+Wed  4 Nov 2026 12:07:33 CST

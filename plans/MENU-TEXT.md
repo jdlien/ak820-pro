@@ -131,7 +131,34 @@ Reset counters     ▶
 System info is About's page, moved here on 10-28 (the title `System info`,
 Diagnostics' icon). Health page opens the existing Fn+D page (its own text,
 `graphics/display.c`). The Camera page was removed on 10-28. Dev builds add
-Write test.
+a fifth row, Floor probe (11-04; the Write test from 10-27 until then).
+
+### Floor probe (11-04, dev builds; under Diagnostics; title: `Floor probe`)
+
+```
+◀ Back
+Color           Red
+Ticks             0
+Color R         Red
+Ticks R           0
+Split           Off
+```
+
+Stage 6's floor per colour by hand ([ROW-ISR-PLAN.md](ROW-ISR-PLAN.md),
+"The floor is measured first, per colour"): every LED on one colour at the
+ticks shown, the bytes raw to the driver (on the devprobe flavour a byte is
+its pulse width in ticks). A row's click takes the knob, its value in angle
+brackets (`<Red>`, `<12>`), and a click gives it back: Color's turns go round
+`Red`, `Green`, `Blue` (a colour change without a click, which is a key: a
+held key brightens its column neighbours at the dim end); Ticks' turns are a
+tick each, 0 to 255 without wrapping. Split's click turns the split on: the
+left half of the board (columns 0-7) at Color and Ticks, the right half
+(8-14) at Color R and Ticks R, two fields abutting for the per-colour gain by
+eye (one side's ticks turned until the halves match); off, every LED at Color
+and Ticks. The page
+opens dark (red at 0), and leaving it, or the session closing from outside,
+releases the pattern to the effect. Nothing is saved. It needs an effect
+rendering (RGB on, not NONE).
 
 ### Font (10-28; on the top level; title: `Font`)
 

@@ -296,7 +296,7 @@ def run(a):
             rec["windows"]["pcf"] = window(h, "pcf", a.window, load_pcf(a.window), "clock-chip transactions every 250-300 ms")
             save()
         if a.cleanup == "manual" and not a.skip_windows:
-            input("\n  >>> the cleanup window: press Enter, then within 10 s run Diagnostics > Write test > Cleanup on the board's menu: ")
+            input("\n  >>> the cleanup window: press Enter, then within 10 s force a consolidation by hand (the dev Write test page that had Cleanup was retired 11-04; nothing on the board triggers one now): ")
             rec["windows"]["cleanup"] = window(h, "cleanup", a.window, None, "a forced consolidation, by hand")
             save()
         else:

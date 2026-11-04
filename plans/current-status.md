@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-04, 00:40. The block below is where things stand, written to
+Updated 2026-11-04, 15:15. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -88,7 +88,35 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**RESUME HERE (10:05 11-04): white runs stage 5h since 08:33** (`row-isr`
+**RESUME HERE (15:15 11-04): stage 6's floor evening is done; white runs
+the `devprobe` build of `row-isr` `bfff926086`** (token `0x3b47b8a1`, heap
+gap 368 B: stage 5h plus the dev Diagnostics page **Floor probe** in the
+Write test's place, and sub 3's every-LED and split patterns; a byte is
+its pulse width in ticks on this flavour, so JD's Purple/Blue sits at a
+fifth of its light until the dev build goes back on, hands-free). The
+readings (the README's "Stage 6's floor by eye", `floor-eye.log`): every
+colour visible at one tick; the unit step lost at 6-7 ticks (red) and
+11-12 (green, blue); green the brightest at equal ticks; the split match
+red 12 = green 9-10 = blue 23 (red 1.26 and blue 2.4 times green: the
+white's composition, not a table correction; equal ticks keep the hue).
+Found: **a held key brightens the LEDs above and below it in its column**
+at the dim end (the scan's microsecond on the just-deselected mux rail;
+a stage 6 fix in the row ISR). The logger pass's current slope per colour
+is in the README. **The mode was set to Always on for the session and
+persisted by a restore: Power saver is put back with the standing state**
+(done 15:13: the board's live record reads Power saver, and `~/Documents/ak820pro-profiles.json` was refreshed from it, since a flash from a hand-entered bootloader restores that file). Next, in order:
+(1) the dev build back on white (`via-dev-bfff926086-20261104-141323.bin`,
+`0x11e5314a`, hands-free) or the daily soak first (`via-daily-bfff926086-
+20261104-141344.bin`, `0xf6243273`; the return needs JD's `Fn`+`Esc`);
+(2) the camera's linearity pass (the phone at the capless keys, the
+exposure locked, pixel sums at 1-8 ticks per colour; `led all` or the
+page); (3) the held-key fix (the scan after the match registers, or a
+gap after the deselect; JD's eye at 3 ticks with a key held is the gate);
+(4) D9's wide conversion with the floors, the eye's ratio and the gains
+above; (5) stage 7 as before. White is Blackberry's until the standing
+state is restored and Hutch told.
+
+**Before it (10:05 11-04): white ran stage 5h since 08:33** (`row-isr`
 `bde904e491`, dev token `0xfeeeb2db`, heap gap 368 B; flashed on JD's
 08:30 go) **and every hands-free gate on it is met** (the README's
 "Stage 5h on white"): the full-white window 52.8 us and 42.2% at 8,002

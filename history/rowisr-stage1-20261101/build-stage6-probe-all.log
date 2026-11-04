@@ -1,0 +1,81 @@
+Wed  4 Nov 2026 12:02:39 CST
+(the first attempt at 12:02 built the main clone by mistake: QMK_HOME is set by env.sh, the override is AK820_QMK_HOME; its stray daily of c43b104157 removed)
+=== build.sh devprobe
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_ftdi.c                                      [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_aoa.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_hid.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_uvc.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_ee24xx.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_ee25xx.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_eeprom.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_timcap.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_qei.c                                                 [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usb_hid.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usb_msd.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_comp.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_opamp.c                                               [32;01m[OK][0m
+Linking: .build/a_jazz_ak820pro_via.elf                                                             [32;01m[OK][0m
+Creating binary load file for flashing: .build/a_jazz_ak820pro_via.bin                              [32;01m[OK][0m
+Creating load file for flashing: .build/a_jazz_ak820pro_via.hex                                     [32;01m[OK][0m
+
+Size after:
+   text	   data	    bss	    dec	    hex	filename
+      0	 250906	      0	 250906	  3d41a	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 368 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-devprobe-bbf5d6069e-20261104-120302.bin  (token 0x9413cb17)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-devprobe-bbf5d6069e-20261104-120302.bin"   # dumps+restores the VIA keymap around the flash
+=== build.sh dev
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_ftdi.c                                      [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_aoa.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_hid.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_uvc.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_ee24xx.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_ee25xx.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_eeprom.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_timcap.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_qei.c                                                 [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usb_hid.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usb_msd.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_comp.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_opamp.c                                               [32;01m[OK][0m
+Linking: .build/a_jazz_ak820pro_via.elf                                                             [32;01m[OK][0m
+Creating binary load file for flashing: .build/a_jazz_ak820pro_via.bin                              [32;01m[OK][0m
+Creating load file for flashing: .build/a_jazz_ak820pro_via.hex                                     [32;01m[OK][0m
+
+Size after:
+   text	   data	    bss	    dec	    hex	filename
+      0	 250906	      0	 250906	  3d41a	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 368 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-bbf5d6069e-20261104-120325.bin  (token 0x41833307)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-bbf5d6069e-20261104-120325.bin"   # dumps+restores the VIA keymap around the flash
+=== build.sh daily
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_ftdi.c                                      [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_aoa.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_hid.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_uvc.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_ee24xx.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_ee25xx.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_eeprom.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_timcap.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_qei.c                                                 [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usb_hid.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usb_msd.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_comp.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_opamp.c                                               [32;01m[OK][0m
+Linking: .build/a_jazz_ak820pro_via.elf                                                             [32;01m[OK][0m
+Creating binary load file for flashing: .build/a_jazz_ak820pro_via.bin                              [32;01m[OK][0m
+Creating load file for flashing: .build/a_jazz_ak820pro_via.hex                                     [32;01m[OK][0m
+
+Size after:
+   text	   data	    bss	    dec	    hex	filename
+      0	 216078	      0	 216078	  34c0e	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 2656 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-bbf5d6069e-20261104-120347.bin  (token 0x0b36f2a5)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-bbf5d6069e-20261104-120347.bin"   # dumps+restores the VIA keymap around the flash
+Wed  4 Nov 2026 12:03:48 CST

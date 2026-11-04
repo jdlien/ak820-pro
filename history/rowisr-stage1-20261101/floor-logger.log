@@ -1,0 +1,65 @@
+[15:03:48] the logger pass: the stage forced ACTIVE (op 14 [2,0]; the pack at 14.7% is under the low cap's Saver ladder), relay 2 off, every LED at 0/10/15/20/30/50 ticks per colour, 20 s a level
+forced ACTIVE: 0000ff0000
+relay 1 off (key), relay 2 off (power)
+[15:04:01] red: every LED at N ticks, 6 levels [0, 10, 15, 20, 30, 50], 20.0 s each, a staircase
+[15:04:01] red: every LED at N ticks, 6 levels [0, 10, 15, 20, 30, 50], 20.0 s each, a staircase
+[15:04:01] dark
+[15:04:01] dark
+[15:04:04] N=0
+[15:04:04] N=0
+[15:04:24] N=10
+[15:04:24] N=10
+[15:04:44] N=15
+[15:04:44] N=15
+[15:05:04] N=20
+[15:05:04] N=20
+[15:05:24] N=30
+[15:05:24] N=30
+[15:05:44] N=50
+[15:05:44] N=50
+[15:06:04] dark
+[15:06:04] dark
+[15:06:06] pattern released to the effect, the label cleared
+[15:06:06] pattern released to the effect, the label cleared
+[15:06:06] green: every LED at N ticks, 6 levels [0, 10, 15, 20, 30, 50], 20.0 s each, a staircase
+[15:06:06] green: every LED at N ticks, 6 levels [0, 10, 15, 20, 30, 50], 20.0 s each, a staircase
+[15:06:06] dark
+[15:06:06] dark
+[15:06:09] N=0
+[15:06:09] N=0
+[15:06:29] N=10
+[15:06:29] N=10
+[15:06:49] N=15
+[15:06:49] N=15
+[15:07:09] N=20
+[15:07:09] N=20
+[15:07:29] N=30
+[15:07:29] N=30
+[15:07:49] N=50
+[15:07:49] N=50
+[15:08:09] dark
+[15:08:09] dark
+[15:08:11] pattern released to the effect, the label cleared
+[15:08:11] pattern released to the effect, the label cleared
+[15:08:11] blue: every LED at N ticks, 6 levels [0, 10, 15, 20, 30, 50], 20.0 s each, a staircase
+[15:08:11] blue: every LED at N ticks, 6 levels [0, 10, 15, 20, 30, 50], 20.0 s each, a staircase
+[15:08:11] dark
+[15:08:11] dark
+[15:08:14] N=0
+[15:08:14] N=0
+[15:08:34] N=10
+[15:08:34] N=10
+[15:08:54] N=15
+[15:08:54] N=15
+[15:09:14] N=20
+[15:09:14] N=20
+[15:09:34] N=30
+[15:09:34] N=30
+[15:09:54] N=50
+[15:09:54] N=50
+[15:10:14] dark
+[15:10:14] dark
+[15:10:16] pattern released to the effect, the label cleared
+[15:10:16] pattern released to the effect, the label cleared
+stage released: 0000ffff01
+[15:10:16] pass done; the stage released

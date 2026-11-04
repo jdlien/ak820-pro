@@ -1,0 +1,23 @@
+A short review of one small firmware commit for an SN32F299 (Cortex-M0, 48 MHz) QMK keyboard, the AK820 Pro. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md. Run no builds. Report P1 (must fix before this build goes on the board), P2 (should fix), P3 (notes), each with file:line and the failing scenario, then a verdict in one line: READY or NOT READY for a flash of the devprobe flavour.
+
+The subject: commit bbf5d6069e on the branch row-isr in the worktree qmk_firmware-ak820pro-rowisr, over stage 5h's bde904e491 (which you reviewed READY on 11-03: plans/review-codex-row-isr-stage5h-2026-11-03-raw.md and the verify round). Read it as
+
+  git -C qmk_firmware-ak820pro-rowisr diff bde904e491..bbf5d6069e -- keyboards/a_jazz/ak820pro
+
+and the host-side change, uncommitted in the main tree:
+
+  git diff -- scripts/rowisr_diag.py
+
+What it does: dev op 28 sub 3 (rowisr_diag.c, "one LED, one colour": a pattern applied after each render in rgb_matrix_indicators_kb, one LED at r,g,b and every other dark) now also takes LED index 254 for every LED at that colour (rgb_matrix_set_color_all); 255 stays off, 0..80 one LED. The host's `led all R G B` sends 254 and prints the echo. The purpose: stage 6's floor measurement per colour on the devprobe flavour (build.sh: -DROWISR_K_Q6=64u, so a byte is its pulse width in ticks at the 125 us cadence, full scale 255 ticks), with every LED held at N ticks on one colour so the eye in a dark room, the camera and the INA228 logger (which needs the sum of 81 LEDs to resolve ~0.2 mA at 10 ticks) read the same light (plans/ROW-ISR-PLAN.md, "Stage 6: the precision path", "The floor is measured first, per colour").
+
+Questions:
+
+Q1. Does the pattern's byte reach the driver raw, as the header now claims: past QMK's CIE table and the HSV value (rgb_matrix_set_color / rgb_matrix_set_color_all write the driver buffer directly), through the board's power scale (sn32f2xx.c, sn32f2xx_set_power_scale: 255 on USB power), and nothing else between the indicators hook and the sn32f2xx driver's buffer (rgb_matrix_indicators_kb's place in rgb_matrix_task's render; the flush-allowed hook; the board's own caps in rgb/ or power.c)? On the bench the board is on USB power with the data line off or on; name anything that scales or clamps the bytes on battery (the ladder, Saver's cap) so it can be held off for the measurement.
+
+Q2. Cost and safety at every LED: rgb_matrix_set_color_all over 81 LEDs each render, in the thread context, against the render budget; any path where pat_led == 254 is treated as an index (the Q6 witness use, the echo, anything comparing against RGB_MATRIX_LED_COUNT); the reply's [4] echoing 254 and the host decoding it.
+
+Q3. On the devprobe scale (ROWISR_K_Q6 64): a byte of 255 on every LED is 255 ticks a slot, within the arm deadline and the width rule (the stage 5h review's Q5); D8's drive accounting with ROWISR_K_REF_Q6 as the unit. Anything the all-LED hold at low bytes (1..50 ticks) could do that one LED did not: the field's current step, the row gap, the witness, the omissions.
+
+Q4. The host change: the argument check (`all` or a digit index, three digit components), the 0xFE send, the printed forms, `--json`.
+
+Format: a table per priority (P1, P2, P3) with file:line, the finding and the scenario, then the verdict in one line.

@@ -1,0 +1,15 @@
+A short review of one small firmware commit for an SN32F299 (Cortex-M0) QMK keyboard, the AK820 Pro. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md. Run no builds. Report P1 (must fix before this build stays on the board), P2 (should fix), P3 (notes), each with file:line and the failing scenario, then a verdict in one line: READY or NOT READY.
+
+The subject: commit 116c06c7f9 on the branch row-isr in the worktree qmk_firmware-ak820pro-rowisr, over b9f892460d (the Floor probe menu page you reviewed READY on 11-04 in two rounds: plans/review-codex-row-isr-stage6-probe-page-raw.md and -verify-raw.md). Read it as
+
+  git -C qmk_firmware-ak820pro-rowisr diff b9f892460d..116c06c7f9 -- keyboards/a_jazz/ak820pro
+
+and the host test's change, uncommitted in the main tree (its probe case rewritten; the suite passes in both builds, S0 and -DMENU_ENABLE):
+
+  git diff -- scripts/menu_s0_test.c plans/MENU-TEXT.md
+
+What it does: on the dev-only Diagnostics page "Floor probe" (menu/menu.c, the pr_* functions, MENU_PROBE), the Color row's click now takes the knob the way Ticks' does (pg.pr.editing is the captured row's index, PR_COLOUR or PR_TICKS, 0 none; a click on the captured row releases it); while Color has the knob, a turn goes round red, green, blue (wrapping, both directions) and applies the pattern; the row shows its value in angle brackets while captured. The reason: a held key brightens the LEDs above and below it in its column at the dim end (the scan pulls the column low through the key's diode a microsecond after the previous mux row's deselect), and the knob's click is a key, so JD wants to change colour by turning alone. The label is "Color" on the screen (American, as the other labels).
+
+Questions: (1) the capture's release on every way out (pr_leave on Back/hold, menu_probe_closed, Fn+D's round trip, the session's idle close): with Color captured as with Ticks? (2) The modulo on a negative turn count (pr_turn: (colour + turns) % 3 with turns an int8_t, possibly beyond ±3 in one pass): is the wrap right for every value? (3) The row's signature (row_sig / x.bullet / x.line) repaints the Color row when its capture or value changes, both rows distinct? (4) The value buffer (buf[24]) for "<Green>"; anything the cursor's movement or activate() still assumes about Color being click-cycled. (5) Anything else.
+
+Format: a table per priority (P1, P2, P3) with file:line, the finding and the scenario, then the verdict in one line.

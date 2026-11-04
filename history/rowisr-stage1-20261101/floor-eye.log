@@ -1,0 +1,38 @@
+[12:11:36] red: every LED at N ticks, 12 levels [1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 30, 50], 4.0 s each, a staircase
+[12:11:36] dark
+[12:11:39] N=1
+[12:11:43] N=2
+[12:11:47] N=3
+[12:11:51] N=4
+[12:11:55] N=5
+[12:11:59] N=6
+[12:12:03] N=8
+[12:12:07] N=10
+[12:12:11] N=15
+[12:12:15] N=20
+[12:12:19] N=30
+[12:12:23] N=50
+[12:12:28] dark
+[12:12:30] pattern released to the effect, the label cleared
+[12:14:49] pattern off: the effect back
+[12:15:24] pattern off: the effect back
+[12:18:15] every LED red at 1 ticks
+[12:19:49] every LED red at 2 ticks
+[12:20:05] every LED red at 3 ticks
+[12:20:09] every LED red at 4 ticks
+[12:20:14] every LED red at 5 ticks
+[12:20:19] every LED red at 6 ticks
+[12:20:24] every LED red at 5 ticks
+[12:20:29] every LED red at 6 ticks
+[12:20:35] every LED red at 7 ticks
+[12:20:42] every LED red at 6 ticks
+[12:21:43] JD, red (every LED, the office dark): 1 tick clearly visible and very dim; each unit step visible up to 6; 7 looks about the same as 6 (the unit step lost at ~15%)
+[12:41:29] JD, green (the Floor probe page, every LED, the office dark): very visible at 1 tick; the jump 1 -> 2 very steep; the unit step imperceptible between 11 and 12 (~9%)
+[12:41:29] JD, blue: pretty similar to green (visible at 1; the unit step lost about 11-12)
+[12:41:29] JD: all three visible at 1 tick; green appears the brightest at the same ticks
+[13:08:23] JD: any key press brightens the lights, only (he thinks) the LEDs in the pressed key's column, subtle for some keys (seen on the bare LEDs); on the page, the knob's click did it
+[13:36:41] JD: a held key brightens the LEDs above and below it in its column only (the neighbouring mux rows' LEDs at the pressed column: the scan pulls the column low through the key's diode a microsecond after the previous row's deselect, and the deselected rail's stored charge flows through that LED); invisible at his Purple/Blue, only at the dimmest levels. A stage 6 item, not a blocker
+[14:01:15] JD, the dimmest values compared across colours at equal ticks: green brightest, red just slightly dimmer, blue notably dimmer (his words; no numbers: the single-colour pattern gives no side-by-side)
+[14:49:52] relay 2 (power) on for the split match: the pack at ~15%, the low cap's Saver ladder would darken the keys after 3 idle min
+[14:55:02] JD, the split match (USB power): red at 12 is matched by green at about 9, maybe 10 (green 12 slightly too bright): red needs ~1.2-1.3x green's ticks for the same brightness
+[14:58:00] JD, the split match: blue at 23 is pretty close to red at 12. Against red 12: green ~9.5, blue 23; relative to green: red x1.26, blue x2.4 (the per-colour gains at the dim end, one tick's uncertainty)

@@ -1,0 +1,180 @@
+Wed  4 Nov 2026 12:35:17 CST
+the Floor probe menu page's devprobe build, on JD's go at 12:41 (codex's round still running)
+firmware : ak820pro-builds/out/via-devprobe-53d64bcdb4-20261104-123022.bin
+built    : Nov  4 12:30:22 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+== dumping the battery log ==
+# 1 entries (log v8, one per 900 s), newest 771 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before +2574.8 ms, after +0.2 ms, rtt 2.0 ms, U ~1.5 ms, lead now 2.70 ms, bias sent
+done.
+flash.sh exit 0
+Wed  4 Nov 2026 12:35:40 CST
+Wed  4 Nov 2026 12:49:15 CST
+the Floor probe page's final build b9f892460d (codex verify READY), on JD's go at 12:49
+firmware : ak820pro-builds/out/via-devprobe-b9f892460d-20261104-124149.bin
+built    : Nov  4 12:41:49 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+== dumping the battery log ==
+# 0 entries (log v8, one per 900 s), newest 0 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before -1042.1 ms, after -2.2 ms, rtt 3.0 ms, U ~1.6 ms, lead now 2.70 ms, bias sent
+done.
+flash.sh exit 0
+Wed  4 Nov 2026 12:49:38 CST
+Wed  4 Nov 2026 13:39:39 CST
+the Color capture tweak 116c06c7f9, on JD's ask (codex's round running in parallel)
+firmware : ak820pro-builds/out/via-devprobe-116c06c7f9-20261104-133939.bin
+built    : Nov  4 13:39:39 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+== dumping the battery log ==
+# 3 entries (log v8, one per 900 s), newest 307 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before -270.3 ms, after -0.7 ms, rtt 1.8 ms, U ~1.1 ms, lead now 2.70 ms, bias sent
+done.
+flash.sh exit 0
+Wed  4 Nov 2026 13:40:02 CST
+Wed  4 Nov 2026 14:07:14 CST
+the split d39525bee3, on JD's go (codex's round running in parallel)
+firmware : ak820pro-builds/out/via-devprobe-d39525bee3-20261104-140714.bin
+built    : Nov  4 14:07:14 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+== dumping the battery log ==
+# 1 entries (log v8, one per 900 s), newest 740 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before -1730.1 ms, after -1.1 ms, rtt 1.9 ms, U ~1.1 ms, lead now 2.70 ms, bias sent
+done.
+flash.sh exit 0
+Wed  4 Nov 2026 14:07:37 CST
+Wed  4 Nov 2026 14:12:39 CST
+the signature fix bfff926086 (codex's P2 on the split), hands-free
+firmware : ak820pro-builds/out/via-devprobe-bfff926086-20261104-141239.bin
+built    : Nov  4 14:12:39 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 219, val 125, speed 231
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+== dumping the battery log ==
+# 0 entries (log v8, one per 900 s), newest 0 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Alphas/Mods on h178 s219 v125 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before -1019.6 ms, after -0.8 ms, rtt 2.0 ms, U ~2.0 ms, lead now 2.70 ms, bias sent
+done.
+flash.sh exit 0
+Wed  4 Nov 2026 14:13:02 CST

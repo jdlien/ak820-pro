@@ -5,7 +5,8 @@ stage 1 of plans/ROW-ISR-PLAN.md (rgb/rowisr_diag.c in the firmware).
     venv/bin/python scripts/rowisr_diag.py regs [TIMER|all] [PAGE]   the CT16 timers' registers
     venv/bin/python scripts/rowisr_diag.py hold MS                   a row-only interrupt hold-off, 1..10000 ms
     venv/bin/python scripts/rowisr_diag.py status                    the hold's state and counts
-    venv/bin/python scripts/rowisr_diag.py led INDEX R G B | off     one LED at one colour, every other dark
+    venv/bin/python scripts/rowisr_diag.py led INDEX|all R G B | off one LED at one colour, every other dark (all: every LED)
+    venv/bin/python scripts/rowisr_diag.py led split R G B R2 G2 B2   the left half of the board (columns 0-7) at one colour, the right at another
     venv/bin/python scripts/rowisr_diag.py skip MS                   the callback skips the key scan for MS ms
     venv/bin/python scripts/rowisr_diag.py record                    the handler's record past page 7 (stage 2)
     venv/bin/python scripts/rowisr_diag.py usb                       the USB frame counter's record and the clocks' state (D3 case 5)
@@ -36,7 +37,9 @@ while a hold runs or the tick is stopped.
 `led` sets a one-LED pattern that outlives the effect (applied after every
 render until `led off`; it needs an effect rendering, so RGB on): with a
 slow tagged slot sequence on the witness it settles Q6, which physical LED
-each mux pin drives.
+each mux pin drives. `led all R G B` lights every LED at that colour, the
+bytes raw (past the CIE table and the value; on the devprobe build a byte
+is its pulse width in ticks): stage 6's floor per colour.
 
 `skip` makes the row ISR do its LED work and skip the key scan for MS ms
 (keys are dead meanwhile): health page 4's callback metric with and without
@@ -74,7 +77,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from ak820health import open_device  # noqa: E402
 
 SET_VALUE, CH, HC, OP = 0x07, 0x13, 0x76, 28
-USAGE = "usage: rowisr_diag.py regs [TIMER|all] [PAGE] | hold MS | skip MS | status | record | usb | silence MS [DELAY] | report | readcost | sections | rig [R0 C0 R1 C1] | settle [TICKS] | frmscan [MS] | led INDEX R G B | led off  [--json]"
+USAGE = "usage: rowisr_diag.py regs [TIMER|all] [PAGE] | hold MS | skip MS | status | record | usb | silence MS [DELAY] | report | readcost | sections | rig [R0 C0 R1 C1] | settle [TICKS] | frmscan [MS] | led INDEX|all R G B | led split R G B R2 G2 B2 | led off  [--json]"
 
 
 def xfer(h, sub, args=b""):
@@ -227,7 +230,8 @@ def main():
     ok = (cmd == "regs" and len(args) <= 3 and all(a == "all" or a.isdigit() for a in args[1:])) or \
          (cmd in ("hold", "skip") and len(args) == 2 and args[1].isdigit()) or (cmd in ("status", "record", "usb", "report", "readcost", "sections") and len(args) == 1) or \
          (cmd == "silence" and 2 <= len(args) <= 3 and all(a.replace(".", "", 1).isdigit() for a in args[1:])) or \
-         (cmd == "led" and (args[1:] == ["off"] or (len(args) == 5 and all(a.isdigit() for a in args[1:])))) or \
+         (cmd == "led" and (args[1:] == ["off"] or (len(args) == 5 and (args[1] == "all" or args[1].isdigit()) and all(a.isdigit() for a in args[2:]))
+                            or (len(args) == 8 and args[1] == "split" and all(a.isdigit() for a in args[2:])))) or \
          (cmd == "rig" and (len(args) == 1 or (len(args) == 5 and all(a.isdigit() for a in args[1:])))) or \
          (cmd in ("settle", "frmscan") and (len(args) == 1 or (len(args) == 2 and args[1].isdigit())))
     if not ok:
@@ -388,10 +392,14 @@ def main():
             if args[1:] == ["off"]:
                 r = xfer(h, 3, bytes([0xFF, 0, 0, 0]))
             else:
-                i, rr, g, b = (int(x) for x in args[1:5])
-                r = xfer(h, 3, bytes([i, rr, g, b]))
-            d = {"led": None if r[4] == 0xFF else r[4], "r": r[5], "g": r[6], "b": r[7]}
+                i = 0xFE if args[1] == "all" else 0xFD if args[1] == "split" else int(args[1])   # 254: every LED (stage 6's floor probe); 253: the split
+                vals = [int(x) for x in args[2:]]
+                r = xfer(h, 3, bytes([i] + vals))
+            d = {"led": None if r[4] == 0xFF else "all" if r[4] == 0xFE else "split" if r[4] == 0xFD else r[4], "r": r[5], "g": r[6], "b": r[7]}
+            if d["led"] == "split": d.update({"r2": r[8], "g2": r[9], "b2": r[10]})
             print(json.dumps(d) if as_json else (f"pattern off" if d["led"] is None else
+                                               f"every LED at ({d['r']}, {d['g']}, {d['b']})" if d["led"] == "all" else
+                                               f"the left half at ({d['r']}, {d['g']}, {d['b']}), the right at ({d['r2']}, {d['g2']}, {d['b2']})" if d["led"] == "split" else
                                                f"LED {d['led']} at ({d['r']}, {d['g']}, {d['b']}), every other dark"))
     finally:
         h.close()

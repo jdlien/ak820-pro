@@ -1440,39 +1440,27 @@ bool env_store_failed(void) { return false; }
 void env_settings_touch(void) { fk_settle_touches++; fk_settle_pending = true; }
 bool env_settings_pending(void) { return fk_settle_pending; }
 void env_prof_switched(uint8_t slot, uint8_t st) { (void)slot; (void)st; }   /* the Win/Mac switch: profiles_test.c */
-/* 10-27, dev's write test: the strategy, the writes and cleanups made, the
- * spare byte's absence, the dim forced, when its cap is in force (20 passes
- * of 5 ms after the force), and the LED frames committed (one each 17 ms, or
- * none while fk_wt_frames_hold: a pass blocked). */
-static bool    fk_wt_scan, fk_wt_none, fk_wt_dim, fk_wt_early;   /* early: a cleanup before the cap was in force */
-static bool    fk_wt_frames_hold;
-static uint8_t fk_wt_frames_held;
-static int     fk_wt_writes, fk_wt_cleans, fk_wt_dim_sets, fk_wt_dim_passes;
-static uint32_t fk_wt_applied_at, fk_wt_dim_gap;   /* when the cap was first on, the dim's write after it (ms) */
-bool           env_wt_scan(void) { return fk_wt_scan; }
-void           env_wt_set_scan(bool on) { fk_wt_scan = on; }
-uint8_t        env_wt_write(void) {
-    if (fk_wt_none) return ENV_WT_NONE;
-    fk_wt_writes++;
-    return ENV_WR_OK;
+/* 11-04, dev's Floor probe: the pattern's last bytes, whether it is set,
+ * the sets and the releases. */
+static uint8_t fk_pr_r, fk_pr_g, fk_pr_b, fk_pr_r2, fk_pr_g2, fk_pr_b2;
+static bool    fk_pr_live, fk_pr_split;
+static int     fk_pr_sets, fk_pr_offs;
+void           env_probe(uint8_t r, uint8_t g, uint8_t b) {
+    fk_pr_r = r; fk_pr_g = g; fk_pr_b = b;
+    fk_pr_split = false;
+    fk_pr_live  = true;
+    fk_pr_sets++;
 }
-bool env_wt_cleanup(void) {
-    if (fk_wt_dim && fk_wt_dim_passes <= 20) fk_wt_early = true;
-    if (fk_wt_dim) fk_wt_dim_gap = fk_now - fk_wt_applied_at;
-    fk_wt_cleans++;
-    return true;
+void env_probe_split(uint8_t r, uint8_t g, uint8_t b, uint8_t r2, uint8_t g2, uint8_t b2) {
+    fk_pr_r = r; fk_pr_g = g; fk_pr_b = b;
+    fk_pr_r2 = r2; fk_pr_g2 = g2; fk_pr_b2 = b2;
+    fk_pr_split = true;
+    fk_pr_live  = true;
+    fk_pr_sets++;
 }
-uint8_t env_wt_frames(void) { return fk_wt_frames_hold ? fk_wt_frames_held : (uint8_t)(fk_now / 17u); }
-void env_wt_dim(bool on) {
-    fk_wt_dim = on;
-    fk_wt_dim_sets++;
-    fk_wt_dim_passes = 0;
-}
-bool env_wt_dimmed(void) { return fk_wt_dim; }
-bool env_wt_dim_applied(void) {   /* the ladder's next tick, ~100 ms */
-    if (!fk_wt_dim || ++fk_wt_dim_passes <= 20) return false;
-    if (fk_wt_dim_passes == 21) fk_wt_applied_at = fk_now;
-    return true;
+void env_probe_off(void) {
+    fk_pr_live = false;
+    fk_pr_offs++;
 }
 static int  fk_defaults_reads;
 void        env_defaults(env_defaults_t *d) {   /* Reset settings (10-27): mode 1 is Solid (fk_effect_names) */
@@ -2040,7 +2028,7 @@ static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
  * the defaults' values. */
 enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_PROF, T_BOOT, T_FONT, T_DEFS, T_DIAG, T_HELP,
        T_EXIT, T_ROWS };   /* 10-28: About in Diagnostics, as System info, its first row (D_SYSINFO) */
-enum { D_SYSINFO = 1, D_HEALTH, D_RESET, D_WTEST };   /* 10-28: the Camera page gone */   /* P5b: Profiles page one's last, Bootloader to page two; 10-27: Reset settings under it;
+enum { D_SYSINFO = 1, D_HEALTH, D_RESET, D_PROBE };   /* 10-28: the Camera page gone */   /* P5b: Profiles page one's last, Bootloader to page two; 10-27: Reset settings under it;
                                      * 10-28: Font under Bootloader */
 static const char *const top_rows_want[T_ROWS][2] = {
     {FONT_MONO_I_LIGHT " Lighting", FONT_MONO_TRI_R}, {FONT_MONO_I_SCREEN "Screen", "52%"},   /* 52 of 100 */
@@ -5581,117 +5569,111 @@ static void test_large_restore(void) {
     ts_face    = MT_SMALL;
 }
 
-/* 10-27: dev builds' Write test (JD: "a dev-only option in the menu that
- * lets you do a write strategy test"): Diagnostics' fifth row; the strategy
- * toggled; one write; ten, a second apart, a click again stopping them;
- * the cleanup; Dim + cleanup stopping the ten and waiting for the cap and
- * then two committed frames, a click releasing it;
- * leaving the page or closing the session releasing a dim the page forced,
- * and never a bench's. */
-enum { SC_WTEST = 16 + 59 };
-static void test_wtest(void) {
+/* 11-04: dev builds' Floor probe (JD: "can I manually drive that somehow?
+ * Can we stick something in the menus"), in the Write test's place:
+ * Diagnostics' fifth row; the page opens dark (red at 0) with the pattern
+ * set; a row's click takes the knob (the value in angle brackets) and a
+ * click gives it back: Color's turns go round red, green, blue, each applied
+ * at the ticks (12:3x: a colour change without a click, which is a key and
+ * brightens the held key's column neighbours at the dim end); Ticks' turns
+ * step the ticks 0..255 without wrapping; neither moves the cursor; leaving
+ * the page (a hold, the capture included) releases
+ * the pattern, as does the session closing from outside with the page open,
+ * at the close itself (a reopen in the same pass inherits nothing) and
+ * once; nothing is written. */
+enum { SC_PROBE = 16 + 59 };
+static void test_probe(void) {
     fw_reset();
-    fk_wt_scan = fk_wt_none = fk_wt_dim = fk_wt_early = false;
-    fk_wt_writes = fk_wt_cleans = fk_wt_dim_sets = 0;
-    fk_wt_scan = true;   /* the driver's default since 10-27 */
-    fk_wt_frames_hold = false;
+    fk_pr_r = fk_pr_g = fk_pr_b = 0;
+    fk_pr_live = false;
+    fk_pr_sets = fk_pr_offs = 0;
     menu_watch = true; menu_max_lit = menu_max_cursor = 0;
     CHECK(op27(11, 0, 0) == MI_OK);
     m_settle();
     m_turn(T_DIAG);
     m_click();
-    CHECK(sub5_screen() == 16 + 4 && row_bad(4, cells2("Write test", FONT_MONO_TRI_R), MENU_DIM) == 0);
+    CHECK(sub5_screen() == 16 + 4 && row_bad(4, cells2("Floor probe", FONT_MONO_TRI_R), MENU_DIM) == 0);
     m_turn(3);
     m_click();
-    CHECK(sub5_screen() == SC_WTEST && sub5_cursor() == 1 && title_bad(FONT_MONO_I_DIAG " Write test") == 0);
-    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, cells2("Strategy", "Scan"), MENU_LIT) == 0 &&
-          row_bad(2, "One write", MENU_DIM) == 0 && row_bad(3, "Ten writes", MENU_DIM) == 0 &&
-          row_bad(4, "Cleanup", MENU_DIM) == 0 && row_bad(5, "Dim + cleanup", MENU_DIM) == 0 && row_bad(6, "", 0) == 0);
-    /* The strategy, both ways. */
-    m_click();
-    CHECK(!fk_wt_scan && row_bad(1, cells2("Strategy", "Blank"), MENU_LIT) == 0);
-    m_click();
-    CHECK(fk_wt_scan && row_bad(1, cells2("Strategy", "Scan"), MENU_LIT) == 0);
-    /* One write, "Written"; with no spare byte, said so. */
+    CHECK(sub5_screen() == SC_PROBE && sub5_cursor() == 1 && title_bad(FONT_MONO_I_DIAG " Floor probe") == 0);
+    CHECK(fk_pr_live && fk_pr_sets == 1 && fk_pr_r == 0 && fk_pr_g == 0 && fk_pr_b == 0);
+    CHECK(row_bad(0, FONT_MONO_TRI_L " Back", MENU_LEAVE) == 0 && row_bad(1, cells2("Color", "Red"), MENU_LIT) == 0 &&
+          row_bad(2, cells2("Ticks", "0"), MENU_DIM) == 0 && row_bad(3, cells2("Color R", "Red"), MENU_DIM) == 0 &&
+          row_bad(4, cells2("Ticks R", "0"), MENU_DIM) == 0 && row_bad(5, cells2("Split", "Off"), MENU_DIM) == 0 && row_bad(6, "", 0) == 0);
+    CHECK(!fk_pr_split);
+    /* Ticks: the click takes the knob; turns step it and the cursor stays; a click gives it back. */
     m_turn(1);
     m_click();
-    CHECK(fk_wt_writes == 1 && title_bad("Written") == 0);
-    m_unflash();
-    fk_wt_none = true;
+    CHECK(sub5_cursor() == 2 && row_bad(2, cells2("Ticks", "<0>"), MENU_LIT) == 0 && fk_pr_sets == 1);
+    m_turn(3);
+    CHECK(sub5_cursor() == 2 && row_bad(2, cells2("Ticks", "<3>"), MENU_LIT) == 0 && fk_pr_r == 3 && fk_pr_g == 0 && fk_pr_b == 0);
+    m_turn(-5);
+    CHECK(sub5_cursor() == 2 && row_bad(2, cells2("Ticks", "<0>"), MENU_LIT) == 0 && fk_pr_r == 0);   /* no wrap below 0 */
+    for (int i = 0; i < 26; i++) m_turn(10);   /* 260 up */
+    CHECK(sub5_cursor() == 2 && row_bad(2, cells2("Ticks", "<255>"), MENU_LIT) == 0 && fk_pr_r == 255);   /* none above 255 */
     m_click();
-    CHECK(fk_wt_writes == 1 && title_bad("No spare byte") == 0);
-    fk_wt_none = false;
-    m_unflash();
-    /* Ten, a second apart; a click again stops them. */
+    CHECK(sub5_cursor() == 2 && row_bad(2, cells2("Ticks", "255"), MENU_LIT) == 0 && fk_pr_r == 255);
+    m_turn(-1);
+    CHECK(sub5_cursor() == 1 && row_bad(2, cells2("Ticks", "255"), MENU_DIM) == 0);
+    /* Color: a click takes the knob too; turns go round red, green, blue, applied at the ticks; a click gives it back. */
+    m_click();
+    CHECK(sub5_cursor() == 1 && row_bad(1, cells2("Color", "<Red>"), MENU_LIT) == 0 && fk_pr_r == 255);
+    m_turn(1);
+    CHECK(sub5_cursor() == 1 && row_bad(1, cells2("Color", "<Green>"), MENU_LIT) == 0 && fk_pr_r == 0 && fk_pr_g == 255 && fk_pr_b == 0);
+    m_turn(1);
+    CHECK(row_bad(1, cells2("Color", "<Blue>"), MENU_LIT) == 0 && fk_pr_r == 0 && fk_pr_g == 0 && fk_pr_b == 255);
+    m_turn(1);
+    CHECK(row_bad(1, cells2("Color", "<Red>"), MENU_LIT) == 0 && fk_pr_r == 255 && fk_pr_g == 0 && fk_pr_b == 0);   /* round */
+    m_turn(-1);
+    CHECK(row_bad(1, cells2("Color", "<Blue>"), MENU_LIT) == 0 && fk_pr_r == 0 && fk_pr_b == 255);                 /* and back round */
     m_turn(1);
     m_click();
-    CHECK(fk_wt_writes == 2 && row_bad(3, cells2("Ten writes", "Writing"), MENU_LIT) == 0);
-    for (int i = 0; i < 200; i++) fw_pass(5);   /* a second */
-    m_settle();
-    CHECK(fk_wt_writes == 3);
-    for (int i = 0; i < 1800; i++) fw_pass(5);   /* nine more seconds: the ten */
-    m_settle();
-    CHECK(fk_wt_writes == 11 && row_bad(3, "Ten writes", MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 1 && row_bad(1, cells2("Color", "Red"), MENU_LIT) == 0 && fk_pr_r == 255 && fk_pr_g == 0 && fk_pr_b == 0);
+    /* The split (the per-colour gain by eye): Color R and Ticks R are the right half's, captured as the left's are;
+     * Split's click turns it on (the left half at Color and Ticks, the right at Color R and Ticks R) and off again. */
+    m_turn(4);
+    CHECK(sub5_cursor() == 5 && row_bad(5, cells2("Split", "Off"), MENU_LIT) == 0 && !fk_pr_split);
     m_click();
-    for (int i = 0; i < 400; i++) fw_pass(5);
-    m_settle();
-    CHECK(fk_wt_writes == 14);
-    m_click();   /* stopped */
-    for (int i = 0; i < 400; i++) fw_pass(5);
-    m_settle();
-    CHECK(fk_wt_writes == 14 && row_bad(3, "Ten writes", MENU_LIT) == 0);
-    /* The cleanup. */
-    m_turn(1);
-    m_click();
-    CHECK(fk_wt_cleans == 1 && title_bad("Cleaned up") == 0);
-    m_unflash();
-    /* Dim + cleanup: it stops the ten; the cleanup waits for the cap, then
-     * for two frames committed, however long a blocked pass keeps them;
-     * a click again releases. */
+    CHECK(sub5_cursor() == 5 && row_bad(5, cells2("Split", "On"), MENU_LIT) == 0 && fk_pr_split && fk_pr_r == 255 && fk_pr_g == 0 &&
+          fk_pr_r2 == 0 && fk_pr_g2 == 0 && fk_pr_b2 == 0);
     m_turn(-1);
     m_click();
-    CHECK(fk_wt_writes == 15 && row_bad(3, cells2("Ten writes", "Writing"), MENU_LIT) == 0);
+    CHECK(sub5_cursor() == 4 && row_bad(4, cells2("Ticks R", "<0>"), MENU_LIT) == 0);
+    m_turn(7);
+    CHECK(sub5_cursor() == 4 && row_bad(4, cells2("Ticks R", "<7>"), MENU_LIT) == 0 && fk_pr_split && fk_pr_r2 == 7 && fk_pr_g2 == 0 && fk_pr_r == 255);
+    m_click();
+    m_turn(-1);
+    m_click();
+    CHECK(sub5_cursor() == 3 && row_bad(3, cells2("Color R", "<Red>"), MENU_LIT) == 0);
+    m_turn(1);
+    CHECK(row_bad(3, cells2("Color R", "<Green>"), MENU_LIT) == 0 && fk_pr_r2 == 0 && fk_pr_g2 == 7 && fk_pr_b2 == 0 && fk_pr_r == 255);
+    m_click();
     m_turn(2);
-    fk_wt_frames_held = (uint8_t)(fk_now / 17u);
-    fk_wt_frames_hold = true;
     m_click();
-    CHECK(fk_wt_dim && fk_wt_dim_sets == 1);
-    for (int i = 0; i < 400; i++) fw_pass(5);   /* two seconds, no frame */
-    m_settle();
-    CHECK(fk_wt_cleans == 1 && fk_wt_writes == 15 && row_bad(3, "Ten writes", MENU_DIM) == 0);
-    fk_wt_frames_hold = false;
-    for (int i = 0; i < 4; i++) fw_pass(5);
-    m_settle();
-    CHECK(fk_wt_cleans == 2 && !fk_wt_early && fk_wt_dim_gap >= 50 && title_bad("Cleaned up") == 0 &&
-          row_bad(5, cells2("Dim + cleanup", "On"), MENU_LIT) == 0);
-    m_unflash();
-    /* ... and with the frames coming, it waits 50 ms at least. */
+    CHECK(sub5_cursor() == 5 && row_bad(5, cells2("Split", "Off"), MENU_LIT) == 0 && !fk_pr_split && fk_pr_r == 255 && fk_pr_g == 0);
+    m_turn(-4);
+    CHECK(sub5_cursor() == 1 && row_bad(1, cells2("Color", "Red"), MENU_LIT) == 0);
+    /* Leaving the page, the knob captured, releases the pattern ... */
+    m_turn(1);
     m_click();
-    CHECK(!fk_wt_dim && fk_wt_dim_sets == 2 && row_bad(5, "Dim + cleanup", MENU_LIT) == 0);
-    m_click();
-    for (int i = 0; i < 40; i++) fw_pass(5);
-    m_settle();
-    CHECK(fk_wt_cleans == 3 && !fk_wt_early && fk_wt_dim_gap >= 50 && fk_wt_writes == 15);
-    m_unflash();
-    m_click();
-    CHECK(!fk_wt_dim && fk_wt_dim_sets == 4);
-    /* Leaving the page releases the page's dim; ... */
-    m_click();
-    CHECK(fk_wt_dim);
+    CHECK(row_bad(2, cells2("Ticks", "<255>"), MENU_LIT) == 0 && fk_pr_live);
     m_hold();
-    CHECK(sub5_screen() == 16 + 4 && !fk_wt_dim);
-    /* ... closing the session does too; a bench's forced dim stays. */
+    CHECK(sub5_screen() == 16 + 4 && !fk_pr_live && fk_pr_offs == 1);
+    /* ... re-entering starts dark again, the capture gone ... */
     m_click();
-    m_turn(4);
-    m_click();
-    CHECK(fk_wt_dim);
+    CHECK(sub5_screen() == SC_PROBE && sub5_cursor() == 1 && fk_pr_live && fk_pr_r == 0 && fk_pr_g == 0 && fk_pr_b == 0 &&
+          row_bad(1, cells2("Color", "Red"), MENU_LIT) == 0 && row_bad(2, cells2("Ticks", "0"), MENU_DIM) == 0);
+    /* ... and the session closing from outside releases it at the close
+     * itself, so a reopen before the next pass (two opener reports in one
+     * pass) starts with nothing of the page's standing; nothing more is
+     * released after. */
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE && !fk_pr_live && fk_pr_offs == 2);
+    CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_OPEN && !fk_pr_live && fk_pr_offs == 2);
+    m_settle();
+    CHECK(sub5_screen() == 16 + 1 && fk_pr_offs == 2);
     CHECK(op27(11, 0, 0) == MI_OK && po_session() == SESSION_NONE);
-    fw_pass(5);
-    CHECK(!fk_wt_dim);
-    fk_wt_dim = true;   /* a bench's (op 14 sub 2) */
     for (int i = 0; i < 20; i++) fw_pass(5);
-    CHECK(fk_wt_dim);
-    fk_wt_dim = false;
+    CHECK(!fk_pr_live && fk_pr_offs == 2);
     CHECK(menu_max_lit <= 1 && menu_max_cursor <= 1);
     menu_watch = false;
 }
@@ -5842,7 +5824,7 @@ int main(int argc, char **argv) {
     test_large_pages();
     test_large_restore();
     test_font_preview();
-    test_wtest();
+    test_probe();
     test_more_info();
     if (fk_oob) printf("%d rectangle(s) off the panel\n", fk_oob);
     CHECK(fk_oob == 0);

@@ -538,6 +538,9 @@ notice the lights ... I haven't noticed screen blinking."
   Always on (on battery the other modes go dark first); the Write test's
   Dim + cleanup, waiting for two rendered frames after the cap. Docs:
   docs/leds.md, "The blink is the consolidation". GREMLIN-RESULTS §20z.
+  The Write test page was retired on 11-04 (`row-isr` `b9f892460d`): its
+  question settled, its two menu nodes went to stage 6's Floor probe;
+  `sn32f2xx_pgm_scan` stays at its default, nothing toggles it now.
 - **Dim + cleanup, by eye (10-27, ~17:55):** JD: "can't see any flicker at
   the dim". But JD saw one flicker "in between me trying the options"
   and wonders whether there is another cause. The board's counters for

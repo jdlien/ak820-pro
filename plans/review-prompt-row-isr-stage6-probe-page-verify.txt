@@ -1,0 +1,13 @@
+A verify round on your Floor probe review (plans/review-codex-row-isr-stage6-probe-page-raw.md: NOT READY, one P1, one P2, notes). Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md. Run no builds and no board commands. The commit was amended: it is now b9f892460d on row-isr in the worktree qmk_firmware-ak820pro-rowisr, over bbf5d6069e:
+
+  git -C qmk_firmware-ak820pro-rowisr diff bbf5d6069e..b9f892460d -- keyboards/a_jazz/ak820pro
+
+and the host side, uncommitted in the main tree: git diff -- scripts/menu_s0_test.c scripts/rowisr_baseline.py
+
+What changed against your findings:
+
+- P1 (a close then a reopen in one pass stranding the pattern): panel_owner.c's do_close() now calls menu_probe_closed() synchronously, beside menu_edit_rollback(), under the dev/host-test guard (menu.h included there); menu_open() calls it too as the opening backstop; menu_return_from_diag() and menu_ops.c's per-pass check stay. The host test closes the session with the page open and checks the release at the op27 call itself (no fw_pass), reopens at once and checks nothing of the page's stands and no further release follows.
+- P2 (pr_live as history, not ownership): rowisr_diag_pattern() takes an owner (ROWISR_PAT_HOST from sub 3, ROWISR_PAT_MENU from the menu's env_probe()), the standing pattern's owner recorded (0 when off); rowisr_diag_pattern_release(owner) releases only that owner's; env_probe_off() calls it with ROWISR_PAT_MENU; the host's sub 3 with index 255 stays unconditional (the host's off releases anyone's). The menu's pr_live is unchanged (the page's own flag).
+- P3: rowisr_baseline.py's --cleanup manual prompt no longer points at the Write test page.
+
+Check: that do_close() is every session close's path (PO_EV_CLOSE from Exit, Back at the top, the 60 s idle, op 27 sub 11 and sub 6's disarm, a profile key, a host restore), that cancel_pending needs nothing (a PENDING session never had the page open), that panel_owner.c's include of menu.h under MENU_HOST_TEST and on the board is sound (menu.h pulls menu_input.h only), that the owner tag's semantics are right at every sequence you can construct (page sets, host sets, page leaves: the host's stands; host sets, page enters and sets, page leaves: released; page sets, host's off: released, pat_owner 0, the page's later release a no-op; the dev build without RGB_MATRIX_ENABLE's stubs), and whether anything else in the earlier review remains. Report P1/P2/P3 with file:line, then READY or NOT READY for a flash of the dev and devprobe flavours in one line.

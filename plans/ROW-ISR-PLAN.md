@@ -1364,6 +1364,32 @@ the curve's exponent by eye, L* the start. Both calibrations are hands-on
 at the board, so each is one evening with the camera running as the
 record.
 
+**Measured 11-04 (12:05-15:10, the office dark, JD at the board; the
+README's "Stage 6's floor by eye"):** every colour lights at **one tick**
+(21 ns a field), clearly, so the floor is under the probe's reach and
+the dimmest levels are made by skipping fields, not by shorter pulses.
+The eye's step limit: a one-tick step stops showing at 6-7 ticks for red
+(about 15%) and at 11-12 for green and blue (about 9%), so the table's
+bottom grows by ratios of that size. At equal ticks green is the
+brightest, red just under, blue well under; the split match (the Floor
+probe page's halves) put green at 9-10 and blue at 23 against red at 12:
+**red 1.26 and blue 2.4 times green's ticks** for the same brightness.
+Those are the white's composition, not a correction for the table: full
+white is equal ticks too, so equal ticks keep the hue at every level as
+long as the light stays proportional to the width. What the eye cannot
+settle is that proportionality in the first few ticks (the LED still
+turning on), per colour: **the camera's pass is owed** (the exposure
+locked, pixel sums at 1, 2, 3, 4, 6, 8 ticks per colour, hands-free).
+Found on the way, a stage 6 fix: **a held key brightens the LEDs above
+and below it in its column** at the dim end (the scan pulls the key's
+column low through its diode a microsecond after the previous mux row's
+deselect, and that rail's stored charge lights the column's neighbour
+for the scan's microsecond: ~48 ticks' worth once a field, invisible at
+JD's Purple/Blue, 4-48x at 1-12 ticks). The instrument: the dev
+Diagnostics page Floor probe (Color, Ticks, Color R, Ticks R, Split; the
+knob captured by a click so a comparison needs no key press), in the
+Write test's place, and the host's `probe` and `led all|split`.
+
 ### Stage 7: the release check
 
 A combined soak with the power-model refit: a night each on black and
@@ -2362,6 +2388,30 @@ one loss where the per-slot judgment counted two.
   spurious, 14.8 M frame intervals judged and 0 rejected, the writer 49
   runs and 0 restarts, 18,700 blits and no fault); white asleep in the
   standing state to Hutch for Warren's M2/M3.
+- 11-04 12:05-15:10: **stage 6's floor evening on white** (the README's
+  "Stage 6's floor by eye"). JD's go at 12:05 with the office dark; he
+  entered the bootloader by hand and `devprobe` `bbf5d6069e` (sub 3's
+  every-LED pattern, token `0x9413cb17`) went on at 12:07 from this
+  morning's backups. His first readings by a timed staircase and the
+  `probe` command (`floor_set.py`, `! probe red 3` from the prompt):
+  red visible at 1 tick, each step to 6, 7 like 6. He asked for a knob
+  page: a fork of this session built **Diagnostics > Floor probe** in
+  the dev Write test's place (the node table full at 64; codex found a
+  stranded-pattern P1 in the first build, fixed in `b9f892460d`, token
+  `0x74ec7b22`, on at 12:49); green and blue visible at 1, the unit step
+  lost at 11-12; green brightest. The knob's click brightened the LEDs
+  above and below the pressed key (any key; the shared columns: the
+  scan's microsecond on the just-deselected rail), so Color's click took
+  the knob like Ticks' (`116c06c7f9`, `0x0d49c431`, 13:40; codex READY)
+  and then the split, the two halves at their own colours and ticks
+  (`d39525bee3`, 14:07; codex's P2 on the row signatures fixed in
+  `bfff926086`, `0x3b47b8a1`, 14:13, verify READY). The match: red 12 =
+  green 9-10 = blue 23. The logger pass after (every LED at 10-50 ticks
+  per colour on battery, the stage forced ACTIVE: the README). The mode
+  was set to Always on for the session and persisted by a restore; put
+  back to Power saver with the standing state. The daily soak is still
+  owed (JD's `Fn`+`Esc`), and now the camera's linearity pass and the
+  held-key fix.
 - 11-04 08:30-10:01: **stage 5h flashed on white and gated** (the
   README's "Stage 5h on white"). JD's go at 08:30; white from Hutch at
   08:31:38, its M4 with-run stopped before the press. The flash at

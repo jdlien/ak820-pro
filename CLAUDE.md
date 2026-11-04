@@ -135,7 +135,25 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 08:33 11-04: stage 5h of the row ISR rewrite,
+**On white since 14:13 11-04: the `devprobe` flavour of `row-isr`
+`bfff926086`** (token `0x3b47b8a1`; the dev build `0x11e5314a`, the daily
+`0xf6243273`): stage 5h plus the dev Diagnostics page **Floor probe**
+(Color, Ticks, Color R, Ticks R, Split; a click captures the knob; in
+the Write test's place, that page retired) and sub 3's every-LED (254)
+and split (253) patterns. On devprobe a byte is its pulse width in
+ticks, so JD's lighting runs at a fifth of its light until the dev build
+goes back (hands-free). **Stage 6's floor evening is done** (11-04
+12:05-15:10, `history/rowisr-stage1-20261101/README.md`, "Stage 6's
+floor by eye"): every colour visible at one tick; the eye's unit step
+lost at 6-7 ticks red, 11-12 green and blue; the split match red 12 =
+green 9-10 = blue 23 (the white's composition; equal ticks keep the
+hue); **a held key brightens its column neighbours at the dim end** (the
+scan's microsecond on the just-deselected rail: a stage 6 fix). Owed:
+the dev build back (or the daily soak first, JD's `Fn`+`Esc` for the
+return), the camera's linearity pass at 1-8 ticks, the held-key fix,
+D9. ⚠️ The power mode was set to Always on for the session and a restore
+persisted it: Power saver goes back with the standing state.
+**Before it, from 08:33 11-04: stage 5h of the row ISR rewrite,
 `row-isr` `bde904e491`** (dev, token `0xfeeeb2db`, heap gap 368 B; the
 daily `0xcaa61e41`, 2656 B; the floor probe `devprobe` `0xefa1c31f`):
 the per-slot judgment back, the detector behind `ROWISR_USB_DETECT`

@@ -1,0 +1,15 @@
+A short review of one small firmware commit for an SN32F299 (Cortex-M0) QMK keyboard, the AK820 Pro. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md. Run no builds. Report P1 (must fix before this build stays on the board), P2 (should fix), P3 (notes), each with file:line and the failing scenario, then a verdict in one line: READY or NOT READY.
+
+The subject: commit d39525bee3 on the branch row-isr in the worktree qmk_firmware-ak820pro-rowisr, over 116c06c7f9 (the Floor probe page and its Color capture, which you reviewed READY on 11-04: plans/review-codex-row-isr-stage6-probe-page-raw.md, -verify-raw.md, -color-raw.md). Read it as
+
+  git -C qmk_firmware-ak820pro-rowisr diff 116c06c7f9..d39525bee3 -- keyboards/a_jazz/ak820pro
+
+and the host side, uncommitted in the main tree (the host test's suite passes in both builds, S0 and -DMENU_ENABLE):
+
+  git diff -- scripts/menu_s0_test.c scripts/rowisr_diag.py plans/MENU-TEXT.md
+
+What it does: the dev-only diagnostic pattern (rgb/rowisr_diag.c, sub 3) gains a split, index 253: the LEDs in matrix columns 0-7 at r, g, b and those in columns 8-14 at r2, g2, b2, applied per LED through g_led_config.matrix_co in rgb_matrix_indicators_kb; rowisr_diag_pattern_split() sets it (the owner tag as before), the host's `led split R G B R2 G2 B2` sends it with the second colour at [9..11] and reads it back at [8..10]. The menu's Floor probe page (menu/menu.c, MENU_PROBE) gains three rows: Color R and Ticks R (the right half's, captured by a click as Color and Ticks are, turns round the colour or clamp the ticks) and Split (a click toggles it and applies; On: the halves, Off: every LED at Color and Ticks). pg.pr grows to six bytes inside the pg union (its size is asserted against env_about_t). The purpose: JD matches the two halves by eye for the per-colour gain at the dim end (his reading at one tick on every LED: green brightest, red just under, blue well under).
+
+Questions: (1) pr_turn's pointer selection and the NULL case (a turn with Split captured cannot happen, since Split's click does not capture; is that so on every path, including a turn delivered in the same pass as the click?); (2) the row count 6 on both faces (Large's 7 rows a page, Small's 8), the cursor's range, row_node/row_count, the signatures distinct for five rows (row_sig's bits for val, line, bullet); (3) the indicators hook's split loop: 90 matrix positions each render, the hole positions skipped by matrix_co's NO_LED, the cost in thread context; (4) sub 3's reply layout change ([8..10] now the second colour: nothing else read those bytes?) and the host's parse; (5) the release paths unchanged for the split (pr_leave, menu_probe_closed, Fn+D, the session's close); (6) anything else.
+
+Format: a table per priority (P1, P2, P3) with file:line, the finding and the scenario, then the verdict in one line.
