@@ -88,6 +88,15 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
+**RESUME HERE (15:25 11-03): two of JD's calls open: (1) the every-eighth
+silence judgment (~8 us of the 50 us handler, 40% to ~33%; two
+aliasing silences inside 1 ms would count as one: a diagnostic
+concession, the arm deadline and the dark-by-hardware untouched); (2)
+the release pace: JD may skip the full night. The remaining evidence
+the plan wants is an awake soak on 5e (4b's was 4 h clean), black's run
+(Warren), then the merge onto `ak820pro-jdlien`, `deps.lock`, the daily
+build and a tag.** White is Hutch's since 15:15 for the asleep night
+(Warren's M2/M3); the awake soak conflicts with it, so the order is JD's.
 **15:15: white handed to Hutch for the night on stage 5e
 (`739fe1b635`, token `0xf222e31c`), asleep in the standing state, the
 pack at 31% after a 40 min charge (relay 2 off).** The SRAM trial (5f,
