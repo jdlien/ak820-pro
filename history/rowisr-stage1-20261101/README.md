@@ -1628,6 +1628,100 @@ skipped tonight on JD's instruction (they run on tomorrow's build, which
 needs them anyway). White goes to Hutch asleep at about 00:35 for
 Warren's M2/M3.
 
+### Stage 5h built overnight (11-03, 22:23-23:45, `a1a0c783d5` to `bde904e491`): the per-slot judgment back, the detector a dev-only flag, the floor probe's flavour; codex READY; waiting for the go
+
+JD's bedtime question (22:23): on white the lights dimmed by the value
+keys hold from 1% to about 3%, step, hold to 5-6%, step. The cause is
+QMK's CIE 1931 table (`quantum/led_tables.c`, really CIELAB's 1976 L*)
+applied to the value before the 8-bit byte the driver sees: values 1-9
+all leave it as byte 1, 10-18 as byte 2, 19-26 as 3, 27-33 as 4; of 256
+values 175 distinct bytes, of the 128 below half brightness 48. Not the
+rewrite's doing (the stock driver had exactly 255 widths, the byte its
+limit); the rewrite's timers have 1,195 widths at full scale, 4.7 a
+byte, reachable only from a wider conversion (the plan's D9, stage 6).
+The 444 Hz field halved the widths (2,550 at 267 us) and raises the
+dimmest steady level (the shortest pulse that lights fires 444 times a
+second), and makes two- and four-field dithering usable (222 and 111 Hz
+patterns; the eye's fusion rate falls with the light). Recorded in the
+plan's stage 6 with the per-colour floor calibration JD will do by eye
+(red's forward voltage a volt below green's and blue's), the camera at
+the two capless keys as the check: "The floor is measured first, per
+colour", and Q2.
+
+**Stage 5h (`a1a0c783d5`, 23:25), tomorrow's agreed first commit, done
+tonight on JD's "what can you work through overnight":** the frame
+counter's judgment at every service again (5e's form on 5g's pure
+`usb_judge`, `last_snap` to `s1`); the whole detector behind
+`ROWISR_USB_DETECT` (`config.h`: 1 under `AK820_DEV_HOOKS`, 0 otherwise:
+the constants, `frmno_read`, the freshness state with `frm_staleI` and
+`frm_trackI` as stubs, the bus-event generation and `usb_event_kb`, the
+snapshot's frame fields and `take_snapI`'s six register reads, the
+judgment, the adoption, the sub 6 record's frame bytes), which
+`build.sh` checks by `usb_event_kb`'s symbol type (ours in a dev build,
+the USB handler's weak default in daily and fpb); the silence report's
+two fixes kept, its sequence now the services entered past the spurious
+check in every build; `ROWISR_K_Q6` overridable and the flavour
+`devprobe` (64: a byte its width in ticks, the board at 21% of its
+light), stage 6's floor probe; `scan_key_row` under
+`SN32F2XX_SLEEP_HOOKS` (a daily build of the branch had not been made
+since scan-only took the only call, and failed on the unused function).
+The builds (`build-stage5h.sh`, `build-stage5h-*.log`):
+
+| flavour | artifact (of `bde904e491`, the final) | token | heap gap |
+|---|---|---|---|
+| dev (the candidate for white) | `via-dev-bde904e491-20261103-234013.bin` | `0xfeeeb2db` | 368 B (5g 336) |
+| daily (the detector out) | `via-daily-bde904e491-20261103-234032.bin` | `0xcaa61e41` | 2656 B; `usb_event_kb` weak |
+| devprobe (the floor probe) | `via-devprobe-bde904e491-20261103-234052.bin` | `0xefa1c31f` | 368 B |
+
+(The superseded builds: `a1a0c783d5` at 23:28, dev `0xd67c292a`, daily
+`0x304b98d4`, devprobe `0x9c7f221c`; `703df88a9d` at 23:37, dev
+`0x24f30c92`, daily `0x74cd2124`, devprobe `0x8ae8a53b`.) **Codex on `a1a0c783d5` (23:28-23:35,
+`plans/review-prompt-row-isr-stage5h.txt`, the raw output beside it):
+READY, no P1.** Its P2: the probe build's drive accounting reported the
+byte as the value (4.7x the light), which on battery would run the
+gauge down and could pull Saver's cap in early; fixed in `703df88a9d`
+by `ROWISR_K_REF_Q6`, the cadence's calibrated scale, as the D8 unit
+whatever scale is in force. Its notes, all taken: the judgment
+equivalent to 5e's (Q1), the detector-off isolation checked against the
+daily ELF's disassembly (Q2: no USB register or `USBD1.state` read in
+the handler or the observer), the two-service wait sufficient and
+conservative (Q3), the symbol check and the flag transport (Q4), the
+probe arithmetic sound (Q5), and the comment rot: the rejection comment
+no longer claims step 6 checks the generation (it reads the hardware's
+flag and counter since 5a), sub 8's "2 ms after" is the bounded wait,
+sub 9's [16] is a saturating lower bound of the services entered (an
+entry counts whether it judged or not) with PENDING the conservative
+reading, the host's strings follow. **The verify round on `703df88a9d`
+(23:37-23:39, `-verify`): READY, no P1 or P2, the P2 resolved**, five
+more comment spots (the "2 ms after" in the diag's header and the host's
+docstring, "each judges" where an invalidated entry counts too, "not
+yet in" where the verdict may be in, the drive comment's unit under a
+probe): `bde904e491`, comment-only, the final build above. Owed on the
+flash, on JD's go: the full-white window (the dev
+build's cost should read 5e's ~52 us, the detector in; the daily build's
+is the release's figure, expected ~45), the silence set
+(`stage5_gates.sh TOKEN stage5h 3`), the five wakes (`2`), then a daily
+build's short soak.
+
+**JD's clock-sync question (20:31: does the faster main loop tighten
+the daemon's syncs?), from the daemon's log (`clocksync_compare.py` in
+the scratchpad; periodic syncs only, an enumerated one follows a
+reconnect):**
+
+| period | periodic syncs | before, mean / median / p95 / max (ms, absolute) | rtt mean / p95 (ms) | U mean (ms) |
+|---|---|---|---|---|
+| stage 4b's night, 05:08-09:35 | 39 | 6.4 / 5.2 / 16.0 / 20.0 | 2.06 / 2.60 | 1.17 |
+| stage 5g, 20:19-23:30 | 27 | 6.8 / 5.5 / 15.8 / 16.8 | 2.33 / 3.00 | 1.45 |
+
+The same within noise: the residual between syncs is the RTC's drift
+over the 300 s (5-6 ms, 17-20 ppm), which the handler does not touch,
+and the transaction's rtt is 2 ms either way. The old ISR has no
+periodic sample on the Mac (the 10-19 soak's syncs were all post-wake
+enumerated ones; the 10-31 to 11-02 log has none, the data line off in
+the standing state), so against it the only figure is gremlin's Windows
+daemon of 09-06 (p95 21.0 ms), a different host. The answer: no
+measurable change.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

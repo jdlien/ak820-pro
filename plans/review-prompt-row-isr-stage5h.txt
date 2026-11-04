@@ -1,0 +1,43 @@
+You are reviewing one firmware commit for an SN32F299 (Cortex-M0, 48 MHz) QMK keyboard, the AK820 Pro. Stay inside /Users/jdlien/code/ak820-pro; read only; run no builds. Report P1 (must fix before this build goes on the board), P2 (should fix), P3 (notes), each with file:line and the failing scenario, then a verdict: READY or NOT READY for the flash.
+
+The subject: the row ISR rewrite's stage 5h, commit a1a0c783d5 on the branch row-isr in the worktree qmk_firmware-ak820pro-rowisr, over stage 5g (c4d0527e59). Read it as
+
+  git -C qmk_firmware-ak820pro-rowisr diff c4d0527e59..a1a0c783d5 -- keyboards/a_jazz/ak820pro
+
+and the two host-side changes, uncommitted in the main tree:
+
+  git diff -- build.sh scripts/rowisr_diag.py
+
+The files: keyboards/a_jazz/ak820pro/rgb/rowisr.c (the handler), rowisr.h, rowisr_diag.c and rowisr_diag.h (the dev-only diagnostics, op 28), config.h. Stage 5e's per-slot form, which 5h restores, is
+
+  git -C qmk_firmware-ak820pro-rowisr show 739fe1b635:keyboards/a_jazz/ak820pro/rgb/rowisr.c
+
+and the design is plans/ROW-ISR-PLAN.md (D3 case 5, "Stage 5g's reviews", the process log). You reviewed 5g three times (plans/review-codex-row-isr-stage5g*.txt and the raw outputs beside them); 5g's cadence is now retired because it measured 0.2 us of the detector's ~7 us (the cost is the entry snapshot's six USB register reads, not the judgment).
+
+What 5h does:
+
+1. The USB frame counter's judgment runs at every service again (5e's form), written on 5g's pure verdict function usb_judge(&last_snap, &s1): UNTRUSTED when the interval began with the bus down or the frames known stopped, KEPT, REJECT (the live rejection path: the extension invalidated if no other observer has since the snapshot, the generation adopted by the committed baseline, one loss) or UNJUDGED (both ends inside a stale's recovery: excluded, no loss). 5g's baseline, pending sums, phase, discontinuity judgment and trust-return retake are gone.
+
+2. The whole detector sits behind ROWISR_USB_DETECT (config.h: 1 under AK820_DEV_HOOKS, the dev build, else 0): the frame counter's constants, usb_distance_ticks, frmno_read, the freshness state and frm_staleI/frm_trackI (stubs without it), the bus-event generation and usb_event_kb (the USB handler's weak default in tmk_core/protocol/chibios/usb_main.c stands without it), the snapshot's frm/ugen/bus/fresh/pending fields and take_snapI's reads, the judgment, adopt_pending/adopt_gen, and the frame bytes of the sub 6 record (zero without it). build.sh checks the flavours by the symbol type of usb_event_kb ('T' ours in dev, not 'T' in daily/fpb).
+
+3. The silence report's two fixes from 5g stay (the pages paired by the run count, the PENDING verdict), with the sequence it waits on, usb_judge_seq, now incremented once per service past the spurious check in every build: with the detector each such service judges the interval just ended, so two services since before the silence put one after it; without the detector the wait still terminates.
+
+4. ROWISR_K_Q6 (the byte-to-ticks scale, 300/64 = 4.6875 ticks a unit at the 125 us cadence) may now be given on the command line; build.sh's new flavour devprobe gives 64u, so a byte is its pulse width in ticks (full scale 255 ticks, the board at 21% of its light), the instrument for stage 6's floor measurement (the plan, "The floor is measured first, per colour"). The D8 drive accounting divides the emitted ticks by ROWISR_K_Q6 (rowisr.c, the drive read), so on that build it reports the byte as the value.
+
+5. scan_key_row is under SN32F2XX_SLEEP_HOOKS (dev builds), since only scan-only's slots call it and a daily build of this branch failed on -Werror=unused-function.
+
+Questions, in order of weight:
+
+Q1. Is the per-slot judgment in 5h behaviourally identical to 5e's? Compare the verdict, the rejection path, the loss accounting (at most one loss per entry), the adoption through service_commit, the unjudged exclusion, and the ordering against the spurious check and the generation check. usb_judge's early UNTRUSTED return replaces 5e's condition last_snap.bus && (last_snap.fresh || last_snap.pending); usb_judge also increments rec.usb_unjudged and sets rec.usb_last_dt/df itself where 5e did so at the call site. Any difference in what the record counts or when the extension is invalidated?
+
+Q2. With ROWISR_USB_DETECT 0: is every read of SN32_USB (FRMNO, CFG, INSTS) and of USBD1.state gone from the handler's hot path and the 20 kHz tick's observer (rowisr_time_observe)? Does the extension's own logic (time_observeI, the 8 ms guard, the exclusions, the re-prime, the generation, rowisr_time_exclude, the sleep hooks) behave exactly as before with frm_staleI and frm_trackI as empty stubs; did anything outside the detector depend on frm_pending or frm_seen? Does rowisr_diag.c still compile and behave sanely if a dev build sets ROWISR_USB_DETECT 0 by hand (sub 6's zeros; the silence report's wait on the services count)? Is rowisr_record_usb's use of USBD1.state outside the flag fine?
+
+Q3. The silence report's wait: with per-slot judgment, is "two services since the sequence read under the mask" the right bound for the verdict being in at the second copy? Consider the first service after the unmask being spurious (it returns before the increment), being the one that sees the guard's generation move (no frame-counter judgment then: the guard's verdict is the loss), scan-only's 625 us slots, a row-only hold outlasting the 20 ms (PENDING, which the host reports). Any case where the copy at sequence +2 precedes the frame counter's verdict on the silence?
+
+Q4. build.sh's check: nm's type letter for usb_event_kb. Could --gc-sections drop the weak default from a daily build so the symbol is absent (the check reads != "T", which an absent symbol passes: acceptable?), or could a dev build's definition be something other than 'T'? Is the devprobe flavour's -DROWISR_K_Q6=64u reaching the compile the same way the other EXTRA defines do (look at how EXTRA_CC is used)?
+
+Q5. The probe override: with ROWISR_K_Q6 64, check ROWISR_WIDTH's rounding ((b * 64 + 32) >> 6 == b), the #if assertion against the terminal, the width_lut's values, the arm deadline and the "every width strictly below the terminal" rule, the D8 accounting's divide (num / (1000 * ROWISR_K_Q6)) and its remainder, and anything that assumes a minimum width or a scale near 300. Anything in battery.c or power.c that would misbehave at a quarter of the usual tick count beyond reporting a wrong LED draw (acknowledged)?
+
+Q6. The scan_key_row guard and anything else you see: unused statics or warnings under either value of the flag (the tree builds clean as dev and daily with -Werror; a dev build with the flag forced to 0 has not been built), comment rot (a comment that still describes 5g's cadence), and the header's descriptions (rowisr_diag.h subs 6 and 9) against what the code now puts on the wire.
+
+Format: a table per priority (P1, P2, P3) with file:line, the finding and the scenario, then the verdict in one line.

@@ -1,0 +1,263 @@
+check_via_sync: OK (25 custom keycodes)
+check_effect_ids: OK (12 effects)
+Ψ Compiling keymap with make -r -R -f builddefs/build_keyboard.mk -s KEYBOARD=a_jazz/ak820pro KEYMAP=via KEYBOARD_FILESAFE=a_jazz_ak820pro TARGET=a_jazz_ak820pro_via VERBOSE=false COLOR=true SILENT=false QMK_BIN="qmk" EXTRAFLAGS=-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS -g -DAK820_BUILD_TOKEN=0xfeeeb2dbu -DAK820_BUILD_HASH=0xbde904e4u -DAK820_BUILD_DIRTY=0
+
+
+arm-none-eabi-gcc (xPack GNU Arm Embedded GCC arm64) 13.3.1 20240614
+Copyright (C) 2023 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Size before:
+   text	   data	    bss	    dec	    hex	filename
+      0	 250886	      0	 250886	  3d406	a_jazz_ak820pro_via.bin
+
+Compiling: keyboards/a_jazz/ak820pro/graphics/lcd_bus.c                                             [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.c                                       [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/bluetooth/raw81.c                                              [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/lockchan.c                                                     [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/lockchan_media.c                                               [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/graphics/display.c                                             [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/graphics/playback.c                                            [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/graphics/batt_text.c                                           [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/graphics/text_fit.c                                            [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/graphics/power_bulb.c                                          [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/rtc/rtc.c                                                      [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/watchdog.c                                                     [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/watchdog_record.c                                              [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/fault.c                                                        [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/health.c                                                       [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/kb_eeconfig.c                                                  [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/bt_ui.c                                                        [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/consumer_mod.c                                                 [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/param_overlay.c                                                [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/rgb_effects.c                                                  [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/rgb_speed.c                                                    [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/indicators.c                                                   [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/battery.c                                                      [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/power.c                                                        [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/overrun_diag.c                                                 [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/hid_protocol.c                                                 [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/flash_stats.c                                                  [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/flash_tidy.c                                                   [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/loop_acct.c                                                    [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/sleep.c                                                        [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/rtc/rtc_persist.c                                              [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/panel_owner.c                                             [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu_input.c                                              [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu_slots.c                                              [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu_fixture.c                                            [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu_text.c                                               [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu.c                                                    [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu_edit.c                                               [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu_ops.c                                                [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu_glue.c                                               [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/profiles.c                                                [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/menu/menu_meas.c                                               [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/rgb/rowisr.c                                                   [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/rgb/rowisr_diag.c                                              [32;01m[OK][0m
+Compiling: keyboards/a_jazz/ak820pro/ak820pro.c                                                     [32;01m[OK][0m
+Compiling: .build/obj_a_jazz_ak820pro_via/src/default_keyboard.c                                    [32;01m[OK][0m
+Compiling: quantum/keymap_introspection.c                                                           [32;01m[OK][0m
+Compiling: quantum/quantum.c                                                                        [32;01m[OK][0m
+Compiling: quantum/bitwise.c                                                                        [32;01m[OK][0m
+Compiling: quantum/led.c                                                                            [32;01m[OK][0m
+Compiling: quantum/action.c                                                                         [32;01m[OK][0m
+Compiling: quantum/action_layer.c                                                                   [32;01m[OK][0m
+Compiling: quantum/action_tapping.c                                                                 [32;01m[OK][0m
+Compiling: quantum/action_util.c                                                                    [32;01m[OK][0m
+Compiling: quantum/eeconfig.c                                                                       [32;01m[OK][0m
+Compiling: quantum/keyboard.c                                                                       [32;01m[OK][0m
+Compiling: quantum/keymap_common.c                                                                  [32;01m[OK][0m
+Compiling: quantum/keycode_config.c                                                                 [32;01m[OK][0m
+Compiling: quantum/sync_timer.c                                                                     [32;01m[OK][0m
+Compiling: quantum/logging/debug.c                                                                  [32;01m[OK][0m
+Compiling: quantum/logging/sendchar.c                                                               [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_default_layer.c                                          [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_oneshot.c                                                [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_quantum.c                                                [32;01m[OK][0m
+Compiling: quantum/nvm/eeprom/nvm_eeconfig.c                                                        [32;01m[OK][0m
+Compiling: quantum/logging/print.c                                                                  [32;01m[OK][0m
+Compiling: quantum/matrix_common.c                                                                  [32;01m[OK][0m
+Compiling: quantum/debounce/sym_defer_pk.c                                                          [32;01m[OK][0m
+Compiling: quantum/main.c                                                                           [32;01m[OK][0m
+Compiling: lib/printf/src/printf/printf.c                                                           [32;01m[OK][0m
+Compiling: drivers/eeprom/eeprom_driver.c                                                           [32;01m[OK][0m
+Compiling: drivers/eeprom/eeprom_wear_leveling.c                                                    [32;01m[OK][0m
+Compiling: quantum/wear_leveling/wear_leveling.c                                                    [32;01m[OK][0m
+Compiling: platforms/chibios/drivers/wear_leveling/wear_leveling_efl.c                              [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_underglow.c                                              [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_rgb_matrix.c                                             [32;01m[OK][0m
+Compiling: quantum/color.c                                                                          [32;01m[OK][0m
+Compiling: quantum/rgb_matrix/rgb_matrix.c                                                          [32;01m[OK][0m
+Compiling: quantum/rgb_matrix/rgb_matrix_drivers.c                                                  [32;01m[OK][0m
+Compiling: quantum/led_tables.c                                                                     [32;01m[OK][0m
+Compiling: quantum/raw_hid.c                                                                        [32;01m[OK][0m
+Compiling: lib/fnv/qmk_fnv_type_validation.c                                                        [32;01m[OK][0m
+Compiling: lib/fnv/hash_32a.c                                                                       [32;01m[OK][0m
+Compiling: lib/fnv/hash_64a.c                                                                       [32;01m[OK][0m
+Compiling: lib/lib8tion/lib8tion.c                                                                  [32;01m[OK][0m
+Compiling: drivers/bluetooth/bluetooth.c                                                            [32;01m[OK][0m
+Compiling: quantum/encoder.c                                                                        [32;01m[OK][0m
+Compiling: drivers/encoder/encoder_quadrature.c                                                     [32;01m[OK][0m
+Compiling: quantum/bootmagic/bootmagic.c                                                            [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_connection.c                                             [32;01m[OK][0m
+Compiling: quantum/connection/connection.c                                                          [32;01m[OK][0m
+Compiling: quantum/deferred_exec.c                                                                  [32;01m[OK][0m
+Compiling: quantum/dip_switch.c                                                                     [32;01m[OK][0m
+Compiling: quantum/dynamic_keymap.c                                                                 [32;01m[OK][0m
+Compiling: quantum/nvm/eeprom/nvm_dynamic_keymap.c                                                  [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_grave_esc.c                                              [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_magic.c                                                  [32;01m[OK][0m
+Compiling: quantum/send_string/send_string.c                                                        [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_space_cadet.c                                            [32;01m[OK][0m
+Compiling: quantum/process_keycode/process_tri_layer.c                                              [32;01m[OK][0m
+Compiling: quantum/tri_layer.c                                                                      [32;01m[OK][0m
+Compiling: quantum/via.c                                                                            [32;01m[OK][0m
+Compiling: quantum/nvm/eeprom/nvm_via.c                                                             [32;01m[OK][0m
+Compiling: tmk_core/protocol/host.c                                                                 [32;01m[OK][0m
+Compiling: tmk_core/protocol/report.c                                                               [32;01m[OK][0m
+Compiling: tmk_core/protocol/usb_device_state.c                                                     [32;01m[OK][0m
+Compiling: tmk_core/protocol/usb_util.c                                                             [32;01m[OK][0m
+Compiling: platforms/suspend.c                                                                      [32;01m[OK][0m
+Compiling: platforms/synchronization_util.c                                                         [32;01m[OK][0m
+Compiling: platforms/timer.c                                                                        [32;01m[OK][0m
+Compiling: platforms/chibios/hardware_id.c                                                          [32;01m[OK][0m
+Compiling: platforms/chibios/platform.c                                                             [32;01m[OK][0m
+Compiling: platforms/chibios/suspend.c                                                              [32;01m[OK][0m
+Compiling: platforms/chibios/timer.c                                                                [32;01m[OK][0m
+Compiling: platforms/chibios/bootloaders/sn32_dfu.c                                                 [32;01m[OK][0m
+Assembling: lib/chibios/os/common/startup/ARMCMx/compilers/GCC/crt0_v6m.S                           [32;01m[OK][0m
+Assembling: lib/chibios/os/common/startup/ARMCMx/compilers/GCC/vectors.S                            [32;01m[OK][0m
+Assembling: lib/chibios/os/common/ports/ARMv6-M/compilers/GCC/chcoreasm.S                           [32;01m[OK][0m
+Compiling: tmk_core/protocol/chibios/usb_main.c                                                     [32;01m[OK][0m
+Compiling: tmk_core/protocol/chibios/chibios.c                                                      [32;01m[OK][0m
+Compiling: tmk_core/protocol/usb_descriptor.c                                                       [32;01m[OK][0m
+Compiling: tmk_core/protocol/chibios/usb_driver.c                                                   [32;01m[OK][0m
+Compiling: tmk_core/protocol/chibios/usb_endpoints.c                                                [32;01m[OK][0m
+Compiling: tmk_core/protocol/chibios/usb_report_handling.c                                          [32;01m[OK][0m
+Compiling: tmk_core/protocol/chibios/usb_util.c                                                     [32;01m[OK][0m
+Compiling: lib/chibios/os/common/startup/ARMCMx/compilers/GCC/crt1.c                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/common/ext/SONiX/SN32F2xx/system_SN32F290.c                       [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chsys.c                                                            [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chrfcu.c                                                           [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chdebug.c                                                          [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chtrace.c                                                          [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chvt.c                                                             [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chschd.c                                                           [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chinstances.c                                                      [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chthreads.c                                                        [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chtm.c                                                             [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chstats.c                                                          [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chregistry.c                                                       [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chsem.c                                                            [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chmtx.c                                                            [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chcond.c                                                           [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chevents.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chmsg.c                                                            [32;01m[OK][0m
+Compiling: lib/chibios/os/rt/src/chdynamic.c                                                        [32;01m[OK][0m
+Compiling: lib/chibios/os/common/ports/ARMv6-M/chcore.c                                             [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/osal/rt-nil/osal.c                                                    [32;01m[OK][0m
+Compiling: lib/chibios/os/oslib/src/chmboxes.c                                                      [32;01m[OK][0m
+Compiling: lib/chibios/os/oslib/src/chmemcore.c                                                     [32;01m[OK][0m
+Compiling: lib/chibios/os/oslib/src/chmemheaps.c                                                    [32;01m[OK][0m
+Compiling: lib/chibios/os/oslib/src/chmempools.c                                                    [32;01m[OK][0m
+Compiling: lib/chibios/os/oslib/src/chpipes.c                                                       [32;01m[OK][0m
+Compiling: lib/chibios/os/oslib/src/chobjcaches.c                                                   [32;01m[OK][0m
+Compiling: lib/chibios/os/oslib/src/chdelegates.c                                                   [32;01m[OK][0m
+Compiling: lib/chibios/os/oslib/src/chfactory.c                                                     [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal.c                                                             [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_st.c                                                          [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_buffers.c                                                     [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_queues.c                                                      [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_flash.c                                                       [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_mmcsd.c                                                       [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_adc.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_can.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_crypto.c                                                      [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_dac.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_efl.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_gpt.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_i2c.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_i2s.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_icu.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_mac.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_mmc_spi.c                                                     [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_pal.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_pwm.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_rtc.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_sdc.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_serial.c                                                      [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_serial_usb.c                                                  [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_sio.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_spi.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_trng.c                                                        [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_uart.c                                                        [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_usb.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_wdg.c                                                         [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/src/hal_wspi.c                                                        [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/GPIO/hal_pal_lld.c                    [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/USB/hal_usb_lld.c                     [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_gpt_lld.c                      [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/CT/hal_pwm_lld.c                      [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/SysTick/hal_st_lld.c                  [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.c                  [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/WDT/hal_wdg_lld.c                     [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/ADC/hal_adc_lld.c                     [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/RTC/hal_rtc_lld.c                     [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/boards/SN_SN32F290/board.c                                    [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/lib/streams/chprintf.c                                                [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/lib/streams/chscanf.c                                                 [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/lib/streams/memstreams.c                                              [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/lib/streams/nullstreams.c                                             [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/lib/streams/bufstreams.c                                              [32;01m[OK][0m
+Compiling: lib/chibios/os/various/syscalls.c                                                        [32;01m[OK][0m
+Compiling: platforms/chibios/syscall-fallbacks.c                                                    [32;01m[OK][0m
+Compiling: platforms/chibios/wait.c                                                                 [32;01m[OK][0m
+Compiling: platforms/chibios/synchronization_util.c                                                 [32;01m[OK][0m
+Compiling: platforms/chibios/interrupt_handlers.c                                                   [32;01m[OK][0m
+Compiling: lib/chibios/os/hal/ports/common/ARMCMx/nvic.c                                            [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/SN32F290/hal_lld.c                                 [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/SN32F290/hal_efl_lld.c                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/lib/fallback/I2C/hal_i2c_lld.c                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/UART/hal_serial_lld.c                 [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/UART/hal_uart_lld.c                   [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_community.c                                           [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_fsmc.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_nand.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_sram.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_sdram.c                                               [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_onewire.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_eicu.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_crc.c                                                 [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_rng.c                                                 [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usbh.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_debug.c                                     [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_desciter.c                                  [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_hub.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_msd.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_ftdi.c                                      [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_aoa.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_hid.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/usbh/hal_usbh_uvc.c                                       [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_ee24xx.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_ee25xx.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_eeprom.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_timcap.c                                              [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_qei.c                                                 [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usb_hid.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_usb_msd.c                                             [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_comp.c                                                [32;01m[OK][0m
+Compiling: lib/chibios-contrib/os/hal/src/hal_opamp.c                                               [32;01m[OK][0m
+Linking: .build/a_jazz_ak820pro_via.elf                                                             [32;01m[OK][0m
+Creating binary load file for flashing: .build/a_jazz_ak820pro_via.bin                              [32;01m[OK][0m
+Creating load file for flashing: .build/a_jazz_ak820pro_via.hex                                     [32;01m[OK][0m
+
+Size after:
+   text	   data	    bss	    dec	    hex	filename
+      0	 250886	      0	 250886	  3d406	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 368 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-bde904e491-20261103-234013.bin  (token 0xfeeeb2db)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-bde904e491-20261103-234013.bin"   # dumps+restores the VIA keymap around the flash

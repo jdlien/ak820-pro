@@ -1,5 +1,5 @@
 #!/bin/zsh
-# build.sh [daily|dev|devfault|instrumented|fpb] — build the AK820 Pro VIA firmware with provenance.
+# build.sh [daily|dev|devfault|devprobe|instrumented|fpb] — build the AK820 Pro VIA firmware with provenance.
 #
 # daily        (default): console off, probes compiled out — what releases ship.
 # dev:          daily plus the raw-HID bootloader jump (HC_BOOTLOADER), so
@@ -12,6 +12,12 @@
 #               completion: the configuration menu's S0 proves its loss
 #               recovery with it (plans/CONFIG-MENU-BUILD-PLAN.md). Gremlin's
 #               board only; checked as a dev build.
+# devprobe:     dev with the row ISR's scale at one tick a unit
+#               (ROWISR_K_Q6 64: a byte is its pulse width in ticks, the
+#               board at 21% of its light), the floor probe for stage 6's
+#               first measurement (plans/ROW-ISR-PLAN.md, "The floor is
+#               measured first, per colour"). An evening's build, never
+#               released; checked as a dev build.
 # instrumented: console on + LOOPGAP_INSTRUMENT — for soak runs and debugging.
 # fpb:          daily, but for the OTHER LCD panel revision — the one that comes
 #               up upside down and colour-inverted on the default build. Shipped
@@ -22,19 +28,20 @@
 # that path is shared and whoever compiles last owns it (see CLAUDE.md).
 set -euo pipefail
 
-if (( $# > 1 )); then echo "usage: build.sh [daily|dev|devfault|instrumented|fpb]" >&2; exit 2; fi
+if (( $# > 1 )); then echo "usage: build.sh [daily|dev|devfault|devprobe|instrumented|fpb]" >&2; exit 2; fi
 FLAVOR="${1:-daily}"
 case "$FLAVOR" in
   daily)        FLAGS=();                        EXTRA="" ;;
   dev)          FLAGS=();                        EXTRA="-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS" ;;
   devfault)     FLAGS=();                        EXTRA="-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS -DWDT_TEST_HOOKS -DAK820_DEVFAULT" ;;
+  devprobe)     FLAGS=();                        EXTRA="-DAK820_RAW_BOOTLOADER -DAK820_DEV_HOOKS -DROWISR_K_Q6=64u" ;;
   instrumented) FLAGS=(-e CONSOLE_ENABLE=yes);   EXTRA="-DLOOPGAP_INSTRUMENT -DWDT_TEST_HOOKS" ;;
   fpb)          FLAGS=();                        EXTRA="-DAK820PRO_LCD_VARIANT_FPB" ;;
-  *) echo "usage: build.sh [daily|dev|devfault|instrumented|fpb]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [daily|dev|devfault|devprobe|instrumented|fpb]" >&2; exit 2 ;;
 esac
-# The structural checks below treat devfault as the dev build it extends.
+# The structural checks below treat devfault and devprobe as the dev build they extend.
 CHECK_AS="$FLAVOR"
-[[ "$FLAVOR" == devfault ]] && CHECK_AS=dev
+[[ "$FLAVOR" == (devfault|devprobe) ]] && CHECK_AS=dev
 command -v xxd >/dev/null || { echo "ERROR: xxd not found" >&2; exit 1; }
 
 # The build token (health page 6) names THIS build, so a fault PC the board
@@ -190,6 +197,16 @@ done
 for sym in ak820_i2c_xfer_begin ak820_i2c_xfer_end; do
   [[ -n "$(awk -v s="$sym" '$3 == s' <<<"$nm_out")" ]] || { echo "FAIL: $sym is missing (the unlocked PCF transfer)" >&2; fail=1; }
 done
+# The USB frame counter's silence detector (rgb/rowisr.c, D3 case 5) is a
+# bench instrument: a dev build carries it (its usb_event_kb replaces the
+# USB handler's weak default, 'T'), a released build leaves it out and keeps
+# ~7 us of each slot (the weak default stands, 'W'; config.h,
+# ROWISR_USB_DETECT, stage 5h).
+uek=$(awk '$3 == "usb_event_kb" {print $2}' <<<"$nm_out")
+case "$CHECK_AS" in
+  dev)       [[ "$uek" == "T" ]] || { echo "FAIL: the dev build lacks the frame counter's detector (usb_event_kb: '$uek')" >&2; fail=1; } ;;
+  daily|fpb) [[ "$uek" != "T" ]] || { echo "FAIL: a $FLAVOR build carries the frame counter's detector (usb_event_kb is ours)" >&2; fail=1; } ;;
+esac
 od_syms=(od_mask_begin od_uart_oe od_fill_summary rtc_burst_start sleep_wake_ring_fill od_tick od_set_uart_priority)
 for sym in "${od_syms[@]}"; do
   have=$(awk -v s="$sym" '$3 == s' <<<"$nm_out")

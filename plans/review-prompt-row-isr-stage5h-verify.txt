@@ -1,0 +1,13 @@
+A verify round on your stage 5h review (plans/review-codex-row-isr-stage5h-2026-11-03-raw.md: READY, one P2, notes). Stay inside /Users/jdlien/code/ak820-pro; read only; run no builds. The follow-up commit on the branch row-isr in the worktree qmk_firmware-ak820pro-rowisr is the HEAD over a1a0c783d5:
+
+  git -C qmk_firmware-ak820pro-rowisr diff a1a0c783d5..HEAD -- keyboards/a_jazz/ak820pro
+
+and the host's wording in the main tree: git diff -- scripts/rowisr_diag.py (together with build.sh's earlier change, still uncommitted).
+
+What it does, against your findings:
+
+- P2 (the probe build's power model): ROWISR_K_REF_Q6 is the cadence's calibrated scale (300/64 at 125 us, 640/64 at 267) and the D8 drive accounting's unit; ROWISR_K_Q6, the scale in force, defaults to it and the probe overrides it alone. sn32f2xx_led_drive_take divides by the reference, so with the probe's 64 the accounting reports ticks / 4.6875 as the value: the light emitted, in the unit battery.c's coefficients were fitted to. Check the arithmetic (the remainder's bound, 64-bit), that nothing else still divides or multiplies by ROWISR_K_Q6 expecting the unit, and that the static assertion and the width table still use the scale in force.
+- The rejection path's comment: step 6 reads the hardware's match flag and counter for the crossing (5a), so the comment now says the service commits invalid and the next observation re-primes. Is that what happens (service_commit with valid1 false after the rejection, time_valid 0 until the re-prime)?
+- Sub 8's "[16..19] 2 ms after" and sub 9's [16..17] reworded as you asked: a saturating lower bound of the services entered, an entry counted whether it judged or not, PENDING the conservative reading; rowisr_diag.c's comment at the final sequence read and the host's two strings follow.
+
+Report anything wrong or still rotten as P1/P2/P3 with file:line, then READY or NOT READY for the flash in one line.

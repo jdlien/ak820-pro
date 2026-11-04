@@ -1325,6 +1325,45 @@ transitions between byte and wide effects, and sleep; render preparation
 ≤ 0.5 ms a changed frame; the SPI DMA sweep once more; `rgb_fit.py` refit
 if the per-unit drive moves.
 
+Seen by eye on white (11-03, stage 5g), dimming by the value keys: the
+light holds from about 1% to 3-4%, steps, holds again to about 5-7%, steps
+again. That is the CIE table's plateau: values 1-9 all leave the conversion
+as byte 1, 10-18 as byte 2, 19-26 as byte 3, 27-33 as byte 4
+(`quantum/led_tables.c`), so at the step of 2 a press changes the light
+about every fourth press at the bottom. The rewrite's timers have 4.7
+widths a byte to spend on it (1,195 at full scale), which D9's wide
+conversion reaches; the floor is the shortest pulse the LED chain
+reproduces (byte 1 today is 104 ns and lights), Q2.
+
+**The floor is measured first, per colour** (11-03). Red's forward voltage
+is about a volt below green's and blue's (and red draws the most of the
+three), so the three colours will not light at the same tick, and the
+dim end needs a floor and a gain for each. The instrument is a probe
+build with the scale at one tick a unit (`ROWISR_K_Q6` 64: a byte is its
+width in ticks, and the board runs at 21% of its light for the evening),
+and the hold op driving one colour at N ticks on every LED. Three
+readings at each N (1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 30, 50):
+
+- the eye, in the dark room: the first N that shows at all, and the first
+  N from which each step up is a visible step; the target for the
+  dimmest level is barely perceptible in the dark, well under today's
+  byte 1;
+- the camera at the two capless keys, the exposure locked (the AE lesson),
+  the pixel sum against N: where the light becomes linear in the width,
+  per colour; the sanity check on the eye;
+- the logger, from the N where it resolves (about 10 ticks on every LED
+  is ~0.2 mA): the slope of the current, which the drive model's
+  coefficients already assume linear.
+
+What comes out: a floor tick and a linear-from tick for each colour,
+which set the wide table's bottom entries and the per-colour gains, and
+whether a level below the floor needs the field skipped (a two-field
+pattern repeats at 222 Hz, a four-field at 111 Hz; the eye's fusion rate
+falls with the light, so the dimmest levels tolerate the slowest). Then
+the curve's exponent by eye, L* the start. Both calibrations are hands-on
+at the board, so each is one evening with the camera running as the
+record.
+
 ### Stage 7: the release check
 
 A combined soak with the power-model refit: a night each on black and
@@ -1567,7 +1606,7 @@ not substitute for them.
 | | Question | Settled by |
 |---|---|---|
 | Q1 | The column settle after release, select and restore, with pressed keys across rows and the transistors' stored charge. | A dev delay sweep against ISR samples and raw errors with held cross-row chords and each colour active, on both boards; keep margin above the shortest clean setting. Expect single microseconds. |
-| Q2 | How many of the 4,096 codes are optically distinct at the bottom. | A photodiode or scope on isolated low-width pulses if one is borrowed; the camera and the logger reject obvious plateaus and non-monotonic steps only. Values 1-16 by camera is the stage 6 gate. |
+| Q2 | How many of the 4,096 codes are optically distinct at the bottom, per colour. | The probe build (`ROWISR_K_Q6` 64, a byte its width in ticks) with the hold op at N ticks on one colour: the eye in the dark room for the floor and the first distinct step, the camera at the capless keys with the exposure locked for linearity, the logger from ~10 ticks. Red, green and blue each; the stage 6 gate ("The floor is measured first, per colour"). |
 | Q3 | The PCF bracket's and the 5 ms deep-sleep path's tolerance of a 20% longer transaction. | `rtc.c`'s bracket math and `docs/clock.md`'s seed budget; per-kind transaction times, the bracket width and release error, the daemon's residuals, over a night of syncs with the handler preempting; the pre-sleep read and wake recovery under load. |
 | Q4 | What a stall shows today: does the counter free-run (a hot row) or stop (dark)? | Stage 0b's register capture and row-only hold at Solid white, by eye, camera and INA228. Gates the old light-energy figure D4's scale starts from; pulse shape needs a scope. |
 | Q5 | Restarting a stopped counter: `TC` writable while stopped; `CRST` self-clear cycles; the terminal-equality case; selecting the mux before the restart lights nothing. | Stage 0b on all three timers with the widths 0, 1, terminal−1 and an invalid terminal, service delayed; `TC` and `CEN` recorded; gross optical output. (`CEN` cleared by a stop match is documented, `sn32_ct.h:357`.) |
@@ -2286,6 +2325,40 @@ one loss where the per-slot judgment counted two.
 | 2 | The recovery trace passes (one loss, one reject at the first fresh entry; a later fresh-to-stale judgment rejects as an event); the forced judgment runs once when it coincides with the eighth; the discontinuity runs first against `usb_last`; a pending baseline ending stale is UNJUDGED; rejection attribution is aggregated (an alias followed by stopped frames is one event rejection); the pending drop covers the healthy services of a rejected interval too; the report pairing holds under the single-host-process rule. | Confirmed; the attribution and the drop are the cadence's nature, noted in the design comment. |
 
 ## Process log
+
+- 11-03 22:23-23:35: **the dim end explained, stage 6's calibration
+  written, stage 5h built overnight** (the README's "Stage 5h built
+  overnight"). JD's bedtime observation (the value keys' steps invisible
+  from 1% to 3% and to 5-6%) is the CIE table's plateau before the byte
+  (values 1-9 all byte 1; 175 distinct bytes of 256, 48 of the 128 below
+  half): not the rewrite's, and reachable only from D9's wide
+  conversion, since the timers now have 4.7 widths a byte; the 444 Hz
+  field halved those widths and raised the dimmest steady level while
+  making the two- and four-field dithers usable. His call: calibrate the
+  floor by eye, per colour (red's forward voltage), the camera at the
+  capless keys as the check, the dimmest level barely perceptible in the
+  dark; the fringe and flicker keep priority over the dim end. Written
+  into stage 6 ("The floor is measured first, per colour") and Q2. On
+  his "what can you work through overnight": `a1a0c783d5`, the per-slot
+  judgment back on 5g's `usb_judge`, the detector behind
+  `ROWISR_USB_DETECT` (the dev build's default, out of daily and fpb,
+  `build.sh`'s check by `usb_event_kb`'s symbol type), the report's
+  fixes kept, `ROWISR_K_Q6` overridable with the `devprobe` flavour (64,
+  the floor probe), `scan_key_row` guarded (the branch's daily build had
+  failed on it). Built clean three ways (dev `0xd67c292a`, 368 B; daily
+  `0x304b98d4`, 2656 B; devprobe `0x9c7f221c`); codex at 23:35: READY,
+  no P1, one P2 (the probe build's drive accounting reported the byte
+  as the value: on battery the gauge would run down and Saver's cap
+  could come in early), fixed in `703df88a9d` by `ROWISR_K_REF_Q6` as
+  the D8 unit, with its comment notes; rebuilt (dev `0x24f30c92`, daily
+  `0x74cd2124`, devprobe `0x8ae8a53b`); the verify round (23:37-23:39):
+  READY, no P1 or P2, comment rot only, fixed in `bde904e491`, the
+  final (dev `0xfeeeb2db`, daily `0xcaa61e41`, devprobe `0xefa1c31f`),
+  pushed to `jdlien/row-isr`; the flash waits on JD's go.
+  The clock-sync comparison for JD's 20:31 question: 4b's night and 5g's
+  evening the same within noise (|before| mean 6.4 and 6.8 ms, p95 16;
+  rtt 2.1 and 2.3), no old-ISR periodic sample on the Mac. The soak
+  runs on to 00:35.
 
 - 11-03 19:36-20:36: **stage 5g, the every-eighth judgment, built,
   reviewed, flashed and measured** (the README's "Stage 5g on white"):

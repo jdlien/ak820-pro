@@ -146,6 +146,17 @@ stay). The awake soak on it from 20:34 with JD typing, white to Hutch
 asleep at ~00:35. JD's eye at 444 Hz: the fringe all but gone, the
 screen's drawing about twice as fast (`plans/current-status.md`,
 `history/rowisr-stage1-20261101/README.md`, "Stage 5g on white").
+**Stage 5h is built and waits for JD's go (11-03 23:45): `row-isr`
+`bde904e491`** (dev token `0xfeeeb2db`, heap gap 368 B; the daily
+`0xcaa61e41`, 2656 B; the floor probe `devprobe` `0xefa1c31f`): the
+per-slot judgment back, the detector behind `ROWISR_USB_DETECT` (the
+dev build's default, out of daily and fpb, `build.sh`'s check), the
+silence report's fixes kept, `ROWISR_K_Q6` overridable for stage 6's
+floor measurement; codex READY twice, its one P2 fixed. Owed on
+the flash: the window, the silence set, the five wakes, a daily build's
+soak. The dim end's plateaus (JD, 22:23) are QMK's CIE table before the
+byte: stage 6's D9, with the per-colour floor by eye (the README's
+"Stage 5h built overnight").
 **Before it, from 15:06 11-03 (and 13:34-14:31): stage 5e of the row ISR
 rewrite, the 125 us cadence, `739fe1b635`** (dev, token `0xf222e31c`,
 heap gap 376 B, `row-isr`; the keep-alive and the battery icon's colours

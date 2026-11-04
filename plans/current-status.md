@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-03, 13:12. The block below is where things stand, written to
+Updated 2026-11-03, 23:45. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -88,7 +88,33 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**RESUME HERE (20:40 11-03): white runs stage 5g (`row-isr`
+**RESUME HERE (23:45 11-03): stage 5h is built, codex READY twice (no
+P1; its one P2 fixed; comment rot fixed), pushed, and waits for JD's go
+to flash on 11-04: `row-isr` `bde904e491` (dev
+`via-dev-bde904e491-20261103-234013.bin`, token `0xfeeeb2db`, heap gap
+368 B; the daily `0xcaa61e41`, the detector out, 2656 B; the floor
+probe `devprobe` `0xefa1c31f`), the per-slot judgment back, the
+detector behind `ROWISR_USB_DETECT` (the dev build only), the silence
+report's two fixes kept, `ROWISR_K_Q6` overridable for stage 6's floor
+measurement with the drive accounting on the calibrated unit (the
+README's "Stage 5h built overnight"). The flash command, once JD says
+go: `history/rowisr-stage1-20261101/stage5_flash.sh
+ak820pro-builds/out/via-dev-bde904e491-20261103-234013.bin 0xfeeeb2db
+stage5h 300 no` (white claimed from Hutch first), then
+`stage5g_window_fullwhite.sh` if JD's lighting is on it, then
+`stage5_gates.sh 0xfeeeb2db stage5h 3` and `2`. On the flash: the full-white window, the
+silence set (`stage5_gates.sh TOKEN stage5h 3`), the five wakes (`2`),
+then a daily build's short soak. The dim-end question of 22:23 (the
+value keys' plateaus at the bottom) is the CIE table before the byte,
+recorded in the plan's stage 6 with the per-colour floor calibration JD
+will do by eye (`devprobe`, the camera at the capless keys as the
+check): "The floor is measured first, per colour". The clock-sync
+comparison: 4b's night and 5g's evening the same within noise (the
+README's table); no old-ISR sample on the Mac. White runs 5g with the
+awake soak until 00:35 (clean through read 9, 23:14: losses 2 of the
+boot, 0 frame rejects of 10.0 million, the clock 33 runs good), then to
+Hutch asleep for Warren's M2/M3.**
+**Before it (20:40 11-03): white runs stage 5g (`row-isr`
 `4f19e6c31f`, token `0x34d7c5fb`) since 20:19 with the awake soak on it
 from 20:34 (`soak_watch_awake.sh stage5g`, a read every 20 min, JD
 typing); Blackberry stops it at about 00:35 and hands white to Hutch
