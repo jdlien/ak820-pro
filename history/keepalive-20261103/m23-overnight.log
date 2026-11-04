@@ -1,0 +1,13 @@
+[11-03 15:14:43] daemon paused until 11-04 08:00
+[11-03 15:14:43] data off
+[15:14:50] A1 (blue, (0,13) Delete/F19): one press, asked 100 ms, actual 100097 us
+[11-03 15:14:53] start 1793740493: white sleeps on its ladder ~3 min after that press
+[11-03 15:44:54] 11-03 15:14:53 to 11-03 15:44:52 (0.5 h): floor 3.37 mA, mean 7.78 mA; 2 wakes, period 25.95 min, awake 93.5 s, 3942.8 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-03 16:14:55] 11-03 15:14:53 to 11-03 16:14:53 (1.0 h): floor 3.37 mA, mean 5.606 mA; 3 wakes, period 25.46 min, awake 6 s, 98.0 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-03 16:44:57] 11-03 15:14:53 to 11-03 16:44:55 (1.5 h): floor 3.35 mA, mean 4.864 mA; 4 wakes, period 24.98 min, awake 6.0 s, 97.9 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-03 17:15:00] 11-03 15:14:53 to 11-03 17:14:57 (2.0 h): floor 3.345 mA, mean 4.502 mA; 5 wakes, period 24.98 min, awake 6 s, 98.1 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-03 17:45:03] 11-03 15:14:53 to 11-03 17:44:59 (2.5 h): floor 3.35 mA, mean 4.291 mA; 6 wakes, period 24.98 min, awake 5.5 s, 97.9 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-03 18:15:06] 11-03 15:14:53 to 11-03 18:15:02 (3.0 h): floor 3.355 mA, mean 4.158 mA; 8 wakes, period 24.98 min, awake 5.0 s, 98.0 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-03 18:45:10] 11-03 15:14:53 to 11-03 18:45:06 (3.5 h): floor 3.355 mA, mean 4.056 mA; 9 wakes, period 24.98 min, awake 5 s, 98.0 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-03 19:15:15] 11-03 15:14:53 to 11-03 19:15:09 (4.0 h): floor 3.36 mA, mean 3.979 mA; 10 wakes, period 24.98 min, awake 5.0 s, 98.0 mA*s above the floor (medians); white's link: 0 disconnects, 0 events
+[11-03 19:36:48] stopped by Hutch (SIGKILL, no trap) for Blackberry's stage 5g on JD's go; the daemon left booted out for Blackberry's scripts to restore; the evening's read -> m23-evening.json

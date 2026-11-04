@@ -77,6 +77,26 @@ untouched by stage 5. Warren's watch items:
 3. M3 measures stage 5's awake-dark draw; white's 11:31 11-02 stray (28.8 mA
    for 3.1 s, stage 2) is the earlier reference.
 
+### The evening on stage 5e (15:14-19:36 11-03)
+
+`m23_overnight.sh` (the daemon paused, the data off, one presser press, then
+`m23_read.py` every 30 min: the logs only, no board traffic), on 5e
+(`739fe1b635`, token `0xf222e31c`) from 15:14:53 until Blackberry took white
+back for stage 5g at 19:36 (`m23-evening.json`):
+
+- **The link held for 4 h 19 min asleep, 0 disconnects** of white's device.
+  Without the keep-alive the module would have ended it at ~15:47:50, 30 min
+  after the sleep at 15:17:55. **M2: a keep-alive's poll restarts the
+  module's 30 min.**
+- **The calibration works.** The first wake came 25:56 after the sleep on
+  the default rate (1308 counted s); the second came 24:57 after its entry,
+  once the first had measured white's rate (~841 per mille, against 10-19's
+  872); then every 24:58 (median of 11).
+- **M3: each wake is dark, 5 s and ~98 mA·s above the 3.36 mA floor** (the
+  INA228's own charge register; peaks 28.5-29.1 mA), ~0.065 mA over 25 min,
+  against Warren's estimate of 79 mA·s. With M1's held link, the keep-alive
+  costs ~0.2 mA asleep, ~6% of the floor.
+
 The read after: every ring entry reason 7 at ~1308 counted s (fewer once the
 rate is measured); no 719 for white's device. Past the bound, the last
 keep-alive comes at up to 18 h of absence, the sleep after it runs on the
