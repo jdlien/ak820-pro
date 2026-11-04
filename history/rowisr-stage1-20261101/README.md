@@ -1838,6 +1838,152 @@ the read does not separate. White back to Hutch at 10:01 in the
 standing state.
 That closes stage 5h's hands-free gates; what remains on it is the
 daily build's soak, JD at the board.
+### Stage 6's floor by eye (11-04, 12:05-15:10): every colour lights at one tick, the eye's step limit, the white's composition, a held key's column neighbours
+
+JD's go at 12:05 with the office dark. He entered the bootloader by hand,
+so `flash.sh` found no firmware to read and used the morning's 08:32
+backups (the keymap, the lighting, the profiles; the battery log since
+08:32 not dumped); `devprobe` `bbf5d6069e` (token `0x9413cb17`: stage 5h
+plus sub 3's every-LED pattern, index 254, codex READY) was on white at
+12:07, the ladder held at Always on for the session (`flash-stage6-probe.log`).
+On this flavour a byte is its pulse width in ticks (`ROWISR_K_Q6` 64),
+full scale 255 ticks, the board at a fifth of its light.
+
+**The instruments, as they grew through the afternoon** (the commits on
+`row-isr`, every flash hands-free from the dev flavour's bootloader jump,
+`flash-stage6-probe-page.log`; the builds `build-stage6-probe-*.log`):
+
+- `floor_eye.py COLOUR`: the timed staircase, every LED at 1, 2, 3, 4, 5,
+  6, 8, 10, 15, 20, 30, 50 ticks, 4 s each, the level on the LCD's text
+  line ("R N=3"), logged with times (`floor-eye.log`). Red ran once
+  (12:11); JD wanted his own pace.
+- `floor_set.py` as `~/.local/bin/probe`: `! probe red 3` typed at this
+  session's prompt sets every LED, `probe dark`, `probe off`; each call
+  logged. His red readings came this way (12:18-12:20).
+- **Diagnostics > Floor probe**, a dev-only menu page in the Write
+  test's place (that page retired: its question, Scan against Blank at a
+  flash write, was settled by eye on 10-27; the menu's node table is
+  full at 64, so a page reuses nodes). Built by a fork of this session
+  while JD probed: rows Color and Ticks, a click capturing the knob (a
+  turn a tick, 0-255, no wrap; the colour round red, green, blue), the
+  pattern on every LED while the page is open and released on every way
+  out, nothing saved. Codex's first round found a real P1 (two opener
+  reports in one pass could close and reopen the session before the
+  per-pass release and strand the pattern on the keys) and a P2 (the
+  release was by history, not ownership, so leaving the page cancelled
+  a pattern the host set after it): fixed, verify READY, `b9f892460d`
+  (`0x74ec7b22`) on at 12:49 (its first build `53d64bcdb4`, `0x6403558a`,
+  on at 12:35 on JD's "just flash it now"). Then **Color's click took the
+  knob too** (`116c06c7f9`, `0x0d49c431`, 13:40; codex READY), so a colour
+  change needs no key press (below), the label "Color" on the screen. Then
+  **the split** (`d39525bee3`, 14:07): Color R and Ticks R for the right
+  half of the board (columns 8-14) and a Split switch, the two halves
+  abutting for a match; sub 3's index 253 with the second colour at
+  [9..11], the host's `led split R G B R2 G2 B2`. Codex's P2: the row
+  signature kept two index bits, so Ticks R at 0 shared the blank row's
+  signature and Split shared Color's, and a fast page change could leave
+  a row unpainted; each row its own range in `bfff926086` (`0x3b47b8a1`,
+  on at 14:13; verify READY: 2,080 combinations distinct). The host test
+  (`scripts/menu_s0_test.c`) covers the page in both builds.
+- The 5 V relay on from 14:49 for the match (the pack at 14.7%, under
+  the low cap's Saver ladder, which darkens an idle board at 3 min), off
+  again for the logger pass.
+
+**The readings** (`floor-eye.log`; JD's words, the office dark, the bare
+LEDs seen through the capless keys, `led-die-capless-IMG_0812.jpg`: the
+three dies in three quadrants of the package, red top right, green bottom
+left, blue bottom right, each a point):
+
+| | visible at | a one-tick step stops showing at |
+|---|---|---|
+| red | 1 tick, "clearly visible and very dim" | 6 to 7 (~15%) |
+| green | 1 tick, "very visible"; 1 to 2 "very steep" | 11 to 12 (~9%) |
+| blue | 1 tick, "pretty similar" to green | about 11 to 12 |
+
+So **the floor is below the probe's reach**: a one-tick pulse (21 ns a
+field, a duty of one in a hundred thousand) lights every colour clearly in
+the dark, and the dimmest levels will be made by skipping fields (one
+tick every second or fourth field), not by shorter pulses; JD's "barely
+perceptible" sits under a tick. **The eye's ratio limit** is the shape
+the curve's bottom needs: steps of 9-15% or more, growing by ratio, not
+by equal ticks (from 1 to 2 is a doubling, which he called steep). At
+equal ticks **green is the brightest, red just under, blue well under**.
+The split match on USB power, the left half red at 12: **green at 9,
+maybe 10** ("green 12 is just slightly too bright"), **blue at 23** ("pretty
+close"), so red 1.26 and blue 2.4 times green's ticks for the same
+brightness, a tick's uncertainty either way. The match was made at 12
+rather than at 1 or 2 because a tick there is a doubling or a 50% step
+and the nearest setting can be far from equal; at 12 a tick is 8%, the
+eye's own limit.
+
+**What the gains are, and are not.** Mid-afternoon I told JD a dim white
+of equal ticks would look green; that was wrong, and corrected: full
+white on this board is equal ticks on all three, so equal ticks at any
+level has the same mix, as long as each colour's light stays proportional
+to its width. The gains describe the white's composition, a cross-check
+for any later camera numbers, not a correction the table needs. What the
+eye cannot measure is that proportionality in the first few ticks, per
+colour, where the LED is still turning on (a short red tick giving less
+than its share would turn the dimmest white cyan): that is the plan's
+"linear-from tick" and the camera's pass, still owed (the phone at the
+capless keys, the exposure locked, pixel sums at 1, 2, 3, 4, 6, 8 ticks
+per colour, hands-free once the phone is placed). JD's thought of lighting
+all three dies at once and tuning each by eye is a better instrument for
+the same ratio, so it was not built.
+
+**A held key brightens the LEDs above and below it in its column.** The
+knob's click (a key to the firmware) brightened the keys as JD compared
+levels; any key does it, only its column, only while held, invisible at
+his Purple/Blue. The mechanism, from the slot's order (`rowisr.c`, the
+hot section): step 2 deselects every mux row, and within a microsecond
+step 3 scans one key row with the columns released to their pull-ups and
+the key row driven low; a held key pulls its column low through its
+diode, and the LED on that column in the row just deselected still has
+charge on its anode rail (or a transistor still turning off), so it
+lights for the scan's microsecond: about 48 ticks' worth once a field,
+a 17% nudge on one LED at his lighting, four to fifty times a 1-12 tick
+level. A stage 6 fix in the row ISR (the scan after the match-register
+writes, or a deliberate gap after the deselect), gated by JD's eye at 3
+ticks with a key held. Meanwhile the page's captures let every
+comparison be made with nothing pressed.
+
+**The logger pass** (15:04-15:10, `floor-logger.log`; its lines doubled by a `tee` beside the script's own log): every LED at 0, 10, 15,
+20, 30 and 50 ticks per colour, 20 s a level, on battery (the 5 V relay
+off, the INA228 being pack-side) with the stage forced ACTIVE (dev op 14
+sub 2: the pack at 14.7% is under the low cap, whose Saver ladder would
+have darkened the keys at 3 idle minutes; raw HID is not activity).
+`floor_logger_fit.py` pairs the levels with the INA228's rows (the first
+5 s of each dropped) and fits the rise over the run's own dark:
+
+| colour | dark (mA) | +10 ticks | +15 | +20 | +30 | +50 | slope, every LED | intercept |
+|---|---|---|---|---|---|---|---|---|
+| red | 41.19 | +1.55 | +1.81 | +1.82 | +2.07 | +2.43 | 20.7 uA/tick | +1.42 mA |
+| green | 41.30 | +1.42 | +1.51 | +1.66 | +1.76 | +2.05 | 15.5 uA/tick | +1.29 mA |
+| blue | 41.38 | +1.39 | +1.54 | +1.60 | +1.72 | +1.97 | 13.6 uA/tick | +1.30 mA |
+
+Two things in it. **The intercept is the mux's own cost of lighting at
+all, about 1.3-1.4 mA whatever the level:** a row with any width is
+selected every field (its transistor's base current), and a dark row is
+not (`rowisr.c`, step 5; F-033's lesson), so the dimmest possible pattern
+on every key costs 1.4 mA before any light, the same as a bright one's
+mux share. The power model already carries a per-row term; this is its
+measured size at the probe's cadence. **The slope is the LED current:**
+per LED and tick, 0.26 uA red, 0.19 green, 0.17 blue, which at a tick's
+duty (21 ns in a 2.25 ms field) is a pulse current of about 28, 21 and
+18 mA. Scaled to full white (1,195 ticks a colour) the slopes give
+59.5 mA above the mux's 1.4, against the ~50 mA the full-white window
+measured above the dark board (91.6 lit); the rows are 1 Hz with a
+scatter of ~0.1 mA against rises of 1.4-2.4, so the slopes carry about
+20%, and the difference is inside that and the long pulse's droop. The
+light per tick is linear from 10 to 50 within the scatter; below 10 the
+logger cannot see, which is the camera's range.
+
+**White after it:** the standing state (the data line off, the daemon,
+the relay off) with the mode put back to Power saver, which the session's
+hold had set to Always on and the 12:35 restore had persisted; the
+devprobe build stays on (JD's lighting at a fifth of its light) until the
+dev build `0x11e5314a` or the daily `0xf6243273` goes on. White to Hutch.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
