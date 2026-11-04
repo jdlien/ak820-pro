@@ -169,3 +169,4 @@ dips: 58 (+3 in the clip's first 0.5 s, the camera settling, not counted)
 profile (each column the darkest frame in its slice; '#' at the median, '.' a dip):
   ...+......+...........++++++++..+...+++++++++++.+...+++++++++++++++.............+++++++++++++.++++++
 wrote history/rowisr-stage1-20261101/camera-write1-luma.csv
+[14:25:35] relay 2 ON: the charge for the holds (JD 14:05: the ISR before the drain)
