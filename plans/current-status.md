@@ -88,7 +88,30 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**RESUME HERE (15:25 11-03): two of JD's calls open: (1) the every-eighth
+**RESUME HERE (20:40 11-03): white runs stage 5g (`row-isr`
+`4f19e6c31f`, token `0x34d7c5fb`) since 20:19 with the awake soak on it
+from 20:34 (`soak_watch_awake.sh stage5g`, a read every 20 min, JD
+typing); Blackberry stops it at about 00:35 and hands white to Hutch
+asleep for Warren's M2/M3. JD's two calls are made: (1) the every-eighth
+judgment measured 0.2 us (52.1 us, 41.7% at full white against 5e's
+52.3, 41.8%), so **tomorrow's first commit reverts the decimation to the
+per-slot judgment, keeps the silence report's two fixes (the pages
+paired by the run count, the PENDING verdict) and puts the detector
+behind a compile-time flag the dev build sets and the daily build does
+not** (the release gets the ~7 us; the daily build then owes a short
+soak of its own); (2) the timeline: tonight's awake soak instead of a
+second night. Then: the silence set and the five wakes on the revert
+build (skipped tonight on JD's instruction), black's night (Warren),
+the clock-sync residuals of this night against the 4b/5e nights and the
+10-20 old-ISR soak (JD's question: does the faster main loop tighten
+them), the docs' remainder (leds.md, hardware.md's table, sn32f299.md,
+the health pages, power.md's LED figures), the merge onto
+`ak820pro-jdlien`, `deps.lock`, the daily and fpb builds, a tag. JD's
+eye on 444 Hz: the colour fringe all but gone (a deliberate rapid
+flick, the capless rig LEDs only); the screen's drawing about twice as
+fast. The record: the README's "Stage 5g on white", the plan's "Stage
+5g's reviews" and its log.**
+**Before it (15:25 11-03): two of JD's calls open: (1) the every-eighth
 silence judgment (~8 us of the 50 us handler, 40% to ~33%; two
 aliasing silences inside 1 ms would count as one: a diagnostic
 concession, the arm deadline and the dark-by-hardware untouched); (2)

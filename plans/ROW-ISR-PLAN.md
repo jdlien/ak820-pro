@@ -2240,7 +2240,72 @@ quantization, above the largest new tolerance of 28.389 ms.
 | d | `cur_colour == cur_row % 3` and `key_row == cur_row / 3` hold from the zero initializers through the only writes, the adjacent rotation, the 17 -> 0 wrap, scan-only and the early returns; 100,000 rotations checked. | Correct. |
 | e | Only rowisr.c changed; `Vector90` makes no arithmetic-library call and no external call inside its five masked sections; the divides live in the two fallbacks and the unlocked record conversion; sub 6's offsets and units match `rowisr_diag.py` (a synthetic reply decoded). Qualification: the unchanged scan helper calls `_pal_lld_setpadmode` while masked (ELF 0x23eba, 0x23f0e), from before these commits. | Correct. The mode writes in the scan's masked section are stage 3's subject ("the scan without mode writes"): fixed pin modes, no call. Noted there. |
 
+## Stage 5g's reviews: the every-eighth judgment, three rounds (11-03 19:58-20:18)
+
+The first cadence attempt (`1d73bf3ed5`, 11-03 00:14) judged every eighth
+service against a second baseline and took a time-only snapshot between;
+codex's P1 on it (00:22, `review-codex-row-isr-cadence-2026-11-03-raw.md`)
+was a coverage hole, not the multiplicity point JD was first told: a
+generation change between two judging services (the guard's 20 ms gap)
+made the judged interval discontinuous, the judgment was skipped and the
+baseline moved past it, and an aliasing silence on either side of the gap
+was never judged; the services between carried no frame counter to judge
+it from after the fact. Reverted that night. Stage 5g (`1dfa597991`,
+19:50) keeps the full snapshot at every service and decimates the
+judgment alone, with the pending interval judged at any discontinuity
+before the baseline is given up; `0b5e547705` (20:02) and `4f19e6c31f`
+(20:12) answered the next two rounds. The one declared concession: two
+aliasing silences inside one judged interval are one rejected interval and
+one loss where the per-slot judgment counted two.
+
+### Round 1 (19:58, `review-codex-row-isr-stage5g-2026-11-03-raw.md`, on `1dfa597991`): NOT READY on two P1s, fixed
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 (P1) | A crossed non-judging service loses its entry evidence: the pending interval ended at the committed `last_snap`, which step 6 commits only when the service did not cross; a service whose entry carried an alias and which then crossed (a second silence inside it moving the generation) left nothing, and the deferred judgment kept the healthy interval before it (one loss, no reject, for two silences). | **Fixed** (`0b5e547705`): every counted service continuous with the baseline leaves its entry snapshot in `usb_last`, committed or crossed; the deferred judgment ends there. |
+| 2 (P1) | A baseline taken untrusted (the bus down) judged nothing until replaced at the next judging service, hiding an alias after the bus came up inside the same generation; the per-slot judgment judged every pair from a trusted service on. | **Fixed**: `usb_base_trusted`; at the first trusted service after an untrusted baseline the stretch is folded (not judgeable, as the per-slot left its services) and the baseline retaken at once. |
+| 3 (P2) | The silence report's sequence was read before the injection's lock and its final one after the copy; a silence inside a row-only hold outlasting the 20 ms wait copies a state with no verdict and the host prints "no loss". | **Fixed**: the first read under the mask, the second before the copy (a lower bound of what the copy reflects); under two the host prints the verdict PENDING with the count and the wait. |
+| 4 | Two aliases between judging services are one rejected interval and one loss. | **Accepted** as the cadence's concession, declared in the design comment. |
+| 5 | The "at most one loss per entry" comments are inaccurate now: the deferred rejection is a second loss at one entry; `epoch_losses` is diagnostic, nothing branches on it; `seen_gen` needs no touch on that path. | **Fixed**: both comments reworded. |
+| 6 | Dropping a rejected interval's pending services does not count them in `invalid_services`. | **Accepted**: `invalid_services` counts services whose own interval was INVALID at their entry; the dropped ones are reported by the fall in `serviced_valid`. |
+
+### Round 2 (20:10, `review-codex-row-isr-stage5g-verify-2026-11-03-raw.md`, on `0b5e547705`): NOT READY on one P1, fixed
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 (P1) | A baseline taken in a stale's recovery (pending, no frame yet) is trusted; an alias before the next entry, the frames moving through it, was judged only at the eighth service, and if the frames had stopped again by then (a 5 ms row-only hold expires the freshness with the extension VALID) both ends read without a frame and the interval was UNJUDGED: the alias lost, where the per-slot compared the pair at its fresh end. | **Fixed** (`4f19e6c31f`): such a baseline is judged at the first fresh entry as a judging service (the live rules, the re-base), whatever the phase. |
+| 2 (P2) | The host reads sub 8 and sub 9 separately with no shared identity; a silence finishing between the reads mixes two reports. | **Fixed**: sub 9 carries the run count at [18], as sub 8's [31]; the host re-reads up to three times until they agree and warns otherwise. |
+| 3 | After a judging service's adoption only `usb_base.gen` took `adopt_gen`; `usb_last.gen` stayed (safe, equal extensions). The design comment still named `last_snap`. | **Fixed**: `usb_last = usb_base` after the adoption; the comment names `usb_last`. |
+| 4 | Both P1-1 traces pass (two losses, one reject, counted once); the trust-return trace passes; the branches are mutually exclusive, discontinuity first; folding the untrusted stretch is right even with phantom boundaries in it; the report's timing fix is sound; the non-judging path's work as stated (the copy 20 bytes, the pending branch). | Confirmed. |
+
+### Round 3 (20:18, `review-codex-row-isr-stage5g-verify2-2026-11-03-raw.md`, on `4f19e6c31f`): READY TO FLASH
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 (P2) | A temporary freshness loss can disappear before the judgment: a 4 ms pause in the host's SOFs straddling a fresh baseline, no bus event, the frames resuming inside the interval with the host's count: the per-slot rejected the first stale entry as an event; this code sees fresh ends and agreeing spans. | **Accepted** as a second concession, declared in the design comment: a pause of the host's SOFs is not a silence of the MCU, and the per-slot's loss for it was a conservative false one; the spans still catch any pause over the tolerance that does not resume with the host's count. |
+| 2 | The recovery trace passes (one loss, one reject at the first fresh entry; a later fresh-to-stale judgment rejects as an event); the forced judgment runs once when it coincides with the eighth; the discontinuity runs first against `usb_last`; a pending baseline ending stale is UNJUDGED; rejection attribution is aggregated (an alias followed by stopped frames is one event rejection); the pending drop covers the healthy services of a rejected interval too; the report pairing holds under the single-host-process rule. | Confirmed; the attribution and the drop are the cadence's nature, noted in the design comment. |
+
 ## Process log
+
+- 11-03 19:36-20:36: **stage 5g, the every-eighth judgment, built,
+  reviewed, flashed and measured** (the README's "Stage 5g on white"):
+  JD's go at 19:36; `1dfa597991` keeps the full snapshot at every
+  service and decimates the judgment alone, with the pending interval
+  judged at any discontinuity; codex's three rounds ("Stage 5g's
+  reviews" above: two P1s, one P1, READY) closed the coverage holes the
+  first cadence had and added the silence report's pairing and PENDING
+  verdict; `4f19e6c31f` (token `0x34d7c5fb`) on white since 20:19. The
+  full-white window: **52.1 us and 41.7% against 5e's 52.3 and 41.8%:
+  0.2 us**, the skipped arithmetic (~3 us) paid back by the bookkeeping
+  correctness demanded; the detector's cost is its snapshot. JD's
+  decision (20:36): **revert the decimation tomorrow, keep the report's
+  two fixes, the detector behind a flag the daily build leaves out.**
+  JD's eye on 5e at 444 Hz (19:42-20:18): the fringe all but gone (a
+  deliberate rapid flick, the capless rig LEDs), the screen's drawing
+  about twice as fast (the main loop's share). The awake soak on 5g from
+  20:34 with JD typing; the silence set and the wakes skipped tonight on
+  his instruction, owed on the revert build; white to Hutch asleep at
+  about 00:35.
 
 - 10-31 02:28: the brief to codex (gpt-6-astra); revision 0 written blind
   in parallel.

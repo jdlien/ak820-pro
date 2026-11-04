@@ -191,8 +191,11 @@ def report_dict(r, r2=None):
     if r2 is not None:
         p = r2[4:]
         d.update({"stamp0": u16(p, 0), "stamp1": u16(p, 2), "guard_gap0_ticks": u16(p, 4), "guard_gap1_ticks": u16(p, 6),
-                  "guard_rejects0": u16(p, 8), "guard_rejects1": u16(p, 10)})
+                  "guard_rejects0": u16(p, 8), "guard_rejects1": u16(p, 10),
+                  "judged": p[12], "waited_ms": p[13], "run2": p[14]})   # 5g: the judging opportunities between the copies, the wait for two, the run count again
+        d["pages_match"] = d["run2"] == d["run"]   # the two pages are of one silence only when their run counts agree (one can finish between the reads)
         d["guard_rejected"] = d["guard_rejects1"] != d["guard_rejects0"]   # by the count, not the gap's value (two equal gaps would hide one)
+        d["verdict_pending"] = d["judged"] < 2   # the frame counter's verdict not yet in at the copy (a hold on the row ISR outlasting the 20 ms)
         d["guard_gap1_ms"] = round(d["guard_gap1_ticks"] / 187.5, 3)
     return d
 
@@ -360,16 +363,25 @@ def main():
                 print(f"a silence of every interrupt armed: {us / 1000} ms after {delay or 200} ms")
                 print_status(r)
         elif cmd == "report":   # op 28 subs 8 and 9
-            d = report_dict(xfer(h, 8), xfer(h, 9))
+            for _ in range(3):   # a silence can finish between the two reads: re-read until the pages agree on the run count
+                d = report_dict(xfer(h, 8), xfer(h, 9))
+                if d["pages_match"]: break
+            else:
+                print("WARNING: the report's two pages are of different silences after three reads", file=sys.stderr)
             if as_json:
                 print(json.dumps(d))
             else:
                 verdict = ("no loss across it" if not d["gen_delta"] else
                            f"a loss across it, the guard's (its count moved; the gap it rejected: {d['guard_gap1_ms']} ms)" if d["guard_rejected"] else
                            "a loss across it, not the guard's (the frame counter's or an exclusion's: see `usb`)")
+                if d.get("verdict_pending"):
+                    verdict = (("no loss by the guard, and " if not d["gen_delta"] else verdict + "; ") +
+                               f"the frame counter's verdict PENDING at the copy ({d['judged']} judging opportunity in {d['waited_ms']} ms: "
+                               "a hold on the row ISR?): read `usb` and the record later")
                 print(f"the last silence: asked {d['us'] / 1000} ms, the spin measured {d['measured_ms']} ms ({d['ticks']} ticks), "
                       f"TC {d['tc0']} -> {d['tc1']}; the extension read {d['ext_delta_ms']} ms across it (its stamps {d['stamp0']} -> {d['stamp1']}), "
                       f"generation {d['gen0']} -> {d['gen1']}: {verdict}; VALID before {d['valid0']} after {d['valid1']}; "
+                      f"the second copy after {d['judged']} judging opportunities, {d['waited_ms']} ms waited; "
                       f"run {d['run']}, not run for a high pin {d['lost']}")
         elif cmd == "led":
             if args[1:] == ["off"]:

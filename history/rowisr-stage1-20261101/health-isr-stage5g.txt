@@ -1,0 +1,35 @@
+blit_timeouts            0
+tx_sent                  212
+tx_timeouts              68
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          7
+scan_rate                563
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                871867
+build_token              0x34d7c5fb
+msp_free                 600 bytes (interrupt stack; paint watermark)
+psp_free                 936 bytes (main thread; paint watermark)
+blits_issued             2399
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0
+
+isr_per_s                8002.0
+isr_mean_us              52.1
+isr_min_us               32.0
+isr_max_us               128.0
+isr_cpu_pct              41.7
+row_samples_per_row_per_s 444.6
+timebase_vs_wall         0.999
+
+  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;
+  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop

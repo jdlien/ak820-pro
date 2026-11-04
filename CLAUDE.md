@@ -135,7 +135,18 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 15:06 11-03 (and 13:34-14:31): stage 5e of the row ISR
+**On white since 20:19 11-03: stage 5g of the row ISR rewrite,
+`4f19e6c31f`** (dev, token `0x34d7c5fb`, heap gap 336 B, `row-isr`): 5e
+plus the frame counter's judgment every eighth service with the evidence
+kept at every one (three codex rounds, READY at 20:18). It measured
+52.1 us and 41.7% at full white against 5e's 52.3 and 41.8%, so **the
+decimation is reverted on 11-04** (the detector goes behind a flag the
+daily build leaves out; the silence report's pairing and PENDING verdict
+stay). The awake soak on it from 20:34 with JD typing, white to Hutch
+asleep at ~00:35. JD's eye at 444 Hz: the fringe all but gone, the
+screen's drawing about twice as fast (`plans/current-status.md`,
+`history/rowisr-stage1-20261101/README.md`, "Stage 5g on white").
+**Before it, from 15:06 11-03 (and 13:34-14:31): stage 5e of the row ISR
 rewrite, the 125 us cadence, `739fe1b635`** (dev, token `0xf222e31c`,
 heap gap 376 B, `row-isr`; the keep-alive and the battery icon's colours
 in it; 5d `6a9fc0fcfe` from 13:02, the SRAM trial 5f from 14:31 to 15:06,

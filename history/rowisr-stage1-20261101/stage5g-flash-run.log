@@ -1,0 +1,105 @@
+Boot-out failed: 3: No such process
+[20:18:47] daemon paused
+[20:18:50] data on
+[20:18:54] board present, token before: 0xf222e31c
+[20:18:54] flash: ak820pro-builds/out/via-dev-4f19e6c31f-20261103-201301.bin
+firmware : ak820pro-builds/out/via-dev-4f19e6c31f-20261103-201301.bin
+built    : Nov  3 20:13:01 2026  (262144 bytes)  <- confirm this is your build
+
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+   saved: /Users/jdlien/Documents/ak820pro-keymap.json  Nov  3 20:18:54 2026  (1952 bytes)
+
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 2, hue 178, sat 0, val 141, speed 231
+   saved: /Users/jdlien/Documents/ak820pro-lighting.json  Nov  3 20:18:55 2026  (83 bytes)
+
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s0 v141 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+   saved: /Users/jdlien/Documents/ak820pro-profiles.json  Nov  3 20:18:55 2026  (2703 bytes)
+
+== dumping the battery log ==
+# 20 entries (log v8, one per 900 s), newest 764 s ago
+   saved: /Users/jdlien/Documents/ak820pro-battlogs/log-20261103-201855-preflash.csv  Nov  3 20:18:55 2026  (2387 bytes)
+
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+
+Flashing done. Rebooting.
+
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+  M slot 1: Purple/Blue: Alphas/Mods h178 s219 v125, screen 100%, clock 12h:ss
+    slot 2: Rainbow Slow: Cycle L-R h178 s255 v168, screen 100%, clock 24h:ss
+    slot 3: Bright White: Solid h178 s0 v255, screen 100%, clock 12h:ss
+    slot 4: empty
+    slot 5: empty
+    slot 6: empty
+    slot 7: empty
+live: Alphas/Mods on h178 s0 v141 speed 231, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Always on
+
+raw HID: OK -- board is healthy
+== syncing the clock ==
+clock set (sub-second): before +1247.6 ms, after -1.6 ms, rtt 1.8 ms, U ~1.6 ms, lead now 2.24 ms, bias sent
+done.
+[20:19:25] token after the flash: 0x34d7c5fb (want 0x34d7c5fb)
+[20:19:40] the ladder held at Always on (the lights stay on for the window and the light gate); a relight press
+[20:19:54] health counters reset
+[20:19:54] the warm window: 300 s, white lit at JD's full white, nothing touching it
+[20:24:54] page 4 (the handler) and page 7 (the scheduler) after 300 s
+loop_gap_max_ms          6
+isr_per_s                7999.0
+isr_mean_us              51.6
+isr_min_us               32.0
+isr_max_us               122.7
+isr_cpu_pct              41.3
+  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;
+  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop
+blit_timeouts            0
+tx_sent                  75
+tx_timeouts              22
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          6
+scan_rate                351
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+slots_elapsed            2417139
+serviced_valid           2417139
+missed_slots             0
+longest run of omissions 1, spurious invocations 0, omissions by the arm deadline 44, epoch losses 0, invalid services 0, shortest handler 29.9 us, elapsed samples dropped for a boundary inside the handler 0 (stage 5a: the kept samples are the boundary-free services)
+omissions per mux row (R, B, G per key row, the pins' order; 255 = saturated):
+  key row 0: R   6  B   0  G   4
+  key row 1: R   7  B   6  G   1
+  key row 2: R   4  B   1  G   3
+  key row 3: R   2  B   1  G   0
+  key row 4: R   2  B   1  G   2
+  key row 5: R   2  B   2  G   0
+loop_gap_max_ms          6
+row_gap_max_ms           3  (row 3)
+[20:24:57] the light: the lit draw over the last 120 s at full white: 55.99 mA (4b: 92.1 lit, 31.1 dark, 61.0 incremental; within 5% is 58.0-64.1 incremental, 89.1-95.2 lit)
+[20:24:57] the ladder back to Power saver; the standing state
+[20:24:59] data off
+[20:24:59] daemon back: the standing state
+[20:24:59] the presser's gate skipped (PRESSER=no): run presser_gate.sh stage5g 0x34d7c5fb with Buzz locked

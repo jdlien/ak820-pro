@@ -1551,6 +1551,83 @@ the colours' spread for the model's refit (stage 7). JD's lighting
 restored from the dump taken before the holds; the standing state at
 15:13:21; white handed to Hutch for Warren's M2/M3 overnight on 5e.
 
+### Stage 5g on white (11-03, 19:36-20:34, `4f19e6c31f`, token `0x34d7c5fb`): the every-eighth judgment measured, 0.2 us, to be reverted
+
+JD's go at 19:36 (N = 8, the timeline accelerated: the awake soak
+tonight instead of a second night), white claimed back from Hutch at
+19:37 (its evening on 5e: 11 keep-alive wakes every 24:58, 0
+disconnects, `m23-evening.json`). The first cadence attempt
+(`1d73bf3ed5`, 00:14, reverted on codex's P1 at 00:22) had taken a
+time-only snapshot between judging services; the P1 was a coverage
+hole, not the two-aliases-in-one-interval point JD had been told: a
+guard-visible gap between two judging services made the judged interval
+discontinuous, the judgment was skipped and the baseline moved past it,
+and an alias on either side of the gap was never judged. **Stage 5g
+(`1dfa597991`, 19:50)** keeps the full snapshot at every service and
+decimates the judgment alone, judging the pending interval at any
+discontinuity before the baseline is given up; codex's three rounds
+(19:58 two P1s, 20:10 one P1, 20:18 READY; `plans/ROW-ISR-PLAN.md`,
+"Stage 5g's reviews") added the entry-snapshot end (`usb_last`: a
+crossed service's entry is evidence too), the retake of an untrusted
+baseline when the frames' trust returns, the forced judgment of a
+recovery baseline at its first fresh entry, and the silence report's
+two fixes (its sequence read under the mask, the verdict PENDING under
+two opportunities; its two pages paired by the run count).
+`0b5e547705` (20:02), `4f19e6c31f` (20:12, heap gap 336 B against 5e's
+376). JD typed on 5e meanwhile (19:42-20:18): **the colour fringe all
+but gone at 444 Hz**, seen only on a deliberate rapid flick and most on
+the rig's capless LEDs (no diffuser); **the screen's drawing (the menu,
+the text pages) about twice as fast**, the main loop's share of the
+core having gone from ~27% to ~60%.
+
+**The flash (20:18:46-20:19:25, `stage5_flash.sh ... stage5g 300 no`,
+`stage5g-flash-run.log`):** the token right. Its window
+(20:19:54-20:24:54) ran at JD's own lighting (val 141, set while he
+judged the rainbow and restored by the flash), 56.0 mA steady, so it is
+void for the light gate (`LIT_MIN` 60) and biased low for the cost (a
+dark row skips its select and arm): 51.6 us, 41.3%, max 122.7, 44 late
+omissions, 0 spurious, 0 losses, `row_gap_max` 3 ms. The guarded
+`stage5_window.sh` (20:25) refused it at 56.02 mA. **The full-white
+window (20:27:56-20:33:46, `stage5g_window_fullwhite.sh`: JD's choice
+saved to `lighting-5g-jd-choice.json`, val 255 restored from
+`lighting-before-holds-stage5e.json`, the window, his choice put back;
+`stage5g-window2-run.log`, `health-isr-stage5g.txt`,
+`health-sched-stage5g.txt`, `record-stage5g.txt`, `light-stage5g.txt`):**
+
+| | 5e lit (13:35) | 5e night (15:06 on) | **5g full white** |
+|---|---|---|---|
+| page 4 mean, us | 52.3 | 52.4 | **52.1** |
+| page 4 share | 41.8% | 41.9% | **41.7%** |
+| page 4 max, us | | 128.0 | 128.0 |
+| late omissions in 300 s | 78 | 87 | 81 |
+| spurious, losses | 0, 0 | 0, 0 | 0, 0 |
+| `row_gap_max` | 3 ms | 3 ms | 3 ms |
+| the lit draw | | | 91.2-91.6 mA (4b 92.1) |
+
+**0.2 us.** The skipped arithmetic was worth ~3 us a slot; the
+bookkeeping that correctness demanded (the full snapshot kept and
+copied, the discontinuity and trust tests, the held statistics) costs
+about as much. The detector's cost lives in its snapshot, not its
+judgment, so the ~7 us is only to be had by compiling it out. **JD's
+decision (20:36): revert the decimation to 5e's per-slot judgment
+tomorrow, keep the silence report's two fixes, and put the detector
+behind a flag the dev build sets and the daily build does not;** the
+release then gets the saving and the dev build the simplest correct
+instrument. Tonight's soak runs on 5g as flashed (reviewed, equivalent
+in coverage but for the two declared concessions: two aliases in one
+interval are one rejected interval, and a 4 ms pause of the host's SOFs
+straddling a baseline is no longer a loss).
+
+**The awake soak from 20:34 (`soak_watch_awake.sh stage5g`,
+`soak-stage5g.jsonl`, `soak-stage5g.log`):** the data on, the daemon
+loaded, a read every 20 min with the daemon paused ~15 s, JD typing on
+it, his lighting his own. Read 1 (20:34:23): losses 2 (the boot's), 0
+frame rejects of 331,285 intervals judged, `i2c_max_cycles` 251, 0
+fails, `row_gap_max` 3 ms. The silence set and the five wakes are
+skipped tonight on JD's instruction (they run on tomorrow's build, which
+needs them anyway). White goes to Hutch asleep at about 00:35 for
+Warren's M2/M3.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.
