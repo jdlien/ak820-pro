@@ -49,7 +49,9 @@ daily gap 2272 B.
 4. **Note, the ~3.1 s USB step stays.** A cable-out board and a suspended
    host look alike (`sleep.c`'s USB watch), so skipping the re-attach at a
    keep-alive needs its own validation. Taken: a follow-up after the bench's
-   M3 measures the real per-wake cost.
+   M3 measures the real per-wake cost. M3 (white, 11-03/11-04): a median
+   99 mA*s a wake, ~0.066 mA over 25 min, so a lean wake would save at
+   most ~0.06 mA, under 2% of the sleep draw; not pursued.
 5. **Note, the poll is module-side traffic.** The recovery queues `A6 53
    F9` and gets the ACK and `5C` back; that this restarts the module's 30
    min is the hardware premise, for white's with-run (no reason-719 drop over

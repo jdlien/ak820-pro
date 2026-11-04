@@ -25,7 +25,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## The first key after a long sleep takes ~2.4 s to register on the Mac (2026-11-02) -- the module's 30 min idle disconnect, measured; accepted as how Bluetooth works, the keep-alive wake pinned for later if it annoys
+## The first key after a long sleep takes ~2.4 s to register on the Mac (2026-11-02) -- the module's 30 min idle disconnect, measured; the keep-alive wake built (11-03) and passed on white (11-04), black's run on Windows owed
 
 Seen at 22:36 11-02 on white, Bluetooth, after a 1 h 52 min sleep: "a few
 seconds before keystrokes registered", like the Nuphy. The Mac's own log
@@ -65,6 +65,36 @@ reports on the link state nor re-selected after the module's own drop.
   counted within 50 ms and reaches the Mac in 48-64 ms when the link is
   up), the row ISR, or the lock-light channel (its frames keep the link,
   they do not drop it).
+- **Built (11-03) and passed on white (11-04).** JD chose the keep-alive
+  over a ~1.5 s hold of the waking key (11-03): a ladder sleep with a BT
+  link up wakes after ~25 real minutes (each PCF-timed sleep measures the
+  counted seconds' rate for the next), its usual recovery sends the
+  battery poll, and it sleeps again; only for 18 h asleep since the last
+  input, so a night away keeps the link and a weekend lets it go.
+  `gremlin/keepalive` `3b04a983a24` on v0.3.1's base (codex:
+  [`review-codex-keepalive-2026-11-03.md`](review-codex-keepalive-2026-11-03.md)),
+  cherry-picked into row-isr's stage 5; `ak820 sleep` names wake reason 7
+  "keep-alive". Hutch's runs on white
+  ([`../history/keepalive-20261103/`](../history/keepalive-20261103/README.md)):
+  - **The link held** 4 h 19 min asleep on stage 5e (11-03 evening) and
+    7.5 h on 5g (00:36-08:07 11-04), with no disconnect: the poll
+    restarts the module's 30 min.
+  - **The calibration works:** the first keep-alive 26 min after the
+    sleep on the default 872 per mille, then every 24:58 once measured
+    (~841).
+  - **The cost:** each wake dark, 4-6 s, peak ~29 mA, a median 99 mA*s
+    above the 3.375 mA floor (~0.066 mA over 25 min); the night's mean
+    3.73 mA, so ~0.3 mA asleep with the held link (0.14 of it), not the
+    ~0.02 guessed above for a one-poll wake.
+  - **The first key after 32 min asleep arrived** in the same second
+    (09:20 11-04, stage 5h, F19 from the presser, no link event in
+    bluetoothd); the control lost that key (11-03).
+  - **Not pursued: a lean keep-alive wake** (no supply or USB step). It
+    would save at most ~0.06 mA, under 2% of the sleep draw and only in
+    the 18 h, and the USB step is how a wake tells a cable-out board from
+    a suspended host (codex), so skipping it needs its own validation.
+  - **Owed:** black on Windows (the dev build `3b04a983a24`, after its
+    link trace's letter test); 2.4G is untested.
 
 ## The saturation read 191 after a keyed change to 0 and two deep-sleep wakes (2026-11-01) -- unexplained, noted
 
