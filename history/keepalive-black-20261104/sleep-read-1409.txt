@@ -1,0 +1,11 @@
+last sleep: woke on key after 517 counted s; flags pcf,acq,reattach,slept; strays 0; pins P0 0x0 P1 0x0 P2 0x200; pll_loops 92; keys gained 0; sleeps this boot 51; blocked 0x0000; timed out -
+ring[0]  sleep #48: woke on keep-alive after 1344 counted s, at 4364662 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x0
+ring[1]  sleep #49: woke on keep-alive after 1344 counted s, at 4367773 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x0
+ring[2]  sleep #50: woke on key after 517 counted s, at 4370887 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x200
+ring[3]  sleep #43: woke on keep-alive after 1344 counted s, at 4015924 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x0
+ring[4]  sleep #44: woke on keep-alive after 1344 counted s, at 4019036 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x0
+ring[5]  sleep #45: woke on key after 3568 counted s, at 4022150 ms uptime; flags slept; strays 0; pins P0 0x40 P1 0x0 P2 0x0
+ring[6]  sleep #46: woke on keep-alive after 1344 counted s, at 4358442 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x0
+ring[7]  sleep #47: woke on keep-alive after 1344 counted s, at 4361552 ms uptime; flags slept; strays 0; pins P0 0x0 P1 0x0 P2 0x0
+stray    none kept
+ak820: devhook op 24: the firmware does not handle command 0x76 on channel 0x13 -- flashed from a different tree?

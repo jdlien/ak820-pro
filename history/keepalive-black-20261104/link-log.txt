@@ -1,0 +1,5 @@
+2026-11-04 16:05:31  bt_connected=True last_connected=2026-11-04 16:00:16 usb=True
+2026-11-04 16:07:04  bt_connected=True last_connected=2026-11-04 16:00:16 usb=False
+2026-11-05 11:35:45  bt_connected=False last_connected=2026-11-05 11:35:26 usb=False
+2026-11-05 12:11:56  bt_connected=True last_connected=2026-11-05 12:11:49 usb=False
+2026-11-05 14:08:38  bt_connected=True last_connected=2026-11-05 12:11:49 usb=True

@@ -34,7 +34,7 @@ The order agreed after the sleep experiments:
      ([`POWER-CHARTS-PLAN.md`](POWER-CHARTS-PLAN.md)); its sweep runs before
      step 1's full charge, not during it.
 
-## The first key after a long sleep takes ~2.4 s to register on the Mac (2026-11-02) -- the module's 30 min idle disconnect, measured; the keep-alive wake built (11-03) and passed on white (11-04), black's run on Windows owed
+## The first key after a long sleep takes ~2.4 s to register on the Mac (2026-11-02) -- the module's 30 min idle disconnect, measured; the keep-alive wake built (11-03), passed on white (11-04) and on Windows (black, 11-05)
 
 Seen at 22:36 11-02 on white, Bluetooth, after a 1 h 52 min sleep: "a few
 seconds before keystrokes registered", like the Nuphy. The Mac's own log
@@ -102,11 +102,13 @@ reports on the link state nor re-selected after the module's own drop.
     would save at most ~0.06 mA, under 2% of the sleep draw and only in
     the 18 h, and the USB step is how a wake tells a cable-out board from
     a suspended host (codex), so skipping it needs its own validation.
-  - **Owed:** black on Windows. Its link trace's letter test came first
-    (16:00 11-04, GREMLIN-RESULTS §21: the waking key lost, sent 14 ms
-    before the module's link was back at 119 ms), then the keep-alive
-    went on at 16:04; its overnight cable-out run is next. 2.4G is
-    untested.
+  - **Passed on Windows too** (black, 11-04/11-05, GREMLIN-RESULTS §21).
+    Its link trace came first (16:00 11-04: the waking key lost, sent
+    14 ms before the module's link was back at 119 ms). With the
+    keep-alive the link held overnight and dropped at 11:35:26, ~18 h
+    28 min after black slept, the bound and the module's 30 min; a key
+    1 h 50 min into a later sleep, after four keep-alive wakes, typed at
+    once (JD: "No second keypress needed"). 2.4G is untested.
 
 ## The saturation read 191 after a keyed change to 0 and two deep-sleep wakes (2026-11-01) -- unexplained, noted
 

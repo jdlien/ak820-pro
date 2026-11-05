@@ -2208,3 +2208,32 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     and read back). Its overnight cable-out run on Windows is next,
     with a PnP logger on black's BLE device (`IsConnected` and
     `LastConnectedTime` every 30 s).
+- **The keep-alive on Windows: the link held, the first key typed
+  (11-04/11-05).** Black on `3b04a983a24` (`0xf7ddd286`), cable out from
+  16:07 11-04, slider on BT, JD at Buzz from ~17:06
+  ([`../history/keepalive-black-20261104/`](../history/keepalive-black-20261104/):
+  the logger's changes and `ak820 sleep` at 14:09 11-05). Windows'
+  `LastConnectedTime` is stamped at a connect and at a disconnect (it
+  read 11-02's drop while the link was down).
+  - **The night:** no change logged from 16:07 until the link dropped at
+    11:35:26 11-05 (`IsConnected` False at the 11:35:45 poll). That is
+    the 18 h bound working: the last keep-alive wake (the ring's sleep
+    #44) came ~11:05, the sleep after it ran on the backstop, and the
+    module ended the link 30 min later, ~18 h 28 min after black slept
+    (~17:07).
+  - **12:11:49:** a key woke black from that sleep (#45, 3,568 counted
+    s, ~66 min) and Windows reconnected. These were JD's toddler's keys
+    into the terminal, so whether the first typed is unknown; past the
+    bound it is the old behaviour. They reset the absence.
+  - **14:07, M4 on Windows:** black slept from ~12:17; four keep-alive
+    wakes (#46-#49, 1,344 counted s each: 1,500 at the measured 896 per
+    mille) held the link, the logger showing no event after 12:11:49.
+    JD's key (#50, 517 counted s into the sleep, ~1 h 50 min after
+    black slept) woke gremlin's display at once: **"No second keypress
+    needed."** Without the keep-alive the link would have dropped at
+    ~12:47 and the key been lost, as at 16:00 11-04.
+  - The ring: every wake reason 7 at 1,344 counted s but #45 (the key
+    after the backstop's 3,568) and #50; 0 strays; each keep-alive wake
+    ~3.1 s of uptime (the next wake's stamp, 3,110-3,114 ms on). The
+    last wake: flags `pcf`, `acq`, `reattach`, `slept`, no step timed
+    out, PLL 92 loops; 51 sleeps since the flash.
