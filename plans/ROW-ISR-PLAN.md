@@ -1148,7 +1148,10 @@ a percentage now means two lights, the wide modes about 5x under the byte path
 at the slider's middle (the README's table), and `DIM_VAL`, the default val and
 pre-D9 profiles all moved with the table. An 8-bit byte cannot follow the new
 curve down (a byte is 4.69 ticks), so a shared table costs the byte path its
-bottom third.
+bottom third. The biggest of those: `SAVER_VAL` 128, the ceiling in Power saver
+and under 15% on battery, was 18.6% of full light on L* and is 3.6% on the new
+tables, and `DIM_VAL` 64 went from 4.4% to 0.7%. Both caps need new values, chosen
+by light rather than kept by number.
 
 ### D10. Measuring the handler
 

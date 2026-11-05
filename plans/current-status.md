@@ -106,6 +106,8 @@ if he prefers the hybrid, revert `7221cb6080`. The tables' codex round is
 the merge: a percentage now means two lights, the wide modes about 5x under
 the byte path at 50% (`history/rowisr-stage1-20261101/README.md`, the end of
 "D9 on white").
+The caps moved too: `SAVER_VAL` 128 is 3.6% of full light now against 18.6%,
+`DIM_VAL` 64 is 0.7% against 4.4% (the plan's "curve's candidates").
 
 *What is on white:* `row-isr` `a86a07610f`, dev token `0xfbcd040d` (since
 20:41; devprobe `0x06cda486`, daily `0x6115beeb`; the gaps 344 and
