@@ -1,0 +1,40 @@
+[13:18:30] steady 25%, no change: 892 frames (steady-25%-4)
+[13:18:30]   Delete   levels  401.3 to  413.6, extremes  392.1 to  420.3, 0 steps: 0 dips [] [], 0 over []
+[13:18:30]   F-row a  levels  689.0 to  693.0, extremes  684.3 to  697.4, 0 steps: 0 dips [] [], 0 over []
+[13:18:30]   F-row b  levels  716.2 to  721.6, extremes  710.0 to  723.8, 0 steps: 0 dips [] [], 0 over []
+[13:18:30]   Ctrl     levels  676.7 to  695.4, extremes  655.9 to  698.1, 0 steps: 0 dips [] [], 0 over []
+[13:18:47] steps 25% and 50%: 888 frames (steps-25%-and-50%-5)
+[13:18:47]   Delete   levels  401.7 to  447.5, extremes  389.9 to  455.5, 0 steps: 0 dips [] [], 0 over []
+[13:18:47]   F-row a  levels  685.9 to  694.4, extremes  681.7 to  699.9, 0 steps: 0 dips [] [], 0 over []
+[13:18:47]   F-row b  levels  716.4 to  734.2, extremes  709.2 to  736.5, 0 steps: 0 dips [] [], 0 over []
+[13:18:47]   Ctrl     levels  681.2 to  737.7, extremes  654.8 to  741.8, 0 steps: 0 dips [] [], 0 over []
+[13:19:03] steady 25%, again: 888 frames (steady-25%-6)
+[13:19:03]   Delete   levels  398.6 to  410.4, extremes  384.4 to  414.9, 0 steps: 0 dips [] [], 0 over []
+[13:19:03]   F-row a  levels  685.5 to  689.4, extremes  681.2 to  692.8, 0 steps: 0 dips [] [], 0 over []
+[13:19:03]   F-row b  levels  714.8 to  720.0, extremes  707.8 to  722.2, 0 steps: 0 dips [] [], 0 over []
+[13:19:03]   Ctrl     levels  675.5 to  694.4, extremes  652.8 to  698.1, 0 steps: 0 dips [] [], 0 over []
+[13:19:19] steady 50%, no change: 888 frames (steady-50%-7)
+[13:19:19]   Delete   levels  424.8 to  450.2, extremes  410.5 to  456.3, 0 steps: 0 dips [] [], 0 over []
+[13:19:19]   F-row a  levels  689.8 to  694.6, extremes  685.2 to  697.5, 0 steps: 0 dips [] [], 0 over []
+[13:19:19]   F-row b  levels  727.8 to  734.6, extremes  722.3 to  736.3, 0 steps: 0 dips [] [], 0 over []
+[13:19:19]   Ctrl     levels  723.9 to  739.5, extremes  710.9 to  742.1, 0 steps: 0 dips [] [], 0 over []
+[13:19:36] steps 10% and 75%: 880 frames (steps-10%-and-75%-8)
+[13:19:36]   Delete   levels  385.0 to  524.6, extremes  376.1 to  531.3, 0 steps: 0 dips [] [], 0 over []
+[13:19:36]   F-row a  levels  678.7 to  706.9, extremes  674.5 to  711.0, 0 steps: 0 dips [] [], 0 over []
+[13:19:36]   F-row b  levels  707.8 to  746.5, extremes  698.0 to  749.2, 0 steps: 0 dips [] [], 0 over []
+[13:19:36]   Ctrl     levels  625.4 to  758.8, extremes  581.2 to  761.3, 0 steps: 0 dips [] [], 0 over []
+[13:19:52] steady 10%, no change: 880 frames (steady-10%-9)
+[13:19:52]   Delete   levels  387.1 to  394.9, extremes  377.9 to  402.8, 0 steps: 0 dips [] [], 0 over []
+[13:19:52]   F-row a  levels  683.4 to  687.2, extremes  680.9 to  690.8, 0 steps: 0 dips [] [], 0 over []
+[13:19:52]   F-row b  levels  710.2 to  714.4, extremes  702.2 to  717.4, 0 steps: 0 dips [] [], 0 over []
+[13:19:52]   Ctrl     levels  621.7 to  646.7, extremes  582.8 to  650.3, 0 steps: 0 dips [] [], 0 over []
+[13:20:08] RGB off and on at 50%: 880 frames (RGB-off-and-on-at-50%-10)
+[13:20:08]   Delete   levels  375.5 to  447.6, extremes  366.5 to  455.6, 0 steps: 0 dips [] [], 0 over []
+[13:20:08]   F-row a  levels  681.5 to  693.9, extremes  677.2 to  698.4, 0 steps: 0 dips [] [], 0 over []
+[13:20:08]   F-row b  levels  692.8 to  734.5, extremes  688.3 to  736.7, 0 steps: 0 dips [] [], 0 over []
+[13:20:08]   Ctrl     levels  502.4 to  743.3, extremes  495.6 to  745.8, 0 steps: 0 dips [] [], 0 over []
+[13:20:24] steps 25% and 50%, again: 888 frames (steps-25%-and-50%-11)
+[13:20:24]   Delete   levels  401.0 to  447.2, extremes  390.1 to  456.6, 0 steps: 0 dips [] [], 0 over []
+[13:20:24]   F-row a  levels  685.0 to  693.1, extremes  680.5 to  698.2, 0 steps: 0 dips [] [], 0 over []
+[13:20:24]   F-row b  levels  720.1 to  734.4, extremes  711.2 to  737.1, 0 steps: 0 dips [] [], 0 over []
+[13:20:24]   Ctrl     levels  685.2 to  742.7, extremes  660.6 to  745.8, 0 steps: 0 dips [] [], 0 over []

@@ -141,8 +141,9 @@ the commit names the live settings' side (`hostagent/ak820profiles.py`).
 `feef9b4bfe`** (dev token `0xd3e8d30b`; every enabled effect on the curve, which JD's
 eye settled as `--stops 4`; the hold's ramp; the Cycles keep their place through a
 speed change; `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%); the new effect `Rain`, one
-colour, Rainfall now `Rain RGB`; what is left before the merge is in
-`plans/ROW-ISR-PLAN.md`, "The curve's candidates"; ⚠️ the same setting gives 20-35%
+colour, Rainfall now `Rain RGB`; the warm window 51.9 us and 41.5% at full white; the
+branch's head `7c4d4fa28f`, Help's saturation keys, not flashed; what is left before the merge
+is in `plans/current-status.md`; ⚠️ the same setting gives 20-35%
 less light on battery than on USB while charging, by the camera, accepted; ⚠️ relay 2
 ON since 20:11 11-04 by hand, the pack full, the drain stopped short of the cut:
 `plans/current-status.md`). **Before it, from 11:00 11-05: `d6656f9262`** (dev token

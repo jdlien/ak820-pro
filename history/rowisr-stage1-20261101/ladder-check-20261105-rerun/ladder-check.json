@@ -1,0 +1,120 @@
+{
+ "rows": [
+  {
+   "part": "stages",
+   "effect": 7,
+   "name": "typing heatmap",
+   "active": 43.0,
+   "dim": 0.0,
+   "off": 0.0,
+   "dark": 0.0,
+   "wake": 43.0,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "stages",
+   "effect": 8,
+   "name": "rain (custom)",
+   "active": 55.666666666666664,
+   "dim": 1.0,
+   "off": 0.0,
+   "dark": 0.0,
+   "wake": 50.666666666666664,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "stages",
+   "effect": 10,
+   "name": "drift (custom)",
+   "active": 25.0,
+   "dim": 0.0,
+   "off": 0.0,
+   "dark": 0.0,
+   "wake": 25.0,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "saver",
+   "value": 255,
+   "effect": 7,
+   "name": "typing heatmap",
+   "full": 43.125,
+   "saver": 7.75,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "saver",
+   "value": 255,
+   "effect": 8,
+   "name": "rain (custom)",
+   "full": 57.0,
+   "saver": 10.75,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "saver",
+   "value": 255,
+   "effect": 10,
+   "name": "drift (custom)",
+   "full": 16.375,
+   "saver": 4.875,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "saver",
+   "value": 180,
+   "effect": 7,
+   "name": "typing heatmap",
+   "full": 5.75,
+   "saver": 5.75,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "saver",
+   "value": 180,
+   "effect": 8,
+   "name": "rain (custom)",
+   "full": 8.0,
+   "saver": 7.5,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "saver",
+   "value": 180,
+   "effect": 10,
+   "name": "drift (custom)",
+   "full": 1.75,
+   "saver": 3.5,
+   "op14": true,
+   "judged": true,
+   "ok": true
+  },
+  {
+   "part": "white",
+   "full_128": 186.0,
+   "saver_255": 186.0,
+   "op14": true,
+   "ok": true
+  }
+ ],
+ "rig": true,
+ "restored": true,
+ "incomplete": false,
+ "at": "2026-11-05 13:09:01"
+}

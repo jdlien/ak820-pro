@@ -99,9 +99,12 @@ ramp, the Cycles' place kept through a speed change, the ceilings `SAVER_VAL` 19
 as in the standing state, but **relay 2 is ON, by hand since 20:11 11-04; the pack is
 full**. Whether a drain restarts is his call. Flashes need his word.
 
-The ladder check passed on every effect but its own calibration of two. Owed: its rerun
-`scripts/ladder_check.py --presser --only 7,8,10` (Heatmap, Rain, Drift, about 5 min, with
-the data line up and the daemon out, taking over the lights), and JD's eye on Rain.
+JD's eye passed Rain. The ladder check passes in full, the warm window reads 51.9 us and 41.5%
+at full white, and the transitions show no blaze or dark frame (the README's end). Help's
+saturation keys are fixed at the branch's head `7c4d4fa28f` (dev `0x1b57b59d`, daily
+`0xa17a0215`), not flashed. Codex's round on everything since 5256860413:
+`plans/review-codex-row-isr-d9-round-raw.md`. Next: its findings; the daily soak (JD's
+`Fn`+`Esc` for the return); black's night (Warren); the docs' remainder; the merge and release.
 
 **The curve is settled by JD's eye (`--stops 4`).** His calls: the battery's 20-35% less
 light is fine, old profiles need no conversion, the `Fn`+arrow keys keep raw values, the

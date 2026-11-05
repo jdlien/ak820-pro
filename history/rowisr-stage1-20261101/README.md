@@ -2383,6 +2383,40 @@ LED drive over five 1 s reads at speed 255 and value 255, 11.0 per mille at satu
 menu's Help, the README and our notes all said `Fn`+`6`/`7`, which are F6 and F7 in the keymap;
 saturation is `Fn`+`,` and `Fn`+`.`. Help is corrected at the branch's head, not yet flashed.
 
+JD on the result: "the effect is nice now"; mono Rain felt like a missing piece.
+
+### The rerun, the transitions and the warm window (11-05, 13:01-13:20, `feef9b4bfe`, dev `0xd3e8d30b`)
+
+**The ladder check passes** (`--presser --only 7,8,10`, `ladder-check-20261105-rerun/`): the
+Heatmap, Rain and Drift, with the check's calibration fixed: the Heatmap 4.3% lit with the key
+pressed through the samples and 0.18 of that in Power saver, Rain 5.7% and 0.19, Drift 0.30 on
+a moving field.
+
+**The warm window** (`stage5_window.sh`, 300 s at full white on the pack):
+
+| | 5h | D9 now |
+|---|---|---|
+| Handler mean | 52.8 us | 51.9 us |
+| CPU | 42.2% | 41.5% |
+| Slots missed | 0 | 0 |
+| Pulses omitted | | 51 of 2,562,459, the longest run 1 |
+| Spurious invocations | 0 | 0 |
+| Longest row gap | | 3 ms |
+| Longest loop gap | | 4 ms |
+| Draw | 91.6 mA at ~3.7 V | 82.5 mA at ~4.1 V, the same ~340 mW |
+
+**The transitions, by camera** (`transition_cam.py`, `transition_cam2.py`, `transitioncam/`): no
+blaze and no dark frame at a change of brightness, hue, effect or RGB off and on. In the clips
+that step brightness, the extremes match the steady clips at the same levels: on Ctrl, the
+floor 655 against 656 and 653 at a steady 25%, the peak 742 against 742 at a steady 50%; on
+Delete, 390 against 392 and 384, and 456 against 456. The first run flagged 10 single frames
+as dips. They are the camera's: 444 fields a second against 240 frames is 1.85 pulses a frame,
+so about 15% of frames catch one pulse fewer, and the steady clips show them at the same rate
+as the stepping ones, 447 against 511 in about 13,500 frames, with Ctrl at 131 of 848, 15.4%.
+Room lights came on between the first run's second and third clips, so only those two are
+dark-room clips and the rest see the LEDs over ambient light, which still reads the change
+(RGB off drops Ctrl from 746 to 496).
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

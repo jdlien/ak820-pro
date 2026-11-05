@@ -1,0 +1,245 @@
+[
+ {
+  "name": "brightness, 25% and 50%",
+  "frames": 888,
+  "leds": {
+   "Delete": {
+    "low": 47.2,
+    "high": 172.5,
+    "peak": 189.8,
+    "floor": 18.3,
+    "over": 0,
+    "under": 4,
+    "over_at": [],
+    "under_at": [
+     670,
+     690,
+     805,
+     819
+    ]
+   },
+   "F-row a": {
+    "low": 45.6,
+    "high": 109.1,
+    "peak": 124.2,
+    "floor": 25.5,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row b": {
+    "low": 394.1,
+    "high": 593.7,
+    "peak": 600.6,
+    "floor": 304.2,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "Ctrl": {
+    "low": 496.1,
+    "high": 657.6,
+    "peak": 675.4,
+    "floor": 412.3,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   }
+  }
+ },
+ {
+  "name": "brightness, 10% and 75%",
+  "frames": 888,
+  "leds": {
+   "Delete": {
+    "low": 16.0,
+    "high": 335.5,
+    "peak": 353.7,
+    "floor": 7.2,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row a": {
+    "low": 28.9,
+    "high": 214.9,
+    "peak": 228.9,
+    "floor": 16.0,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row b": {
+    "low": 233.6,
+    "high": 672.7,
+    "peak": 682.6,
+    "floor": 134.1,
+    "over": 0,
+    "under": 2,
+    "over_at": [],
+    "under_at": [
+     60,
+     654
+    ]
+   },
+   "Ctrl": {
+    "low": 309.7,
+    "high": 738.2,
+    "peak": 743.0,
+    "floor": 179.3,
+    "over": 0,
+    "under": 4,
+    "over_at": [],
+    "under_at": [
+     538,
+     592,
+     700,
+     754
+    ]
+   }
+  }
+ },
+ {
+  "name": "hue, purple and red at 25%",
+  "frames": 888,
+  "leds": {
+   "Delete": {
+    "low": 390.6,
+    "high": 411.6,
+    "peak": 420.7,
+    "floor": 380.2,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row a": {
+    "low": 681.2,
+    "high": 688.6,
+    "peak": 693.8,
+    "floor": 675.9,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row b": {
+    "low": 708.1,
+    "high": 718.1,
+    "peak": 721.5,
+    "floor": 698.8,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "Ctrl": {
+    "low": 670.0,
+    "high": 695.9,
+    "peak": 702.3,
+    "floor": 638.8,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   }
+  }
+ },
+ {
+  "name": "effect, Solid and Cycle All at 25%",
+  "frames": 882,
+  "leds": {
+   "Delete": {
+    "low": 390.3,
+    "high": 412.4,
+    "peak": 418.4,
+    "floor": 381.7,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row a": {
+    "low": 683.7,
+    "high": 689.6,
+    "peak": 693.4,
+    "floor": 679.6,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row b": {
+    "low": 712.0,
+    "high": 719.5,
+    "peak": 722.4,
+    "floor": 702.1,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "Ctrl": {
+    "low": 674.4,
+    "high": 695.8,
+    "peak": 705.4,
+    "floor": 640.4,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   }
+  }
+ },
+ {
+  "name": "RGB off and on at 25%",
+  "frames": 888,
+  "leds": {
+   "Delete": {
+    "low": 379.1,
+    "high": 412.2,
+    "peak": 418.9,
+    "floor": 371.6,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row a": {
+    "low": 682.8,
+    "high": 688.8,
+    "peak": 692.5,
+    "floor": 678.6,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "F-row b": {
+    "low": 689.9,
+    "high": 719.2,
+    "peak": 721.5,
+    "floor": 685.4,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   },
+   "Ctrl": {
+    "low": 495.9,
+    "high": 695.8,
+    "peak": 698.6,
+    "floor": 490.1,
+    "over": 0,
+    "under": 0,
+    "over_at": [],
+    "under_at": []
+   }
+  }
+ }
+]

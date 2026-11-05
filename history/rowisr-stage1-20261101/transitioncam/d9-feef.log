@@ -1,0 +1,26 @@
+[13:09:17] brightness, 25% and 50%: 888 frames
+[13:09:17]   Delete   levels   47.2 to  172.5, extremes   18.3 to  189.8: 0 over, 4 under [][670, 690, 805, 819]
+[13:09:17]   F-row a  levels   45.6 to  109.1, extremes   25.5 to  124.2: 0 over, 0 under [][]
+[13:09:17]   F-row b  levels  394.1 to  593.7, extremes  304.2 to  600.6: 0 over, 0 under [][]
+[13:09:17]   Ctrl     levels  496.1 to  657.6, extremes  412.3 to  675.4: 0 over, 0 under [][]
+[13:09:32] brightness, 10% and 75%: 888 frames
+[13:09:32]   Delete   levels   16.0 to  335.5, extremes    7.2 to  353.7: 0 over, 0 under [][]
+[13:09:32]   F-row a  levels   28.9 to  214.9, extremes   16.0 to  228.9: 0 over, 0 under [][]
+[13:09:32]   F-row b  levels  233.6 to  672.7, extremes  134.1 to  682.6: 0 over, 2 under [][60, 654]
+[13:09:32]   Ctrl     levels  309.7 to  738.2, extremes  179.3 to  743.0: 0 over, 4 under [][538, 592, 700, 754]
+[13:09:48] hue, purple and red at 25%: 888 frames
+[13:09:48]   Delete   levels  390.6 to  411.6, extremes  380.2 to  420.7: 0 over, 0 under [][]
+[13:09:48]   F-row a  levels  681.2 to  688.6, extremes  675.9 to  693.8: 0 over, 0 under [][]
+[13:09:48]   F-row b  levels  708.1 to  718.1, extremes  698.8 to  721.5: 0 over, 0 under [][]
+[13:09:48]   Ctrl     levels  670.0 to  695.9, extremes  638.8 to  702.3: 0 over, 0 under [][]
+[13:10:05] effect, Solid and Cycle All at 25%: 882 frames
+[13:10:05]   Delete   levels  390.3 to  412.4, extremes  381.7 to  418.4: 0 over, 0 under [][]
+[13:10:05]   F-row a  levels  683.7 to  689.6, extremes  679.6 to  693.4: 0 over, 0 under [][]
+[13:10:05]   F-row b  levels  712.0 to  719.5, extremes  702.1 to  722.4: 0 over, 0 under [][]
+[13:10:05]   Ctrl     levels  674.4 to  695.8, extremes  640.4 to  705.4: 0 over, 0 under [][]
+[13:10:20] RGB off and on at 25%: 888 frames
+[13:10:20]   Delete   levels  379.1 to  412.2, extremes  371.6 to  418.9: 0 over, 0 under [][]
+[13:10:20]   F-row a  levels  682.8 to  688.8, extremes  678.6 to  692.5: 0 over, 0 under [][]
+[13:10:20]   F-row b  levels  689.9 to  719.2, extremes  685.4 to  721.5: 0 over, 0 under [][]
+[13:10:20]   Ctrl     levels  495.9 to  695.8, extremes  490.1 to  698.6: 0 over, 0 under [][]
+[13:10:20] frames outside the levels, all clips: 10
