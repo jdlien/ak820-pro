@@ -423,3 +423,78 @@ done.
 token: 0xf63adb29 (want 0xf63adb29)
 board : effect 1, hue 31, sat 159, val 255, speed 163
 Thu  5 Nov 2026 11:00:15 CST
+Thu  5 Nov 2026 11:45:55 CST
+the ceilings settled: ak820pro-builds/out/via-dev-f5c51a8f19-20261105-114223.bin (0x88e3ca82), on JD's go
+white present
+firmware : ak820pro-builds/out/via-dev-f5c51a8f19-20261105-114223.bin
+built    : Nov  5 11:42:23 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 1, hue 182, sat 255, val 103, speed 4
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Solid on h182 s255 v103 speed 4, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+== dumping the battery log ==
+# 3 entries (log v8, one per 900 s), newest 51 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Solid on h182 s255 v103 speed 4, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+token: 0x88e3ca82 (want 0x88e3ca82)
+board : effect 1, hue 182, sat 255, val 103, speed 4
+Thu  5 Nov 2026 11:46:23 CST
+Thu  5 Nov 2026 12:06:23 CST
+Rain: ak820pro-builds/out/via-dev-5d46f4b1f7-20261105-115750.bin (0x31b3b6ab), on JD's go
+white present
+firmware : ak820pro-builds/out/via-dev-5d46f4b1f7-20261105-115750.bin
+built    : Nov  5 11:57:50 2026  (262144 bytes)  <- confirm this is your build
+== backing up the VIA keymap ==
+saved 720 bytes, 4 layers, 1 encoder(s), 0 of 18 macro bytes used -> /Users/jdlien/Documents/ak820pro-keymap.json
+== backing up the RGB lighting ==
+lighting saved to /Users/jdlien/Documents/ak820pro-lighting.json
+  effect 1, hue 182, sat 255, val 103, speed 4
+== backing up the settings profiles and the live settings ==
+profiles and live settings saved to /Users/jdlien/Documents/ak820pro-profiles.json
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Solid on h182 s255 v103 speed 4, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+== dumping the battery log ==
+# 1 entries (log v8, one per 900 s), newest 313 s ago
+== asking the firmware to jump to the bootloader ==
+jump sent: no reply, so the board is resetting into its bootloader
+bootloader detected (0C45:7140)
+== flashing ==
+Device succesfully flashed!
+Flashing done. Rebooting.
+== waiting for the board to come back ==
+== restoring the VIA keymap ==
+restored 720 bytes across 4 layers from /Users/jdlien/Documents/ak820pro-keymap.json, read back and verified
+(VIA reads the keymap at connect -- reload the tab to see it)
+== restoring the settings profiles and the live settings ==
+live settings restored and flushed
+profiles restored and read back
+profiles (W, M: the slot each side of the Win/Mac switch loads; the switch on the Mac):
+live: Solid on h182 s255 v103 speed 4, screen 100%, locks 1, charging 0, clock 12h:ss, battery both, font regular, power Power saver
+raw HID: OK -- board is healthy
+== clock: left to the daemon (it syncs on the board's return; see `ak820 status`) ==
+done.
+token: 0x31b3b6ab (want 0x31b3b6ab)
+board : effect 1, hue 182, sat 255, val 103, speed 4
+white off data
+Thu  5 Nov 2026 12:06:56 CST

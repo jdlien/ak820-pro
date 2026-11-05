@@ -92,19 +92,21 @@ set, the camera gate). The fallback for the night is `8355011389`
 is judging its curve by eye.** Written for a fresh session.
 
 *The newest state, which overrides the paragraphs under it where they differ:*
-white runs `row-isr` `d6656f9262` since 11:00 11-05 (dev `0xf63adb29`): every effect on
-the curve, the hold's ramp, the Cycles keeping their place through a speed change. The
-branch's head carries the ceilings, `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), JD's
-choices from the percent map (the README's end), built and pushed, not flashed: it needs
-his word, and then `scripts/ladder_check.py --rig` (about 18 min, on USB) to prove its new gates.
-The data line is off and the daemon running, as in the standing state, but **relay 2 is
-ON, by hand since 20:11 11-04; the pack is full**. Whether a drain restarts is his call.
-Flashes need his word.
+white runs `row-isr` `5d46f4b1f7` since 12:06 11-05 (dev `0x31b3b6ab`, devprobe
+`0xf93b82b9`, daily `0x30922fb3`), the branch's head: every effect on the curve, the hold's
+ramp, the Cycles' place kept through a speed change, the ceilings `SAVER_VAL` 191 (75%) and
+`DIM_VAL` 102 (40%), and the new effect `Rain`. The data line is off and the daemon running,
+as in the standing state, but **relay 2 is ON, by hand since 20:11 11-04; the pack is
+full**. Whether a drain restarts is his call. Flashes need his word.
+
+The ladder check passed on every effect but its own calibration of two. Owed: its rerun
+`scripts/ladder_check.py --presser --only 7,8,10` (Heatmap, Rain, Drift, about 5 min, with
+the data line up and the daemon out, taking over the lights), and JD's eye on Rain.
 
 **The curve is settled by JD's eye (`--stops 4`).** His calls: the battery's 20-35% less
 light is fine, old profiles need no conversion, the `Fn`+arrow keys keep raw values, the
-hold's 4-5 s is good, the Cycles' speed fix is good, Drift stays as it is for now. Next:
-the flash and the ladder check; then the order below, its first item done.
+hold's 4-5 s is good, the Cycles' speed fix is good, Drift stays as it is for now. Then
+the order below, its first item done.
 
 *What is on white:* `row-isr` `a86a07610f`, dev token `0xfbcd040d` (since
 20:41; devprobe `0x06cda486`, daily `0x6115beeb`; the gaps 344 and

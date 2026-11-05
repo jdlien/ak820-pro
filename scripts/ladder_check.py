@@ -5,7 +5,7 @@ every enabled lighting effect, its stages and its ceiling forced over
 HC_DEVHOOK op 14, with the board's own LED drive read back (the committed
 frames, ak820battery's `led drive`).
 
-    venv/bin/python scripts/ladder_check.py [--rig] [--out DIR]
+    venv/bin/python scripts/ladder_check.py [--rig | --presser] [--out DIR]
 
 Two parts, on USB (the cable): a held stage ignores the battery-only rule, and
 so does the ceiling it takes, so the relay can stay on. Every effect runs at
@@ -44,7 +44,7 @@ JD's lighting, the stage held at the start (usually none) and the mode are
 restored in a `finally`, each step on its own; a failed restore exits 1.
 Needs a dev build with op 14. The LEDs change visibly for ~18 minutes.
 """
-import argparse, json, os, sys, time
+import argparse, json, os, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -53,13 +53,13 @@ import deep_sleep as ds  # noqa: E402  (with_dev: the board's raw HID, retried)
 import sleep_baseline as sb  # noqa: E402  (attempt, the relay)
 
 EFFECTS = {1: "solid", 2: "alphas mods (JD's)", 3: "cycle all", 4: "cycle left-right", 5: "cycle up-down",
-           6: "jellybean raindrops", 7: "typing heatmap", 8: "rainfall (custom)", 9: "drift (custom)"}
-ANIMATED = {3, 4, 5, 6, 7, 8, 9}
+           6: "jellybean raindrops", 7: "typing heatmap", 8: "rain (custom)", 9: "rain rgb (custom)", 10: "drift (custom)"}
 CONVERTED = {1, 2, 3, 4, 5, 6}   # every LED at the user's value, so the CIE ratio holds
-HEATMAP, DRIFT = 7, 9
+HEATMAP, RAIN, RAINRGB, DRIFT = 7, 8, 9, 10
 FULL, SAVER = 0, 2               # power.c's POWER_MODE_FULL, POWER_MODE_SAVER
 STAGES = ["active", "dim", "off", "dark", "active"]
 DIM_CAP, SAVER_CAP = 102, 191    # power.c's DIM_VAL and SAVER_VAL on the row ISR branch (64 and 128 through v0.3.1)
+PRESSER_START = 10               # s: presser_repl.py pausing the logger and entering the REPL
 UNDER = 180                      # a value under Saver's ceiling, bright enough for the Heatmap's one key to read
 STAGE_CAP = {"active": 255, "dim": DIM_CAP, "off": 255, "dark": 255}   # op 14's value ceiling, in Always on
 SPEED = 255
@@ -77,8 +77,13 @@ MIN_LIT = {255: 20, UNDER: 2}    # per mille: a lit reference at each value (pur
 MIN_LIT_HEATMAP = {255: 4, UNDER: 0.5}
 
 
+# Drift's stops top out near a quarter of full chroma and most of its field is dark:
+# measured 16-25 per mille at 255 and about 2 at UNDER.
+MIN_LIT_DRIFT = {255: 10, UNDER: 1}
+
+
 def min_lit(eff, v):
-    return (MIN_LIT_HEATMAP if eff == HEATMAP else MIN_LIT)[v]
+    return (MIN_LIT_HEATMAP if eff == HEATMAP else MIN_LIT_DRIFT if eff == DRIFT else MIN_LIT)[v]
 MIN_WHITE = 100                  # per mille: white at Saver's ceiling (measured 186)
 
 
@@ -87,8 +92,9 @@ def tol(eff, ref):
 
 
 class Bench:
-    def __init__(self, press=None):
+    def __init__(self, press=None, presser=False):
         self.rig = press   # a key tap through relay 1, or None
+        self.presser = presser   # the logger's presser on Delete
 
     def set(self, rgb=None, mode=None, stage=0):
         def go(h):
@@ -105,7 +111,15 @@ class Bench:
 
     def drive(self, eff, n):
         """The hold: SETTLE s, then n samples SPACING s apart, per mille; the
-        Heatmap's key tapped before each if there is a rig."""
+        Heatmap's key tapped before each if there is a rig. The presser's tool
+        takes seconds to start and to leave (it pauses the logger on the same
+        QT Py), and the heat decays in 6 s, so it presses through the samples."""
+        pressing = None
+        if self.presser and eff == HEATMAP:
+            count = int((PRESSER_START + SETTLE + n * SPACING + 2) * 10)   # 100 ms a press
+            pressing = subprocess.Popen([sys.executable, os.path.join(HERE, "presser_repl.py"), "batch", "A1", str(count), "40", "60"],
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(PRESSER_START)
         time.sleep(SETTLE)
         got = []
         for k in range(n):
@@ -115,13 +129,15 @@ class Bench:
                 for _ in range(4):
                     self.rig()
             got.append(cm.led_drive())
+        if pressing is not None:
+            pressing.wait()
         if None in got:
             raise SystemExit("the board's LED drive did not read back")
         return sum(got) / len(got)
 
 
-def judged(eff, rig):
-    return eff != HEATMAP or rig is not None
+def judged(eff, b):
+    return eff != HEATMAP or b.rig is not None or b.presser
 
 
 def stages_pass(b, rows):
@@ -138,13 +154,13 @@ def stages_pass(b, rows):
         act, dim, off, dark, back = got
         drive_ok = (act >= min_lit(eff, 255) and off == 0 and dark == 0 and dim < act
                     and abs(back - act) <= max(20, act * 0.2))
-        ok = all(caps) and (drive_ok or not judged(eff, b.rig))
+        ok = all(caps) and (drive_ok or not judged(eff, b))
         bad += not ok
         rows.append({"part": "stages", "effect": eff, "name": name, "active": act, "dim": dim, "off": off,
-                     "dark": dark, "wake": back, "op14": all(caps), "judged": judged(eff, b.rig), "ok": ok})
+                     "dark": dark, "wake": back, "op14": all(caps), "judged": judged(eff, b), "ok": ok})
         print(f"{eff} {name:22} active {act / 10:5.1f}%  dim {dim / 10:5.1f}%  off {off / 10:4.1f}%  "
               f"dark {dark / 10:4.1f}%  wake {back / 10:5.1f}%  op 14 {'ok' if all(caps) else 'WRONG'}  "
-              f"{'ok' if ok else 'FAIL'}{'' if judged(eff, b.rig) else ' (not judged: no --rig)'}")
+              f"{'ok' if ok else 'FAIL'}{'' if judged(eff, b) else ' (not judged: no --rig)'}")
     return bad
 
 
@@ -168,18 +184,18 @@ def saver_pass(b, rows):
                 drive_ok = sav <= ref + t
                 if eff in CONVERTED:
                     drive_ok = drive_ok and sav <= ref * CAPPED_MAX + 2
-                if eff == DRIFT:
+                if eff in (RAIN, RAINRGB, DRIFT):
                     drive_ok = drive_ok and sav <= ref * DRIFT_MAX + 2
             else:
                 drive_ok = abs(sav - ref) <= t
             drive_ok = drive_ok and ref >= min_lit(eff, v)
-            ok = ok1 and ok2 and (drive_ok or not judged(eff, b.rig))
+            ok = ok1 and ok2 and (drive_ok or not judged(eff, b))
             bad += not ok
             rows.append({"part": "saver", "value": v, "effect": eff, "name": name, "full": ref, "saver": sav,
-                         "op14": ok1 and ok2, "judged": judged(eff, b.rig), "ok": ok})
+                         "op14": ok1 and ok2, "judged": judged(eff, b), "ok": ok})
             print(f"v{v:<3} {eff} {name:22} Always on {ref / 10:5.1f}%  Power saver {sav / 10:5.1f}%"
                   f"  ({sav / ref if ref else 0:4.2f})  op 14 {'ok' if ok1 and ok2 else 'WRONG'}  "
-                  f"{'ok' if ok else 'FAIL'}{'' if judged(eff, b.rig) else ' (not judged: no --rig)'}")
+                  f"{'ok' if ok else 'FAIL'}{'' if judged(eff, b) else ' (not judged: no --rig)'}")
     w128, ok1 = held(b, {"effect": 1, "h": 0, "s": 0, "v": SAVER_CAP}, FULL, 255)
     w255, ok2 = held(b, {"effect": 1, "h": 0, "s": 0, "v": 255}, SAVER, SAVER_CAP)
     ok = ok1 and ok2 and w128 >= MIN_WHITE and abs(w255 - w128) <= w128 * 0.05
@@ -192,6 +208,8 @@ def saver_pass(b, rows):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rig", action="store_true", help="tap the relay's key through the Heatmap's holds")
+    ap.add_argument("--presser", action="store_true", help="the same with the logger's presser on Delete (scripts/presser_repl.py); the relay's key is broken since the move to Buzz")
+    ap.add_argument("--only", default=None, help="comma-separated effect numbers: a rerun of a few, not the whole check")
     ap.add_argument("--out", default=os.path.join(HERE, "..", "history", "ladder-check-" + time.strftime("%Y%m%d-%H%M")))
     a = ap.parse_args()
     jd_rgb, jd_mode = ds.with_dev(cm.read_rgb), ds.with_dev(cm.power_mode)
@@ -208,7 +226,11 @@ def main():
         relay = hid.Device(path=devs[0]["path"])   # one handle: macOS opens it exclusively
     rows, bad, restored = [], 0, True
     try:
-        b = Bench((lambda: sb.press(relay, 40, 120)) if relay is not None else None)
+        if a.only:
+            keep = {int(x) for x in a.only.split(",")}
+            for e in [e for e in EFFECTS if e not in keep]:
+                del EFFECTS[e]
+        b = Bench((lambda: sb.press(relay, 40, 120)) if relay is not None else None, presser=a.presser)
         bad += stages_pass(b, rows)
         bad += saver_pass(b, rows)
     finally:
@@ -231,15 +253,15 @@ def main():
             restored = False
             print(f"⚠️ the restore could not be read back: {e}")
     os.makedirs(a.out, exist_ok=True)
-    incomplete = not a.rig
+    incomplete = not (a.rig or a.presser)
     with open(os.path.join(a.out, "ladder-check.json"), "w") as f:
-        json.dump({"rows": rows, "rig": a.rig, "restored": restored, "incomplete": incomplete,
+        json.dump({"rows": rows, "rig": a.rig or a.presser, "restored": restored, "incomplete": incomplete,
                    "at": time.strftime("%Y-%m-%d %H:%M:%S")}, f, indent=1)
     if bad or not restored:
         print("ladder check:", f"{bad} FAILED" if bad else "passed, but the restore FAILED")
         sys.exit(1)
     if incomplete:
-        print("ladder check: INCOMPLETE -- everything judged passed, but the Heatmap was not judged (no --rig)")
+        print("ladder check: INCOMPLETE -- everything judged passed, but the Heatmap was not judged (no --rig or --presser)")
         sys.exit(2)
     print("ladder check: all pass")
     sys.exit(0)

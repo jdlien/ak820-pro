@@ -2350,6 +2350,25 @@ dimmer than full and only just visible in bright office light; 40% for the idle 
 to see in bright light, on the side of too dim. So `SAVER_VAL` 191 and `DIM_VAL` 102 (the
 plan's "curve's candidates").
 
+### The ladder check on the settled ceilings, and Rain (11-05, 11:46-12:06)
+
+`scripts/ladder_check.py --presser` on `f5c51a8f19` (dev `0x88e3ca82`,
+`ladder-check-20261105/`): every lit effect takes 18-19% of its light in Power saver at
+value 255 (white exactly 18.6%), is unchanged under the ceiling, 1.6% of it in the dim,
+and exactly 0.0% in the off and dark stages, and comes back at the wake; op 14 agreed
+at every hold; lighting, mode and relay restored; no reset. Five rows failed, all the
+check's own calibration: three the Heatmap (the presser's tool takes seconds to leave,
+because it pauses the logger on the same QT Py, so the heat had decayed before the read)
+and two Drift (its dark ramp reads under a floor set for the old linear Drift). The
+script now presses through the samples and gives Drift its own floor, and `--only` reruns
+a few effects.
+
+`Rain` (`5d46f4b1f7`, dev `0x31b3b6ab`, on white 12:06): RAINFALL's drops in one colour,
+each from its own top, 96 to 255 as the drop's value, so a tenth of the light to full.
+Rainfall is `Rain RGB` in the menu. Rain took mode 8, so Rain RGB is 9 and Drift 10; a
+profile stores stable ids (Rain's is 13) and does not notice. The simulator's `k_rain`
+checks the colour on every LED, the spread of tops and the ceilings, with four mutants.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

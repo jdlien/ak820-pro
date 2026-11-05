@@ -1159,8 +1159,8 @@ are the firmware step if a quarter is still too coarse under a tick.
   office light. 102 is 1.8% of full, chosen by eye on the side of too dim. The percent
   map (11-05, `history/rowisr-stage1-20261101/percent-map-20261105/`): on white the LEDs
   add 11.6 mA at 75%, 4.5 at 40% and 45.5 at full, so the dim saves a lot from a bright
-  setting and almost nothing from a setting near it. `scripts/ladder_check.py` and
-  `current_map.py` carry the new values, the ladder check not yet run on them.
+  setting and almost nothing from a setting near it. The ladder check passes them on
+  every effect but its own calibration of the Heatmap and Drift, fixed, the rerun owed.
 - **The gauge's model: a small debt.** Against the same map it reads 3 to 6% low from
   5% to 75% and 5% high at a dim 1%, 299 against 300 mW at full. The fixed 8.64 mW for
   any LED lit looks low, near 13 mW once every colour pulses each field, and high when
