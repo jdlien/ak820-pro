@@ -2369,6 +2369,10 @@ Rainfall is `Rain RGB` in the menu. Rain took mode 8, so Rain RGB is 9 and Drift
 profile stores stable ids (Rain's is 13) and does not notice. The simulator's `k_rain`
 checks the colour on every LED, the spread of tops and the ceilings, with four mutants.
 
+JD's eye on Rain: the drops would look better falling about half as long again. So
+`8ae385563d` (dev `0xb1dd84c2`, devprobe `0xb3b6bb11`, daily `0x41fc673a`; on white 12:15)
+falls 43/16 of the drop's value a frame against Rain RGB's 4 (`RAIN_DECAY_Q4`, one constant).
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

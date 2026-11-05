@@ -444,7 +444,7 @@ static void k_rain_at(uint8_t cap) {
     static const uint8_t cs[][2] = {{178, 219}, {0, 255}, {85, 128}, {40, 0}};
     uint16_t top = k_quarters(255, k_recip(cap));
     rgb_mode = RGB_MATRIX_CUSTOM_RAIN;
-    unsigned bad = 0, lit = 0, seeds = 0;
+    unsigned bad = 0, lit = 0, seeds = 0, fell = 0, falls = 0;
     uint8_t  low = 255, high = 0;
     for (unsigned k = 0; k < sizeof cs / sizeof cs[0]; k++) {
         rgb_matrix_config.hsv   = (hsv_t){cs[k][0], cs[k][1], 200};
@@ -459,6 +459,9 @@ static void k_rain_at(uint8_t cap) {
                     seeds++;
                     if (v < low) low = v;
                     if (v > high) high = v;
+                } else if (f && before[i] > 8 && before[i] - v <= 4) {   /* a falling drop, clear of the floor and not reseeded lower */
+                    fell += (unsigned)(before[i] - v);
+                    falls++;
                 }
                 rgb_t   want = hsv_to_rgb((hsv_t){cs[k][0], cs[k][1], v});
                 k_out_t o    = k_out(k_frame[i], rgb_matrix_config.hsv.v);
@@ -472,7 +475,9 @@ static void k_rain_at(uint8_t cap) {
     CHECK(bad == 0 && lit > 0, "RAIN under %u: %u wrong, %u lit", cap, bad, lit);
     CHECK(seeds > 1000 && low >= RAIN_PEAK_MIN && low < RAIN_PEAK_MIN + 16 && high > 240,
           "RAIN under %u: %u drops, tops %u to %u", cap, seeds, low, high);
-    printf("  RAIN under %u: %u drops, tops %u to %u\n", cap, seeds, low, high);
+    /* The fade: half as long again as RAIN RGB's 4 a frame. */
+    CHECK(falls > 1000 && fell * 16u > falls * 42u && fell * 16u < falls * 44u, "RAIN under %u: fell %u over %u frames of a drop", cap, fell, falls);
+    printf("  RAIN under %u: %u drops, tops %u to %u, falling %.2f a frame\n", cap, seeds, low, high, (double)fell / falls);
     rgb_mode = 2;
 }
 
