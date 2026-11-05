@@ -1339,7 +1339,9 @@ changed, which is why it is a ceiling and not half the user's value: halving
 a dim board again can move its colours (a dim magenta toward red). DRIFT,
 whose brightness scales its colours after the conversion, caps its own
 value knob instead, so it saves about half its LED power, not three
-quarters.
+quarters. That describes releases through v0.3.1. On the row ISR branch the
+flush applies the ceiling on every effect, and its curve makes 128 only 3.6%
+of full light, so this value is due to be chosen again by light.
 
 **Lights out** keeps the RGB and the backlight off even while typing (~107 mW,
 ~6 days a charge by the model), and lights the backlight at the user's level

@@ -92,23 +92,22 @@ set, the camera gate). The fallback for the night is `8355011389`
 is judging its curve by eye.** Written for a fresh session.
 
 *The newest state, which overrides the paragraphs under it where they differ:*
-white runs `row-isr` `7221cb6080` since 21:01 (dev `0xd35fb613`, devprobe
-`0x5ff4aba9`, daily `0x15a432dc`), the curve `--stops 4`, the branch's head.
-The data line is off and the daemon running, as in the standing state, but
-**relay 2 is ON since 20:11, switched by hand: the pack is charging**. JD
-stopped the drain because Power saver and the low-pack limit on the LEDs made
-the lights hard to judge, and the flash moratorium's reason went with it.
-Leave the relay as it is; whether a drain restarts is his call. Flashes still
-need his word.
+white runs `row-isr` `5256860413` since 21:35 (dev `0x2f5bccee`). The branch's head
+is one commit past it: `8f98d44cef` (dev `0x0c72ad26`, devprobe `0x64463b91`, daily
+`0x8e9ffb70`), built, pushed and not flashed: follow-ups that matter only on battery,
+to go on with the next build. The data line is off and the daemon running, as in the
+standing state, but **relay 2 is ON since 20:11, switched by hand: the pack is
+charging**. JD stopped the drain because Power saver and the low-pack limit on the LEDs
+made the lights hard to judge. Leave the relay as it is; whether a drain restarts is
+his call. Flashes still need his word.
 
-**The curve is settled by JD's eye: `--stops 4`, on USB.** Codex's round on it
-is NOT READY for release, on what the curve moved rather than the tables. Before
-the merge (the plan, "The curve's candidates", has the numbers): Rainfall, Heatmap
-and Drift are about 5x brighter than the wide modes at 50%; the draw wants
-re-measuring at each percent and `SAVER_VAL`/`DIM_VAL` re-choosing by light, on
-battery, because the same setting measured 20-35% less light there than on USB
-while charging; the default and pre-D9 profiles load dimmer; the keys walk raw
-values and miss the percent stops. Then the order below, its first item done.
+**The curve is settled by JD's eye (`--stops 4`), and every effect is now on it.** His
+calls: the battery's 20-35% less light is fine, old profiles load dimmer and need no
+conversion, the `Fn`+arrow keys keep raw values. Next (the plan, "The curve's
+candidates"): his eye on the effects and the hold's new ramp, and on Drift, which is
+far dimmer at mid settings and may be rescaled, rethought or dropped; then the draw at
+each percent on battery, once charged, and `SAVER_VAL`/`DIM_VAL` chosen by light, with
+`scripts/ladder_check.py`'s old-curve gates. Then the order below, its first item done.
 
 *What is on white:* `row-isr` `a86a07610f`, dev token `0xfbcd040d` (since
 20:41; devprobe `0x06cda486`, daily `0x6115beeb`; the gaps 344 and

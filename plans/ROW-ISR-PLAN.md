@@ -1031,9 +1031,9 @@ which the dev build cannot hold. Revised:
   config under the ladder's cap. The encoding is the mode's, not the
   render's: a frame of a wide mode is chroma whether or not that render
   called the wrap (Jellybean paints nothing in a frame without a drop).
-  The effects whose value varies per LED (Typing Heatmap, RAINFALL,
-  DRIFT) keep the byte path: the wrap converts them as before and the
-  flush uses `width_lut[]` on their bytes.
+  Since `5256860413` every enabled effect is wide. RAINFALL and the Heatmap hand
+  the wrap their local value and DRIFT writes its palette, all at full global
+  value. Only the dev pattern's raw bytes still take `width_lut[]`.
 - **The flush converts, unmasked.** `sn32f2xx_flush()` converts when the
   render buffer changed, or the encoding changed (the mode, a raw
   pattern), or the value changed, even with no byte moved (a dim Solid's
@@ -1142,32 +1142,28 @@ and two levels skipped, because the menu steps 2.55 values a percent);
 prints any table's widths per detent. Eighth ticks (an eight-field pattern)
 are the firmware step if a quarter is still too coarse under a tick.
 
-**Settled: `--stops 4`, by JD's eye on USB** (`7221cb6080`). Codex's round
-(`review-codex-row-isr-d9-curve-raw.md`) found the tables and the machinery sound
-and called the release NOT READY on what the curve moved. **Open for the merge:**
+**Settled: `--stops 4`, by JD's eye on USB** (`7221cb6080`). What the curve moved:
 
-- **A percentage means two lights (its P1).** Rainfall, Typing Heatmap and Drift,
-  the enabled effects on the byte path, are about 5x brighter than the wide modes
-  at 50%, by peak pixel. A shared 8-bit table is no fix: rounded, slider 0-33%
-  collapses to four byte outputs (0, 1, 2, 3), the first nonzero at 9%. Codex's
-  smallest acceptable fix: those effects render at full brightness and the wide
-  flush applies the curve and the cap once, the raw patterns' bypass kept and the
-  effects' fade response reviewed.
-- **The caps (P2).** `SAVER_VAL` 128, the ceiling in Power saver and under 15% on
-  battery, went from 18.6% of full light to 3.6%, and `DIM_VAL` 64 from 4.4% to
-  0.7%. Keeping the old light on a full channel would put them near 191 and 138,
-  which must be mode-aware until the first item is settled. Measure the draw at
-  each percent first, on battery, then choose them by light. The same setting
-  gives 20-35% less light on battery than on USB while charging
-  (`history/rowisr-stage1-20261101/README.md`, "The same setting on USB and on
-  battery"), so judge them there.
-- **The default and old profiles (P2).** `keyboard.json`'s h36/s64/v191 drives
-  about 61% less, and a profile saved before D9 loads far dimmer: purple at v125
-  from (61,28,211) to (12,5.5,39). Records stay intact. Settle the default, and
-  whether old profiles convert.
-- **The keys (P2).** `RGB_MATRIX_VAL_STEP` 2 walks raw values, not the menu's
-  percent stops: v2 and v4 show 1% and 2% and drive the same half tick, and v10 to
-  v12 show 4% to 5% with no change. Align the keys with percent stepping.
+- **A percentage meaning two lights: fixed in `5256860413`.** Rainfall, the Heatmap
+  and Drift render at full global value and the flush applies the curve and the cap
+  once (codex's smallest acceptable fix). Codex's round on it found no P1 and one P2,
+  the stale colour checks, since fixed along with the simulator's missing stub for
+  this branch: `scripts/battery_sim/run.sh` now passes against this tree, its colour
+  checks reading final widths, 33 of 34 mutants caught and the one known survivor.
+- **Drift: open, JD's look.** Its stops top out near a quarter of full chroma, so 50%
+  is about 11 ticks at its brightest, where it was about 160. Rescaling the stops is
+  one table; some effects may also go or be rethought.
+- **The caps: open, next.** `SAVER_VAL` 128, the ceiling in Power saver and under 15%
+  on battery, went from 18.6% of full light to 3.6%, and `DIM_VAL` 64 from 4.4% to
+  0.7%. Measure the draw at each percent on battery, then choose them by light.
+  `scripts/ladder_check.py`'s ratios and `MIN_WHITE` still expect the old curve and
+  change with them.
+- **USB against battery: accepted.** 20-35% less light on battery at one setting is
+  expected and fine; it would want a solution only near half.
+- **Old profiles: accepted, no conversion.** A profile saved before D9 loads dimmer.
+  `keyboard.json`'s default v191 drives about 61% less; it stays until someone objects.
+- **The `Fn`+arrow keys: raw values kept**, the finest control there is. Their hold
+  is now a straight ramp in `param_overlay.c`, with a floor per control in `config.h`.
 - **Accepted (P3).** 36% and 37% are 17 ticks on a full channel, and devprobe's
   K=64 has plateaus and a dark 1%, a bench flavour only.
 

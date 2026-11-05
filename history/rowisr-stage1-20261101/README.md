@@ -2271,6 +2271,46 @@ measured: a full pack on USB, whose rail is higher still (4.47 V), or the cable
 position (4.53-4.79 V). The eye on the curve so far is USB's, while the power
 caps apply only on battery, so the caps want choosing there.
 
+JD's reading of that: a few percent on battery is expected and fine; only something
+near half would want a solution.
+
+### Every effect on the wide path, and the hold's ramp (11-04, 21:35, `5256860413`, dev `0x2f5bccee`)
+
+Rainfall, the Heatmap and Drift moved to the flush's curve and cap, so one percentage
+means one light across the effects. The hold on the adjust keys went from a jump to 83
+steps/s, which crossed the top 90% of the light in half a second, to a straight line
+from 60 ms to a floor per control over 2 s:
+
+| Control | Steps | Full traverse before | Now |
+|---|---|---|---|
+| Brightness | 127 | 2.7 s | 4.3 s |
+| Hue | 255 | 4.5 s | 5.0 s |
+| LCD | 100 | 2.4 s | 4.2 s |
+| Saturation, speed | 63 | 1.9 s | 3.7 s |
+
+Modelled at a main-loop pass of 2.7 ms; codex's own count agrees within 0.1 s.
+
+By camera (`effects_cam.py`, `effectscam/`): Solid and the Heatmap rise with the value
+(the Heatmap's held Delete key reads 174, 220, 254 at values 26, 64, 128), and in the
+frames Rainfall and Drift run without blazing over Solid. It gives no number for those
+two: Rainfall's drops land at random and a green bench light sets a floor of about 120
+over Drift. The first run's reading was the LCD's and its Heatmap clips missed the
+presses, both fixed in the second.
+
+Codex (`plans/review-codex-row-isr-d9-effects-raw.md`): no P1, no firmware defect, one
+P2, the colour checks. Taken in `8f98d44cef` (dev `0x0c72ad26`, devprobe `0x64463b91`,
+daily `0x8e9ffb70`; built, not flashed): a wide mode's cap change restarts nothing, so
+the key that ends a dim keeps its heat; the unused `sn32f2xx_led_load()` gone; stale
+comments corrected, among them that QMK's RGB keys step on release. Its count for the
+flush's cost: the wide loop 54-86 instructions an LED against the byte loop's 21, about
+0.6-1.5 ms of wall time a frame beside the row ISR, no path to a 25 ms stall found, which
+an ELF count cannot certify: the warm window is still owed.
+
+The simulator had not compiled against this branch since the row ISR moved a header,
+which nothing had noticed. It now does, and its colour checks read final widths through
+a copy of the flush's arithmetic. Against 8b06e4dcc4's DRIFT at full value, today's
+bytes hash the same (`d05750ef`), so the rendering at the top is unchanged.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

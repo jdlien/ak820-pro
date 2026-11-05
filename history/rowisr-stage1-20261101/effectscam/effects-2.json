@@ -1,0 +1,78 @@
+{
+ "label": "effects-2",
+ "steps": {
+  "solid-26": {
+   "peak": 169,
+   "mean_peak": 148.72,
+   "mean": 5.241,
+   "frames": 340
+  },
+  "solid-64": {
+   "peak": 254,
+   "mean_peak": 247.37,
+   "mean": 5.763,
+   "frames": 348
+  },
+  "solid-128": {
+   "peak": 255,
+   "mean_peak": 254.91,
+   "mean": 10.091,
+   "frames": 332
+  },
+  "heatmap-26": {
+   "peak": 174,
+   "mean_peak": 151.78,
+   "mean": 4.72,
+   "frames": 348
+  },
+  "heatmap-64": {
+   "peak": 220,
+   "mean_peak": 201.08,
+   "mean": 4.522,
+   "frames": 340
+  },
+  "heatmap-128": {
+   "peak": 254,
+   "mean_peak": 248.49,
+   "mean": 4.872,
+   "frames": 348
+  },
+  "rainfall-26": {
+   "peak": 222,
+   "mean_peak": 123.5,
+   "mean": 4.69,
+   "frames": 340
+  },
+  "rainfall-64": {
+   "peak": 120,
+   "mean_peak": 109.42,
+   "mean": 4.629,
+   "frames": 356
+  },
+  "rainfall-128": {
+   "peak": 211,
+   "mean_peak": 118.36,
+   "mean": 4.71,
+   "frames": 348
+  },
+  "drift-26": {
+   "peak": 123,
+   "mean_peak": 110.1,
+   "mean": 4.711,
+   "frames": 353
+  },
+  "drift-64": {
+   "peak": 120,
+   "mean_peak": 110.37,
+   "mean": 4.691,
+   "frames": 348
+  },
+  "drift-128": {
+   "peak": 120,
+   "mean_peak": 109.63,
+   "mean": 4.778,
+   "frames": 348
+  }
+ },
+ "token": "0x2f5bccee"
+}

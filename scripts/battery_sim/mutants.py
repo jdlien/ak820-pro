@@ -156,6 +156,46 @@ POWER_MUTANTS = [
 ]
 
 
+# On the wide path (D9) the flush applies the value and the cap.
+WIDE_POWER_MUTANTS = [
+    ("DRIFT's palette built through the wrap again", "rgb_matrix_kb.inc",
+     [("        drift_ramp[i] = hsv_to_rgb(c);", "        drift_ramp[i] = rgb_matrix_hsv_to_rgb(c);")],
+     [("colour", "k_drift_usb")]),
+    ("DRIFT scaled by the value again, under the flush's own", "rgb_matrix_kb.inc",
+     [("        rgb_matrix_set_color(i, r, g, bl);",
+       "        rgb_matrix_set_color(i, scale8(r, rgb_matrix_config.hsv.v), scale8(g, rgb_matrix_config.hsv.v), scale8(bl, rgb_matrix_config.hsv.v));")],
+     [("colour", "k_drift")]),
+    ("RAINFALL scaled by the value again, under the flush's own", "rgb_matrix_kb.inc",
+     [("rainfall_h[i], rgb_matrix_config.hsv.s, rainfall_v[i]};",
+       "rainfall_h[i], rgb_matrix_config.hsv.s, scale8(rainfall_v[i], rgb_matrix_config.hsv.v)};")],
+     [("colour", "k_rainfall")]),
+    ("a uniform effect's value not forced to full", "power.c",
+     [("        if (!power_local_value_mode()) hsv.v = 255;", "        if (false) hsv.v = 255;")],
+     [("colour", "k_hook")]),
+    ("a local value forced to full", "power.c",
+     [("        if (!power_local_value_mode()) hsv.v = 255;", "        hsv.v = 255;")],
+     [("colour", "k_hook")]),
+    ("the ceiling applied to a wide effect's local value", "power.c",
+     [("        if (!power_local_value_mode()) hsv.v = 255;",
+       "        if (!power_local_value_mode()) hsv.v = 255; else if (hsv.v > val_cap) hsv.v = val_cap;")],
+     [("colour", "k_rainfall")]),
+    ("a mode off the list losing the old ceiling", "power.c",
+     [("    } else if (hsv.v > val_cap) {\n        hsv.v = val_cap;\n    }\n", "    }\n")],
+     [("colour", "k_hook")]),
+    ("a wide mode restarted by a cap change again", "power.c",
+     [("(vcap != val_cap && !power_wide_mode())", "(vcap != val_cap)")],
+     [("colour", "k_restart")]),
+    ("a cap-only change restarting nothing off the list", "power.c",
+     [("(vcap != val_cap && !power_wide_mode())", "false")],
+     [("colour", "k_restart")]),
+    ("a ladder whose ceiling never reaches the flush", "power.c",
+     [("uint8_t power_val_cap(void) {\n    return val_cap;", "uint8_t power_val_cap(void) {\n    return 255;")],
+     [("colour", "k_hook")]),
+]
+# The old mutants those replace: the render no longer reads the knob or the ceiling.
+RETIRED_ON_WIDE = {"DRIFT's palette built through the ceiling again", "DRIFT's value knob not capped", "Saver's ceiling a halving of the value, not a ceiling"}
+
+
 def round2_table(k, lk, t_h):
     """Round 2's generator: tau = T_TAIL / ln((1000 - L_KNEE) / 10), M = 1000 - g."""
     ts = round(t_h * 3600 / TG.NODE_S) * TG.NODE_S
@@ -175,6 +215,9 @@ def build(src, mutations, sanitize=False, target="battery.c", flavour="sim", qro
     for f in ("battery.c", "battery.h", "power.c", "power.h", "battery_tail.h", "rgb_matrix_kb.inc"):
         if f != "rgb_matrix_kb.inc" or os.path.exists(os.path.join(src, f)):
             shutil.copy(os.path.join(src, f), d)
+    for curve in (os.path.join(src, "rgb", "curve12.h"), os.path.join(src, "curve12.h")):   # the wide path's, flat in a copy
+        if os.path.exists(curve):
+            shutil.copy(curve, d)
     # The backlight's scale, as run.sh selects it (the menu's P2b: 0-100 once
     # display.c has no 24-entry bkl_duty[]; codex, P2b's code review).
     disp = os.path.join(src, "graphics", "display.c")
@@ -182,6 +225,9 @@ def build(src, mutations, sanitize=False, target="battery.c", flavour="sim", qro
             "static const uint8_t bkl_duty[]" not in open(disp, encoding="utf-8").read():
         shutil.copy(os.path.join(src, "indicator_levels.h"), d)
         open(os.path.join(d, "sim_bkl.h"), "w").write("#define SIM_BKL_100 1\n")
+    if os.path.exists(os.path.join(src, "sim_bkl.h")):   # a copy built from a copy: the scale travels with it
+        shutil.copy(os.path.join(src, "sim_bkl.h"), d)
+        shutil.copy(os.path.join(src, "indicator_levels.h"), d)
     p = os.path.join(d, target)
     s = open(p, encoding="utf-8").read()   # UTF-8 on every host (Windows' default is cp1252)
     for old, new in mutations:
@@ -194,6 +240,8 @@ def build(src, mutations, sanitize=False, target="battery.c", flavour="sim", qro
         extra = ["-DAK820_DEV_HOOKS"]
     elif flavour == "colour":
         extra = ["-DSIM_REAL_COLOUR", "-Wno-unused-function", "-idirafter", os.path.join(qroot, "quantum")]
+        if "power_local_value_mode" in open(os.path.join(d, "power.c"), encoding="utf-8").read():   # as run.sh's colour()
+            extra += ["-DSIM_WIDE_EFFECTS", "-DRGB_MATRIX_CUSTOM_KB", "-DENABLE_RGB_MATRIX_SOLID_COLOR", "-DENABLE_RGB_MATRIX_TYPING_HEATMAP"]
         for f in ("color", "led_tables"):
             o = os.path.join(d, f + ".o")
             c = subprocess.run(["cc", "-std=c11", "-O1", "-DUSE_CIE1931_CURVE", "-I" + os.path.join(qroot, "quantum"),
@@ -247,6 +295,8 @@ def main():
     power = "want_val" in open(os.path.join(a.src, "power.c"), encoding="utf-8").read() and \
         os.path.exists(os.path.join(a.src, "rgb_matrix_kb.inc"))
     pmuts = POWER_MUTANTS if power else []
+    if power and "power_local_value_mode" in open(os.path.join(a.src, "power.c"), encoding="utf-8").read():
+        pmuts = [m for m in pmuts if m[0] not in RETIRED_ON_WIDE] + WIDE_POWER_MUTANTS
     bad = known = 0
 
     clean = build(a.src, [])

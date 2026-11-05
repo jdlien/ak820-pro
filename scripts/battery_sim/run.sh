@@ -132,22 +132,33 @@ if grep -q '^#define POWER_HAS_MODES' "$build/power.h"; then
             cc -std=c11 -O1 -Wall -DUSE_CIE1931_CURVE -I"$qroot/quantum" -I"$qroot/platforms" \
                -c -o "$build/$f.o" "$qroot/quantum/$f.c"
         done
-        colour() {   # colour <out> <dir holding rgb_matrix_kb.inc>
-            cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -DSIM_REAL_COLOUR \
+        # Once every effect is on the wide path (D9), the flush applies the value
+        # and the cap, so the checks read final widths (colour.c).
+        wide=""
+        ktests="k_hook k_drift k_drift_usb k_rainfall"
+        if grep -q power_local_value_mode "$build/power.c"; then
+            wide="-DSIM_WIDE_EFFECTS -DRGB_MATRIX_CUSTOM_KB -DENABLE_RGB_MATRIX_SOLID_COLOR -DENABLE_RGB_MATRIX_TYPING_HEATMAP"
+            ktests="$ktests k_restart"
+            cp "$kb/rgb/curve12.h" "$build/"
+        fi
+        colour() {   # colour <out> <dir holding rgb_matrix_kb.inc> [more flags]
+            cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -DSIM_REAL_COLOUR $wide ${3:-} \
                -I"$2" -I"$build" -idirafter "$qroot/quantum" -o "$1" "$here/sim.c" "$build/battery.c" \
                "$build/power.c" "$build/color.o" "$build/led_tables.o" -lm
         }
         colour "$build/sim_colour" "$build"
-        for s in k_hook k_drift k_drift_usb k_rainfall; do
+        for s in $ktests; do
             "$build/sim_colour" "$s" || fail=1
         done
         # k_drift_usb's hash is DRIFT's before the revision (8b06e4dcc4): that
         # DRIFT, built here beside today's power.c, must give it too, or the
         # constant is not what it claims to be.
+        # On the wide path it does so at full value (SIM_DRIFT_USB_FULL), where the
+        # old scale8 by the value changed nothing.
         base="$build/drift-8b06e4dcc4"
         mkdir -p "$base"
         if git -C "$qroot" show 8b06e4dcc4:keyboards/a_jazz/ak820pro/rgb_matrix_kb.inc > "$base/rgb_matrix_kb.inc" 2>/dev/null; then
-            colour "$base/sim_colour" "$base"
+            colour "$base/sim_colour" "$base" "${wide:+-DSIM_DRIFT_USB_FULL}"
             "$base/sim_colour" k_drift_usb > "$base/out.txt" || { cat "$base/out.txt"; echo "FAIL 8b06e4dcc4's DRIFT does not give k_drift_usb's hash"; fail=1; }
             grep -q '^ok' "$base/out.txt" && echo "ok   k_drift_usb's hash is 8b06e4dcc4's DRIFT's"
         else

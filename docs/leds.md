@@ -395,16 +395,17 @@ DRIFT`.
   grey), weighted dark, so a few soft blobs drift across a mostly dark
   board. Hue rotates the whole ramp and saturation washes it toward grey;
   speed runs from minutes to cross the board to ~7 s. Its palette is cached
-  and converted once per hue or saturation change, and **the user's value
-  scales the colours after the conversion**, linearly, unlike every other
-  effect.
+  and converted once per hue or saturation change. Through v0.3.1 the user's
+  value scaled the colours after the conversion, linearly, unlike every other
+  effect. On the row ISR branch the flush applies the value, as on every
+  effect, and the stops keep only their dark weighting, so DRIFT's brightest
+  stop is about a quarter of full chroma at any setting.
 - **The power ladder's ceilings** (the dim's 64, Power saver's 128 while
   typing, [battery.md](battery.md), "The idle ladder and the power modes")
-  act in the conversion, `rgb_matrix_hsv_to_rgb`, so every effect is capped
-  there, RAINFALL included. DRIFT is the exception: its palette is built
-  uncapped and it caps its own value knob instead, so a capped DRIFT looks
-  like DRIFT with the knob at the ceiling (`scripts/battery_sim/colour.c`
-  checks it frame for frame).
+  act once, in the flush on the row ISR branch, so every effect is capped alike
+  and a cap change restarts nothing (`scripts/battery_sim/colour.c` checks the
+  final widths). Through v0.3.1 they act in the conversion,
+  `rgb_matrix_hsv_to_rgb`, and DRIFT caps its own value knob.
 - Traps: custom effects are `RGB_MATRIX_CUSTOM_<NAME>` in the enum; reactive
   effects need `RGB_MATRIX_KEYPRESSES` or they compile out **silently**;
   `nm` LIES about whether an effect got built (static + inlined) — the proof

@@ -23,7 +23,18 @@
  * The frames run as rgb_matrix.c runs them: the board's 81 LEDs in QMK's
  * default 5 chunks, init on every chunk of a first frame. The LED positions
  * are a synthetic grid across the board's 217 x 59, not its map: enough to
- * reach every cell of DRIFT's ramp, not a claim about the board's frames. */
+ * reach every cell of DRIFT's ramp, not a claim about the board's frames.
+ *
+ * On the wide path (D9, SIM_WIDE_EFFECTS, a power.c with power_local_value_mode)
+ * an effect renders chroma and the flush applies the value and the cap, so a
+ * render buffer says nothing about light. There these checks read final widths,
+ * in quarter ticks, through a copy of rowisr.c's flush arithmetic and the real
+ * power_val_cap(): k_hook checks a uniform effect's chroma and final width, a
+ * local-value effect's uncapped conversion, and a mode off the list keeping the
+ * old hook; k_drift compares final widths; k_drift_usb hashes DRIFT's bytes,
+ * which no longer depend on the value; k_rainfall bounds the final widths and
+ * requires a drop's full chroma; k_restart checks a wide mode's cap change
+ * restarts nothing while a scale change does. */
 
 /* What rgb_matrix_kb.inc takes from QMK's rgb_matrix, for its two effects on
  * a host. lib8tion's formulas as the board builds them (SCALE8_C, and
@@ -55,6 +66,35 @@ static bool rgb_matrix_check_finished_leds(uint8_t led_max) { return led_max < R
             max = (uint8_t)((min) + K_LIMIT < RGB_MATRIX_LED_COUNT ? (min) + K_LIMIT : RGB_MATRIX_LED_COUNT)
 #define RGB_MATRIX_TEST_LED_FLAGS()
 #include "rgb_matrix_kb.inc"
+
+/* What a test compares: the light that reaches the LEDs. */
+#ifdef SIM_WIDE_EFFECTS
+#include "curve12.h"
+typedef struct { uint16_t r, g, b; } k_out_t;
+static uint32_t k_recips[256];
+static uint32_t k_recip(uint8_t v) {
+    if (!k_recips[255])
+        for (unsigned i = 0; i < 256; i++) {   /* rowisr.c's flush at the 125 us cadence's K */
+            uint32_t full_q8 = ((uint32_t)curve_q6[i] * 300u) >> 4;
+            k_recips[i] = (full_q8 * 256u + 127u) / 255u;
+        }
+    return k_recips[v];
+}
+static uint16_t k_quarters(uint8_t chroma, uint32_t recip) {   /* wide_width()'s mean, in quarter ticks */
+    uint32_t q8 = ((uint32_t)chroma * recip + 128u) >> 8, w = q8 >> 8, frac = q8 & 0xFFu;
+    if (w >= 16u) return (uint16_t)((w + (frac >= 128u ? 1u : 0u)) * 4u);
+    return (uint16_t)(w * 4u + ((frac + 32u) >> 6));
+}
+static k_out_t k_out(rgb_t c, uint8_t v) {   /* the flush: the config's value under the ladder's cap */
+    uint32_t r = k_recip(v < power_val_cap() ? v : power_val_cap());
+    return (k_out_t){k_quarters(c.r, r), k_quarters(c.g, r), k_quarters(c.b, r)};
+}
+#else
+typedef rgb_t k_out_t;
+static k_out_t k_out(rgb_t c, uint8_t v) { (void)v; return c; }
+#endif
+static bool k_out_same(k_out_t a, k_out_t b) { return a.r == b.r && a.g == b.g && a.b == b.b; }
+static bool k_out_lit(k_out_t a) { return a.r || a.g || a.b; }
 
 /* One frame as rgb_matrix.c renders it: chunk after chunk until the effect
  * says the board is done, `init` on every chunk of a first frame. */
@@ -104,6 +144,47 @@ static void k_ceiling(uint8_t cap) {
 static uint8_t k_max3(rgb_t c) { return c.r > c.g ? (c.r > c.b ? c.r : c.b) : (c.g > c.b ? c.g : c.b); }
 static bool    k_same(rgb_t a, rgb_t b) { return a.r == b.r && a.g == b.g && a.b == b.b; }
 
+#ifdef SIM_WIDE_EFFECTS
+/* Every hue, saturation and value of a uniform effect: the hook hands the flush
+ * the chroma, and the final width is that chroma's at min(value, ceiling), never
+ * above white's at the ceiling. A local-value effect keeps its own value through
+ * the ceiling, and a mode off the list keeps the old hook (a stride of colours
+ * for those two). */
+static unsigned k_hook_at(uint8_t cap) {
+    uint32_t rc = k_recip(cap);
+    uint16_t top = k_quarters(255, rc);
+    unsigned bad = 0;
+    for (unsigned h = 0; h < 256; h++)
+        for (unsigned s = 0; s < 256; s++) {
+            rgb_t chroma = hsv_to_rgb((hsv_t){(uint8_t)h, (uint8_t)s, 255});
+            rgb_mode = RGB_MATRIX_SOLID_COLOR;
+            for (unsigned v = 0; v < 256; v++) {
+                rgb_t got = rgb_matrix_hsv_to_rgb((hsv_t){(uint8_t)h, (uint8_t)s, (uint8_t)v});
+                k_out_t o = k_out(got, (uint8_t)v);
+                if (!k_same(got, chroma) || o.r > top || o.g > top || o.b > top) {
+                    if (bad++ < 3)
+                        CHECK(false, "cap %u: uniform hsv %u,%u,%u gives %u,%u,%u, want the chroma %u,%u,%u, top %u", cap, h, s, v,
+                              got.r, got.g, got.b, chroma.r, chroma.g, chroma.b, top);
+                }
+            }
+            if (h % 5u == 0 && s % 5u == 0)
+                for (unsigned v = 0; v < 256; v++) {
+                    hsv_t c = {(uint8_t)h, (uint8_t)s, (uint8_t)v};
+                    rgb_mode = RGB_MATRIX_CUSTOM_RAINFALL;
+                    rgb_t loc = rgb_matrix_hsv_to_rgb(c);
+                    rgb_mode = 200;   /* off the list */
+                    rgb_t off = rgb_matrix_hsv_to_rgb(c);
+                    hsv_t w = c;
+                    if (w.v > cap) w.v = cap;
+                    if (!k_same(loc, hsv_to_rgb(c)) || !k_same(off, hsv_to_rgb(w))) {
+                        if (bad++ < 3) CHECK(false, "cap %u: hsv %u,%u,%u: a local value or the old hook is wrong", cap, h, s, v);
+                    }
+                }
+        }
+    rgb_mode = 2;
+    return bad;
+}
+#else
 /* Every hue, saturation and value through the hook, against QMK's own
  * conversion at min(value, ceiling). */
 static unsigned k_hook_at(uint8_t cap) {
@@ -125,6 +206,7 @@ static unsigned k_hook_at(uint8_t cap) {
             }
     return bad;
 }
+#endif
 
 static void k_hook(void) {
     k_ceiling_dim();
@@ -140,17 +222,17 @@ static void k_hook(void) {
 /* DRIFT's frames at one value: the init frame and K_FRAMES - 1 after it, at a
  * mid speed so the field moves between them. */
 #define K_FRAMES 6
-static void k_drift_frames(hsv_t c, rgb_t out[K_FRAMES][RGB_MATRIX_LED_COUNT]) {
+static void k_drift_frames(hsv_t c, k_out_t out[K_FRAMES][RGB_MATRIX_LED_COUNT]) {
     rgb_matrix_config.hsv   = c;
     rgb_matrix_config.speed = 200;
     for (unsigned f = 0; f < K_FRAMES; f++) {
         k_run(DRIFT, f == 0);
-        memcpy(out[f], k_frame, sizeof k_frame);
+        for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) out[f][i] = k_out(k_frame[i], c.v);
     }
 }
 
-static rgb_t k_capped[256][K_FRAMES][RGB_MATRIX_LED_COUNT];
-static rgb_t k_free[256][K_FRAMES][RGB_MATRIX_LED_COUNT];
+static k_out_t k_capped[256][K_FRAMES][RGB_MATRIX_LED_COUNT];
+static k_out_t k_free[256][K_FRAMES][RGB_MATRIX_LED_COUNT];
 
 /* One stream from a single init, the palette's cache warm throughout: each
  * step K_STEP_FRAMES frames at its hue, saturation and value, under its
@@ -164,13 +246,13 @@ static const k_step_t k_stream[] = {
 };
 #define K_STEPS       (sizeof k_stream / sizeof k_stream[0])
 #define K_STEP_FRAMES 4
-static rgb_t k_stream_a[K_STEPS][K_STEP_FRAMES][RGB_MATRIX_LED_COUNT];
-static rgb_t k_stream_b[K_STEPS][K_STEP_FRAMES][RGB_MATRIX_LED_COUNT];
+static k_out_t k_stream_a[K_STEPS][K_STEP_FRAMES][RGB_MATRIX_LED_COUNT];
+static k_out_t k_stream_b[K_STEPS][K_STEP_FRAMES][RGB_MATRIX_LED_COUNT];
 
 /* The stream under its ceilings (capped), or with none and the value at
  * min(value, ceiling) (free). The ceilings move between frames, as the
  * ladder moves them; DRIFT is never re-initialized. */
-static void k_stream_run(bool capped, rgb_t out[K_STEPS][K_STEP_FRAMES][RGB_MATRIX_LED_COUNT]) {
+static void k_stream_run(bool capped, k_out_t out[K_STEPS][K_STEP_FRAMES][RGB_MATRIX_LED_COUNT]) {
     if (!capped) k_ceiling_none();
     rgb_matrix_config.speed = 200;
     for (unsigned k = 0; k < K_STEPS; k++) {
@@ -179,7 +261,7 @@ static void k_stream_run(bool capped, rgb_t out[K_STEPS][K_STEP_FRAMES][RGB_MATR
         rgb_matrix_config.hsv = (hsv_t){st.h, st.s, capped ? st.v : (st.v < st.cap ? st.v : st.cap)};
         for (unsigned f = 0; f < K_STEP_FRAMES; f++) {
             k_run(DRIFT, k == 0 && f == 0);
-            memcpy(out[k][f], k_frame, sizeof k_frame);
+            for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) out[k][f][i] = k_out(k_frame[i], rgb_matrix_config.hsv.v);
         }
     }
 }
@@ -187,6 +269,9 @@ static void k_stream_run(bool capped, rgb_t out[K_STEPS][K_STEP_FRAMES][RGB_MATR
 static void k_drift(void) {
     static const uint8_t hs[][2] = {{0, 255}, {170, 255}, {85, 128}, {213, 64}, {40, 0}};
     k_points();
+#ifdef SIM_WIDE_EFFECTS
+    rgb_mode = RGB_MATRIX_CUSTOM_DRIFT;
+#endif
     for (unsigned pass = 0; pass < 2; pass++) {
         uint8_t cap = pass == 0 ? 64 : 128;
         for (unsigned k = 0; k < sizeof hs / sizeof hs[0]; k++) {
@@ -201,9 +286,9 @@ static void k_drift(void) {
                 unsigned ve = v < cap ? v : cap;
                 for (unsigned f = 0; f < K_FRAMES; f++)
                     for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-                        rgb_t a = k_capped[v][f][i], b = k_free[ve][f][i];
-                        if (k_max3(a)) lit++;
-                        if (!k_same(a, b) && bad++ < 3)
+                        k_out_t a = k_capped[v][f][i], b = k_free[ve][f][i];
+                        if (k_out_lit(a)) lit++;
+                        if (!k_out_same(a, b) && bad++ < 3)
                             CHECK(false, "cap %u, hue %u sat %u, value %u, frame %u, LED %u: %u,%u,%u, want %u,%u,%u",
                                   cap, hs[k][0], hs[k][1], v, f, i, a.r, a.g, a.b, b.r, b.g, b.b);
                     }
@@ -220,9 +305,9 @@ static void k_drift(void) {
     for (unsigned k = 0; k < K_STEPS; k++)
         for (unsigned f = 0; f < K_STEP_FRAMES; f++)
             for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-                rgb_t a = k_stream_a[k][f][i], b = k_stream_b[k][f][i];
-                if (k_max3(a)) lit++;
-                if (!k_same(a, b) && bad++ < 3)
+                k_out_t a = k_stream_a[k][f][i], b = k_stream_b[k][f][i];
+                if (k_out_lit(a)) lit++;
+                if (!k_out_same(a, b) && bad++ < 3)
                     CHECK(false, "the warm stream, step %u frame %u LED %u: %u,%u,%u, want %u,%u,%u", k, f, i, a.r,
                           a.g, a.b, b.r, b.g, b.b);
             }
@@ -235,19 +320,31 @@ static void k_drift(void) {
  * cache warm across hue, saturation and value changes. DRIFT_USB_FNV is the
  * hash 8b06e4dcc4's DRIFT gives (run.sh builds that DRIFT and checks it), so
  * the revision leaves USB rendering exactly as it was. */
+#ifdef SIM_WIDE_EFFECTS
+/* DRIFT's bytes no longer depend on the value, and they are the old DRIFT's at
+ * full value: run.sh builds 8b06e4dcc4's with SIM_DRIFT_USB_FULL and checks it. */
+#define DRIFT_USB_FNV 0xd05750efu
+#else
 #define DRIFT_USB_FNV 0x41da838au
+#endif
 static void k_drift_usb(void) {
     static const uint8_t speeds[] = {0, 128, 255};
     static const hsv_t   steps[]  = {{191, 255, 255}, {191, 255, 120}, {30, 255, 120}, {30, 90, 120},
                                      {30, 90, 255},   {0, 0, 200},     {213, 64, 40},  {170, 255, 0}};
     k_points();
     k_ceiling_none();
+#if defined(SIM_WIDE_EFFECTS) && !defined(SIM_DRIFT_USB_FULL)
+    rgb_mode = RGB_MATRIX_CUSTOM_DRIFT;   /* not for the old DRIFT, whose palette goes through the wrap */
+#endif
     uint32_t h = 2166136261u;
     unsigned lit = 0;
     for (unsigned sp = 0; sp < sizeof speeds; sp++) {
         rgb_matrix_config.speed = speeds[sp];
         for (unsigned k = 0; k < sizeof steps / sizeof steps[0]; k++) {
             rgb_matrix_config.hsv = steps[k];
+#ifdef SIM_DRIFT_USB_FULL
+            rgb_matrix_config.hsv.v = 255;
+#endif
             for (unsigned f = 0; f < 6; f++) {
                 k_run(DRIFT, k == 0 && f == 0);
                 for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
@@ -267,21 +364,42 @@ static void k_drift_usb(void) {
  * ceiling's drive. */
 static void k_rainfall_at(uint8_t cap) {
     static const uint8_t vs[] = {255, 200, 150, 129, 128, 100, 65, 64, 30};
+#ifdef SIM_WIDE_EFFECTS
+    rgb_mode = RGB_MATRIX_CUSTOM_RAINFALL;
+    uint16_t top = k_quarters(255, k_recip(cap));
+#else
     uint8_t  top = hsv_to_rgb((hsv_t){0, 0, cap}).r;
+#endif
     unsigned bad = 0, lit = 0;
     for (unsigned k = 0; k < sizeof vs; k++) {
         rgb_matrix_config.hsv   = (hsv_t){0, 255, vs[k]};
         rgb_matrix_config.speed = 255;   /* a drop every frame */
+#ifdef SIM_WIDE_EFFECTS
+        uint8_t peak = 0;
+#endif
         for (unsigned f = 0; f < 300; f++) {
             k_run(RAINFALL, f == 0);
             for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+#ifdef SIM_WIDE_EFFECTS
+                k_out_t  o = k_out(k_frame[i], vs[k]);
+                uint16_t m = o.r > o.g ? (o.r > o.b ? o.r : o.b) : (o.g > o.b ? o.g : o.b);
+                if (k_max3(k_frame[i]) > peak) peak = k_max3(k_frame[i]);
+#else
                 uint8_t m = k_max3(k_frame[i]);
+#endif
                 if (m) lit++;
                 if (m > top && bad++ < 3) CHECK(false, "cap %u, value %u: LED %u drives %u, top %u", cap, vs[k], i, m, top);
             }
         }
+#ifdef SIM_WIDE_EFFECTS
+        /* A fresh drop is at full chroma at every value: the value and the cap are the flush's. */
+        CHECK(peak == 255, "RAINFALL under %u, value %u: a fresh drop's chroma reaches %u", cap, vs[k], peak);
+#endif
     }
     CHECK(bad == 0 && lit > 0, "RAINFALL under %u: %u over the ceiling, %u lit", cap, bad, lit);
+#ifdef SIM_WIDE_EFFECTS
+    rgb_mode = 2;
+#endif
 }
 
 static void k_rainfall(void) {
@@ -290,3 +408,30 @@ static void k_rainfall(void) {
     k_ceiling_saver();
     k_rainfall_at(128);
 }
+
+#ifdef SIM_WIDE_EFFECTS
+/* A wide mode's cap change is the flush's alone: Rainfall, the Heatmap and Drift
+ * keep their state across a dim. A scale change still restarts the effect, since
+ * the scale applies as an LED is set, and a mode off the list restarts on either. */
+static void k_restart(void) {
+    k_ceiling_saver();
+    rgb_mode = RGB_MATRIX_CUSTOM_RAINFALL;
+    idle_ms = 0; ltick();
+    int r = rgb_restarts;
+    idle_ms = 60000; ltick();
+    CHECK(power_val_cap() == 64, "Saver's dim at 1 min: %u", power_val_cap());
+    CHECK(rgb_restarts == r, "a wide mode restarted at the dim: %d", rgb_restarts - r);
+    idle_ms = 0; ltick();
+    CHECK(power_val_cap() == 128, "the key after the dim: %u", power_val_cap());
+    CHECK(rgb_restarts == r, "a wide mode restarted at the dim's end: %d", rgb_restarts - r);
+    idle_ms = 180000; ltick();
+    CHECK(rgb_restarts > r, "the lights' scale changed and nothing restarted");
+    idle_ms = 0; ltick();
+    rgb_mode = 200;   /* off the list */
+    r = rgb_restarts;
+    idle_ms = 60000; ltick();
+    CHECK(rgb_restarts == r + 1, "a mode off the list did not restart at the dim: %d", rgb_restarts - r);
+    idle_ms = 0; ltick();
+    rgb_mode = 2;
+}
+#endif

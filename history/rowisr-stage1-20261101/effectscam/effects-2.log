@@ -1,0 +1,18 @@
+[21:39:32] JD's lighting: board : effect 2, hue 178, sat 219, val 129, speed 231
+[21:39:32] token 0x2f5bccee
+[21:39:32] the stage held ACTIVE
+[21:39:43] solid v=26: {'peak': 169, 'mean_peak': 148.72, 'mean': 5.241, 'frames': 340}
+[21:39:54] solid v=64: {'peak': 254, 'mean_peak': 247.37, 'mean': 5.763, 'frames': 348}
+[21:40:05] solid v=128: {'peak': 255, 'mean_peak': 254.91, 'mean': 10.091, 'frames': 332}
+[21:40:28] heatmap v=26: {'peak': 174, 'mean_peak': 151.78, 'mean': 4.72, 'frames': 348}
+[21:40:50] heatmap v=64: {'peak': 220, 'mean_peak': 201.08, 'mean': 4.522, 'frames': 340}
+[21:41:12] heatmap v=128: {'peak': 254, 'mean_peak': 248.49, 'mean': 4.872, 'frames': 348}
+[21:41:25] rainfall v=26: {'peak': 222, 'mean_peak': 123.5, 'mean': 4.69, 'frames': 340}
+[21:41:38] rainfall v=64: {'peak': 120, 'mean_peak': 109.42, 'mean': 4.629, 'frames': 356}
+[21:41:51] rainfall v=128: {'peak': 211, 'mean_peak': 118.36, 'mean': 4.71, 'frames': 348}
+[21:42:02] drift v=26: {'peak': 123, 'mean_peak': 110.1, 'mean': 4.711, 'frames': 353}
+[21:42:13] drift v=64: {'peak': 120, 'mean_peak': 110.37, 'mean': 4.691, 'frames': 348}
+[21:42:24] drift v=128: {'peak': 120, 'mean_peak': 109.63, 'mean': 4.778, 'frames': 348}
+[21:42:24] the stage released
+[21:42:24] JD's lighting restored: board : effect 2, hue 178, sat 219, val 129, speed 231
+[21:42:27] the data line off, the daemon back

@@ -1479,6 +1479,9 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "k_drift")) k_drift();
     else if (!strcmp(s, "k_drift_usb")) k_drift_usb();
     else if (!strcmp(s, "k_rainfall")) k_rainfall();
+#ifdef SIM_WIDE_EFFECTS
+    else if (!strcmp(s, "k_restart")) k_restart();
+#endif
 #endif
     else if (!strcmp(s, "c_rate"))        c_rate();
     else if (!strcmp(s, "c_uneven"))      c_uneven();
