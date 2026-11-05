@@ -137,8 +137,8 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 12:15 11-05: D9, the precision path, `row-isr`
-`8ae385563d`** (dev token `0xb1dd84c2`; every enabled effect on the curve, which JD's
+**On white since 12:46 11-05: D9, the precision path, `row-isr`
+`feef9b4bfe`** (dev token `0xd3e8d30b`; every enabled effect on the curve, which JD's
 eye settled as `--stops 4`; the hold's ramp; the Cycles keep their place through a
 speed change; `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%); the new effect `Rain`, one
 colour, Rainfall now `Rain RGB`; what is left before the merge is in

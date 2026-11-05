@@ -390,8 +390,8 @@ DRIFT`.
   fades a random key out — `PIXEL_RAIN` is a static scatter,
   `STARLIGHT*` keep the whole board lit. Do not swap it out expecting the
   same look. The menu calls it `Rain RGB`. `RAIN` (`Rain`), on the row ISR
-  branch, is the same drops in one colour, the user's hue and saturation, each
-  falling from its own brightness.
+  branch, is the same drops in one colour, the user's hue. Both fall from each
+  drop's own brightness, and both take the user's saturation.
 - **`DRIFT` is board-local too**: a slow plasma, a scrolling value-noise
   field mapped onto a hand-picked ramp (dark indigo, violet, slate, warm
   grey), weighted dark, so a few soft blobs drift across a mostly dark

@@ -2373,6 +2373,15 @@ JD's eye on Rain: the drops would look better falling about half as long again. 
 `8ae385563d` (dev `0xb1dd84c2`, devprobe `0xb3b6bb11`, daily `0x41fc673a`; on white 12:15)
 falls 43/16 of the drop's value a frame against Rain RGB's 4 (`RAIN_DECAY_Q4`, one constant).
 
+His eye again: a little slower, and the two could share one algorithm. So `feef9b4bfe` (dev
+`0xd3e8d30b`, devprobe `0xa32172d9`, daily `0x790052d2`; on white 12:46): both fall 2.25 a
+frame from their own tops and differ only in colour.
+
+He then reported Rain RGB not answering saturation. On the board over VIA's channel it does:
+LED drive over five 1 s reads at speed 255 and value 255, 11.0 per mille at saturation 255,
+16.8 at 128, 20.8 at 0, back to 11.0 at 255 (Rain alone: 7.0, 14.2, 22.0, 7.0). Which control
+he used, and at what setting, is open.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

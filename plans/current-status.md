@@ -92,10 +92,10 @@ set, the camera gate). The fallback for the night is `8355011389`
 is judging its curve by eye.** Written for a fresh session.
 
 *The newest state, which overrides the paragraphs under it where they differ:*
-white runs `row-isr` `8ae385563d` since 12:15 11-05 (dev `0xb1dd84c2`, devprobe
-`0xb3b6bb11`, daily `0x41fc673a`), the branch's head: every effect on the curve, the hold's
+white runs `row-isr` `feef9b4bfe` since 12:46 11-05 (dev `0xd3e8d30b`, devprobe
+`0xa32172d9`, daily `0x790052d2`), the branch's head: every effect on the curve, the hold's
 ramp, the Cycles' place kept through a speed change, the ceilings `SAVER_VAL` 191 (75%) and
-`DIM_VAL` 102 (40%), and the new effect `Rain`. The data line is off and the daemon running,
+`DIM_VAL` 102 (40%), and the new effect `Rain`, one algorithm with `Rain RGB`. The data line is off and the daemon running,
 as in the standing state, but **relay 2 is ON, by hand since 20:11 11-04; the pack is
 full**. Whether a drain restarts is his call. Flashes need his word.
 

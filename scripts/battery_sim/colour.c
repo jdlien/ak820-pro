@@ -394,8 +394,8 @@ static void k_rainfall_at(uint8_t cap) {
             }
         }
 #ifdef SIM_WIDE_EFFECTS
-        /* A fresh drop is at full chroma at every value: the value and the cap are the flush's. */
-        CHECK(peak == 255, "RAINFALL under %u, value %u: a fresh drop's chroma reaches %u", cap, vs[k], peak);
+        /* The top drops near full chroma at every value: the value and the cap are the flush's. */
+        CHECK(peak >= 240, "RAINFALL under %u, value %u: the brightest fresh drop's chroma reaches %u", cap, vs[k], peak);
 #endif
     }
     CHECK(bad == 0 && lit > 0, "RAINFALL under %u: %u over the ceiling, %u lit", cap, bad, lit);
@@ -475,8 +475,8 @@ static void k_rain_at(uint8_t cap) {
     CHECK(bad == 0 && lit > 0, "RAIN under %u: %u wrong, %u lit", cap, bad, lit);
     CHECK(seeds > 1000 && low >= RAIN_PEAK_MIN && low < RAIN_PEAK_MIN + 16 && high > 240,
           "RAIN under %u: %u drops, tops %u to %u", cap, seeds, low, high);
-    /* The fade: half as long again as RAIN RGB's 4 a frame. */
-    CHECK(falls > 1000 && fell * 16u > falls * 42u && fell * 16u < falls * 44u, "RAIN under %u: fell %u over %u frames of a drop", cap, fell, falls);
+    /* The fade: 2.25 a frame, written out so a changed constant must change this too. */
+    CHECK(falls > 1000 && fell * 16u > falls * 35u && fell * 16u < falls * 37u, "RAIN under %u: fell %u over %u frames of a drop", cap, fell, falls);
     printf("  RAIN under %u: %u drops, tops %u to %u, falling %.2f a frame\n", cap, seeds, low, high, (double)fell / falls);
     rgb_mode = 2;
 }
