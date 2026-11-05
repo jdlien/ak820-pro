@@ -94,18 +94,17 @@ is judging its curve by eye.** Written for a fresh session.
 *The newest state, which overrides the paragraphs under it where they differ:*
 white runs `row-isr` `d6656f9262` since 11:00 11-05 (dev `0xf63adb29`): every effect on
 the curve, the hold's ramp, the Cycles keeping their place through a speed change. The
-branch's head is one commit past it, `SAVER_VAL` 191 and `DIM_VAL` 139, chosen by light
-(the percent map, the README's end), built and pushed, not flashed: it needs JD's word,
-and then `scripts/ladder_check.py --rig` (about 18 min, on USB) to prove its new gates.
+branch's head carries the ceilings, `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), JD's
+choices from the percent map (the README's end), built and pushed, not flashed: it needs
+his word, and then `scripts/ladder_check.py --rig` (about 18 min, on USB) to prove its new gates.
 The data line is off and the daemon running, as in the standing state, but **relay 2 is
 ON, by hand since 20:11 11-04; the pack is full**. Whether a drain restarts is his call.
 Flashes need his word.
 
 **The curve is settled by JD's eye (`--stops 4`).** His calls: the battery's 20-35% less
 light is fine, old profiles need no conversion, the `Fn`+arrow keys keep raw values, the
-hold's 4-5 s is good, Drift stays as it is for now. Next: his eye on the Cycles' speed and
-the ceilings (the dim no longer shows at his 51%: 102 would); the ladder check; then the
-order below, its first item done.
+hold's 4-5 s is good, the Cycles' speed fix is good, Drift stays as it is for now. Next:
+the flash and the ladder check; then the order below, its first item done.
 
 *What is on white:* `row-isr` `a86a07610f`, dev token `0xfbcd040d` (since
 20:41; devprobe `0x06cda486`, daily `0x6115beeb`; the gaps 344 and

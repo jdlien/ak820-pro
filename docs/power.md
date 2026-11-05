@@ -303,8 +303,8 @@ They apply on battery only; on USB the board stays fully on.
   | 100% | 45.5 mA | 22.3 mA |
 
   So the lighting is cheap to about 60% and most of its cost is in the top quarter.
-  That branch's curve puts Power saver's ceiling at 75% and the idle dim at 55%,
-  the same light as this page's 128 and 64.
+  That branch puts Power saver's ceiling at 75%, the same light as this page's 128,
+  and the idle dim at 40%, dimmer than this page's 64, chosen by eye.
 - **Below 15%, every mode takes Power saver's lighting**, its 128 while
   typing included (Lights out stays darker), and Balanced sleeps at Power
   saver's 3 minutes. Always on still never sleeps.

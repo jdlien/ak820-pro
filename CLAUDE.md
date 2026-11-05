@@ -140,8 +140,8 @@ the commit names the live settings' side (`hostagent/ak820profiles.py`).
 **On white since 11:00 11-05: D9, the precision path, `row-isr`
 `d6656f9262`** (dev token `0xf63adb29`; every enabled effect on the curve, which
 JD's eye settled as `--stops 4`; the hold's ramp; the Cycles keep their place through a
-speed change; the branch's head carries the ceilings by light, `SAVER_VAL` 191 and
-`DIM_VAL` 139, built, not flashed; what is left before the merge is in
+speed change; the branch's head carries the settled ceilings, `SAVER_VAL` 191 (75%)
+and `DIM_VAL` 102 (40%), built, not flashed; what is left before the merge is in
 `plans/ROW-ISR-PLAN.md`, "The curve's candidates"; ⚠️ the same setting gives 20-35%
 less light on battery than on USB while charging, by the camera, accepted; ⚠️ relay 2
 ON since 20:11 11-04 by hand, the pack full, the drain stopped short of the cut:

@@ -2,7 +2,7 @@
 
 ## Brightness after the new curve (2026-11-04) -- open; before the row ISR's merge
 
-The ceilings are chosen by light (`SAVER_VAL` 191, `DIM_VAL` 139, the percent map of
+The ceilings are settled (`SAVER_VAL` 191, `DIM_VAL` 102, from the percent map of
 11-05). Owed: JD's eye on them on battery, `scripts/ladder_check.py --rig`, and a look
 at the gauge's fixed LED term (`plans/ROW-ISR-PLAN.md`, "The curve's candidates"). Some
 effects could go or be rethought; Drift is fine as it is for now.

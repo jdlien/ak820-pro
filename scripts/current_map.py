@@ -267,7 +267,7 @@ def attempt(what, fn, *args):
         return False
 
 
-DIM_CAP, SAVER_CAP = 139, 191   # power.c's DIM_VAL and SAVER_VAL on the row ISR branch (64 and 128 through v0.3.1)
+DIM_CAP, SAVER_CAP = 102, 191   # power.c's DIM_VAL and SAVER_VAL on the row ISR branch (64 and 128 through v0.3.1)
 
 
 def expected_cap(mode, stage):

@@ -2342,8 +2342,13 @@ White jumps 1.7 mA between half a tick at 1% and 1.5 ticks at 5%, then barely mo
 25%, though the light nearly triples. So about 3 mA is the cost of pulsing at all rather
 than of the light, the likely reason being the rails' charge a pulse; at half a tick the
 pulses run only every other field. That is an inference from these steps, not measured
-directly. From it the ceilings, chosen by light: `SAVER_VAL` 191, `DIM_VAL` 139
-(the plan's "curve's candidates").
+directly.
+
+JD's eye on the Cycles: the pattern stays put through a speed change, and adjusting it is
+much easier to see. On the ceilings: not below 75% for Power saver, which is notably
+dimmer than full and only just visible in bright office light; 40% for the idle dim, hard
+to see in bright light, on the side of too dim. So `SAVER_VAL` 191 and `DIM_VAL` 102 (the
+plan's "curve's candidates").
 
 ## Files
 

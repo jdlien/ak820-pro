@@ -1153,15 +1153,14 @@ are the firmware step if a quarter is still too coarse under a tick.
 - **Drift: open, JD's look.** Its stops top out near a quarter of full chroma, so 50%
   is about 11 ticks at its brightest, where it was about 160. Rescaling the stops is
   one table; some effects may also go or be rethought.
-- **The caps: chosen by light, `SAVER_VAL` 191 and `DIM_VAL` 139** (`row-isr` head,
-  built; on white once JD says). They keep the light 128 and 64 gave on QMK's table,
-  18.6% and 4.75% of full. The percent map (11-05,
-  `history/rowisr-stage1-20261101/percent-map-20261105/`) backs it: on white the LEDs
-  add 11.6 mA at 75% against 45.5 at full, the original "a quarter", and only 3 to 5 mA
-  from 5% to 50%, so a lower ceiling buys little. At JD's 51% the dim is now above his
-  setting and changes nothing, which costs about 1 mA; 102 (40%) would make it visible.
-  `scripts/ladder_check.py` and `current_map.py` carry the new values, the ladder check
-  not yet run on them.
+- **The caps: settled, `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%)** (`row-isr` head,
+  built; on white once JD says). 191 keeps the light 128 gave on QMK's table, 18.6% of
+  full, and JD would not go lower: at 75% the lights are only just visible in bright
+  office light. 102 is 1.8% of full, chosen by eye on the side of too dim. The percent
+  map (11-05, `history/rowisr-stage1-20261101/percent-map-20261105/`): on white the LEDs
+  add 11.6 mA at 75%, 4.5 at 40% and 45.5 at full, so the dim saves a lot from a bright
+  setting and almost nothing from a setting near it. `scripts/ladder_check.py` and
+  `current_map.py` carry the new values, the ladder check not yet run on them.
 - **The gauge's model: a small debt.** Against the same map it reads 3 to 6% low from
   5% to 75% and 5% high at a dim 1%, 299 against 300 mW at full. The fixed 8.64 mW for
   any LED lit looks low, near 13 mW once every colour pulses each field, and high when
