@@ -1,0 +1,7 @@
+[11:00:28] speed   0 (a cycle in   600 s,  0.6 deg/s): hue by LED [23.3, 342.8, 33.5, 39.2]
+[11:00:39] speed   0 (a cycle in   600 s,  0.6 deg/s): hue by LED [25.7, 331.6, 36.1, 40.8]; 12 s since the last
+[11:00:50] speed  40 (a cycle in   316 s,  1.1 deg/s): hue by LED [29.2, 323.5, 43.0, 47.0]; 11 s since the last
+[11:01:01] speed  80 (a cycle in   166 s,  2.2 deg/s): hue by LED [53.1, 6.0, 72.5, 77.4]; 11 s since the last
+[11:01:12] speed 120 (a cycle in    87 s,  4.1 deg/s): hue by LED [49.6, 10.5, 165.0, 169.0]; 11 s since the last
+[11:01:23] speed   0 (a cycle in   600 s,  0.6 deg/s): hue by LED [51.5, 8.3, 193.2, 186.6]; 11 s since the last
+[11:01:23] JD's lighting restored: board : effect 1, hue 31, sat 159, val 255, speed 163

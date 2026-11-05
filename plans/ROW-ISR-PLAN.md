@@ -1153,11 +1153,19 @@ are the firmware step if a quarter is still too coarse under a tick.
 - **Drift: open, JD's look.** Its stops top out near a quarter of full chroma, so 50%
   is about 11 ticks at its brightest, where it was about 160. Rescaling the stops is
   one table; some effects may also go or be rethought.
-- **The caps: open, next.** `SAVER_VAL` 128, the ceiling in Power saver and under 15%
-  on battery, went from 18.6% of full light to 3.6%, and `DIM_VAL` 64 from 4.4% to
-  0.7%. Measure the draw at each percent on battery, then choose them by light.
-  `scripts/ladder_check.py`'s ratios and `MIN_WHITE` still expect the old curve and
-  change with them.
+- **The caps: chosen by light, `SAVER_VAL` 191 and `DIM_VAL` 139** (`row-isr` head,
+  built; on white once JD says). They keep the light 128 and 64 gave on QMK's table,
+  18.6% and 4.75% of full. The percent map (11-05,
+  `history/rowisr-stage1-20261101/percent-map-20261105/`) backs it: on white the LEDs
+  add 11.6 mA at 75% against 45.5 at full, the original "a quarter", and only 3 to 5 mA
+  from 5% to 50%, so a lower ceiling buys little. At JD's 51% the dim is now above his
+  setting and changes nothing, which costs about 1 mA; 102 (40%) would make it visible.
+  `scripts/ladder_check.py` and `current_map.py` carry the new values, the ladder check
+  not yet run on them.
+- **The gauge's model: a small debt.** Against the same map it reads 3 to 6% low from
+  5% to 75% and 5% high at a dim 1%, 299 against 300 mW at full. The fixed 8.64 mW for
+  any LED lit looks low, near 13 mW once every colour pulses each field, and high when
+  a dither leaves fields dark.
 - **USB against battery: accepted.** 20-35% less light on battery at one setting is
   expected and fine; it would want a solution only near half.
 - **Old profiles: accepted, no conversion.** A profile saved before D9 loads dimmer.

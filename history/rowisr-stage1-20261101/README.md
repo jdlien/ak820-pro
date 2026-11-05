@@ -2311,6 +2311,40 @@ which nothing had noticed. It now does, and its colour checks read final widths 
 a copy of the flush's arithmetic. Against 8b06e4dcc4's DRIFT at full value, today's
 bytes hash the same (`d05750ef`), so the rendering at the top is unchanged.
 
+### The Cycles' speed, and the draw at each percent (11-05, 11:00-11:22, `d6656f9262`, dev `0xf63adb29`)
+
+JD's eye on the hold: 4-5 s for the range, good, where 2-3 s was too fast to tune the
+middle. His ask: a speed change moved a Cycle's pattern somewhere else, because its
+position was time x speed. `rgb_speed_advance()` now adds each frame's travel. The host
+test passes and shows the old sum jumping at the same moments. By camera
+(`speed_check.py`, `speedcam/`): on the two LEDs bright enough to read, the hue climbs
+33, 36, 43, 72, 165, 193 degrees through speeds 0, 0, 40, 80, 120, 0, with no fall back
+at the last step, where time x speed would have dropped most of the wheel. A camera's
+hue is not linear, so that is direction, not rate.
+
+The percent map (`percent-map-20261105/`, `current_map.py --set percent`, two passes,
+25 s holds, screen off, the pack full, USB data on, the two passes within 0.1 mA):
+
+| Slider | White mA | LEDs add | Purple mA | LEDs add | Model, white mW | Pack, white mW |
+|---|---|---|---|---|---|---|
+| dark | 27.80 | | | | 114.0 | 114.1 |
+| 1% | 29.26 | 1.46 | 28.52 | 0.72 | 122.7 | 120.1 |
+| 5% | 30.95 | 3.15 | 29.53 | 1.73 | 122.9 | 127.0 |
+| 10% | 30.97 | 3.17 | 30.07 | 2.27 | 123.0 | 127.1 |
+| 25% | 31.58 | 3.78 | 31.15 | 3.35 | 123.8 | 129.6 |
+| 50% | 33.17 | 5.37 | 32.00 | 4.20 | 129.0 | 136.1 |
+| 60% | 34.54 | 6.74 | | | 134.8 | 141.7 |
+| 75% | 39.40 | 11.60 | 35.09 | 7.29 | 155.6 | 161.5 |
+| 90% | 53.16 | 25.36 | | | 214.4 | 217.8 |
+| 100% | 73.32 | 45.52 | 50.06 | 22.26 | 299.4 | 299.9 |
+
+White jumps 1.7 mA between half a tick at 1% and 1.5 ticks at 5%, then barely moves to
+25%, though the light nearly triples. So about 3 mA is the cost of pulsing at all rather
+than of the light, the likely reason being the rails' charge a pulse; at half a tick the
+pulses run only every other field. That is an inference from these steps, not measured
+directly. From it the ceilings, chosen by light: `SAVER_VAL` 191, `DIM_VAL` 139
+(the plan's "curve's candidates").
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

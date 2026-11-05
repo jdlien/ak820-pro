@@ -18,6 +18,7 @@ $BATTERY_SIM_SRC). Exit status 1 if a mutant survives or a clean run fails.
 import argparse
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -228,6 +229,11 @@ def build(src, mutations, sanitize=False, target="battery.c", flavour="sim", qro
     if os.path.exists(os.path.join(src, "sim_bkl.h")):   # a copy built from a copy: the scale travels with it
         shutil.copy(os.path.join(src, "sim_bkl.h"), d)
         shutil.copy(os.path.join(src, "indicator_levels.h"), d)
+    # The ladder's ceilings, as run.sh writes them, from the unmutated power.c.
+    text = open(os.path.join(d, "power.c"), encoding="utf-8").read()
+    dv, sv = re.search(r"^#define DIM_VAL +(\d+)u", text, re.M), re.search(r"^#define SAVER_VAL +(\d+)u", text, re.M)
+    if dv and sv:
+        open(os.path.join(d, "sim_vals.h"), "w").write(f"#define SIM_DIM_VAL {dv[1]}\n#define SIM_SAVER_VAL {sv[1]}\n")
     p = os.path.join(d, target)
     s = open(p, encoding="utf-8").read()   # UTF-8 on every host (Windows' default is cp1252)
     for old, new in mutations:

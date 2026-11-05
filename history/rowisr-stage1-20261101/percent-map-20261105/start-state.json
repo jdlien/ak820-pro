@@ -1,0 +1,16 @@
+{
+  "lighting": {
+    "effect": 1,
+    "h": 31,
+    "s": 159,
+    "v": 255,
+    "speed": 163
+  },
+  "screen": {
+    "level": 100,
+    "max": 100,
+    "on": true,
+    "effective": 100,
+    "saved": 100
+  }
+}

@@ -23,6 +23,10 @@ if [ -f "$kb/indicator_levels.h" ] && ! grep -q 'static const uint8_t bkl_duty\[
     cp "$kb/indicator_levels.h" "$build/"
     echo '#define SIM_BKL_100 1' > "$build/sim_bkl.h"
 fi
+# The ladder's ceilings, for the checks: whatever this power.c defines.
+dimv="$(sed -n 's/^#define DIM_VAL  *\([0-9]*\)u.*/\1/p' "$build/power.c")"
+savv="$(sed -n 's/^#define SAVER_VAL  *\([0-9]*\)u.*/\1/p' "$build/power.c")"
+[ -n "$dimv" ] && [ -n "$savv" ] && printf '#define SIM_DIM_VAL %s\n#define SIM_SAVER_VAL %s\n' "$dimv" "$savv" > "$build/sim_vals.h"
 cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -I"$build" \
    -o "$build/sim" "$here/sim.c" "$build/battery.c" "$build/power.c" -lm
 fail=0

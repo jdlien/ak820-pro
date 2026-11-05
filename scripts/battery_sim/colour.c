@@ -122,13 +122,13 @@ static void k_ceiling_dim(void) {
     k_on_battery();
     while (power_mode() != POWER_MODE_NORMAL) power_cycle_mode();
     idle_ms = 600000; ltick();
-    CHECK(power_val_cap() == 64, "the dim's ceiling: %u", power_val_cap());
+    CHECK(power_val_cap() == SIM_DIM_VAL, "the dim's ceiling: %u", power_val_cap());
 }
 static void k_ceiling_saver(void) {
     k_on_battery();
     while (power_mode() != POWER_MODE_SAVER) power_cycle_mode();
     idle_ms = 0; ltick();
-    CHECK(power_val_cap() == 128, "Saver's ceiling: %u", power_val_cap());
+    CHECK(power_val_cap() == SIM_SAVER_VAL, "Saver's ceiling: %u", power_val_cap());
 }
 static void k_ceiling_none(void) {
     vdd_mv = 4470; chrg_low = false; c5 = 100;
@@ -136,8 +136,8 @@ static void k_ceiling_none(void) {
     CHECK(power_val_cap() == 255, "on USB, no ceiling: %u", power_val_cap());
 }
 static void k_ceiling(uint8_t cap) {
-    if (cap == 64) k_ceiling_dim();
-    else if (cap == 128) k_ceiling_saver();
+    if (cap == SIM_DIM_VAL) k_ceiling_dim();
+    else if (cap == SIM_SAVER_VAL) k_ceiling_saver();
     else k_ceiling_none();
 }
 
@@ -210,9 +210,9 @@ static unsigned k_hook_at(uint8_t cap) {
 
 static void k_hook(void) {
     k_ceiling_dim();
-    CHECK(k_hook_at(64) == 0, "the dim's ceiling, every colour");
+    CHECK(k_hook_at(SIM_DIM_VAL) == 0, "the dim's ceiling, every colour");
     k_ceiling_saver();
-    CHECK(k_hook_at(128) == 0, "Saver's ceiling, every colour");
+    CHECK(k_hook_at(SIM_SAVER_VAL) == 0, "Saver's ceiling, every colour");
     CHECK(hsv_to_rgb((hsv_t){0, 0, 128}).r == 48 && hsv_to_rgb((hsv_t){0, 0, 64}).r == 12,
           "QMK's CIE table: 128 drives 48, 64 drives 12");
     k_ceiling_none();
@@ -239,10 +239,12 @@ static k_out_t k_free[256][K_FRAMES][RGB_MATRIX_LED_COUNT];
  * ceiling. */
 typedef struct { uint8_t h, s, v, cap; } k_step_t;
 static const k_step_t k_stream[] = {
-    {191, 255, 200, 128}, {191, 255, 200, 64}, {191, 255, 200, 128},   /* the ceiling moves */
-    {30, 255, 200, 128},  {30, 120, 200, 128},                         /* hue, then saturation */
-    {30, 120, 90, 128},   {30, 120, 90, 64},   {30, 120, 255, 64},     /* under and over each */
-    {0, 0, 255, 128},     {0, 0, 128, 64},     {213, 64, 160, 128},
+#define KS SIM_SAVER_VAL
+#define KD SIM_DIM_VAL
+    {191, 255, 200, KS}, {191, 255, 200, KD}, {191, 255, 200, KS},   /* the ceiling moves */
+    {30, 255, 200, KS},  {30, 120, 200, KS},                         /* hue, then saturation */
+    {30, 120, 90, KS},   {30, 120, 90, KD},   {30, 120, 255, KD},    /* under and over each */
+    {0, 0, 255, KS},     {0, 0, 200, KD},     {213, 64, 160, KS},
 };
 #define K_STEPS       (sizeof k_stream / sizeof k_stream[0])
 #define K_STEP_FRAMES 4
@@ -273,7 +275,7 @@ static void k_drift(void) {
     rgb_mode = RGB_MATRIX_CUSTOM_DRIFT;
 #endif
     for (unsigned pass = 0; pass < 2; pass++) {
-        uint8_t cap = pass == 0 ? 64 : 128;
+        uint8_t cap = pass == 0 ? SIM_DIM_VAL : SIM_SAVER_VAL;
         for (unsigned k = 0; k < sizeof hs / sizeof hs[0]; k++) {
             /* Each ceiling's frames for every value, then the same with no
              * ceiling (USB). */
@@ -404,9 +406,9 @@ static void k_rainfall_at(uint8_t cap) {
 
 static void k_rainfall(void) {
     k_ceiling_dim();
-    k_rainfall_at(64);
+    k_rainfall_at(SIM_DIM_VAL);
     k_ceiling_saver();
-    k_rainfall_at(128);
+    k_rainfall_at(SIM_SAVER_VAL);
 }
 
 #ifdef SIM_WIDE_EFFECTS
@@ -419,10 +421,10 @@ static void k_restart(void) {
     idle_ms = 0; ltick();
     int r = rgb_restarts;
     idle_ms = 60000; ltick();
-    CHECK(power_val_cap() == 64, "Saver's dim at 1 min: %u", power_val_cap());
+    CHECK(power_val_cap() == SIM_DIM_VAL, "Saver's dim at 1 min: %u", power_val_cap());
     CHECK(rgb_restarts == r, "a wide mode restarted at the dim: %d", rgb_restarts - r);
     idle_ms = 0; ltick();
-    CHECK(power_val_cap() == 128, "the key after the dim: %u", power_val_cap());
+    CHECK(power_val_cap() == SIM_SAVER_VAL, "the key after the dim: %u", power_val_cap());
     CHECK(rgb_restarts == r, "a wide mode restarted at the dim's end: %d", rgb_restarts - r);
     idle_ms = 180000; ltick();
     CHECK(rgb_restarts > r, "the lights' scale changed and nothing restarted");

@@ -2,11 +2,10 @@
 
 ## Brightness after the new curve (2026-11-04) -- open; before the row ISR's merge
 
-Re-measure the draw at each percent on battery, then re-choose where the power
-saving levels sit, by light, and update `scripts/ladder_check.py`'s gates with them.
-The numbers are in `plans/ROW-ISR-PLAN.md`, "The curve's candidates". Also owed: JD's
-eye on the curve on battery, once the pack is charged, since every look so far has
-been on USB. Some effects could go or be rethought, Drift first.
+The ceilings are chosen by light (`SAVER_VAL` 191, `DIM_VAL` 139, the percent map of
+11-05). Owed: JD's eye on them on battery, `scripts/ladder_check.py --rig`, and a look
+at the gauge's fixed LED term (`plans/ROW-ISR-PLAN.md`, "The curve's candidates"). Some
+effects could go or be rethought; Drift is fine as it is for now.
 
 ## Next phase: record in daily use, then polish for other owners (2026-10-18)
 

@@ -57,6 +57,34 @@ int main(void) {
     r = rgb_speed_rate(&RGB_SPEED_JELLYBEAN, 255);
     for (uint32_t ms = 0; ms < 100000u; ms += 16u) CHECK(rgb_speed_phase(ms + 16u, r) - rgb_speed_phase(ms, r) <= 1u);
 
+    /* The running clock: at a steady rate it is the phase, even across the
+     * millisecond counter's wrap, and a speed change moves it by one frame's
+     * travel at the new rate, never more, where the phase jumps. */
+    r = rgb_speed_rate(&RGB_SPEED_CYCLE_SWEEP, 128);
+    rgb_speed_clock_t k = {0, 0};
+    for (uint32_t ms = 0; ms < 1000000u; ms += 7u) CHECK(rgb_speed_advance(&k, ms, r) == (uint8_t)rgb_speed_phase(ms, r));
+    k = (rgb_speed_clock_t){0, 0xFFFFFF00u};
+    uint32_t want = 0;
+    for (uint32_t ms = 0xFFFFFF00u, n = 0; n < 200u; n++, ms += 16u) {   /* through the wrap */
+        rgb_speed_advance(&k, ms, r);
+        CHECK(k.phase == want);
+        want += 16u * r;
+    }
+    k = (rgb_speed_clock_t){0, 0};
+    uint8_t hue = rgb_speed_advance(&k, 300000u, rgb_speed_rate(&RGB_SPEED_CYCLE_ALL, 100));
+    int jumped = 0;
+    for (int s = 0; s < 256; s += 4) {   /* a held speed key from 0 to the top, 12 ms a step */
+        uint32_t ms = 300000u + (uint32_t)(s + 4) * 3u;
+        uint8_t  next = rgb_speed_advance(&k, ms, rgb_speed_rate(&RGB_SPEED_CYCLE_ALL, (uint8_t)s));
+        CHECK((uint8_t)(next - hue) <= 2u);
+        hue = next;
+        /* And what the old sum did at the same moments, to show the test can see it. */
+        uint8_t a = (uint8_t)rgb_speed_phase(ms, rgb_speed_rate(&RGB_SPEED_CYCLE_ALL, (uint8_t)s));
+        uint8_t b = (uint8_t)rgb_speed_phase(ms, rgb_speed_rate(&RGB_SPEED_CYCLE_ALL, (uint8_t)(s + 4)));
+        if ((uint8_t)(b - a) > 2u) jumped++;
+    }
+    CHECK(jumped > 30);
+
     printf("Cycle All %.0f s / %.0f s / %.1f s; L-R, U-D %.0f s / %.1f s; Jellybean %.2f s / %.0f a second\n",
            cycle_s(&RGB_SPEED_CYCLE_ALL, 0), cycle_s(&RGB_SPEED_CYCLE_ALL, 128), cycle_s(&RGB_SPEED_CYCLE_ALL, 255),
            cycle_s(&RGB_SPEED_CYCLE_SWEEP, 0), cycle_s(&RGB_SPEED_CYCLE_SWEEP, 255), drop_s(0), 1.0 / drop_s(255));

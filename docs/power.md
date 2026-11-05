@@ -288,6 +288,23 @@ They apply on battery only; on USB the board stays fully on.
   on battery for free. The same setting gives less light on battery anyway:
   20-35% less than on USB while charging (measured by camera on a development
   build, 11-04).
+- **On the development branch, the lighting's cost by slider position** (measured
+  11-05, on battery, screen off, the bench's USB data attached). The board without
+  its LEDs draws 27.8 mA. The LEDs add:
+
+  | Slider | White | A purple |
+  |---|---|---|
+  | 1% | 1.5 mA | 0.7 mA |
+  | 5% | 3.2 mA | 1.7 mA |
+  | 25% | 3.8 mA | 3.4 mA |
+  | 50% | 5.4 mA | 4.2 mA |
+  | 75% | 11.6 mA | 7.3 mA |
+  | 90% | 25.4 mA | |
+  | 100% | 45.5 mA | 22.3 mA |
+
+  So the lighting is cheap to about 60% and most of its cost is in the top quarter.
+  That branch's curve puts Power saver's ceiling at 75% and the idle dim at 55%,
+  the same light as this page's 128 and 64.
 - **Below 15%, every mode takes Power saver's lighting**, its 128 while
   typing included (Lights out stays darker), and Balanced sleeps at Power
   saver's 3 minutes. Always on still never sleeps.

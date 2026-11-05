@@ -137,14 +137,16 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 21:35 11-04: D9, the precision path, `row-isr`
-`5256860413`** (dev token `0x2f5bccee`; every enabled effect on the curve, which
-JD's eye settled as `--stops 4`; the hold's ramp; the branch's head `8f98d44cef`,
-dev `0x0c72ad26`, built, not flashed; what is left before the merge is in
+**On white since 11:00 11-05: D9, the precision path, `row-isr`
+`d6656f9262`** (dev token `0xf63adb29`; every enabled effect on the curve, which
+JD's eye settled as `--stops 4`; the hold's ramp; the Cycles keep their place through a
+speed change; the branch's head carries the ceilings by light, `SAVER_VAL` 191 and
+`DIM_VAL` 139, built, not flashed; what is left before the merge is in
 `plans/ROW-ISR-PLAN.md`, "The curve's candidates"; ⚠️ the same setting gives 20-35%
 less light on battery than on USB while charging, by the camera, accepted; ⚠️ relay 2
-ON since 20:11 by hand, the pack charging, the drain stopped short of the cut:
-`plans/current-status.md`). **Before it, from 21:01: `7221cb6080`** (dev token
+ON since 20:11 11-04 by hand, the pack full, the drain stopped short of the cut:
+`plans/current-status.md`). **Before it, from 21:35 11-04: `5256860413`** (dev token
+`0x2f5bccee`). **Before it, from 21:01: `7221cb6080`** (dev token
 `0xd35fb613`; the curve `--stops 4`). **Before it, from
 20:52: `9157b1599c`** (dev token `0x118846ea`; the curve `--hybrid 2`, passed by
 JD's eye). **Before it, from 20:41: `a86a07610f`** (dev token

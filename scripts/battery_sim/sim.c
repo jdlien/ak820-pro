@@ -15,6 +15,14 @@
 #include "quantum.h"
 #include "battery.h"
 #include "power.h"
+/* The ladder's ceilings, as the power.c under test defines them (run.sh and
+ * mutants.py write sim_vals.h). */
+#if __has_include("sim_vals.h")
+#include "sim_vals.h"
+#else
+#define SIM_DIM_VAL   64
+#define SIM_SAVER_VAL 128
+#endif
 #include "kb_eeconfig.h"
 
 struct fake_adc fake_adc;

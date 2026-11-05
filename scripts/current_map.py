@@ -4,7 +4,7 @@ board's lighting and screen from the Mac while it runs on the pack, and read
 each state's current from the power logger.
 
     venv/bin/python scripts/current_map.py --log <power.csv> [--hold 90] [--settle 15]
-                                           [--set loads|rgb-curve] [--out <dir>] [--dry-run]
+                                           [--set loads|rgb-curve|stages|knobs|percent] [--out <dir>] [--dry-run]
 
 What it does, in order:
 - reads JD's lighting (VIA's channel 3) and the screen (HC_DEVHOOK op 6, flash
@@ -138,7 +138,19 @@ KNOBS = ([_knob("dark 1", OFF), _knob("value 0", _solid(0, 0, 0))]
             _knob("blue 64 lcd 4", _solid(170, 255, 64), 4)]
          + [_knob("cycle 255", dict(CYCLE)), _knob("cycle 128", dict(CYCLE, v=128))]
          + [_knob("dark 5", OFF)])
-SETS = {"loads": STATES, "rgb-curve": RGB_CURVE, "stages": STAGES, "knobs": KNOBS}
+# The draw at the menu's percent stops on the curve (D9, plans/ROW-ISR-PLAN.md,
+# "The curve's candidates"): white, for the most any setting draws, and JD's
+# purple, with the screen off, for choosing the power modes' ceilings by light.
+def _pct(p):
+    return (p * 255 + 50) // 100   # menu.c's val_of_pct
+
+
+PERCENT = ([_knob("dark 1", OFF)]
+           + [_knob(f"white {p}%", _solid(0, 0, _pct(p))) for p in (1, 5, 10, 15, 25, 40, 50, 60, 75, 90, 100)]
+           + [_knob("dark 2", OFF)]
+           + [_knob(f"purple {p}%", _solid(178, 219, _pct(p))) for p in (1, 5, 10, 25, 50, 75, 100)]
+           + [_knob("dark 3", OFF)])
+SETS = {"loads": STATES, "rgb-curve": RGB_CURVE, "stages": STAGES, "knobs": KNOBS, "percent": PERCENT}
 
 
 def stamp():
@@ -255,12 +267,15 @@ def attempt(what, fn, *args):
         return False
 
 
+DIM_CAP, SAVER_CAP = 139, 191   # power.c's DIM_VAL and SAVER_VAL on the row ISR branch (64 and 128 through v0.3.1)
+
+
 def expected_cap(mode, stage):
     """The value ceiling op 14 must read for a held stage in a mode, above 15%."""
     if stage == 1:
-        return 64
+        return DIM_CAP
     if stage == 0:
-        return 128 if mode == POWER_SAVER else 255
+        return SAVER_CAP if mode == POWER_SAVER else 255
     return 255
 
 

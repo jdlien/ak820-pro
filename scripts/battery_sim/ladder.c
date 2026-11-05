@@ -75,9 +75,9 @@ static void l_normal(void) {
     CHECK(power_mode() == POWER_MODE_NORMAL, "the default is Normal, got %d", power_mode());
     idle_ms = 599999;  ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 255, "599.999 s idle");
     int r0 = rgb_restarts;
-    idle_ms = 600000;  ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "10 min idle");
+    idle_ms = 600000;  ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "10 min idle");
     expect_one_repaint(r0, "Normal's dim");
-    idle_ms = 1199999; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "1199.999 s idle");
+    idle_ms = 1199999; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "1199.999 s idle");
     idle_ms = 1200000; ltick(); expect_stage(POWER_STAGE_SCREEN_OFF, 0, 0, 255, "20 min idle");
     idle_ms = 0;       ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 255, "a keypress");
 }
@@ -91,12 +91,12 @@ static void l_modes(void) {
     CHECK(!strcmp(last_status, NAME_SAVER), "overlay '%s'", last_status);
     uint8_t m = 0xFF;
     CHECK(kb_eeconfig_get_power_mode(&m) && m == POWER_MODE_SAVER, "persisted %u", m);
-    idle_ms = 0;      ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "Saver, typing");
-    idle_ms = 59999;  ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "Saver, 59.999 s");
+    idle_ms = 0;      ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "Saver, typing");
+    idle_ms = 59999;  ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "Saver, 59.999 s");
     int r0 = rgb_restarts;
-    idle_ms = 60000;  ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "Saver, 1 min");
+    idle_ms = 60000;  ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "Saver, 1 min");
     expect_one_repaint(r0, "Saver's dim");   /* its 128 for ACTIVE is not the 64 applied */
-    idle_ms = 179999; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "Saver, 179.999 s");
+    idle_ms = 179999; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "Saver, 179.999 s");
     idle_ms = 180000; ltick(); expect_stage(POWER_STAGE_SCREEN_OFF, 0, 0, 255, "Saver, 3 min");
     power_cycle_mode();
     CHECK(power_mode() == POWER_MODE_MINIMAL, "Saver -> Minimal, got %d", power_mode());
@@ -131,9 +131,9 @@ static void l_low_cap(void) {
     CHECK(battery_level_permille() <= 150, "level %u pm, want <= 150", battery_level_permille());
     CHECK(!strcmp(last_status, "Saving power"), "overlay '%s'", last_status);
     last_status[0] = 0;
-    idle_ms = 0;     ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "low, Normal, typing");
-    idle_ms = 59999; ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "low, Normal, 59.999 s");
-    idle_ms = 60000; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "low, Normal, 1 min");
+    idle_ms = 0;     ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "low, Normal, typing");
+    idle_ms = 59999; ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "low, Normal, 59.999 s");
+    idle_ms = 60000; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "low, Normal, 1 min");
     CHECK(last_status[0] == 0, "said once, then '%s'", last_status);
 #ifdef POWER_HAS_BULB
     /* The bulb says whose stages the lights follow: Saver's for the two
@@ -146,8 +146,8 @@ static void l_low_cap(void) {
 #endif
     power_cycle_mode(); power_cycle_mode(); power_cycle_mode();   /* Normal -> Saver -> Minimal -> Full */
     CHECK(power_mode() == POWER_MODE_FULL, "mode %d", power_mode());
-    idle_ms = 0;      ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "low, Full, typing");
-    idle_ms = 120000; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "low, Full, 2 min");
+    idle_ms = 0;      ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "low, Full, typing");
+    idle_ms = 120000; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "low, Full, 2 min");
     idle_ms = 180000; ltick(); expect_stage(POWER_STAGE_SCREEN_OFF, 0, 0, 255, "low, Full, 3 min");
     sweep_no_lights_off("low");
 }
@@ -161,14 +161,14 @@ static void l_val_cap(void) {
     idle_ms = 600000; ltick();
     hsv_t hi = {191, 255, 200}, lo = {191, 255, 30};
     rgb_t a = rgb_matrix_hsv_to_rgb(hi), b = rgb_matrix_hsv_to_rgb(lo);
-    CHECK(a.r == 64, "200 capped to 64, got %u", a.r);
+    CHECK(a.r == SIM_DIM_VAL, "200 capped to the dim, got %u", a.r);
     CHECK(b.r == 30, "30 left alone, got %u", b.r);
     idle_ms = 0; ltick();
     a = rgb_matrix_hsv_to_rgb(hi);
     CHECK(a.r == 200, "after the wake 200, got %u", a.r);
     power_cycle_mode(); ltick();   /* Saver, typing */
     a = rgb_matrix_hsv_to_rgb(hi); b = rgb_matrix_hsv_to_rgb(lo);
-    CHECK(a.r == 128, "Saver: 200 capped to 128, got %u", a.r);
+    CHECK(a.r == SIM_SAVER_VAL, "Saver: 200 capped to its ceiling, got %u", a.r);
     CHECK(b.r == 30, "Saver: 30 left alone, got %u", b.r);
 }
 
@@ -179,7 +179,7 @@ static void l_lights_cut(void) {
     power_set_lights_cut(true);
     CHECK(scale == 0, "cut while active: scale %u", scale);
     idle_ms = 600000; ltick();
-    CHECK(scale == 0 && power_val_cap() == 64, "cut and dim: scale %u, cap %u", scale, power_val_cap());
+    CHECK(scale == 0 && power_val_cap() == SIM_DIM_VAL, "cut and dim: scale %u, cap %u", scale, power_val_cap());
     idle_ms = 0; ltick();
     CHECK(scale == 0, "cut after the wake: scale %u", scale);
     power_set_lights_cut(false);
@@ -189,11 +189,11 @@ static void l_lights_cut(void) {
     power_set_lights_cut(true);
     int r0 = rgb_restarts;
     power_cycle_mode(); ltick();   /* Saver, typing */
-    expect_stage(POWER_STAGE_ACTIVE, 0, 0xFF, 128, "cut, Fn+B into Saver");
+    expect_stage(POWER_STAGE_ACTIVE, 0, 0xFF, SIM_SAVER_VAL, "cut, Fn+B into Saver");
     expect_one_repaint(r0, "Saver's ceiling under the cut");
     r0 = rgb_restarts;
     power_set_lights_cut(false);
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "the cut lifted in Saver");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "the cut lifted in Saver");
     expect_one_repaint(r0, "the cut lifted in Saver");
 }
 
@@ -257,7 +257,7 @@ static void l_minimal_enter(void) {
     power_init();
     on_battery_mid();
     idle_ms = 0; ltick();
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "Saver, typing");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "Saver, typing");
     power_cycle_mode();
     CHECK(power_mode() == POWER_MODE_MINIMAL && !strcmp(last_status, NAME_MINIMAL),
           "mode %d, overlay '%s'", power_mode(), last_status);
@@ -422,7 +422,7 @@ static void l_ceiling_moves(void) {
     power_init();
     int r0 = rgb_restarts;
     on_battery_mid();
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "a boot in Saver, on battery");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "a boot in Saver, on battery");
     expect_one_repaint(r0, "a boot in Saver");
 
     /* The cable in: Always on's lighting, at once. */
@@ -436,7 +436,7 @@ static void l_ceiling_moves(void) {
     r0 = rgb_restarts;
     vdd_mv = 3900; c5 = 80;
     lrun_s(30);
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "Saver, back on battery");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "Saver, back on battery");
     expect_one_repaint(r0, "Saver, the cable out");
 
     /* Fn+B: Saver -> Minimal -> Full -> Normal -> Saver, typing throughout. */
@@ -448,7 +448,7 @@ static void l_ceiling_moves(void) {
     CHECK(rgb_restarts == r0, "Full -> Normal while typing: %d repaints, want none", rgb_restarts - r0);
     r0 = rgb_restarts;
     power_cycle_mode(); ltick();     /* Saver */
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "Fn+B into Saver, typing");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "Fn+B into Saver, typing");
     expect_one_repaint(r0, "Fn+B into Saver");
 }
 
@@ -469,11 +469,11 @@ static void l_low_edge(void) {
     int r0 = rgb_restarts;
     for (uint32_t i = 0; i < 36000u && battery_level_permille() > 150; i++) ltick();
     CHECK(battery_level_permille() == 150, "then 150: %u", battery_level_permille());
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "150 pm, Normal, typing");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "150 pm, Normal, typing");
     CHECK(power_lights_mode() == POWER_MODE_SAVER, "150 pm: the bulb %d", power_lights_mode());
     expect_one_repaint(r0, "the low cap's entry");
-    idle_ms = 59999; ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "150 pm, Normal, 59.999 s");
-    idle_ms = 60000; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "150 pm, Normal, 1 min");
+    idle_ms = 59999; ltick(); expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "150 pm, Normal, 59.999 s");
+    idle_ms = 60000; ltick(); expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "150 pm, Normal, 1 min");
     CHECK(!power_sleep_wanted(), "150 pm, Normal: awake at 1 min");
     idle_ms = 180000; ltick(); expect_stage(POWER_STAGE_SCREEN_OFF, 0, 0, 255, "150 pm, Normal, 3 min");
     CHECK(power_sleep_wanted(), "150 pm, Normal: asleep at Saver's 3 min");
@@ -511,7 +511,7 @@ static void l_forced_ceiling(void) {
     expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 255, "Saver on USB, nothing held");
     int r0 = rgb_restarts;
     power_force_stage(POWER_STAGE_ACTIVE); ltick();
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "Saver on USB, ACTIVE held");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "Saver on USB, ACTIVE held");
     expect_one_repaint(r0, "ACTIVE held in Saver on USB");
     r0 = rgb_restarts;
     power_set_mode(POWER_MODE_FULL); ltick();
@@ -523,7 +523,7 @@ static void l_forced_ceiling(void) {
     CHECK(rgb_restarts == r0, "released into the same lighting: %d repaints", rgb_restarts - r0);
     /* Released from Saver's held 128 on USB: back to no ceiling, once. */
     power_set_mode(POWER_MODE_SAVER); power_force_stage(POWER_STAGE_ACTIVE); ltick();
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "Saver on USB, ACTIVE held again");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "Saver on USB, ACTIVE held again");
     r0 = rgb_restarts;
     power_force_stage(0xFF); ltick();
     expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 255, "Saver on USB, released");
@@ -546,7 +546,7 @@ static void l_low_minimal_held(void) {
     CHECK(power_stage() == POWER_STAGE_SCREEN_OFF && scale == 0, "low, Lights out, typing: dark (stage %d, scale %u)",
           power_stage(), scale);
     power_force_stage(POWER_STAGE_ACTIVE); ltick();
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "low, Lights out, ACTIVE held: the low cap's 128");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "low, Lights out, ACTIVE held: the low cap's 128");
     CHECK(power_lights_mode() == POWER_MODE_MINIMAL, "low, Lights out: its own bulb, %d", power_lights_mode());
     power_force_stage(0xFF); ltick();
     CHECK(power_stage() == POWER_STAGE_SCREEN_OFF && scale == 0 && power_val_cap() == 255,
@@ -561,7 +561,7 @@ static void l_set_mode(void) {
     idle_ms = 0; ltick();
     int r0 = rgb_restarts;
     power_set_mode(POWER_MODE_SAVER); ltick();
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "power_set_mode(Saver), typing");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "power_set_mode(Saver), typing");
     expect_one_repaint(r0, "power_set_mode into Saver");
     r0 = rgb_restarts;
     power_set_mode(POWER_MODE_NORMAL); ltick();
@@ -575,10 +575,10 @@ static void l_under_dim(void) {
     power_init();
     on_battery_mid();
     power_force_stage(POWER_STAGE_DIM); ltick();
-    expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "DIM held, Normal");
+    expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "DIM held, Normal");
     int r0 = rgb_restarts;
     power_set_mode(POWER_MODE_SAVER); ltick();
-    expect_stage(POWER_STAGE_DIM, 255, 0xFF, 64, "DIM held, Saver");
+    expect_stage(POWER_STAGE_DIM, 255, 0xFF, SIM_DIM_VAL, "DIM held, Saver");
     power_set_mode(POWER_MODE_NORMAL); ltick();
     power_set_mode(POWER_MODE_SAVER); ltick();
     CHECK(rgb_restarts == r0, "Saver's ceiling under the dim: %d repaints, want none", rgb_restarts - r0);
@@ -586,6 +586,6 @@ static void l_under_dim(void) {
     lrun_s(2);
     CHECK(scale_sets == s1, "under the dim in Saver: %d applies on unchanged ticks", scale_sets - s1);
     power_force_stage(0xFF); idle_ms = 0; ltick();
-    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 128, "released, Saver, typing");
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "released, Saver, typing");
 }
 #endif

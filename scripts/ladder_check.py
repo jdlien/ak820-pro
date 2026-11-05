@@ -23,15 +23,15 @@ speed 255, so the animated ones cycle within a sample's second.
    - at 255, Saver at or below Always on (within ANIM_TOL for the animated
      effects), and for the effects that convert at the user's value (solid,
      Alphas/Mods, the cycles, Jellybean) at most CAPPED_MAX of it (QMK's CIE
-     curve: 128 drives 48 of 255's 255); DRIFT, whose knob is linear in
-     drive, at most DRIFT_MAX;
+     curve's ceiling is 18.6% of full light); DRIFT the same since D9,
+     at most DRIFT_MAX;
    - at 100, under the ceiling, Saver matches Always on for every effect,
      DRIFT included (within ANIM_TOL for the animated effects);
-   - solid white at 255 in Saver within 5% of solid white at 128 in Always on,
+   - solid white at 255 in Saver within 5% of solid white at Saver's ceiling in Always on,
      itself at least MIN_WHITE.
 
 Every hold also reads op 14 back after a tick: the mode, the stage held, and
-the ceiling the firmware says it applies (255, the dim's 64, Saver's 128).
+the ceiling the firmware says it applies (255, DIM_CAP, SAVER_CAP).
 
 Drive is the mean of a hold's samples, each a separate second of committed
 frames (the board updates the figure once a second, so samples are spaced
@@ -59,25 +59,27 @@ CONVERTED = {1, 2, 3, 4, 5, 6}   # every LED at the user's value, so the CIE rat
 HEATMAP, DRIFT = 7, 9
 FULL, SAVER = 0, 2               # power.c's POWER_MODE_FULL, POWER_MODE_SAVER
 STAGES = ["active", "dim", "off", "dark", "active"]
-STAGE_CAP = {"active": 255, "dim": 64, "off": 255, "dark": 255}   # op 14's value ceiling, in Always on
+DIM_CAP, SAVER_CAP = 139, 191    # power.c's DIM_VAL and SAVER_VAL on the row ISR branch (64 and 128 through v0.3.1)
+UNDER = 180                      # a value under Saver's ceiling, bright enough for the Heatmap's one key to read
+STAGE_CAP = {"active": 255, "dim": DIM_CAP, "off": 255, "dark": 255}   # op 14's value ceiling, in Always on
 SPEED = 255
 SETTLE = 3
 SPACING = 1.2                    # s between samples: the drive figure is a second's
 SAMPLES_STAGE = 3
 SAMPLES_SAVER = 8
 ANIM_TOL = 0.25                  # and 15 per mille: two holds of a moving or random field
-CAPPED_MAX = 0.35                # expected 48 / 255 = 0.19
-DRIFT_MAX = 0.70                 # expected 128 / 255 = 0.50
-MIN_LIT = {255: 20, 100: 2}      # per mille: a lit reference at each value (purple at 255 reads ~500)
+CAPPED_MAX = 0.35                # expected 18.6% of full light
+DRIFT_MAX = CAPPED_MAX            # the flush caps every effect alike since D9
+MIN_LIT = {255: 20, UNDER: 2}    # per mille: a lit reference at each value (purple at 255 reads ~500)
 # The Heatmap lights only the rig's one tapped key of 81: measured 10-20 at
 # 6.7 per mille over a stage's holds and 1.9 at value 100, so the floor that
 # fits a field of lit keys can never pass it.
-MIN_LIT_HEATMAP = {255: 4, 100: 1}
+MIN_LIT_HEATMAP = {255: 4, UNDER: 0.5}
 
 
 def min_lit(eff, v):
     return (MIN_LIT_HEATMAP if eff == HEATMAP else MIN_LIT)[v]
-MIN_WHITE = 100                  # per mille: white at 128 (expected ~188)
+MIN_WHITE = 100                  # per mille: white at Saver's ceiling (measured 186)
 
 
 def tol(eff, ref):
@@ -156,11 +158,11 @@ def held(b, rgb, mode, want_cap, n=SAMPLES_SAVER):
 
 def saver_pass(b, rows):
     bad = 0
-    for v in (255, 100):
+    for v in (255, UNDER):
         for eff, name in EFFECTS.items():
             rgb = {"effect": eff, "h": 191, "s": 255, "v": v}
             ref, ok1 = held(b, rgb, FULL, 255)
-            sav, ok2 = held(b, rgb, SAVER, 128)
+            sav, ok2 = held(b, rgb, SAVER, SAVER_CAP)
             t = tol(eff, ref)
             if v == 255:
                 drive_ok = sav <= ref + t
@@ -178,12 +180,12 @@ def saver_pass(b, rows):
             print(f"v{v:<3} {eff} {name:22} Always on {ref / 10:5.1f}%  Power saver {sav / 10:5.1f}%"
                   f"  ({sav / ref if ref else 0:4.2f})  op 14 {'ok' if ok1 and ok2 else 'WRONG'}  "
                   f"{'ok' if ok else 'FAIL'}{'' if judged(eff, b.rig) else ' (not judged: no --rig)'}")
-    w128, ok1 = held(b, {"effect": 1, "h": 0, "s": 0, "v": 128}, FULL, 255)
-    w255, ok2 = held(b, {"effect": 1, "h": 0, "s": 0, "v": 255}, SAVER, 128)
+    w128, ok1 = held(b, {"effect": 1, "h": 0, "s": 0, "v": SAVER_CAP}, FULL, 255)
+    w255, ok2 = held(b, {"effect": 1, "h": 0, "s": 0, "v": 255}, SAVER, SAVER_CAP)
     ok = ok1 and ok2 and w128 >= MIN_WHITE and abs(w255 - w128) <= w128 * 0.05
     bad += not ok
     rows.append({"part": "white", "full_128": w128, "saver_255": w255, "op14": ok1 and ok2, "ok": ok})
-    print(f"white: Always on at 128 {w128 / 10:5.1f}%, Power saver at 255 {w255 / 10:5.1f}%  {'ok' if ok else 'FAIL'}")
+    print(f"white: Always on at {SAVER_CAP} {w128 / 10:5.1f}%, Power saver at 255 {w255 / 10:5.1f}%  {'ok' if ok else 'FAIL'}")
     return bad
 
 

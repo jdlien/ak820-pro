@@ -1340,8 +1340,10 @@ a dim board again can move its colours (a dim magenta toward red). DRIFT,
 whose brightness scales its colours after the conversion, caps its own
 value knob instead, so it saves about half its LED power, not three
 quarters. That describes releases through v0.3.1. On the row ISR branch the
-flush applies the ceiling on every effect, and its curve makes 128 only 3.6%
-of full light, so this value is due to be chosen again by light.
+flush applies the ceiling on every effect, and it is 191, 75% of the slider,
+which on the branch's curve is the light 128 gave: 18.6% of full, with the
+LEDs at a quarter of their draw at full, measured. The dim's 64 is 139 there, for
+the same reason.
 
 **Lights out** keeps the RGB and the backlight off even while typing (~107 mW,
 ~6 days a charge by the model), and lights the backlight at the user's level
