@@ -95,9 +95,10 @@ is judging its curve by eye.** Written for a fresh session.
 white runs `row-isr` `7221cb6080` since 21:01 (dev `0xd35fb613`, devprobe
 `0x5ff4aba9`, daily `0x15a432dc`), the curve `--stops 4`, the branch's head.
 The data line is off and the daemon running, as in the standing state, but
-**relay 2 is ON since 20:11, switched by hand: the pack is charging**, so the
-drain to the RGB cut stopped short and the flash moratorium's reason with it.
-Leave the relay as it is; whether a drain restarts is JD's call. Flashes still
+**relay 2 is ON since 20:11, switched by hand: the pack is charging**. JD
+stopped the drain because Power saver and the low-pack limit on the LEDs made
+the lights hard to judge, and the flash moratorium's reason went with it.
+Leave the relay as it is; whether a drain restarts is his call. Flashes still
 need his word. Next: his eye on `--stops 4` against the hybrid before it
 (`9157b1599c`, dev `0x118846ea`, which he passed as "a really decent curve");
 if he prefers the hybrid, revert `7221cb6080`. The tables' codex round is

@@ -2227,7 +2227,9 @@ profile saved before D9, which now loads dimmer than it was saved.
 
 `--stops 4` went on at 21:01 for his second look, the settings kept and the
 token read back. Relay 2 has been on since 20:11, switched by hand: the pack is
-charging at about 530 mA, so the drain to the RGB cut stopped short of the cut.
+charging at about 530 mA, from 3727 mV under a 46 mA load, so the drain stopped
+short of the RGB cut. Power saver's idle dim and the low-pack limit on the LEDs
+were making the lights hard to judge, and neither applies with VBUS present.
 
 ## Files
 
