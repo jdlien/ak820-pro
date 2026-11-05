@@ -2146,8 +2146,14 @@ is about 2% of full light on it against 18% on L\*, and today's look sits
 near 78%**. That trade is JD's to judge; the generator makes the next
 candidate (`--gamma G`, `--log`, or a pinned midpoint) in a minute, and
 the exhaustive host check (`scripts/check_curve12.py`) runs the flush's
-arithmetic on any table. His eye on this build is where the record ends
-tonight.
+arithmetic on any table. One more build at 20:36 on his ask
+(`b45a904f11`, dev `0xc3b0ea56`; devprobe `0xeafa5d2a`, daily
+`0xc0f7878f`): the menu editors' fast turn toned down, since a quick spin
+stepped 8% a detent and skipped the steps he wanted to see: the shipped
+builds step 4% (6 hue units) on a fast turn within 60 ms, the dev build
+has no acceleration at all (`config.h`'s `MENU_FAST_*`, `menu.h`'s
+defaults the old values for the host test). His eye on the curve is
+where the record ends tonight.
 
 ## Files
 

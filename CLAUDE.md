@@ -135,9 +135,10 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 20:28 11-04: D9, the precision path, `row-isr`
-`6e7924ac26`** (dev token `0xdfb885fb`; devprobe `0x7b367d92`, daily
-`0x831605d8`; the curve geometric for JD's eye after the L* build's
+**On white since 20:36 11-04: D9, the precision path, `row-isr`
+`b45a904f11`** (dev token `0xc3b0ea56`; devprobe `0xeafa5d2a`, daily
+`0xc0f7878f`; the menu's fast turn none on dev and 4% shipped since this
+commit; the curve geometric for JD's eye after the L* build's
 uneven steps, the dither a quarter tick under 16 ticks; six codex
 rounds, the last running; **resume from `plans/current-status.md`'s
 RESUME HERE, written for a fresh session**): the committed frame holds pulse widths at 12

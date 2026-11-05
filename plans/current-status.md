@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-04, 20:35. The block below is where things stand, written to
+Updated 2026-11-04, 20:40. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -88,12 +88,13 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**RESUME HERE (20:35 11-04): D9, the precision path, is on white and JD
+**RESUME HERE (20:40 11-04): D9, the precision path, is on white and JD
 is judging its curve by eye.** Written for a fresh session.
 
-*What is on white:* `row-isr` `6e7924ac26`, dev token `0xdfb885fb` (since
-20:28; devprobe `0x7b367d92`, daily `0x831605d8`; the gaps 344 and
-2,416 B), in the standing state (the data line off, the daemon running,
+*What is on white:* `row-isr` `b45a904f11`, dev token `0xc3b0ea56` (since
+20:36; devprobe `0xeafa5d2a`, daily `0xc0f7878f`; the gaps 344 and
+2,416 B; its last commit the menu editors' fast turn toned down, none on
+dev, 4% within 60 ms shipped), in the standing state (the data line off, the daemon running,
 relay 2 off, Power saver; JD's lighting Alphas/Mods hue 178 sat 219, val
 131 as he left it), Hutch's on the books. The pack is at ~14% on a drain
 to the RGB cut; the flash moratorium (JD, Hutch, 15:2x) stands in
