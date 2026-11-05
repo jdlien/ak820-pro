@@ -118,8 +118,7 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 - an untethered drain at real use, run to the RGB cut. The one from FULL
   at 04:44 10-24 stopped short at 20:11 11-04 with ~19% left by the
   logger, two long charges for bench work inside it
-  (`plans/current-status.md`, "Stopped 20:11:24 11-04"); a new one is
-  JD's call;
+  (`plans/current-status.md`, "Stopped 20:11:24 11-04"); a new one runs from FULL since 13:56:13 11-05, on the daily build;
 - stripping the bench, the soak, and the release for other owners.
 
 **v0.3.1, released 11-01 22:25 from `cfe6c2d3a5`** (`ak820pro-jdlien`
