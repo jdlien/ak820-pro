@@ -1137,13 +1137,13 @@ the eye above 25%, jumps under 20%); `--log` (8% a percent step, but under 3
 ticks the quarter grid swallows most detents: "nothing, nothing, jump");
 `--hybrid 2` (the grid by value, on white since 20:52; three flat detents
 and two levels skipped, because the menu steps 2.55 values a percent);
-`--stops 4` (the grid by percent stop, built as `7221cb6080`: no flat detent,
+`--stops 4` (the grid by percent stop, `7221cb6080`, on white since 21:01: no flat detent,
 50% at 3.6% of full light). `history/rowisr-stage1-20261101/curve_steps.py`
 prints any table's widths per detent. Eighth ticks (an eight-field pattern)
 are the firmware step if a quarter is still too coarse under a tick.
 
 JD's eye passed the hybrid ("a really decent curve"); `--stops 4` differs from
-it only below about 16% and has not been on the board. **Open for the merge:**
+it only below about 16% and is on the board for his second look. **Open for the merge:**
 a percentage now means two lights, the wide modes about 5x under the byte path
 at the slider's middle (the README's table), and `DIM_VAL`, the default val and
 pre-D9 profiles all moved with the table. An 8-bit byte cannot follow the new

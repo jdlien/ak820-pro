@@ -2187,7 +2187,7 @@ Two tables came of it:
   his eye. It has a fault found after the flash: the menu steps in percent,
   2.55 values a detent, so two values a level skips the half tick and 1.75
   ticks, and three detents still move nothing (6, 8, 13).
-- **`--stops 4`, built and not flashed (`7221cb6080`, dev `0xd35fb613`;
+- **`--stops 4`, on white since 21:01 (`7221cb6080`, dev `0xd35fb613`;
   devprobe `0x5ff4aba9`, daily `0x15a432dc`):** the grid on the slider's
   stops: 1% half a tick, then a quarter tick a percent to 4 ticks at 15%,
   then geometric at 6.9% a percent to the top. No detent leaves every
@@ -2224,6 +2224,10 @@ In ticks at full chroma, `--stops 4` against L*:
 Computed, not measured. The same table moves everything keyed to a value:
 `DIM_VAL` 64 (Power saver's dim), `keyboard.json`'s default val 191, and a
 profile saved before D9, which now loads dimmer than it was saved.
+
+`--stops 4` went on at 21:01 for his second look, the settings kept and the
+token read back. Relay 2 has been on since 20:11, switched by hand: the pack is
+charging at about 530 mA, so the drain to the RGB cut stopped short of the cut.
 
 ## Files
 

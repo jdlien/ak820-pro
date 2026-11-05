@@ -92,19 +92,19 @@ set, the camera gate). The fallback for the night is `8355011389`
 is judging its curve by eye.** Written for a fresh session.
 
 *The newest state, which overrides the paragraphs under it where they differ:*
-white runs `row-isr` `9157b1599c` since 20:52 (dev `0x118846ea`), the curve
-`--hybrid 2`, in the standing state. The branch's head is one commit past it:
-`7221cb6080`, the curve `--stops 4` (dev `0xd35fb613`, devprobe `0x5ff4aba9`,
-daily `0x15a432dc`), built, pushed and NOT flashed: it needs JD's word.
-By arithmetic it fixes the hybrid's three flat detents
-(`history/rowisr-stage1-20261101/curve_steps.py`; README, "D9 on white", at
-its end). JD's eye passed the hybrid on the board ("a really decent curve").
-Next: his choice between keeping it (the branch's head then reverts
-`7221cb6080`) and one look at `--stops 4`
-(`ak820pro-builds/out/via-dev-7221cb6080-*.bin`, on his word); the tables'
-codex round is `plans/review-codex-row-isr-d9-curve-raw.md`; then the order
-below. Open for the merge: a percentage now means two lights, the wide modes
-about 5x under the byte path at 50% (the README's table).
+white runs `row-isr` `7221cb6080` since 21:01 (dev `0xd35fb613`, devprobe
+`0x5ff4aba9`, daily `0x15a432dc`), the curve `--stops 4`, the branch's head.
+The data line is off and the daemon running, as in the standing state, but
+**relay 2 is ON since 20:11, switched by hand: the pack is charging**, so the
+drain to the RGB cut stopped short and the flash moratorium's reason with it.
+Leave the relay as it is; whether a drain restarts is JD's call. Flashes still
+need his word. Next: his eye on `--stops 4` against the hybrid before it
+(`9157b1599c`, dev `0x118846ea`, which he passed as "a really decent curve");
+if he prefers the hybrid, revert `7221cb6080`. The tables' codex round is
+`plans/review-codex-row-isr-d9-curve-raw.md`. Then the order below. Open for
+the merge: a percentage now means two lights, the wide modes about 5x under
+the byte path at 50% (`history/rowisr-stage1-20261101/README.md`, the end of
+"D9 on white").
 
 *What is on white:* `row-isr` `a86a07610f`, dev token `0xfbcd040d` (since
 20:41; devprobe `0x06cda486`, daily `0x6115beeb`; the gaps 344 and
