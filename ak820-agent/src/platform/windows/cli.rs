@@ -36,6 +36,7 @@ pub fn main() -> ExitCode {
         ["lighting"] => lighting(),
         ["health", flags @ ..] => health_cmd(flags),
         ["sleep", flags @ ..] => sleep_cmd(flags),
+        ["rowisr", flags @ ..] => rowisr_cmd(flags),
         ["clock", flags @ ..] => clock(flags),
         ["install", flags @ ..] => install(flags),
         ["uninstall"] => uninstall(),
@@ -100,6 +101,8 @@ fn usage() {
          \x20   [--crash] [--stalls] [--rows] [--isr] [--sched [--window SECS]] [--json] [--raw]\n\
          \x20 ak820 sleep [--raw]  the deep sleep's dev records (dev builds): the last sleep, the wake\n\
          \x20                      ring, the last stray, the sleep kept through a reset, the wake's census\n\
+         \x20 ak820 rowisr         the row ISR's dev records (dev builds): what held its handler off;\n\
+         \x20   [--mon on|off] [--zero]  switch the gap monitor, or zero it and the longest handlers (RAM only)\n\
          \x20 ak820 clock [--raw]  the RTC, as `ak820ctl clock --read` prints it;\n\
          \x20                      refuses while the Python timekeeper task runs (--anyway overrides)\n\
          \n\
@@ -380,6 +383,93 @@ fn health_cmd(flags: &[&str]) -> Result<(), String> {
         }
     }
     report_drained(&drained);
+    Ok(())
+}
+
+/// The row ISR's dev records (`rowdiag`): what held the row handler off. Reads, but
+/// for `--mon` (the gap monitor, off until asked, adds a little to every 20 kHz tick;
+/// `--mon off` when done) and `--zero` (the monitor's counts and the longest
+/// handlers, whose maxima otherwise run from the boot's enumeration). RAM only.
+fn rowisr_cmd(flags: &[&str]) -> Result<(), String> {
+    use crate::hid::exchange::REQUEST_TIMEOUT;
+    use crate::proto::Channel;
+    use crate::rowdiag as rd;
+
+    let (mon_sub, zero) = match flags {
+        [] => (0, false),
+        ["--mon", "on"] => (rd::MON_ON, false),
+        ["--mon", "off"] => (rd::MON_OFF, false),
+        ["--zero"] => (rd::MON_ZERO, true),
+        other => return Err(format!("rowisr: unknown flags {other:?}; the flags are --mon on|off, --zero")),
+    };
+    contention_notice();
+    let dev = device::open_board().map_err(|e| e.to_string())?;
+    let ask = |body: &[u8]| -> Result<Option<[u8; 32]>, String> {
+        let r = dev
+            .request(Channel::Health, rd::DEVHOOK, body, REQUEST_TIMEOUT)
+            .map_err(|e| format!("devhook op {}: {e}", body[0]))?
+            .report;
+        if r[0] == 0xFF {
+            return Ok(None); // unhandled: not a dev build, or past the ring
+        }
+        if r[3] != body[0] {
+            return Err(format!("devhook op {} answered as op {}", body[0], r[3]));
+        }
+        Ok(Some(r))
+    };
+    const NOT_DEV: &str = "the board does not answer: not a dev build";
+
+    if zero {
+        ask(&[rd::OP_SUMMARY, rd::SUMMARY_ZERO])?.ok_or(NOT_DEV)?;
+    }
+    let m = rd::mon(&ask(&[rd::OP_MON, mon_sub])?.ok_or(NOT_DEV)?);
+    let rec = rd::record(&ask(&[rd::OP_ROW, rd::SUB_RECORD])?.ok_or(NOT_DEV)?);
+    println!(
+        "the handler: longest run of omissions {}, spurious invocations {}, omissions by the arm deadline {}, \
+         epoch losses {}, invalid services {}, shortest handler {} us, samples dropped for a boundary inside the handler {}",
+        rec.omit_run_max, rec.spurious, rec.late_omit, rec.epoch_losses, rec.invalid_services, rec.elapsed_min_us,
+        rec.elapsed_crossed
+    );
+    println!("omissions per mux row (R, B, G per key row; 255 = saturated):");
+    for k in 0..6 {
+        println!(
+            "  key row {k}: R {:3}  B {:3}  G {:3}",
+            rec.omit_row[3 * k],
+            rec.omit_row[3 * k + 1],
+            rec.omit_row[3 * k + 2]
+        );
+    }
+    let s = rd::summary(&ask(&[rd::OP_SUMMARY, 0])?.ok_or(NOT_DEV)?);
+    let uart = rd::uart_max_ms(&ask(&[rd::OP_KIND, 0xFF])?.ok_or(NOT_DEV)?);
+    println!(
+        "longest handlers: USB {} ms, system timer {} ms, UART2 {} ms; UART2 at priority {}",
+        s.usb_max_ms, s.st_max_ms, uart, s.uart_prio
+    );
+    println!(
+        "overruns {} (+{} in the drain's re-reads), bytes refused {}; seen with a PCF transaction {}, a flash write {}, neither {}",
+        s.oe_obs, s.oe_drain, s.rx_drop, s.ctx_pcf, s.ctx_flash, s.ctx_none
+    );
+    println!(
+        "gap monitor {}: {} ticks, gaps >= 128 us {}, >= 197 us {}, >= 347 us {}; longest {} ms{}",
+        if m.on { "on" } else { "off" },
+        m.ticks,
+        m.n_128us,
+        m.n_197us,
+        m.n_347us,
+        m.max_ms,
+        if m.n_128us > 0 { format!(" in {} (activity {:#x})", m.max_scope, m.max_act) } else { String::new() }
+    );
+    let mut ring = Vec::new();
+    for page in 0..rd::MON_RING_PAGES {
+        match ask(&[rd::OP_MON_RING, page])? {
+            Some(r) => ring.extend(rd::gaps(&r)),
+            None => break,
+        }
+    }
+    ring.sort_by_key(|g| g.seq);
+    for g in ring {
+        println!("  gap #{} {} ms at board second {}, in {} (activity {:#x})", g.seq, g.gap_ms, g.secs, g.scope, g.act);
+    }
     Ok(())
 }
 

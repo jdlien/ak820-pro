@@ -18,6 +18,7 @@ pub mod platform;
 pub mod proto;
 pub mod radio;
 pub mod raw81;
+pub mod rowdiag;
 pub mod sleepdiag;
 pub mod smtc;
 pub mod status;
