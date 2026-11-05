@@ -115,9 +115,11 @@ ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
 **Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-22
 — RESUME HERE"). **Feature-complete for JD's board.** What's left:
-- an untethered drain at real use, running to the RGB cut. It restarted
-  from FULL at 04:44 10-24 (`charge_mah` -1116.956 at the start): the move
-  to Buzz, the new Mac, on 10-23 spoiled the first;
+- an untethered drain at real use, run to the RGB cut. The one from FULL
+  at 04:44 10-24 stopped short at 20:11 11-04 with ~19% left by the
+  logger, two long charges for bench work inside it
+  (`plans/current-status.md`, "Stopped 20:11:24 11-04"); a new one is
+  JD's call;
 - stripping the bench, the soak, and the release for other owners.
 
 **v0.3.1, released 11-01 22:25 from `cfe6c2d3a5`** (`ak820pro-jdlien`

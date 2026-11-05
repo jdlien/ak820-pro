@@ -1079,10 +1079,31 @@ bulbs.
   against +1106.3 ms the morning before without the trim
   ([`../history/lockchan-clock-mac-cut-trim-20261021/`](../history/lockchan-clock-mac-cut-trim-20261021/README.md)).
 
-### Running since 04:44:26 10-24: the untethered drain at real use, from FULL
+### Stopped 20:11:24 11-04, short of the RGB cut: the untethered drain at real use, from FULL 04:44:26 10-24
 
 The drain restarted on `b9555ff3e6`, with Buzz's daemon (`--clock --radio
---lockchan`) and the slider on BT. It runs to the RGB cut.
+--lockchan`) and the slider on BT. It was to run to the RGB cut.
+
+- **The end:** relay 2 switched on by hand at 20:11:25 11-04, the pack
+  charging at ~530 mA from then. The last row on the drain, 20:11:24,
+  `charge_mah` 414.29: **3243 mAh net since FULL (±18, the 11-03 offset
+  below), 80.8% of R4's 4011.6, ~768 mAh (19.2%) left by the logger,
+  after 11 d 15 h 27 min (279.45 h).** The board read lower near the
+  bottom: its low cap at 15% came at 13:42 11-03 and it read 14.7% at
+  14:49 11-04, where the logger's count left 19.5% and 18.5%.
+- **Not a clean runtime: two long charges fell inside it**, both for
+  the row ISR's light measurements, out of the low cap's ladder (under
+  15% it darkens an idle board at 3 min): 14:25:16-15:05:15
+  11-03 (365.3 mAh in) and 14:49:48-15:03:49 11-04 (128.3 mAh in),
+  besides the short wakes' charges (eight of 2-6 s, 3.6 mAh in all: 10-26
+  13:08-13:13, 10-28 12:41, 11-01 16:46-17:45). **497.2 mAh in, so ~3,740
+  mAh out over the 279 h, 13.4 mA on average**, the row ISR's bench
+  windows, the flashes and the gates included: not JD's use alone. The
+  net count is the pack's state; the out count is what the board drew.
+- **What it answers and what it does not:** the board ran untethered for
+  over 11 days with a fifth of the pack left by the logger; the runtime
+  to the RGB cut at real use is still unmeasured. A new drain from FULL
+  is JD's call.
 
 - **The charge:** relay 2 on at 23:46:52 10-23, with `charge_mah` at 50.83.
   It tapered to ~-79 mA and terminated at 04:16:03 10-24 (`charge_mah`
