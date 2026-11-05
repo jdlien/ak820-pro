@@ -1,0 +1,11 @@
+[17:39:57] asleep: one rig press
+[17:40:09] before: token 0x154c76fb, hue 178 sat 219 val 13: a 3 s clip
+phone - mac: +1269.4 ms (round trip 40 ms)
+before: bright points (x, y): R, G, B in a 16 px window: (816,12): (76.9, 115.5, 148.3); (888,12): (105.8, 115.4, 128.3); (744,60): (1.8, 18.7, 83.0); (408,180): (3.5, 30.3, 86.9); (408,804): (0.6, 23.6, 77.1); (432,900): (4.3, 27.2, 88.2); (960,1692): (1.1, 24.9, 97.3)
+board : effect 2, hue 178, sat 219, val 125, speed 231
+[17:40:23] before done; the standing state
+[17:41:34] after: token 0xb4061e41, hue 178 sat 219 val 13: a 3 s clip
+phone - mac: +1273.3 ms (round trip 41 ms)
+after: bright points (x, y): R, G, B in a 16 px window: (816,12): (58.6, 116.8, 159.9); (744,60): (14.5, 19.4, 74.7); (888,60): (76.2, 80.2, 90.0); (408,180): (27.7, 28.8, 80.5); (408,804): (27.4, 24.5, 65.1); (432,900): (20.6, 24.1, 71.9); (960,1692): (59.1, 33.3, 84.9)
+board : effect 2, hue 178, sat 219, val 125, speed 231
+[17:41:48] after done; the standing state

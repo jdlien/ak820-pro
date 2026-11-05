@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-04, 17:25. The block below is where things stand, written to
+Updated 2026-11-04, 18:10. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
 
@@ -88,7 +88,23 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**RESUME HERE (17:25 11-04): stage 6's floor evening is done; white runs
+**RESUME HERE (18:10 11-04): D9, the precision path, is on white**
+(`row-isr` `7dad75d506`, dev token `0x5c792f4d`, since 18:07; devprobe
+`0xcadc2613`, daily `0xd49b8772`; the gaps 344 and 2,416 B): the purple
+theme keeps its red at 5% (the camera: red 14-28 against 1-4 before),
+the gates pass with the ladder held (the README's "D9 on white"); codex:
+a design round and a code round NOT READY, both taken, two verify
+rounds with no P1, their P2s taken (the core guard for a mode round-trip,
+the pattern's block from its hook, the release's clear) or owed (the
+transition validation by camera, the handler's warm window). White is
+in the standing state, Hutch's.
+**JD's eye is the open gate**: the hue to the bottom with the value keys,
+the steps' evenness, no flicker at the dithered levels (values 1-3); then
+the exponent evening (`scripts/gen_curve12.py --gamma G`). The flash
+moratorium was kept in substance (every flash over the data line, the
+pack fed nothing) with JD's "through to completion" as the go.
+
+**Before it (17:25 11-04): stage 6's floor evening is done; white ran
 the dev build of `row-isr` `245fcfe8e3`** (token `0x154c76fb`, heap gap
 368 B: stage 5h plus the dev Diagnostics page **Floor probe** in the
 Write test's place, sub 3's every-LED and split patterns, and the

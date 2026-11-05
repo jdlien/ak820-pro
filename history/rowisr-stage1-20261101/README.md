@@ -2016,6 +2016,110 @@ call); the measurement is the camera on the probe build at 1 tick with
 a key held in a column of bare LEDs. The dev build `245fcfe8e3`
 (`0x154c76fb`) went back on at 17:20, white to the standing state.
 
+### D9 on white (11-04, 17:08-17:57): the precision path on one wide frame, the purple's red back at 5%
+
+JD's evening ask after the floor work: his purple theme (Alphas/Mods, hue
+178, sat 219) was pure blue under 8% brightness: QMK curves the value
+first (5% is a lightness of about 1 of 255 under CIE), then multiplies
+the channels by it and truncates, so red's 30% of that 1 is 0 while blue
+keeps the 1. "Go through to
+completion", the camera his until the eye check. The design is the plan's
+**"D9 revised (11-04)"**, written against the 11-04 RAM ledger
+(`arm-none-eabi-nm` on the dev ELF: the gap 368 B, the two byte frames
+243 B each, the dev-only RX tap ring 208 B, the battery log 12,960): one
+wide frame instead of the original D9's two. The committed frame holds
+each LED's pulse widths in ticks (12 bits, `led_w[81][3]`, +243 B); the
+render buffer stays QMK's bytes; for an effect whose value is the same on
+every LED (Solid, Alphas/Mods, the three Cycles, Jellybean: `power.c`'s
+whitelist, `power_wide_mode()`), the board's `rgb_matrix_hsv_to_rgb()`
+wrap converts the colour at full value so the bytes hold the chroma, and
+the flush applies the value (the config's under the ladder's cap) at 12
+bits through a 16-bit CIE L* curve (`rgb/curve12.h`, 512 B of flash,
+`scripts/gen_curve12.py`; `--gamma` for the exponent evening). Under a
+tick the field is skipped (one tick every second field from 0.5, every
+fourth from 0.25, flagged above the terminal and resolved by a field
+counter in the handler). The other effects (Typing Heatmap, RAINFALL,
+DRIFT: a value per LED) and the dev patterns stay on the byte path
+through `width_lut[]`, now loaded at the flush, not in the handler. The
+conversion runs unmasked (a halfword store is atomic; a field can mix old
+and new LEDs across a transition, D8's coherence relaxed on purpose). The
+RX tap went opt-in (`CH582_RXTAP`) for the RAM: the dev gap 344 B, the
+daily 2,416.
+
+**Two codex rounds, both NOT READY, both taken** (`review-codex-row-isr-d9-design-raw.md`,
+`-code-raw.md`): the first version let the wrap's calls decide a frame's
+encoding, and Jellybean paints nothing in a frame without a drop, so such
+a frame would have read its chroma as raw bytes and blazed; a brightness
+change in such a frame would never have landed; a raw pattern with the
+chroma's own bytes would have skipped the conversion; and a pattern's
+release over a sparse painter would have left raw bytes read as chroma.
+The second version (`4ff4caf4d6`): the encoding is the mode's, the value
+is read at the flush, an encoding or a value change converts the frame
+even with no byte moved, and a pattern's release re-inits the effect.
+The third (`13d7d8bd71`, token `0x85c5ed74`; devprobe `0xb074f1ef`, daily
+`0x9cc1d614`) is comments and the host side (the overrun diagnostic takes
+an absent tap as optional, the generator rejects a zero exponent): its
+code is the second's. Accepted from the reviews, in the plan: the old
+path applied CIE to the value and truncated the products, so widths
+differ by a few ticks mid-range and the bottom is dimmer (a value of 1
+was five ticks, now half a tick on alternate fields); the hue is not kept
+under a value of about 4; the fixed mux term overstates a frame of
+dithered ticks; the dev build with the tap on is unsupported.
+`scripts/check_curve12.py` runs the flush's arithmetic over every
+(chroma, value) at the three scales: every width below the terminal,
+monotonic in both, the tops exact (1,195, 255, 2,550 ticks).
+
+**On the board** (`flash-stage6-d9.log`; every flash over the data line
+alone, the drain's moratorium kept in substance: nothing fed the pack):
+the first version at 17:41 (`0xb4061e41`), the second at 17:46
+(`0x3cc82483`). **The camera's before and after at value 13** (`d9_cam.sh`,
+`d9cam/`): on the byte-path build the bare LEDs read red 1-4, blue 77-97
+(pure blue, JD's complaint in numbers); on D9 red 14-28, blue 65-80: the
+purple. **The gates on the second version** (`d9_gates.py v2e`, the
+ladder's stage forced ACTIVE for the run, which the first three attempts
+lacked and the instrument's own faults spoiled: Power saver's dim cap at
+one idle minute had flattened 128 and 255 to 64, and its lights-off at
+three had darkened the Jellybean step; the bare LEDs' positions taken
+from the floor clips, the frame past 300 in each clip):
+
+| gate | read at the four bare LEDs | result |
+|---|---|---|
+| the purple ramp 1, 2, 4, 8, 13, 26, 64, 128, 255 | blue 3.5/10 at 1, 18 at 2, 48 at 4, 60 at 8, 83 at 13, 125 at 26, 189 at 64, then the camera saturates; red 1-10 at 8 (one tick), 20-40 at 13 (two ticks), 43-80 at 26 | monotonic; the red from 13 on the camera (from 4 in ticks) |
+| RGB toggled off and on at 64 | off: (3, 0, 2) on every LED; back on within 15% of before | pass |
+| the dev pattern on (red at byte 1) and off | on: red 61-95 with green and blue under 10; off: the purple back | pass |
+| Jellybean at 64 left 3 s, the value to 13 with no drop | 64: four different colours 80-177; 13: the same colours at 10-100, not dark | pass: the value lands without a drop |
+
+The one honest miss in the table: at a value of 8 the purple's red is one
+tick, which the camera reads at 1-10 against JD's floor finding that one
+tick is "clearly visible" to the eye; the gate's criterion moved to 13
+and 26. Above 64 the camera saturates and re-meters each clip (128 read
+above 255 on the fourth run), so the ramp is judged to 64.
+
+**Codex's two verify rounds** (`review-codex-row-isr-d9-verify-raw.md`,
+`-verify2-raw.md`): no P1 in either; the first's P2s, taken in
+`7edd3997f9` (the fourth version, token `0x4126ca00`, on white 18:02,
+the gates run again: the ramp monotonic to 64, the toggle, the pattern,
+Jellybean's dropless value change all pass): a mode that comes back
+before a flush (A, a chunk of B, A) kept B's chunk in the buffer as
+chroma, since QMK's compare at render saw A == A, so a two-line local
+core edit in `rgb_task_start()` invalidates the last-flushed effect when
+the effect to render changes (`quantum/rgb_matrix/rgb_matrix.c`); the
+dev pattern's block on the wide path moved from its command to the hook
+that installs its bytes (a chroma frame rendered before the command and
+flushed after it would have shown at full for a frame); a pattern's
+release clears the render buffer before the re-init (flags that exclude
+LEDs would have kept raw bytes); the overrun diagnostic's tap fallback
+takes only an op the build answers unhandled. The second round's
+remainder: the transition validation (tearing at hue, brightness and
+byte/wide changes, which a settled-frame camera run cannot see) and the
+handler's warm window are owed with the exponent evening, and the last
+stale comments went in the final commit, **`7dad75d506`: dev token
+`0x5c792f4d` (on white from 18:07, the fourth's code), devprobe
+`0xcadc2613`, daily `0xd49b8772`, the gaps 344 and 2,416 B**; white back
+in the standing state at 18:08 (Power saver, the relay off, the daemon),
+Hutch told. JD's eye on the hue to the bottom and on the steps' evenness
+is the gate that remains.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

@@ -56,8 +56,10 @@ ms = lambda ticks: round(ticks * 1000.0 / TICK_HZ, 3)
 
 def op(h, n, args=()):
     r = cm.xfer(h, [cm.SET_VALUE, cm.HEALTH_CH, cm.HC_DEVHOOK, n] + list(args) + [0] * (28 - len(args)))
+    if len(r) >= 32 and r[3] == n and r[0] == 0xFF:   # RTC_UNHANDLED (VIA's id_unhandled) with the op echoed: this build lacks the op
+        sys.exit(f"op {n}: unhandled by this build")
     if len(r) < 32 or r[3] != n:
-        sys.exit(f"op {n}: unhandled or another op's reply ({bytes(r[:8]).hex()}); a build with overrun_diag?")
+        sys.exit(f"op {n}: {'a short reply' if len(r) < 32 else 'another op' + chr(39) + 's reply'} ({bytes(r[:8]).hex()}); a build with overrun_diag?")
     return bytes(r[4:32])
 
 
@@ -109,8 +111,12 @@ def mon_ring(h, seq):
 def rxtap(h, sub=0):
     """Gremlin's RX tap (op 15): sub 1 arms it (count zeroed), 2 disarms; the
     count is every byte the link's parser took since arming."""
-    b = op(h, 15, [sub])
-    return {"armed": bool(b[0]), "bytes": U32(b, 1)}
+    try:
+        b = op(h, 15, [sub])
+    except SystemExit as e:   # opt-in since 11-04 (CH582_RXTAP; its 208 B went to the precision path's wide frame): an unhandled op 15 is a tap this build lacks, not a fault; a timeout or a wrong reply stays one
+        if "unhandled by this build" not in str(e): raise   # a short or a wrong reply stays a failure (codex, 11-04)
+        return {"armed": False, "bytes": 0, "available": False}
+    return {"armed": bool(b[0]), "bytes": U32(b, 1), "available": True}
 
 
 def walk_back(slots, seq, cap):

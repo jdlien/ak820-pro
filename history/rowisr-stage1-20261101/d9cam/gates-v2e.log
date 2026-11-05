@@ -1,0 +1,19 @@
+[17:54:02] v2e: token 0x3cc82483
+[17:54:02] the ladder's stage forced ACTIVE for the run (Power saver on battery dims at 1 min idle and darkens at 3: the first run's 128 and 255 read as 64 and its Jellybean step went dark)
+[17:54:12] bare LEDs at [(408, 180), (408, 804), (432, 900), (960, 1692)]: at value 64 they read [(126.2, 109.6, 187.9), (84.4, 69.1, 99.5), (95.6, 85.9, 144.9), (123.5, 115.4, 158.4)]
+[17:54:23] purple v=1: (2.9, 0.0, 3.5); (1.4, 1.4, 10.0); (3.2, 1.0, 5.0); (2.1, 1.7, 10.0)
+[17:54:33] purple v=2: (3.6, 0.7, 5.3); (0.7, 1.6, 18.1); (2.3, 2.6, 11.0); (13.8, 3.7, 11.6)
+[17:54:44] purple v=4: (2.7, 2.1, 12.7); (0.3, 8.5, 48.5); (3.5, 11.2, 38.7); (3.4, 15.2, 65.2)
+[17:54:54] purple v=8: (4.0, 15.7, 50.4); (1.5, 17.7, 59.8); (5.0, 16.5, 57.4); (10.0, 31.5, 90.4)
+[17:55:04] purple v=13: (33.3, 31.0, 83.3); (27.5, 23.0, 63.8); (19.5, 24.0, 73.8); (39.8, 43.5, 106.8)
+[17:55:14] purple v=26: (65.2, 61.4, 125.1); (47.0, 41.6, 64.7); (42.9, 45.5, 99.3); (80.2, 76.5, 119.5)
+[17:55:25] purple v=64: (130.5, 111.0, 189.0); (77.9, 67.1, 90.9); (93.0, 87.2, 143.5); (122.3, 111.9, 155.0)
+[17:55:35] purple v=128: (140.9, 168.8, 244.8); (74.5, 90.4, 138.1); (91.6, 124.3, 197.7); (162.9, 160.6, 206.7)
+[17:55:45] purple v=255: (191.4, 176.7, 244.4); (98.2, 93.4, 142.8); (125.5, 129.3, 197.3); (161.7, 157.6, 204.2)
+[17:55:45] (1) purple: monotonic True, red present from 4 False -> FAIL
+[17:56:17] (2) toggle: dark when off True, the same back on True -> PASS
+[17:56:38] (3) pattern: red while on True, the effect back after True -> PASS
+[17:57:02] (4) Jellybean's value change with no drop: dimmed True -> PASS
+[17:57:02] the stage released
+[17:57:02] JD's lighting restored: board : effect 2, hue 178, sat 219, val 125, speed 231
+[17:57:05] the standing state; a FAIL above

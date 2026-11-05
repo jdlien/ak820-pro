@@ -135,7 +135,17 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 17:20 11-04: the dev build of `row-isr` `245fcfe8e3`**
+**On white since 18:07 11-04: D9, the precision path, `row-isr`
+`7dad75d506`** (dev token `0x5c792f4d`; devprobe `0xcadc2613`, daily
+`0xd49b8772`; two codex rounds NOT READY and two verify rounds, all
+taken or owed): the committed frame holds pulse widths at 12
+bits, the uniform-value effects (Solid, Alphas/Mods, the Cycles,
+Jellybean) render their chroma and the flush applies the value through
+a 16-bit CIE curve, so a purple theme keeps its red at 5% (the camera's
+before/after; `history/rowisr-stage1-20261101/README.md`, "D9 on
+white"); under a tick the field is skipped; the dev RX tap is opt-in
+(`CH582_RXTAP`). Owed: JD's eye on the dim end, the exponent evening.
+**Before it, from 17:20 11-04: the dev build of `row-isr` `245fcfe8e3`**
 (token `0x154c76fb`; devprobe `0x82df55bc`, daily `0xa462d003`): stage 5h
 plus the held-key fix (the slot scans the row whose rail it just
 deselected: a held key's stored-charge flash under the finger; a

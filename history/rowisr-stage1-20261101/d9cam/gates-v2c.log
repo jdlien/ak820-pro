@@ -1,0 +1,4 @@
+[17:52:45] v2c: token 0x3cc82483
+[17:52:45] the ladder's stage forced ACTIVE for the run (Power saver on battery dims at 1 min idle and darkens at 3: the first run's 128 and 255 read as 64 and its Jellybean step went dark)
+[17:52:55] bare LEDs at [(408, 180), (408, 804), (432, 900), (960, 1692)]: at value 64 they read [(144.4, 150.5, 210.5), (86.1, 82.3, 111.8), (97.4, 116.5, 169.8), (169.2, 161.2, 208.5)]
+[17:53:06] the stage released

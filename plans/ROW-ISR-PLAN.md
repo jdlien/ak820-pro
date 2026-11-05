@@ -1001,6 +1001,121 @@ earlier stage is neutral. Its RAM is proven by a complete allocation
 ledger before it is built and by the linker map and stack watermarks on
 each build flavour and each board after.
 
+### D9 revised (11-04): the precision path on one wide frame
+
+The 11-04 floor evening gave the design its numbers (stage 6's "Measured
+11-04"): every colour lights at one tick, the eye's unit step is lost at
+6-7 ticks (red) and 11-12 (green, blue), equal ticks keep the hue, and no
+per-colour gain is needed. JD's complaint is the case to fix: his purple
+theme (Alphas/Mods) is pure blue under 8% brightness, because QMK curves
+the value first (5% is a lightness of about 1 of 255 under CIE) and then
+multiplies the channels by it and truncates, so red's 30% of that 1 is 0
+while blue keeps the 1. The 11-04 RAM ledger (`arm-none-eabi-nm` on
+the dev ELF): the dev build's gap is 368 B, the daily's 2,656; the two
+byte buffers are 243 B each; the dev-only RX tap ring is 208 B
+(`ch582f_ajazz.c`, ops 15 and 16, the 2.4G stage-1 investigation of
+10-19, settled). D9 as first written wanted two wide buffers (+486 B),
+which the dev build cannot hold. Revised:
+
+- **One wide frame.** The committed frame `led_state[]` (243 B of bytes)
+  becomes `uint16_t led_w[81][3]`, the pulse widths in ticks (12 bits,
+  +243 B). The handler's step 4 loads the width straight from it (the
+  `width_lut[]` load leaves the hot path: a small saving). The render
+  buffer stays QMK's 8-bit `led_state_buf[]`.
+- **The brightness travels beside the bytes, not inside them.** For the
+  modes whose value is the same on every LED (Solid, Alphas/Mods, the
+  three Cycles, Jellybean Raindrops: `power_wide_mode()` in power.c), the
+  board's `rgb_matrix_hsv_to_rgb()` wrap converts the colour at full
+  value, so the render buffer holds the chroma at 8-bit precision, and
+  the flush applies the value once, at 12 bits, reading it from the
+  config under the ladder's cap. The encoding is the mode's, not the
+  render's: a frame of a wide mode is chroma whether or not that render
+  called the wrap (Jellybean paints nothing in a frame without a drop).
+  The effects whose value varies per LED (Typing Heatmap, RAINFALL,
+  DRIFT) keep the byte path: the wrap converts them as before and the
+  flush uses `width_lut[]` on their bytes.
+- **The flush converts, unmasked.** `sn32f2xx_flush()` converts when the
+  render buffer changed, or the encoding changed (the mode, a raw
+  pattern), or the value changed, even with no byte moved (a dim Solid's
+  chroma is a bright one's): per channel, width = chroma x curve(v),
+  `curve_q6[256]` in flash (512 B), the CIE L* lightness at 16 bits in Q6
+  byte units (full scale 255 x 64; the byte-path LUT's unit, so the
+  devprobe's `ROWISR_K_Q6` applies to both: on that flavour the wide
+  path's full scale is 255 ticks too), with one divide per frame for a
+  Q8 reciprocal and a multiply and a shift per channel. A halfword store
+  is atomic on this core and the handler reads one channel of one LED at
+  a time, so no width tears, but a field can mix old and new LEDs across
+  a hue or brightness change: D8's coherent-frame invariant is relaxed on
+  purpose (codex), to be seen by camera at the transitions; the old
+  masked memcpy of 243 B is replaced by 243 unmasked conversions (~100 us
+  of main-loop time a changed frame, under the 0.5 ms budget).
+- **Under a tick, the field is skipped.** A width that rounds below one
+  tick at the flush becomes one tick on every second field (0.5-1), or
+  every fourth (0.25-0.5), or dark; flagged in the width's top bits
+  (above `ROWISR_TERMINAL`, so one compare per column in the handler
+  tells) and resolved by a field counter the rotation's wrap advances.
+  The dither patterns repeat at 222 and 111 Hz, which the eye tolerates
+  at those levels (JD: a one-tick pulse is "clearly visible"; "barely
+  perceptible" is under it).
+- **The probe pattern and raw bytes stay raw.** The dev Floor probe and
+  the host's `led` command write bytes past the effect; the hook that
+  installs them blocks the wide path each render while a pattern
+  stands (never the command, so a chroma frame rendered before the
+  command and flushed after it is still chroma), so the flush takes the
+  byte path and a byte is its width in ticks on the devprobe flavour, as
+  the floor measurement relies on; the release clears the render buffer
+  and re-inits the effect, so no raw byte is read as chroma afterwards
+  (a sparse painter, or flags that exclude LEDs). A mode that comes back
+  before a flush (A, a chunk of B, A) re-inits too: a two-line guard in
+  QMK's `rgb_task_start()` invalidates the last-flushed effect when the
+  effect to render changes (a local core edit, `quantum/rgb_matrix/
+  rgb_matrix.c`).
+- **D8 keeps its unit:** `width_sum` sums the emitted ticks as before
+  and `sn32f2xx_led_drive_take()` divides by the reference scale; the
+  committed sums for `sn32f2xx_led_committed_dark()` and `lit_ms` are
+  the widths' (a dithered entry counts as lit).
+- **RAM:** +243 B against the RX tap ring made opt-in (`CH582_RXTAP`,
+  off: ops 15 and 16 answer unhandled), so the dev gap goes 368 to about
+  333 B and the daily's barely moves; the floor stays 128.
+- **Codex's design review (11-04, `review-codex-row-isr-d9-design-raw.md`,
+  NOT READY on three P1s, taken):** the frame's encoding cannot follow the
+  wrap's calls (Jellybean paints nothing in a frame without a drop, and
+  such a frame would have read its chroma as raw bytes and blazed), so
+  **the encoding is the mode's** (`power_wide_mode()`: the wrap converts at
+  full value in those modes, the flush converts whenever the mode is one
+  of them and no raw pattern stands); **the value is read at the flush**
+  from the config under the ladder's cap, not reported by the wrap (a
+  brightness change in a frame with no wrap call lands all the same);
+  and **an encoding change or a value change converts the frame even
+  when no byte moved** (a dim Solid's chroma is a bright one's; a raw
+  pattern with the chroma's bytes), with a full effect re-init when a
+  pattern releases (a sparse painter would keep the raw bytes it did not
+  repaint). Accepted from its P2s: QMK's old path applied CIE to the value
+  and truncated the products, so the new widths differ from the old by a
+  few ticks mid-range and the bottom is dimmer (a value of 1 was five
+  ticks, now half a tick on alternate fields): expected, not parity, and
+  the camera's comparison is against the predicted widths; the hue is not
+  kept under about a value of 4 (red at 0.12 ticks is discarded where
+  blue is 0.5): inherent to one-tick quantization with two-field dither;
+  the tearing invariant is relaxed deliberately (gated on camera at
+  hue, brightness and byte/wide transitions); the dev build with the RX
+  tap on is unsupported (125 B, under the floor; the tap is off); and
+  the power model's fixed mux term overstates a frame of dithered ticks
+  (rows selected one field in two or four), a note for the model.
+- **Not in this step:** the white-balance gains (11-04 showed equal ticks
+  keep the hue), per-key trims, a precision path for the per-LED-value
+  effects (would need a wide render buffer or a per-LED value byte, 81 B),
+  and the curve's exponent, which JD's eye sets after this build (the
+  generator `scripts/gen_curve12.py` takes it as a parameter; L* first).
+- **Gates:** the host-side check of the table (monotonic, the ratio at
+  the bottom, the top exact at 255 x 64); the build on all flavours with
+  the gaps; the camera on white: purple (Alphas/Mods) at 5% keeps its
+  red at the capless keys, the dim end monotonic at values 1-16, no
+  glitch at 0 and full, the probe pattern unchanged on devprobe; JD's
+  eye: the purple theme holds its hue to the bottom, the brightness
+  steps even, no flicker at the dithered levels; then the warm window
+  for the handler's cost (the LUT load gone) and the silence set.
+
 ### D10. Measuring the handler
 
 Health page 4's hooks read CT16B5 at 187.5 kHz, 5.33 µs a tick, useless for
@@ -2394,6 +2509,24 @@ one loss where the per-slot judgment counted two.
   spurious, 14.8 M frame intervals judged and 0 rejected, the writer 49
   runs and 0 restarts, 18,700 blits and no fault); white asleep in the
   standing state to Hutch for Warren's M2/M3.
+- 11-04 17:08-17:57: **D9 built and on white** (the README's "D9 on
+  white"). JD's ask after dinner: the purple theme pure blue under 8%,
+  "go through to completion". The RAM ledger, the design "D9 revised"
+  (one wide frame, the chroma in the bytes and the value at the flush,
+  the dither under a tick, the RX tap opt-in), two codex rounds NOT
+  READY (the encoding by the wrap's calls, taken apart by Jellybean's
+  dropless frames; fixed: the encoding by mode, the value read at the
+  flush, the dirtiness on encoding and value changes, the re-init on a
+  pattern's release); codex's two verify rounds (no P1; the first's P2s
+  taken in `7edd3997f9`: the core guard for a mode round-trip inside a
+  render, the pattern's block from its hook, the release's buffer
+  clear); the final `7dad75d506` (dev `0x5c792f4d`, devprobe `0xcadc2613`,
+  daily `0xd49b8772`) on white from 18:07. The camera: red 14-28 at value
+  13 against 1-4 before; the gates (the ramp monotonic to 64, the toggle,
+  the pattern, Jellybean's dropless value change) pass with the ladder
+  held, on the second and the fourth versions. Owed: JD's eye (the hue
+  to the bottom, the steps, no flicker at 1-3), the exponent evening, the
+  handler's warm window, the transition validation by camera.
 - 11-04 12:05-15:10: **stage 6's floor evening on white** (the README's
   "Stage 6's floor by eye"). JD's go at 12:05 with the office dark; he
   entered the bootloader by hand and `devprobe` `bbf5d6069e` (sub 3's
