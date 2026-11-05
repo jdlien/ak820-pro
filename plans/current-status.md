@@ -88,8 +88,18 @@ the measured duty, the dropped elapsed samples counted; the comments
 gate), then `stage5_gates.sh` (the UART counts, five wakes, the silence
 set, the camera gate). The fallback for the night is `8355011389`
 (`0x0ec277e2`, 4b with the keep-alive), agreed with Hutch.
-**RESUME HERE (20:45 11-04): D9, the precision path, is on white and JD
+**RESUME HERE (20:58 11-04): D9, the precision path, is on white and JD
 is judging its curve by eye.** Written for a fresh session.
+
+*The newest state, which overrides the paragraphs under it where they differ:*
+white runs `row-isr` `9157b1599c` since 20:52 (dev `0x118846ea`), the curve
+`--hybrid 2`, in the standing state. The branch's head is one commit past it:
+`7221cb6080`, the curve `--stops 4` (dev `0xd35fb613`, devprobe `0x5ff4aba9`,
+daily `0x15a432dc`), built, pushed and NOT flashed: it needs JD's word.
+By arithmetic it fixes the hybrid's three flat detents
+(`history/rowisr-stage1-20261101/curve_steps.py`; README, "D9 on white", at
+its end). Next: his verdict; flash `ak820pro-builds/out/via-dev-7221cb6080-*.bin`
+on his word; the settled table's codex round; then the order below.
 
 *What is on white:* `row-isr` `a86a07610f`, dev token `0xfbcd040d` (since
 20:41; devprobe `0x06cda486`, daily `0x6115beeb`; the gaps 344 and

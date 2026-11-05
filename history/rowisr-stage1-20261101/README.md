@@ -2166,7 +2166,41 @@ single-colour fields at 111 Hz (at the 267 us cadence it would be 52 Hz),
 an eye result not a frequency one; the ratio error bound is 0.128 tick
 after the fixed-point rounding; and on the devprobe flavour the log
 curve's full chroma is dark to a value of 3 (the probe's raw patterns
-unaffected). His eye on the curve is where the record ends tonight.
+unaffected).
+
+JD's eye on the geometric curve (20:45), detent by detent on his purple:
+1 to 2% no difference, a jump at 3, nothing to 5, a jump about 6, a colour
+change at 7-8, a jump at 13, then a visible step at nearly every detent;
+"nothing, nothing, jump". `curve_steps.py` (arithmetic only: the widths
+each percent stop drives through `wide_width()`) puts the same pattern on
+paper: under `--log`, no channel moves at detents 2, 4, 5, 6, 9, 10, 14,
+15 and 17, blue goes from 0.5 to 0.75 tick at 3 and to 1.25-1.5 at 11-13,
+and green's first quarter tick arrives at 8. The geometric's 8% a percent
+is finer than a quarter tick under 3 ticks, so the rounding swallows most
+detents there. The flats are the curve's, and the fix is the table.
+
+Two tables came of it:
+
+- **`--hybrid 2`, on white since 20:52 (`9157b1599c`, dev `0x118846ea`;
+  devprobe `0x2c0f64c2`, daily `0x3ac97ceb`):** the quarter-tick grid from
+  half a tick to two ticks, two values a level, then geometric. Flashed for
+  his eye. It has a fault found after the flash: the menu steps in percent,
+  2.55 values a detent, so two values a level skips the half tick and 1.75
+  ticks, and three detents still move nothing (6, 8, 13).
+- **`--stops 4`, built and not flashed (`7221cb6080`, dev `0xd35fb613`;
+  devprobe `0x5ff4aba9`, daily `0x15a432dc`):** the grid on the slider's
+  stops: 1% half a tick, then a quarter tick a percent to 4 ticks at 15%,
+  then geometric at 6.9% a percent to the top. No detent leaves every
+  channel where it was; the ratio falls smoothly from 1.5 at the second
+  detent to the geometric's. 50% is 43 ticks, about 3.6% of full light,
+  against 2% on `--log` and 18% on L*. `check_curve12.py` passes at the
+  three scales. No codex round on either table yet.
+
+The limit under a tick is the pattern's: 0.25, 0.5 and 0.75 are all a
+four-field pattern has, so 1% to 3% are still ratios of 1.5 and 1.33. The
+next step, if the eye asks, is an eight-field pattern (eighth ticks, 55 Hz
+at the 125 us cadence, flicker the question; pattern bits 7-14, base bits
+0-6), a firmware change where these two are tables.
 
 ## Files
 

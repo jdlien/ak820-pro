@@ -1131,6 +1131,17 @@ which the dev build cannot hold. Revised:
   steps even, no flicker at the dithered levels; then the warm window
   for the handler's cost (the LUT load gone) and the silence set.
 
+
+**The curve's candidates (11-04 evening, JD's eye the judge).** L* (even to
+the eye above 25%, jumps under 20%); `--log` (8% a percent step, but under 3
+ticks the quarter grid swallows most detents: "nothing, nothing, jump");
+`--hybrid 2` (the grid by value, on white since 20:52; three flat detents
+and two levels skipped, because the menu steps 2.55 values a percent);
+`--stops 4` (the grid by percent stop, built as `7221cb6080`: no flat detent,
+50% at 3.6% of full light). `history/rowisr-stage1-20261101/curve_steps.py`
+prints any table's widths per detent. Eighth ticks (an eight-field pattern)
+are the firmware step if a quarter is still too coarse under a tick.
+
 ### D10. Measuring the handler
 
 Health page 4's hooks read CT16B5 at 187.5 kHz, 5.33 µs a tick, useless for
