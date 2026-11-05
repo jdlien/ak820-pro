@@ -1,0 +1,79 @@
+== mon off at 14:47:21
+the handler: longest run of omissions 2, spurious invocations 0, omissions by the arm deadline 255, epoch losses 1, invalid services 1, shortest handler 0.48 us, samples dropped for a boundary inside the handler 241
+omissions per mux row (R, B, G per key row; 255 = saturated):
+  key row 0: R  69  B  41  G  29
+  key row 1: R  84  B  48  G  62
+  key row 2: R  86  B  36  G  42
+  key row 3: R  80  B  37  G  65
+  key row 4: R  65  B  40  G  34
+  key row 5: R  74  B  41  G  35
+longest handlers: USB 0.085 ms, system timer 0.016 ms, UART2 0.011 ms; UART2 at priority 0
+overruns 0 (+0 in the drain's re-reads), bytes refused 0; seen with a PCF transaction 0, a flash write 0, neither 0
+gap monitor off: 2403300 ticks, gaps >= 128 us 1, >= 197 us 0, >= 347 us 0; longest 0.133 ms in none (activity 0x0)
+flash: erases 8 since boot, each the whole store of 2048 B, the last at uptime 600 s; tidies 1 (last lit, failures 0); log 24 of 1016 B, a tidy from 508
+== daemon stopped 14:47:25, processes 0; window start
+blit_timeouts            0
+tx_sent                  385
+tx_timeouts              266
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          25
+scan_rate                576
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                1919461
+build_token              0x73a8ce33
+msp_free                 656 bytes (interrupt stack; paint watermark)
+psp_free                 1232 bytes (main thread; paint watermark)
+blits_issued             2213
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0
+
+slots_elapsed            16315475
+serviced_valid           16315299
+missed_slots             176
+pulses_emitted           16310239
+pulses_omitted           995
+latency_max_us           89.44
+elapsed_mean_us          3.68
+elapsed_max_us           115.1
+elapsed_samples          16315122
+
+win_secs                 120.01
+win_slots_elapsed        960090
+win_slots_per_s          8000.3
+win_serviced_valid       960089
+win_missed_slots         1
+win_pulses_emitted       960084
+win_pulses_omitted       6
+win_elapsed_samples      960086
+win_elapsed_mean_us      47.33
+win_cpu_pct              37.87
+
+  the scheduler's record since the health reset (stage 2): the slot is fixed by CT16B4,
+  latency is the handler's entry from the slot boundary, elapsed its entry to exit;
+  missed slots are boundaries the handler did not service, omitted pulses the slots it
+  serviced too late to arm (or across a slot); a dark row is neither.
+  elapsed_mean_us is cumulative and its sum wraps after 89 s of handler time (about
+  7.6 min of uptime at 52 us a slot): the win_ figures (--window) are the ones to quote
+== rowisr at 14:49:25
+the handler: longest run of omissions 2, spurious invocations 0, omissions by the arm deadline 255, epoch losses 1, invalid services 1, shortest handler 0.48 us, samples dropped for a boundary inside the handler 251
+omissions per mux row (R, B, G per key row; 255 = saturated):
+  key row 0: R  69  B  43  G  29
+  key row 1: R  87  B  48  G  64
+  key row 2: R  89  B  40  G  44
+  key row 3: R  81  B  37  G  67
+  key row 4: R  68  B  42  G  36
+  key row 5: R  76  B  41  G  36
+longest handlers: USB 0.085 ms, system timer 0.016 ms, UART2 0.011 ms; UART2 at priority 0
+overruns 0 (+0 in the drain's re-reads), bytes refused 0; seen with a PCF transaction 0, a flash write 0, neither 0
+gap monitor off: 2403300 ticks, gaps >= 128 us 1, >= 197 us 0, >= 347 us 0; longest 0.133 ms in none (activity 0x0)
+flash: erases 8 since boot, each the whole store of 2048 B, the last at uptime 600 s; tidies 1 (last lit, failures 0); log 24 of 1016 B, a tidy from 508

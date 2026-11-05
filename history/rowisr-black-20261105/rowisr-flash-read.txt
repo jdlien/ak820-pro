@@ -1,0 +1,12 @@
+the handler: longest run of omissions 2, spurious invocations 0, omissions by the arm deadline 255, epoch losses 1, invalid services 1, shortest handler 0.48 us, samples dropped for a boundary inside the handler 231
+omissions per mux row (R, B, G per key row; 255 = saturated):
+  key row 0: R  64  B  41  G  29
+  key row 1: R  82  B  44  G  60
+  key row 2: R  84  B  35  G  39
+  key row 3: R  79  B  35  G  63
+  key row 4: R  64  B  39  G  31
+  key row 5: R  74  B  41  G  35
+longest handlers: USB 0.085 ms, system timer 0.016 ms, UART2 0.011 ms; UART2 at priority 0
+overruns 0 (+0 in the drain's re-reads), bytes refused 0; seen with a PCF transaction 0, a flash write 0, neither 0
+gap monitor off: 2403300 ticks, gaps >= 128 us 1, >= 197 us 0, >= 347 us 0; longest 0.133 ms in none (activity 0x0)
+flash: erases 8 since boot, each the whole store of 2048 B, the last at uptime 600 s; tidies 1 (last lit, failures 0); log 24 of 1016 B, a tidy from 508

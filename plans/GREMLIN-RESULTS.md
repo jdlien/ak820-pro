@@ -2312,16 +2312,29 @@ byte; 0 spurious; since boot 1 epoch loss and 1 invalid service, the
 longest run of omissions 2, the arm deadline's omissions saturated at
 255, the omissions spread over all 18 mux rows (R a little above B and
 G). With the monitor on, the stopped-daemon condition's 22 became 1, and
-no gap reached 197 us, so no mask or higher handler showed; the monitor's
-own tick is the change to suspect. Unresolved, small.
+no gap reached 197 us (the ring keeps only those), so no mask or higher
+handler showed.
 
-**Owed, JD's hands at gremlin, as one list** (Blackberry): (1) cable out,
-black lit, the slider unchanged, 5 min: read, unplug, replug, read (the
-monitor's and page 7's totals run across it); (2) the slider on cable, a
-lit window, no module traffic (the flip browns the MCU out: counters
-from zero, `--mon on` again); (3) 2.4G: typing with `--radio` on, then a
-deep sleep with the waking key kept; (4) his report of any phantom or
-missed key.
+**The 22 were one flash tidy, not a rate** (Blackberry's inference,
+then read; `ak820 rowisr` from `4267090`, same boot, 14:47:09,
+`rowisr-flash-read.txt`): erases 8 since boot, each the whole 2 KB
+store, **the last at uptime 600 s; tidies 1, lit**, the log 24 of
+1,016 B. `flash_tidy.c` consolidates on USB power after 10 min without
+input when the log holds 508 B or more, and 600 s falls inside the
+14:25 window (uptime 587-707 s); the 25 ms flash stall read after it
+is the same event. An erase stalls the core 1-2 ms a page: 16-32 slots.
+**The A/B** (`rowisr-ab-monoff.txt`): the monitor off, the daemon's
+task stopped (restarted 14:49:28), lit (47.33 us), 120 s from 14:47:25:
+**1 missed, 6 omitted, no new erase**, as predicted. So the monitor
+changed nothing; black's floor is about 1 missed slot in 120 s, with no
+gap reaching 197 us, no overrun and USB's handler at 85-91 us. Closed
+as noise, ~0.0001% of slots; the earlier windows' 5 and 9 likely carry
+the boot restores' other seven erases.
+
+**Owed, JD's hands at gremlin:** 2.4G (typing with `--radio` on, then a
+deep sleep with the waking key kept; the ISR's first 2.4G run), and his
+report of any phantom or missed key. The cable-out and slider-on-cable
+reads are dropped now the misses are explained (Blackberry).
 The `rowisr_diag.py` pages (epoch losses, strays) are Python HID, which
 gremlin doesn't run. Owed: a second read after real use, JD's report of
 any phantom or missed key, and a 2.4G run (typing, then a deep sleep with
