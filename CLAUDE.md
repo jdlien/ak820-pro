@@ -136,7 +136,8 @@ fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
 **On white since 20:52 11-04: D9, the precision path, `row-isr`
-`9157b1599c`** (dev token `0x118846ea`; the curve `--hybrid 2`; the branch's
+`9157b1599c`** (dev token `0x118846ea`; the curve `--hybrid 2`, passed by JD's
+eye; the branch's
 head `7221cb6080`, `--stops 4`, dev `0xd35fb613`, built and not flashed:
 `plans/current-status.md`). **Before it, from 20:41: `a86a07610f`** (dev token
 `0xfbcd040d`; devprobe `0x06cda486`, daily

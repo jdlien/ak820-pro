@@ -2202,6 +2202,29 @@ next step, if the eye asks, is an eight-field pattern (eighth ticks, 55 Hz
 at the 125 us cadence, flicker the question; pattern bits 7-14, base bits
 0-6), a firmware change where these two are tables.
 
+JD's eye on the hybrid (on white, `9157b1599c`; the `--stops` build was not
+on the board): a visible difference at almost every step at both the low and
+the high end, better colour at low brightness, "a really decent curve"
+without measuring tools. The "almost" fits the arithmetic's three flat
+detents, unconfirmed: he did not name which steps.
+
+A consequence of the curve that the slider does not show: the modes on the
+byte path (Breathing, Drift, Rainfall and the rest) still take QMK's L*
+table, and the wide modes no longer do, so one percentage means two lights.
+In ticks at full chroma, `--stops 4` against L*:
+
+| Slider | Wide modes | Byte path | Byte path brighter by |
+|---|---|---|---|
+| 5% | 1.5 | 6.7 | 4.6x |
+| 25% | 7.9 | 53.1 | 6.7x |
+| 50% | 42.6 | 222.1 | 5.2x |
+| 75% | 222.5 | 575.1 | 2.6x |
+| 100% | 1195.3 | 1195 | 1x |
+
+Computed, not measured. The same table moves everything keyed to a value:
+`DIM_VAL` 64 (Power saver's dim), `keyboard.json`'s default val 191, and a
+profile saved before D9, which now loads dimmer than it was saved.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

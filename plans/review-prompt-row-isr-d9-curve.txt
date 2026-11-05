@@ -1,0 +1,13 @@
+Review only: no builds, no file changes, and stay inside this repository.
+
+The firmware is the worktree qmk_firmware-ak820pro-rowisr, branch row-isr. Two commits change only keyboards/a_jazz/ak820pro/rgb/curve12.h: 9157b1599c (generated with --hybrid 2, on the board now) and 7221cb6080 (--stops 4, built, not flashed). One of them will ship. The generator and tools are in this repository: scripts/gen_curve12.py, scripts/check_curve12.py, history/rowisr-stage1-20261101/curve_steps.py. Background: plans/ROW-ISR-PLAN.md, "D9 revised" and "The curve's candidates"; the previous round, plans/review-codex-row-isr-d9-dither-raw.md, which you need not repeat.
+
+Check each of these, and try to break the claims rather than confirm them:
+
+1. Does the generator reproduce both committed tables exactly? Under menu.c's pct_of() and val_of_pct(), does --stops 4 put each percent stop on its intended level, with no percent stop that repeats a width on a full channel except where the output says so? Check every percent, and pct_of(val_of_pct(p)) == p.
+2. Does curve_steps.py reproduce rowisr.c's wide_width() and the flush's reciprocal exactly? Is (77, 35, 255) the chroma that hue 178 sat 219 renders through QMK's hsv_to_rgb?
+3. The other consumers of the value. Find every one that assumed the old curve or a particular light for a value: the keys' RGB_MATRIX_VAL_STEP, profiles, power.c's DIM_VAL and power_val_cap(), the idle ladder, keyboard.json's default, the menu's previews, the battery model and drive accounting, the RGB cut, any threshold on the value. Give the behaviour change and its size, and say which are defects.
+4. A wide mode at a low nonzero value. Can a whole frame, or a single LED, round to dark with the value nonzero? Trace what that does to committed-dark detection, sleep, the wake path and the LED accounting. Include Jellybean and the Cycles at 1%, at both cadence scales (K=300, K=640) and devprobe (K=64).
+5. The two paths. plans/ROW-ISR-PLAN.md says a percentage now means two lights, with byte-path effects about 5x brighter at 50%, and that a shared table costs the byte path its bottom third. Is that right? Trace a mode change at a fixed value across the two paths, and name the smallest fix you would accept for a release, or say none is needed.
+
+Report P1 (must fix), P2 (should fix) and P3 (notes) in tables with file:line and a concrete failing scenario. Say which table each finding applies to if it is not both. End with one line: READY or NOT READY.

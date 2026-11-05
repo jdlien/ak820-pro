@@ -98,8 +98,13 @@ white runs `row-isr` `9157b1599c` since 20:52 (dev `0x118846ea`), the curve
 daily `0x15a432dc`), built, pushed and NOT flashed: it needs JD's word.
 By arithmetic it fixes the hybrid's three flat detents
 (`history/rowisr-stage1-20261101/curve_steps.py`; README, "D9 on white", at
-its end). Next: his verdict; flash `ak820pro-builds/out/via-dev-7221cb6080-*.bin`
-on his word; the settled table's codex round; then the order below.
+its end). JD's eye passed the hybrid on the board ("a really decent curve").
+Next: his choice between keeping it (the branch's head then reverts
+`7221cb6080`) and one look at `--stops 4`
+(`ak820pro-builds/out/via-dev-7221cb6080-*.bin`, on his word); the tables'
+codex round is `plans/review-codex-row-isr-d9-curve-raw.md`; then the order
+below. Open for the merge: a percentage now means two lights, the wide modes
+about 5x under the byte path at 50% (the README's table).
 
 *What is on white:* `row-isr` `a86a07610f`, dev token `0xfbcd040d` (since
 20:41; devprobe `0x06cda486`, daily `0x6115beeb`; the gaps 344 and

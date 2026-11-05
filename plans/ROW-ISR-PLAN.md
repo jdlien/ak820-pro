@@ -1142,6 +1142,14 @@ and two levels skipped, because the menu steps 2.55 values a percent);
 prints any table's widths per detent. Eighth ticks (an eight-field pattern)
 are the firmware step if a quarter is still too coarse under a tick.
 
+JD's eye passed the hybrid ("a really decent curve"); `--stops 4` differs from
+it only below about 16% and has not been on the board. **Open for the merge:**
+a percentage now means two lights, the wide modes about 5x under the byte path
+at the slider's middle (the README's table), and `DIM_VAL`, the default val and
+pre-D9 profiles all moved with the table. An 8-bit byte cannot follow the new
+curve down (a byte is 4.69 ticks), so a shared table costs the byte path its
+bottom third.
+
 ### D10. Measuring the handler
 
 Health page 4's hooks read CT16B5 at 187.5 kHz, 5.33 µs a tick, useless for
