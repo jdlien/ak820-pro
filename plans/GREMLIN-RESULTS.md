@@ -2238,10 +2238,11 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     last wake: flags `pcf`, `acq`, `reattach`, `slept`, no step timed
     out, PLL 92 loops; 51 sleeps since the flash.
 
-### 22. Black on the row ISR (11-05, from 14:22)
+### 22. Black on the row ISR (11-05, from ~14:15)
 
 On JD's go ("We should probably merge our fix into that build and flash
-it here"): black flashed with the dev build of `row-isr` `4c85f385a98`,
+it here"): black flashed at ~14:15 (its uptime; 14:22 in the commit is
+wrong) with the dev build of `row-isr` `4c85f385a98`,
 the head white runs as its daily soak (Hutch; codex's last round found no
 firmware failure), with the keep-alive already in it (`c043db65dd`,
 `a088b51c8b`, patch-id equal to `6cbbb8df653` and `3b04a983a24`). Built on
@@ -2258,7 +2259,8 @@ recorded run on 2.4G**.
 **The first read** (`ak820 health --rows --isr --sched --window 60`,
 uptime 44 s at the start, the cable in, gremlin's daemon running, black's
 Alphas/Mods at v175; `../history/rowisr-black-20261105/health-1422.txt`),
-against white's at full white, the data line off:
+against white's at full white (the data line up, the daemon out, on the
+pack, the counters reset long after its restores; Blackberry):
 
 | | black | white |
 |---|---|---|
@@ -2270,9 +2272,27 @@ against white's at full white, the data line off:
 | omitted pulses | 184 since boot; 22 in the window | 51 of 2.56 M in 300 s |
 | `row_gap_max_ms`, `loop_gap_max_ms` | 5, 5 | 3, 4 |
 
-The rows even (19,566-19,567), no stall, `tx_timeouts` 2 of 10. The
-missed slots are the difference to watch: black's USB carried the
-daemon's traffic, and boot's restore writes are in the since-boot counts.
+The rows even (19,566-19,567), no stall, `tx_timeouts` 2 of 10 (white's
+25 and 35 of 73 on the cable). The since-boot counts carry the flash's
+restores (white's stage 2: 401 missed since boot), so only the windows
+count. Then Blackberry's two reads (`../history/rowisr-black-20261105/`):
+
+| window | conditions | missed | omitted | handler mean, CPU |
+|---|---|---|---|---|
+| 60 s from 44 s uptime | the daemon running, after the restores | 5 | 22 | 47.3 us, 37.9% |
+| 300 s, 14:19:36 | the daemon running (one clock sync, 14:23:41), black dark | 9 | 103 | 10.1 us, 8.0% |
+| 120 s, 14:25:12 | **the daemon's task stopped**, black lit | **22** | 7 | 47.3 us, 37.9% |
+
+So the misses are not the daemon's: with its task stopped (restarted
+at 14:27:15, enumerated and synced) they ran at 11 a minute, against
+white's 0 in 300 s. They track the light instead: ~1.8 a minute while
+black was dark and the handler 10 us. That fits a hold-off of roughly
+80-125 us, which only costs a slot when the handler is long; at ~11 a
+minute it is near the 5 s battery poll's rate, unproven. Black was on
+the cable (white on the pack). After the restart, one 25 ms main-loop
+stall attributed to flash (wear-levelling consolidation), `row_gap_max`
+5 ms. Each miss is one slot of light and a scan one slot late: 22 of
+959,875 is 0.002%.
 The `rowisr_diag.py` pages (epoch losses, strays) are Python HID, which
 gremlin doesn't run. Owed: a second read after real use, JD's report of
 any phantom or missed key, and a 2.4G run (typing, then a deep sleep with
