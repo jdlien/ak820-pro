@@ -2328,8 +2328,10 @@ task stopped (restarted 14:49:28), lit (47.33 us), 120 s from 14:47:25:
 **1 missed, 6 omitted, no new erase**, as predicted. So the monitor
 changed nothing; black's floor is about 1 missed slot in 120 s, with no
 gap reaching 197 us, no overrun and USB's handler at 85-91 us. Closed
-as noise, ~0.0001% of slots; the earlier windows' 5 and 9 likely carry
-the boot restores' other seven erases.
+as noise, ~0.0001% of slots. The earlier windows' 5 and 9 are
+unexplained and small: each is below one erase (~16 slots at the least,
+~22 measured), so they hold none. The boot restores' other seven erases
+more likely sit in the 94 missed before uptime 44 s (Blackberry).
 
 **Owed, JD's hands at gremlin:** 2.4G (typing with `--radio` on, then a
 deep sleep with the waking key kept; the ISR's first 2.4G run), and his
