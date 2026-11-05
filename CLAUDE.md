@@ -135,10 +135,12 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 18:07 11-04: D9, the precision path, `row-isr`
-`7dad75d506`** (dev token `0x5c792f4d`; devprobe `0xcadc2613`, daily
-`0xd49b8772`; two codex rounds NOT READY and two verify rounds, all
-taken or owed): the committed frame holds pulse widths at 12
+**On white since 20:28 11-04: D9, the precision path, `row-isr`
+`6e7924ac26`** (dev token `0xdfb885fb`; devprobe `0x7b367d92`, daily
+`0x831605d8`; the curve geometric for JD's eye after the L* build's
+uneven steps, the dither a quarter tick under 16 ticks; six codex
+rounds, the last running; **resume from `plans/current-status.md`'s
+RESUME HERE, written for a fresh session**): the committed frame holds pulse widths at 12
 bits, the uniform-value effects (Solid, Alphas/Mods, the Cycles,
 Jellybean) render their chroma and the flush applies the value through
 a 16-bit CIE curve, so a purple theme keeps its red at 5% (the camera's

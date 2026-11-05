@@ -2117,8 +2117,37 @@ stale comments went in the final commit, **`7dad75d506`: dev token
 `0x5c792f4d` (on white from 18:07, the fourth's code), devprobe
 `0xcadc2613`, daily `0xd49b8772`, the gaps 344 and 2,416 B**; white back
 in the standing state at 18:08 (Power saver, the relay off, the daemon),
-Hutch told. JD's eye on the hue to the bottom and on the steps' evenness
-is the gate that remains.
+Hutch told.
+
+**JD's eye on D9 (the L\* build, 20:0x):** "Looks much better on those
+colors": a representative hue from about 4%, a fair mix even at 1-3%
+(before: blue to 4%, cyan to 8%). The brightness "a smooth, even gradient
+for most of the curve", but: steps imperceptible above about 25%, visible
+jumps under 25% and big ones under 20% (20 to 19 noticeable, 13 to 12
+big, 8 to 9 bigger, 3 to 2 and 2 to 1 big); and the hue wobbling at the
+bottom: indigo at 6%, purple at 5, magenta at 4, almost blue at 3. Both
+read straight off the arithmetic. The CIE L\* curve, stepped in equal
+percent, changes the light 4% a step near half scale (under the eye's
+8-9%), 9% at 20%, 13% at 10%, 33% at 3% and 50% at 2%: its linear bottom
+is additive in ticks, so the ratios grow as the light falls. And at 3-6%
+the purple's red is 1.6-2.3 ticks and its green 0.7-1.1, so rounding each
+to a whole tick moves the red-to-blue ratio by up to a third from one
+step to the next. **The build of 20:28 (`6e7924ac26`, dev `0xdfb885fb`;
+devprobe `0x7b367d92`, daily `0x831605d8`; on JD's "go for it and flash
+as soon as possible, before you send for a codex review")** does two
+things: the dithered entry carries a quarter-tick fraction on top of a
+base width under 16 ticks (bit 15 the flag, bits 11-14 a four-field
+pattern, bits 0-10 the base; the handler drives the base plus this
+field's bit), so the channels' ratios hold to an eighth of a tick; and
+the curve is geometric (`gen_curve12.py --log`: a constant 3.1% a value
+unit from half a tick at 1 to the top, about 8% a percent step
+everywhere, the eye's threshold), **which moves the slider's middle: 49%
+is about 2% of full light on it against 18% on L\*, and today's look sits
+near 78%**. That trade is JD's to judge; the generator makes the next
+candidate (`--gamma G`, `--log`, or a pinned midpoint) in a minute, and
+the exhaustive host check (`scripts/check_curve12.py`) runs the flush's
+arithmetic on any table. His eye on this build is where the record ends
+tonight.
 
 ## Files
 

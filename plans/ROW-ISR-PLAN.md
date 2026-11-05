@@ -1049,14 +1049,29 @@ which the dev build cannot hold. Revised:
   purpose (codex), to be seen by camera at the transitions; the old
   masked memcpy of 243 B is replaced by 243 unmasked conversions (~100 us
   of main-loop time a changed frame, under the 0.5 ms budget).
-- **Under a tick, the field is skipped.** A width that rounds below one
-  tick at the flush becomes one tick on every second field (0.5-1), or
-  every fourth (0.25-0.5), or dark; flagged in the width's top bits
-  (above `ROWISR_TERMINAL`, so one compare per column in the handler
-  tells) and resolved by a field counter the rotation's wrap advances.
-  The dither patterns repeat at 222 and 111 Hz, which the eye tolerates
-  at those levels (JD: a one-tick pulse is "clearly visible"; "barely
-  perceptible" is under it).
+- **Under 16 ticks, the fraction of a tick is kept to a quarter** (the
+  evening's second build, `6e7924ac26`, after JD saw a purple's hue
+  wobble between 3% and 6% from whole-tick rounding): a dithered entry
+  has bit 15 set, a four-field pattern in bits 11-14 (a quarter: one
+  field of four lit a tick more; a half: two; three quarters: three) and
+  the base width in bits 0-10; the handler drives the base plus this
+  field's bit (a shift, an and, an add on flagged entries; one compare on
+  the common path), the field counter advanced at the rotation's wrap.
+  Under a tick the base is 0: one tick on every second field from 0.5,
+  every fourth from 0.25, dark under. The patterns repeat at 111 Hz,
+  which the eye tolerates at those levels (JD: a one-tick pulse is
+  "clearly visible"; "barely perceptible" is under it; no flicker
+  reported at 1-3% on the L* build). From 16 ticks the width is rounded.
+- **The curve is the eye's choice** (`scripts/gen_curve12.py`: CIE L*,
+  `--gamma G`, or `--log`; `scripts/check_curve12.py` runs the flush's
+  arithmetic over every chroma and value for any table). JD's eye on the
+  L* build (20:0x 11-04): the hue right, the steps invisible above 25%
+  (4% a step near half scale) and jumps under 20% (13% a step at 10%,
+  33% at 3%, 50% at 2%: L*'s bottom is additive in ticks). The geometric
+  curve on the board since 20:28 gives 8% a percent step everywhere and
+  moves the middle (49% is 2% of full light on it, today's look near 78%):
+  his call between the two, or a pinned midpoint next.
+- **Not in this step:** the white-balance gains (11-04 showed equal ticks
 - **The probe pattern and raw bytes stay raw.** The dev Floor probe and
   the host's `led` command write bytes past the effect; the hook that
   installs them blocks the wide path each render while a pattern
@@ -2524,8 +2539,14 @@ one loss where the per-slot judgment counted two.
   daily `0xd49b8772`) on white from 18:07. The camera: red 14-28 at value
   13 against 1-4 before; the gates (the ramp monotonic to 64, the toggle,
   the pattern, Jellybean's dropless value change) pass with the ladder
-  held, on the second and the fourth versions. Owed: JD's eye (the hue
-  to the bottom, the steps, no flicker at 1-3), the exponent evening, the
+  held, on the second and the fourth versions. **JD's eye (20:0x):** the
+  hue right to 1-3%; the steps invisible above 25% and jumps under 20%
+  (L*'s shape); a hue wobble at 3-6% (whole-tick rounding). **The second
+  build of the evening** (`6e7924ac26`, dev `0xdfb885fb`, on white 20:28,
+  flashed before its codex round on JD's word): the dither carries a
+  quarter-tick fraction under 16 ticks, and the curve is geometric
+  (`--log`, 8% a percent step everywhere; the middle moves to 2% of full
+  at 49%: his call). Owed: his eye on it, the curve's choice, the
   handler's warm window, the transition validation by camera.
 - 11-04 12:05-15:10: **stage 6's floor evening on white** (the README's
   "Stage 6's floor by eye"). JD's go at 12:05 with the office dark; he

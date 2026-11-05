@@ -9,15 +9,22 @@ import sys
 H = "qmk_firmware-ak820pro-rowisr/keyboards/a_jazz/ak820pro/rgb/curve12.h"
 t = [int(x) for l in open(H) if l.startswith("    ") for x in l.strip().rstrip(",").split(",")]
 assert len(t) == 256 and t[0] == 0 and t[255] == 16320 and all(t[i] <= t[i + 1] for i in range(255))
-HALF, QUARTER = 0x8000, 0xC000
+FLAG, BASE, PSHIFT = 0x8000, 0x07FF, 11
+PAT = [0, 0x1, 0x5, 0x7]
 def wide(chroma, v, K):
     full_q8 = (t[v] * K) >> 4; assert full_q8 * 256 < 2**32
     recip = (full_q8 * 256 + 127) // 255; assert chroma * recip < 2**32
     q8 = (chroma * recip + 128) >> 8; w, frac = q8 >> 8, q8 & 0xFF
-    if w == 0: return HALF if frac >= 128 else (QUARTER if frac >= 64 else 0)
-    return w + (1 if frac >= 128 else 0)
+    if w >= 16: return w + (1 if frac >= 128 else 0)
+    q = (frac + 32) >> 6
+    if q == 4: w += 1; q = 0
+    if q == 0: return w
+    return FLAG | (PAT[q] << PSHIFT) | w
 def light(w):   # the mean ticks a field a coded width means
-    return 0.5 if w == HALF else 0.25 if w == QUARTER else w
+    if w & FLAG: return (w & BASE) + bin((w >> PSHIFT) & 0xF).count("1") / 4
+    return w
+def worst(w):   # the most ticks one field of it drives (the terminal rule)
+    return (w & BASE) + 1 if w & FLAG else w
 bad = 0
 for K, term in ((300, 1535), (64, 1535), (640, 4095)):
     top = (255 * K + 32) >> 6
@@ -25,7 +32,7 @@ for K, term in ((300, 1535), (64, 1535), (640, 4095)):
         prev = -1
         for v in range(256):
             w = wide(chroma, v, K)
-            if not (w >= HALF or w < term): bad += 1; print("over the terminal", K, chroma, v, w)
+            if not (worst(w) < term): bad += 1; print("over the terminal", K, chroma, v, w)
             l = light(w)
             if l < prev: bad += 1; print("not monotonic in v", K, chroma, v, w, prev)
             prev = l
