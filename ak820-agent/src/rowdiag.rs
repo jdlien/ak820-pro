@@ -13,6 +13,10 @@ pub const OP_SUMMARY: u8 = 20;
 /// Op 20's sub that zeroes the overrun counts and the longest handlers.
 pub const SUMMARY_ZERO: u8 = 1;
 pub const OP_KIND: u8 = 22;
+pub const HC_FLASHW: u8 = 0x0C;
+pub const FLASH_PAGE_ERASES: u8 = 0;
+pub const FLASH_PAGE_LAST: u8 = 2;
+pub const FLASH_PAGE_TIDY: u8 = 4;
 pub const OP_MON: u8 = 25;
 pub const OP_MON_RING: u8 = 26;
 pub const OP_ROW: u8 = 28;
@@ -107,6 +111,49 @@ pub fn summary(r: &[u8; 32]) -> Summary {
         ctx_pcf: u16le(b, 20),
         ctx_flash: u16le(b, 22),
         ctx_none: u16le(b, 24),
+    }
+}
+
+/// `HC_FLASHW`'s pages on the health channel (every build), for the erases: an erase
+/// is the whole store, two 1 KB pages at 1-2 ms each with the core stalled, so 16-32
+/// slots go in one event, which a window's missed count can't tell from a rate.
+/// Page 0's erases by writer, summed.
+pub fn erases(r: &[u8; 32]) -> u32 {
+    let b = payload(r);
+    (0..4).map(|w| u32::from(u16le(b, 16 + 2 * w))).sum()
+}
+
+/// Page 2: the last erase's uptime in ms (0: none) and the store's size in bytes.
+pub fn last_erase(r: &[u8; 32]) -> (u32, u16) {
+    let b = payload(r);
+    (u32le(b, 22), u16le(b, 26))
+}
+
+/// Page 4: the emulated EEPROM's early cleanup (`flash_tidy.c`).
+#[derive(Debug, PartialEq)]
+pub struct Tidy {
+    pub log_used: u16,
+    pub log_bytes: u16,
+    pub tidy_bytes: u16,
+    pub tidies: u16,
+    pub failures: u8,
+    pub kind: &'static str,
+}
+
+pub fn tidy(r: &[u8; 32]) -> Tidy {
+    let b = payload(r);
+    Tidy {
+        log_used: u16le(b, 0),
+        log_bytes: u16le(b, 2),
+        tidy_bytes: u16le(b, 4),
+        tidies: u16le(b, 6),
+        failures: b[8],
+        kind: match b[9] {
+            0 => "none yet",
+            1 => "dark",
+            2 => "lit",
+            _ => "unknown",
+        },
     }
 }
 
@@ -218,6 +265,19 @@ mod tests {
         assert_eq!((m.n_128us, m.n_197us, m.n_347us, m.ticks), (9, 2, 0, 256));
         assert_eq!(m.max_scope, "batt");
         assert_eq!((m.max_act, m.seq), (0x40, 6));
+    }
+
+    #[test]
+    fn the_erases_add_up_across_the_writers() {
+        assert_eq!(erases(&reply(0, &[(16, &[1, 0, 2, 0, 0, 0, 4, 0])])), 7);
+        assert_eq!(last_erase(&reply(2, &[(22, &[0xC0, 0x27, 0x09, 0, 0, 8])])), (600_000, 2048));
+    }
+
+    #[test]
+    fn the_tidy_page_names_its_kind() {
+        let t = tidy(&reply(9, &[(0, &[0xFC, 0x01, 0xF8, 0x03, 0xFC, 0x01, 2, 0, 1, 2])]));
+        assert_eq!((t.log_used, t.log_bytes, t.tidy_bytes, t.tidies, t.failures), (508, 1016, 508, 2, 1));
+        assert_eq!(t.kind, "lit");
     }
 
     #[test]

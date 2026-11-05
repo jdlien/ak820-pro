@@ -404,19 +404,20 @@ fn rowisr_cmd(flags: &[&str]) -> Result<(), String> {
     };
     contention_notice();
     let dev = device::open_board().map_err(|e| e.to_string())?;
-    let ask = |body: &[u8]| -> Result<Option<[u8; 32]>, String> {
+    let ask_cmd = |cmd: u8, body: &[u8]| -> Result<Option<[u8; 32]>, String> {
         let r = dev
-            .request(Channel::Health, rd::DEVHOOK, body, REQUEST_TIMEOUT)
-            .map_err(|e| format!("devhook op {}: {e}", body[0]))?
+            .request(Channel::Health, cmd, body, REQUEST_TIMEOUT)
+            .map_err(|e| format!("command {cmd:#x} {}: {e}", body[0]))?
             .report;
         if r[0] == 0xFF {
             return Ok(None); // unhandled: not a dev build, or past the ring
         }
         if r[3] != body[0] {
-            return Err(format!("devhook op {} answered as op {}", body[0], r[3]));
+            return Err(format!("command {cmd:#x} {} answered as {}", body[0], r[3]));
         }
         Ok(Some(r))
     };
+    let ask = |body: &[u8]| ask_cmd(rd::DEVHOOK, body);
     const NOT_DEV: &str = "the board does not answer: not a dev build";
 
     if zero {
@@ -458,6 +459,22 @@ fn rowisr_cmd(flags: &[&str]) -> Result<(), String> {
         m.n_347us,
         m.max_ms,
         if m.n_128us > 0 { format!(" in {} (activity {:#x})", m.max_scope, m.max_act) } else { String::new() }
+    );
+    const NO_FLASH_PAGE: &str = "the board does not answer the flash pages";
+    let flash = |page: u8| ask_cmd(rd::HC_FLASHW, &[page])?.ok_or(NO_FLASH_PAGE.to_string());
+    let erases = rd::erases(&flash(rd::FLASH_PAGE_ERASES)?);
+    let (last_ms, store) = rd::last_erase(&flash(rd::FLASH_PAGE_LAST)?);
+    let t = rd::tidy(&flash(rd::FLASH_PAGE_TIDY)?);
+    println!(
+        "flash: erases {erases} since boot, each the whole store of {store} B, the last at uptime {} s; \
+         tidies {} (last {}, failures {}); log {} of {} B, a tidy from {}",
+        last_ms as f64 / 1000.0,
+        t.tidies,
+        t.kind,
+        t.failures,
+        t.log_used,
+        t.log_bytes,
+        t.tidy_bytes
     );
     let mut ring = Vec::new();
     for page in 0..rd::MON_RING_PAGES {
