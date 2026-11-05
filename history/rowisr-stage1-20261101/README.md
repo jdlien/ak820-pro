@@ -2152,8 +2152,16 @@ arithmetic on any table. One more build at 20:36 on his ask
 stepped 8% a detent and skipped the steps he wanted to see: the shipped
 builds step 4% (6 hue units) on a fast turn within 60 ms, the dev build
 has no acceleration at all (`config.h`'s `MENU_FAST_*`, `menu.h`'s
-defaults the old values for the host test). His eye on the curve is
-where the record ends tonight.
+defaults the old values for the host test). Codex's round on the dither
+and the curve (`review-codex-row-isr-d9-dither-raw.md`, after the flash
+on JD's word): READY, no P1 or P2; its notes: the flagged decode is seven
+Thumb instructions with the shift hoisted; the channels' quarter patterns
+share the phase, so a mixed-fraction LED cycles through mixed and
+single-colour fields at 111 Hz (at the 267 us cadence it would be 52 Hz),
+an eye result not a frequency one; the ratio error bound is 0.128 tick
+after the fixed-point rounding; and on the devprobe flavour the log
+curve's full chroma is dark to a value of 3 (the probe's raw patterns
+unaffected). His eye on the curve is where the record ends tonight.
 
 ## Files
 
