@@ -1,0 +1,7 @@
+Review only: no builds, no file changes, and stay inside this repository.
+
+A verification round on your last review, plans/review-codex-row-isr-d9-round-raw.md. The firmware is the worktree qmk_firmware-ak820pro-rowisr, branch row-isr, range 7c4d4fa28f..4c85f385a9. The host side is this repository's commit HEAD against HEAD~1: scripts/check_effect_ids.py, scripts/ladder_check.py, scripts/battery_sim/, env.sh, ak820-agent/src/via.rs, docs/leds.md.
+
+For each of your four P2s say closed or not, and show why, trying to break the fix. Then check what the fixes could have broken. RAIN's RGB_MATRIX_EFFECT declaration now comes after DRIFT while its code stays above: does the board's enum, the render dispatch and the implementation order still compile and map correctly, in each flavour? rgb_effects[] is no longer in mode order: does anything assume it is, in the menu, the readout, profiles, Next and Previous effect, or a host tool? Is the mode number of everything but Rain now what it was in v0.3.1, end to end? Does flush_dirty.h behave identically to the line it replaced? Does sourcing env.sh with a relative or absent AK820_QMK_HOME behave, and from every caller? Does ladder_check.py's selftest test what its gates do on the board?
+
+Report P1 (must fix), P2 (should fix) and P3 (notes) in tables with file:line and a concrete failing scenario. End with one line: READY or NOT READY.
