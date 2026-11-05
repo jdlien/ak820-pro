@@ -112,7 +112,9 @@ the last drain's 3243 net out.
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
 white, the transitions show no blaze or dark frame (the README's end). JD's eye passed Rain. Codex's
-two rounds since: no firmware failure, every P2 taken. Next: the soak; black's night (Warren); the
+two rounds since: no firmware failure, every P2 taken. **Never run on this ISR, by the record:
+2.4G** (white has been on BT since before it; the plan's 2.4G gates have no result), so black's
+turn should settle it (Warren has the list, 11-05). Next: the soak; black's night (Warren); the
 docs' remainder, `site/power/`'s calculator among them, still pinned to the old curve; the merge
 and release (at the merge, `check_effect_ids.py`'s `ADDED` line goes).
 
