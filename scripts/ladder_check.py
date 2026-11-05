@@ -54,6 +54,7 @@ import sleep_baseline as sb  # noqa: E402  (attempt, the relay)
 
 EFFECTS = {1: "solid", 2: "alphas mods (JD's)", 3: "cycle all", 4: "cycle left-right", 5: "cycle up-down",
            6: "jellybean raindrops", 7: "typing heatmap", 8: "rain (custom)", 9: "rain rgb (custom)", 10: "drift (custom)"}
+ANIMATED = {3, 4, 5, 6, 7, 8, 9, 10}
 CONVERTED = {1, 2, 3, 4, 5, 6}   # every LED at the user's value, so the CIE ratio holds
 HEATMAP, RAIN, RAINRGB, DRIFT = 7, 8, 9, 10
 FULL, SAVER = 0, 2               # power.c's POWER_MODE_FULL, POWER_MODE_SAVER
