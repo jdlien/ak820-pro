@@ -2379,8 +2379,9 @@ frame from their own tops and differ only in colour.
 
 He then reported Rain RGB not answering saturation. On the board over VIA's channel it does:
 LED drive over five 1 s reads at speed 255 and value 255, 11.0 per mille at saturation 255,
-16.8 at 128, 20.8 at 0, back to 11.0 at 255 (Rain alone: 7.0, 14.2, 22.0, 7.0). Which control
-he used, and at what setting, is open.
+16.8 at 128, 20.8 at 0, back to 11.0 at 255 (Rain alone: 7.0, 14.2, 22.0, 7.0). The lead: the
+menu's Help, the README and our notes all said `Fn`+`6`/`7`, which are F6 and F7 in the keymap;
+saturation is `Fn`+`,` and `Fn`+`.`. Help is corrected at the branch's head, not yet flashed.
 
 ## Files
 

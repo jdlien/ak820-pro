@@ -306,7 +306,7 @@ Fn+Q/W/E  BT slot
 Slider: BT 2.4G USB
 Fn+Lt/Rt  hue
 Fn+Up/Dn  brightness
-Fn+6/7    saturation
+Fn+,/.    saturation
 Fn+X      lights
 Fn+\      effect
 Fn+B      power mode
@@ -379,7 +379,7 @@ Slider  BT 2.4G
         or USB
 Fn+Lt/Rt  hue
 Fn+Up/Dn bright
-Fn+6/7 saturate
+Fn+,/. saturate
 Fn+X    lights
 Fn+\    effect
 Fn+B    power

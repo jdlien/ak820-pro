@@ -25,7 +25,8 @@ import sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 TEXT = os.path.join(ROOT, "plans", "MENU-TEXT.md")
-FW = os.path.join(ROOT, "qmk_firmware-ak820pro", "keyboards", "a_jazz", "ak820pro")
+FW = os.path.join(os.environ.get("AK820_QMK_HOME") or os.path.join(ROOT, "qmk_firmware-ak820pro"),   # the tree being built
+                  "keyboards", "a_jazz", "ak820pro")
 OUT = os.path.join(FW, "graphics", "res", "menu_text_pages.h")
 TOPICS = ["Using the menu", "Customizing", "Shortcuts", "Pro tips"]
 COLS = 20

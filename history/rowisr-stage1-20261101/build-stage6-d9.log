@@ -465,3 +465,26 @@ RAM: heap gap 2408 B (floor 128)
 BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-feef9b4bfe-20261105-124611.bin  (token 0x790052d2)
 flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-feef9b4bfe-20261105-124611.bin"   # dumps+restores the VIA keymap around the flash
 Thu  5 Nov 2026 12:46:12 CST
+Thu  5 Nov 2026 12:51:03 CST
+=== build.sh dev (Help's saturation keys, 7c4d4fa28f)
+      0	 252626	      0	 252626	  3dad2	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 336 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-7c4d4fa28f-20261105-125124.bin  (token 0x1b57b59d)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-dev-7c4d4fa28f-20261105-125124.bin"   # dumps+restores the VIA keymap around the flash
+=== build.sh devprobe (Help's saturation keys, 7c4d4fa28f)
+      0	 252614	      0	 252614	  3dac6	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 336 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-devprobe-7c4d4fa28f-20261105-125146.bin  (token 0x62010200)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-devprobe-7c4d4fa28f-20261105-125146.bin"   # dumps+restores the VIA keymap around the flash
+=== build.sh daily (Help's saturation keys, 7c4d4fa28f)
+      0	 217702	      0	 217702	  35266	a_jazz_ak820pro_via.bin
+
+Copying a_jazz_ak820pro_via.bin to qmk_firmware folder                                              [32;01m[OK][0m
+RAM: heap gap 2408 B (floor 128)
+BUILD OK: /Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-7c4d4fa28f-20261105-125207.bin  (token 0xa17a0215)
+flash:    /Users/jdlien/code/ak820-pro/flash.sh "/Users/jdlien/code/ak820-pro/ak820pro-builds/out/via-daily-7c4d4fa28f-20261105-125207.bin"   # dumps+restores the VIA keymap around the flash
+Thu  5 Nov 2026 12:52:07 CST

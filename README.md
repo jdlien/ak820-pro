@@ -294,7 +294,7 @@ The menu covers all of these. They are here for speed.
 | Slider | Bluetooth / 2.4G / cable |
 | `Fn`+`←` / `→` | Hue |
 | `Fn`+`↑` / `↓` | Brightness |
-| `Fn`+`6` / `7` | Saturation |
+| `Fn`+`,` / `.` | Saturation |
 | `Fn`+`-` / `=` | Effect speed (second colour on Alphas/Mods) |
 | `Fn`+`\` | Next effect |
 | `Fn`+`X` | Lights on/off |
