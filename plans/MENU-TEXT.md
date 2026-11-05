@@ -453,7 +453,7 @@ Lights            On
   percentage instead.
 - **Effect** (a choice that previews as you turn): `Solid`, `Alphas/Mods`,
   `Cycle All`, `Cycle L-R`, `Cycle U-D`, `Jellybean`, `Heatmap`,
-  `Rainfall`, `Drift`.
+  `Rain`, `Rain RGB`, `Drift`.
 - **Lights** (a choice): `Off`, `On`.
 - **Brightness, Saturation, Speed** open the range editor; **Hue, Second
   color** the hue editor (both below).

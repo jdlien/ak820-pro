@@ -47,7 +47,7 @@ rgb_t hsv_to_rgb(hsv_t hsv);
 /* The modes power.c names once every effect is on the wide path (D9). The numbers
  * are the board's; only their identity matters here. */
 #ifdef SIM_WIDE_EFFECTS
-enum { RGB_MATRIX_SOLID_COLOR = 1, RGB_MATRIX_TYPING_HEATMAP = 7, RGB_MATRIX_CUSTOM_RAINFALL = 8, RGB_MATRIX_CUSTOM_DRIFT = 9 };
+enum { RGB_MATRIX_SOLID_COLOR = 1, RGB_MATRIX_TYPING_HEATMAP = 7, RGB_MATRIX_CUSTOM_RAINFALL = 8, RGB_MATRIX_CUSTOM_DRIFT = 9, RGB_MATRIX_CUSTOM_RAIN = 10 };
 #endif
 uint8_t rgb_matrix_get_mode(void);
 void    rgb_matrix_mode_noeeprom(uint8_t mode);

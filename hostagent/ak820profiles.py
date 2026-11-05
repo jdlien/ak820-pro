@@ -105,7 +105,8 @@ STATUS = {0: "ok", 1: "bad request", 2: "no such restore (token)", 3: "busy (a d
 
 # rgb_effects.c's stable ids (scripts/check_effect_ids.py's REFERENCE), for reading.
 EFFECTS = {1: "Solid", 2: "Alphas/Mods", 3: "Breathing", 4: "Cycle All", 5: "Cycle L-R",
-           6: "Cycle U-D", 7: "Chevron", 8: "Pinwheel", 9: "Jellybean", 10: "Heatmap", 11: "Rainfall", 12: "Drift"}
+           6: "Cycle U-D", 7: "Chevron", 8: "Pinwheel", 9: "Jellybean", 10: "Heatmap", 11: "Rain RGB", 12: "Drift",
+           13: "Rain"}
 CLOCKS = ["24h:ss", "12h:ss", "off", "date", "24h", "12h"]   # enum display_clock_mode
 POWER = ["Always on", "Balanced", "Power saver", "Lights out"]
 

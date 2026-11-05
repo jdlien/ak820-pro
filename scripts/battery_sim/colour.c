@@ -436,4 +436,51 @@ static void k_restart(void) {
     idle_ms = 0; ltick();
     rgb_mode = 2;
 }
+
+#ifndef SIM_DRIFT_USB_FULL   /* the old DRIFT's tree has no RAIN */
+/* RAIN: every LED the user's hue and saturation at the drop's own brightness, the
+ * ceiling left to the flush, and the drops' tops spread from RAIN_PEAK_MIN to full. */
+static void k_rain_at(uint8_t cap) {
+    static const uint8_t cs[][2] = {{178, 219}, {0, 255}, {85, 128}, {40, 0}};
+    uint16_t top = k_quarters(255, k_recip(cap));
+    rgb_mode = RGB_MATRIX_CUSTOM_RAIN;
+    unsigned bad = 0, lit = 0, seeds = 0;
+    uint8_t  low = 255, high = 0;
+    for (unsigned k = 0; k < sizeof cs / sizeof cs[0]; k++) {
+        rgb_matrix_config.hsv   = (hsv_t){cs[k][0], cs[k][1], 200};
+        rgb_matrix_config.speed = 255;   /* a drop every frame */
+        for (unsigned f = 0; f < 600; f++) {
+            uint8_t before[RGB_MATRIX_LED_COUNT];
+            memcpy(before, rainfall_v, sizeof before);
+            k_run(RAIN, f == 0);
+            for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+                uint8_t v = rainfall_v[i];
+                if (f && v > before[i]) {   /* a fresh drop */
+                    seeds++;
+                    if (v < low) low = v;
+                    if (v > high) high = v;
+                }
+                rgb_t   want = hsv_to_rgb((hsv_t){cs[k][0], cs[k][1], v});
+                k_out_t o    = k_out(k_frame[i], rgb_matrix_config.hsv.v);
+                if (k_max3(k_frame[i])) lit++;
+                if ((!k_same(k_frame[i], want) || o.r > top || o.g > top || o.b > top) && bad++ < 3)
+                    CHECK(false, "cap %u, hsv %u,%u, frame %u, LED %u: %u,%u,%u at drop %u, want %u,%u,%u", cap, cs[k][0], cs[k][1], f,
+                          i, k_frame[i].r, k_frame[i].g, k_frame[i].b, v, want.r, want.g, want.b);
+            }
+        }
+    }
+    CHECK(bad == 0 && lit > 0, "RAIN under %u: %u wrong, %u lit", cap, bad, lit);
+    CHECK(seeds > 1000 && low >= RAIN_PEAK_MIN && low < RAIN_PEAK_MIN + 16 && high > 240,
+          "RAIN under %u: %u drops, tops %u to %u", cap, seeds, low, high);
+    printf("  RAIN under %u: %u drops, tops %u to %u\n", cap, seeds, low, high);
+    rgb_mode = 2;
+}
+
+static void k_rain(void) {
+    k_ceiling_dim();
+    k_rain_at(SIM_DIM_VAL);
+    k_ceiling_saver();
+    k_rain_at(SIM_SAVER_VAL);
+}
+#endif
 #endif

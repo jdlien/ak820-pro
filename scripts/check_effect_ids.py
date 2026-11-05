@@ -14,8 +14,9 @@ import os
 import re
 import sys
 
-KB = os.path.join(os.path.dirname(__file__), "..",
-                  "qmk_firmware-ak820pro", "keyboards", "a_jazz", "ak820pro")
+# The tree being built: build.sh's override, or the pinned clone.
+TREE = os.environ.get("AK820_QMK_HOME") or os.path.join(os.path.dirname(__file__), "..", "qmk_firmware-ak820pro")
+KB = os.path.join(TREE, "keyboards", "a_jazz", "ak820pro")
 
 # The ids as first committed (10-25), append-only. Never edit or remove a line.
 REFERENCE = {
@@ -31,6 +32,7 @@ REFERENCE = {
     "TYPING_HEATMAP": 10,
     "CUSTOM_RAINFALL": 11,
     "CUSTOM_DRIFT": 12,
+    "CUSTOM_RAIN": 13,
 }
 
 
@@ -60,8 +62,11 @@ def main():
         if name not in dict(rows) and i in seen:
             errors.append(f"{name}'s id {i} is reused by {seen[i]}")
     names = dict(rows)
+    newest = max(i for _, i in rows)
     for name in REFERENCE:
-        if name not in names:
+        # An id above this tree's newest is an effect the tree predates (Rain, on a
+        # branch older than it), so other trees keep building; under it, a removal.
+        if name not in names and REFERENCE[name] < newest:
             errors.append(f"{name} was removed from rgb_effects[]: keep its entry, #ifdef'd on its enable")
     if errors:
         sys.exit("check_effect_ids: FAIL -- " + "; ".join(errors) +
