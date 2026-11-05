@@ -32,7 +32,7 @@
 # below for exactly this reason -- confirm it is YOUR build, not merely recent.
 set -u
 cd "$(dirname "$0")" || exit 1
-source ./env.sh                          # must be sourced from the repo root
+source ./env.sh || exit 1                # must be sourced from the repo root
 
 # `hid` lives in the venv only. env.sh puts the venv's bin on PATH, but pin it
 # the way nowplaying-macos.sh does so this still works if PATH is not what we

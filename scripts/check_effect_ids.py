@@ -12,17 +12,17 @@ standalone.
 """
 import os
 import re
-import subprocess
 import sys
 
 # The tree being built: build.sh's override, or the pinned clone.
 TREE = os.environ.get("AK820_QMK_HOME") or os.path.join(os.path.dirname(__file__), "..", "qmk_firmware-ak820pro")
 KB = os.path.join(TREE, "keyboards", "a_jazz", "ak820pro")
 
-# An effect added after the first table, with the commit that added it. A tree without
-# that commit predates the effect, so its absence there is no removal. Without it, every
-# other branch's build would fail until the merge.
-ADDED = {"CUSTOM_RAIN": "5d46f4b1f7"}
+# An effect added after the first table, with what its code declares. A tree with no such
+# declaration predates the effect, so a missing table entry there is no removal, and other
+# branches keep building until the merge. Evidence in the tree, not in git: setup.sh's
+# clones are shallow. Once the effect is on the pinned branch, delete its line here.
+ADDED = {"CUSTOM_RAIN": "RGB_MATRIX_EFFECT(RAIN)"}
 
 # The ids as first committed (10-25), append-only. Never edit or remove a line.
 REFERENCE = {
@@ -43,12 +43,11 @@ REFERENCE = {
 
 
 def predates(name):
-    """True if this tree has not got the commit that added the effect."""
-    sha = ADDED.get(name)
-    if sha is None:
+    """True if this tree's code has no such effect yet."""
+    marker = ADDED.get(name)
+    if marker is None:
         return False
-    r = subprocess.run(["git", "-C", TREE, "merge-base", "--is-ancestor", sha, "HEAD"], capture_output=True)
-    return r.returncode != 0
+    return marker not in open(os.path.join(KB, "rgb_matrix_kb.inc"), encoding="utf-8").read()
 
 
 def table(path):

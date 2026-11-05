@@ -137,16 +137,16 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 12:46 11-05: D9, the precision path, `row-isr`
-`feef9b4bfe`** (dev token `0xd3e8d30b`; every enabled effect on the curve, which JD's
-eye settled as `--stops 4`; the hold's ramp; the Cycles keep their place through a
-speed change; `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%); the new effect `Rain`, one
-colour, Rainfall now `Rain RGB`; the warm window 51.9 us and 41.5% at full white; the
-branch's head, built, not flashed, has Help's saturation keys and Rain's mode number last, so
-Rain RGB is 8 and Drift 9 as ever; what is left before the merge is in `plans/current-status.md`; ⚠️ the same setting gives 20-35%
-less light on battery than on USB while charging, by the camera, accepted; ⚠️ relay 2
-ON since 20:11 11-04 by hand, the pack full, the drain stopped short of the cut:
-`plans/current-status.md`). **Before it, from 11:00 11-05: `d6656f9262`** (dev token
+**On white since 13:55 11-05: the DAILY build of `row-isr` `4c85f385a9`** (token
+`0xae868950`; dev `0xc7bc1681`), the soak: the row ISR rewrite and D9, every enabled effect on
+the curve JD's eye settled, the hold's ramp, the Cycles' place kept through a speed change,
+`SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), the new effect `Rain`, one colour, Rainfall now
+`Rain RGB`; the warm window 51.9 us and 41.5% at full white. ⚠️ No bootloader over USB or dev
+hooks: the return to dev is `Fn`+`Esc`. ⚠️ **A new drain runs from FULL since 13:56:13 11-05**
+(`charge_mah` -2754.007, relay 2 off): `plans/current-status.md`. ⚠️ The same setting gives
+20-35% less light on battery than on USB while charging, by the camera, accepted. **Before it,
+from 12:46 11-05: `feef9b4bfe`** (dev token `0xd3e8d30b`). **Before it, from 12:15:
+`8ae385563d`; from 12:06: `5d46f4b1f7`.** **Before it, from 11:00 11-05: `d6656f9262`** (dev token
 `0xf63adb29`). **Before it, from 21:35 11-04: `5256860413`** (dev token
 `0x2f5bccee`). **Before it, from 21:01: `7221cb6080`** (dev token
 `0xd35fb613`; the curve `--stops 4`). **Before it, from

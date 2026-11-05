@@ -11,7 +11,10 @@ export AK820_ROOT
 # clone's checkout. build.sh stamps the artifact with that tree's own hash.
 # Made absolute here, since the build changes directory and the Python guards read it.
 if [ -n "${AK820_QMK_HOME:-}" ]; then
-    AK820_QMK_HOME="$( cd "$AK820_QMK_HOME" && pwd )"
+    if ! AK820_QMK_HOME="$( cd "$AK820_QMK_HOME" 2>/dev/null && pwd )" || [ -z "$AK820_QMK_HOME" ]; then
+        echo "env.sh: AK820_QMK_HOME does not name a directory from here (a relative path is taken from the repo root)" >&2
+        return 1 2>/dev/null || exit 1
+    fi
     export AK820_QMK_HOME
 fi
 export QMK_HOME="${AK820_QMK_HOME:-$AK820_ROOT/qmk_firmware-ak820pro}"

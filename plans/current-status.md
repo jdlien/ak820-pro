@@ -92,20 +92,24 @@ set, the camera gate). The fallback for the night is `8355011389`
 is judging its curve by eye.** Written for a fresh session.
 
 *The newest state, which overrides the paragraphs under it where they differ:*
-white runs `row-isr` `feef9b4bfe` since 12:46 11-05 (dev `0xd3e8d30b`, devprobe
-`0xa32172d9`, daily `0x790052d2`), the branch's head: every effect on the curve, the hold's
-ramp, the Cycles' place kept through a speed change, the ceilings `SAVER_VAL` 191 (75%) and
-`DIM_VAL` 102 (40%), and the new effect `Rain`, one algorithm with `Rain RGB`. The data line is off and the daemon running,
-as in the standing state, but **relay 2 is ON, by hand since 20:11 11-04; the pack is
-full**. Whether a drain restarts is his call. Flashes need his word.
+**white runs the DAILY build of `row-isr` `4c85f385a9` since 13:55 11-05 (token `0xae868950`;
+dev `0xc7bc1681`, devprobe `0xea3c593d`), the soak, with JD typing on it.** It has every effect
+on the curve, the hold's ramp, the Cycles' place kept through a speed change, the ceilings
+`SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), `Rain`, and Help's saturation keys. No bootloader
+over USB and no dev hooks: the way back to dev is JD's `Fn`+`Esc`, and `ladder_check`, `current_map`
+and `rowisr_diag` do not run on it. The gauge, `ak820 health` and `Fn`+`D` do. Flashes need his word.
 
-JD's eye passed Rain, and he is typing on white. The ladder check passes in full, the warm
-window reads 51.9 us and 41.5% at full white, and the transitions show no blaze or dark frame
-(the README's end). The branch's head, built, not flashed, has Help's saturation keys and
-Rain's mode number last. Codex's round found no firmware failure and its four P2s are taken
-(the README's end). Next: the daily soak on the head's daily build (JD's `Fn`+`Esc` for the
-return); black's night (Warren); the docs' remainder, `site/power/`'s calculator among them,
-still pinned to the old curve; the merge and release.
+**A new drain runs from FULL: relay 2 off at 13:56:13 11-05**, the gauge reading FULL 100%, the
+pack 4140 mV, `charge_mah` -2754.007 in `history/power-bench-2026-10-15/power.csv`, the data line
+off, Power saver, his lighting Alphas/Mods at 64%. It runs to the RGB cut. Leave relay 2 off; any
+charge in the drain is noted beside it. The last drain averaged 11.6 mA, so about two weeks.
+
+Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
+and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
+white, the transitions show no blaze or dark frame (the README's end). JD's eye passed Rain. Codex's
+two rounds since: no firmware failure, every P2 taken. Next: the soak; black's night (Warren); the
+docs' remainder, `site/power/`'s calculator among them, still pinned to the old curve; the merge
+and release (at the merge, `check_effect_ids.py`'s `ADDED` line goes).
 
 **The curve is settled by JD's eye (`--stops 4`).** His calls: the battery's 20-35% less
 light is fine, old profiles need no conversion, the `Fn`+arrow keys keep raw values, the

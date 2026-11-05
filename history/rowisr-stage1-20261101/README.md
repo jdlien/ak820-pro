@@ -2425,7 +2425,14 @@ Rain RGB. `check_effect_ids.py` takes a commit, not the largest id, to say a tre
 effect. `ladder_check.py` requires light where light is expected, with `--selftest`, and fails
 on a failed presser. The flush's rule moved to `rgb/flush_dirty.h`, which the simulator's
 `k_flush` walks through the real ladder. Also: the agent names the board's effects,
-`AK820_QMK_HOME` is made absolute in `env.sh`.
+`AK820_QMK_HOME` is made absolute in `env.sh`. Its verification (`review-codex-row-isr-d9-verify3-raw.md`)
+closed three of those and found two more in the tools, both taken: the effect guard now reads the
+tree's own code, not git, since `setup.sh`'s clones are shallow, and a bad override stops `env.sh`.
+
+### The daily soak and a new drain (11-05, 13:55)
+
+The daily build of `4c85f385a9` (token `0xae868950`) on white, the gauge at FULL on USB within a
+minute of the flash, then relay 2 off at 13:56:13: pack 4140 mV, `charge_mah` -2754.007. JD types on it.
 
 ## Files
 
