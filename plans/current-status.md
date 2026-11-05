@@ -99,15 +99,16 @@ The data line is off and the daemon running, as in the standing state, but
 stopped the drain because Power saver and the low-pack limit on the LEDs made
 the lights hard to judge, and the flash moratorium's reason went with it.
 Leave the relay as it is; whether a drain restarts is his call. Flashes still
-need his word. Next: his eye on `--stops 4` against the hybrid before it
-(`9157b1599c`, dev `0x118846ea`, which he passed as "a really decent curve");
-if he prefers the hybrid, revert `7221cb6080`. The tables' codex round is
-`plans/review-codex-row-isr-d9-curve-raw.md`. Then the order below. Open for
-the merge: a percentage now means two lights, the wide modes about 5x under
-the byte path at 50% (`history/rowisr-stage1-20261101/README.md`, the end of
-"D9 on white").
-The caps moved too: `SAVER_VAL` 128 is 3.6% of full light now against 18.6%,
-`DIM_VAL` 64 is 0.7% against 4.4% (the plan's "curve's candidates").
+need his word.
+
+**The curve is settled by JD's eye: `--stops 4`, on USB.** Codex's round on it
+is NOT READY for release, on what the curve moved rather than the tables. Before
+the merge (the plan, "The curve's candidates", has the numbers): Rainfall, Heatmap
+and Drift are about 5x brighter than the wide modes at 50%; the draw wants
+re-measuring at each percent and `SAVER_VAL`/`DIM_VAL` re-choosing by light, on
+battery, because the same setting measured 20-35% less light there than on USB
+while charging; the default and pre-D9 profiles load dimmer; the keys walk raw
+values and miss the percent stops. Then the order below, its first item done.
 
 *What is on white:* `row-isr` `a86a07610f`, dev token `0xfbcd040d` (since
 20:41; devprobe `0x06cda486`, daily `0x6115beeb`; the gaps 344 and

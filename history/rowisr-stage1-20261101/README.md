@@ -2208,8 +2208,8 @@ the high end, better colour at low brightness, "a really decent curve"
 without measuring tools. The "almost" fits the arithmetic's three flat
 detents, unconfirmed: he did not name which steps.
 
-A consequence of the curve that the slider does not show: the modes on the
-byte path (Breathing, Drift, Rainfall and the rest) still take QMK's L*
+A consequence of the curve that the slider does not show: the three enabled
+effects on the byte path (Rainfall, Typing Heatmap, Drift) still take QMK's L*
 table, and the wide modes no longer do, so one percentage means two lights.
 In ticks at full chroma, `--stops 4` against L*:
 
@@ -2230,6 +2230,46 @@ token read back. Relay 2 has been on since 20:11, switched by hand: the pack is
 charging at about 530 mA, from 3727 mV under a 46 mA load, so the drain stopped
 short of the RGB cut. Power saver's idle dim and the low-pack limit on the LEDs
 were making the lights hard to judge, and neither applies with VBUS present.
+
+**The curve is settled: `--stops 4`, by JD's eye at about 21:05, on USB.** Most
+percent steps show a subtle but visible change, the dim levels hold the true
+colours, and there is a difference between almost every pair. Under the wide
+modes the brightness can now be tuned without the colour falling apart.
+
+**Codex's round on the tables: NOT READY, on what the curve moved, not on the
+tables** (`plans/review-codex-row-isr-d9-curve-raw.md`). Both tables match their
+generator byte for byte, `curve_steps.py` matches `wide_width()` across all
+393,216 cases, and at K=300 and K=640 no LED can round dark at a nonzero value,
+so committed-dark, sleep, wake, the RGB cut and the drive accounting all hold.
+Its findings are in the plan's "curve's candidates": the two lights a percentage
+now means (its P1), the caps, the default and old profiles, and the keys.
+
+### The same setting on USB and on battery (11-04, 21:16-21:21, `usb_light.py`, token `0xd35fb613`)
+
+**The same pulse width gives less light on battery: about 20-35%, with no clear
+colour shift.** Solid purple at three values, relay 2 alternated in both orders
+with the data line up, the stage held and every value at or under Power saver's
+ceiling, so the supply is the only thing that moved. Each number averages one
+clip's frames. On the Delete LED's camera readings, which stay out of saturation:
+
+| Slider | Blue, USB | Blue, battery | Median light, battery over USB | Looks like, on USB |
+|---|---|---|---|---|
+| 10% | 11.2, 11.6 | 9.0, 8.8 | 0.70 | 7% |
+| 25% | 26.8, 26.3 | 21.3, 21.4 | 0.81 | 22% |
+| 50% | 65.7, 66.7 | 55.9, 54.8 | 0.65 | 44% |
+
+The "median light" column inverts the camera's response through the same LEDs'
+readings at known widths on USB, so it inherits that ramp's gaps (nothing between
+values 28 and 59, or 69 and 128) and spreads widely per LED: 0.55-0.96 at 25%.
+Read it as a range, not three separate figures. The two orders agree closely. At
+50% the Delete LED's three colours fell alike (0.65, 0.66, 0.64). The board did
+not reset through the twelve switches (uptime 925 s to 1,203 s).
+
+The probable cause is the rail: 4.12-4.31 V charging through the diode against
+the buck-boost's 3.90 V (`docs/battery.md`), which this run did not read. Not
+measured: a full pack on USB, whose rail is higher still (4.47 V), or the cable
+position (4.53-4.79 V). The eye on the curve so far is USB's, while the power
+caps apply only on battery, so the caps want choosing there.
 
 ## Files
 

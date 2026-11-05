@@ -25,8 +25,9 @@ finer than a quarter tick. So each percent stop gets its own level (1% half a
 tick, then a quarter tick a percent to KNEE ticks; the values between two stops
 hold the lower) and the geometric part starts at the knee's stop. With KNEE 4
 the ratio falls smoothly into the geometric's 6.9% a percent, and that is
-coarser than a quarter tick above 3.6 ticks and a whole tick above 16, so no
-percent stop on a full channel repeats a width.
+coarser than a quarter tick above 3.6 ticks and about a whole tick above 16.
+One full-channel repeat remains: 36% and 37% both round to 17 ticks. A colour
+with a weaker channel still moves there.
 
     scripts/gen_curve12.py [--gamma G | --log | --hybrid KNEE | --stops KNEE] [--out PATH]
 """

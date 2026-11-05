@@ -284,8 +284,10 @@ They apply on battery only; on USB the board stays fully on.
 - **Power saver caps the lighting's value at 128 while typing.** That is
   about half as bright to the eye under QMK's brightness curve, and a quarter
   of the LEDs' power. It is a ceiling, so a board already at 128 or below
-  looks the same as on USB. With bright settings on the cable, it gives a
-  dimmer board on battery for free.
+  keeps its setting. With bright settings on the cable, it gives a dimmer board
+  on battery for free. The same setting gives less light on battery anyway:
+  20-35% less than on USB while charging (measured by camera on a development
+  build, 11-04).
 - **Below 15%, every mode takes Power saver's lighting**, its 128 while
   typing included (Lights out stays darker), and Balanced sleeps at Power
   saver's 3 minutes. Always on still never sleeps.

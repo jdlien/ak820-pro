@@ -43,5 +43,5 @@ for K, term in ((300, 1535), (64, 1535), (640, 4095)):
             if l < prev: bad += 1; print("not monotonic in chroma", K, chroma, v)
             prev = l
     assert wide(255, 255, K) == top, (K, wide(255, 255, K), top)
-    print(f"K={K}: top {top} ticks exact; v=1 {light(wide(255,1,K))}, v=2 {light(wide(255,2,K))}, v=13 {wide(255,13,K)}, v=128 {wide(255,128,K)}; purple at v=13: r {light(wide(77,13,K))} g {light(wide(36,13,K))} b {light(wide(255,13,K))}; the first v with every purple channel lit: " + str(next(v for v in range(256) if all(light(wide(c, v, K)) > 0 for c in (77, 36, 255)))))
+    print(f"K={K}: top {top} ticks exact; v=1 {light(wide(255,1,K))}, v=2 {light(wide(255,2,K))}, v=13 {wide(255,13,K)}, v=128 {wide(255,128,K)}; purple at v=13: r {light(wide(77,13,K))} g {light(wide(35,13,K))} b {light(wide(255,13,K))}; the first v with every purple channel lit: " + str(next(v for v in range(256) if all(light(wide(c, v, K)) > 0 for c in (77, 35, 255)))))
 print("exhaustive checks:", "all pass" if bad == 0 else f"{bad} FAILED"); sys.exit(1 if bad else 0)

@@ -1137,21 +1137,39 @@ the eye above 25%, jumps under 20%); `--log` (8% a percent step, but under 3
 ticks the quarter grid swallows most detents: "nothing, nothing, jump");
 `--hybrid 2` (the grid by value, on white since 20:52; three flat detents
 and two levels skipped, because the menu steps 2.55 values a percent);
-`--stops 4` (the grid by percent stop, `7221cb6080`, on white since 21:01: no flat detent,
+`--stops 4` (the grid by percent stop, `7221cb6080`, on white since 21:01: no flat detent on his purple,
 50% at 3.6% of full light). `history/rowisr-stage1-20261101/curve_steps.py`
 prints any table's widths per detent. Eighth ticks (an eight-field pattern)
 are the firmware step if a quarter is still too coarse under a tick.
 
-JD's eye passed the hybrid ("a really decent curve"); `--stops 4` differs from
-it only below about 16% and is on the board for his second look. **Open for the merge:**
-a percentage now means two lights, the wide modes about 5x under the byte path
-at the slider's middle (the README's table), and `DIM_VAL`, the default val and
-pre-D9 profiles all moved with the table. An 8-bit byte cannot follow the new
-curve down (a byte is 4.69 ticks), so a shared table costs the byte path its
-bottom third. The biggest of those: `SAVER_VAL` 128, the ceiling in Power saver
-and under 15% on battery, was 18.6% of full light on L* and is 3.6% on the new
-tables, and `DIM_VAL` 64 went from 4.4% to 0.7%. Both caps need new values, chosen
-by light rather than kept by number.
+**Settled: `--stops 4`, by JD's eye on USB** (`7221cb6080`). Codex's round
+(`review-codex-row-isr-d9-curve-raw.md`) found the tables and the machinery sound
+and called the release NOT READY on what the curve moved. **Open for the merge:**
+
+- **A percentage means two lights (its P1).** Rainfall, Typing Heatmap and Drift,
+  the enabled effects on the byte path, are about 5x brighter than the wide modes
+  at 50%, by peak pixel. A shared 8-bit table is no fix: rounded, slider 0-33%
+  collapses to four byte outputs (0, 1, 2, 3), the first nonzero at 9%. Codex's
+  smallest acceptable fix: those effects render at full brightness and the wide
+  flush applies the curve and the cap once, the raw patterns' bypass kept and the
+  effects' fade response reviewed.
+- **The caps (P2).** `SAVER_VAL` 128, the ceiling in Power saver and under 15% on
+  battery, went from 18.6% of full light to 3.6%, and `DIM_VAL` 64 from 4.4% to
+  0.7%. Keeping the old light on a full channel would put them near 191 and 138,
+  which must be mode-aware until the first item is settled. Measure the draw at
+  each percent first, on battery, then choose them by light. The same setting
+  gives 20-35% less light on battery than on USB while charging
+  (`history/rowisr-stage1-20261101/README.md`, "The same setting on USB and on
+  battery"), so judge them there.
+- **The default and old profiles (P2).** `keyboard.json`'s h36/s64/v191 drives
+  about 61% less, and a profile saved before D9 loads far dimmer: purple at v125
+  from (61,28,211) to (12,5.5,39). Records stay intact. Settle the default, and
+  whether old profiles convert.
+- **The keys (P2).** `RGB_MATRIX_VAL_STEP` 2 walks raw values, not the menu's
+  percent stops: v2 and v4 show 1% and 2% and drive the same half tick, and v10 to
+  v12 show 4% to 5% with no change. Align the keys with percent stepping.
+- **Accepted (P3).** 36% and 37% are 17 ticks on a full channel, and devprobe's
+  K=64 has plateaus and a dark 1%, a bench flavour only.
 
 ### D10. Measuring the handler
 

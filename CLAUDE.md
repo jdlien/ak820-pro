@@ -138,8 +138,10 @@ fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
 **On white since 21:01 11-04: D9, the precision path, `row-isr`
-`7221cb6080`** (dev token `0xd35fb613`; the curve `--stops 4`, on the board for
-JD's second look; ⚠️ relay 2 ON since 20:11 by hand, the pack charging, the
+`7221cb6080`** (dev token `0xd35fb613`; the curve `--stops 4`, settled by JD's
+eye, the release's open items in `plans/ROW-ISR-PLAN.md`, "The curve's
+candidates"; ⚠️ the same setting gives 20-35% less light on battery than on USB
+while charging, by the camera; ⚠️ relay 2 ON since 20:11 by hand, the pack charging, the
 drain stopped short of the cut: `plans/current-status.md`). **Before it, from
 20:52: `9157b1599c`** (dev token `0x118846ea`; the curve `--hybrid 2`, passed by
 JD's eye). **Before it, from 20:41: `a86a07610f`** (dev token
