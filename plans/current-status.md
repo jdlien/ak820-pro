@@ -103,6 +103,11 @@ and `rowisr_diag` do not run on it. The gauge, `ak820 health` and `Fn`+`D` do. F
 pack 4140 mV, `charge_mah` -2754.007 in `history/power-bench-2026-10-15/power.csv`, the data line
 off, Power saver, his lighting Alphas/Mods at 64%. It runs to the RGB cut. Leave relay 2 off; any
 charge in the drain is noted beside it. The last drain averaged 11.6 mA, so about two weeks.
+**mAh since FULL = `charge_mah` + 2754.007** while the count runs unbroken (a jump or a gap in
+`charge_mah` means a restart: rebase it, as the last drain's section does). The charge before
+it: relay 2 on at 20:11:25 11-04 (`charge_mah` 414.24), ~530 mA tapering to termination at
+~05:48 11-05: 3119 mAh in over 9.6 h, 3168 by 13:56 with the charger's top-ups at FULL, against
+the last drain's 3243 net out.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
