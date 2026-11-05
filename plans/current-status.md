@@ -118,6 +118,16 @@ turn should settle it (Warren has the list, 11-05). Next: the soak; black's nigh
 docs' remainder, `site/power/`'s calculator among them, still pinned to the old curve; the merge
 and release (at the merge, `check_effect_ids.py`'s `ADDED` line goes).
 
+**Black's missed slots, open and small.** On the dev build of the same source, black misses
+~11 slots a minute lit (22 of 959,875 in 120 s) with the daemon's task stopped, ~1.8 a minute dark;
+white's windows read 0 (`plans/GREMLIN-RESULTS.md`, section 22). Each is one slot of light and a
+scan one slot late. It is not cable power alone (white's 5f window: USB power, the Mac, lit, 0 of
+2,417,359) and not handler length alone (white's is longer). Open: Windows' USB traffic, the unit,
+module traffic, the effect. The tool is `ak820 rowisr` (Windows; `ak820-agent/src/rowdiag.rs`), with
+the gap monitor on. Warren has the reads; the two that need hands, a cable-out window and a
+slider-on-cable window, go on JD's list for his 2.4G session at gremlin. What would make it matter
+is a masked stretch over ~80 us losing UART bytes, so read the overruns with it.
+
 **The curve is settled by JD's eye (`--stops 4`).** His calls: the battery's 20-35% less
 light is fine, old profiles need no conversion, the `Fn`+arrow keys keep raw values, the
 hold's 4-5 s is good, the Cycles' speed fix is good, Drift stays as it is for now. Then

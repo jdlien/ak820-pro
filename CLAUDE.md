@@ -973,6 +973,7 @@ ak820 watch [secs]    # narrate presence + what the drain discards
 ak820 probe           # what SMTC sees; touches no keyboard at all
 ak820 lighting        # RGB values read back off the board
 ak820 health          # the firmware's counters, as ak820health.py prints them (--stalls --rows --isr --sched [--window N] --json --raw)
+ak820 rowisr          # dev builds, Windows: what holds the row handler off (--mon on|off, --zero: RAM only)
 ak820 clock [--raw]   # the RTC, printed as `ak820ctl clock --read` prints it
 ```
 
