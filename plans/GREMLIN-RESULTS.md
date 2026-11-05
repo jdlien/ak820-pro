@@ -2293,6 +2293,35 @@ the cable (white on the pack). After the restart, one 25 ms main-loop
 stall attributed to flash (wear-levelling consolidation), `row_gap_max`
 5 ms. Each miss is one slot of light and a scan one slot late: 22 of
 959,875 is 0.002%.
+
+**With Blackberry's gap monitor** (`ak820 rowisr`, `231e10b`, its first
+run on a board; `--mon on`, `--zero` before each window, `--mon off`
+after; `../history/rowisr-black-20261105/rowisr-mon-*.txt`). White's
+stage 5f window, on USB power and lit, missed 0 of 2.4 M, so cable power
+alone is not it, and white's longer handler at full white missed none:
+the handler's length exposes a hold-off, it doesn't make one.
+
+| 120 s window | missed | omitted | handler mean | gaps >= 128 us | >= 197 us | longest |
+|---|---|---|---|---|---|---|
+| 14:36:58, the daemon's task stopped | 1 | 6 | 49.07 us | 2 | 0 | 0.144 ms, in ch582 |
+| 14:39:19, the daemon running | 3 | 50 | 49.08 us | 1 | 0 | 0.133 ms, in none |
+
+Both lit. The longest USB handler 0.085 ms (0.091 since boot), the
+system timer 0.016, UART2 0.011 at priority 0; no overrun, no refused
+byte; 0 spurious; since boot 1 epoch loss and 1 invalid service, the
+longest run of omissions 2, the arm deadline's omissions saturated at
+255, the omissions spread over all 18 mux rows (R a little above B and
+G). With the monitor on, the stopped-daemon condition's 22 became 1, and
+no gap reached 197 us, so no mask or higher handler showed; the monitor's
+own tick is the change to suspect. Unresolved, small.
+
+**Owed, JD's hands at gremlin, as one list** (Blackberry): (1) cable out,
+black lit, the slider unchanged, 5 min: read, unplug, replug, read (the
+monitor's and page 7's totals run across it); (2) the slider on cable, a
+lit window, no module traffic (the flip browns the MCU out: counters
+from zero, `--mon on` again); (3) 2.4G: typing with `--radio` on, then a
+deep sleep with the waking key kept; (4) his report of any phantom or
+missed key.
 The `rowisr_diag.py` pages (epoch losses, strays) are Python HID, which
 gremlin doesn't run. Owed: a second read after real use, JD's report of
 any phantom or missed key, and a 2.4G run (typing, then a deep sleep with
