@@ -9,6 +9,11 @@ export AK820_ROOT
 # from: a git worktree on a long-lived branch (qmk_firmware-ak820pro-rowisr for
 # row-isr, 11-01), so a second session can build without moving the main
 # clone's checkout. build.sh stamps the artifact with that tree's own hash.
+# Made absolute here, since the build changes directory and the Python guards read it.
+if [ -n "${AK820_QMK_HOME:-}" ]; then
+    AK820_QMK_HOME="$( cd "$AK820_QMK_HOME" && pwd )"
+    export AK820_QMK_HOME
+fi
 export QMK_HOME="${AK820_QMK_HOME:-$AK820_ROOT/qmk_firmware-ak820pro}"
 
 # The venv's directory name is platform-specific, so everything downstream asks

@@ -80,10 +80,11 @@ pub struct Lighting {
 /// same append-only hazard `scripts/check_via_sync.py` guards for custom
 /// keycodes, but with no guard here.
 ///
-/// This table mirrors the seven animations enabled in
-/// `keyboards/a_jazz/ak820pro/keyboard.json` as of 2026-09-06. If that set
-/// changes, this is wrong and the number is the only thing worth trusting.
-pub const EFFECT_NAMES: [&str; 8] = [
+/// This table mirrors the animations enabled in
+/// `keyboards/a_jazz/ak820pro/keyboard.json`, then the board's own effects in
+/// `rgb_matrix_kb.inc`. If that set changes, this is wrong and the number is the
+/// only thing worth trusting.
+pub const EFFECT_NAMES: [&str; 11] = [
     "none",
     "solid_color",
     "alphas_mods",
@@ -92,6 +93,9 @@ pub const EFFECT_NAMES: [&str; 8] = [
     "cycle_up_down",
     "jellybean_raindrops",
     "typing_heatmap",
+    "rain_rgb",
+    "drift",
+    "rain",
 ];
 
 pub fn effect_name(index: u8) -> &'static str {

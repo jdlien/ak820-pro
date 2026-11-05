@@ -142,8 +142,8 @@ if grep -q '^#define POWER_HAS_MODES' "$build/power.h"; then
         ktests="k_hook k_drift k_drift_usb k_rainfall"
         if grep -q power_local_value_mode "$build/power.c"; then
             wide="-DSIM_WIDE_EFFECTS -DRGB_MATRIX_CUSTOM_KB -DENABLE_RGB_MATRIX_SOLID_COLOR -DENABLE_RGB_MATRIX_TYPING_HEATMAP"
-            ktests="$ktests k_restart k_rain"
-            cp "$kb/rgb/curve12.h" "$build/"
+            ktests="$ktests k_restart k_flush k_rain"
+            cp "$kb/rgb/curve12.h" "$kb/rgb/flush_dirty.h" "$build/"
         fi
         colour() {   # colour <out> <dir holding rgb_matrix_kb.inc> [more flags]
             cc -std=c11 -O1 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -DSIM_REAL_COLOUR $wide ${3:-} \

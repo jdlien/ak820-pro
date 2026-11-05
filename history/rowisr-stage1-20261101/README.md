@@ -2417,6 +2417,16 @@ Room lights came on between the first run's second and third clips, so only thos
 dark-room clips and the rest see the LEDs over ambient light, which still reads the change
 (RGB off drops Ctrl from 746 to 496).
 
+Codex's round on everything since `5256860413` (`plans/review-codex-row-isr-d9-round-raw.md`):
+no firmware failure, and its static trace of a cap change through the flush agrees with the
+bench. Four P2s, all taken. Rain's mode goes last, so Rain RGB stays 8 and Drift 9 for VIA, the
+RGB EEPROM and lighting backups, which store the number bare; the menu still lists Rain beside
+Rain RGB. `check_effect_ids.py` takes a commit, not the largest id, to say a tree predates an
+effect. `ladder_check.py` requires light where light is expected, with `--selftest`, and fails
+on a failed presser. The flush's rule moved to `rgb/flush_dirty.h`, which the simulator's
+`k_flush` walks through the real ladder. Also: the agent names the board's effects,
+`AK820_QMK_HOME` is made absolute in `env.sh`.
+
 ## Files
 
 - `session.sh`, `session.log`: the six attempts and the clean run; `run-base.log`, `run-stage1.log`, `base.json`, `stage1.json`, `compare.txt`, `flash.log`.

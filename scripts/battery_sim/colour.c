@@ -70,6 +70,7 @@ static bool rgb_matrix_check_finished_leds(uint8_t led_max) { return led_max < R
 /* What a test compares: the light that reaches the LEDs. */
 #ifdef SIM_WIDE_EFFECTS
 #include "curve12.h"
+#include "flush_dirty.h"
 typedef struct { uint16_t r, g, b; } k_out_t;
 static uint32_t k_recips[256];
 static uint32_t k_recip(uint8_t v) {
@@ -434,6 +435,35 @@ static void k_restart(void) {
     idle_ms = 60000; ltick();
     CHECK(rgb_restarts == r + 1, "a mode off the list did not restart at the dim: %d", rgb_restarts - r);
     idle_ms = 0; ltick();
+    rgb_mode = 2;
+}
+
+/* The flush's rule, from rowisr.c's own header: since a wide mode's cap change no longer
+ * restarts the effect, a value change with no byte moved is the only way the cap reaches
+ * the LEDs. Walked through the real ladder: each ceiling it moves to must call for a
+ * conversion, once. */
+static void k_flush(void) {
+    CHECK(!rowisr_flush_dirty(false, true, true, 64, 64), "nothing changed");
+    CHECK(rowisr_flush_dirty(true, true, true, 64, 64), "the bytes changed");
+    CHECK(rowisr_flush_dirty(false, true, false, 64, 64), "into the wide path");
+    CHECK(rowisr_flush_dirty(false, false, true, 64, 64), "out of it");
+    CHECK(!rowisr_flush_dirty(false, false, false, 64, 128), "raw bytes take no value");
+    k_ceiling_saver();
+    rgb_mode = RGB_MATRIX_SOLID_COLOR;
+    idle_ms = 0; ltick();
+    uint8_t cfg = 255, last = cfg < power_val_cap() ? cfg : power_val_cap();
+    CHECK(last == SIM_SAVER_VAL, "typing, at Saver's ceiling: %u", last);
+    for (unsigned k = 0; k < 3; k++) {
+        idle_ms = 60000; ltick();
+        uint8_t v = cfg < power_val_cap() ? cfg : power_val_cap();
+        CHECK(v == SIM_DIM_VAL && rowisr_flush_dirty(false, true, true, v, last), "into the dim: %u from %u", v, last);
+        CHECK(!rowisr_flush_dirty(false, true, true, v, v), "the dim's next frame");
+        last = v;
+        idle_ms = 0; ltick();
+        v = cfg < power_val_cap() ? cfg : power_val_cap();
+        CHECK(v == SIM_SAVER_VAL && rowisr_flush_dirty(false, true, true, v, last), "out of the dim: %u from %u", v, last);
+        last = v;
+    }
     rgb_mode = 2;
 }
 

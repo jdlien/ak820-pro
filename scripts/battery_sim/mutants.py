@@ -201,6 +201,9 @@ WIDE_POWER_MUTANTS = [
      [("           || m == RGB_MATRIX_CUSTOM_RAIN\n           || m == RGB_MATRIX_CUSTOM_RAINFALL\n           || m == RGB_MATRIX_CUSTOM_DRIFT",
        "           || m == RGB_MATRIX_CUSTOM_RAINFALL\n           || m == RGB_MATRIX_CUSTOM_DRIFT")],
      [("colour", "k_rain")]),
+    ("the flush blind to a value change", "flush_dirty.h",
+     [("bytes_changed || wide != last_wide || (wide && v != last_v)", "bytes_changed || wide != last_wide")],
+     [("colour", "k_flush")]),
     ("a wide mode restarted by a cap change again", "power.c",
      [("(vcap != val_cap && !power_wide_mode())", "(vcap != val_cap)")],
      [("colour", "k_restart")]),
@@ -234,9 +237,10 @@ def build(src, mutations, sanitize=False, target="battery.c", flavour="sim", qro
     for f in ("battery.c", "battery.h", "power.c", "power.h", "battery_tail.h", "rgb_matrix_kb.inc"):
         if f != "rgb_matrix_kb.inc" or os.path.exists(os.path.join(src, f)):
             shutil.copy(os.path.join(src, f), d)
-    for curve in (os.path.join(src, "rgb", "curve12.h"), os.path.join(src, "curve12.h")):   # the wide path's, flat in a copy
-        if os.path.exists(curve):
-            shutil.copy(curve, d)
+    for base in ("curve12.h", "flush_dirty.h"):   # the wide path's, flat in a copy
+        for path in (os.path.join(src, "rgb", base), os.path.join(src, base)):
+            if os.path.exists(path):
+                shutil.copy(path, d)
     # The backlight's scale, as run.sh selects it (the menu's P2b: 0-100 once
     # display.c has no 24-entry bkl_duty[]; codex, P2b's code review).
     disp = os.path.join(src, "graphics", "display.c")

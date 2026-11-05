@@ -1489,6 +1489,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "k_rainfall")) k_rainfall();
 #ifdef SIM_WIDE_EFFECTS
     else if (!strcmp(s, "k_restart")) k_restart();
+    else if (!strcmp(s, "k_flush")) k_flush();
 #ifndef SIM_DRIFT_USB_FULL
     else if (!strcmp(s, "k_rain")) k_rain();
 #endif

@@ -53,10 +53,10 @@ import deep_sleep as ds  # noqa: E402  (with_dev: the board's raw HID, retried)
 import sleep_baseline as sb  # noqa: E402  (attempt, the relay)
 
 EFFECTS = {1: "solid", 2: "alphas mods (JD's)", 3: "cycle all", 4: "cycle left-right", 5: "cycle up-down",
-           6: "jellybean raindrops", 7: "typing heatmap", 8: "rain (custom)", 9: "rain rgb (custom)", 10: "drift (custom)"}
+           6: "jellybean raindrops", 7: "typing heatmap", 8: "rain rgb (custom)", 9: "drift (custom)", 10: "rain (custom)"}
 ANIMATED = {3, 4, 5, 6, 7, 8, 9, 10}
 CONVERTED = {1, 2, 3, 4, 5, 6}   # every LED at the user's value, so the CIE ratio holds
-HEATMAP, RAIN, RAINRGB, DRIFT = 7, 8, 9, 10
+HEATMAP, RAINRGB, DRIFT, RAIN = 7, 8, 9, 10
 FULL, SAVER = 0, 2               # power.c's POWER_MODE_FULL, POWER_MODE_SAVER
 STAGES = ["active", "dim", "off", "dark", "active"]
 DIM_CAP, SAVER_CAP = 102, 191    # power.c's DIM_VAL and SAVER_VAL on the row ISR branch (64 and 128 through v0.3.1)
@@ -75,7 +75,8 @@ MIN_LIT = {255: 20, UNDER: 2}    # per mille: a lit reference at each value (pur
 # The Heatmap lights only the rig's one tapped key of 81: measured 10-20 at
 # 6.7 per mille over a stage's holds and 1.9 at value 100, so the floor that
 # fits a field of lit keys can never pass it.
-MIN_LIT_HEATMAP = {255: 4, UNDER: 0.5}
+MIN_LIT_HEATMAP = {255: 20, UNDER: 2}   # the key pressed through the samples: measured 43 and 6
+DIM_LIGHT, SAVER_LIGHT = 0.018, 0.186   # the ceilings' share of full light, power.c's values through the curve
 
 
 # Drift's stops top out near a quarter of full chroma and most of its field is dark:
@@ -130,8 +131,8 @@ class Bench:
                 for _ in range(4):
                     self.rig()
             got.append(cm.led_drive())
-        if pressing is not None:
-            pressing.wait()
+        if pressing is not None and pressing.wait() != 0:
+            raise SystemExit("the presser failed, so the Heatmap's samples say nothing")
         if None in got:
             raise SystemExit("the board's LED drive did not read back")
         return sum(got) / len(got)
@@ -139,6 +140,43 @@ class Bench:
 
 def judged(eff, b):
     return eff != HEATMAP or b.rig is not None or b.presser
+
+
+def stage_ok(eff, act, dim, off, dark, back):
+    """Lit, then under the dim, exactly dark in the off stages, and back at the wake. A dim
+    too small for the reading's resolution is not required to read."""
+    want_dim = act * DIM_LIGHT
+    return (act >= min_lit(eff, 255) and off == 0 and dark == 0 and dim < act
+            and (want_dim < 1.5 or dim >= want_dim * 0.4)
+            and back >= act * 0.5 and abs(back - act) <= max(20, act * 0.2))
+
+
+def saver_ok(eff, v, ref, sav):
+    """At 255 Power saver takes its share of the light and still lights; under its ceiling
+    it changes nothing."""
+    t = tol(eff, ref)
+    if v == 255:
+        ok = sav <= ref + t and sav <= ref * CAPPED_MAX + 2
+        want = ref * SAVER_LIGHT
+        ok = ok and (want < 1.5 or sav >= want * 0.4)
+    else:
+        ok = abs(sav - ref) <= t and sav >= 1
+    return ok and ref >= min_lit(eff, v)
+
+
+def selftest():
+    """The gates against the readings measured on 11-05, and against dark rows that must fail."""
+    good = [(1, 497, 8, 0, 0, 497), (3, 472, 8, 0, 0, 551), (6, 639, 11, 0, 0, 613), (HEATMAP, 43, 0, 0, 0, 43),
+            (RAIN, 56, 1, 0, 0, 51), (RAINRGB, 94, 1, 0, 0, 93), (DRIFT, 25, 0, 0, 0, 25)]
+    bad = [(HEATMAP, 6, 0, 0, 0, 0), (DRIFT, 16, 0, 0, 0, 0), (1, 497, 0, 0, 0, 497), (1, 497, 8, 1, 0, 497),
+           (1, 497, 8, 0, 0, 0), (RAIN, 56, 1, 0, 0, 0)]
+    sgood = [(1, 255, 497, 92), (6, 255, 630, 117), (HEATMAP, 255, 43, 8), (RAIN, 255, 57, 11), (DRIFT, 255, 16, 5),
+             (1, UNDER, 69, 69), (6, UNDER, 86, 90), (HEATMAP, UNDER, 6, 6), (DRIFT, UNDER, 2, 3)]
+    sbad = [(HEATMAP, 255, 6, 0), (1, 255, 497, 0), (1, 255, 497, 497), (DRIFT, UNDER, 1, 0), (1, UNDER, 69, 0), (HEATMAP, UNDER, 1, 1)]
+    fails = [("stage", g) for g in good if not stage_ok(*g)] + [("stage should fail", g) for g in bad if stage_ok(*g)]
+    fails += [("saver", g) for g in sgood if not saver_ok(*g)] + [("saver should fail", g) for g in sbad if saver_ok(*g)]
+    print("ladder_check selftest:", fails or "all pass")
+    sys.exit(1 if fails else 0)
 
 
 def stages_pass(b, rows):
@@ -153,8 +191,7 @@ def stages_pass(b, rows):
                         and st["val_cap"] == STAGE_CAP[stage])
             got.append(b.drive(eff, SAMPLES_STAGE))
         act, dim, off, dark, back = got
-        drive_ok = (act >= min_lit(eff, 255) and off == 0 and dark == 0 and dim < act
-                    and abs(back - act) <= max(20, act * 0.2))
+        drive_ok = stage_ok(eff, act, dim, off, dark, back)
         ok = all(caps) and (drive_ok or not judged(eff, b))
         bad += not ok
         rows.append({"part": "stages", "effect": eff, "name": name, "active": act, "dim": dim, "off": off,
@@ -180,16 +217,7 @@ def saver_pass(b, rows):
             rgb = {"effect": eff, "h": 191, "s": 255, "v": v}
             ref, ok1 = held(b, rgb, FULL, 255)
             sav, ok2 = held(b, rgb, SAVER, SAVER_CAP)
-            t = tol(eff, ref)
-            if v == 255:
-                drive_ok = sav <= ref + t
-                if eff in CONVERTED:
-                    drive_ok = drive_ok and sav <= ref * CAPPED_MAX + 2
-                if eff in (RAIN, RAINRGB, DRIFT):
-                    drive_ok = drive_ok and sav <= ref * DRIFT_MAX + 2
-            else:
-                drive_ok = abs(sav - ref) <= t
-            drive_ok = drive_ok and ref >= min_lit(eff, v)
+            drive_ok = saver_ok(eff, v, ref, sav)
             ok = ok1 and ok2 and (drive_ok or not judged(eff, b))
             bad += not ok
             rows.append({"part": "saver", "value": v, "effect": eff, "name": name, "full": ref, "saver": sav,
@@ -211,8 +239,11 @@ def main():
     ap.add_argument("--rig", action="store_true", help="tap the relay's key through the Heatmap's holds")
     ap.add_argument("--presser", action="store_true", help="the same with the logger's presser on Delete (scripts/presser_repl.py); the relay's key is broken since the move to Buzz")
     ap.add_argument("--only", default=None, help="comma-separated effect numbers: a rerun of a few, not the whole check")
+    ap.add_argument("--selftest", action="store_true", help="the gates against known readings, with no board")
     ap.add_argument("--out", default=os.path.join(HERE, "..", "history", "ladder-check-" + time.strftime("%Y%m%d-%H%M")))
     a = ap.parse_args()
+    if a.selftest:
+        selftest()
     jd_rgb, jd_mode = ds.with_dev(cm.read_rgb), ds.with_dev(cm.power_mode)
     if jd_mode is None:
         sys.exit("no HC_DEVHOOK op 14 on this firmware: flash a dev build first")

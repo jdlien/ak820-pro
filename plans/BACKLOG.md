@@ -4,8 +4,10 @@
 
 The ceilings are settled (`SAVER_VAL` 191, `DIM_VAL` 102, from the percent map of
 11-05). Owed: JD's eye on them on battery, `scripts/ladder_check.py --rig`, and a look
-at the gauge's fixed LED term (`plans/ROW-ISR-PLAN.md`, "The curve's candidates"). Some
-effects could go or be rethought; Drift is fine as it is for now.
+at the gauge's fixed LED term (`plans/ROW-ISR-PLAN.md`, "The curve's candidates"). At the
+release: `site/power/`'s calculator still models the old curve and hardcodes 128, and
+`docs/power.md` promotes the branch's figures. Some effects could go or be rethought; Drift
+is fine as it is for now.
 
 ## Next phase: record in daily use, then polish for other owners (2026-10-18)
 

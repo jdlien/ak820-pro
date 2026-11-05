@@ -402,8 +402,9 @@ DRIFT`.
   effect. On the row ISR branch the flush applies the value, as on every
   effect, and the stops keep only their dark weighting, so DRIFT's brightest
   stop is about a quarter of full chroma at any setting.
-- **The power ladder's ceilings** (the dim's 64, Power saver's 128 while
-  typing, [battery.md](battery.md), "The idle ladder and the power modes")
+- **The power ladder's ceilings** (the dim's value and Power saver's while typing,
+  64 and 128 through v0.3.1, 102 and 191 on the row ISR branch,
+  [battery.md](battery.md), "The idle ladder and the power modes")
   act once, in the flush on the row ISR branch, so every effect is capped alike
   and a cap change restarts nothing (`scripts/battery_sim/colour.c` checks the
   final widths). Through v0.3.1 they act in the conversion,

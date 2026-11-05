@@ -12,11 +12,17 @@ standalone.
 """
 import os
 import re
+import subprocess
 import sys
 
 # The tree being built: build.sh's override, or the pinned clone.
 TREE = os.environ.get("AK820_QMK_HOME") or os.path.join(os.path.dirname(__file__), "..", "qmk_firmware-ak820pro")
 KB = os.path.join(TREE, "keyboards", "a_jazz", "ak820pro")
+
+# An effect added after the first table, with the commit that added it. A tree without
+# that commit predates the effect, so its absence there is no removal. Without it, every
+# other branch's build would fail until the merge.
+ADDED = {"CUSTOM_RAIN": "5d46f4b1f7"}
 
 # The ids as first committed (10-25), append-only. Never edit or remove a line.
 REFERENCE = {
@@ -34,6 +40,15 @@ REFERENCE = {
     "CUSTOM_DRIFT": 12,
     "CUSTOM_RAIN": 13,
 }
+
+
+def predates(name):
+    """True if this tree has not got the commit that added the effect."""
+    sha = ADDED.get(name)
+    if sha is None:
+        return False
+    r = subprocess.run(["git", "-C", TREE, "merge-base", "--is-ancestor", sha, "HEAD"], capture_output=True)
+    return r.returncode != 0
 
 
 def table(path):
@@ -62,11 +77,8 @@ def main():
         if name not in dict(rows) and i in seen:
             errors.append(f"{name}'s id {i} is reused by {seen[i]}")
     names = dict(rows)
-    newest = max(i for _, i in rows)
     for name in REFERENCE:
-        # An id above this tree's newest is an effect the tree predates (Rain, on a
-        # branch older than it), so other trees keep building; under it, a removal.
-        if name not in names and REFERENCE[name] < newest:
+        if name not in names and not predates(name):
             errors.append(f"{name} was removed from rgb_effects[]: keep its entry, #ifdef'd on its enable")
     if errors:
         sys.exit("check_effect_ids: FAIL -- " + "; ".join(errors) +
