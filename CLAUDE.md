@@ -911,7 +911,8 @@ hook that attributes the LED blink to its writer),
 two, F-017), `tmk_core/protocol/chibios/usb_main.c`
 (`RAW_HID_TASK_MAX_REPORTS`: the raw HID reports a pass handles, F-001),
 `quantum/rgb_matrix/rgb_matrix.c` + `.h` (flush-allowed hook, Phase 2's
-`rgb_matrix_reinit_effect`, the effects' speed hooks
+`rgb_matrix_reinit_effect`, D9's invalidation of the last-flushed effect
+when the effect to render changes in `rgb_task_start()`, the effects' speed hooks
 `rgb_matrix_runner_i_time()` and `rgb_matrix_jellybean_drop()`), and the two
 animations that call them, `animations/runners/effect_runner_i.h` and
 `animations/jellybean_raindrops_anim.h` (the board's curves are
