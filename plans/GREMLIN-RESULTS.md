@@ -2237,3 +2237,43 @@ session read it (`ak820 health --crash --json`, 23:10, nothing written):
     ~3.1 s of uptime (the next wake's stamp, 3,110-3,114 ms on). The
     last wake: flags `pcf`, `acq`, `reattach`, `slept`, no step timed
     out, PLL 92 loops; 51 sleeps since the flash.
+
+### 22. Black on the row ISR (11-05, from 14:22)
+
+On JD's go ("We should probably merge our fix into that build and flash
+it here"): black flashed with the dev build of `row-isr` `4c85f385a98`,
+the head white runs as its daily soak (Hutch; codex's last round found no
+firmware failure), with the keep-alive already in it (`c043db65dd`,
+`a088b51c8b`, patch-id equal to `6cbbb8df653` and `3b04a983a24`). Built on
+gremlin from a clean tree (`via-dev-4c85f385a98-20261105-201423.bin`,
+token `0x73a8ce33`, heap gap 336 B; tokens are drawn per build, so the
+Mac's dev `0xc7bc1681` is the same source); the keymap, live settings and
+profiles restored and read back. Black loses nothing it still had:
+`ds-phase`'s op 24 slots were already gone on the keep-alive build.
+Blackberry's notes for a second unit: nothing in the row ISR is a
+per-board constant, but the settle (24 ticks, 0.5 us), `FRMNO_SPACE` and
+the curve and ceilings were proven on white alone, and **the ISR has no
+recorded run on 2.4G**.
+
+**The first read** (`ak820 health --rows --isr --sched --window 60`,
+uptime 44 s at the start, the cable in, gremlin's daemon running, black's
+Alphas/Mods at v175; `../history/rowisr-black-20261105/health-1422.txt`),
+against white's at full white, the data line off:
+
+| | black | white |
+|---|---|---|
+| `isr_per_s` | 8000.5 | ~8000 |
+| `isr_mean_us`, `isr_cpu_pct` | 52.5, 42.0% | 51.9, 41.5% |
+| `isr_max_us` | 181.3 (since boot) | 106.7 |
+| `latency_max_us` | 88.81 | 71.9 |
+| missed slots | 94 since boot; **5 in the 60 s window** (480,021 slots) | 0 in 300 s |
+| omitted pulses | 184 since boot; 22 in the window | 51 of 2.56 M in 300 s |
+| `row_gap_max_ms`, `loop_gap_max_ms` | 5, 5 | 3, 4 |
+
+The rows even (19,566-19,567), no stall, `tx_timeouts` 2 of 10. The
+missed slots are the difference to watch: black's USB carried the
+daemon's traffic, and boot's restore writes are in the since-boot counts.
+The `rowisr_diag.py` pages (epoch losses, strays) are Python HID, which
+gremlin doesn't run. Owed: a second read after real use, JD's report of
+any phantom or missed key, and a 2.4G run (typing, then a deep sleep with
+the waking key kept).
