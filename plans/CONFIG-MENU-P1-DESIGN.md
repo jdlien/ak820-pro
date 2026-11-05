@@ -471,8 +471,8 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
 | Lighting | list | ◀ Back, Effect, Brightness, Hue, Saturation, Second color *or* Speed, Lights | ▶ |
 | Screen | range editor, 0-23, step 1 | the range layout | `Off`, else `round(level*100/23)%` |
 | Effect | previewing choice | ◀ Back, the nine effects (two pages, the scrollbar) | the effect's readout name |
-| Brightness, Saturation, Speed | range editor, 0-255; a detent the next percentage, `MENU_FAST_PCT` fast (the shipped builds 4% since 11-04, 8% before; the dev build none: config.h) | the range layout | `(v*100+127)/255 %` (the readout's rounding) |
-| Hue, Second color | hue editor, 0-255 wrapping, step 1 (`MENU_FAST_HUE` fast: 6 shipped since 11-04, 12 before; the dev build 1) | the hue layout | `h*360/256` degrees; Second color `+` that of `speed` |
+| Brightness, Saturation, Speed | range editor, 0-255; a detent the next percentage, 2 on a medium spin and 3 on a fast one since 11-04 (config.h's `MENU_MED_PCT`/`MENU_FAST_PCT`; 8% on any fast turn before) | the range layout | `(v*100+127)/255 %` (the readout's rounding) |
+| Hue, Second color | hue editor, 0-255 wrapping, step 1, 2 medium, 4 fast since 11-04 (`MENU_MED_HUE`/`MENU_FAST_HUE`; 12 fast before) | the hue layout | `h*360/256` degrees; Second color `+` that of `speed` |
 | Lights | previewing choice | ◀ Back, Off, On | `On` / `Off` |
 
 - **Second color or Speed** (the row's label and its editor) follows the
@@ -488,10 +488,12 @@ no scrollbar). Connection, Indicators and Battery join with P2/P3.
   (U+F834, one cell, JD's pick; the palette U+F8D7 is the alternative if the
   dashboard's power-mode bulb confuses), Screen the desktop (U+F108, two
   cells). Their headings carry them, as P1a's do.
-- **Fast turns:** an input carrying two or more detents, or one within
-  `MENU_FAST_MS` of the last (60 ms shipped since 11-04, 90 before; the host
-  test keeps the 10-25 values through menu.h's defaults), takes the fast
-  step (the mockup's rule). `menu_input` has the
+- **Fast turns:** three tiers since 11-04 by the gap between detents: an
+  input carrying two or more detents, or one within `MENU_FAST_MS` (50 ms)
+  of the last, takes the fast step; one within `MENU_MED_MS` (110 ms) the
+  medium; a slower one the finest (the mockup's rule had two tiers at
+  90 ms; the host test keeps those through menu.h's defaults, where the
+  medium tier equals the fast). `menu_input` has the
   detents and `now`; the last turn's time is new state: **32-bit ms** (a
   16-bit one aliases inside the 180 s backstop: a turn 65,556 ms after the
   last would read as 20 ms), with a flag for "a previous turn in this

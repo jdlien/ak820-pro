@@ -2150,9 +2150,14 @@ arithmetic on any table. One more build at 20:36 on his ask
 (`b45a904f11`, dev `0xc3b0ea56`; devprobe `0xeafa5d2a`, daily
 `0xc0f7878f`): the menu editors' fast turn toned down, since a quick spin
 stepped 8% a detent and skipped the steps he wanted to see: the shipped
-builds step 4% (6 hue units) on a fast turn within 60 ms, the dev build
-has no acceleration at all (`config.h`'s `MENU_FAST_*`, `menu.h`'s
-defaults the old values for the host test). Codex's round on the dither
+builds 4% within 60 ms, the dev build none. With no acceleration the
+range took him four spins, so the build of 20:41 (`a86a07610f`, dev
+`0xfbcd040d`; devprobe `0x06cda486`, daily `0x6115beeb`) replaces the
+fork with three tiers on every build, by the gap between detents: a slow
+turn 1%, a medium spin (within 110 ms) 2%, a fast one (within 50 ms, or
+two detents in one input) 3%, hue 1, 2 and 4 units (`config.h`'s
+`MENU_FAST_*` and `MENU_MED_*`; `menu.h`'s defaults keep the two-tier
+values for the host test). Codex's round on the dither
 and the curve (`review-codex-row-isr-d9-dither-raw.md`, after the flash
 on JD's word): READY, no P1 or P2; its notes: the flagged decode is seven
 Thumb instructions with the shift hoisted; the channels' quarter patterns
