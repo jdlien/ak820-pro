@@ -1,0 +1,18 @@
+Review one firmware commit. You are read-only: change nothing, and run no build. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+The firmware is QMK on an SN32F299 (Cortex-M0, 48 MHz) for the AK820 Pro keyboard. The commit is ee2013b5c0 on branch row-isr, in the git worktree qmk_firmware-ak820pro-rowisr/ (`git -C qmk_firmware-ak820pro-rowisr show ee2013b5c0`). Read its message for the intent.
+
+It moves the lock-LED channel's receiver (now-playing text and clock frames a host signals through its lock LED reports over Bluetooth) out of AK820_DEV_HOOKS, so that release builds (the daily and fpb flavours in build.sh) carry it. These flavours have never run this code: the receiver's only soak has been on dev builds. It also adds guards so an idle pass does not call timer_read32().
+
+Background to read as needed: plans/LOCK-LED-CHANNEL-PLAN.md, docs/wireless.md, docs/hardware.md (the sleep and watchdog sections), keyboards/a_jazz/ak820pro/lockchan.c, lockchan_media.c, bluetooth/ch582f_ajazz.c, hid_protocol.c, indicators.c, sleep.c, rtc/rtc.c, and plans/AUDIT-2026-10-31.md (F-019, F-020 and any finding that touches 5A frames).
+
+Find real defects, by tracing the code. Questions worth answering, not a limit:
+1. Does anything the receiver's behaviour depends on still exist only under AK820_DEV_HOOKS? Look at every remaining AK820_DEV_HOOKS block in ch582f_ajazz.c, in particular the RX drain, where dev and release read bytes differently, the pump's rx_defer and ACK-window logic, and the link-change and sleep paths.
+2. Are the new guards in ch582_task exactly equivalent to the unguarded calls in every state, including a link that drops mid-frame, usb_mode, a pending clock retry and the wrap of the time values?
+3. What changes for an owner whose host sends no frames at all, including ordinary Caps, Num and Scroll Lock use, the Scroll band's hold in indicators.c, and hosts that report LED state often? Can a frame be falsely committed by ordinary lock-key use, and what would it do?
+4. LOCKCHAN_LINK_LOST() was a no-op on release builds and now does work. Check every call site, including its execution context (USB handler, drain, main loop) and any re-entry.
+5. rawhid_clock_set() and the media lease are now live on release builds. Is there a release-only path in hid_protocol.c where the stamps are wrong or the clock owner rule now refuses something that used to work? What happens when a daemon syncs over USB and frames arrive too, and with an older host agent?
+6. Deep sleep and wake on a release build with frames arriving: the rtc_set_time_ms path, the rate trim (RTC_SETF_FRAME), PCF writes, and whether anything can now stall the main loop long enough to matter (a pass of 25 ms or more can lose a key).
+7. The plan is to cherry-pick this same commit onto ak820pro-jdlien (cfe6c2d3a5, the firmware branch, which does not have the row ISR rewrite; it is checked out in qmk_firmware-ak820pro/). Is the patch right on that base too?
+
+Report in three tables, P1 (must fix), P2 (should fix), P3 (notes), each row with file:line, the finding, and the concrete scenario that fails. Report only what you traced; say what you could not verify. End with one line: READY or NOT READY.
