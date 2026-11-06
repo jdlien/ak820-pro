@@ -98,6 +98,11 @@ on the curve, the hold's ramp, the Cycles' place kept through a speed change, th
 `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), `Rain`, and Help's saturation keys. No bootloader
 over USB and no dev hooks: the way back to dev is JD's `Fn`+`Esc`, and `ladder_check`, `current_map`
 and `rowisr_diag` do not run on it. The gauge, `ak820 health` and `Fn`+`D` do. Flashes need his word.
+⚠️ **The receiver for the Mac's lock-light frames is dev-only (`AK820_DEV_HOOKS`, `lockchan_feed`), and
+so is the dongle's raw HID (`raw81`), so on daily no now-playing text and no clock sync reach the
+board wirelessly.** With the data line off for the drain, white gets neither. The Mac's daemon keeps
+sending (`lockchan=waiting`, frames counted as sent): its log looks healthy, and the board drops the
+frames after keeping their lock bits. A daily build's now-playing and clock are USB only.
 
 **A new drain runs from FULL: relay 2 off at 13:56:13 11-05**, the gauge reading FULL 100%, the
 pack 4140 mV, `charge_mah` -2754.007 in `history/power-bench-2026-10-15/power.csv`, the data line
