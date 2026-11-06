@@ -1,0 +1,16 @@
+Verify a firmware fix, read-only: change nothing, and run no build. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+Your earlier review is plans/review-codex-lockchan-every-build-raw.md, of ee2013b5c0 on row-isr (worktree qmk_firmware-ak820pro-rowisr/). Since then:
+
+1. Commit 4790208267 on row-isr. `git -C qmk_firmware-ak820pro-rowisr show 4790208267`.
+2. Both commits cherry-picked onto ak820pro-jdlien as branch lockchan-every-build-main: e3cc253727 and cbd0d2f308 on c43b104157. Read them through git from the shared repository: `git -C qmk_firmware-ak820pro show cbd0d2f308`, `git -C qmk_firmware-ak820pro show lockchan-every-build-main:keyboards/a_jazz/ak820pro/bluetooth/ch582f_ajazz.h`. The header's conflict was resolved by hand.
+
+Measured since your review: all three flavours build at 4790208267. The cherry-picked daily builds; the cherry-picked dev compiled and links but fails a build.sh structural check for the row ISR's detector, which that branch has not got. raw81_test.py and lockchan_test.py pass. None of this has run on a board.
+
+Answer:
+A. For each P1 and P2 of your earlier review: fixed, not fixed, or wrong, by tracing the code.
+B. Is the moved ACK deferral correct on a release build, where the drain reads a byte at a time and raw81 and r91 do not exist? Trace: `drained` on every exit of the drain loop including the WDT_TEST_HOOKS injection path; the expiry of a stale `61` / `61 0D` when r81's silence logic is absent (F-019's RX_QUIET_TICKS); ch582_tx_drain() and the bootloader's use of the pump, and whether the deferral can delay or break a drain's deadline; the deep sleep's admission and wake; the first frame after a boot or a resync; whether a sustained 5A or other inbound stream can hold keyboard reports back, and for how long at most.
+C. The hid_rawhid_media_forget() call and the clock generation check: any new failure?
+D. Does the cherry-picked branch differ from row-isr in a way that makes these changes wrong there? Its row ISR is the old one.
+
+Report P1, P2, P3 tables with file:line, the finding, and the scenario. Report only what you traced, and say what you could not verify. End with one line: READY or NOT READY.

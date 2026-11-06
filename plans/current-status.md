@@ -103,13 +103,22 @@ so is the dongle's raw HID (`raw81`), so on daily no now-playing text and no clo
 board wirelessly.** With the data line off for the drain, white gets neither. The Mac's daemon keeps
 sending (`lockchan=waiting`, frames counted as sent): its log looks healthy, and the board drops the
 frames after keeping their lock bits. A daily build's now-playing and clock are USB only.
-**Moved 11-05: `row-isr` `ee2013b5c0` puts the Bluetooth receiver in every build** (daily token
-`0xcc71d517`, heap gap 2152 B; dev `0x82be955d`, 336 B; fpb `0x16af7ed0`, 2152 B), and an idle pass no
-longer reads the time for its two polls. Built, host tests pass, not on a board yet: flashing it takes
-JD's word and his `Fn`+`Esc`, and restarts the daily soak. Next, on codex's READY
-(`plans/review-prompt-lockchan-every-build.txt`): the same commit cherry-picked onto `ak820pro-jdlien`,
-`deps.lock` moved with it, and `build.sh`'s check that every flavour carries `lockchan_feed`. `--radio`
-stays dev-only until the 2.4G run. The sentences above describe the daily on white until that flash.
+**Moved 11-05: the Bluetooth receiver is in every build, and on `ak820pro-jdlien`.** `row-isr`
+`4790208267` (daily token `0x3501ba59`, heap gap 2136 B; dev `0x50f8f2d1`, 336 B; fpb `0x20196ead`,
+2136 B), and the same two commits on `ak820pro-jdlien` at `cbd0d2f308` (daily `0xe41f89da`, 2016 B;
+its dev compiles but fails `build.sh`'s check for the row ISR's detector, which that branch lacks
+until the merge). Also in them: an idle pass reads no time for the two polls; the ACK deferral in
+every build, the release builds' lost press or stuck release, older than the channel; a refused
+legacy clock SET claims nothing; a wake forgets the raw-HID media lease. Host tests pass, and codex is
+READY on both branches (`plans/review-codex-lockchan-every-build-raw.md`, `-verify-raw.md`), with the
+limits it names: a sustained inbound stream can delay a report by the deferral's 50 ms cap, and an ACK
+later than the cap can still be misattributed. **Not on a board yet:** flashing white takes JD's word
+and his `Fn`+`Esc` and restarts the daily soak. `flash.sh` backs up first, so the data line comes up and
+the daemon goes out before the key, not after it. **`deps.lock` stays at v0.3.1's `cfe6c2d3a5`:** the
+branch was already one commit ahead of it, the combination of these commits with the old row ISR has
+never run, and the row ISR's merge moves the pin. At that move, add `build.sh`'s check that every
+flavour carries `lockchan_feed`. `--radio` stays dev-only until the 2.4G run. The sentences above
+describe the daily on white until that flash.
 
 **A new drain runs from FULL: relay 2 off at 13:56:13 11-05**, the gauge reading FULL 100%, the
 pack 4140 mV, `charge_mah` -2754.007 in `history/power-bench-2026-10-15/power.csv`, the data line

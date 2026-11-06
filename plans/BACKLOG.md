@@ -1397,7 +1397,7 @@ v0.1.1) are unsigned. None of it is started:
    October, from two sessions on one repo.
 9. **Release defaults:**
    - `--lockchan` only against firmware with the lock-LED handler: in every
-     build since `ee2013b5c0` (11-05), so not in v0.3.1 or earlier, whose
+     build on `ak820pro-jdlien` since 11-05, so not in v0.3.1 or earlier, whose
      release builds drop the frames while the README and `INSTALL.txt` tell
      every owner to pass the flag;
    - the Mac's `--radio` the same, for the 2.4G dongle's raw HID (`raw81`),
