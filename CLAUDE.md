@@ -141,7 +141,9 @@ the commit names the live settings' side (`hostagent/ak820profiles.py`).
 the curve JD's eye settled, the hold's ramp, the Cycles' place kept through a speed change,
 `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), the new effect `Rain`, one colour, Rainfall now
 `Rain RGB`; the warm window 51.9 us and 41.5% at full white. ⚠️ No bootloader over USB or dev
-hooks: the return to dev is `Fn`+`Esc`. ⚠️ **A new drain runs from FULL since 13:56:13 11-05**
+hooks: the return to dev is `Fn`+`Esc`. ⚠️ No wireless now-playing or
+clock either: the lock-light receiver and the dongle's raw HID are dev-only, and the Mac's log still
+reads as if they arrive. ⚠️ **A new drain runs from FULL since 13:56:13 11-05**
 (`charge_mah` -2754.007, relay 2 off): `plans/current-status.md`. ⚠️ The same setting gives
 20-35% less light on battery than on USB while charging, by the camera, accepted. **Before it,
 from 12:46 11-05: `feef9b4bfe`** (dev token `0xd3e8d30b`). **Before it, from 12:15:
