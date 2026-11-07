@@ -92,17 +92,19 @@ set, the camera gate). The fallback for the night is `8355011389`
 is judging its curve by eye.** Written for a fresh session.
 
 *The newest state, which overrides the paragraphs under it where they differ:*
-**white runs the DAILY build of `row-isr` `4c85f385a9` since 13:55 11-05 (token `0xae868950`;
+**White runs the DAILY build of `row-isr` `4790208267` since 00:35 11-07 (token `0x3501ba59`; dev
+`0x50f8f2d1`), the soak restarted, the drain running on: daemon out and data line up 00:35:18, off and
+back 00:36:13, relay 2 off throughout.** The paragraph after next says what it adds.
+**Before it, the DAILY build of `row-isr` `4c85f385a9` from 13:55 11-05 (token `0xae868950`;
 dev `0xc7bc1681`, devprobe `0xea3c593d`), the soak, with JD typing on it.** It has every effect
 on the curve, the hold's ramp, the Cycles' place kept through a speed change, the ceilings
 `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), `Rain`, and Help's saturation keys. No bootloader
 over USB and no dev hooks: the way back to dev is JD's `Fn`+`Esc`, and `ladder_check`, `current_map`
 and `rowisr_diag` do not run on it. The gauge, `ak820 health` and `Fn`+`D` do. Flashes need his word.
-⚠️ **The receiver for the Mac's lock-light frames is dev-only (`AK820_DEV_HOOKS`, `lockchan_feed`), and
-so is the dongle's raw HID (`raw81`), so on daily no now-playing text and no clock sync reach the
-board wirelessly.** With the data line off for the drain, white gets neither. The Mac's daemon keeps
-sending (`lockchan=waiting`, frames counted as sent): its log looks healthy, and the board drops the
-frames after keeping their lock bits. A daily build's now-playing and clock are USB only.
+⚠️ **On that build and every release through v0.3.1, the receiver for the Mac's lock-light frames is
+missing, so no now-playing text or clock sync reaches the board wirelessly, while the daemon's log reads
+as if they do (`lockchan=waiting`, frames counted as sent).** Release builds of the dongle's raw HID
+(`raw81`) still lack it.
 **Moved 11-05: the Bluetooth receiver is in every build, and on `ak820pro-jdlien`.** `row-isr`
 `4790208267` (daily token `0x3501ba59`, heap gap 2136 B; dev `0x50f8f2d1`, 336 B; fpb `0x20196ead`,
 2136 B), and the same two commits on `ak820pro-jdlien` at `cbd0d2f308` (daily `0xe41f89da`, 2016 B;
@@ -112,13 +114,12 @@ every build, the release builds' lost press or stuck release, older than the cha
 legacy clock SET claims nothing; a wake forgets the raw-HID media lease. Host tests pass, and codex is
 READY on both branches (`plans/review-codex-lockchan-every-build-raw.md`, `-verify-raw.md`), with the
 limits it names: a sustained inbound stream can delay a report by the deferral's 50 ms cap, and an ACK
-later than the cap can still be misattributed. **Not on a board yet:** flashing white takes JD's word
-and his `Fn`+`Esc` and restarts the daily soak. `flash.sh` backs up first, so the data line comes up and
-the daemon goes out before the key, not after it. **`deps.lock` stays at v0.3.1's `cfe6c2d3a5`:** the
+later than the cap can still be misattributed. On white since 00:35 11-07. ⚠️ A flash from a daily build:
+`flash.sh` backs up first, so the data line comes up and the daemon goes out before JD's `Fn`+`Esc`, not
+after it. **`deps.lock` stays at v0.3.1's `cfe6c2d3a5`:** the
 branch was already one commit ahead of it, the combination of these commits with the old row ISR has
 never run, and the row ISR's merge moves the pin. At that move, add `build.sh`'s check that every
-flavour carries `lockchan_feed`. `--radio` stays dev-only until the 2.4G run. The sentences above
-describe the daily on white until that flash.
+flavour carries `lockchan_feed`. `--radio` stays dev-only until the 2.4G run.
 
 **A new drain runs from FULL: relay 2 off at 13:56:13 11-05**, the gauge reading FULL 100%, the
 pack 4140 mV, `charge_mah` -2754.007 in `history/power-bench-2026-10-15/power.csv`, the data line

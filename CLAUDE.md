@@ -136,14 +136,16 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 13:55 11-05: the DAILY build of `row-isr` `4c85f385a9`** (token
+**On white since 00:35 11-07: the DAILY build of `row-isr` `4790208267`** (token `0x3501ba59`; dev
+`0x50f8f2d1`): the build below plus Bluetooth now-playing and the wireless clock in every build, and the
+ACK deferral in every build (the same commits on `ak820pro-jdlien` at `cbd0d2f308`; `deps.lock` stays at
+v0.3.1 until the row ISR's merge). The dongle's raw HID stays dev-only. The soak restarted there; the
+drain ran on, relay 2 off. **Before it, from 13:55 11-05: the DAILY build of `row-isr` `4c85f385a9`** (token
 `0xae868950`; dev `0xc7bc1681`), the soak: the row ISR rewrite and D9, every enabled effect on
 the curve JD's eye settled, the hold's ramp, the Cycles' place kept through a speed change,
 `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), the new effect `Rain`, one colour, Rainfall now
 `Rain RGB`; the warm window 51.9 us and 41.5% at full white. ⚠️ No bootloader over USB or dev
-hooks: the return to dev is `Fn`+`Esc`. ⚠️ No wireless now-playing or
-clock either: the lock-light receiver and the dongle's raw HID are dev-only, and the Mac's log still
-reads as if they arrive. ⚠️ **A new drain runs from FULL since 13:56:13 11-05**
+hooks: the return to dev is `Fn`+`Esc`. ⚠️ **A new drain runs from FULL since 13:56:13 11-05**
 (`charge_mah` -2754.007, relay 2 off): `plans/current-status.md`. ⚠️ The same setting gives
 20-35% less light on battery than on USB while charging, by the camera, accepted. **Before it,
 from 12:46 11-05: `feef9b4bfe`** (dev token `0xd3e8d30b`). **Before it, from 12:15:
