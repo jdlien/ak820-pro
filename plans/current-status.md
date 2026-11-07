@@ -130,6 +130,14 @@ charge in the drain is noted beside it. The last drain averaged 11.6 mA, so abou
 it: relay 2 on at 20:11:25 11-04 (`charge_mah` 414.24), ~530 mA tapering to termination at
 ~05:48 11-05: 3119 mAh in over 9.6 h, 3168 by 13:56 with the charger's top-ups at FULL, against
 the last drain's 3243 net out.
+- **Flashed mid-drain at 00:35 11-07 (the daily `4790208267`), the count unbroken**, so the baseline
+  stands: from 13:56:08 11-05 to 00:37 11-07 the logger has no gap over 5 s, no step off the
+  current's integral and no charging sample. At the data line's rise (00:35:18): **368.2 mAh since
+  FULL over 34.65 h, 10.63 mA mean**, the pack 4020 mV. The window to 00:36:13 cost 0.55 mAh (mean
+  37 mA, peak 69).
+- ⚠️ **The conditions change at 00:35:18 11-07: read the drain in two parts there.** The build
+  before it dropped the Mac's lock-light frames; this one paints the title and clock from them, the
+  load the dev builds carried in earlier drains, unmeasured here.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
