@@ -114,7 +114,9 @@ every build, the release builds' lost press or stuck release, older than the cha
 legacy clock SET claims nothing; a wake forgets the raw-HID media lease. Host tests pass, and codex is
 READY on both branches (`plans/review-codex-lockchan-every-build-raw.md`, `-verify-raw.md`), with the
 limits it names: a sustained inbound stream can delay a report by the deferral's 50 ms cap, and an ACK
-later than the cap can still be misattributed. On white since 00:35 11-07. ⚠️ A flash from a daily build:
+later than the cap can still be misattributed. On white since 00:35 11-07. **Verified on white 11-08:**
+the title over Bluetooth on the panel by JD's eye ("the song title is showing"), and his first key after
+~38 h untouched woke the board and the Mac, the daemon's wireless clock frame out 20 s later. ⚠️ A flash from a daily build:
 `flash.sh` backs up first, so the data line comes up and the daemon goes out before JD's `Fn`+`Esc`, not
 after it. **`deps.lock` stays at v0.3.1's `cfe6c2d3a5`:** the
 branch was already one commit ahead of it, the combination of these commits with the old row ISR has
