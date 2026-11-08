@@ -138,6 +138,22 @@ the last drain's 3243 net out.
 - ⚠️ **The conditions change at 00:35:18 11-07: read the drain in two parts there.** The build
   before it dropped the Mac's lock-light frames; this one paints the title and clock from them, the
   load the dev builds carried in earlier drains, unmeasured here.
+- **Part 2, from 00:35:18 11-07 to JD's first key at 14:52:09 11-08 (the logger to 14:53:12):
+  38.3 h, 129.3 mAh, 3.375 mA mean**, under 6 mA 99.6% of the time. No one touched white in it, so
+  it says nothing yet of the frames' load awake. The count is still unbroken: no gap, no jump, no
+  charging sample. **Whole drain to 14:53 11-08: 72.95 h, 497.5 mAh since FULL, 12.4% of R4's
+  4011.6, 87.6% left**, the pack 4004 mV.
+  - The keep-alive woke white 43 times, every ~25:02 from 01:06:39 to 18:38:02 11-07 (~5 s each, peak
+    ~27 mA), then stopped at its 18 h bound. Asleep, the mean was **3.386 mA from 07:00 to 18:00 11-07
+    with the link held and the wakes in it, 3.186 mA from 19:30 11-07 to 11:00 11-08** after the
+    module's drop: the keep-alive and the held link cost ~0.2 mA here.
+  - **One wake unexplained: 11:20:17 11-08, 10 s, peak 26.9 mA, dark**, no key and nothing in the
+    daemon's log. Its shape is a keep-alive wake's, but it came 16 h 42 min after the last one, well
+    before the backstop's ~27.5 h, with the bound already past.
+  - The board's gauge read 92% at about 14:53 (Power saver), against 87.6% by the count. ⚠️ It is not
+    counting from FULL: the flash wiped the saved level, and a reboot on battery starts from the
+    pack's voltage ([docs/battery.md](../docs/battery.md), "The level after a flash"), here 4020 mV
+    on the plateau.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
