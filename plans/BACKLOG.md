@@ -31,6 +31,23 @@ sighting on record.
 Not image retention ("A ghost of the dashboard's 100%", below): that is a faint copy of something
 shown. These were bright pixels where nothing had been drawn.
 
+**The read, 11:45 11-09** (data line up 11:45:48 to 11:45:51, daemon out from ~11:45:46, relay 2 off;
+`history/lcd-speckle-20261109/health-1145.txt`): every blit counter is zero since the flash's boot (00:35 11-07,
+reset flags 0x01, no watchdog): 5,246 blits issued, 0 timeouts, 0 never started, 0 stalled, 0 lost
+completions, 0 unknown, 0 retries; `blit_gap_max_ms` 6, `loop_gap_max_ms` 9, no pass of 25 ms or
+more. (`uptime_ms` read 62.7 min: the system timer stands still asleep, so it counts awake time.) So
+none of the known failure paths fired in this boot, the 09-22/23 class among them; as suspect 1 says,
+that does not clear a bad window or extra bytes on a transfer that completed.
+
+**What the place and the colour suggest, by inference:** white is `0xFFFF` in RGB565, what all-ones
+bytes paint, and all-ones is what an undriven line or erased flash reads. Bytes that reach the panel
+after a write has filled its window land at that window's start, since the panel's pointer wraps to
+it. The channel digit's rect is x 108-119, rows 0-23, starting at (108, 0): its top row is above the
+digit and right of the strip, where JD saw the speckle. The digit repaints at every link-state change,
+so at every wake's reconnect. A few stray all-ones bytes right after a digit repaint fit both the place
+and the colour. Unproven; it says where to look, the digit's paint and what follows it on SPI0, and
+makes "had the board just woken or reconnected" the useful question at the next sighting.
+
 **If it comes back:** a photo first, before any key. Note what was on screen, roughly when, and
 whether the board had just woken. Then one health read for `blit_timeouts` (the data line up, the
 daemon paused). On a dev build the console names each timeout's class (`[lcd] blit timeout #n
