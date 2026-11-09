@@ -206,6 +206,17 @@ the last drain's 3243 net out.
   at ~14:57 (a reboot), 14:58:19-14:58:24 (the daemon out 14:58:18, back 14:58:24; a BT title clean,
   the token read back). Every counter read zero both times
   (`history/lcd-speckle-20261109/fixA-read-1454.txt`, `fixA-read-1458.txt`).
+- **The switchable diagnostic, from 15:14:53 11-09:** `lcd-diag` `5688b2a975`
+  (`via-daily-5688b2a975-20261109-151210.bin`, token `0x8edc1022`; never merged), fix A with the
+  old send kept beside it, a RAM mode byte, and boots in A's mode. Its flash: the data line up
+  15:13:09-15:15:02 (the daemon out 15:13:08), JD's `Fn`+`Esc`, relay 2 off, no charging by the
+  logger. Mode switches over the data line (Blackberry; relay 2 off throughout):
+  - 15:14:57, set to old, inside the flash's window;
+  - 15:38:31-15:38:33, read and set to A's mode;
+  - 16:55:32-16:55:35, set to old for the camera;
+  - 16:59:28-16:59:31, back to A's mode.
+
+  Old mode garbled over BT, A's mode stayed clean (`plans/BACKLOG.md`'s first item).
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full

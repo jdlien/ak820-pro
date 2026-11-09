@@ -188,6 +188,37 @@ not have caught it.
   3.8 KB). It hides the symptom and leaves the cause open. Fold it into the next firmware change
   rather than a flash of its own.
 
+## On 2.4G with music playing, the board barely sleeps (2026-11-09) -- measured; a daemon hold and a firmware guard, neither built; blocks raw81 in a release
+
+raw81, now in every build (`row-isr` `585f14a23e` and fix A `6683c18134`), puts the Mac's titles on
+the screen over the dongle. The daemon's `--radio` path has no idle hold. It polls the media every
+3 s and sends the playback readout each time, even unchanged; it also sends both text lines every
+30 s and on a change. A silent board gets a new session about every 34 s.
+
+**Measured on white, 14:22:50-14:38 11-09** (dev `4790208267`, 2.4G, Power saver, music playing, the
+board untouched; `power.csv` and the wake ring `history/lcd-speckle-20261109/wake-ring-1448.txt`):
+- It slept 3 min after the last key (14:25:55), at a 3.33 mA floor.
+- Each daemon session drew a ~5 s blip to ~16 mA. The ring has no entry for them, so they are the
+  CH582F's radio with the MCU asleep, about +1.9 mA at the 34 s cadence.
+- Twice it woke lit, at ~44 mA for 3-4 min: 14:26:49 and 14:33:21. Both were KEY wakes on matrix
+  columns nobody pressed (P0.7, column 7; P0.4, column 0), each within seconds of a radio session's
+  start. A KEY wake restarts the idle (`sleep.c`), so the lights stay on for Power saver's 3 min.
+  Radio frames themselves don't count as input (`power.c`: the ladder reads key and encoder
+  activity only).
+- **The mean over 14:26-14:38 was ~28 mA**, against 3.3 asleep.
+
+**Two fixes, neither built:**
+1. **The daemon (host side, the main one):** hold radio pushes after `HOLD_IDLE` of Mac input
+   idle, as the lock-light path does (`lockchan/sender.rs`), and send the playback readout only on
+   a change (the board advances the position itself). That cuts the sessions, so the blips and
+   the chances for a phantom wake both drop.
+2. **The firmware:** count a KEY wake as input only if the matrix reports a key within the
+   recovery's input step (`SLEEP_RC_INPUT`, ~50 ms). Otherwise record a phantom, stay dark and
+   sleep again, so a phantom costs a blip, not 3 min lit. Why column pins edge at a radio session is
+   open (coupling from the module's transmit is a guess), on two events so far.
+
+Before raw81 ships in a release, fix 1 at least, and the same measurement repeated after it.
+
 ## Brightness after the new curve (2026-11-04) -- open; before the row ISR's merge
 
 The ceilings are settled (`SAVER_VAL` 191, `DIM_VAL` 102, from the percent map of
