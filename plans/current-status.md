@@ -191,6 +191,16 @@ the last drain's 3243 net out.
 - **A data-line window, 13:53:03-13:53:07 11-09** (the daemon out 13:53:02, back 13:53:07; relay 2
   off), Blackberry's dev read on white's first wake after 13:44
   (`history/lcd-speckle-20261109/dev-read-1353.txt`).
+- **The slider to 2.4G at ~14:21:50 11-09** (a reboot), then **a sleep measurement on 2.4G,
+  14:22:50-14:38**: dev, Power saver, music playing, white untouched. It slept at 14:25:55 (3.33 mA
+  floor), but the daemon's radio sessions (every ~34 s) each drew a ~5 s blip to ~16 mA. Twice it
+  woke lit at ~44 mA for 3-4 min: 14:26:49 and 14:33:21. Both were KEY wakes on matrix columns
+  nobody pressed (the wake ring, `history/lcd-speckle-20261109/wake-ring-1448.txt`), each within
+  seconds of a radio session's start. **The mean over 14:26-14:38 was ~28 mA.**
+- **A data-line window, 14:48:19-14:48:44 11-09** (JD's key woke white at 14:48:17; the daemon out
+  14:48:17, back 14:48:44; relay 2 off): the wake ring read, then **fix A flashed from dev, no
+  `Fn`+`Esc`**: `via-daily-6683c18134-20261109-142621.bin` (`row-isr`, token `0x2ca0ce80`; the
+  title fix, raw81 in every build, the hardening). Settings restored.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
