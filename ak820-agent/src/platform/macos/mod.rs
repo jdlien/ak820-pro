@@ -74,6 +74,11 @@ impl crate::platform::Platform for Native {
         radio_lock::try_take().map(|held| held.map(|l| Box::new(l) as crate::platform::RadioGuard))
     }
 
+    /// The HID system's `HIDIdleTime`, as the lock-LED sender reads it.
+    fn host_input() -> Option<crate::input::Reading> {
+        lock_lights::idle().map(crate::input::Reading::Idle)
+    }
+
     fn spawn_media(interval: Duration, log: &Log) -> Result<media::MediaRemoteSource, String> {
         let log = Log::at(log.path());
         media::MediaRemoteSource::spawn(

@@ -555,3 +555,70 @@ and leaves no I/O outstanding. Left as stated gaps: an outer-loop test of
 directly), a second Windows user, and exhausting 256 real search candidates.
 The cable-out test runs on the Mac (JD, 10-20): its bench drops USB data
 with no hands.
+
+## A sleeping board left alone (11-09, built, not installed)
+
+Measured on white 11-09 (`plans/BACKLOG.md`, "On 2.4G with music playing,
+the board barely sleeps"): with music playing and the board idle on 2.4G it
+averaged ~28 mA against 3.3 asleep. A session every ~34 s to a silent board
+cost the module a ~5 s blip each, and twice a session's start coincided with
+a phantom key wake. Three rules in `ak820-agent/src/radio.rs`, the radio
+only (USB unchanged):
+
+1. **The hold.** No input on the host for `HOLD_IDLE` (180 s, the lock-light
+   sender's constant and sources, read raw by `Platform::host_input`:
+   `HIDIdleTime` on macOS, `GetLastInputInfo` on Windows, followed across
+   ticks by `src/input.rs`): nothing is sent and the acquisition ends (state
+   `held`). Checked as the tick starts and again, aged by the tick: after
+   the probe, before every media request (each line, the readout, all after
+   the lock lights' revocation) and after a failed one; a poisoned radio
+   keeps its lock. Input's return starts a new session, whose qualification
+   sends the whole text.
+2. **A silent board waits for input.** At the backoff's 30 s cap the next
+   session starts only once the host has seen input since the silence, and
+   no sooner than the cap. Input is a change between two samples (Windows:
+   `dwTime`, the last input's identity; macOS: an idle that fell against the
+   monotonic clock), latched until the backoff runs out.
+3. **The readout when it matters**, not every tick: with any text push, on
+   a new qualification, on a change of whether it shows, the duration or the
+   track, on a seek (`SEEK_SLACK_S`), after one the board did not confirm,
+   and to renew its lease. The board advances the position itself between
+   readouts but drops a raw-HID readout 20 s after the last it ran
+   (`PLAYBACK_TIMEOUT_MS`, `display.c`). The renewal goes at the first tick
+   from which waiting one more would put its retry past 18 s; while a
+   confirmed readout's lease runs the daemon ticks no slower than 3 s
+   (`Radio::next_tick`), so at any `--interval` a renewal and one retry land
+   inside the lease.
+
+No idle time to read: rules 1 and 2 stand aside. A track change while held
+waits for input; the board's title expires ~3 min after the last push and
+its play time 20 s after the last readout, as with the lock lights' hold. A
+board woken with no input reaching the host (its knob, a key to another
+host) gets no title until there is input: the price of leaving it alone.
+
+**Codex's review** ([raw](review-codex-radio-idle-hold-raw.md)): NOT READY,
+two P2s and two P3s, all taken. P2 1, a fixed 12 s renewal expired at
+`--interval` 11 and lost its retry at 5: the derived renewal point and the
+3 s pace while leased, tested with a lost renewal against the lease at 0.5,
+3, 5 and 11 s. P2 2, a key within a second after the silence was ignored
+for good: input as a change between samples, latched. P3 3, a probe reply
+crossing the hold still sent: the hold rechecked, aged, before the media and
+before the readout. P3 4, Windows' 49.7-day wrap read as input: `dwTime`'s
+identity, and macOS's implausible falls refused. Added with them: a hold
+ending inside a backoff, the input turning unreadable and back, and the held
+radio's transport handing the media to the lock lights
+(`agent::lock_lights_may_carry`, the loop's grant condition, extracted).
+
+**Codex's verify** ([raw](review-codex-radio-idle-hold-verify-raw.md)): the
+two P2s and the Windows wrap fixed; NOT READY on two P3s, both taken. The
+hold inside the tick missed the second line, the revocation and failures
+that end the tick: it is now checked before every media request and after a
+failed one (the poisoned lock kept). New: the macOS check that refused a
+fall placing the input before the last sample refused input made just
+before a sleep, if `HIDIdleTime` counts the sleep and `Instant` does not.
+Dropped rather than given a sleep-counting clock: which clock `HIDIdleTime`
+keeps is not known, a sleep-counting elapsed would read a sleep as input if
+it excludes sleep, and a fall against `Instant` reads no sleep as input
+either way. It guarded only against a hypothetical glitch; the lock-light
+sender has never had it.
+Owed: the 11-09 measurement repeated on it.

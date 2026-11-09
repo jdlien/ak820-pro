@@ -86,6 +86,17 @@ pub trait Platform {
     /// (codex, play times, P2-2).
     const POSITION_AS_OF_OBSERVATION: bool = false;
 
+    /// The last input on this machine, any device, read raw: the radio's
+    /// hold and its wait after a silence (`crate::radio`, rules 1 and 2)
+    /// take one reading each media tick and follow them across ticks
+    /// (`crate::input::Track`). The same sources the lock-LED sender's hold
+    /// and wake guess read (`HIDIdleTime` on macOS, `GetLastInputInfo` on
+    /// Windows). `None` when it cannot be read, and the radio behaves as it
+    /// did before the hold. The default: none.
+    fn host_input() -> Option<crate::input::Reading> {
+        None
+    }
+
     /// Has something asked this daemon to stop (Windows: `ak820 install` or
     /// `uninstall` signalling its stop event)? The loop then returns, which
     /// stops the lock-LED sender with its one bounded restore. Default: never.

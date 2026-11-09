@@ -74,6 +74,14 @@ impl crate::platform::Platform for Native {
 
     const POSITION_AS_OF_OBSERVATION: bool = true;
 
+    /// The lock-LED sender's own source: `GetLastInputInfo`'s `dwTime`, the
+    /// last input's identity, with `GetTickCount` (`crate::input` follows
+    /// the identity, so 49.7 days without input never wrap back to fresh).
+    fn host_input() -> Option<crate::input::Reading> {
+        use crate::lockchan::sender::Platform as _;
+        lock_lights::WinPlat::default().input().map(|(last, now)| crate::input::Reading::Ticks { last, now })
+    }
+
     fn stop_requested() -> bool {
         STOP.get().is_some_and(|e| e.requested())
     }

@@ -73,7 +73,8 @@ pub struct LockchanStatus {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct RadioStatus {
     /// `off`, `absent`, `contended`, `quiet`, `qualified`, `silent`, `busy`,
-    /// `refused`, `unresponsive`, `abandoned`, `lock error`.
+    /// `refused`, `unresponsive`, `abandoned`, `lock error`, `held` (no input
+    /// on this machine for `HOLD_IDLE`).
     pub state: String,
     pub session: Option<u8>,
     /// Has the board answered this session's probe since the last failure

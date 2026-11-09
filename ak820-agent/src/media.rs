@@ -73,7 +73,8 @@ pub struct Plan {
     /// Whether the text differs from what was last pushed successfully — the
     /// Python logs the track only then, not on a keepalive.
     pub changed: bool,
-    /// The playback readout. Always.
+    /// The playback readout. Always: USB sends it every poll. The radio sends
+    /// it only when it matters (`crate::radio`, rule 3).
     pub playback: (u8, Vec<u8>),
 }
 

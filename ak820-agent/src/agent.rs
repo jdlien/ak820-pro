@@ -262,7 +262,9 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
             log.line("radio: --radio-only (development): the media goes over the radio even with the cable in");
         }
         log.line("radio: now-playing over the 2.4G dongle while the board is not on USB (--radio)");
-        Radio::new(std::process::id() as u64)
+        let mut r = Radio::new(std::process::id() as u64);
+        r.interval = opts.interval;
+        r
     });
     let mut st = Status {
         version,
@@ -403,6 +405,7 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
                             P::open_radio,
                             publisher,
                             &snapshot,
+                            P::host_input(),
                             || logfile::stamp(&P::host()),
                             &mut &log,
                         )
@@ -431,10 +434,7 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
                     // When the position was true is the platform's to say.
                     let pos_at = if P::POSITION_AS_OF_OBSERVATION { observed } else { now };
                     lc.set(crate::lockchan::sender::Media::of(&snapshot), observed, pos_at);
-                    // Only when USB is Absent (not busy, refused or a failed
-                    // discovery) and the radio is not carrying (R2-5).
-                    let absent = matches!(&outcome, Some(Err(hid::Error::Absent)));
-                    if absent && transport == "none" {
+                    if lock_lights_may_carry(&outcome, transport) {
                         if !lc.granted() {
                             // Leaving raw HID: when it comes back it publishes
                             // in full, not from its memory of what it last
@@ -464,7 +464,10 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
             st.smtc_failures = health.failures;
             st.smtc_last_error = health.last_error;
             st.smtc_stale_s = health.stale_for.map(|d| d.as_secs());
-            next_media = Instant::now() + opts.interval;
+            // The interval, or sooner while the radio keeps a readout's lease
+            // (`Radio::next_tick`); without the radio, or on USB, as it is.
+            let now = Instant::now();
+            next_media = now + radio.as_ref().map_or(opts.interval, |r| r.next_tick(now));
         }
 
         if let Some(clock) = clock.as_mut() {
@@ -616,6 +619,14 @@ fn open_noting<P: Platform>() -> Result<P::Device, hid::Error> {
         }
     }
     r
+}
+
+/// May the lock lights carry the media after this media tick (R2-5)? Only
+/// when USB's opener said `Absent` (not busy, refused or a failed discovery;
+/// `None` is `--radio-only`, which never asks) and the radio is not carrying
+/// it: not set up, or in a quiet, silent or held.
+pub fn lock_lights_may_carry(outcome: &Option<Result<(), hid::Error>>, transport: &str) -> bool {
+    matches!(outcome, Some(Err(hid::Error::Absent))) && transport == "none"
 }
 
 /// Which transport last delivered the text. Entering any other refreshes the
@@ -1302,6 +1313,7 @@ mod media_tick_tests {
     use super::*;
     use crate::platform::RadioGuard;
     use crate::raw81::fake::{Board, Fake, FakeClock};
+    use crate::lockchan::sender::HOLD_IDLE;
     use crate::raw81::link::{Clock, QUIET};
     use std::cell::Cell;
     use std::rc::Rc;
@@ -1333,6 +1345,10 @@ mod media_tick_tests {
         lock_takes: Duration,
         /// The USB side's pushes: (text pushed?) per USB tick.
         usb_ticks: Vec<bool>,
+        /// What every tick publishes.
+        snap: Snapshot,
+        /// The host's input as the radio reads it (`None`: unreadable).
+        reading: Option<crate::input::Reading>,
     }
 
     impl<'c> Rig<'c> {
@@ -1348,13 +1364,16 @@ mod media_tick_tests {
                 held: Rc::new(Cell::new(false)),
                 lock_takes: Duration::ZERO,
                 usb_ticks: Vec::new(),
+                snap: track(),
+                reading: None,
             }
         }
 
         /// One media tick with the USB opener answering `usb` (and, opened,
         /// the cycle answering `cycle`).
         fn tick(&mut self, usb: Result<(), hid::Error>, cycle: Result<(), hid::Error>) -> (Option<Result<(), hid::Error>>, &'static str) {
-            let snap = track();
+            let snap = self.snap.clone();
+            let reading = self.reading;
             let c = self.c;
             let f = &self.f;
             let free = &self.free;
@@ -1384,7 +1403,7 @@ mod media_tick_tests {
                             Ok(None)
                         }
                     };
-                    r.tick(c, lock, || Ok(f), p, &snap, || "now".into(), &mut Vec::<String>::new())
+                    r.tick(c, lock, || Ok(f), p, &snap, reading, || "now".into(), &mut Vec::<String>::new())
                 },
                 &mut self.p,
                 &mut self.via,
@@ -1521,18 +1540,22 @@ mod media_tick_tests {
         assert!(g.held.get(), "a poisoned lock outlives the Radio");
     }
 
+    /// The timed-out write is the keepalive's first line: a steady tick
+    /// sends nothing over the radio now (the readout goes when it matters,
+    /// `radio::Readout`), so the next request after the first push is the
+    /// keepalive's, not a 3 s tick's readout as it was.
     #[test]
     fn a_write_timeout_recovers_with_a_probe_and_the_whole_text() {
         let c = FakeClock::new();
-        // Probe, two lines, playback answered; then the next playback's write
-        // times out (cancelled, never left).
+        // Probe, two lines, playback answered; then the keepalive's first
+        // line's write times out (cancelled, never left).
         let mut script = vec![Board::Answer { ms: 20 }; 4];
         script.push(Board::WriteTimeout);
         let mut g = Rig::new(&c, &script);
         g.absent();
         c.advance(QUIET);
         g.absent();
-        c.advance(Duration::from_secs(3));
+        c.advance(media::KEEPALIVE);
         g.absent();
         assert_eq!(g.radio.state(), radio::State::Unresponsive);
         assert!(!g.radio.status.qualified);
@@ -1585,6 +1608,9 @@ mod media_tick_tests {
         assert_eq!(g.radio.status.session, None);
     }
 
+    /// The radio's failure is a seek's readout going unanswered: a steady
+    /// tick sends nothing over the radio now (`radio::Readout`), so the
+    /// failure needs a reason to send, inside the keepalive.
     #[test]
     fn a_radio_failure_then_usb_refreshes_the_text_whole() {
         let c = FakeClock::new();
@@ -1592,12 +1618,15 @@ mod media_tick_tests {
         let mut script = vec![Board::Answer { ms: 20 }; 4];
         script.extend(vec![Board::Silent; 4]);
         let mut g = Rig::new(&c, &script);
+        g.snap = Snapshot { pos_s: 10, dur_s: 300, ..track() };
         g.absent();
         c.advance(QUIET);
         assert_eq!(g.absent(), "radio");
         assert_eq!(g.via, Via::Radio);
         c.advance(Duration::from_secs(3));
-        g.absent(); // the playback goes unanswered: the radio is silent
+        g.snap.pos_s = 100; // a seek
+        g.absent(); // its readout goes unanswered: the radio is silent
+        assert_eq!(g.radio.state(), radio::State::Silent);
         // USB back well inside the keepalive: the text goes whole anyway.
         c.advance(Duration::from_secs(3));
         g.tick(Ok(()), Ok(()));
@@ -1646,7 +1675,7 @@ mod media_tick_tests {
             |_, _| unreachable!(),
             Some(&mut radio),
             |r: &mut Radio, p: &mut Publisher| {
-                r.tick(&c, || Ok(Some(Box::new(()) as RadioGuard)), || Ok(&f), p, &track(), || "now".into(), &mut Vec::<String>::new())
+                r.tick(&c, || Ok(Some(Box::new(()) as RadioGuard)), || Ok(&f), p, &track(), None, || "now".into(), &mut Vec::<String>::new())
             },
             &mut p,
             &mut via,
@@ -1654,5 +1683,86 @@ mod media_tick_tests {
         );
         assert!(outcome.is_none());
         assert!(radio.acquired());
+    }
+
+    /// A stuck write that ends its tick past the hold keeps the poisoned
+    /// lock and the abandoned state: the hold's release is not for it.
+    #[test]
+    fn a_stuck_write_crossing_the_hold_keeps_the_poisoned_lock() {
+        use crate::input::Reading;
+        let c = FakeClock::new();
+        let mut script = vec![Board::Answer { ms: 20 }; 4];
+        script.push(Board::StuckWrite);
+        let mut g = Rig::new(&c, &script);
+        g.reading = Some(Reading::Idle(Duration::from_secs(1)));
+        g.absent();
+        c.advance(QUIET);
+        assert_eq!(g.absent(), "radio");
+        // The keepalive's tick a millisecond short of the hold: its first
+        // line's drain takes that millisecond, then the write sticks.
+        c.advance(media::KEEPALIVE);
+        g.reading = Some(Reading::Idle(HOLD_IDLE - Duration::from_millis(1)));
+        g.absent();
+        assert_eq!(g.radio.state(), radio::State::Abandoned);
+        assert!(g.held.get(), "the abandoned write may still go out: the lock is kept");
+        let n = g.sent();
+        g.reading = Some(Reading::Idle(Duration::ZERO));
+        c.advance(Duration::from_secs(60));
+        g.absent();
+        assert_eq!((g.sent(), g.radio.state()), (n, radio::State::Abandoned));
+    }
+
+    /// A held radio (no input on the host for `HOLD_IDLE`) carries nothing.
+    /// Its tick reads `none` with USB's opener `Absent`, which is when the
+    /// loop lets the lock lights carry the media; it holds no lock, makes no
+    /// request and stamps no media attempt, so the lock lights' handover
+    /// waits from the radio's last real request. Input brings it back, and
+    /// it revokes the lock lights before its first media request.
+    #[test]
+    fn a_held_radio_hands_the_media_to_the_lock_lights() {
+        use crate::input::Reading;
+        let c = FakeClock::new();
+        let mut g = Rig::new(&c, &[]);
+        let revokes = Rc::new(Cell::new(0u32));
+        let r = revokes.clone();
+        g.radio.before_media = Some(Box::new(move || r.set(r.get() + 1)));
+        g.reading = Some(Reading::Idle(Duration::from_secs(1)));
+        g.absent();
+        c.advance(QUIET);
+        let (outcome, t) = g.tick(Err(hid::Error::Absent), Ok(()));
+        assert_eq!(t, "radio");
+        assert!(!lock_lights_may_carry(&outcome, t), "the radio carries: the lights are revoked");
+        assert_eq!(revokes.get(), 1);
+        let (last, n) = (g.radio.last_media_attempt, g.sent());
+
+        g.reading = Some(Reading::Idle(HOLD_IDLE));
+        for _ in 0..5 {
+            c.advance(Duration::from_secs(3));
+            let (outcome, t) = g.tick(Err(hid::Error::Absent), Ok(()));
+            assert_eq!(t, "none");
+            assert!(lock_lights_may_carry(&outcome, t), "held: the lights may carry");
+        }
+        assert_eq!(g.radio.state(), radio::State::Held);
+        assert!(!g.held.get(), "no radio lock while held");
+        assert_eq!(g.sent(), n, "no request while held");
+        assert_eq!(g.radio.last_media_attempt, last, "the handover waits from the last real request");
+        assert_eq!(revokes.get(), 1);
+
+        // Input: the lock again, its quiet (the lights may still carry, as
+        // in any quiet), then the radio revokes them before its media.
+        c.advance(Duration::from_secs(3));
+        g.reading = Some(Reading::Idle(Duration::ZERO));
+        let (outcome, t) = g.tick(Err(hid::Error::Absent), Ok(()));
+        assert!(g.held.get());
+        assert!(lock_lights_may_carry(&outcome, t));
+        c.advance(QUIET);
+        g.reading = Some(Reading::Idle(QUIET));
+        let (outcome, t) = g.tick(Err(hid::Error::Absent), Ok(()));
+        assert_eq!(t, "radio");
+        assert!(!lock_lights_may_carry(&outcome, t));
+        assert_eq!(revokes.get(), 2);
+        // radio_only's tick gives USB no outcome: never the lights' turn.
+        assert!(!lock_lights_may_carry(&None, "none"));
+        assert!(!lock_lights_may_carry(&Some(Err(open_err())), "none"), "USB evidence: not absent");
     }
 }

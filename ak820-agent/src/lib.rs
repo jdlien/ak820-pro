@@ -11,6 +11,7 @@ pub mod flash;
 pub mod health;
 pub mod hid;
 pub mod history;
+pub mod input;
 pub mod lockchan;
 pub mod logfile;
 pub mod media;
