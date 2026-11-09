@@ -1,0 +1,51 @@
+# white, DEV row-isr 4790208267 (0x50f8f2d1), read 2026-11-09 13:53:07 after JD's BT title changes on dev
+## op 27 sub 5
+{"last_seq": 0, "last_state": "none", "owner": "dash", "session": "none", "restore_gen": 1, "phase": "done", "damaged": false, "screen": 0, "cursor": 0, "armed": false, "edit": false, "pixels_done": false, "dma_busy": false, "clearing": false, "wake_hold": false, "batt_dirty": false, "logo_stale": false, "gq": 0, "lq": 0, "turns": 0, "latch": "none", "dropped": 0, "unsettled": 0, "losses": 0, "capture": 0, "invariant_fail": 0, "paint_us": 0, "pairing": 0, "ops": 0, "stopped": false, "debug_done": false}
+## display probe
+   1.63 ms  restore clear band 1
+   1.56 ms  restore clear band 2
+   1.65 ms  restore clear band 3
+   1.60 ms  restore clear band 4
+   1.60 ms  restore clear band 5
+   1.62 ms  restore clear band 6
+   1.56 ms  restore clear band 7
+   1.62 ms  restore clear band 8
+   0.63 ms  restore: OS icon
+   2.79 ms  restore: conn row + clock
+   0.85 ms  restore: conn digit
+   0.37 ms  restore: battery (outline)
+   0.01 ms  restore: lock band
+   0.39 ms  restore: text slot
+   2.52 ms  hk: text slot
+   0.21 ms  hk: status overlay
+   0.09 ms  hk: lock band
+   0.63 ms  hk: clock
+   2.61 ms  hk: battery
+   0.09 ms  hk: conn digit
+   1.12 ms  text icon
+   2.22 ms  band clear
+## health
+blit_timeouts            0
+tx_sent                  539
+tx_timeouts              14
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          11
+scan_rate                586
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                265712
+build_token              0x50f8f2d1
+msp_free                 608 bytes (interrupt stack; paint watermark)
+psp_free                 1224 bytes (main thread; paint watermark)
+blits_issued             413
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0

@@ -160,6 +160,12 @@ shifter. Two counters on health page 4's reserved bytes, every build, `spi0_poll
 H1 is confirmed; if titles garble with `late` at 0, H1 is wrong. Codex's review of the diff is
 running; two reviews of the hypothesis are Hutch's.
 
+**The dev read, 13:53 11-09** (`history/lcd-speckle-20261109/dev-read-1353.txt`, after JD's title
+changes on dev): op 27's sticky failures 0, so no polled send on dev gave up, and no losses or damage;
+0 blit timeouts. So dev does not avoid the fault by refusing sends over leftover receive entries. That
+fits a systematic early return on the daily's layout and timing, not random strays, and the same send
+code timed differently on dev.
+
 **If it comes back:** a photo first, before any key. Note what was on screen, roughly when, and
 whether the board had just woken. Then one health read for `blit_timeouts` (the data line up, the
 daemon paused). On a dev build the console names each timeout's class (`[lcd] blit timeout #n
