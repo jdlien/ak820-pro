@@ -188,6 +188,9 @@ the last drain's 3243 net out.
   13:44:24-13:44:37 (the daemon out 13:44:22, back 13:44:37), then 13:44:51-13:45:07 (the daemon
   out 13:44:49, back 13:45:07), with a relay 1 tap at 13:44:51 that did not wake it (the wake rig
   has been broken since the bench moved). No key reached the Mac.
+- **A data-line window, 13:53:03-13:53:07 11-09** (the daemon out 13:53:02, back 13:53:07; relay 2
+  off), Blackberry's dev read on white's first wake after 13:44
+  (`history/lcd-speckle-20261109/dev-read-1353.txt`).
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
