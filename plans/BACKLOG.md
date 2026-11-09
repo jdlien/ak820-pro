@@ -1,5 +1,41 @@
 # Backlog — known, accepted, or deferred items
 
+## Stray white pixels in the screen's top-right corner (2026-11-09) -- JD's sighting, once; not explained
+
+**What JD saw:** a few white-ish pixels, mostly a horizontal speckle, at the top right, above and
+to the right of the connected Bluetooth channel. The board was white on the daily build of
+`row-isr` `4790208267`, flashed 00:35 11-07. `Fn`+`D` and back cleared them: the page's exit
+clears and repaints every band, so the panel is not failing. There is no photo. It is the first
+sighting on record.
+
+**What paints that corner** (`display.c`):
+- The connection strip, x 29-107 and rows 0-23, is one 3.8 KB DMA image from the asset flash
+  (`draw_conn_row`). It is repainted only at a slider or OS change, or at a page's restore.
+- The channel digit's rect, x 108-120 and rows 0-23, is repainted at every link-state change, so a
+  reconnect cleans it.
+- x 121-127 is painted only by a full repaint.
+- Neither the panel nor the flash sleeps with the board; only the backlight goes off. So whatever
+  landed there stayed until a full repaint, and could date from any time since the last one.
+
+**Suspects, none proven:**
+1. A paint sent to the wrong place, or fed bad data, on SPI0, where the panel and the asset flash
+   share the DMA path: a lost completion, a starved source, or a window command gone wrong. The
+   recovery counts its timeouts in `blit_timeouts` (health). A non-zero count since the boot at
+   00:35 11-07 would point here. Zero would not clear a bad window whose DMA completed.
+2. The row ISR rewrite shares priority 3 with SPI0, and changing either moves which transfers are
+   exposed to races (CLAUDE.md). But it has been on white since 11-01, and this is the first
+   sighting.
+3. This build paints the Mac's title and clock over Bluetooth again, where the daily before it
+   dropped them, so the bus is busier. Dev builds carried the same load for weeks with no sighting.
+
+Not image retention ("A ghost of the dashboard's 100%", below): that is a faint copy of something
+shown. These were bright pixels where nothing had been drawn.
+
+**If it comes back:** a photo first, before any key. Note what was on screen, roughly when, and
+whether the board had just woken. Then one health read for `blit_timeouts` (the data line up, the
+daemon paused). On a dev build the console names each timeout's class (`[lcd] blit timeout #n
+kind=...`).
+
 ## Brightness after the new curve (2026-11-04) -- open; before the row ISR's merge
 
 The ceilings are settled (`SAVER_VAL` 191, `DIM_VAL` 102, from the percent map of
