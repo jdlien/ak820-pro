@@ -131,6 +131,35 @@ old "Volkor X" / "Beacon (fe" (13:07:17's "Volkor X - Beacon (feat. Dimi Ka...")
   HID over the dongle: the daemon's radio checks every ~34 s end "no answer on the radio". JD moved
   the slider to 2.4G at ~13:25, which reboots the board as a rule, so the RAM counters restarted.
 
+**Settled 11-09 afternoon: the daily build's paint, not the transport and not the new commits.**
+JD: it happens at nearly every track change, and `Fn`+`D` and back shows the new title, so the
+title was in RAM and its paint failed (codex's first outcome). Over USB (13:38, the data line up, the
+daemon sending) the daily garbled too, so the Bluetooth receiver is cleared. On the dev build of the
+same source (`0x50f8f2d1`, from 13:39) titles paint reliably over Bluetooth. The paint path differs
+between the flavours only by diagnostics (DPROBE's sub-microsecond timer reads, the scratch and stream
+checks, `PO_FAIL` bookkeeping), so the difference is timing. **Released firmware is likely affected:**
+the large song font's polled letters date from 10-28; JD ran dev builds since, and the one daily on
+white before this painted no titles, so no daily on record had painted this font, while v0.3.0 and
+v0.3.1 ship daily with it as the default.
+
+**The shape fits one cause:** each letter's window keeps the right XS and rows with XE stuck at 127,
+the last full-to-the-edge window (the line's remainder clear, by DMA). 112 px from x fill
+112/(128-x) rows: a thin band from the left, a growing block toward x 101-127, as in the photos.
+**The hypothesis (H1, unproven; `plans/LCD-TITLE-GARBLE-PLAN.md` has the evidence and the open
+points):** the polled send returned with the column end still queued, and the caller's DC flip made
+the panel take XE's low byte as a command. `spi0_poll_send` counted any receive entry as its own and
+returned on BUSY alone, where the DMA's teardown waits for TX_EMPTY as well. Commands and XS land
+right on every letter, so if H1 holds, the early return is systematic on the 4-byte parameter sends,
+not random strays.
+
+**The fix, built, not flashed: `row-isr` `862acd7b0c`** (daily `0x7d11d483`, dev `0xd4a286ae`): the
+send discards leftovers at its start instead of refusing, counts an entry as its own only while one of
+its bytes is in flight, and returns only after three reads in a row of an empty FIFO and an idle
+shifter. Two counters on health page 4's reserved bytes, every build, `spi0_poll_strays` and
+`spi0_poll_late` (host tools at `10f88c2`). If titles paint and `late` climbs at each title change,
+H1 is confirmed; if titles garble with `late` at 0, H1 is wrong. Codex's review of the diff is
+running; two reviews of the hypothesis are Hutch's.
+
 **If it comes back:** a photo first, before any key. Note what was on screen, roughly when, and
 whether the board had just woken. Then one health read for `blit_timeouts` (the data line up, the
 daemon paused). On a dev build the console names each timeout's class (`[lcd] blit timeout #n

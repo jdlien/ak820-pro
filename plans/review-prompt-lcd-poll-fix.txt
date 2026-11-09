@@ -1,0 +1,11 @@
+Review one firmware commit, read-only: change nothing, and run no build. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+The commit is 862acd7b0c on branch row-isr, worktree qmk_firmware-ak820pro-rowisr/ (`git -C qmk_firmware-ak820pro-rowisr show 862acd7b0c`); its message states the fault and the intent. The fault and the evidence are in plans/LCD-TITLE-GARBLE-PLAN.md and plans/BACKLOG.md's first item. Separate reviews are judging the hypothesis; judge the change.
+
+Questions, not a limit:
+1. Is the new spi0_poll_send correct in every case: the leftover drain at entry with the bus idle; counting an entry as the send's own only while rx < tx; the exit after three consecutive reads of TX_EMPTY and !BUSY; the end drain; the give-up paths, including WDT_TEST_HOOKS's fault injection; the spin limits. Can it hang, send a byte twice, drop a byte, or return before the last byte has left the shifter?
+2. Does any caller depend on the old behaviour: refusing the send when the receive FIFO was not empty at entry, or returning on BUSY alone? Every caller of spi0_poll_send and lcd_window_polled, including lcd_blit_flash's window between Prepare() and Fire().
+3. If the hypothesis is wrong, can this change make anything worse: timing in the pump (a 224-byte glyph), the row ISR at the same priority, the DMA's teardown, the counters' cost?
+4. Health page 4's two new u16s at bytes 24-27 of the payload (health.c), and the host tools (hostagent/ak820health.py, ak820-agent/src/health.rs): correct offsets, old firmware's zero bytes, old hosts.
+
+Report P1, P2, P3 tables with file:line, the finding and the scenario. End with READY or NOT READY.
