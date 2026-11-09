@@ -35,7 +35,6 @@ def main():
     print(f"giveups              {u16(1)}")
     print(f"strays               {u16(3)}")
     print(f"late                 {u16(5)}")
-    print(f"old_queued           {u16(7)}")
     print(f"window_notidle       {u16(9)}")
     print(f"dma_gap_min          {'none' if gap == 0xFFFF else f'{gap} ticks ({gap * 1e6 / 187500:.1f} us)'}")
     print(f"windows_after_dma    {u32(13)}")
