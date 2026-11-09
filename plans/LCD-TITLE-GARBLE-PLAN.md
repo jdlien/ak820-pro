@@ -156,3 +156,23 @@ set flag supports H1; a clear one sends us elsewhere.
 
 Each was asked first for its own reading of the evidence and the code, then for a judgment of H1 and
 O1-O6, then for one on the fix.
+
+## Where it stands (11-09 evening), and the analyser session
+
+- **Fix A cures it; the bus-level cause is unproven.** On the switchable diagnostic `lcd-diag`
+  `5688b2a975` (token `0x8edc1022`; fix A with 4790208267's send kept beside it, raw81 in both modes),
+  the old send garbled over BT and A's stayed clean. Over 609 polled windows, with the old send
+  among them, nothing refused and no window started with SPI0 busy. No window came closer than
+  229 us after a DMA's completion, and the old mode's closest was 1.17 ms. So the fault lies inside
+  the old send's completion, not in a busy bus at entry or a DMA's tail. A's own counters (`late`,
+  `strays`) read 0, so what A changed works without either guard firing.
+- **White stays on `lcd-diag` in A's mode** until the logic analyser arrives (1-2 weeks). Every boot
+  and watchdog reset comes up in A. `scripts/lcd_diag.py read|old|new|zero` switches and reads over
+  the data line, with the daemon out.
+- **The capture:** SCK, MOSI, DC and the panel's CS, triggered on DC rising during CASET's argument
+  bytes. In old mode the early-return theory predicts the 4th argument byte (`XE_lo`) still
+  clocking after DC has dropped for RASET. Fire a track change and the capture together. The
+  presser's F19 key, mapped to next track on the Mac, keeps the board's keymap untouched.
+- **The 240 fps camera can't resolve it:** about one camera pixel per panel pixel at the closest
+  focus. Its one clip (16:55:46-16:56:38) showed per-change failure in old mode: "Warp Drive"
+  painted, "You Can't Hurry Love" didn't, and the old title stayed while the new time showed.
