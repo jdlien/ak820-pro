@@ -56,6 +56,21 @@ whether the board had just woken. Then one health read for `blit_timeouts` (the 
 daemon paused). On a dev build the console names each timeout's class (`[lcd] blit timeout #n
 kind=...`).
 
+**A workaround, JD's idea (11-09), not built:** repaint the whole screen at a wake.
+- **Cost:** cheap in battery. It is a fraction of a second of drawing per wake that lights the screen,
+  so microamp-hours. Skip the keep-alive's dark wakes.
+- **Stalls:** done as `Fn`+`D`'s exit does it, there is none: a banded clear, then one component a
+  pass, the worst pass ~12-13 ms. A plain full-screen clear would block ~43 ms, past the 25 ms that
+  can lose a key, right when the waking key matters.
+- **Unseen:** the backlight is held dark at the wake until the clock and battery have repainted, so
+  the repaint could run inside the hold. It may lengthen the hold; the restore's whole duration is
+  unmeasured.
+- **The catch:** if the stray bytes come from the channel digit's own redraw at the reconnect, which
+  comes after the wake, a repaint at the wake's start runs first and misses them. Run it once the
+  link has settled instead, or repaint just the strip and digit then, a few ms (the strip's DMA is
+  3.8 KB). It hides the symptom and leaves the cause open. Fold it into the next firmware change
+  rather than a flash of its own.
+
 ## Brightness after the new curve (2026-11-04) -- open; before the row ISR's merge
 
 The ceilings are settled (`SAVER_VAL` 191, `DIM_VAL` 102, from the percent map of
