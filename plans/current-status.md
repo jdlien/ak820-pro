@@ -217,6 +217,10 @@ the last drain's 3243 net out.
   - 16:59:28-16:59:31, back to A's mode.
 
   Old mode garbled over BT, A's mode stayed clean (`plans/BACKLOG.md`'s first item).
+- **A data-line window, 17:36:17-17:47:02 11-09** (the daemon out 17:36:16, back 17:47:03; relay 2
+  off): a read of `lcd-diag`'s counters and flash.sh's backups for the split build `1bc39c8281`.
+  No `Fn`+`Esc` came, so flash.sh timed out at 17:46:52 and nothing was written. White stays on
+  `5688b2a975` in A's mode.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
