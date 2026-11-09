@@ -1,0 +1,11 @@
+Review one small firmware commit, read-only: change nothing, and run no build. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+The commit is a75671847b on branch lcd-freset (`git -C qmk_firmware-ak820pro show a75671847b`; its parent 6683c18134 is row-isr's head, fix A). It adds a FRESET of SPI0, with leftover receive entries counted first, at the start of lcd_window_polled() in keyboards/a_jazz/ak820pro/graphics/lcd_bus.c, to meet the manual's rule after the DMA completion's DL change (docs/sn32f299.md's SPI section; lib/chibios-contrib/os/hal/ports/SN32/LLD/SN32F2xx/SPI/hal_spi_v2_lld.c, sn32_flash_dma_isr). The evidence and both prior reviews: plans/LCD-TITLE-GARBLE-PLAN.md, plans/review-codex-lcd-title-garble.md, plans/review-fable-lcd-title-garble.md.
+
+Questions:
+1. Is the reset safe at every caller of lcd_window_polled: the polled fill, the stream begin, the RAM blit, and lcd_blit_flash between Prepare() and Fire()? Does FRESET disturb anything Prepare() set (DMACTRL, DMACNT, DMAHTCNT, DL, IE, the RX threshold), the ChibiOS driver's state, or the chip selects?
+2. Can its guard (blit_done and !BUSY) let it reset a live transaction, or skip it where the evidence says it matters?
+3. Does the self-clear wait need a bound or a check it lacks, and is reading CTRL0_b.FRESET back meaningful on this part?
+4. Anything else that would make this flash worse than fix A alone.
+
+Report P1, P2, P3 tables with file:line, the finding and the scenario. End with READY or NOT READY.
