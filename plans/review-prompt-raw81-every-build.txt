@@ -1,0 +1,13 @@
+Review one firmware commit, read-only: change nothing, and run no build. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+The commit is 585f14a23e on branch row-isr, worktree qmk_firmware-ak820pro-rowisr/ (`git -C qmk_firmware-ak820pro-rowisr show 585f14a23e`); read its message for the intent. It moves raw HID over the 2.4G dongle (raw81: keyboards/a_jazz/ak820pro/bluetooth/raw81.c and its glue in bluetooth/ch582f_ajazz.c) out of AK820_DEV_HOOKS, so release builds (build.sh's daily and fpb) carry it; its bench ops stay dev-only. Release builds have never run this glue; dev builds have, on the owner's board, since October. Background: plans/RAWHID-24G-PLAN.md, docs/wireless.md, plans/AUDIT-2026-10-31.md (F-031 and any finding naming raw81 or the RX drain). Its parent, 862acd7b0c (the polled send's fix), is under a separate review; ignore it unless the two interact.
+
+Questions, not a limit:
+1. Is anything the moved code depends on still only under AK820_DEV_HOOKS: a declaration, a counter, an init, a hook in hid_protocol.c or elsewhere? Is the remaining dev-only code (op 17's fill, clear, stall and hold; op 19; the 5A trace; the RX tap) cleanly separable, with nothing in the release path reading state only those ops set?
+2. The release RX drain now uses the bulk read (rx_take) instead of one chnReadTimeout per byte. Trace every exit of the drain loop with it, the 64-byte cap, the WDT_TEST_HOOKS injection path, F-019's quiet-window expiry, and the deferral's `drained`.
+3. The TX pump now holds A-frames for the 91 response's ACK window in release builds, and sleep admission waits for a request, a response and the window. Can a release build's keyboard reports be held longer than before, and by how much at most? Can sleep be blocked indefinitely?
+4. Security for a release: raw81_allowed()'s list, the dispatch through via_custom_value_command_kb, and anything a 2.4G host could now do on a release build that it could not before. Check that nothing outside the list is reachable, including through the receipt or the response path.
+5. A board on Bluetooth or cable whose host never sends an 81 frame: does anything change for it, in timing, sleep or RAM, beyond the static RAM?
+6. The plan is to cherry-pick this onto ak820pro-jdlien (cbd0d2f308, without the row ISR rewrite; checked out in qmk_firmware-ak820pro/). Is the patch right on that base?
+
+Report P1, P2, P3 tables with file:line, the finding and the scenario. End with READY or NOT READY.
