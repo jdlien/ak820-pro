@@ -1,0 +1,130 @@
+# white, daily row-isr 4790208267 (0x3501ba59), read 2026-11-09 12:11:50, after the 12:02:47 title that never painted
+blit_timeouts            0
+tx_sent                  11479
+tx_timeouts              170
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          9
+scan_rate                809
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                4612305
+build_token              0x3501ba59
+msp_free                 696 bytes (interrupt stack; paint watermark)
+psp_free                 1096 bytes (main thread; paint watermark)
+blits_issued             6250
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0
+blit_timeouts            0
+tx_sent                  11479
+tx_timeouts              170
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          9
+scan_rate                809
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                4612325
+build_token              0x3501ba59
+msp_free                 696 bytes (interrupt stack; paint watermark)
+psp_free                 1096 bytes (main thread; paint watermark)
+blits_issued             6250
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0
+
+passes                   4391141
+count_ge_10ms            0
+count_ge_25ms            0
+count_ge_25ms_nonflash   0
+loop_gap_max_mark        none
+flash_writes             714
+flash_gap_max_ms         6
+blit_gap_max_ms          6
+i2c_gap_max_ms           9
+key_presses              5281
+
+  no stall >= 25 ms since reset (shorter stalls delay a press, they cannot drop it)
+blit_timeouts            0
+tx_sent                  11479
+tx_timeouts              170
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          9
+scan_rate                809
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                4612351
+build_token              0x3501ba59
+msp_free                 696 bytes (interrupt stack; paint watermark)
+psp_free                 1096 bytes (main thread; paint watermark)
+blits_issued             6250
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0
+
+isr_per_s                7999.5
+isr_mean_us              40.1
+isr_min_us               5.3
+isr_max_us               138.7
+isr_cpu_pct              32.1
+row_samples_per_row_per_s 444.4
+timebase_vs_wall         1.0005
+
+  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;
+  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop
+blit_timeouts            0
+tx_sent                  11480
+tx_timeouts              170
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          9
+scan_rate                812
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+watchdog_record          unavailable (reset flags 0x01, consecutive 0)
+
+uptime_ms                4614424
+build_token              0x3501ba59
+msp_free                 696 bytes (interrupt stack; paint watermark)
+psp_free                 1096 bytes (main thread; paint watermark)
+blits_issued             6254
+blit_never_started       0
+blit_stalled             0
+blit_irq_lost            0
+blit_unknown             0
+blit_busy_waits          0 (overlaps that could hang before the 2026-09-22 fix)
+blit_retry_successes     0
+
+row_samples              [16506, 16506, 16505, 16505, 16505, 16505]
+row_gap_max_ms           7  (row 3)
+raw_edges                10570
+consumes                 4400525
+cooked_changes           10553
+
+  spread 16505-16506 (EVEN)  [uint16, wraps every ~5 min -- --reset first for absolute counts]
+  worst gap 7 ms -- healthy (a 25-80 ms press gets sampled several times)
