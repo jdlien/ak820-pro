@@ -1,0 +1,11 @@
+Review one diagnostic firmware commit, read-only: change nothing, and run no build. Read only files inside /Users/jdlien/code/ak820-pro; do not search or list anything outside it, and there is no AGENTS.md.
+
+The commit is bc1b9f42cb on branch lcd-diag (`git -C qmk_firmware-ak820pro show bc1b9f42cb`), on fix A (6683c18134); read its message. It is a daily build for one bench test and is never merged: the polled SPI0 send switchable at run time between fix A's and 4790208267's, over a new health-channel command, with counters. The host side is scripts/lcd_diag.py. Background: plans/LCD-TITLE-GARBLE-PLAN.md.
+
+Questions:
+1. Is mode 1 (spi0_poll_send_old) the 4790208267 send as it was, apart from the one STAT read after its BUSY wait? Does that read change the send's timing in a way that could hide the fault the test is looking for (the caller's DC flip after return)?
+2. Can switching the mode at run time, from the HID handler on the main thread, land in the middle of a send, a window or a paint's sequence of sends?
+3. Are the counters right: blit_done_cb's timestamp in ISR context against the window's read on the main thread, the 16-bit tick's wrap, window_is_dma_arm around lcd_blit_flash's window, and the op's reply layout against scripts/lcd_diag.py?
+4. Anything that makes this build unsafe to run on the owner's board for a day: a hang, a watchdog reset, a lost key, a build.sh daily check it should fail.
+
+Report P1, P2, P3 tables with file:line, the finding and the scenario. End with READY or NOT READY.
