@@ -92,7 +92,13 @@ set, the camera gate). The fallback for the night is `8355011389`
 is judging its curve by eye.** Written for a fresh session.
 
 *The newest state, which overrides the paragraphs under it where they differ:*
-**White runs the DAILY build of `row-isr` `4790208267` since 00:35 11-07 (token `0x3501ba59`; dev
+**White runs the DEV build of `row-isr` `4790208267` since 13:39 11-09 (token `0x50f8f2d1`), the daily
+soak ended: the daily paints the large song font's letters wrong at nearly every title change, over USB
+too, so released firmware may carry it (`plans/BACKLOG.md`'s first item). Data line up 13:38:14,
+daemon out 13:39:05, boot ~13:39:54, data line off and daemon back 13:40:10; relay 2 off but for
+JD's 13:36:51-13:38:11 charge (Hutch's books). Next: a track change on dev, Bluetooth, then one
+read of op 27's sticky failures and the display probe.**
+**Before it, the DAILY build of `row-isr` `4790208267` from 00:35 11-07 (token `0x3501ba59`; dev
 `0x50f8f2d1`), the soak restarted, the drain running on: daemon out and data line up 00:35:18, off and
 back 00:36:13, relay 2 off throughout.** The paragraph after next says what it adds.
 **Before it, the DAILY build of `row-isr` `4c85f385a9` from 13:55 11-05 (token `0xae868950`;

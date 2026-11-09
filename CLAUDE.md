@@ -136,7 +136,11 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 00:35 11-07: the DAILY build of `row-isr` `4790208267`** (token `0x3501ba59`; dev
+**On white since 13:39 11-09: the DEV build of `row-isr` `4790208267`** (token `0x50f8f2d1`), the same
+source as the daily below, flashed to split commits from flavour: the daily's large song font paints
+its letters wrong at nearly every title change, over Bluetooth and over USB alike (`plans/BACKLOG.md`'s
+first item), and no daily build before it had ever painted that font. **Before it, from 00:35 11-07:
+the DAILY build of `row-isr` `4790208267`** (token `0x3501ba59`; dev
 `0x50f8f2d1`): the build below plus Bluetooth now-playing and the wireless clock in every build, and the
 ACK deferral in every build (the same commits on `ak820pro-jdlien` at `cbd0d2f308`; `deps.lock` stays at
 v0.3.1 until the row ISR's merge). The dongle's raw HID stays dev-only. The soak restarted there; the
