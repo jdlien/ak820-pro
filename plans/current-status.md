@@ -201,6 +201,11 @@ the last drain's 3243 net out.
   14:48:17, back 14:48:44; relay 2 off): the wake ring read, then **fix A flashed from dev, no
   `Fn`+`Esc`**: `via-daily-6683c18134-20261109-142621.bin` (`row-isr`, token `0x2ca0ce80`; the
   title fix, raw81 in every build, the hardening). Settings restored.
+- **Two more data-line windows on fix A** (relay 2 off), Blackberry's counter reads: 14:54:49-14:54:53
+  (the daemon out 14:54:47, back 14:54:53; titles over 2.4G clean) and, after the slider back to BT
+  at ~14:57 (a reboot), 14:58:19-14:58:24 (the daemon out 14:58:18, back 14:58:24; a BT title clean,
+  the token read back). Every counter read zero both times
+  (`history/lcd-speckle-20261109/fixA-read-1454.txt`, `fixA-read-1458.txt`).
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
