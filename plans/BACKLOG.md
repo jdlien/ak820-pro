@@ -3,7 +3,7 @@
 Finished items move to [`history/BACKLOG-DONE.md`](../history/BACKLOG-DONE.md) with their
 headings, so a pointer to a section by name that is not here is there.
 
-## Stray white pixels in the screen's top-right corner (2026-11-09) -- JD's sighting, once; not explained
+## Stray white pixels on the screen (2026-11-09) -- twice in a day: the top-right corner, then the song lines beside a title that never painted; not explained
 
 **What JD saw:** a few white-ish pixels, mostly a horizontal speckle, at the top right, above and
 to the right of the connected Bluetooth channel. The board was white on the daily build of
@@ -51,12 +51,33 @@ so at every wake's reconnect. A few stray all-ones bytes right after a digit rep
 and the colour. Unproven; it says where to look, the digit's paint and what follows it on SPI0, and
 makes "had the board just woken or reconnected" the useful question at the next sighting.
 
+**The second sighting, 12:06 11-09, during use, with a photo** (`history/lcd-speckle-20261109/`,
+`photo-1206.jpg` and the enlarged `photo-1206-band.jpg`):
+- **The junk:** a bright full-width line, about two rows, between the artist and the title (the row
+  between the two song lines, ~41, which only a clear covers). Also a block the size of a glyph cell,
+  mostly white with blue, in the title line's cell at x ~92, three cells past the title's end.
+- **The title never updated:** the screen reads "Tonebox" / "Implosion" / 3:51/6:06. By the Mac's
+  log (`~/Library/Logs/ak820pro/ak820-agent.log`), Implosion's title went at 11:46:07. At 12:02:47
+  the title "Tonebox - Launch Disintegration" went, and at 12:02:50 the transport, play 0:04/6:06.
+  3:51 at 12:06:37 is that new track (0:04 + 3:47). So **the board took the transport frame but
+  never painted the new title, and the junk sits in the title band**. The next title, "Nocturn",
+  went at 12:08:54.
+- **A clear is a flash read too:** `lcd_clear_rect()` copies the stock all-black frame at flash
+  `0x000000` by DMA. A source read that goes wrong paints white where black was meant: a full-width
+  clear's first rows would be the line between the songs. Both sightings now sit at a window's
+  start or in a gap that nothing repaints.
+- **What this narrows:** the Bluetooth title path, new to the daily build at 00:35 11-07: the
+  frame's receipt, the text slot's paint, or the two together. The dev builds that painted titles
+  carried other commits and a different row-ISR flavour.
+
 **If it comes back:** a photo first, before any key. Note what was on screen, roughly when, and
 whether the board had just woken. Then one health read for `blit_timeouts` (the data line up, the
 daemon paused). On a dev build the console names each timeout's class (`[lcd] blit timeout #n
 kind=...`).
 
-**A workaround, JD's idea (11-09), not built:** repaint the whole screen at a wake.
+**A workaround, JD's idea (11-09), pinned, not built:** repaint the whole screen at a wake. JD: it
+would hide the bug, not fix it. The second sighting came during use, where a wake's repaint would
+not have caught it.
 - **Cost:** cheap in battery. It is a fraction of a second of drawing per wake that lights the screen,
   so microamp-hours. Skip the keep-alive's dark wakes.
 - **Stalls:** done as `Fn`+`D`'s exit does it, there is none: a banded clear, then one component a
