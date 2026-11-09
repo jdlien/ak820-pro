@@ -182,7 +182,12 @@ the last drain's 3243 net out.
   daily over USB too (BACKLOG). Then the dev flash: the daemon out 13:39:05, flash.sh's backups
   13:39:06 (the battery log empty after the slider's reboot), JD's `Fn`+`Esc` between 13:39:20 and
   ~13:39:50, boot ~13:39:54 on **the dev build of `row-isr` `4790208267`** (token `0x50f8f2d1`,
-  read back), settings and lighting restored; the data off and the daemon back at 13:40:10.
+  read back), settings and lighting restored; the data off and the daemon back at 13:40:10. JD moved
+  the slider back to BT soon after (a reboot as a rule), and on dev the titles change cleanly.
+- **Two data-line windows, white asleep, nothing read** (Blackberry; relay 2 off): the data up
+  13:44:24-13:44:37 (the daemon out 13:44:22, back 13:44:37), then 13:44:51-13:45:07 (the daemon
+  out 13:44:49, back 13:45:07), with a relay 1 tap at 13:44:51 that did not wake it (the wake rig
+  has been broken since the bench moved). No key reached the Mac.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
