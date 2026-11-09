@@ -163,6 +163,20 @@ the last drain's 3243 net out.
 - **Another, 12:11:46-12:11:52 11-09** (the daemon out 12:11:45, back 12:11:52; relay 2 off),
   Blackberry's second read for the stray pixels. White was awake at ~42 mA, and the count is still
   unbroken. At it: 94.3 h, 613.1 mAh since FULL, 15.3% used, 3994 mV.
+- **The slider to 2.4G at ~13:25 11-09** (JD, to try the titles there), a reboot as a rule. Awake,
+  white drew ~44.5 mA on 2.4G against ~42 on BT just before.
+- ⚠️ **A charge, 13:36:51-13:38:11 11-09: the drain is no longer unbroken.** Relay 2 went on by
+  mistake (taken for the data line) and the pack charged at ~294 mA, **6.56 mAh in** (`charge_mah`
+  -2109.716 to -2116.276). I switched it off at 13:38:12, read back off. Just before it: **95.7 h,
+  644.3 mAh since FULL, 16.1% used**, 3990 mV. The INA228 counts both ways, so `charge_mah +
+  2754.007` stays exact as the **net** since FULL (637.7 mAh right after). Read the drain from here
+  as net, with that charge inside it.
+- **A data-line window, 13:38:14-13:40:10 11-09**, relay 2 off. With the daemon running, the
+  title went over the cable at 13:38:16, and the stray pixels came with it: the paint fails on the
+  daily over USB too (BACKLOG). Then the dev flash: the daemon out 13:39:05, flash.sh's backups
+  13:39:06 (the battery log empty after the slider's reboot), JD's `Fn`+`Esc` between 13:39:20 and
+  ~13:39:50, boot ~13:39:54 on **the dev build of `row-isr` `4790208267`** (token `0x50f8f2d1`,
+  read back), settings and lighting restored; the data off and the daemon back at 13:40:10.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
