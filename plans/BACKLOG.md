@@ -3,7 +3,7 @@
 Finished items move to [`history/BACKLOG-DONE.md`](../history/BACKLOG-DONE.md) with their
 headings, so a pointer to a section by name that is not here is there.
 
-## Stray white pixels on the screen (2026-11-09) -- twice in a day: the top-right corner, then the song lines beside a title that never painted; not explained
+## Stray white pixels on the screen (2026-11-09) -- at nearly every track change on the daily `4790208267`, by JD: the title arrives, its letters land in the wrong window; a regression, not explained
 
 **What JD saw:** a few white-ish pixels, mostly a horizontal speckle, at the top right, above and
 to the right of the connected Bluetooth channel. The board was white on the daily build of
@@ -94,6 +94,42 @@ RAM held it and the paint failed; the old one means the frame never landed. **Th
 diagnostic,** for the next change and not a flash of its own: a read-only health page with the RAM
 title and the shadow's, `text_dirty`, `ts_step`, the queue's depth, the polled give-up count, and
 the lock-light frames accepted and rejected by type with the last type 1's sequence.
+
+**The third sighting, 13:23 11-09, and a repro** (`photo-1323.jpg`, metadata stripped). JD: it comes
+at nearly every track change and stays until a page change, and the repaint then shows the new song.
+That is the test's first outcome: the title arrives over the lock lights and is held, and its paint
+fails. JD has watched titles paint for weeks on dev builds and never saw this before the daily
+`4790208267`, so it is a regression, not a fluke. The Mac's log: the title "Lucy In Disguise -
+Southbound" at 13:22:10, the transport, play 0:06/5:00, at 13:22:13. The photo (13:23:04) shows the
+old "Volkor X" / "Beacon (fe" (13:07:17's "Volkor X - Beacon (feat. Dimi Ka...") with the new 0:59/5:00.
+- **The junk has a shape.** A thin speckled band crosses the top row or two of each song line, edge
+  to edge. On the artist line it grows into a block at the right end, about x 101-127 and 8 rows tall.
+  The title line has no block. A speckle also sits top right beside the channel digit, the first
+  sighting's place.
+- **The old title's tail is gone.** The line reads "Beacon (fe", ten cells, then black, and
+  "Southbound" has ten letters. So the clear past the new text's end (a DMA from flash) landed right
+  and the letters (polled writes) did not.
+- **By inference, unproven, one fit for all of it:** each letter's window has the right left edge and
+  top row, but its right edge is x 127. Its 112 pixels (8x14) then fill 112/(128-x) rows from its
+  corner: under one row for a letter at the line's start, two at x 72, six at x 110, eleven at x 118.
+  "Southbound" ends at x 80, so its band stays thin. The artist's 16 letters from x 14 reach the
+  right edge, hence the block. The old letters survive because only their top rows are overwritten.
+  An end column left at 127 by an earlier full-width window, with the column command's end not
+  taking, would do it. Which command misses, and why, is the question for codex.
+- **What changed:** `feef9b4bfe` (dev, 11-05 12:46) was the last build that painted titles for JD.
+  From it to `4790208267` the paint path's code is unchanged: in `graphics/` only the Help page's
+  text moved (`menu_text_pages.h`), and nothing outside the board's directory. What did change:
+  `ch582f_ajazz.c` and `.h`, `hid_protocol.c`, `rules.mk`, `ak820pro.h`, three lines of `rowisr.c`
+  and the effects (`ee2013b5c0`, the lock-LED channel in every build; `4790208267`, the ACK deferral
+  in every build and the channel's two ownership fixes; Rain's mode number), and the flavour, dev to
+  daily. **The dev build of the same commit,
+  `via-dev-4790208267-20261105-221041.bin` (token `0x50f8f2d1`), splits the two:** the glitch kept
+  means the two commits, gone means the daily's timing. It also carries the dongle's raw HID
+  (`AK820_DEV_HOOKS`), so titles reach the screen over 2.4G as well.
+- **2.4G on the daily shows no song at all.** The Mac's lock-light writer opens only the board's
+  Bluetooth keyboard (`lock_lights.rs`, transport "Bluetooth Low Energy"), and the daily has no raw
+  HID over the dongle: the daemon's radio checks every ~34 s end "no answer on the radio". JD moved
+  the slider to 2.4G at ~13:25, which reboots the board as a rule, so the RAM counters restarted.
 
 **If it comes back:** a photo first, before any key. Note what was on screen, roughly when, and
 whether the board had just woken. Then one health read for `blit_timeouts` (the data line up, the
