@@ -53,11 +53,12 @@ fn the_rendering_is_the_pythons_byte_for_byte() {
     let rates = health::isr_rates(&a, &b, wall(), p3.matrix_rows as u32);
 
     let text = format!(
-        "{}{}{}{}",
+        "{}{}{}{}{}",
         health::render_page1(&p1),
         health::render_page2(&p2),
         health::render_page3(&p3, Some(p2.key_presses)),
-        health::render_isr(&rates)
+        health::render_isr(&rates),
+        health::render_spi0_poll(&b)
     );
     assert_eq!(text, expected_text);
 

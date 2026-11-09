@@ -213,8 +213,9 @@ fn health(flags: &[&str]) -> Result<(), String> {
         if let Some(p3) = &p3 {
             print!("{}", health::render_page3(p3, p2.as_ref().map(|p| p.key_presses)));
         }
-        if let Some((_, rates)) = &p4 {
+        if let Some((p, rates)) = &p4 {
             print!("{}", health::render_isr(rates));
+            print!("{}", health::render_spi0_poll(p));
         }
         if let Some((p, w)) = &p7 {
             print!("{}", health::render_sched(p, w.as_ref()));

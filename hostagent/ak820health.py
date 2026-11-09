@@ -61,7 +61,10 @@ FIELDS3 = ["row_samples", "row_gap_max_ms", "raw_edges", "consumes",
 # because the PWM counter is re-armed at the ISR's END, so duration -- not the
 # timer -- sets the row rate and caps the main loop. Ticks at st_freq per second.
 FIELDS4 = ["isr_entries", "isr_ticks_sum", "isr_ticks_min", "isr_ticks_max",
-           "st_freq", "uptime_ms", "row_samples_total", "_reserved4"]
+           "st_freq", "uptime_ms", "row_samples_total", "spi0_poll_strays", "spi0_poll_late"]
+# The last two (11-09, the large-font fault): the polled send's leftover receive
+# entries and its waits for an empty transmit FIFO (graphics/lcd_bus.c); zero
+# from firmware before them, whose bytes were reserved.
 
 # Page 7 (proto v9): the row handler's record since the health reset, in the
 # scheduler's 48 MHz ticks (plans/ROW-ISR-PLAN.md, D10). Slots elapsed are
@@ -215,10 +218,8 @@ def read_isr(h=None, timeout_ms=500):
         rep = _txn(h, HC_GET4, timeout_ms)
         if rep[3] < 5:
             raise SystemExit(f"firmware health proto v{rep[3]}; page 4 needs v5")
-        v = struct.unpack_from("<2I2H4I", bytes(rep), 4)
-        d = dict(zip(FIELDS4, v))
-        d.pop("_reserved4", None)
-        return d
+        v = struct.unpack_from("<2I2H3I2H", bytes(rep), 4)
+        return dict(zip(FIELDS4, v))
     finally:
         if own:
             h.close()
@@ -656,6 +657,9 @@ def main():
             print("\n  period = ISR duration + ~53 us (counter re-armed at ISR end), "
                   "so isr_mean_us sets the row rate;\n  isr_cpu_pct is the M0 share "
                   "inside the row ISR -- the ceiling on scanning and the main loop")
+            for k in ("spi0_poll_strays", "spi0_poll_late"):   # the polled send's (lcd_bus.c)
+                if k in d:
+                    print(f"{k:24} {d[k]}")
         if a.sched:
             print()
             for k in ("slots_elapsed", "serviced_valid", "missed_slots", "pulses_emitted", "pulses_omitted",

@@ -551,6 +551,11 @@ pub struct Page4 {
     pub st_freq: u32,
     pub uptime_ms: u32,
     pub row_samples_total: u32,
+    /// The polled send's leftover receive entries and its waits for an empty
+    /// transmit FIFO (graphics/lcd_bus.c, the 11-09 large-font fault); zero
+    /// from firmware before them, whose bytes were reserved.
+    pub spi0_poll_strays: u16,
+    pub spi0_poll_late: u16,
 }
 
 impl Page4 {
@@ -575,6 +580,8 @@ impl Page4 {
             st_freq: u32_at(report, 16),
             uptime_ms: u32_at(report, 20),
             row_samples_total: u32_at(report, 24),
+            spi0_poll_strays: u16_at(report, 28),
+            spi0_poll_late: u16_at(report, 30),
         })
     }
 }
@@ -865,6 +872,11 @@ fn pyopt(v: Option<f64>) -> String {
     v.map_or("None".to_string(), pyfloat)
 }
 
+/// The polled send's two counters, printed after the `--isr` block.
+pub fn render_spi0_poll(p: &Page4) -> String {
+    format!("{:<24} {}\n{:<24} {}\n", "spi0_poll_strays", p.spi0_poll_strays, "spi0_poll_late", p.spi0_poll_late)
+}
+
 /// The `--isr` block.
 pub fn render_isr(r: &IsrRates) -> String {
     let mut out = String::from("\n");
@@ -997,6 +1009,8 @@ pub fn render_json(
             ("st_freq".into(), p.st_freq.to_string()),
             ("uptime_ms".into(), p.uptime_ms.to_string()),
             ("row_samples_total".into(), p.row_samples_total.to_string()),
+            ("spi0_poll_strays".into(), p.spi0_poll_strays.to_string()),
+            ("spi0_poll_late".into(), p.spi0_poll_late.to_string()),
             ("isr_dt_s".into(), pyfloat(r.isr_dt_s)),
             ("isr_per_s".into(), null(r.isr_per_s)),
             ("isr_mean_us".into(), null(r.isr_mean_us)),
@@ -1279,6 +1293,8 @@ mod tests {
             st_freq: 187_500,
             uptime_ms: 12_000,
             row_samples_total: 3000 + 2580,
+            spi0_poll_strays: 0,
+            spi0_poll_late: 0,
         };
         let r = isr_rates(&pa, &pb, 2.001, 6);
         assert_eq!(r.isr_dt_s, 2.0);
@@ -1308,6 +1324,8 @@ mod tests {
             st_freq: 0,
             uptime_ms: 5,
             row_samples_total: 0,
+            spi0_poll_strays: 0,
+            spi0_poll_late: 0,
         };
         let r = isr_rates(&p, &p, 0.0, 6);
         assert_eq!(r.isr_dt_s, 0.0);
