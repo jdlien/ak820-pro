@@ -280,7 +280,7 @@ battery poll every 5 s feeds it, so the link never drops while the board is
 awake, whatever the typing (the three sleep cases above drop 5-6 s short of
 30:00 after the first asleep sample: the last poll). Asleep, only the Mac's
 lock-light frames feed it (one burst a minute while music plays on an
-unlocked Mac, the ~1.6 mA of `BACKLOG.md`'s item), and after 30 min of
+unlocked Mac, the ~1.6 mA of `history/BACKLOG-DONE.md`'s item), and after 30 min of
 silence the module ends the link and goes idle: it does not advertise again
 until the next key.
 

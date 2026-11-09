@@ -32,8 +32,8 @@ Consequences:
 
 - **Every RAM state dies on a rebooting flip**: health counters, WDT
   consecutive-reset count, the in-RAM trim. You cannot capture a BT
-  session's health counters by flipping to wired and reading. (Backlog: an
-  on-LCD health readout.)
+  session's health counters by flipping to wired and reading. `Fn`+`D`'s
+  debug page shows them on the LCD ([display.md](display.md)).
 - **Cold power-off** = slider to `cable` + unplug ~10 s. The old "board is
   battery-backed, pulling the cable doesn't cold-boot it" is true only in
   the wireless positions.

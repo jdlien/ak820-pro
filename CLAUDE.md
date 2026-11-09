@@ -344,7 +344,7 @@ white; token `0xf2a645a7`), flashed on Buzz's relay cable
 `c4bc0852` build (token `0x189635f2`) from 20:51 10-28.
 **On white since 17:28 10-30: `5c8c5f5ea8`** (dev, token `0x5b880dd4`,
 heap gap 224 B, the branch `icon-only`): the mainline `8ec0c8b9b4` plus the
-battery readout's Icon only (`plans/BACKLOG.md`, "Icon only"; the text slot
+battery readout's Icon only (`history/BACKLOG-DONE.md`, "Icon only"; the text slot
 clear, the icon and the warnings kept), flashed mid-drain with the settings
 kept (`history/icon-only-20261030/`). Warren's ds-phase diagnostics are off
 white now; they run on black.
@@ -424,7 +424,7 @@ battery; the drain runs on to the cut. ⚠️ **On Buzz the daemon's lock-light 
 (`plans/current-status.md`): a new Mac needs that grant before it works.
 **Before it, from 22:02 10-24: `52acdffe99`** (dev, token `0xab194817`,
 `mac/wake-dark-frame`): `b9555ff3e6` plus the wake's dark-frame fix
-(`plans/BACKLOG.md`). **Before it, from 23:48 10-23: the mainline until
+(`history/BACKLOG-DONE.md`). **Before it, from 23:48 10-23: the mainline until
 10-25, `b9555ff3e6`** (dev, token `0x3c117332`), flashed from Buzz. It is `36afff30e8` plus `ce229f87c6` and a credit comment, and it
 moves the glyph pump off the clock's seconds tick, the pass that hit 10 ms
 every second. On gremlin's board since 17:03 10-22, `count_ge_10ms` fell
@@ -451,7 +451,8 @@ unlocked screen to measure.
   trim seen running; an hour asleep at 3.01 mA; every reconnect synced and
   every PCF write settled.
 - ⚠️ **Lock-light frames into a sleeping board cost ~1.6 mA on average**
-  while the Mac plays music (`plans/BACKLOG.md`).
+  while the Mac plays music (`history/BACKLOG-DONE.md`: the daemon's
+  `HOLD_IDLE` fixed it).
 
 **Before it, from ~21:50 10-20: `7ae8575c1a`** (dev, token `0x350912aa`):
 `dd8391c28d` plus Gremlin's PCF writer fixes and the repaint at a guess.
@@ -468,7 +469,7 @@ the lock-LED handler and play times, which stay on their branch.
   one in 50 sleeps, is unexplained (`plans/BACKLOG.md`).
 - **Since 20:30: `dd8391c28d`** (dev, token `0x28e58a4c`), the same plus
   the fix for the clock flashing at lock-light title frames
-  (`plans/BACKLOG.md`, "The clock flashes"; codex cleared it).
+  (`history/BACKLOG-DONE.md`, "The clock flashes"; codex cleared it).
 
 **Before it, from 15:16 10-20: `8b06e4dcc4`** (a `dev` build, token
 `0x3e1c880c`). It is
