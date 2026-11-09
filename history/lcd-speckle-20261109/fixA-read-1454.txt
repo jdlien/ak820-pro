@@ -1,0 +1,70 @@
+# white, fix A daily row-isr 6683c18134 (expect 0x2ca0ce80), read 2026-11-09 14:54:51, after JD's 2.4G title changes
+blit_timeouts            0
+tx_sent                  297
+tx_timeouts              2
+tx_drops                 0
+rx_malformed             0
+loop_gap_max_ms          12
+scan_rate                793
+wdt_consecutive_resets   0
+wdt_fired_last_boot      False
+wdt_degraded             False
+
+passes                   242662
+count_ge_10ms            1
+count_ge_25ms            0
+count_ge_25ms_nonflash   0
+loop_gap_max_mark        none
+flash_writes             710
+flash_gap_max_ms         3
+blit_gap_max_ms          6
+i2c_gap_max_ms           8
+key_presses              120
+
+  no stall >= 25 ms since reset (shorter stalls delay a press, they cannot drop it)
+
+transport (every way the CH582F link can lose a frame):
+  sent 297  timeouts 2  queue_full 0  giveups 0  replaced 0  | uart overrun 0 framing 0 parity 0
+  slow ch582 calls (>= 4.0 ms): 0; their time, ms: control 0.0  rx 0.0  c5_hook 0.0  ack_writes 0.0  tx_pump 0.0
+  5C reports 56: hook 4.76 ms in all, mean 0.08, longest 0.13
+
+internal-flash writes by writer (sessions / programs / erases):
+  other       16      301      3
+  kb           2        6      0
+  rgb          2        4      0
+  via        690     1206      4
+  kb sessions by field: bt 0  rtc_period 0  lcd_brightness 0  clock_mode 0  batt_level 1  power_mode 0  ind_locks 0  ind_charging 0  batt_view 0  mixed 1  unknown 0
+  rtc period: last proposed 0 (-), last stored 0 (-); proposals sof 0 pcf 0, stores sof 0 pcf 0
+  (an erase is a whole-store erase: all 2048 bytes, 2 x 1 KB pages)
+  last erase at uptime 7.5 s
+
+per-task accounting (ON): 242690 passes, 1 slow (>= 10 ms), of which 0 >= 340 ms (counted, not attributed: the 16-bit tick may have wrapped)
+  scope          slow ms  share largest     all ms
+  ch582              0.3   2.3%       0      50704
+  battery            0.0   0.0%       0        920
+  display_hk         0.0   0.0%       0        648
+  blit_pump          0.0   0.1%       0       3576
+  rtc_task           0.0   0.0%       0        193
+  rtc_fast           0.0   0.2%       0       3631
+  leds               0.0   0.0%       0         20
+  health             0.0   0.0%       0          1
+  eeconfig           0.0   0.0%       0          6
+  second_edge        0.0   0.0%       0        870
+  anim               0.0   0.0%       0          4
+  hk_other           0.0   0.0%       0         51
+  unaccounted       11.7  97.4%       1     207327
+  last 1 slow passes (uptime s, pass ms: scopes > 0 ms):
+         182.0   12 ms: unaccounted 12
+
+isr_per_s                8001.0
+isr_mean_us              39.6
+isr_min_us               5.3
+isr_max_us               138.7
+isr_cpu_pct              31.7
+row_samples_per_row_per_s 444.4
+timebase_vs_wall         1.0
+
+  period = ISR duration + ~53 us (counter re-armed at ISR end), so isr_mean_us sets the row rate;
+  isr_cpu_pct is the M0 share inside the row ISR -- the ceiling on scanning and the main loop
+spi0_poll_strays         0
+spi0_poll_late           0
