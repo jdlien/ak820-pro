@@ -1,0 +1,9 @@
+# lcd-diag 5688b2a975 read, before the camera's old-mode clip (counters since 15:38:32 new mode), 2026-11-09 16:55:34
+mode                 fix A
+giveups              0
+strays               0
+late                 0
+window_notidle       0
+dma_gap_min          43 ticks (229.3 us)
+windows_after_dma    30
+windows_total        534

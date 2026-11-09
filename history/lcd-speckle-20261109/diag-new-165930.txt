@@ -1,0 +1,9 @@
+# lcd-diag 5688b2a975 new, after the camera's old-mode clip (16:55:46-16:56:39) and JD's wake key, 2026-11-09 16:59:30
+mode                 fix A
+giveups              0
+strays               0
+late                 0
+window_notidle       0
+dma_gap_min          none
+windows_after_dma    0
+windows_total        0
