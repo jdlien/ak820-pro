@@ -160,6 +160,9 @@ the last drain's 3243 net out.
   off), Blackberry's health read for the stray pixels (BACKLOG). White was awake at ~41 mA through
   it, and the count is still unbroken, with no charging sample. At it: **93.8 h, 602.4 mAh since
   FULL, 15.0% used**, the pack 3992 mV.
+- **Another, 12:11:46-12:11:52 11-09** (the daemon out 12:11:45, back 12:11:52; relay 2 off),
+  Blackberry's second read for the stray pixels. White was awake at ~42 mA, and the count is still
+  unbroken. At it: 94.3 h, 613.1 mAh since FULL, 15.3% used, 3994 mV.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full
