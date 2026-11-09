@@ -622,3 +622,5 @@ it excludes sleep, and a fall against `Instant` reads no sleep as input
 either way. It guarded only against a hypothetical glitch; the lock-light
 sender has never had it.
 Owed: the 11-09 measurement repeated on it.
+
+**Installed on Buzz at 17:59:16 11-09** from `320871e` (`ak820 0.3.1 (v0.3.1-208-g320871e)`, signed, `install --clock --radio --lockchan`, replacing 0.2.0 from 10-29). Its first lines: the radio silent (white on Bluetooth), the lock lights sending the title. Owed: the 2.4G sleep measurement repeated on it.
