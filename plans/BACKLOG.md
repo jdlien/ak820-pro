@@ -70,6 +70,31 @@ makes "had the board just woken or reconnected" the useful question at the next 
   frame's receipt, the text slot's paint, or the two together. The dev builds that painted titles
   carried other commits and a different row-ISR flavour.
 
+**Codex's trace (11-09, `plans/review-codex-lcd-speckle-raw.md`): no proven trigger.** Its best fit:
+the title frame was accepted into RAM, and its paint went wrong silently on SPI0. `queue_line`
+records the new text as painted (the shadow) before the glyphs reach the panel, so a write that the
+peripheral completed but the panel took wrongly is never repaired: identical title refreshes don't
+dirty the text, and type 3 updates the readout as usual. That explains the old title kept for
+minutes with the new track's time and zero health faults. The block at x ~92 sits in the new
+title's added cells. Its limits: every glyph sends its own window, so keeping all nine old letters
+needs several misses, and nothing in a normal title update paints row 41. The second candidate, a
+lost or rejected type 1 with type 3 applied to the old slot (type 3 carries no title identity), is
+reachable, but explains no junk and fits the minutes badly (only type 1 renews the 180 s lease).
+Corrections it made: the large song face's glyphs are 8x14 CPU-polled writes from internal flash, not
+asset-flash DMA, and are not in `blits_issued`; a polled window give-up is counted only in a dev
+diagnostic, though it latches a repaint; the channel's clear is x 109-121. A setter arriving
+mid-sequence leaves `text_dirty` for the next sequence, the same as raw HID's path for months. Its
+named unproven trigger: SPI0's 8-to-16-bit mode change with the panel selected, at a DMA's start and
+end (`hal_spi_v2_lld.c:218`, `:306`). Daily against dev changes timing (no detector in the row
+handler, no DPROBE, a per-byte RX read), not the rendering rules.
+
+**The test that splits it, at the next sighting, needs no new firmware:** a photo; pause the music,
+so no new title arrives; then `Fn`+`D` and back, and a second photo. The new title appearing means
+RAM held it and the paint failed; the old one means the frame never landed. **The smallest firmware
+diagnostic,** for the next change and not a flash of its own: a read-only health page with the RAM
+title and the shadow's, `text_dirty`, `ts_step`, the queue's depth, the polled give-up count, and
+the lock-light frames accepted and rejected by type with the last type 1's sequence.
+
 **If it comes back:** a photo first, before any key. Note what was on screen, roughly when, and
 whether the board had just woken. Then one health read for `blit_timeouts` (the data line up, the
 daemon paused). On a dev build the console names each timeout's class (`[lcd] blit timeout #n
