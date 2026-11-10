@@ -1,0 +1,11 @@
+# lcd-diag 5688b2a975 (reflashed 23:00:33, the discriminator) read, 2026-11-09 23:00:40
+mode                 0 fix A
+giveups              0
+strays               0
+late                 0
+bytes 7-8            0 (unversioned: 5688b2a975 or earlier; old_queued on bc1b9f42cb, else 0)
+window_notidle       0
+dma_gap_min          46 ticks (245.3 us)
+windows_after_dma    3
+windows_total        8
+n, div               (unversioned build: none)
