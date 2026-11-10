@@ -221,6 +221,19 @@ the last drain's 3243 net out.
   off): a read of `lcd-diag`'s counters and flash.sh's backups for the split build `1bc39c8281`.
   No `Fn`+`Esc` came, so flash.sh timed out at 17:46:52 and nothing was written. White stays on
   `5688b2a975` in A's mode.
+- **Two data-line windows and a flash, 11-10** (Hutch; relay 2 off throughout, no charging sample
+  since 13:38:11 11-09). At the first: **121.8 h, 986.7 mAh net since FULL, 24.6% used**, the pack
+  3982 mV; the board read 77% at ~14:00 against the count's 75.8%.
+  - 15:41:59-15:52:30 (the daemon out 15:41:58, back 15:52:32): flash.sh's backups and battery log
+    (66 entries), then no `Fn`+`Esc` inside its 10 min; nothing written.
+  - 15:53:10-15:55:06 (the daemon out 15:53:10, back 15:55:07): JD's `Fn`+`Esc` at 15:53:10, the
+    bootloader at ~11 mA (the job looked only for 0x8009 and missed it), a slider power-cycle at
+    15:54:00 (0 mA; the RAM battery log emptied, the 15:42 dump holds it), back at 15:54:11, the
+    backups, `Fn`+`Esc` again at ~15:54:50, and **the daily of `help-trim` `067cb8a3f0`** (token
+    `0xd15fe684`: `row-isr`'s fix A daily plus Help without Pro tips, Shortcuts without the slider
+    line) at ~15:55:00, 994.7 mAh net since FULL. Settings restored (Power saver); the clock over the
+    lock lights at 15:55:33. The `lcd-diag` switch is off white until it is reflashed for the
+    analyser.
 
 Tests on `feef9b4bfe`, whose firmware differs from this only in Help's text, Rain's mode number
 and a moved rule: the ladder check passes in full, the warm window reads 51.9 us and 41.5% at full

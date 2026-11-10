@@ -275,7 +275,7 @@ More info          ▶
 Pro tips was dropped on 11-10, and Shortcuts' slider line with it, which brings
 Shortcuts to two screens in both faces. The firmware for it is the branch
 `help-trim` (`067cb8a3f0`, one commit on `row-isr`'s `6683c18134`), not yet
-merged or flashed.
+merged; its daily (token `0xd15fe684`) is on white since 15:55 11-10.
 
 #### Using the menu
 
