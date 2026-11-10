@@ -1,0 +1,13 @@
+# lcd-diag 1bc39c8281 zero, step 1: before old, 2026-11-09 22:33:24
+mode                 0 fix A
+giveups              0
+strays               0
+late                 0
+exit_extra           0
+window_notidle       0
+dma_gap_min          none
+windows_after_dma    0
+windows_total        0
+n (delay reads)      10
+div asked            0 (24 MHz)
+div in SPI0          0 (24 MHz)
