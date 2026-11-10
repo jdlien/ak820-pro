@@ -176,8 +176,15 @@ O1-O6, then for one on the fix.
     wait states make a polling loop's cycle timing depend on its alignment.
   The 13:38 pair (the daily `4790208267` garbled, the dev build of the same source clean a minute
   later) leans to (b), but it is not a layout-only control: the dev build also carries the row
-  ISR's detector and the buffered radio RX. **The cheapest discriminator** is `5688b2a975`'s old
-  mode run again under the same evening's conditions: garbling means (b), clean means (a).
+  ISR's detector and the buffered radio RX. **The discriminator, run at once: (b).** `5688b2a975`
+  flashed back at 23:00:33 and set to old at 23:00:40 garbled at the third title, 23:08:55 ("Virtua
+  - Final Destination": the artist not replaced, a line of noise at the top), under the same
+  evening's conditions. Its read over 105 windows: every counter 0, no window within 240 us of a
+  DMA's completion. White is back on it in A's mode from 23:09:44
+  (`history/lcd-speckle-20261109/back-*.txt`). **So the old send's fault depends on the build, at
+  cycle scale, with its logic unchanged.** Fix A has stayed clean in all three builds it is in
+  (`6683c18134`, `5688b2a975`, `1bc39c8281`). The split's other modes can't be read from a build
+  whose baseline is clean.
   **Then a provocation mode** (DC dropped for the next command a set number of cycles before the
   last argument byte finishes, swept): if it gives this garble's shape on demand, with its
   threshold near the old send's timing, it shows the mechanism without an analyser. The 24 MS/s
