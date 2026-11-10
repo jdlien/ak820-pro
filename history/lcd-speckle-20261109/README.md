@@ -29,9 +29,10 @@ split, `plans/review-codex-lcd-diag-split-raw.md`, item 2).
 
 "All 0": give-ups, strays, late and windows not idle; every polled window
 began with TX empty, RX empty and not BUSY, and none came within about 190 us
-of a DMA's completion. Fix A's stretches between (15:38-16:55, 16:59-17:36,
-22:32-22:33, 22:57-23:00) were clean with every counter 0, and `exit_extra` 0
-on the split.
+of a DMA's completion. Fix A's read stretches (15:38-16:55, 16:59-17:36,
+22:32-22:33, 23:00:33-23:00:40) were clean with every counter 0, and
+`exit_extra` 0 on the split; the stretches between those reads (17:36-22:32,
+22:57-23:00) were not read.
 
 ## What it shows
 
