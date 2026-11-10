@@ -267,11 +267,15 @@ Click: back
 Using the menu     ▶
 Customizing        ▶
 Shortcuts          ▶
-Pro tips           ▶
 More info          ▶
 ```
 
 (More info, P1d: the credits and the QR code, at the end of this file.)
+
+Pro tips was dropped on 11-10, and Shortcuts' slider line with it, which brings
+Shortcuts to two screens in both faces. The firmware for it is the branch
+`help-trim` (`067cb8a3f0`, one commit on `row-isr`'s `6683c18134`), not yet
+merged or flashed.
 
 #### Using the menu
 
@@ -303,7 +307,6 @@ Definition.
 ```
 Fn+Q/W/E  BT slot
   hold 2 s: pair
-Slider: BT 2.4G USB
 Fn+Lt/Rt  hue
 Fn+Up/Dn  brightness
 Fn+,/.    saturation
@@ -316,24 +319,6 @@ Fn+Esc    bootloader
 ```
 
 JD: There's a chance we may remove some of these since, for rarely-used shortcuts, we can use the menu now.
-
-#### Pro tips
-
-```
-Balanced sleeps
-after 20 min idle.
-A key wakes it, and
-the key still types.
-
-The lights are the
-battery's big cost.
-Asleep, a night is
-about 1%.
-
-2.4G answers faster;
-Bluetooth has three
-slots.
-```
 
 ### Help in Large (15 columns)
 
@@ -375,8 +360,6 @@ Definition.
 ```
 Fn+QWE  BT 1-3
  hold 2 s: pair
-Slider  BT 2.4G
-        or USB
 Fn+Lt/Rt  hue
 Fn+Up/Dn bright
 Fn+,/. saturate
@@ -388,26 +371,6 @@ Fn+PgUp/Dn
         screen
 Fn+Esc
     bootloader
-```
-
-#### Large: Pro tips
-
-```
-Balanced sleeps
-after 20 min
-idle. A key
-wakes it and
-still types.
-
-The lights are
-the battery's
-big cost.
-Asleep, a night
-is about 1%.
-
-2.4G answers
-faster; BT has
-three slots.
 ```
 
 ### System info (title: `System info`; About until 10-28), page 1

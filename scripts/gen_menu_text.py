@@ -4,14 +4,14 @@ writes graphics/res/menu_text_pages.h from JD's text, plans/MENU-TEXT.md.
 
     python scripts/gen_menu_text.py [--check] < /dev/null
 
-- The four topics (Using the menu, Customizing, Shortcuts, Pro tips) are the
-  fenced blocks under their "#### <title>" headings in MENU-TEXT.md, which JD
-  edits (10-24: it replaced the mockup as the words' source, so his edits
-  reach the firmware as they are); blank lines are kept, notes outside the
-  fences ignored.
-- FACTS below: a number the text quotes (the idle close, the backstop, a
-  mode's sleep) is checked against the firmware's own constant, and a
-  disagreement refuses, so the text can't silently go stale.
+- The three topics (Using the menu, Customizing, Shortcuts; Pro tips was
+  dropped 11-10) are the fenced blocks under their "#### <title>" headings in
+  MENU-TEXT.md, which JD edits (10-24: it replaced the mockup as the words'
+  source, so his edits reach the firmware as they are); blank lines are kept,
+  notes outside the fences ignored.
+- FACTS below: a number the text quotes (the idle close, the backstop) is
+  checked against the firmware's own constant, and a disagreement refuses, so
+  the text can't silently go stale.
 - Every line must fit 20 cells of the 6x14 face, in printable ASCII: the
   generator refuses otherwise.
 - The Large face's topics (plans/MENU-8X16-PLAN.md, 10-28) are the blocks
@@ -28,9 +28,9 @@ TEXT = os.path.join(ROOT, "plans", "MENU-TEXT.md")
 FW = os.path.join(os.environ.get("AK820_QMK_HOME") or os.path.join(ROOT, "qmk_firmware-ak820pro"),   # the tree being built
                   "keyboards", "a_jazz", "ak820pro")
 OUT = os.path.join(FW, "graphics", "res", "menu_text_pages.h")
-TOPICS = ["Using the menu", "Customizing", "Shortcuts", "Pro tips"]
+TOPICS = ["Using the menu", "Customizing", "Shortcuts"]
 COLS = 20
-TOPICS_L = ["Menu basics", "Customizing", "Shortcuts", "Pro tips"]   # Large's, under "#### Large: <title>"
+TOPICS_L = ["Menu basics", "Customizing", "Shortcuts"]   # Large's, under "#### Large: <title>"
 COLS_L = 15
 
 
@@ -63,13 +63,6 @@ def define(path, name):
     return int(m.group(1))
 
 
-def ladder_sleep_ms(mode):
-    m = re.search(r"\[" + mode + r"\]\s*=\s*\{([^}]*)\}", open(os.path.join(FW, "power.c"), encoding="utf-8").read())
-    if not m:
-        sys.exit(f"power.c: no ladder for {mode}")
-    return int(m.group(1).split(",")[3].strip().rstrip("u"))   # dim, lights off, screen off, sleep
-
-
 # A number the text quotes, and the firmware's own (topic, a pattern over the
 # topic's lines joined with spaces, its value from the firmware, what it is).
 # A pattern the text doesn't use isn't checked; one it uses must agree.
@@ -78,8 +71,6 @@ FACTS = [
      lambda: define(os.path.join(FW, "menu", "menu_input.h"), "MI_IDLE_MS") // 1000, "the idle close, s"),
     ("Using the menu", r"(\d+) min mid-edit",
      lambda: define(os.path.join(FW, "menu", "menu_input.h"), "MI_BACKSTOP_MS") // 60000, "the backstop, min"),
-    ("Pro tips", r"Balanced sleeps after (\d+) min",
-     lambda: ladder_sleep_ms("POWER_MODE_NORMAL") // 60000, "Balanced's sleep, min"),
 ]
 
 
@@ -143,7 +134,7 @@ def main():
     for title in TOPICS_L:
         starts.append(len(flat))
         flat += pages_l[title]
-    out.append("/* Large's (plans/MENU-8X16-PLAN.md): the same four, wrapped at 15. */")
+    out.append("/* Large's (plans/MENU-8X16-PLAN.md): the same three, wrapped at 15. */")
     out.append("static const char *const menu_help_titles_l[MENU_HELP_TOPICS] = {")
     out += [f"    {c_str(t)}," for t in TOPICS_L]
     out += ["};", ""]

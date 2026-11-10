@@ -2122,8 +2122,8 @@ static void test_menu(void) {
     m_settle();
     CHECK(row_bad(T_POWER, cells2(FONT_MONO_I_POWER " Power", "Always on"), MENU_DIM) == 0);
 
-    /* Help: a topic pages by 8, clamped. Shortcuts has 12 lines: its top
-     * stops at 4. */
+    /* Help: a topic pages by 8, clamped. Shortcuts has 11 lines: its top
+     * stops at 3. */
     for (int i = 0; i < 300; i++) fw_pass(5);   /* past the Saved flash */
     m_turn(T_HELP - T_CLOCK);   /* Help (page two's first row) */
     m_click();
@@ -2144,10 +2144,10 @@ static void test_menu(void) {
     m_settle();
     m_turn(-1);
     m_turn(1);
-    CHECK(sub5_cursor() == 4 && row_bad(0, "Fn+Up/Dn  brightness", MENU_WHITE) == 0);
+    CHECK(sub5_cursor() == 3 && row_bad(0, "Fn+Up/Dn  brightness", MENU_WHITE) == 0);
     CHECK(row_bad(7, "Fn+Esc    bootloader", MENU_WHITE) == 0);
     m_turn(1);
-    CHECK(sub5_cursor() == 4);
+    CHECK(sub5_cursor() == 3);
     m_turn(-1);
     CHECK(sub5_cursor() == 0);
     m_click();   /* back to Help, Shortcuts' row */
@@ -2301,12 +2301,12 @@ static void test_menu(void) {
     }
     m_click();
     m_hold();     /* from Diagnostics to the top, on its row */
-    /* Every Help topic paged to its end: 7, 7, 12 and 13 lines (JD's text, 10-24), so its
-     * last top is 0, 0, 4 and 5. */
+    /* Every Help topic paged to its end: 7, 8 and 11 lines (JD's text; Pro tips
+     * dropped 11-10), so its last top is 0, 0 and 3. */
     m_turn(T_HELP - T_DIAG);   /* Help */
     m_click();
-    for (int t = 0; t < 4; t++) {
-        static const uint8_t last_top[4] = {0, 0, 4, 5};
+    for (int t = 0; t < 3; t++) {
+        static const uint8_t last_top[3] = {0, 0, 3};
         if (t) m_turn(1);
         m_click();
         m_turn(1);
@@ -5490,7 +5490,7 @@ static void test_large_restore(void) {
     m_click();
     m_turn(1);
     m_turn(1);
-    CHECK(sub5_screen() == SC_TOPIC0 + 2 && sub5_cursor() == 8);   /* 15 lines, the last page from 8 */
+    CHECK(sub5_screen() == SC_TOPIC0 + 2 && sub5_cursor() == 6);   /* 13 lines, the last page from 6 */
     CHECK(live_apply(true) == PROF_OK && fk_font == ENV_FONT_SMALL);
     ts_face = MT_SMALL;
     m_tick_settle();
@@ -5757,8 +5757,8 @@ static void more_face(uint8_t font, uint8_t face) {
     m_turn(T_HELP);
     m_click();
     CHECK(sub5_screen() == SC_HELP && sub5_cursor() == 1);
-    m_turn(4);   /* Help's last row */
-    CHECK(sub5_cursor() == 5 && row_bad(5, cells2("More info", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    m_turn(3);   /* Help's last row */
+    CHECK(sub5_cursor() == 4 && row_bad(4, cells2("More info", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_click();
     CHECK(sub5_screen() == SC_MORE && sub5_cursor() == 0 && title_bad(FONT_MONO_I_HELP "More info") == 0);
     CHECK(more_credits_bad() == 0);
@@ -5772,7 +5772,7 @@ static void more_face(uint8_t font, uint8_t face) {
     CHECK(sub5_cursor() == 0 && more_credits_bad() == 0);
     m_turn(1);
     m_click();   /* back, on its row */
-    CHECK(sub5_screen() == SC_HELP && sub5_cursor() == 5 && row_bad(5, cells2("More info", FONT_MONO_TRI_R), MENU_LIT) == 0);
+    CHECK(sub5_screen() == SC_HELP && sub5_cursor() == 4 && row_bad(4, cells2("More info", FONT_MONO_TRI_R), MENU_LIT) == 0);
     m_hold();
     CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_HELP);
     CHECK(fk_oob == oob && max_pass_bytes <= MB_PASS_BYTES && menu_max_lit <= 1 && menu_max_cursor <= 1);
