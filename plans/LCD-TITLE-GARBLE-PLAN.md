@@ -166,6 +166,22 @@ O1-O6, then for one on the fix.
   229 us after a DMA's completion, and the old mode's closest was 1.17 ms. So the fault lies inside
   the old send's completion, not in a busy bus at entry or a DMA's tail. A's own counters (`late`,
   `strays`) read 0, so what A changed works without either guard firing.
+- **The split's baseline did not reproduce (22:33-22:57).** On `lcd-diag` `1bc39c8281` (token
+  `0x6d970a9b`, flashed 22:32:46, `plans/LCD-DIAG-SPLIT-PROTOCOL.md`), old mode ran 274 polled
+  windows with every counter 0, and JD saw no garble in 14 title changes over BT. The same old
+  send garbled on `5688b2a975` at 15:38 and 16:55. The protocol stops there, back to A at 22:57:04
+  (`history/lcd-speckle-20261109/split-*.txt`). There are two explanations, not yet told apart:
+  - **(a) conditions:** six hours later in the drain, a different song set, evening BT;
+  - **(b) the build:** the old send sits 12 bytes later (0x83c to 0x848), and on this part flash
+    wait states make a polling loop's cycle timing depend on its alignment.
+  The 13:38 pair (the daily `4790208267` garbled, the dev build of the same source clean a minute
+  later) leans to (b), but it is not a layout-only control: the dev build also carries the row
+  ISR's detector and the buffered radio RX. **The cheapest discriminator** is `5688b2a975`'s old
+  mode run again under the same evening's conditions: garbling means (b), clean means (a).
+  **Then a provocation mode** (DC dropped for the next command a set number of cycles before the
+  last argument byte finishes, swept): if it gives this garble's shape on demand, with its
+  threshold near the old send's timing, it shows the mechanism without an analyser. The 24 MS/s
+  analyser can't resolve DC against a 24 MHz SCK's last edge; that needs 100 MS/s or more.
 - **White stays on `lcd-diag` in A's mode** until the logic analyser arrives (1-2 weeks). Every boot
   and watchdog reset comes up in A. `scripts/lcd_diag.py read|old|new|zero` switches and reads over
   the data line, with the daemon out.
