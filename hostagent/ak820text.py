@@ -33,13 +33,26 @@ ICONS = {"none": 0, "play": 1, "pause": 2, "stop": 3}
 SUBS = {"‘": "'", "’": "'", "“": '"', "”": '"',
         "–": "-", "—": "-", "…": "...", " ": " "}
 
+# Letters with no decomposition at all: NFKD leaves them whole, so the ASCII
+# filter below dropped them ("Øutgrown" reached the panel as "utgrown",
+# 2026-11-09). Their usual transliteration instead.
+SUBS.update({
+    "Æ": "AE", "æ": "ae", "Ð": "D", "ð": "d", "Ø": "O", "ø": "o",
+    "Þ": "Th", "þ": "th", "ß": "ss", "ẞ": "SS", "Đ": "D", "đ": "d",
+    "Ħ": "H", "ħ": "h", "ı": "i", "ĸ": "k", "Ł": "L", "ł": "l",
+    "Ŋ": "N", "ŋ": "n", "Œ": "OE", "œ": "oe", "Ŧ": "T", "ŧ": "t",
+})
+
 
 def to_ascii(s):
     for k, v in SUBS.items():
         s = s.replace(k, v)
     try:                                  # strip accents where possible
         import unicodedata
-        s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+        s = unicodedata.normalize("NFKD", s)
+        for k, v in SUBS.items():         # again: an accented Ø decomposes to Ø + a mark
+            s = s.replace(k, v)
+        s = s.encode("ascii", "ignore").decode()
     except Exception:
         pass
     return "".join(c if 0x20 <= ord(c) < 0x7F else "?" for c in s)

@@ -227,6 +227,23 @@ mod tests {
         assert_eq!(to_ascii("a\u{A0}b"), "a b");
     }
 
+    /// Letters that are not a base letter plus a mark: NFKD leaves them
+    /// whole, so they vanished ("\u{D8}utgrown" showed as "utgrown",
+    /// 2026-11-09) until they got substitutions of their own.
+    #[test]
+    fn letters_with_no_decomposition_transliterate_rather_than_vanishing() {
+        assert_eq!(to_ascii("\u{D8}utgrown"), "Outgrown");
+        assert_eq!(to_ascii("Bj\u{F8}rn"), "Bjorn");
+        assert_eq!(to_ascii("\u{C6}on"), "AEon");
+        assert_eq!(to_ascii("Stra\u{DF}e"), "Strasse");
+        assert_eq!(to_ascii("\u{141}\u{F3}d\u{17A}"), "Lodz");
+        assert_eq!(to_ascii("\u{DE}\u{F3}r \u{F0}"), "Thor d");
+        assert_eq!(to_ascii("\u{152}uvre"), "OEuvre");
+        // An accented form decomposes to one of them plus a mark (codex, P3).
+        assert_eq!(to_ascii("\u{1FE}utgrown"), "Outgrown");
+        assert_eq!(to_ascii("\u{1FC}on"), "AEon");
+    }
+
     #[test]
     fn scripts_with_no_ascii_are_dropped_entirely() {
         assert_eq!(to_ascii("中文"), "");

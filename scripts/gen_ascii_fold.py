@@ -20,15 +20,20 @@ is generated HERE, from the same library the oracle uses, and checked in.
     def to_ascii(s):
         for k, v in SUBS.items():
             s = s.replace(k, v)
-        s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+        s = unicodedata.normalize("NFKD", s)
+        for k, v in SUBS.items():
+            s = s.replace(k, v)
+        s = s.encode("ascii", "ignore").decode()
         return "".join(c if 0x20 <= ord(c) < 0x7F else "?" for c in s)
 
 Three steps, and each is handled somewhere specific:
 
-1. `SUBS` -- a punctuation transliteration applied BEFORE normalization. It is
-   not redundant: U+2018/2019/201C/201D and U+2013/2014 have no compatibility
-   decomposition at all, so without this they would simply vanish. Baked into
-   the table below as overrides.
+1. `SUBS` -- a transliteration of punctuation and of letters that have no
+   decomposition, applied before normalization and again after it. It is
+   not redundant: U+2018/2019/201C/201D, U+2013/2014 and letters such as
+   Ø, Æ and ß have no compatibility decomposition at all, so without
+   this they would simply vanish. The second pass catches an accented form
+   (U+01FE decomposes to Ø and a mark). Baked into the table below.
 2. NFKD, then drop everything non-ASCII. This is the table.
 3. Control characters become `?`. Handled in Rust, not here: NFKD never emits a
    C0 control and no `SUBS` value contains one, so a control in the output can
@@ -39,7 +44,8 @@ Three steps, and each is handled somewhere specific:
 NFKD is compatibility decomposition followed by canonical ordering. Ordering
 only permutes combining marks, which are all >= U+0300 and therefore dropped by
 the ASCII filter anyway -- so it cannot change which characters survive. Every
-`SUBS` key is a single character, so replacement is per-character too. The
+`SUBS` key is a single character with combining class 0, so replacement is
+per-character too, before NFKD and after it. The
 differential test in `src/text/mod.rs` checks this against real Python output
 rather than trusting the argument.
 """
@@ -58,6 +64,16 @@ SUBS = {
     "…": "...",
     " ": " ",
 }
+
+# Letters with no decomposition at all: NFKD leaves them whole, so the ASCII
+# filter dropped them ("Øutgrown" reached the panel as "utgrown",
+# 2026-11-09). Their usual transliteration instead.
+SUBS.update({
+    "Æ": "AE", "æ": "ae", "Ð": "D", "ð": "d", "Ø": "O", "ø": "o",
+    "Þ": "Th", "þ": "th", "ß": "ss", "ẞ": "SS", "Đ": "D", "đ": "d",
+    "Ħ": "H", "ħ": "h", "ı": "i", "ĸ": "k", "Ł": "L", "ł": "l",
+    "Ŋ": "N", "ŋ": "n", "Œ": "OE", "œ": "oe", "Ŧ": "T", "ŧ": "t",
+})
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "ak820-agent" / "src" / "text" / "fold_table.rs"
@@ -92,7 +108,8 @@ def fold(cp: int) -> str:
     ch = chr(cp)
     if ch in SUBS:
         return SUBS[ch]
-    return "".join(c for c in unicodedata.normalize("NFKD", ch) if ord(c) < 0x80)
+    out = "".join(SUBS.get(c, c) for c in unicodedata.normalize("NFKD", ch))
+    return "".join(c for c in out if ord(c) < 0x80)
 
 
 def check_against_oracle(entries):
