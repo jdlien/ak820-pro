@@ -136,10 +136,192 @@ impl Publisher {
     }
 }
 
+/// How long a pause of the playing track is held back before it is shown.
+///
+/// Measured on 2026-11-09 with Apple Music: a skip often reports the old
+/// track paused for 3-4 s before the next track's `now` arrives (4 of that
+/// day's 93 title changes, the gap from the pause frame to the next title
+/// 3, 3, 3 and 4 s), so the panel showed a pause nobody pressed. 5 s covers
+/// those and delays a real pause by 5 s.
+pub const PAUSE_HOLD: Duration = Duration::from_secs(5);
+
+/// Holds back a play-to-pause of the same track for [`PAUSE_HOLD`], so a
+/// skip's momentary pause never reaches the panel.
+///
+/// Only that one transition is held: the same artist and title going from
+/// playing to paused. Anything else passes at once: a new track (playing or
+/// paused), idle, a resume, and a pause with no playing track before it.
+/// While a pause is held the loop publishes the last playing snapshot with
+/// its position advanced by the time since it was taken, as if the pause had
+/// not happened. If the pause outlasts the hold it passes through as it is.
+///
+/// ⚠️ The position is advanced from when it was **true** (`pos_at`: the
+/// source's observation on Windows, the snapshot's creation on the Mac), not
+/// from when the loop took it: a Windows read cached for 6 s would otherwise
+/// come back 6 s behind, which the lock-light channel takes for a seek
+/// (codex, pause hold, P2).
+#[derive(Debug, Default)]
+pub struct PauseHold {
+    /// The last playing snapshot and when its position was true.
+    playing: Option<(Snapshot, Instant)>,
+    /// When the held pause was first seen.
+    since: Option<Instant>,
+}
+
+impl PauseHold {
+    pub fn new() -> PauseHold {
+        PauseHold::default()
+    }
+
+    /// What to publish at `now` in place of `snapshot`, whose position was
+    /// true at `pos_at`, and, while a pause is held, when the hold ends (the
+    /// loop takes its next look then). A held snapshot's position is true at
+    /// `now`.
+    pub fn filter(&mut self, snapshot: Snapshot, pos_at: Instant, now: Instant) -> (Snapshot, Option<Instant>) {
+        if snapshot.playing {
+            self.playing = Some((snapshot.clone(), pos_at));
+            self.since = None;
+            return (snapshot, None);
+        }
+        let same_track = self
+            .playing
+            .as_ref()
+            .is_some_and(|(p, _)| !snapshot.is_idle() && p.artist == snapshot.artist && p.title == snapshot.title);
+        if !same_track {
+            self.playing = None;
+            self.since = None;
+            return (snapshot, None);
+        }
+        let until = *self.since.get_or_insert(now) + PAUSE_HOLD;
+        if now >= until {
+            self.playing = None;
+            self.since = None;
+            return (snapshot, None);
+        }
+        let Some((p, at)) = &self.playing else { return (snapshot, None) };
+        let mut held = p.clone();
+        let ran = now.saturating_duration_since(*at).as_secs().min(u32::MAX as u64) as u32;
+        held.pos_s = held.pos_s.saturating_add(ran);
+        if held.dur_s != 0 {
+            held.pos_s = held.pos_s.min(held.dur_s);
+        }
+        (held, Some(until))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::text::{self, Icon};
+
+    /// The hold with the position true when the loop takes the snapshot, as
+    /// on the Mac.
+    fn f(h: &mut PauseHold, s: Snapshot, now: Instant) -> (Snapshot, Option<Instant>) {
+        h.filter(s, now, now)
+    }
+
+    /// The held position runs from when the playing position was true, not
+    /// from when the loop took it: a Windows read cached 6 s comes back 6 s
+    /// on, not 1 (codex, pause hold, P2).
+    #[test]
+    fn the_held_position_runs_from_when_it_was_true() {
+        let mut h = PauseHold::new();
+        let start = t0();
+        h.filter(track("A", "T", true, 100, 300), start, start + Duration::from_secs(6));
+        let at = start + Duration::from_secs(7);
+        let (s, _) = h.filter(track("A", "T", false, 101, 300), at, at);
+        assert_eq!(s.pos_s, 107);
+    }
+
+    /// A skip's momentary pause: held, the old track still playing with its
+    /// position advanced, then the new track passes at once.
+    #[test]
+    fn a_skips_momentary_pause_is_held_and_the_next_track_passes() {
+        let mut h = PauseHold::new();
+        let start = t0();
+        let (s, until) = f(&mut h, track("A", "T", true, 100, 300), start);
+        assert_eq!((s, until), (track("A", "T", true, 100, 300), None));
+        let at = start + Duration::from_secs(3);
+        let (s, until) = f(&mut h, track("A", "T", false, 101, 300), at);
+        assert_eq!(s, track("A", "T", true, 103, 300), "held: still playing, position advanced");
+        assert_eq!(until, Some(at + PAUSE_HOLD));
+        let (s, until) = f(&mut h, track("B", "U", true, 0, 200), at + Duration::from_secs(3));
+        assert_eq!((s, until), (track("B", "U", true, 0, 200), None));
+    }
+
+    /// A real pause shows once it outlasts the hold, and stays shown.
+    #[test]
+    fn a_real_pause_shows_after_the_hold() {
+        let mut h = PauseHold::new();
+        let start = t0();
+        f(&mut h, track("A", "T", true, 10, 300), start);
+        let paused = track("A", "T", false, 12, 300);
+        let first = start + Duration::from_secs(2);
+        assert!(f(&mut h, paused.clone(), first).0.playing);
+        assert!(f(&mut h, paused.clone(), first + PAUSE_HOLD - Duration::from_millis(1)).0.playing);
+        assert_eq!(f(&mut h, paused.clone(), first + PAUSE_HOLD), (paused.clone(), None));
+        assert_eq!(f(&mut h, paused.clone(), first + PAUSE_HOLD * 3), (paused, None), "no second hold");
+    }
+
+    /// The hold is timed from the pause's first sighting, not renewed by
+    /// each poll that still sees it.
+    #[test]
+    fn the_hold_runs_from_the_first_sighting() {
+        let mut h = PauseHold::new();
+        let start = t0();
+        f(&mut h, track("A", "T", true, 10, 300), start);
+        let paused = track("A", "T", false, 12, 300);
+        let first = start + Duration::from_secs(1);
+        let (_, u1) = f(&mut h, paused.clone(), first);
+        let (_, u2) = f(&mut h, paused, first + Duration::from_secs(3));
+        assert_eq!((u1, u2), (Some(first + PAUSE_HOLD), Some(first + PAUSE_HOLD)));
+    }
+
+    /// A resume inside the hold passes, and a later pause gets a hold of its
+    /// own.
+    #[test]
+    fn a_resume_ends_the_hold_and_a_later_pause_is_held_afresh() {
+        let mut h = PauseHold::new();
+        let start = t0();
+        f(&mut h, track("A", "T", true, 10, 300), start);
+        f(&mut h, track("A", "T", false, 11, 300), start + Duration::from_secs(1));
+        let resumed = track("A", "T", true, 12, 300);
+        assert_eq!(f(&mut h, resumed.clone(), start + Duration::from_secs(2)), (resumed, None));
+        let later = start + Duration::from_secs(60);
+        assert_eq!(f(&mut h, track("A", "T", false, 70, 300), later).1, Some(later + PAUSE_HOLD));
+    }
+
+    /// Only the same track's play-to-pause is held: a new track that arrives
+    /// paused, a pause with nothing playing before it, and idle all pass.
+    #[test]
+    fn only_the_same_tracks_pause_is_held() {
+        let start = t0();
+        let mut h = PauseHold::new();
+        let cold = track("A", "T", false, 10, 300);
+        assert_eq!(f(&mut h, cold.clone(), start), (cold, None), "nothing was playing");
+        f(&mut h, track("A", "T", true, 10, 300), start);
+        let other = track("B", "U", false, 0, 200);
+        assert_eq!(f(&mut h, other.clone(), start + Duration::from_secs(1)), (other, None), "a new track");
+        let mut h = PauseHold::new();
+        f(&mut h, track("A", "T", true, 10, 300), start);
+        let idle = Snapshot::idle();
+        assert_eq!(f(&mut h, idle.clone(), start + Duration::from_secs(1)), (idle, None), "idle");
+        let after = track("A", "T", false, 12, 300);
+        assert_eq!(f(&mut h, after.clone(), start + Duration::from_secs(2)), (after, None), "idle broke the run");
+    }
+
+    /// The held position stops at a known duration, and a stream's (no
+    /// duration) runs on.
+    #[test]
+    fn the_held_position_is_clamped_to_the_duration() {
+        let start = t0();
+        let mut h = PauseHold::new();
+        f(&mut h, track("A", "T", true, 298, 300), start);
+        assert_eq!(f(&mut h, track("A", "T", false, 299, 300), start + Duration::from_secs(4)).0.pos_s, 300);
+        let mut h = PauseHold::new();
+        f(&mut h, track("A", "T", true, 298, 0), start);
+        assert_eq!(f(&mut h, track("A", "T", false, 299, 0), start + Duration::from_secs(4)).0.pos_s, 302);
+    }
 
     fn track(artist: &str, title: &str, playing: bool, pos: u32, dur: u32) -> Snapshot {
         Snapshot {

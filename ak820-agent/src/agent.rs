@@ -255,6 +255,8 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
 
     let worker = P::spawn_media(opts.interval, &log)?;
     let mut publisher = Publisher::new();
+    // A skip's momentary pause, held back from every transport (`PauseHold`).
+    let mut pause_hold = crate::media::PauseHold::new();
     let mut watch = Watch::new();
     let mut via = Via::Nothing;
     let mut radio = (opts.radio || opts.radio_only).then(|| {
@@ -382,6 +384,20 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
                 poll_was_ok = health.last_poll_ok;
             }
             let snapshot = if health.last_poll_ok { snapshot } else { Snapshot::default() };
+            // The content and when the source observed it (R3-7); a failed
+            // read is idle, observed now.
+            let observed = if health.last_poll_ok {
+                health.stale_for.and_then(|d| now.checked_sub(d)).unwrap_or(now)
+            } else {
+                now
+            };
+            // When the position was true is the platform's to say.
+            let pos_at = if P::POSITION_AS_OF_OBSERVATION { observed } else { now };
+            // A pause of the playing track is held for `PAUSE_HOLD`: a skip's
+            // momentary pause never reaches the panel, a real one shows late.
+            // A held snapshot's position is advanced to now, so it is true now.
+            let (snapshot, pause_until) = pause_hold.filter(snapshot, pos_at, now);
+            let pos_at = if pause_until.is_some() { now } else { pos_at };
             if !watch.holding(now) {
                 let mut discarded = Vec::new();
                 let radio_pushes = radio.as_ref().map(|r| r.status.pushes);
@@ -424,15 +440,6 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
                     raw_media_last = Some(raw_media_last.map_or(t, |m| m.max(t)));
                 }
                 if let Some(lc) = &lockchan {
-                    // The content and when the source observed it (R3-7); a
-                    // failed read is idle, observed now.
-                    let observed = if health.last_poll_ok {
-                        health.stale_for.and_then(|d| now.checked_sub(d)).unwrap_or(now)
-                    } else {
-                        now
-                    };
-                    // When the position was true is the platform's to say.
-                    let pos_at = if P::POSITION_AS_OF_OBSERVATION { observed } else { now };
                     lc.set(crate::lockchan::sender::Media::of(&snapshot), observed, pos_at);
                     if lock_lights_may_carry(&outcome, transport) {
                         if !lc.granted() {
@@ -468,6 +475,10 @@ pub fn run<P: Platform>(opts: Options) -> Result<(), String> {
             // (`Radio::next_tick`); without the radio, or on USB, as it is.
             let now = Instant::now();
             next_media = now + radio.as_ref().map_or(opts.interval, |r| r.next_tick(now));
+            // A held pause is looked at again when its hold ends.
+            if let Some(until) = pause_until {
+                next_media = next_media.min(until);
+            }
         }
 
         if let Some(clock) = clock.as_mut() {
