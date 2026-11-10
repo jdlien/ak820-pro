@@ -624,3 +624,5 @@ sender has never had it.
 Owed: the 11-09 measurement repeated on it.
 
 **Installed on Buzz at 17:59:16 11-09** from `320871e` (`ak820 0.3.1 (v0.3.1-208-g320871e)`, signed, `install --clock --radio --lockchan`, replacing 0.2.0 from 10-29). Its first lines: the radio silent (white on Bluetooth), the lock lights sending the title. Owed: the 2.4G sleep measurement repeated on it.
+
+**Reinstalled on Buzz at 23:29:05 11-09** from `86a0e81` (`ak820 0.3.1 (v0.3.1-216-g86a0e81)`, same flags): `320871e` plus the pause hold (a skip's momentary pause held 5 s, `media.rs` `PauseHold`) and the ASCII fold's letters (`63529ee`). The 2.4G sleep measurement is still owed, now on this build.
