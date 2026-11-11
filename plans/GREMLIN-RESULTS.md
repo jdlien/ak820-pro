@@ -2341,3 +2341,21 @@ The `rowisr_diag.py` pages (epoch losses, strays) are Python HID, which
 gremlin doesn't run. Owed: a second read after real use, JD's report of
 any phantom or missed key, and a 2.4G run (typing, then a deep sleep with
 the waking key kept).
+
+**11-11, black to `row-isr`'s head and the agent from `main`** (JD: "pull
+and then flash the latest version of the firmware as well as the agent").
+The firmware: `row-isr` `6683c18134` (the head on the fork; from
+`4c85f385a9`: the Bluetooth receiver and the ACK deferral in every build,
+`4790208267`, the 2.4G dongle's raw HID in every build, `585f14a23e`, and
+the title garble's fix A, `862acd7b0c` and `6683c18134`; each reviewed on
+Buzz), the dev build `via-dev-6683c18134b-20261111-181633.bin`, token
+`0x1c5f845d`, heap gap 328 B, flashed by `flash.sh` (the board away
+12:17:23-12:18:02 by the daemon; the jump, the keymap, the profiles and
+the live settings restored and read back); `ak820 health` read the token
+back at uptime 16.7 s. The agent:
+`ak820 0.3.1 (v0.3.1-209-gf2bb185)` from `main` (the radio's hold for a
+sleeping board, `320871e`, and the diagnostics since), replacing 0.2.0
+(`v0.2.0-7-g9bfdbb0`), by `ak820 install --clock --radio --lockchan` at
+12:16:59, a minute before the flash. Its syncs: 12:17:01 at its start
+(-5.3 ms before, -5.4 after), and 12:18:18 on the board's return from
+the flash (+1421.1 ms before, +1.4 after).
