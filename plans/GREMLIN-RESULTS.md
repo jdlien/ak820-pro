@@ -2359,3 +2359,15 @@ sleeping board, `320871e`, and the diagnostics since), replacing 0.2.0
 12:16:59, a minute before the flash. Its syncs: 12:17:01 at its start
 (-5.3 ms before, -5.4 after), and 12:18:18 on the board's return from
 the flash (+1421.1 ms before, +1.4 after).
+
+**15:15:15 11-11, the agent again, from `77334b7`** (`v0.3.1-221-g77334b7`),
+once Hutch pushed Buzz's two agent commits at JD's ask: the fold's
+transliteration of letters with no decomposition (`63529ee`: O for
+U+00D8, AE, ss, L, D, Th and the rest, 24 letters) and a skip's momentary
+pause held 5 s before it reaches the panel (`86a0e81`). Built and
+tested on gremlin first: `cargo test --release` for `text::` (19),
+`media::` (15), `agent::` (27) and the fold parity (3), all passing; the
+rest of the suite not run here (Buzz ran it whole). Installed with the
+same flags, the clock synced at its start (+1.1 ms). Owed, JD's hands:
+a title with those letters on the panel, and a track skip with no pause
+flash (if SMTC never sends the momentary pause, the hold never fires).
