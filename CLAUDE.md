@@ -111,15 +111,33 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-11-02)
+## Current state (2026-11-13)
 
-**Resume from [`plans/current-status.md`](plans/current-status.md)** ("2026-10-22
-— RESUME HERE"). **Feature-complete for JD's board.** What's left:
+**Resume from [`plans/current-status.md`](plans/current-status.md)** (its
+top block, "2026-11-13 — v0.4.0"). **Feature-complete for JD's board.** What's left:
 - an untethered drain at real use, run to the RGB cut. The one from FULL
   at 04:44 10-24 stopped short at 20:11 11-04 with ~19% left by the
   logger, two long charges for bench work inside it
   (`plans/current-status.md`, "Stopped 20:11:24 11-04"); a new one runs from FULL since 13:56:13 11-05, on the daily build;
 - stripping the bench, the soak, and the release for other owners.
+
+**v0.4.0, released 11-13 from `d59cb1fb0c`** (`ak820pro-jdlien` fast-forwarded
+to it and pinned in `deps.lock`): `row-isr` merged at last, with `help-trim`
+on it. It brings the row ISR rewrite (the 444 Hz field, the scan in the same
+handler, ~40% of the CPU against the old 73%), D9's curve on every effect,
+Rain, the BT keep-alive, now playing and the clock over Bluetooth and the
+2.4G dongle in the daily and fpb builds, fix A (the title garble's cure), the
+Help trim; and the agent 0.4.0 (the fold's transliteration, the skip's pause
+hold, the radio left alone after 180 s idle). The merge is `-s ours`:
+`ak820pro-jdlien`'s three commits since v0.3.1 were already on `row-isr` as
+cherry-picks, so the release's source is byte for byte the code on white.
+⚠️ Owed: the clean-Windows install of the zip (`scripts/sandbox-6b.ps1`;
+gremlin's Windows Sandbox is off). **On white since 15:55 11-10: the daily of
+`help-trim` `067cb8a3f0`** (token `0xd15fe684`): the release's code, its build
+differing only in the token, the hash and VIA's date-derived EEPROM magic. Its
+11-13 read: 23,373 presses, no stall >= 25 ms, no watchdog event, no blit
+fault. Before it, from 14:48 11-09: fix A's daily `6683c18134`, then the
+lcd-diag builds `1bc39c8281` and `5688b2a975` (`history/lcd-speckle-20261109/`).
 
 **v0.3.1, released 11-01 22:25 from `cfe6c2d3a5`** (`ak820pro-jdlien`
 and `deps.lock` there since 18:36): v0.3.0 plus F-033's fix (the row ISR's
@@ -136,7 +154,7 @@ the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
 fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
-**On white since 13:39 11-09: the DEV build of `row-isr` `4790208267`** (token `0x50f8f2d1`), the same
+**Before them, from 13:39 11-09: the DEV build of `row-isr` `4790208267`** (token `0x50f8f2d1`), the same
 source as the daily below, flashed to split commits from flavour: the daily's large song font paints
 its letters wrong at nearly every title change, over Bluetooth and over USB alike (`plans/BACKLOG.md`'s
 first item), and no daily build before it had ever painted that font. **Before it, from 00:35 11-07:

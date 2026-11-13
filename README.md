@@ -171,7 +171,7 @@ a product.
 | The agent (now playing, clock) | build it yourself | ✓ from [Releases](https://github.com/jdlien/ak820-pro/releases) | none |
 
 - **VIA macros are effectively gone.** The profiles take the EEPROM's space,
-  leaving VIA's macro buffer 19 bytes.
+  leaving VIA's macro buffer 18 bytes.
 - **There are two panel revisions.** If the screen comes up upside down or
   colour-inverted, use the `-fpb` binary. Nothing is wrong with your board.
 - **The battery figures come from one keyboard, one pack, at room

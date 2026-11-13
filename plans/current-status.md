@@ -1,8 +1,54 @@
 # Current status
 
-Updated 2026-11-04, 20:45. The block below is where things stand, written to
+Updated 2026-11-13. The block below is where things stand, written to
 be read cold. The dated blocks under it are the record as it was written
 each day, newest first, and they end with the September crash hunt.
+
+## 2026-11-13 — v0.4.0
+
+**Released from `ak820pro-jdlien` `d59cb1fb0c`**, pinned in `deps.lock`: the
+row ISR rewrite merged at last. `row-isr` fast-forwarded to `help-trim`
+(`067cb8a3f0`), then took `ak820pro-jdlien` with `-s ours`, because that
+branch's three commits since v0.3.1 (`c43b104157`, `e3cc253727`,
+`cbd0d2f308`) were cherry-picks of `row-isr`'s own; `ak820pro-jdlien`
+fast-forwarded to the merge. `lcd-diag` stays out. The agent is 0.4.0
+(`63529ee`'s transliteration, `86a0e81`'s pause hold, `320871e`'s radio
+hold). `check_effect_ids.py`'s `ADDED` is empty now that Rain is on the pin.
+
+**What qualified it:** the stage gates on the dev builds (the
+`history/rowisr-stage1-20261101/` record: short taps exact to 10 ms, the
+waking key kept, the silence set, the camera gate, the soaks); the daily
+builds on white since 13:55 11-05 through the drain; this exact code on
+white since 15:55 11-10, whose one health read at 17:28 11-13 (the data line
+on 17:28:10-17:28:13, the daemon out for it) gave 23,373 presses, no stall
+>= 25 ms, `loop_gap_max_ms` 13, no watchdog event, no blit fault, BT
+`tx_timeouts` 253 of 50,706. Its `uptime_ms` (5.67 h) counts awake time only
+(the tick stops in deep sleep): the logger's awake time since the flash is
+5.84 h, and RSTST `0x01` is the bootloader's handoff, not a restart. Black runs
+`row-isr` `6683c18134` dev since 11-11 (`GREMLIN-RESULTS.md`, §22).
+
+**The release's daily against white's:** 19 bytes differ, all named: the
+token (`health_fill6`'s immediates and its word), the hash word, and four
+immediates in `via_init`, `via_eeprom_is_valid` and `eeconfig_init_via`,
+VIA's EEPROM magic, which QMK takes from the build date (day 10 against
+13).
+
+**Owed:**
+- the clean-Windows install of `ak820-agent-v0.4.0-windows-x64.zip`
+  (`scripts/sandbox-6b.ps1 -Tag v0.4.0 -Wait`; gremlin's Windows Sandbox
+  was off at v0.3.0);
+- JD's two checks of the agent on black: an Ø/ß title, a skip with no
+  pause flash;
+- the title garble's cause (fix A cures it either way;
+  `plans/LCD-TITLE-GARBLE-PLAN.md`), when the faster logic analyser comes;
+- the drain, running on: 1,447 mAh of 4,011.6 at 17:17 11-13 (36.1%,
+  195.4 h since FULL, 7.41 mA mean; mAh since FULL = `charge_mah` +
+  2754.007), relay 2 off, no charge since 11-09;
+- the wake gate on the release's code, run at the tag hands-free
+  (`wake-gate`: the board asleep on its own by the logger, the presser's
+  A1 = F19, the key judged kept by a new `down` in `f19.log`): wake 1
+  kept at 17:34 11-13, the rest running. After it the presser's two wired
+  keys can come off white.
 
 ## 2026-11-03 night — stages 3 and 4 of the row ISR rewrite went onto white hands-free; stage 4b is on it with the night's soak
 

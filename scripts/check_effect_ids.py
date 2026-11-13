@@ -22,7 +22,7 @@ KB = os.path.join(TREE, "keyboards", "a_jazz", "ak820pro")
 # declaration predates the effect, so a missing table entry there is no removal, and other
 # branches keep building until the merge. Evidence in the tree, not in git: setup.sh's
 # clones are shallow. Once the effect is on the pinned branch, delete its line here.
-ADDED = {"CUSTOM_RAIN": "RGB_MATRIX_EFFECT(RAIN)"}
+ADDED = {}  # Rain (13) reached the pinned branch with v0.4.0
 
 # The ids as first committed (10-25), append-only. Never edit or remove a line.
 REFERENCE = {
