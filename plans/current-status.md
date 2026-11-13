@@ -44,11 +44,14 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
 - the drain, running on: 1,447 mAh of 4,011.6 at 17:17 11-13 (36.1%,
   195.4 h since FULL, 7.41 mA mean; mAh since FULL = `charge_mah` +
   2754.007), relay 2 off, no charge since 11-09;
-- the wake gate on the release's code, run at the tag hands-free
-  (`wake-gate`: the board asleep on its own by the logger, the presser's
-  A1 = F19, the key judged kept by a new `down` in `f19.log`): wake 1
-  kept at 17:34 11-13, the rest running. After it the presser's two wired
-  keys can come off white.
+- nothing on the presser: **the release's wake gate passed 5 of 5** at
+  the tag, 17:31-17:51 11-13, hands-free on white (the board asleep on its
+  own, the logger's last 60 rows under 6 mA, each about 4 min apart; the
+  presser's A1 = F19 for 100 ms; the key judged kept by a new `down` in
+  `f19.log`): five downs, each with its one up, none lost or doubled. The
+  ~5.96 s to the Mac counts the presser script's logger pause and REPL
+  start before the pulse, not the wake. The presser's two wired keys can
+  come off white.
 
 ## 2026-11-03 night — stages 3 and 4 of the row ISR rewrite went onto white hands-free; stage 4b is on it with the night's soak
 
