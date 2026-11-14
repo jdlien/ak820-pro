@@ -794,9 +794,10 @@ a 2-pin connector to a gutted-switch plug.
   (0,13) presses, which is all the wake checks use. A second key means JD
   swapping the plug back; `presser_repl.py` refuses A0 until
   `--a0-plugged` says so. The keymap still had F20 there at the swap
-  (`~/Documents/ak820pro-keymap.json`, 11-10), so End goes back on both
-  base layers by VIA or a keymap write, the data line up and the daemon
-  out for it.
+  (`~/Documents/ak820pro-keymap.json`, 11-10); End went back on both
+  base layers at 06:20:14 11-14 (VIA's set-keycode, read back; the data
+  line on 06:20:13-06:20:15, the daemon out 06:20:12-06:20:15). Layers 1
+  and 3 keep their `0x7E13` there.
 - **Bring-up still owed:** the presser's own `code.py` (it replaces the
   logger's, so it ends the drain's logging), the dwell map, and the
   witness.
