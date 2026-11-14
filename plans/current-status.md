@@ -43,7 +43,16 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
   `plans/LCD-TITLE-GARBLE-PLAN.md`), when the faster logic analyser comes;
 - the drain, running on: 1,447 mAh of 4,011.6 at 17:17 11-13 (36.1%,
   195.4 h since FULL, 7.41 mA mean; mAh since FULL = `charge_mah` +
-  2754.007), relay 2 off, no charge since 11-09;
+  2754.007), relay 2 off, no charge since 11-09. ⚠️ **Lights out from
+  10:12:05 to 12:28:18 11-14**, by a key while JD typed: the logger shows
+  the RGB off at once (43.5 to 37.7 mA), the screen lit 4 s for the mode's
+  message, then 27.7 awake and deep sleeps a minute after each pause; the
+  RAM log's 15-min entries have the backlight at 0 throughout. No restart
+  (the RAM log runs unbroken from 16:09 11-10, no watchdog event); nothing
+  else could set the mode (the data line was off, and a daily build has no
+  dev hooks). Back in Power saver by 12:32 (`ak820battery.py`, the data
+  line on 12:32:28-12:32:31; the log
+  `~/Documents/ak820pro-battlogs/log-20261114-123230-lightsout.csv`);
 - nothing on the presser: **the release's wake gate passed 5 of 5** at
   the tag, 17:31-17:51 11-13, hands-free on white (the board asleep on its
   own, the logger's last 60 rows under 6 mA, each about 4 min apart; the
