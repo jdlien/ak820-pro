@@ -200,11 +200,37 @@ test("the model against the bench sweep", () => {
   }
 });
 
+// v0.4.0's curve on the bench: the 11-05 percent sweep (white and a purple by
+// slider position, screen off), on firmware whose curve, colour code and
+// battery model are the pin's (power_model.py checks their blobs). Exact: the
+// page's model is the board's own model_mw at every hold, within 0.25 mW (its
+// worst 0.14, at full white, the hold's own variation). The gate: dark within
+// 0.2%; every lit state within 5.5%. The model reads under the board from 5% to
+// 90% (worst 5.19%, white 50%; 3.65% at 75%, 1.53% at 90%), within 0.2% of
+// white at full, and over it at 1% (white 2.19%, the purple 4.85%): a gap in
+// the firmware's own model on the new driver, shown on the page, not fixed here.
+test("the model against the 11-05 sweep on v0.4.0's curve", () => {
+  const sw = ev.percent_sweep;
+  assert.equal(sw.rgb_path, "wide");
+  assert.equal(sw.board_model_same, true, "the sweep's battery.c is the pin's");
+  const rows = M.sweepAgreement(fw, ev, sw);
+  assert.equal(rows.length, 21);
+  for (const r of rows) near(r.model, r.board, 0.25, `${r.name}: the board's own model`);
+  for (const r of rows) {
+    const t = r.family === "dark" ? 0.002 : 0.055;
+    assert.ok(Math.abs(r.err) <= t, `${r.name}: model ${r.model.toFixed(1)} vs measured ${r.measured} (${(100 * r.err).toFixed(2)}%)`);
+  }
+  const at = (name) => rows.find((r) => r.name === name).err;
+  assert.ok(Math.abs(at("white 100%")) <= 0.005, "white at full");
+  assert.ok(at("white 50%") < -0.05 && at("white 75%") < -0.03, "the model reads low at middling brightness");
+});
+
 // Each knob's increment over the dark states' mean, on the model's curve: the
 // screen's within 0.5 mW (worst 0.31), the LEDs' within 3 mW (red at 240-255
 // sits 2.5 below, and the first lit drive ~1.9 below: the floor reads high).
-// Each at the light it ran at (the sweep's byte path), and placed where
-// today's curve gives that light.
+// Each at the light it ran at (the sweep's byte path, by the pinned tree's
+// colour code, which power_model.py holds to the sweep's own by blob), and
+// placed where today's curve gives that light.
 test("the measured points sit on the curves", () => {
   const pts = M.measuredPoints(fw, ev);
   const HS = { white: [0, 0], red: [0, 255], green: [85, 255], blue: [170, 255] };

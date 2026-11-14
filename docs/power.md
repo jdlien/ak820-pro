@@ -243,6 +243,10 @@ The firmware carries this model to count the battery down. Against the logger
 it was within 2% at all 24 steps of the ladder's stages, within 0.6% at every
 step of the 10-19 LED brightness and colour sweep, and within 1% at every lit
 state of the 10-21 sweep of every knob (each step's mean over its two passes).
+On v0.4.0's driver it reads low at middling brightness: the 11-05 sweep by
+slider position found the board drawing 3-5.5% more than the model in white
+from 5% to 75% of the slider, 1.6% more at 90%, and within 0.2% at full
+([`history/rowisr-stage1-20261101/percent-map-20261105/`](../history/rowisr-stage1-20261101/percent-map-20261105/summary.txt)).
 With nothing lit it reads ~1.5 mW (1.4%) under the board: its base is a
 little light and its lit step a little heavy, and the two cancel once an LED
 is on:
@@ -266,15 +270,15 @@ On v0.4.0's curve, white's drive is 1.7 at 25%, 9.2 at 50%, 47.6 at 75% and
 0.69 × drive mW**: 186 mW at drive 255, 42 at 48 (75%), 17 at 12 (about
 54%).
 
-**A worked example:** white at 75%, the screen at level 8, the default
-mode, 4 h of typing a day:
+**A worked example:** white at 75%, the screen at 54% (8 of 48), the
+default mode, 4 h of typing a day:
 
-- **awake:** 106.9 + 6.5 (backlight, 8 of 48) + 42.0 (LEDs) = 155 mW, × 4 h
-  = 622 mWh;
+- **awake:** 106.9 + 6.5 (backlight, 8 of 48) + 41.7 (LEDs) = 155 mW, × 4 h
+  = 620 mWh;
 - **the ladder before each sleep,** say three absences a day: 10 min more at
   155 mW, then 10 dimmed to 40% at ~125 mW, ~47 mWh each, ~140 mWh;
 - **asleep:** the other 19 h × 13.35 mW = 254 mWh;
-- **total:** ~1,016 mWh a day, so 15,579 ÷ 1,016 = **~15.3 days**.
+- **total:** ~1,014 mWh a day, so 15,579 ÷ 1,014 = **~15.4 days**.
 
 ## The power modes
 

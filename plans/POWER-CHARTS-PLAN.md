@@ -43,10 +43,11 @@ without the board:
   identity; white is a neutral line on purpose), settings in the URL. Checked
   rendered at 1100 px, light and dark, and at 375 px.
 - `.github/workflows/power-page.yml`: on PRs and `main`, a blob-less fetch of
-  the pinned firmware commit, a fresh `power.json` (since 11-13 the committed
-  copy's drift is a warning, not a failure: a pin that moved only its sha
-  failed the job), the tests; on `main`, a deploy job publishes `site/` alone
-  to GitHub Pages (Pages set to build from Actions).
+  the pinned firmware commit, `--check` (since 11-13 a difference in the
+  firmware's sha alone, exit 3, warns and publishes a fresh build; any other
+  drift fails, codex's P0 on the first version, which warned on all of it),
+  the tests; on `main`, a deploy job publishes `site/` alone to GitHub Pages
+  (Pages set to build from Actions).
 
 **v0.4.0's brightness curve (11-13).** The pin moved to `d59cb1fb0c`, where
 D9 renders a Solid colour's chroma at full value and the flush applies the
@@ -71,11 +72,24 @@ white's drive is 1,195 ticks, 254.93); white 75% 152.63 mW, 102.07 h; white
 tail); Balanced from full 44.66 + 15.31 = 59.97 h (one point of `f`
 -0.495 h); a Balanced pause above sleep 65.5 mWh, Power saver's 5.97 (the dim
 cheaper); standby unchanged. The day presets move under 0.1 day. 13 tests.
-**Owed: a knobs sweep on v0.4.0's curve.** The only reading on it, white by
-slider position on 11-05 (`docs/power.md`, "The power modes"), agrees at
-90-100% and reads 1.0-1.8 mA above the model at 5-75% (by the pack voltage, unrecorded: 4.0-4.15 V) (the model +2.1-2.2 mA
-at 1-5%, +2.4 at 25%, +3.6 at 50%, +10.0 at 75% at ~4.15 V; measured +3.2,
-+3.8, +5.4, +11.6); at 1% it reads 0.6 below. The page says so.
+**Codex's review of that commit** (`5937de2`;
+[`review-codex-power-curve-2026-11-13.md`](review-codex-power-curve-2026-11-13.md),
+dispositions there): the generator did not fail closed on the scale (a
+`ROWISR_K_Q6` defined in `config.h` would have moved the board's figures and
+not the page's), CI warned on every drift, the worked example's screen level
+was the old scale's, the old sweep's drives leaned on today's colour code,
+and the 11-05 percent sweep on this curve existed with its voltages. All five
+fixed: `scale_guard()` and the stage and Solid checks, `--check`'s exit 3 for
+a sha alone, each sweep's code held to the pin by blob id, and the percent
+sweep in the evidence. **The percent sweep (11-05, `d6656f9262`, the release's
+curve, colour code and battery model):** the page's model equals the board's
+own `model_mw` at every hold (within 0.14 mW), and the board draws more than
+it at middling brightness, white 3.3% at 5%, 5.5% at 50%, 3.8% at 75%, 1.6%
+at 90%, 0.1% at full, and less at 1% (the model 2.2% over; the purple 4.9%):
+the firmware's own model on the new driver, a gauge question (`BACKLOG.md`,
+"Brightness after the new curve"). The page says so, and a test gates it
+(dark 0.2%, lit 5.5%). 14 tests. **Owed: a knobs sweep on v0.4.0's curve**
+(colours, the screen, both on), after the drain.
 
 Preview: `cd site && python3 -m http.server`, then `/power/`.
 

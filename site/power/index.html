@@ -700,11 +700,21 @@ function renderTables() {
   for (const r of M.sweepAgreement(fw, ev))
     m.append(el("tr", {}, el("td", {}, r.name), el("td", {}, r.measured.toFixed(1)), el("td", {}, r.model.toFixed(1)), el("td", {}, `${(100 * r.err).toFixed(2)}%`)));
   box.append(el("h3", {}, "Each bench state against the model, as measured (on the pack, USB data attached; the screen off unless named; each named by the brightness it was set to on the curve before v0.4.0, and modelled at the light that gave)"), m);
+  const pc = el("table");
+  pc.append(el("tr", {}, el("th", {}, "State"), el("th", {}, "Measured (mW)"), el("th", {}, "Model (mW)"), el("th", {}, "Difference")));
+  for (const r of M.sweepAgreement(fw, ev, ev.percent_sweep))
+    pc.append(el("tr", {}, el("td", {}, r.name), el("td", {}, r.measured.toFixed(1)), el("td", {}, r.model.toFixed(1)), el("td", {}, `${(100 * r.err).toFixed(2)}%`)));
+  box.append(el("h3", {}, `On v0.4.0's curve: the ${ev.percent_sweep.date} sweep by slider position (on the pack, USB data attached, the screen off)`), pc);
 }
 
 function renderEvidence() {
   const rows = M.sweepAgreement(fw, ev);
   const lit = rows.filter((r) => r.lighting.effect === 1 && r.lighting.v > 0);
+  const pcRows = M.sweepAgreement(fw, ev, ev.percent_sweep);
+  const more = (r) => 100 * (r.measured / r.model - 1);   /* how much more the keyboard drew than the model, % */
+  const pctErr = (name) => more(pcRows.find((r) => r.name === name)).toFixed(1);
+  const under = Math.max(...pcRows.filter((r) => r.lighting.effect === 1).map(more)).toFixed(1);
+  const boardOff = Math.max(...pcRows.map((r) => Math.abs(r.model - r.board)));
   const both = rows.filter((r) => r.family === "combined");
   const dark = rows.filter((r) => r.family === "dark");
   const unlit = rows.filter((r) => !lit.includes(r));
@@ -724,7 +734,7 @@ function renderEvidence() {
     el("ul", {},
       el("li", {}, `Measured on ${ev.knobs_sweep.date}, each of ${lit.length} solid-colour states, ${both.length} of them with the screen on as well, is within ${worst(lit)}% of the model (the mean of two passes).`),
       el("li", {}, `That sweep ran on firmware ${ev.knobs_sweep.firmware}, before v0.4.0's brightness curve, when the same brightness setting gave a different light: then 50% gave what 75% gives now. So each state is modelled at the light it gave, and the chart draws it where today's curve gives that light.`),
-      el("li", {}, "v0.4.0's curve has not had a sweep of its own. One reading of white by slider position, on a development build with this curve (11-05), agrees at 90 to 100% and reads 1 to 1.8 mA (4 to 7 mW) above the model from 5% to 75%, so at middling brightness the figures here may run a few percent long."),
+      el("li", {}, `On v0.4.0's curve, a sweep by slider position (${ev.percent_sweep.date}, white and a purple, on firmware with this curve) found the keyboard drawing more than the model at middling brightness, up to ${under}% (white: ${pctErr("white 5%")}% at 5%, ${pctErr("white 50%")}% at 50%, ${pctErr("white 75%")}% at 75%, ${pctErr("white 90%")}% at 90%), and within ${Math.abs(+pctErr("white 100%")).toFixed(1)}% at full; at the dimmest settings it drew less. The model there is the keyboard's own count, to within ${boardOff.toFixed(1)} mW at every step, so at middling brightness the figures here may run about 5% long. A full sweep of every knob on this curve is still to come.`),
       el("li", {}, `With every light off the keyboard drew ${Math.min(...dMw).toFixed(1)} to ${Math.max(...dMw).toFixed(1)} mW against the model's ${dark[0].model.toFixed(1)} (both with the bench's USB data), so the states with no LED lit, the screen alone included, read up to ${worst(unlit)}% above it. Measured from that floor, each of ${scr.length} screen levels costs within ${scrOff.toFixed(1)} mW of the model's figure.`),
       el("li", {}, `Five drains from full to 0% at full white with the screen at 42% (the old level 5) ran 50 to 52 hours. The model gives ${fixed.toFixed(1)} h for that setting held still, about ${(100 * (fixed / r3Untethered - 1)).toFixed(0)}% longer than the logged drain (${r3.hours} h, about ${r3Untethered.toFixed(1)} h without the bench's USB cable). The page shows the model, not a correction for that gap.`),
       el("li", {}, "Every logged drain ran on firmware before the low-battery dimming existed, so the headline's dimmed tail is modelled, not yet measured.")),

@@ -62,7 +62,13 @@
    "screen_ticks": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 23, 26, 29, 33, 37, 42, 48],
    "screen_ticks_source": "36afff30e8's graphics/display.c, bkl_duty: the 24-level Screen the sweep ran on (P2b, 10-25, made it 0-100); each level's duty in ticks of 48, so scripts/power_model.py gives its levels on today's scale",
    "rgb_path": "byte",
-   "rgb_path_source": "36afff30e8 drew a Solid colour as QMK's hsv_to_rgb with the CIE curve, each byte its drive (quantum/color.c and led_tables.c unchanged from it to v0.4.0's d59cb1fb0c); since D9 (v0.4.0) the flush applies the value through the firmware's own curve, so model.js gives each lit state the drive it ran at and places it where today's curve gives that light",
+   "rgb_path_source": "36afff30e8 drew a Solid colour as QMK's hsv_to_rgb with the CIE curve, each byte its drive; since D9 (v0.4.0) the flush applies the value through the firmware's own curve, so model.js gives each lit state the drive it ran at, by the pinned tree's hsv_to_rgb and CIE table, and places it where today's curve gives that light",
+   "blobs": {
+    "quantum/color.c": "93564784f0d8b33c80a23947db4cdce8fdc5f7de",
+    "quantum/color.h": "5c23b2533509010488d9397801d190785dc0bdf9",
+    "quantum/led_tables.c": "9fbe642cc76e796a97126316f40851a06b4765e6"
+   },
+   "blobs_source": "git ls-tree 36afff30e83026d41b4654d7b4165086e8a5b440: the colour code the sweep rendered with. scripts/power_model.py fails if the pin's differ, since model.js would then re-render the sweep with code it did not run",
    "hold_s": 90,
    "settle_s": 15,
    "rows": [
@@ -1131,6 +1137,428 @@
      "board_model_mw": [114.0, 114.0]
     }
    ]
+  },
+  "percent_sweep": {
+   "dir": "history/rowisr-stage1-20261101/percent-map-20261105",
+   "date": "2026-11-05",
+   "firmware": "d6656f9262",
+   "conditions": "BT, on the pack (VCELL 4.11-4.09 V) with USB data attached (the bench), the screen off, current_map.py --set percent at --hold 25 --settle 10: white and a purple (hue 178, sat 219) by slider position, 1% to 100%, from a shared dark floor; each state the mean of its passes, from the INA228's charge register; each hold's model_mw is the board's own modelled draw at it",
+   "rgb_path": "wide",
+   "rgb_path_source": "d6656f9262 (row-isr, 11-05) has v0.4.0's wide path: rgb/curve12.h, quantum/color.c and led_tables.c, and battery.c are the release's blobs, and rgb/rowisr.c's flush, wide_width and drive accounting lines are unchanged to d59cb1fb0c (git diff, 11-13)",
+   "blobs": {
+    "keyboards/a_jazz/ak820pro/rgb/curve12.h": "c2e63e05a415a0012767032f64cb17acc3e492fa",
+    "quantum/color.c": "93564784f0d8b33c80a23947db4cdce8fdc5f7de",
+    "quantum/color.h": "5c23b2533509010488d9397801d190785dc0bdf9",
+    "quantum/led_tables.c": "9fbe642cc76e796a97126316f40851a06b4765e6"
+   },
+   "board_model_blob": {
+    "keyboards/a_jazz/ak820pro/battery.c": "80b2f8b773a0f775a6ffce07e72cfcc4b67bd980"
+   },
+   "blobs_source": "git ls-tree d6656f926294024ab86b12a8f1580fa457d04f30. With battery.c the pin's too, the page's model must equal the board's own model_mw at every hold",
+   "hold_s": 25,
+   "settle_s": 10,
+   "rows": [
+    {
+     "name": "dark 1",
+     "family": "dark",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [114.01, 114.05],
+     "mw": 114.03,
+     "ma": 27.78,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
+    },
+    {
+     "name": "white 1%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 3
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [120.1, 120.07],
+     "mw": 120.09,
+     "ma": 29.26,
+     "led_pm": [0, 0],
+     "board_model_mw": [122.714, 122.713]
+    },
+    {
+     "name": "white 5%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 13
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [126.98, 126.93],
+     "mw": 126.95,
+     "ma": 30.95,
+     "led_pm": [1, 1],
+     "board_model_mw": [122.862, 122.862]
+    },
+    {
+     "name": "white 10%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 26
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [127.06, 127.09],
+     "mw": 127.08,
+     "ma": 30.97,
+     "led_pm": [2, 2],
+     "board_model_mw": [123.047, 123.047]
+    },
+    {
+     "name": "white 15%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 38
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [128.11, 128.11],
+     "mw": 128.11,
+     "ma": 31.22,
+     "led_pm": [3, 3],
+     "board_model_mw": [123.232, 123.232]
+    },
+    {
+     "name": "white 25%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 64
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [129.59, 129.52],
+     "mw": 129.55,
+     "ma": 31.58,
+     "led_pm": [6, 6],
+     "board_model_mw": [123.823, 123.825]
+    },
+    {
+     "name": "white 40%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 102
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [132.5, 132.41],
+     "mw": 132.45,
+     "ma": 32.29,
+     "led_pm": [17, 17],
+     "board_model_mw": [125.75, 125.748]
+    },
+    {
+     "name": "white 50%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 128
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [136.11, 136.03],
+     "mw": 136.07,
+     "ma": 33.17,
+     "led_pm": [35, 35],
+     "board_model_mw": [129.003, 129.004]
+    },
+    {
+     "name": "white 60%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 153
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [141.69, 141.7],
+     "mw": 141.69,
+     "ma": 34.54,
+     "led_pm": [68, 68],
+     "board_model_mw": [134.784, 134.772]
+    },
+    {
+     "name": "white 75%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 191
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [161.61, 161.49],
+     "mw": 161.55,
+     "ma": 39.4,
+     "led_pm": [186, 186],
+     "board_model_mw": [155.645, 155.662]
+    },
+    {
+     "name": "white 90%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 230
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [217.68, 217.84],
+     "mw": 217.76,
+     "ma": 53.16,
+     "led_pm": [518, 518],
+     "board_model_mw": [214.395, 214.35]
+    },
+    {
+     "name": "white 100%",
+     "family": "white",
+     "lighting": {
+      "effect": 1,
+      "h": 0,
+      "s": 0,
+      "v": 255
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [299.9, 299.98],
+     "mw": 299.94,
+     "ma": 73.32,
+     "led_pm": [999, 1000],
+     "board_model_mw": [299.438, 299.639]
+    },
+    {
+     "name": "dark 2",
+     "family": "dark",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [114.07, 114.09],
+     "mw": 114.08,
+     "ma": 27.8,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
+    },
+    {
+     "name": "purple 1%",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 178,
+      "s": 219,
+      "v": 3
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [117.02, 116.99],
+     "mw": 117.0,
+     "ma": 28.52,
+     "led_pm": [0, 0],
+     "board_model_mw": [122.676, 122.675]
+    },
+    {
+     "name": "purple 5%",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 178,
+      "s": 219,
+      "v": 13
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [121.15, 121.22],
+     "mw": 121.19,
+     "ma": 29.53,
+     "led_pm": [0, 0],
+     "board_model_mw": [122.743, 122.742]
+    },
+    {
+     "name": "purple 10%",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 178,
+      "s": 219,
+      "v": 26
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [123.3, 123.42],
+     "mw": 123.36,
+     "ma": 30.07,
+     "led_pm": [1, 1],
+     "board_model_mw": [122.82, 122.82]
+    },
+    {
+     "name": "purple 25%",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 178,
+      "s": 219,
+      "v": 64
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [127.79, 127.83],
+     "mw": 127.81,
+     "ma": 31.15,
+     "led_pm": [3, 3],
+     "board_model_mw": [123.164, 123.164]
+    },
+    {
+     "name": "purple 50%",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 178,
+      "s": 219,
+      "v": 128
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [131.28, 131.25],
+     "mw": 131.27,
+     "ma": 32.0,
+     "led_pm": [17, 17],
+     "board_model_mw": [125.432, 125.428]
+    },
+    {
+     "name": "purple 75%",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 178,
+      "s": 219,
+      "v": 191
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [143.91, 143.9],
+     "mw": 143.9,
+     "ma": 35.09,
+     "led_pm": [89, 89],
+     "board_model_mw": [137.216, 137.226]
+    },
+    {
+     "name": "purple 100%",
+     "family": "held out",
+     "lighting": {
+      "effect": 1,
+      "h": 178,
+      "s": 219,
+      "v": 255
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [205.15, 205.04],
+     "mw": 205.1,
+     "ma": 50.06,
+     "led_pm": [479, 479],
+     "board_model_mw": [200.851, 200.748]
+    },
+    {
+     "name": "dark 3",
+     "family": "dark",
+     "lighting": {
+      "effect": 0,
+      "h": 0,
+      "s": 0,
+      "v": 0
+     },
+     "screen_level": null,
+     "screen_duty": null,
+     "screen_x": null,
+     "screen_level_read": null,
+     "passes": [114.07, 114.11],
+     "mw": 114.09,
+     "ma": 27.8,
+     "led_pm": [0, 0],
+     "board_model_mw": [114.0, 114.0]
+    }
+   ],
+   "board_model_same": true
   },
   "sleep_mw": {
    "bt": 13.25,

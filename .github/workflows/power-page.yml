@@ -1,5 +1,6 @@
-# The power page (site/power/, plans/POWER-CHARTS-PLAN.md): builds power.json
-# from deps.lock's firmware (warning when the committed copy differs), checks
+# The power page (site/power/, plans/POWER-CHARTS-PLAN.md): checks that the
+# committed power.json is what deps.lock's firmware generates (a difference in
+# the sha alone warns and publishes a fresh build), checks
 # that model.js matches the firmware's own C exactly (the oracle) and
 # reproduces the plan's figures; then, on main, publishes site/ alone to
 # GitHub Pages (https://jdlien.github.io/ak820-pro/power/). Pull requests run
@@ -57,17 +58,21 @@ jobs:
         with:
           node-version: "22"
 
-      # power.json is generated from the pin. A pin that moved nothing but its
-      # sha used to fail here on the committed copy's sha alone, so the
-      # committed copy is now a warning and the job tests and publishes a
-      # fresh build. The tests pin the plan's figures, so a pin that moves a
-      # number still fails, as v0.4.0's brightness curve did.
+      # power.json is generated from the pin. A pin that moves nothing the
+      # page reads differs from the committed copy in the firmware's sha alone
+      # (--check exits 3): a warning, and the job tests and publishes a fresh
+      # build. Any other difference fails, so a moved figure is reviewed and
+      # committed before it is published (the tests pin only some figures).
       - name: power.json from the pinned firmware
         run: |
-          if ! python3 scripts/power_model.py --check; then
-            echo "::warning file=site/power/power.json::not what the pinned firmware generates; testing and publishing a fresh build (commit scripts/power_model.py's output)"
+          rc=0
+          python3 scripts/power_model.py --check || rc=$?
+          if [ "$rc" = 3 ]; then
+            echo "::warning file=site/power/power.json::differs from the pinned firmware's build in the sha alone; publishing a fresh build (commit scripts/power_model.py's output)"
+            python3 scripts/power_model.py
+          elif [ "$rc" != 0 ]; then
+            exit "$rc"
           fi
-          python3 scripts/power_model.py
 
       - name: model.js against the oracle and the plan
         run: node --test site/power/model.test.js

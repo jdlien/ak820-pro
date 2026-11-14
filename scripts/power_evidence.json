@@ -9,7 +9,29 @@
    "screen_ticks": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 23, 26, 29, 33, 37, 42, 48],
    "screen_ticks_source": "36afff30e8's graphics/display.c, bkl_duty: the 24-level Screen the sweep ran on (P2b, 10-25, made it 0-100); each level's duty in ticks of 48, so scripts/power_model.py gives its levels on today's scale",
    "rgb_path": "byte",
-   "rgb_path_source": "36afff30e8 drew a Solid colour as QMK's hsv_to_rgb with the CIE curve, each byte its drive (quantum/color.c and led_tables.c unchanged from it to v0.4.0's d59cb1fb0c); since D9 (v0.4.0) the flush applies the value through the firmware's own curve, so model.js gives each lit state the drive it ran at and places it where today's curve gives that light"
+   "rgb_path_source": "36afff30e8 drew a Solid colour as QMK's hsv_to_rgb with the CIE curve, each byte its drive; since D9 (v0.4.0) the flush applies the value through the firmware's own curve, so model.js gives each lit state the drive it ran at, by the pinned tree's hsv_to_rgb and CIE table, and places it where today's curve gives that light",
+   "blobs": {
+    "quantum/color.c": "93564784f0d8b33c80a23947db4cdce8fdc5f7de",
+    "quantum/color.h": "5c23b2533509010488d9397801d190785dc0bdf9",
+    "quantum/led_tables.c": "9fbe642cc76e796a97126316f40851a06b4765e6"
+   },
+   "blobs_source": "git ls-tree 36afff30e83026d41b4654d7b4165086e8a5b440: the colour code the sweep rendered with. scripts/power_model.py fails if the pin's differ, since model.js would then re-render the sweep with code it did not run"
+  },
+  "percent": {
+   "dir": "history/rowisr-stage1-20261101/percent-map-20261105",
+   "date": "2026-11-05",
+   "firmware": "d6656f9262",
+   "conditions": "BT, on the pack (VCELL 4.11-4.09 V) with USB data attached (the bench), the screen off, current_map.py --set percent at --hold 25 --settle 10: white and a purple (hue 178, sat 219) by slider position, 1% to 100%, from a shared dark floor; each state the mean of its passes, from the INA228's charge register; each hold's model_mw is the board's own modelled draw at it",
+   "rgb_path": "wide",
+   "rgb_path_source": "d6656f9262 (row-isr, 11-05) has v0.4.0's wide path: rgb/curve12.h, quantum/color.c and led_tables.c, and battery.c are the release's blobs, and rgb/rowisr.c's flush, wide_width and drive accounting lines are unchanged to d59cb1fb0c (git diff, 11-13)",
+   "blobs": {
+    "keyboards/a_jazz/ak820pro/rgb/curve12.h": "c2e63e05a415a0012767032f64cb17acc3e492fa",
+    "quantum/color.c": "93564784f0d8b33c80a23947db4cdce8fdc5f7de",
+    "quantum/color.h": "5c23b2533509010488d9397801d190785dc0bdf9",
+    "quantum/led_tables.c": "9fbe642cc76e796a97126316f40851a06b4765e6"
+   },
+   "board_model_blob": {"keyboards/a_jazz/ak820pro/battery.c": "80b2f8b773a0f775a6ffce07e72cfcc4b67bd980"},
+   "blobs_source": "git ls-tree d6656f926294024ab86b12a8f1580fa457d04f30. With battery.c the pin's too, the page's model must equal the board's own model_mw at every hold"
   }
  },
  "measured": {

@@ -223,9 +223,12 @@ Before raw81 ships in a release, fix 1 at least, and the same measurement repeat
 
 The ceilings are settled (`SAVER_VAL` 191, `DIM_VAL` 102, from the percent map of
 11-05). Owed: JD's eye on them on battery, `scripts/ladder_check.py --rig`, and a look
-at the gauge's fixed LED term (`plans/ROW-ISR-PLAN.md`, "The curve's candidates"). At the
-release: `site/power/`'s calculator still models the old curve and hardcodes 128, and
-`docs/power.md` promotes the branch's figures. Some effects could go or be rethought; Drift
+at the gauge's fixed LED term (`plans/ROW-ISR-PLAN.md`, "The curve's candidates"): on the
+new driver the board's model reads low at middling brightness, the board drawing 3-5.5%
+more than it in white from 5% to 75% (5.5% at 50%, ~7 mW), 1.6% at 90%, 0.1% at full,
+and less at 1% (the percent map, 11-05; `plans/POWER-CHARTS-PLAN.md`, "Codex's review of
+that commit"). Done 11-13 for v0.4.0: `site/power/`'s calculator models the new curve
+(`5937de2` and the review's fixes) and `docs/power.md` names brightness on it. Some effects could go or be rethought; Drift
 is fine as it is for now.
 
 ## Next phase: record in daily use, then polish for other owners (2026-10-18)

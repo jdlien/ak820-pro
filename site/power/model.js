@@ -307,18 +307,21 @@ export function measuredPoints(fw, ev, radio = "bt") {
   return { rgb, screen, floor };
 }
 
-// The model against each knobs state as it was measured (on the pack, USB
-// data attached), from the setting the hold read back: the fractional error
-// per state. Animated effects are not modelled, so they are left out.
-export function sweepAgreement(fw, ev) {
-  return ev.knobs_sweep.rows.filter((r) => r.family !== "animated").map((r) => {
+// The model against each state of a bench sweep (the knobs sweep unless
+// named) as it was measured (on the pack, USB data attached), from the setting
+// the hold read back at the light it gave: the fractional error per state, and
+// the board's own modelled draw at the hold. Animated effects are not
+// modelled, so they are left out.
+export function sweepAgreement(fw, ev, sweep = ev.knobs_sweep) {
+  return sweep.rows.filter((r) => r.family !== "animated").map((r) => {
     const l = r.lighting;
     const setting = {
-      rgb: sweepRgb(fw, ev.knobs_sweep, l),
+      rgb: sweepRgb(fw, sweep, l),
       screen: r.screen_level === null ? { on: false, level: 0 } : { on: true, level: r.screen_level, duty: r.screen_duty },
     };
     const model = boardMw(fw, setting, { usb: true });
     const passErr = Math.max(...r.passes.map((x) => Math.abs(model / x - 1)));
-    return { name: r.name, family: r.family, lighting: l, measured: r.mw, model, err: model / r.mw - 1, passErr };
+    const board = r.board_model_mw.reduce((a, x) => a + x, 0) / r.board_model_mw.length;
+    return { name: r.name, family: r.family, lighting: l, measured: r.mw, model, board, err: model / r.mw - 1, passErr };
   });
 }

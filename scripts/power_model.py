@@ -147,15 +147,38 @@ def exists(sha, path):
     return r.stdout.strip() == path
 
 
+def blob(sha, path):
+    """The blob id of `path` in the pinned tree (trees only, as exists())."""
+    r = subprocess.run(["git", "-C", FW, "ls-tree", sha, "--", path], capture_output=True, text=True)
+    f = r.stdout.split()
+    if r.returncode != 0 or len(f) != 4 or f[1] != "blob" or f[3] != path:
+        die(f"cannot find {path} at {sha[:10]}: {r.stderr.strip() or r.stdout.strip()}")
+    return f[2]
+
+
+def c_function(src, name, where):
+    """The body of the one C function `name` in src, from its signature to the
+    closing brace in column 0."""
+    m = re.findall(rf"^[^\n;]*\b{name}\([^)]*\)\s*\{{\n(.*?)^\}}", src, re.M | re.S)
+    if len(m) != 1:
+        die(f"{where}: expected one definition of {name}(), found {len(m)}")
+    return m[0]
+
+
 # D9's flush (v0.4.0, rgb/rowisr.c), the lines the page's wide path restates:
-# the value under the ladder's cap, the curve at it scaled into Q8 ticks, a
-# chroma byte's width, the handler's dithered tick, and the drive accounting's
-# unit (ticks x field / k_ref: the light emitted in bytes at the reference).
+# the encoding and the value it reads, under the ladder's cap, the curve at it
+# scaled into Q8 ticks, a chroma byte's width, the handler's dithered tick and
+# its one-count-a-field clock, and the drive accounting's unit (ticks x field /
+# k_ref: the light emitted in bytes at the reference).
 WIDE_LINES = {
+    "the encoding": "bool    wide = !wide_blocked && power_wide_mode();",
+    "the value": "uint8_t v    = rgb_matrix_get_val();",
     "the cap": "if (v > power_val_cap()) v = power_val_cap();",
     "full_q8": "uint32_t full_q8 = ((uint32_t)curve_q6[v] * ROWISR_K_Q6) >> 4;",
     "recip": "uint32_t recip   = (full_q8 * 256u + 127u) / 255u;",
     "the dither": "if (w > ROWISR_TERMINAL) w = (w & DITHER_BASE) + ((w >> dither_shift) & 1u);",
+    "the dither's phase": "uint32_t        dither_shift = DITHER_PAT_SHIFT + (field_phase & 3u);",
+    "the dither's clock": "field_phase++;   /* the dither's clock: one count a field (D9) */",
     "the drive": "uint64_t num = acc[k] * FIELD_US * 64u + drive_rem[k];",
     "its unit": "uint64_t q   = num / (1000ULL * ROWISR_K_REF_Q6);",
 }
@@ -170,13 +193,23 @@ def wide_path(sha, pc):
     QMK's CIE table into bytes."""
     if not exists(sha, f"{KB}/rgb/curve12.h"):
         return None
-    for line in ("if (!power_local_value_mode()) hsv.v = 255;", "|| m == RGB_MATRIX_SOLID_COLOR"):
-        if line not in pc:
-            die(f"power.c: no longer has {line!r}, which the wide path assumes")
+    # Solid on the wide path at full value; the stages' caps as model.js applies them.
+    if "if (!power_local_value_mode()) hsv.v = 255;" not in c_function(pc, "rgb_matrix_hsv_to_rgb", "power.c"):
+        die("power.c: rgb_matrix_hsv_to_rgb no longer renders a wide mode's chroma at full value")
+    if "m == RGB_MATRIX_SOLID_COLOR" not in c_function(pc, "power_wide_mode", "power.c"):
+        die("power.c: Solid colour is no longer a wide mode")
+    if "SOLID_COLOR" in c_function(pc, "power_local_value_mode", "power.c"):
+        die("power.c: Solid colour is now a local-value mode, which model.js does not model")
+    ap = c_function(pc, "apply", "power.c")
+    for stage, rule in (("ACTIVE", r"vcap = want_val;"), ("DIM", r"vcap = DIM_VAL;"),
+                        ("LIGHTS_OFF", r"scale = 0;"), ("SCREEN_OFF", r"scale = 0;")):
+        if not re.search(rf"case POWER_STAGE_{stage}:\s*{re.escape(rule)}", ap):
+            die(f"power.c: apply()'s {stage} stage no longer starts {rule!r}")
     ro = show(sha, f"{KB}/rgb/rowisr.c")
     for what, line in WIDE_LINES.items():
         if line not in ro:
             die(f"rgb/rowisr.c: {what} is no longer {line!r}")
+    scale_guard(sha, ro)
     cfg = show(sha, f"{KB}/config.h")
     cadence = define(cfg, "ROWISR_CADENCE_US", "config.h")
     m = re.findall(rf"^#if ROWISR_CADENCE_US == {cadence}u\n(.*?)^#(?:elif|else)", ro, re.M | re.S)
@@ -185,14 +218,72 @@ def wide_path(sha, pc):
     k_ref = define(m[0], "ROWISR_K_REF_Q6", f"rowisr.c's {cadence} us block")
     if not re.search(r"^#\s*define\s+ROWISR_K_Q6\s+ROWISR_K_REF_Q6\s*$", m[0], re.M):
         die(f"rgb/rowisr.c: the {cadence} us block's ROWISR_K_Q6 is not its reference")
-    # The released flavours build at the reference; only devprobe moves the scale.
-    for line in open(os.path.join(ROOT, "build.sh")):
-        if re.match(r"\s*(daily|fpb)\)", line) and "ROWISR_K_Q6" in line:
-            die(f"build.sh: a released flavour sets ROWISR_K_Q6: {line.strip()}")
     curve = c_array(show(sha, f"{KB}/rgb/curve12.h"), "curve_q6", 256, "rgb/curve12.h")
     if curve[0] != 0 or curve[255] != 255 * 64 or any(b < a for a, b in zip(curve, curve[1:])):
         die("rgb/curve12.h: curve_q6 is not 0 to 16,320, non-decreasing")
     return {"curve_q6": curve, "rowisr_k_q6": k_ref, "rowisr_k_ref_q6": k_ref}
+
+
+# The macros that set the wide path's scale and the driver's per-channel
+# luminosity. rowisr.c defaults the cadence and the scale under #ifndef, so a
+# definition anywhere the build sees first would move them silently.
+SCALE_MACROS = ("ROWISR_CADENCE_US", "ROWISR_K_Q6", "ROWISR_K_REF_Q6", "SN32F2XX_LED_OUTPUT_LUMINOSITY")
+
+
+def scale_guard(sha, ro):
+    """Fail unless the scale wide_path() reads is the one the released builds
+    use: no definition of SCALE_MACROS in the keyboard's build-wide files, its
+    keymaps, or the board headers rowisr.c includes, but config.h's one
+    cadence; rowisr.c's own only as the #ifndef defaults; build.sh's only on
+    devprobe; every channel's luminosity, wherever defined, 1."""
+    files = ["config.h", "rules.mk", "keyboard.json", "info.json", "post_config.h", "post_rules.mk"]
+    r = subprocess.run(["git", "-C", FW, "ls-tree", "-r", "--name-only", sha, "--", f"{KB}/keymaps"],
+                       capture_output=True, text=True)
+    files += [p[len(KB) + 1:] for p in r.stdout.split() if os.path.basename(p) in ("config.h", "rules.mk", "keymap.json")]
+    for inc in re.findall(r'^#\s*include\s+"([^"]+)"', ro, re.M):
+        files += [f"rgb/{inc}", inc]
+    names = r"(?:" + "|".join(SCALE_MACROS) + r")\w*"
+    # A definition in any form the build takes: #define or #undef, -D, a make
+    # variable, a JSON key. Comments are stripped first.
+    pat = re.compile(rf"#\s*(?:define|undef)\s+{names}|-D\s*{names}|^\s*{names}\s*[:+?]?=|\"{names}\"", re.M)
+    for rel in dict.fromkeys(files):
+        if not exists(sha, f"{KB}/{rel}"):
+            continue
+        src = show(sha, f"{KB}/{rel}")
+        src = re.sub(r"/\*.*?\*/|//[^\n]*", "", src, flags=re.S) if rel.endswith((".c", ".h")) else \
+            re.sub(r"#[^\n]*", "", src) if rel.endswith(".mk") else src
+        hits = [ln.strip() for ln in src.splitlines() if pat.search(ln) and not unit_luminosity(ln)]
+        allowed = 1 if rel == "config.h" else 0
+        if len(hits) > allowed or (allowed and not re.fullmatch(r"#\s*define\s+ROWISR_CADENCE_US\s+\d+u?", hits[0] if hits else "")):
+            die(f"{rel}: defines {', '.join(SCALE_MACROS)} beyond config.h's one cadence: {hits}")
+    lines = ro.splitlines()
+    for i, ln in enumerate(lines):
+        m = re.match(r"\s*#\s*define\s+(ROWISR_CADENCE_US|ROWISR_K_Q6)\b", ln)
+        if m and not re.match(rf"\s*#\s*ifndef\s+{m.group(1)}\s*(?:/\*.*\*/\s*)?$", lines[i - 1]):
+            die(f"rgb/rowisr.c: {m.group(1)} is defined outside its #ifndef default: {ln.strip()}")
+    for ln in open(os.path.join(ROOT, "build.sh")):
+        if re.search(names, ln) and not re.match(r"\s*(?:devprobe\)|#)", ln):
+            die(f"build.sh: a flavour other than devprobe sets the scale: {ln.strip()}")
+    hdr = show(sha, "drivers/led/sn32f2xx.h")
+    for ln in hdr.splitlines():
+        if "SN32F2XX_LED_OUTPUT_LUMINOSITY" in ln and re.match(r"\s*#\s*define", ln) and not unit_luminosity(ln):
+            die(f"drivers/led/sn32f2xx.h: a channel's luminosity default is no longer 1: {ln.strip()}")
+
+
+def unit_luminosity(ln):
+    """A channel's luminosity defined as 1: set_color's multiply is then the identity."""
+    return re.fullmatch(r"\s*#\s*define\s+SN32F2XX_LED_OUTPUT_LUMINOSITY_[RGB]\s+1\s*", ln) is not None
+
+
+def sweep_firmware_guard(sha, sweep):
+    """A sweep is modelled with the pinned tree's colour code and curve, so the
+    files its rendering depends on must be the ones it ran on (`blobs`, each
+    path's blob id at the sweep's firmware). When one moves, freeze the
+    sweep's drives in the evidence before moving the pin."""
+    for path, want in sweep["blobs"].items():
+        if blob(sha, path) != want:
+            die(f"{path} at the pin is not the one the {sweep['date']} sweep ran on ({sweep['firmware']}): "
+                "model.js would re-render that sweep with the new code; freeze its drives in power_evidence.json first")
 
 
 def firmware(sha):
@@ -261,9 +352,9 @@ def family(effect, h, s, level):
     return "held out"
 
 
-def knobs_sweep(ev, duty):
-    """Each state's passes from a `--set knobs` run's results.json, at full
-    precision: the setting each hold read back, the pack power (mA x VCELL),
+def bench_sweep(sha, ev, duty, want):
+    """Each state's passes from a current_map.py run's results.json (`--set
+    want`), at full precision: the setting each hold read back, the pack power (mA x VCELL),
     the LED drive and the board's own modelled draw. A screen level read back
     on another scale (ev's screen_ticks, the table it ran on) is given on
     today's, with the duty it ran at (sweep_screen()), the one read back kept
@@ -271,8 +362,8 @@ def knobs_sweep(ev, duty):
     rel = ev["dir"]
     then = ev.get("screen_ticks")
     res = json.load(open(os.path.join(ROOT, rel, "results.json")))
-    if res.get("set") != "knobs":
-        die(f"{rel}/results.json: set {res.get('set')!r}, not knobs")
+    if res.get("set") != want:
+        die(f"{rel}/results.json: set {res.get('set')!r}, not {want}")
     by = {}
     for s in res["steps"]:
         m = s.get("measured")
@@ -297,7 +388,11 @@ def knobs_sweep(ev, duty):
                      "ma": mean([s["measured"]["q_ma"] for s in ss]),
                      "led_pm": [int(s["led_pm"]) for s in ss],
                      "board_model_mw": [s["model_mw"] for s in ss]})
-    return {**ev, "hold_s": res["hold_s"], "settle_s": res["settle_s"], "rows": rows}
+    out = {**ev, "hold_s": res["hold_s"], "settle_s": res["settle_s"], "rows": rows}
+    if "board_model_blob" in ev:
+        (path, want), = ev["board_model_blob"].items()
+        out["board_model_same"] = blob(sha, path) == want   # model_mw then is the pin's model_nj
+    return out
 
 
 def collapse_numbers(text):
@@ -310,12 +405,15 @@ def build():
     ev = json.load(open(EVIDENCE))
     sha = pinned_sha()
     fw = firmware(sha)
+    for sweep in ev["sweeps"].values():
+        sweep_firmware_guard(sha, sweep)
     doc = {
         "schema": SCHEMA,
         "generated_by": "scripts/power_model.py from deps.lock's firmware and scripts/power_evidence.json; do not edit",
         "firmware": fw,
         "evidence": {
-            "knobs_sweep": knobs_sweep(ev["sweeps"]["knobs"], fw["backlight_duty"]),
+            "knobs_sweep": bench_sweep(sha, ev["sweeps"]["knobs"], fw["backlight_duty"], "knobs"),
+            "percent_sweep": bench_sweep(sha, ev["sweeps"]["percent"], fw["backlight_duty"], "percent"),
             **ev["measured"],
         },
         "assumptions": ev["assumptions"],
@@ -412,9 +510,19 @@ def model_cases():
     return cases
 
 
+def sha_only(old, new):
+    """Whether two power.json documents differ in nothing but the firmware's
+    sha: a pin that moved without moving anything the page reads."""
+    o, n = json.loads(json.dumps(old)), json.loads(json.dumps(new))
+    o["firmware"].pop("sha", None)
+    n["firmware"].pop("sha", None)
+    return o == n
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--check", action="store_true", help="exit 1 if site/power/power.json differs from a fresh build")
+    ap.add_argument("--check", action="store_true",
+                    help="exit 1 if site/power/power.json differs from a fresh build, 3 if only in the firmware's sha")
     ap.add_argument("--oracle", metavar="DIR", help="build the C oracle and write its fixtures to DIR")
     a = ap.parse_args()
     if a.oracle:
@@ -422,10 +530,14 @@ def main():
         return
     text = build()
     if a.check:
-        if not os.path.exists(OUT) or open(OUT).read() != text:
-            die(f"{os.path.relpath(OUT, ROOT)} has drifted from a fresh build; run scripts/power_model.py")
-        print("power.json: current")
-        return
+        old = open(OUT).read() if os.path.exists(OUT) else None
+        if old == text:
+            print("power.json: current")
+            return
+        if old is not None and sha_only(json.loads(old), json.loads(text)):
+            print(f"power_model: {os.path.relpath(OUT, ROOT)} differs from a fresh build in the firmware's sha alone")
+            sys.exit(3)
+        die(f"{os.path.relpath(OUT, ROOT)} has drifted from a fresh build; run scripts/power_model.py and review what moved")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     open(OUT, "w").write(text)
     print(f"wrote {os.path.relpath(OUT, ROOT)}")
