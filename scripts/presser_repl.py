@@ -12,7 +12,9 @@ The logger's LaunchAgent holds the serial port: the script pauses it
 
 As wired 11-03: A0 is the yellow channel on (3,14) PgDn, A1 the blue on
 (0,13) Delete; both are F19/F20 on the base layers since 02:16 11-03, which
-macOS ignores. The dwell is timed on the board's clock (CircuitPython's
+macOS ignores. Since 11-14 A0's plug is out and (3,14) has a switch again
+(JD's End), so A0 presses nothing: the script refuses it unless
+--a0-plugged says JD has swapped the plug back. The dwell is timed on the board's clock (CircuitPython's
 time.monotonic_ns, ~1 ms resolution): the actual dwell is reported.
 
     presser_repl.py pulse A1 100              one press of A1, 100 ms
@@ -31,7 +33,7 @@ from serial.tools import list_ports
 
 ADAFRUIT = 0x239A
 PINS = ("A0", "A1")
-LABEL = {"A0": "yellow, (3,14) PgDn/F20", "A1": "blue, (0,13) Delete/F19"}
+LABEL = {"A0": "yellow, (3,14) PgDn/F20 (plug out since 11-14)", "A1": "blue, (0,13) Delete/F19"}
 PLG = "com.jdlien.ak820pro.powerlog"
 PLG_PLIST = os.path.expanduser("~/Library/LaunchAgents/com.jdlien.ak820pro.powerlog.plist")
 POWER_CSV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "history", "power-bench-2026-10-15", "power.csv")
@@ -106,9 +108,13 @@ def main():
     ap.add_argument("args", nargs="*", type=int)
     ap.add_argument("--hold", choices=PINS, help="a second channel held high throughout (a chord)")
     ap.add_argument("--no-logger", action="store_true", help="do not pause/resume the logger's LaunchAgent")
+    ap.add_argument("--a0-plugged", action="store_true", help="A0's plug is back in (3,14) (out since 11-14)")
     a = ap.parse_args()
     if a.hold == a.pin:
         raise SystemExit("--hold must name the other channel")
+    if "A0" in (a.pin, a.hold) and not a.a0_plugged:
+        raise SystemExit("A0's plug is out of (3,14) since 11-14 (a switch is back there), so A0 presses "
+                         "nothing; once JD swaps the plug back, pass --a0-plugged")
     port = next((p.device for p in list_ports.comports() if p.vid == ADAFRUIT), None)
     if port is None:
         raise SystemExit("no Adafruit board on USB: is the logger's QT Py plugged in?")

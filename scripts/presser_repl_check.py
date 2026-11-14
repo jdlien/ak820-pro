@@ -19,6 +19,8 @@ logger's LaunchAgent, puts white's data line on, and undoes all three after.
 
 As wired 11-03, A0 is the yellow channel on (3,14), PgDn, and A1 the blue on
 (0,13), Delete. That is crossed against the plan's channel A at (0,13).
+Since 11-14 A0's plug is out and (3,14) has a switch again, so A0 reads 0
+of 5 until JD swaps the plug back.
 
     scripts/presser_repl_check.sh            # A0 and A1, five pulses each
     scripts/presser_repl_check.sh --scan     # every free header pin once

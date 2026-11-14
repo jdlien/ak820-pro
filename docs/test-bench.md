@@ -572,7 +572,7 @@ signature; JD granted it on 10-16. Start it with `open -a "$HOME/Applications/AK
 (`open`, so the grant is the app's, not the shell's), stop it with
 `pkill -x ak820-f19-listener`. It logs F19 down and up only, with the
 event's own timestamp on the wall clock, to `~/Library/Logs/ak820pro/f19.log`.
-Since 11-03 it logs F20 too, the presser's (3,14), as `f20-down` and
+Since 11-03 it logs F20 too, the presser's (3,14) (its plug out since 11-14), as `f20-down` and
 `f20-up`, so the parsers that read field 2 as F19's `down` or `up` skip it.
 ⚠️ An event tap sees every key: the callback matches F19 and F20 and returns
 every other event untouched, never stored. Keep it that way.
@@ -789,6 +789,14 @@ a 2-pin connector to a gutted-switch plug.
   with tweezers, so the agents may remap them as the tests need. His
   keymap before is `~/Documents/ak820pro-keymap-before-presser-20261103.json`
   (Play on (0,13), End on (3,14)).
+- **Since 11-14 the presser has one channel.** A0's plug is out of
+  (3,14) and a switch is back there (JD's End on Windows), so only A1 on
+  (0,13) presses, which is all the wake checks use. A second key means JD
+  swapping the plug back; `presser_repl.py` refuses A0 until
+  `--a0-plugged` says so. The keymap still had F20 there at the swap
+  (`~/Documents/ak820pro-keymap.json`, 11-10), so End goes back on both
+  base layers by VIA or a keymap write, the data line up and the daemon
+  out for it.
 - **Bring-up still owed:** the presser's own `code.py` (it replaces the
   logger's, so it ends the drain's logging), the dwell map, and the
   witness.

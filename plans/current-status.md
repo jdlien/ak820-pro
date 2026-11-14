@@ -51,7 +51,9 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
   `f19.log`): five downs, each with its one up, none lost or doubled. The
   ~5.96 s to the Mac counts the presser script's logger pause and REPL
   start before the pulse, not the wake. The presser's two wired keys can
-  come off white.
+  come off white. (3,14)'s did on 11-14: a switch is back there for JD's
+  End, and A1 on (0,13) alone stays for the wake checks
+  ([docs/test-bench.md](../docs/test-bench.md), "The key presser").
 
 ## 2026-11-03 night — stages 3 and 4 of the row ISR rewrite went onto white hands-free; stage 4b is on it with the night's soak
 
