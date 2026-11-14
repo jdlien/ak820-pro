@@ -2,10 +2,12 @@
 //
 // Exact: the pinned C (scripts/power_oracle.c via power_model.py --oracle),
 // for hsv_to_rgb with the CIE curve over every hue and value at ten
-// saturations, and for model_nj over ~1,000 cases. Set POWER_ORACLE_DIR to
+// saturations, for the flush's wide path (D9, v0.4.0) over every value and
+// chroma byte, and for model_nj over ~1,000 cases. Set POWER_ORACLE_DIR to
 // reuse fixtures; otherwise they are built here (needs cc and git).
-// Checked: the figures plans/POWER-CHARTS-PLAN.md and docs/power.md state,
-// the firmware's rules at the edges, and the model against the bench sweeps.
+// Checked: the figures plans/POWER-CHARTS-PLAN.md and docs/power.md state
+// (since v0.4.0's curve, the plan's "v0.4.0's curve"), the firmware's rules
+// at the edges, and the model against the bench sweeps.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -54,6 +56,24 @@ test("hsv_to_rgb with the CIE curve: every hue and value at ten saturations, exa
   assert.equal(bad, 0, `${bad} mismatches, first ${first}`);
 });
 
+test("the wide path: every value and chroma byte, exactly", () => {
+  assert.equal(fw.rgb_path, "wide");
+  const b = readFileSync(join(oracleDir, "wide.bin"));
+  assert.equal(b.length, 256 * 256 * 2);
+  let i = 0, bad = 0, first = "";
+  for (let v = 0; v < 256; v++) {
+    const recip = M.wideRecip(fw, v);
+    for (let c = 0; c < 256; c++, i += 2) {
+      const want = b.readUInt16LE(i), got = M.wideWidth(c, recip);
+      if (got !== want && !bad++) first = `v ${v} chroma ${c}: ${got} vs ${want}`;
+    }
+  }
+  assert.equal(bad, 0, `${bad} mismatches, first ${first}`);
+  // A dithered entry's mean: the base and a tick in as many of the four fields as its pattern names.
+  assert.equal(M.entryTicks(0x8000 | (5 << 11) | 3), 3.5);
+  assert.equal(M.entryTicks(1195), 1195);
+});
+
 test("model_nj: every oracle case, exactly", () => {
   const { cases } = JSON.parse(readFileSync(join(oracleDir, "model.json"), "utf8"));
   assert.ok(cases.length > 900);
@@ -64,7 +84,14 @@ test("model_nj: every oracle case, exactly", () => {
 test("the firmware facts the page leans on", () => {
   assert.equal(fw.led_count, 81);
   assert.equal(fw.backlight_duty.length, 101);   /* P2b (10-25): the Screen 0-100 */
-  assert.deepEqual([fw.cie1931[64], fw.cie1931[128], fw.cie1931[255]], [12, 48, 255]);
+  assert.deepEqual([fw.cie1931[64], fw.cie1931[128], fw.cie1931[255]], [12, 48, 255]);   /* the sweep's byte path */
+  assert.deepEqual([fw.curve_q6[0], fw.curve_q6[255], fw.rowisr_k_q6, fw.rowisr_k_ref_q6], [0, 16320, 300, 300]);
+  assert.deepEqual([fw.saver_val, fw.dim_val], [191, 102]);   /* 75% and 40% on the curve */
+  const drive = (v) => M.rgbDrive(fw, { on: true, h: 0, s: 0, v })[0];
+  near(drive(255), (1195 * 64) / 300, 1e-9, "full white: 1,195 ticks, the drive 254.93");
+  near(drive(fw.saver_val), 48, 0.5, "Power saver's 75%: the light value 128 gave before v0.4.0");
+  near(drive(fw.dim_val), 4.48, 1e-9, "the dim's 40%, darker than the old 64 (12)");
+  assert.equal(drive(0), 0);
   assert.equal(fw.backlight_duty[42], 5);   /* the old level 5, 5 ticks of 48 */
   assert.equal(M.lcdPercent(fw, 42), 42);
   assert.equal(M.lcdPercent(fw, 100), 100);
@@ -72,9 +99,10 @@ test("the firmware facts the page leans on", () => {
 });
 
 test("draws the plan states (untethered, BT)", () => {
-  near(M.boardMw(fw, setting(255, 42)), 296.584, 0.001, "full white, screen 42% (5 ticks, the old level 5)");
-  near(M.boardMw(fw, setting(128, 42)), 152.93, 0.01, "white 128, screen 42% (5 ticks, the old level 5)");
-  near(M.boardMw(fw, setting(255, 42), { usb: true }), 303.684, 0.001, "full white, screen 42%, the bench's USB");
+  near(M.boardMw(fw, setting(255, 42)), 296.538, 0.001, "full white, screen 42% (5 ticks, the old level 5)");
+  near(M.boardMw(fw, setting(191, 42)), 152.628, 0.001, "white 75%, screen 42%");
+  near(M.boardMw(fw, setting(128, 42)), 125.978, 0.001, "white 50%, screen 42%");
+  near(M.boardMw(fw, setting(255, 42), { usb: true }), 303.638, 0.001, "full white, screen 42%, the bench's USB");
   near(M.boardMw(fw, setting(0, 0, { rgbOn: false, screenOn: false })), 106.9, 1e-9, "every light off");
   // Value 0 lights no LED, so the RGB's fixed cost does not apply; value 1 does.
   near(M.boardMw(fw, setting(0, 0, { screenOn: false })), 106.9, 1e-9, "value 0");
@@ -83,20 +111,21 @@ test("draws the plan states (untethered, BT)", () => {
 
 test("fixed-state runtimes reproduce the plan's figures", () => {
   const E = fw.e_cap_mwh;
-  near(E / M.boardMw(fw, setting(255, 42)), 52.53, 0.01, "full white, screen 42% (5 ticks, the old level 5)");
-  near(E / M.boardMw(fw, setting(128, 42)), 101.87, 0.01, "white 128");
+  near(E / M.boardMw(fw, setting(255, 42)), 52.54, 0.01, "full white, screen 42% (5 ticks, the old level 5)");
+  near(E / M.boardMw(fw, setting(191, 42)), 102.07, 0.01, "white 75%");
+  near(E / M.boardMw(fw, setting(128, 42)), 123.66, 0.01, "white 50%");
   near(E / M.boardMw(fw, setting(0, 42, { rgbOn: false })), 140.39, 0.01, "RGB off, screen 42% (5 ticks, the old level 5)");
   near(E / 106.9, 145.73, 0.01, "every light off");
   const max24 = M.boardMw(fw, setting(255, 100)) + M.radioExtraMw(ev, "g24");
-  near(E / max24, 46.28, 0.01, "everything at max, 2.4G");
+  near(E / max24, 46.29, 0.01, "everything at max, 2.4G");
 });
 
-test("continuous use: the 15% tail at value 128, by mode", () => {
+test("continuous use: the 15% tail at Power saver's value, by mode", () => {
   const s = setting(255, 42);
   const bal = M.continuousUse(fw, ev, s, "normal", F);
-  near(bal.hiHours, 44.65, 0.01, "Balanced, above the cap");
-  near(bal.loHours, 15.28, 0.01, "Balanced, the tail");
-  near(bal.hours, 59.93, 0.01, "Balanced, in all");
+  near(bal.hiHours, 44.66, 0.01, "Balanced, above the cap");
+  near(bal.loHours, 15.31, 0.01, "Balanced, the tail");
+  near(bal.hours, 59.97, 0.01, "Balanced, in all");
   assert.ok(bal.dims);
   near(M.continuousUse(fw, ev, s, "full", F).hours, bal.hours, 1e-9, "Always on types as Balanced does");
   const saver = M.continuousUse(fw, ev, s, "saver", F);
@@ -104,12 +133,14 @@ test("continuous use: the 15% tail at value 128, by mode", () => {
   assert.ok(!saver.dims);
   const lo = M.continuousUse(fw, ev, s, "minimal", F);
   near(lo.hiMw, 106.9, 1e-9, "Lights out types dark, the screen too");
-  // A setting already under the cap does not dim.
+  // A setting at or under the cap does not dim.
   assert.ok(!M.continuousUse(fw, ev, setting(100, 42), "normal", F).dims);
+  assert.ok(!M.continuousUse(fw, ev, setting(fw.saver_val, 42), "normal", F).dims);
+  assert.ok(M.continuousUse(fw, ev, setting(fw.saver_val + 1, 42), "normal", F).dims);
   // The sensitivity the plan quotes: one point of the tail's share.
-  near(M.continuousUse(fw, ev, s, "normal", 0.14).hours - bal.hours, -0.493, 0.002, "one point of f");
+  near(M.continuousUse(fw, ev, s, "normal", 0.14).hours - bal.hours, -0.495, 0.002, "one point of f");
   const max24 = M.continuousUse(fw, ev, setting(255, 100, { radio: "g24" }), "normal", F);
-  near(max24.hours, 51.45, 0.01, "everything at max, 2.4G, with the tail");
+  near(max24.hours, 51.47, 0.01, "everything at max, 2.4G, with the tail");
 });
 
 test("the ladder: stages, the low cap's rules, sleep", () => {
@@ -131,8 +162,8 @@ test("the ladder: stages, the low cap's rules, sleep", () => {
 test("pauses and days", () => {
   const s = setting(255, 42);
   const sleep = M.sleepMw(ev, "bt");
-  near(M.pauseMwh(fw, ev, s, "normal", false, 20) - (sleep * 20) / 60, 66.3, 0.1, "a Balanced pause, above sleep");
-  near(M.pauseMwh(fw, ev, s, "saver", false, 3) - (sleep * 3) / 60, 6.15, 0.02, "a Power saver pause, above sleep");
+  near(M.pauseMwh(fw, ev, s, "normal", false, 20) - (sleep * 20) / 60, 65.5, 0.1, "a Balanced pause, above sleep");
+  near(M.pauseMwh(fw, ev, s, "saver", false, 3) - (sleep * 3) / 60, 5.97, 0.02, "a Power saver pause, above sleep");
   for (const sc of doc.scenarios) {
     const segs = M.dayPlan(sc);
     assert.equal(segs.reduce((a, [, m]) => a + m, 0), 1440, `${sc.id} covers the day once`);
@@ -172,15 +203,28 @@ test("the model against the bench sweep", () => {
 // Each knob's increment over the dark states' mean, on the model's curve: the
 // screen's within 0.5 mW (worst 0.31), the LEDs' within 3 mW (red at 240-255
 // sits 2.5 below, and the first lit drive ~1.9 below: the floor reads high).
+// Each at the light it ran at (the sweep's byte path), and placed where
+// today's curve gives that light.
 test("the measured points sit on the curves", () => {
   const pts = M.measuredPoints(fw, ev);
-  const curves = {
-    white: M.rgbCurve(fw, ev, 0, 0), red: M.rgbCurve(fw, ev, 0, 255),
-    green: M.rgbCurve(fw, ev, 85, 255), blue: M.rgbCurve(fw, ev, 170, 255),
-  };
+  const HS = { white: [0, 0], red: [0, 255], green: [85, 255], blue: [170, 255] };
   assert.equal(pts.rgb.length, 36);
   assert.equal(pts.screen.length, 7);
-  for (const p of pts.rgb) near(p.mw, curves[p.colour][p.v].mw, 3.0, p.name);
+  for (const p of pts.rgb) {
+    const [h, s] = HS[p.colour];
+    assert.deepEqual(p.drive, M.hsvToRgb(fw, h, s, p.v), `${p.name} keeps the drive it ran at`);
+    const ran = M.boardMw(fw, { rgb: { on: true, h, s, v: p.v, drive: p.drive }, screen: { on: false, level: 0 } }) +
+      M.radioExtraMw(ev, "bt");
+    near(p.mw, ran, 3.0, p.name);
+    // On today's curve, at x, the same light: the drive between the two whole values around it
+    // (the top's 254.93 a channel is the curve's most, so a byte of 255 sits at 255).
+    const v = (p.x * 255) / 100, sum = (d) => d[0] + d[1] + d[2];
+    const at = (u) => sum(M.rgbDrive(fw, { on: true, h, s, v: u }));
+    const hi = Math.ceil(v) === 255 ? Infinity : at(Math.ceil(v));
+    assert.ok(at(Math.floor(v)) <= sum(p.drive) + 1e-9 && sum(p.drive) <= hi + 1e-9, `${p.name} at ${v.toFixed(2)}`);
+  }
+  // White 128 ran at the drive 48, which today's 75% gives.
+  near(pts.rgb.find((p) => p.colour === "white" && p.v === 128).x, 75, 0.5, "white 128's place");
   const at = (p) => M.boardMw(fw, { rgb: { on: false }, screen: { on: true, level: p.level, duty: p.duty } }) +
     M.radioExtraMw(ev, "bt");
   for (const p of pts.screen) near(p.mw, at(p), 0.5, p.name);   /* at the duty it ran at */

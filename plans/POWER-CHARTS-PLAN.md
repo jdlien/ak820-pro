@@ -43,8 +43,39 @@ without the board:
   identity; white is a neutral line on purpose), settings in the URL. Checked
   rendered at 1100 px, light and dark, and at 375 px.
 - `.github/workflows/power-page.yml`: on PRs and `main`, a blob-less fetch of
-  the pinned firmware commit, `--check`, the tests; on `main`, a deploy job
-  publishes `site/` alone to GitHub Pages (Pages set to build from Actions).
+  the pinned firmware commit, a fresh `power.json` (since 11-13 the committed
+  copy's drift is a warning, not a failure: a pin that moved only its sha
+  failed the job), the tests; on `main`, a deploy job publishes `site/` alone
+  to GitHub Pages (Pages set to build from Actions).
+
+**v0.4.0's brightness curve (11-13).** The pin moved to `d59cb1fb0c`, where
+D9 renders a Solid colour's chroma at full value and the flush applies the
+value, under the ladder's cap, through the firmware's own curve
+(`rgb/curve12.h`) into 12-bit pulse widths; `SAVER_VAL` is 191 (75%, the
+light 128 gave on QMK's CIE curve) and `DIM_VAL` 102 (40%, darker than the
+old 64). The job failed on it twice over: the committed `power.json` and,
+regenerated, the plan's figures, because `model.js` still put the value
+through the CIE table. Now `power_model.py` reads the curve and the scale
+(`rowisr.c`'s cadence block, the reference `ROWISR_K_Q6`, the flush's lines
+checked verbatim, no released flavour moving the scale), `model.js` follows
+the flush (`wideRecip`, `wideWidth`, the dither's mean, the drive in bytes at
+the reference, `ticks x 64 / k_ref`), and the oracle holds it exactly over
+every value and chroma byte (`rowisr.c`'s `wide_width()` and the flush's two
+lines, compiled verbatim). The 10-21 sweep ran on the CIE byte path
+(`power_evidence.json`'s `rgb_path`), so each lit state keeps the drive it ran
+at and is drawn where today's curve gives that light (white 128 at 75%); the
+bench gate is unchanged (lit within 0.99%). The plan's figures on the new
+curve, full white and screen 42% unless named: 296.54 mW, 52.54 h (full
+white's drive is 1,195 ticks, 254.93); white 75% 152.63 mW, 102.07 h; white
+50% 125.98 mW, 123.66 h; everything at max on 2.4G 46.29 h (51.47 with the
+tail); Balanced from full 44.66 + 15.31 = 59.97 h (one point of `f`
+-0.495 h); a Balanced pause above sleep 65.5 mWh, Power saver's 5.97 (the dim
+cheaper); standby unchanged. The day presets move under 0.1 day. 13 tests.
+**Owed: a knobs sweep on v0.4.0's curve.** The only reading on it, white by
+slider position on 11-05 (`docs/power.md`, "The power modes"), agrees at
+90-100% and reads 1.0-1.8 mA above the model at 5-75% (by the pack voltage, unrecorded: 4.0-4.15 V) (the model +2.1-2.2 mA
+at 1-5%, +2.4 at 25%, +3.6 at 50%, +10.0 at 75% at ~4.15 V; measured +3.2,
++3.8, +5.4, +11.6); at 1% it reads 0.6 below. The page says so.
 
 Preview: `cd site && python3 -m http.server`, then `/power/`.
 

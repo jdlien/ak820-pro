@@ -6,8 +6,14 @@
  * as common_features.mk sets it for RGB matrix boards), and battery.c's
  * model_nj with its #defines, copied verbatim into model_extract.h by the
  * generator. Its two inputs, the backlight's duty and USB, are stubs here.
+ * Since D9 (v0.4.0) also the flush's wide path, in wide_extract.h: curve12.h,
+ * and rgb/rowisr.c's wide_width() with its dither and the flush's two lines
+ * from the value to the reciprocal, verbatim; before D9 that file says
+ * ORACLE_NO_WIDE.
  *
  *   oracle hsv     every h and v for ten saturations, r g b bytes to stdout
+ *   oracle wide    every value and chroma byte, wide_width()'s entry as a
+ *                  little-endian uint16 to stdout (exit 3 before D9)
  *   oracle model   lines of "dt r_ms g_ms b_ms lit_ms duty usb" on stdin,
  *                  model_nj's nJ for each to stdout
  */
@@ -23,6 +29,7 @@ static uint8_t display_backlight_duty(void) { return duty_now; }
 static bool    battery_usb_configured(void) { return usb_now; }
 
 #include "model_extract.h"
+#include "wide_extract.h"
 
 static const uint8_t SATS[] = {0, 1, 2, 64, 127, 128, 129, 200, 254, 255};   /* model.test.js's list */
 
@@ -38,6 +45,21 @@ int main(int argc, char **argv) {
                 }
         return 0;
     }
+    if (argc == 2 && strcmp(argv[1], "wide") == 0) {
+#ifdef ORACLE_NO_WIDE
+        return 3;
+#else
+        for (unsigned v = 0; v < 256; v++) {
+            uint32_t recip = wide_recip((uint8_t)v);
+            for (unsigned c = 0; c < 256; c++) {
+                uint16_t w    = wide_width((uint8_t)c, recip);
+                uint8_t  b[2] = {(uint8_t)(w & 0xFFu), (uint8_t)(w >> 8)};
+                fwrite(b, 1, 2, stdout);
+            }
+        }
+        return 0;
+#endif
+    }
     if (argc == 2 && strcmp(argv[1], "model") == 0) {
         unsigned long dt, lit, duty, usb;
         unsigned long long r, g, b;
@@ -49,6 +71,6 @@ int main(int argc, char **argv) {
         }
         return 0;
     }
-    fprintf(stderr, "usage: oracle hsv | oracle model < cases\n");
+    fprintf(stderr, "usage: oracle hsv | oracle wide | oracle model < cases\n");
     return 2;
 }

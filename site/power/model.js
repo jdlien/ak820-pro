@@ -1,7 +1,8 @@
 // The power page's maths (plans/POWER-CHARTS-PLAN.md). No DOM: index.html and
 // model.test.js run this same code. `fw` is power.json's "firmware" block, read
 // by scripts/power_model.py from the commit deps.lock pins, and `ev` its
-// "evidence" block; nothing here restates a firmware number.
+// "evidence" block; nothing here restates a firmware number but the wide
+// path's frame encoding (wideWidth), which the oracle holds to the C exactly.
 //
 // A setting is { rgb: { on, h, s, v }, screen: { on, level }, radio: "bt" | "g24" };
 // a mode is power.c's: "full" (Always on), "normal" (Balanced), "saver"
@@ -39,11 +40,82 @@ export function hsvToRgb(fw, h, s, v) {
   }
 }
 
-// One LED's channels: power.c's rgb_matrix_hsv_to_rgb caps the value at the
-// stage's ceiling before hsv_to_rgb. Solid colour lights every LED alike.
+// D9's flush (rgb/rowisr.c, since v0.4.0): the curve at the value in Q8
+// ticks at full chroma, and its 1/255 in Q8, in the flush's integer arithmetic.
+export function wideRecip(fw, v) {
+  const fullQ8 = Math.floor((fw.curve_q6[v] * fw.rowisr_k_q6) / 16);
+  return Math.floor((fullQ8 * 256 + 127) / 255);
+}
+
+// wide_width(): a chroma byte's frame entry. From 16 ticks the width rounded;
+// under it the fraction kept to a quarter as a four-field dither, bit 15 set,
+// the fields lit a tick more in bits 11-14 and the base in bits 0-10.
+export function wideWidth(c, recip) {
+  const q8 = Math.floor((c * recip + 128) / 256);
+  let w = Math.floor(q8 / 256);
+  const frac = q8 % 256;
+  if (w >= 16) return w + (frac >= 128 ? 1 : 0);
+  let quarters = Math.floor((frac + 32) / 64);
+  if (quarters === 4) { w++; quarters = 0; }
+  if (quarters === 0) return w;
+  return 0x8000 | ([0, 1, 5, 7][quarters] << 11) | w;
+}
+
+// An entry's mean width in ticks: the handler drives a dithered entry's base
+// plus one tick in each field its pattern names, over the four fields.
+export function entryTicks(e) {
+  if (!(e & 0x8000)) return e;
+  let n = 0;
+  for (let p = (e >> 11) & 0xf; p; p >>= 1) n += p & 1;
+  return (e & 0x7ff) + n / 4;
+}
+
+// The drive the firmware counts from what was emitted
+// (sn32f2xx_led_drive_take): ticks x 64 / k_ref, the light in bytes at the
+// reference scale, so the model's per-unit costs keep their meaning.
+export function wideDrive(fw, chroma, v) {
+  const recip = wideRecip(fw, v);
+  return chroma.map((c) => (entryTicks(wideWidth(c, recip)) * 64) / fw.rowisr_k_ref_q6);
+}
+
+// One LED's drive under the stage's value ceiling `vcap`. Since D9 (v0.4.0,
+// fw.rgb_path "wide") a Solid colour renders its chroma at full value
+// (power.c's rgb_matrix_hsv_to_rgb) and the flush applies the value, capped,
+// through the firmware's own curve; before it the cap came first and
+// hsv_to_rgb's CIE curve made bytes, each its drive. A state measured on an
+// older firmware carries the drive it ran at (`rgb.drive`). Solid colour
+// lights every LED alike.
 export function rgbDrive(fw, rgb, vcap = 255) {
   if (!rgb.on) return [0, 0, 0];
-  return hsvToRgb(fw, rgb.h, rgb.s, Math.min(rgb.v, vcap));
+  if (rgb.drive) return rgb.drive;
+  const v = Math.min(rgb.v, vcap);
+  if (fw.rgb_path !== "wide") return hsvToRgb(fw, rgb.h, rgb.s, v);
+  return wideDrive(fw, hsvToRgb(fw, rgb.h, rgb.s, 255), v);
+}
+
+// Where a drive sits on today's curve for a colour: the fractional value whose
+// drive matches its channels' sum, linear between whole values.
+export function valueForDrive(fw, h, s, drive) {
+  const sum = (d) => d[0] + d[1] + d[2];
+  const want = sum(drive);
+  let dlo = 0;
+  for (let v = 1; v <= 255; v++) {
+    const d = sum(rgbDrive(fw, { on: true, h, s, v }));
+    if (d >= want) return d === dlo ? v : v - 1 + (want - dlo) / (d - dlo);
+    dlo = d;
+  }
+  return 255;
+}
+
+// A knobs state's lighting as it ran. The sweep's firmware drew a Solid colour
+// on the byte path (ev's rgb_path), QMK's hsv_to_rgb with the CIE curve, each
+// byte its drive; on a firmware since D9 the same setting is another light, so
+// the state keeps that drive.
+export function sweepRgb(fw, sweep, l) {
+  if (l.effect === 0) return { on: false };
+  const rgb = { on: true, h: l.h, s: l.s, v: l.v };
+  if (sweep.rgb_path === "byte" && fw.rgb_path === "wide") rgb.drive = hsvToRgb(fw, l.h, l.s, l.v);
+  return rgb;
 }
 
 // display.c's effective duty: off is 0, and a stage's ceiling caps the level.
@@ -214,15 +286,20 @@ export function screenCurve(fw, ev, radio = "bt") {
 
 // The knobs sweep's measured points, as each knob's increment over the dark
 // states' mean (RGB off, screen off), drawn on the model's floor: the bench's
-// USB data and the reversal's drift cancel in the difference.
+// USB data and the reversal's drift cancel in the difference. A lit state's
+// `x` is where today's curve gives the light it ran at, its `v` the value read
+// back then.
 export function measuredPoints(fw, ev, radio = "bt") {
   const floor = boardMw(fw, { rgb: { on: false }, screen: { on: false, level: 0 } }) + radioExtraMw(ev, radio);
   const rows = ev.knobs_sweep.rows;
   const darks = rows.filter((r) => r.family === "dark");
   const dark = darks.reduce((a, r) => a + r.mw, 0) / darks.length;
-  const rgb = rows.filter((r) => ["white", "red", "green", "blue"].includes(r.family)).map((r) => ({
-    colour: r.family, v: r.lighting.v, x: (r.lighting.v * 100) / 255, mw: floor + r.mw - dark, name: r.name,
-  }));
+  // Each lit state at the light it ran at, placed where today's curve gives it.
+  const rgb = rows.filter((r) => ["white", "red", "green", "blue"].includes(r.family)).map((r) => {
+    const l = r.lighting, sr = sweepRgb(fw, ev.knobs_sweep, l);
+    const v = sr.drive ? valueForDrive(fw, l.h, l.s, sr.drive) : l.v;
+    return { colour: r.family, v: l.v, drive: sr.drive ?? null, x: (v * 100) / 255, mw: floor + r.mw - dark, name: r.name };
+  });
   const screen = rows.filter((r) => r.family === "screen").map((r) => ({
     level: r.screen_level, duty: r.screen_duty, x: r.screen_x ?? lcdPercent(fw, r.screen_level),
     mw: floor + r.mw - dark, name: r.name,
@@ -237,7 +314,7 @@ export function sweepAgreement(fw, ev) {
   return ev.knobs_sweep.rows.filter((r) => r.family !== "animated").map((r) => {
     const l = r.lighting;
     const setting = {
-      rgb: l.effect === 0 ? { on: false } : { on: true, h: l.h, s: l.s, v: l.v },
+      rgb: sweepRgb(fw, ev.knobs_sweep, l),
       screen: r.screen_level === null ? { on: false, level: 0 } : { on: true, level: r.screen_level, duty: r.screen_duty },
     };
     const model = boardMw(fw, setting, { usb: true });

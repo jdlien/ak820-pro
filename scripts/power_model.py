@@ -12,7 +12,9 @@ ladders and the ceilings (power.c), the backlight's duty per level (since
 P2b, 10-25, the indicators' 101-level table, indicator_levels.h, rounded to
 whole ticks as display_backlight_duty() does; before it, display.c's 24),
 the LED count (keyboard.json's rgb_matrix layout), QMK's
-CIE table (quantum/led_tables.c) and the screen readout's rounding
+CIE table (quantum/led_tables.c), since D9 (v0.4.0) the flush's brightness
+curve and scale (rgb/curve12.h, rgb/rowisr.c's cadence block, config.h) with
+the flush's lines checked verbatim, and the screen readout's rounding
 (param_overlay.c). A missing or ambiguous definition, or a table of the wrong
 size, is fatal: the page must never show a number the board does not use.
 
@@ -137,6 +139,62 @@ def ladders(src, saver_val):
     return out
 
 
+def exists(sha, path):
+    """Whether the pinned tree has `path`: trees only, so CI's blob-less fetch answers it."""
+    r = subprocess.run(["git", "-C", FW, "ls-tree", "--name-only", sha, "--", path], capture_output=True, text=True)
+    if r.returncode != 0:
+        die(f"cannot list {path} at {sha[:10]}: {r.stderr.strip()}")
+    return r.stdout.strip() == path
+
+
+# D9's flush (v0.4.0, rgb/rowisr.c), the lines the page's wide path restates:
+# the value under the ladder's cap, the curve at it scaled into Q8 ticks, a
+# chroma byte's width, the handler's dithered tick, and the drive accounting's
+# unit (ticks x field / k_ref: the light emitted in bytes at the reference).
+WIDE_LINES = {
+    "the cap": "if (v > power_val_cap()) v = power_val_cap();",
+    "full_q8": "uint32_t full_q8 = ((uint32_t)curve_q6[v] * ROWISR_K_Q6) >> 4;",
+    "recip": "uint32_t recip   = (full_q8 * 256u + 127u) / 255u;",
+    "the dither": "if (w > ROWISR_TERMINAL) w = (w & DITHER_BASE) + ((w >> dither_shift) & 1u);",
+    "the drive": "uint64_t num = acc[k] * FIELD_US * 64u + drive_rem[k];",
+    "its unit": "uint64_t q   = num / (1000ULL * ROWISR_K_REF_Q6);",
+}
+
+
+def wide_path(sha, pc):
+    """D9 (v0.4.0): a Solid colour renders its chroma at full value and the
+    flush applies the value, under the ladder's cap, through curve12.h's
+    curve_q6 into pulse widths; the drive the model counts is the light
+    emitted, in bytes at the reference scale. Returns the curve and the
+    scales, or None for a firmware before it, where the value goes through
+    QMK's CIE table into bytes."""
+    if not exists(sha, f"{KB}/rgb/curve12.h"):
+        return None
+    for line in ("if (!power_local_value_mode()) hsv.v = 255;", "|| m == RGB_MATRIX_SOLID_COLOR"):
+        if line not in pc:
+            die(f"power.c: no longer has {line!r}, which the wide path assumes")
+    ro = show(sha, f"{KB}/rgb/rowisr.c")
+    for what, line in WIDE_LINES.items():
+        if line not in ro:
+            die(f"rgb/rowisr.c: {what} is no longer {line!r}")
+    cfg = show(sha, f"{KB}/config.h")
+    cadence = define(cfg, "ROWISR_CADENCE_US", "config.h")
+    m = re.findall(rf"^#if ROWISR_CADENCE_US == {cadence}u\n(.*?)^#(?:elif|else)", ro, re.M | re.S)
+    if len(m) != 1:
+        die(f"rgb/rowisr.c: expected one block for the {cadence} us cadence, found {len(m)}")
+    k_ref = define(m[0], "ROWISR_K_REF_Q6", f"rowisr.c's {cadence} us block")
+    if not re.search(r"^#\s*define\s+ROWISR_K_Q6\s+ROWISR_K_REF_Q6\s*$", m[0], re.M):
+        die(f"rgb/rowisr.c: the {cadence} us block's ROWISR_K_Q6 is not its reference")
+    # The released flavours build at the reference; only devprobe moves the scale.
+    for line in open(os.path.join(ROOT, "build.sh")):
+        if re.match(r"\s*(daily|fpb)\)", line) and "ROWISR_K_Q6" in line:
+            die(f"build.sh: a released flavour sets ROWISR_K_Q6: {line.strip()}")
+    curve = c_array(show(sha, f"{KB}/rgb/curve12.h"), "curve_q6", 256, "rgb/curve12.h")
+    if curve[0] != 0 or curve[255] != 255 * 64 or any(b < a for a, b in zip(curve, curve[1:])):
+        die("rgb/curve12.h: curve_q6 is not 0 to 16,320, non-decreasing")
+    return {"curve_q6": curve, "rowisr_k_q6": k_ref, "rowisr_k_ref_q6": k_ref}
+
+
 def firmware(sha):
     bc = show(sha, f"{KB}/battery.c")
     bh = show(sha, f"{KB}/battery.h")
@@ -154,6 +212,7 @@ def firmware(sha):
     if duty[-1] != full:
         die(f"display.c's top duty {duty[-1]} is not battery.c's BKL_DUTY_FULL {full}")
     saver = define(pc, "SAVER_VAL", "power.c")
+    wide = wide_path(sha, pc)
     try:
         leds = len(kj["rgb_matrix"]["layout"])
     except (KeyError, TypeError):
@@ -176,6 +235,8 @@ def firmware(sha):
         "ladders": ladders(pc, saver),
         "backlight_duty": duty,
         "cie1931": c_array(lt, "CIE1931_CURVE", 256, "quantum/led_tables.c"),
+        "rgb_path": "wide" if wide else "byte",
+        **(wide or {}),
     }
 
 
@@ -280,6 +341,7 @@ def oracle(outdir):
         if len(defs) != 8 or len(fn) != 1:
             die(f"battery.c: expected 8 model #defines and one model_nj, found {len(defs)} and {len(fn)}")
         open(os.path.join(b, "model_extract.h"), "w").write("\n".join(defs) + "\n\n" + fn[0])
+        open(os.path.join(b, "wide_extract.h"), "w").write(wide_extract(sha))
         exe = os.path.join(b, "oracle")
         cc = subprocess.run(["cc", "-std=c11", "-O1", "-Wall", "-Wextra", "-DUSE_CIE1931_CURVE", f"-I{b}",
                              "-o", exe, ORACLE_C, os.path.join(b, "color.c"), os.path.join(b, "led_tables.c")],
@@ -288,6 +350,12 @@ def oracle(outdir):
             die("the oracle did not build:\n" + cc.stderr)
         with open(os.path.join(outdir, "hsv.bin"), "wb") as f:
             f.write(subprocess.run([exe, "hsv"], capture_output=True, check=True).stdout)
+        wide_bin = subprocess.run([exe, "wide"], capture_output=True)
+        if wide_bin.returncode not in (0, 3):
+            die("the oracle's wide mode failed: " + wide_bin.stderr.decode())
+        if wide_bin.returncode == 0:   # 3: a firmware before D9, no wide path to hold model.js to
+            with open(os.path.join(outdir, "wide.bin"), "wb") as f:
+                f.write(wide_bin.stdout)
         cases = model_cases()
         out = subprocess.run([exe, "model"], input="\n".join(" ".join(map(str, c)) for c in cases) + "\n",
                              capture_output=True, text=True, check=True).stdout.split()
@@ -297,6 +365,34 @@ def oracle(outdir):
                                           "nj": int(n)} for c, n in zip(cases, out)]},
                   open(os.path.join(outdir, "model.json"), "w"))
     print(f"oracle: fixtures for {sha[:10]} in {outdir}")
+
+
+def wide_extract(sha):
+    """The wide path's C for the oracle, from the pinned commit: curve12.h
+    whole; from rowisr.c verbatim, the dither's #defines, dither_pat,
+    wide_width() and the flush's two lines that turn the value into the
+    reciprocal; the scale wide_path() read. Empty of all of it before D9."""
+    pc = show(sha, f"{KB}/power.c")
+    wide = wide_path(sha, pc)
+    if wide is None:
+        return "#define ORACLE_NO_WIDE 1\n"
+    ro = show(sha, f"{KB}/rgb/rowisr.c")
+    defs = re.findall(r"^#define\s+(?:DITHER_FLAG|DITHER_BASE|DITHER_PAT_SHIFT)\b.*$", ro, re.M)
+    pat = re.findall(r"^static const uint8_t dither_pat\[4\] = .*?;", ro, re.M)
+    fn = re.findall(r"^static inline uint16_t wide_width\(.*?^\}\n", ro, re.M | re.S)
+    if len(defs) != 3 or len(pat) != 1 or len(fn) != 1:
+        die(f"rgb/rowisr.c: expected the dither's 3 #defines, one dither_pat and one wide_width, "
+            f"found {len(defs)}, {len(pat)} and {len(fn)}")
+    return "\n".join([
+        f"#define ROWISR_K_Q6 {wide['rowisr_k_q6']}u",
+        show(sha, f"{KB}/rgb/curve12.h"),
+        *defs, pat[0], fn[0],
+        "static uint32_t wide_recip(uint8_t v) {",
+        "    " + WIDE_LINES["full_q8"],
+        "    " + WIDE_LINES["recip"],
+        "    return recip;",
+        "}",
+    ]) + "\n"
 
 
 def model_cases():

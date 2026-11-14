@@ -25,7 +25,7 @@ There are really two numbers, and real use falls between them:
   - **50-52 h** with every LED at full white and the screen dim (measured,
     five drains);
   - ~46 h with everything at maximum (modelled);
-  - ~100 h with the LEDs at half brightness (modelled);
+  - ~100 h with the LEDs at 75%, about half as bright to the eye (modelled);
   - ~6 days with every light off (modelled).
 - **Days of standby** (asleep, untouched): **about 7 weeks** (modelled from
   a measured 3.2 mA asleep).
@@ -38,13 +38,13 @@ at the second:
   counting the weekend asleep (modelled).
 - **JD's own logged use:** about 2¾ hours a day with a key pressed. In the
   default mode that comes to about **12½ days** a charge, and about **three
-  weeks** in Power saver, which types at half brightness (modelled, from two
-  days of logged typing; not yet run as a drain).
+  weeks** in Power saver, which types at 75% brightness at most (modelled,
+  from two days of logged typing; not yet run as a drain).
 
 The rest of the short version:
 
-- **The LEDs are most of the cost:** 62% of the draw at full white. At half
-  brightness they cost a quarter as much.
+- **The LEDs are most of the cost:** 62% of the draw at full white. At 75%,
+  about half as bright to the eye, they cost a quarter as much.
 - **The pack holds 15.6 Wh** to the point where the lights go out (measured),
   a little more than its label's 14.8 Wh.
 - **When the lights go out (0%), it still types for about 5 more hours**
@@ -111,14 +111,16 @@ Untethered, the logged drain would have run ~51.5 h.
 ### Modelled: one state, held
 
 Each figure is that state's measured draw over the measured 15,579 mWh, run to
-the RGB cut, with no USB data attached:
+the RGB cut, with no USB data attached. The brightness is v0.4.0's: the
+sweep set values 128 and 64 on the curve before it, which give the light of
+75% and about 54% now ("Where the power goes", below):
 
 | state                                            | draw    | per hour | runtime  |
 | ------------------------------------------------ | ------- | -------- | -------- |
 | Everything at max: full white, screen full, 2.4G | 340 mW  | 2.2%     | ~46 h    |
 | Full white, screen at level 5                    | 300 mW  | 1.9%     | ~52 h    |
-| White at value 128                               | 154 mW  | 1.0%     | ~4 days  |
-| White at value 64                                | 129 mW  | 0.8%     | ~5 days  |
+| White at 75%                                     | 154 mW  | 1.0%     | ~4 days  |
+| White at about 54%                               | 129 mW  | 0.8%     | ~5 days  |
 | LEDs off, screen at level 5                      | 111 mW  | 0.7%     | ~6 days  |
 | Every light off, awake                           | 107 mW  | 0.7%     | ~6 days  |
 | Asleep                                           | 13.4 mW | 0.09%    | ~49 days |
@@ -133,7 +135,7 @@ not been measured.
 hours).**
 
 Each pause also costs what the mode spends before it sleeps. At full white:
-- **Balanced:** 20 minutes, 10 lit and 10 dimmed, ~67 mWh more than asleep,
+- **Balanced:** 20 minutes, 10 lit and 10 dimmed, ~66 mWh more than asleep,
   0.4% of the pack;
 - **Power saver:** 3 minutes, ~6 mWh.
 
@@ -145,7 +147,7 @@ The office worst case, 8 h of nonstop typing a day and asleep the other 16:
 - **full white, screen dim:** ~16.8% a day, **~6 days**. A five-day week plus
   a weekend asleep uses ~88%: a charge a week;
 - **everything at max:** ~18.8% a day, ~5.3 days;
-- **white at value 128:** ~9.3% a day, ~11 days;
+- **white at 75%:** ~9.3% a day, ~11 days;
 - **Lights out mode** (dark while typing): ~6.9% a day, ~15 days;
 - **Always on mode** never sleeps, so a day is 24 lit hours: ~2.2 days at
   full white.
@@ -173,7 +175,7 @@ Two other days, for comparison:
 - Each idle stretch then steps through the mode's stages at their measured
   draws.
 - The last 15% of the charge runs under the low-battery rule: every mode
-  but Lights out at Power saver's lighting, its half brightness while typing
+  but Lights out at Power saver's lighting, its 75% ceiling while typing
   included.
 - Moving every stretch's length by ±5 minutes (the log's resolution) changes
   the result by about 1%.
@@ -183,15 +185,16 @@ The logged drain in Balanced (R5,
 measure what this models.
 
 **What separates Balanced from Power saver is the typing, not the timing.**
-- **Power saver types at half brightness**, a quarter of the LEDs' power,
-  which is where most of a day's energy goes.
+- **Power saver types at 75% brightness at most**, about half as bright to
+  the eye and a quarter of the LEDs' power, which is where most of a day's
+  energy goes.
 - **Balanced stays lit for 10 minutes into every pause**, so short breaks
-  cost: ~67 mWh each at full white. That is why its stop-start day comes out
+  cost: ~66 mWh each at full white. That is why its stop-start day comes out
   well under its logged one.
 - **Nearly all of JD's idle time is in stretches of hours**, which both modes
   spend asleep.
 - **Below 15% the two behave alike**, so Balanced's office day gains from
-  the half brightness there.
+  Power saver's ceiling there.
 
 The log cannot see pauses of 1-5 minutes, where Balanced now stays lit and
 Power saver dims, so the real gap is probably a little wider than modelled.
@@ -204,14 +207,15 @@ awake with every light off:
 - **The base, awake and dark, BT linked: 27.3 mA, ~107 mW.**
   - It comes from the MCU, the radio, the panel's logic and the regulator,
     and nobody has split it further ("What we don't know").
-  - The MCU never idles while awake: the LED matrix's row interrupt takes 73%
-    of its time, dark or lit.
+  - The MCU never idles while awake: the LED matrix's row interrupt took 73%
+    of its time before v0.4.0, dark or lit, and about 40% since.
 - **The LEDs at full white: +45.2 mA, ~189 mW.** That is 62% of the total at
   full white.
-  - **At value 128: +10.3 mA; at value 64: +4.3 mA.** QMK's CIE 1931 curve
-    maps value 128 to a drive of 48 of 255, and 64 to 12. The draw follows
-    the drive, not the value, so the top of the brightness range is where the
-    power goes.
+  - **At a drive of 48 of 255: +10.3 mA; at 12: +4.3 mA.** Since v0.4.0
+    the firmware's own brightness curve gives a drive of 48 at 75% and 12 at
+    about 54%; these were measured before it, as values 128 and 64 on QMK's
+    CIE 1931 curve. The draw follows the drive, not the slider, so the top of
+    the brightness range is where the power goes.
   - **Colour matters.** Per unit of drive, red costs 1.29× the average, green
     0.90× and blue 0.81×. A saturated purple at full brightness drew 212 mW
     in all, against white's 303.
@@ -251,22 +255,26 @@ is on:
   - **2.565 µW per unit of green,**
   - **2.322 µW per unit of blue.**
 
-  Drive is the value after QMK's CIE curve, 0-255 a channel. (Until 10-21
-  these were 3.636, 2.533 and 2.294: the fit counted 82 LEDs, so the RGB
-  read ~1.2% low.)
+  Drive is the light a channel emits, 0-255. Since v0.4.0 it is the
+  colour's channel scaled by the firmware's brightness curve
+  (`rgb/curve12.h`), at most 254.9; before it, the value after QMK's CIE
+  curve. (Until 10-21 these were 3.636, 2.533 and 2.294: the fit counted 82
+  LEDs, so the RGB read ~1.2% low.)
 
-For white at one brightness, the LEDs come to about **8.6 + 0.69 × drive
-mW**: 186 mW at drive 255, 42 at 48 (value 128), 17 at 12 (value 64).
+On v0.4.0's curve, white's drive is 1.7 at 25%, 9.2 at 50%, 47.6 at 75% and
+254.9 at 100%. For white at one brightness, the LEDs come to about **8.6 +
+0.69 × drive mW**: 186 mW at drive 255, 42 at 48 (75%), 17 at 12 (about
+54%).
 
-**A worked example:** white at value 128, the screen at level 8, the default
+**A worked example:** white at 75%, the screen at level 8, the default
 mode, 4 h of typing a day:
 
 - **awake:** 106.9 + 6.5 (backlight, 8 of 48) + 42.0 (LEDs) = 155 mW, × 4 h
   = 622 mWh;
 - **the ladder before each sleep,** say three absences a day: 10 min more at
-  155 mW, then 10 dimmed at ~130 mW, ~48 mWh each, ~143 mWh;
+  155 mW, then 10 dimmed to 40% at ~125 mW, ~47 mWh each, ~140 mWh;
 - **asleep:** the other 19 h × 13.35 mW = 254 mWh;
-- **total:** ~1,019 mWh a day, so 15,579 ÷ 1,019 = **~15.3 days**.
+- **total:** ~1,016 mWh a day, so 15,579 ÷ 1,016 = **~15.3 days**.
 
 ## The power modes
 
@@ -275,21 +283,21 @@ They apply on battery only; on USB the board stays fully on.
 
 |                                  | Always on | Balanced    | Power saver | Lights out |
 | -------------------------------- | --------- | ----------- | ----------- | ---------- |
-| LEDs while typing                | as set    | as set      | capped, 128 | off        |
-| LEDs dimmed (value capped at 64) | never     | 10 min idle | 1 min       | --         |
+| LEDs while typing                | as set    | as set      | capped, 75% | off        |
+| LEDs dimmed (capped at 40%)      | never     | 10 min idle | 1 min       | --         |
 | LEDs and screen off, deep sleep  | never     | 20 min      | 3 min       | 1 min      |
 
 - **Balanced is the default.** It works as if plugged in unless you are
   most likely away, or watching something.
-- **Power saver caps the lighting's value at 128 while typing.** That is
-  about half as bright to the eye under QMK's brightness curve, and a quarter
-  of the LEDs' power. It is a ceiling, so a board already at 128 or below
-  keeps its setting. With bright settings on the cable, it gives a dimmer board
+- **Power saver caps the lighting at 75% while typing** (value 191; before
+  v0.4.0, 128 on QMK's curve, the same light). That is about half as bright
+  to the eye, and a quarter of the LEDs' power. It is a ceiling, so a board
+  already at 75% or below keeps its setting. With bright settings on the cable, it gives a dimmer board
   on battery for free. The same setting gives less light on battery anyway:
   20-35% less than on USB while charging (measured by camera on a development
   build, 11-04).
-- **On the development branch, the lighting's cost by slider position** (measured
-  11-05, on battery, screen off, the bench's USB data attached). The board without
+- **Since v0.4.0, the lighting's cost by slider position** (measured 11-05 on
+  its development build, on battery, screen off, the bench's USB data attached). The board without
   its LEDs draws 27.8 mA. The LEDs add:
 
   | Slider | White | A purple |
@@ -303,9 +311,9 @@ They apply on battery only; on USB the board stays fully on.
   | 100% | 45.5 mA | 22.3 mA |
 
   So the lighting is cheap to about 60% and most of its cost is in the top quarter.
-  That branch puts Power saver's ceiling at 75%, the same light as this page's 128,
-  and the idle dim at 40%, dimmer than this page's 64, chosen by eye.
-- **Below 15%, every mode takes Power saver's lighting**, its 128 while
+  Power saver's ceiling at 75% is the light value 128 gave before v0.4.0, and the
+  idle dim at 40% is darker than the 64 before it, both chosen by eye.
+- **Below 15%, every mode takes Power saver's lighting**, its 75% while
   typing included (Lights out stays darker), and Balanced sleeps at Power
   saver's 3 minutes. Always on still never sleeps.
 - **Lights out keeps the LEDs and the backlight off even while typing.** It

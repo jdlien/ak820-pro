@@ -110,7 +110,7 @@ What that gives you:
   |---|---|
   | Always on | Never dims or sleeps |
   | Balanced | Dims after 10 min idle, sleeps at 20 |
-  | Power saver | Types at half brightness, dims after 1 min, sleeps at 3 |
+  | Power saver | Types at 75% brightness at most, dims after 1 min, sleeps at 3 |
   | Lights out | Keeps the lights and the screen dark, sleeps after 1 min |
 
 - **A deep sleep at 3.2 mA**, about seven weeks untouched. A key wakes it,
@@ -123,7 +123,7 @@ How long a charge lasts (Bluetooth, the screen dim):
 | | 8 h of typing a day | 2¾ h a day |
 |---|---|---|
 | Balanced, every LED full white | 6½ days | 12½ days |
-| Balanced, one colour at half brightness | 11½ days | 19 days |
+| Balanced, one colour at 75% | 11½ days | 19 days |
 | Power saver | 11 days | 3 weeks |
 | Lights out | 2 weeks | nearly 4 weeks |
 
