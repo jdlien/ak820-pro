@@ -159,6 +159,12 @@ O1-O6, then for one on the fix.
 
 ## Where it stands (11-09 evening), and the analyser session
 
+**Closed 11-17:** cured by fix A (in every build since `6683c18134`, released in v0.4.0), its bus-
+level cause left unproven by JD's call. The analyser that came is 24 MS/s (a CBM9002A, an FX2LP
+clone): one sample per clock of the screen's 24 MHz SPI, so it can't decode the link, and DC against
+the last edge needs 100 MS/s or more. It stays on hand for slow signals, such as the CH582F's
+115200-baud UART (P1.7/P1.6) and the 10-31 audit's two optional module checks. What follows is the record as it stood.
+
 - **Fix A cures it; the bus-level cause is unproven.** On the switchable diagnostic `lcd-diag`
   `5688b2a975` (token `0x8edc1022`; fix A with 4790208267's send kept beside it, raw81 in both modes),
   the old send garbled over BT and A's stayed clean. Over 609 polled windows, with the old send

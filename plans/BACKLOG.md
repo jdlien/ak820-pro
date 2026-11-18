@@ -5,6 +5,12 @@ headings, so a pointer to a section by name that is not here is there.
 
 ## Stray white pixels on the screen (2026-11-09) -- at nearly every track change on the daily `4790208267`, by JD: the title arrives, its letters land in the wrong window; a regression, not explained
 
+**Closed 11-17:** cured by fix A (in every build since `6683c18134`, released in v0.4.0), its bus-
+level cause left unproven by JD's call. The analyser that came is 24 MS/s (a CBM9002A, an FX2LP
+clone): one sample per clock of the screen's 24 MHz SPI, so it can't decode the link, and DC against
+the last edge needs 100 MS/s or more. It stays on hand for slow signals, such as the CH582F's
+115200-baud UART (P1.7/P1.6) and the 10-31 audit's two optional module checks.
+
 **What JD saw:** a few white-ish pixels, mostly a horizontal speckle, at the top right, above and
 to the right of the connected Bluetooth channel. The board was white on the daily build of
 `row-isr` `4790208267`, flashed 00:35 11-07. `Fn`+`D` and back cleared them: the page's exit
