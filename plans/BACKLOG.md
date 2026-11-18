@@ -3,6 +3,96 @@
 Finished items move to [`history/BACKLOG-DONE.md`](../history/BACKLOG-DONE.md) with their
 headings, so a pointer to a section by name that is not here is there.
 
+## The bench supply as the pack: tests that no longer need a drain (2026-11-18) -- planned, after the drain reaches the RGB cut
+
+The bench's Riden RD6006P ([docs/test-bench.md](../docs/test-bench.md),
+"The bench supply") can stand in for the pack at any voltage, for as long
+as a test wants, with the logger still measuring. Each test below is a lease
+of up to 2 h that JD grants on the supply's page. The wiring is one
+hands-on step: the supply's plug goes into the harness's in-line socket,
+with relay 2 off. None of these runs during the drain.
+
+1. **Calibrate the voltage readings (one lease).** Step from 4.10 V down to
+   3.10 V in 10 mV steps, holding each ~30 s (the module answers the poll
+   every 5 s). Read the reference at the harness: the meter, then the
+   MAX17048. It gives:
+   - **The module's `5C` line over its whole range,** with both clamp ends
+     (~4.036 and ~3.161 V, [docs/battery.md](../docs/battery.md)) measured
+     instead of extrapolated. Compare it with `c5_to_mv()`'s line, which was
+     fitted on one unit from 3.30-3.84 V on discharge. Refit only if it's
+     off by more than the ±11 mV the firmware allows for.
+   - **The INA228's VBUS:** it has read ~215 mV low since 10-15, cause not
+     found. Across a range of voltages it shows whether that's an offset
+     or a gain error.
+   - **The MAX17048's VCELL** against the meter.
+2. **Battery low and the RGB cut on demand (one lease).** The firmware's
+   rules (`battery.c`, `protection_tick()`):
+   - the warning at 3680 mV after 30 s under it, once a discharge;
+   - the cut at 3400 mV after 30 s under it, latched until 5 s of external
+     power;
+   - at the bottom clamp, three zero readings cut at once.
+
+   `HC_BATTCFG` already moves the thresholds, which tests the logic. The
+   supply makes the voltage real, with the module's real noise. To check on
+   the keyboard, each in minutes:
+   - each fires after its 30 s and not before, and the warning fires only
+     once;
+   - **a voltage hovering at the threshold:** any reading at or above it
+     starts the 30 s over, so a voltage within the module's noise of
+     3400 mV could put off the cut. Hold 5 mV and 10 mV either side, and
+     time it;
+   - a drop straight below 3.161 V cuts at once and shows "Low";
+   - the ladder below 15% (under ~3.75 V): Power saver's stages and the
+     3 min sleep (`low_now`).
+
+   This leaves out the restore, because it needs the cable's 5 V, which
+   would push current back into the supply. The drain's end checks it on
+   the pack.
+3. **Where the keyboard dies (one lease).** Below 3.161 V the module reads
+   0, and the voltage the keyboard dies at is unknown
+   ([docs/power.md](../docs/power.md), "The battery"). Step down from
+   3.20 V in 20 mV steps, 2 min each. Keep the keyboard awake (Always on,
+   so it never sleeps) with the data line on, and watch both currents (the
+   supply's and the logger's). Find:
+   - the voltage it stops at, and whether it stops cleanly or reboots over
+     and over (the current pulsing, then the watchdog record);
+   - whether it comes back by itself when the voltage returns to 3.7 V or
+     needs the slider, and whether its settings and keymap survive;
+   - how that compares with the pack's protector (not identified; similar
+     packs cut off at 2.75 or 3.0 V): whichever comes first ends a real
+     reserve. That sizes "A day of typing after the LED cut", below.
+
+   This is the brownout sweep ridenboard plans (riden-bridge's phase D,
+   `sweep --from … --to … --step … --hold 2m --stop-if 'i<0.005'`). Until
+   that's built, it runs as a loop under `lease hold`.
+4. **The module's `5C` near empty, with the analyser (one lease, the case
+   open).** This is the 10-31 audit's second optional check
+   (`plans/AUDIT-2026-10-31.md`): whether a poll's three `5C` frames
+   agree, and whether a `5C 00` comes above ~3.2 V. It needed a pack near
+   empty. The supply can hold 3.15-3.30 V for as long as it takes, with the
+   analyser on UART2 (docs/test-bench.md, "The logic analyser").
+5. **The charge, measured from the USB end.** The logger sees only the
+   pack. Put the supply on the cable's 5 V instead, through a USB power
+   breakout or a cable with its VBUS cut, with the data through the hub,
+   the real pack in, and relay 2 off. Then it measures what the keyboard
+   draws from USB:
+   - the charger's efficiency over a whole charge (the energy in at 5 V
+     against what reaches the pack). The pack's recharge after tests 1-3
+     is the chance;
+   - the keyboard on a sagging 5 V (4.4-4.75 V, like a weak hub).
+
+   A charge takes ~10 h, so that's five or six leases, unless the 2 h cap
+   is lifted for it.
+
+**Free with any of them:** with no pack protector in the circuit, a
+keyboard that goes dark on the supply rules out suspect 2 of the 09-24
+shutdown ([docs/battery.md](../docs/battery.md), "The shutdown of
+2026-09-24").
+
+**Order:** 1 and 2 in one sitting with JD there (the first lease, with the
+wiring checked), then 3. Do 4 when the case is open for something else, and
+5 at the pack's recharge if the breakout is to hand.
+
 ## Stray white pixels on the screen (2026-11-09) -- at nearly every track change on the daily `4790208267`, by JD: the title arrives, its letters land in the wrong window; a regression, not explained
 
 **Closed 11-17:** cured by fix A (in every build since `6683c18134`, released in v0.4.0), its bus-

@@ -42,6 +42,10 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
 - ~~the title garble's cause~~ closed 11-17: fix A cures it, the cause
   left unproven; the analyser that came (24 MS/s) can't read the
   screen's 24 MHz link (`plans/LCD-TITLE-GARBLE-PLAN.md`);
+- after the drain: the bench supply's tests. The supply is a Riden RD6006P
+  (since 11-18), with `ridenctl` on Buzz and a lease JD grants; it stands in
+  for the pack (`plans/BACKLOG.md`, "The bench supply as the pack";
+  [docs/test-bench.md](../docs/test-bench.md), "The bench supply");
 - the drain, running on: 1,447 mAh of 4,011.6 at 17:17 11-13 (36.1%,
   195.4 h since FULL, 7.41 mA mean; mAh since FULL = `charge_mah` +
   2754.007), relay 2 off, no charge since 11-09. ⚠️ **Lights out from

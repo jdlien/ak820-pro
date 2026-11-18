@@ -30,6 +30,9 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
   ([below](#the-camera-the-pixel-8-over-adb-11-03)). Since 11-17 a 24 MS/s
   logic analyser is on hand for slow signals
   ([below](#the-logic-analyser-a-24-mss-fx2lp-clone-on-hand-since-11-17-not-yet-used)).
+  Since 11-18 a bench supply that can stand in for the pack, driven from
+  Buzz with `ridenctl` under a lease JD grants
+  ([below](#the-bench-supply-a-riden-rd6006p-driven-with-ridenctl-on-hand-since-11-18-not-yet-on-the-keyboard)).
 - **The keyboard's power is the USB relay**
   ([below](#the-usb-relay-the-keyboards-charging-from-the-host), since 18:30
   10-08). Relay 2 cuts only the keyboard's 5 V, the keyboard stays on USB,
@@ -904,6 +907,88 @@ above), so the analyser's ground (the Mac's) adds no path around it; the
 board's ground already meets the Mac's through the logger and the data
 cable. What keeps it off white during a drain is the case: probing means
 opening it and clipping onto the board.
+
+## The bench supply: a Riden RD6006P, driven with `ridenctl` (on hand since 11-18, not yet on the keyboard)
+
+A Riden RD6006P bench supply: 0-60 V and 0-6 A, set from its panel or over
+Wi-Fi. Its Wi-Fi module serves nothing; it dials out to ridenboard, JD's
+dashboard on bun, which serves the supply at https://psu.jdlien.ca (the LAN
+only). That page's `/agents` is the guide for agents. The source and its
+notes are JD's `~/code/riden-bridge`, not this repo. ridenboard logs the
+supply's readings around the clock (1/s while it's on or a page is open).
+
+**From Buzz:** `~/.local/bin/ridenctl`, downloaded on 11-18 from
+`https://psu.jdlien.ca/dl/ridenctl-darwin-arm64` with curl. Don't use a
+browser for it: macOS quarantines the download and then refuses the
+unsigned tool. Its token is `~/.config/ridenctl/token`, mode 600, named
+`hutch` on the server. JD makes tokens on bun, with sudo there:
+
+```sh
+sudo -u ridenboard /usr/local/bin/ridenboard token -data /Users/ridenboard/data add NAME --out FILE
+```
+
+The file is then handed over (`chown`, then `scp` to Buzz). Never print a
+token, paste it into a chat, or put it on a command line.
+
+**What a token can do, and what needs JD:**
+- **Read, any time:**
+  - `ridenctl status`;
+  - `ridenctl note`, what's on the terminals: read it first, and keep it
+    current with `note set`;
+  - `ridenctl samples --since 30m --every 5s [--csv]`;
+  - `ridenctl events --since 1h`.
+- **Turn the output off, any time:** `ridenctl off`.
+- **Anything that powers something needs a lease**, which JD grants on the
+  page with a passkey:
+  - Ask with `ridenctl lease request --max-v V --max-i A --for DUR --why
+    "…"`, then `ridenctl lease wait`. JD can grant lower caps or a shorter
+    time, never more.
+  - Inside the lease: `set V [I]`, `on`, `off`, and `lease release` at the
+    end.
+  - A lease lasts 2 h at most, and 60 s without a request ends it. Run long
+    work under `ridenctl lease hold -- CMD`, which heartbeats every 15 s.
+  - Every end turns the output off and confirms it: expiry, release,
+    silence, JD ending it, an OFF from anyone, a panel key, a protection
+    trip, a reconnect.
+  - While a lease runs, the supply's OVP and OCP are set just above its
+    caps (the backstop), and put back when it ends.
+- **Exit codes:** 0 ok, 2 refused, 3 the supply (not connected, or not
+  confirmed), 4 the token.
+
+**As the keyboard's pack, after the drain:** this is its use here. The
+tests are in `plans/BACKLOG.md`, "The bench supply as the pack".
+- **Wiring:** a two-wire SH plug on the supply's leads goes into the
+  harness's in-line socket in the pack's place ("The power logger",
+  above). + then runs through the INA228 just as the pack's does, and −
+  reaches the shared ground. The NTC pin stays open; only the charger reads
+  it. ⚠️ Before the first ON, check the polarity at the socket with the
+  meter, identifying the pins by position, not colour.
+- ⚠️ **Relay 2 stays off while the supply stands in for the pack.** The
+  supply can't absorb current. The cable's 5 V would start the charger
+  (~560 mA), which would push current back into the supply. So the RGB
+  cut's restore, which needs external power, is tested on the pack.
+- **The lease's caps:** at most 4.25 V (a full pack rests at ~4.19 V) and
+  about 0.3 A. The keyboard is a constant-power load (~307 mW at JD's
+  lighting, ~75 mA at 4.17 V), so its current rises as the voltage falls.
+  0.3 A leaves room for the start.
+- **No remote sense:** the supply regulates at its own terminals, and the
+  leads drop a few mV at the keyboard's current. So read the reference at
+  the harness: the meter, or the logger's MAX17048 once it's been checked
+  against the meter.
+- **The logger runs as always:** the INA228 sees the supply's current on
+  the + lead, as it does the pack's. The supply's own readings are a second
+  opinion.
+- **The slider:** on BT or 2.4G, as always. Once the drain is over, the
+  data line is free to stay on (it costs ~1.7 mA).
+
+**Not built yet:** ridenboard's sweep. It would step the voltage, hold each
+step, and stop when the current falls, all run by the server under a lease
+(riden-bridge's phase D). Until it's built, a test steps the voltage from
+its own loop under `lease hold`.
+
+**On 11-18:** the supply was off, as it had been since 23:29 11-17 (when
+ridenboard's link dropped), and the bench note said nothing was connected
+to the terminals.
 
 ## The camera: the Pixel 8 over adb (11-03)
 
