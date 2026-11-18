@@ -12,10 +12,14 @@ of up to 2 h that JD grants on the supply's page. The wiring is one
 hands-on step: the supply's plug goes into the harness's in-line socket,
 with relay 2 off. None of these runs during the drain.
 
-1. **Calibrate the voltage readings (one lease).** Step from 4.10 V down to
-   3.10 V in 10 mV steps, holding each ~30 s (the module answers the poll
-   every 5 s). Read the reference at the harness: the meter, then the
-   MAX17048. It gives:
+1. **Calibrate the voltage readings (two leases).** Step from 4.10 V down
+   to 3.10 V. Read the reference at the harness: the meter, then the
+   MAX17048. ⚠️ The firmware's voltage is a trimmed mean of the last 64
+   `5C` reports, ~2-2.5 min of them (`battery.c`, "`5C`: intake,
+   freshness, the estimate"), so hold each step ~3 min before reading its
+   estimate (`HC_CONN`). At 25 mV steps that's about 2 h, so it takes two
+   leases. The raw reports come only from the analyser on UART2 (test 4).
+   It gives:
    - **The module's `5C` line over its whole range,** with both clamp ends
      (~4.036 and ~3.161 V, [docs/battery.md](../docs/battery.md)) measured
      instead of extrapolated. Compare it with `c5_to_mv()`'s line, which was
@@ -26,24 +30,31 @@ with relay 2 off. None of these runs during the drain.
      or a gain error.
    - **The MAX17048's VCELL** against the meter.
 2. **Battery low and the RGB cut on demand (one lease).** The firmware's
-   rules (`battery.c`, `protection_tick()`):
+   rules (`battery.c`, `protection_tick()`), judged on the trimmed mean
+   above, not on single reports:
    - the warning at 3680 mV after 30 s under it, once a discharge;
    - the cut at 3400 mV after 30 s under it, latched until 5 s of external
      power;
-   - at the bottom clamp, three zero readings cut at once.
+   - at the bottom clamp, three zero reports in a row cut at once (raw
+     reports, the one rule that isn't on the mean).
 
    `HC_BATTCFG` already moves the thresholds, which tests the logic. The
    supply makes the voltage real, with the module's real noise. To check on
    the keyboard, each in minutes:
-   - each fires after its 30 s and not before, and the warning fires only
-     once;
-   - **a voltage hovering at the threshold:** any reading at or above it
-     starts the 30 s over, so a voltage within the module's noise of
-     3400 mV could put off the cut. Hold 5 mV and 10 mV either side, and
-     time it;
+   - each fires 30 s after the estimate crosses (read the crossing over
+     `HC_CONN`), and the warning fires only once. Expect a step's effect
+     to show only after the mean has moved, a minute or two after the step;
+   - **a voltage held within a few mV of the threshold:** the mean
+     resolves about a tenth of a count (~1 mV), so it can still cross back
+     and forth, and each time it reads at or above the threshold the 30 s
+     starts over. Hold 2, 5 and 10 mV either side, and time it;
    - a drop straight below 3.161 V cuts at once and shows "Low";
    - the ladder below 15% (under ~3.75 V): Power saver's stages and the
-     3 min sleep (`low_now`).
+     3 min sleep (`low_now`). ⚠️ Run this one in Balanced, since Always on
+     never sleeps (`power_sleep_wanted()`). Confirm the level reads 15% or
+     less, then cut the data line with `uhubctl` (relay 2 stays off), since
+     USB traffic blocks deep sleep (`DSB_USB`). The logger then shows the
+     sleep.
 
    This leaves out the restore, because it needs the cable's 5 V, which
    would push current back into the supply. The drain's end checks it on
@@ -54,13 +65,23 @@ with relay 2 off. None of these runs during the drain.
    3.20 V in 20 mV steps, 2 min each. Keep the keyboard awake (Always on,
    so it never sleeps) with the data line on, and watch both currents (the
    supply's and the logger's). Find:
-   - the voltage it stops at, and whether it stops cleanly or reboots over
-     and over (the current pulsing, then the watchdog record);
+   - the voltage it stops at;
+   - whether it stops cleanly or reboots over and over. ⚠️ The watchdog
+     record can't tell: a brownout's reset (POR or LVD) clears it
+     (`watchdog_record.h`). And the logger's 1 Hz rows can miss a fast
+     cycle. With the data line on, though, each reboot re-enumerates on
+     USB, so watch the Mac's USB log; the current pulsing is supporting
+     evidence. The analyser on a pin gives the exact timing, if the case
+     is open;
    - whether it comes back by itself when the voltage returns to 3.7 V or
-     needs the slider, and whether its settings and keymap survive;
-   - how that compares with the pack's protector (not identified; similar
-     packs cut off at 2.75 or 3.0 V): whichever comes first ends a real
-     reserve. That sizes "A day of typing after the LED cut", below.
+     needs the slider, and whether its settings and keymap survive.
+
+   This gives the reserve's lower end on the keyboard's side: whichever
+   comes first, this voltage or the pack's protector (not identified;
+   similar packs cut off at 2.75 or 3.0 V), ends a real reserve. It
+   doesn't give the reserve's size: that's the pack's energy below the
+   cut, which only a logged discharge past the cut measures ("A day of
+   typing after the LED cut", below).
 
    This is the brownout sweep ridenboard plans (riden-bridge's phase D,
    `sweep --from … --to … --step … --hold 2m --stop-if 'i<0.005'`). Until
@@ -70,24 +91,29 @@ with relay 2 off. None of these runs during the drain.
    (`plans/AUDIT-2026-10-31.md`): whether a poll's three `5C` frames
    agree, and whether a `5C 00` comes above ~3.2 V. It needed a pack near
    empty. The supply can hold 3.15-3.30 V for as long as it takes, with the
-   analyser on UART2 (docs/test-bench.md, "The logic analyser").
+   analyser on UART2 (docs/test-bench.md, "The logic analyser"). The same
+   capture gives test 1 its raw reports.
 5. **The charge, measured from the USB end.** The logger sees only the
    pack. Put the supply on the cable's 5 V instead, through a USB power
    breakout or a cable with its VBUS cut, with the data through the hub,
    the real pack in, and relay 2 off. Then it measures what the keyboard
    draws from USB:
-   - the charger's efficiency over a whole charge (the energy in at 5 V
-     against what reaches the pack). The pack's recharge after tests 1-3
-     is the chance;
+   - a whole charge's energy from USB against what reaches the pack. That's
+     the whole system's figure, not the charger's alone: the keyboard runs
+     from USB while it charges ([docs/power.md](../docs/power.md),
+     "Charging"), and the cable and the hub take their share. The draw once
+     the charger has stopped, at the end, is the keyboard's part to take
+     out. The pack's recharge after tests 1-3 is the chance;
    - the keyboard on a sagging 5 V (4.4-4.75 V, like a weak hub).
 
    A charge takes ~10 h, so that's five or six leases, unless the 2 h cap
    is lifted for it.
 
-**Free with any of them:** with no pack protector in the circuit, a
-keyboard that goes dark on the supply rules out suspect 2 of the 09-24
-shutdown ([docs/battery.md](../docs/battery.md), "The shutdown of
-2026-09-24").
+**Free with tests 1-4:** with no pack protector in the circuit, a keyboard
+that goes dark on the supply at a healthy voltage can't be the protector's
+doing. That points at the board's own power path for the same symptom. It
+doesn't settle the 09-24 shutdown itself, which happened on the pack
+([docs/battery.md](../docs/battery.md), "The shutdown of 2026-09-24").
 
 **Order:** 1 and 2 in one sitting with JD there (the first lease, with the
 wiring checked), then 3. Do 4 when the case is open for something else, and
@@ -995,7 +1021,8 @@ The time-left estimate is already shown in three places:
 - at any length on `Fn`+`D`'s camera page.
 
 The low-battery alert itself still says only `Battery low` (`battery.c`, at
-3550 mV, ~4.5% and ~2.3 h before the cut at JD's settings). The idea: put
+3680 mV, the curve's 10% and ~5 h before the cut at full white; it was
+3550 mV, ~2.3 h). The idea: put
 the number in the alert, the moment someone is actually looking for it.
 - **The text:** the alert slot holds 12 characters (`CONN_STATUS_MAX`), so
   `Batt low: 2h` or `Batt low <1h`.
