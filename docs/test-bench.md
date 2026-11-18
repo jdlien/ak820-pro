@@ -27,7 +27,9 @@ both from the USB side. Set up and measured 2026-10-08 on JD's Mac.
   times every rig keystroke's arrival. Everything but the wiring runs
   without JD's hands. Since 11-03 the Mac also starts and stops the
   Pixel 8's 240 fps recordings and pulls the clips
-  ([below](#the-camera-the-pixel-8-over-adb-11-03)).
+  ([below](#the-camera-the-pixel-8-over-adb-11-03)). Since 11-17 a 24 MS/s
+  logic analyser is on hand for slow signals
+  ([below](#the-logic-analyser-a-24-mss-fx2lp-clone-on-hand-since-11-17-not-yet-used)).
 - **The keyboard's power is the USB relay**
   ([below](#the-usb-relay-the-keyboards-charging-from-the-host), since 18:30
   10-08). Relay 2 cuts only the keyboard's 5 V, the keyboard stays on USB,
@@ -868,6 +870,40 @@ paths, the timeout (33 checks). The sampling itself is the plan's
 qualification on the board: with the probe on, `levels` shows the
 released column high, VIA's key tester no phantom, and the PWM waveform
 unchanged against an unprobed neighbour.
+
+## The logic analyser: a 24 MS/s FX2LP clone (on hand since 11-17, not yet used)
+
+A CBM9002A board, a clone of Cypress's FX2LP (`CY7C68013A`): eight channels
+at up to 24 MS/s, USB-C to the Mac, a ten-pin header for the probes (read
+the board's silkscreen for which pin is which). It has no firmware of its
+own: sigrok (PulseView, or `sigrok-cli`) loads `fx2lafw` into it at every
+connect. It is a libusb device, not a HID one, so it does not touch the
+"never enumerate HID" rule; name its driver (`sigrok-cli -d fx2lafw`)
+rather than scanning every driver, since some drivers probe serial ports.
+The FX2LP's inputs tolerate 5 V, so the board's 3.3 V signals are fine.
+
+**What it can read:** anything up to a few MHz, at four or more samples
+a bit. The fit here is the CH582F's UART2, 115200 8N1 on the MCU's P1.7
+(TX to the module) and P1.6 (RX), 3.3 V ([sn32f299.md](sn32f299.md), the
+pin map). That serves the 10-31 audit's two optional module checks
+(`plans/AUDIT-2026-10-31.md`): which `5B` frames follow the end of
+advertising, and whether a poll's three `5C` frames always agree and a
+`5C 00` ever comes above about 3.2 V (the second wants a pack near empty,
+so the end of a drain). Also software markers: a spare GPIO toggled at an
+event times it to ~42 ns.
+
+**What it cannot:** the screen's SPI0 runs SCK at 24 MHz, one sample a
+clock, so the link can't be decoded, and DC against the last edge (the
+title garble's open question, `plans/LCD-TITLE-GARBLE-PLAN.md`) wants
+100 MS/s or more. The witness above, on a spare RP2040 at 125 MS/s on
+four lines (SCK, MOSI, DC, CS), would reach it; the garble is closed
+(fix A), so neither is planned.
+
+**On white:** the pack's shunt is on its + lead (high side, the logger
+above), so the analyser's ground (the Mac's) adds no path around it; the
+board's ground already meets the Mac's through the logger and the data
+cable. What keeps it off white during a drain is the case: probing means
+opening it and clipping onto the board.
 
 ## The camera: the Pixel 8 over adb (11-03)
 
