@@ -3,6 +3,44 @@
 Finished items move to [`history/BACKLOG-DONE.md`](../history/BACKLOG-DONE.md) with their
 headings, so a pointer to a section by name that is not here is there.
 
+## "Battery low" is easy to miss: once a discharge, for a minute (2026-11-23) -- an idea, optional, not built
+
+**What:** the warning (`battery.c`, `protection_tick()`: the `5C` mean
+under 3680 mV, the curve's 10%, for 30 s) puts "Battery low" in the status
+band for 60 s (`ALERT_HOLD_MS`), once a discharge. Nothing repeats it until
+a real charging session re-arms it, and it does not wait for a lit screen
+the way "Saving power" does (`power.c`'s `low_owed`), so one that trips
+while nobody is looking is gone. On the drain from 11-05 the pack first
+held under 3680 mV while JD typed on the afternoon of 11-20 (the logger's
+two-minute mean from 16:47; the `5C` can sit ~10 mV either side of the
+logger), and at 4% on 11-23 JD had not seen the message.
+
+**Whether it fired:** `ak820battery.py cfg` prints `warned` (HC_BATTCFG's
+byte 5). It is read with the battery log at this drain's cut, not before:
+the read needs the data line up and the daemon paused.
+
+**What already says "low", and is probably enough:** the battery icon, red
+from 15% and nearly empty; the level in single digits; "Saving power" and
+the Power saver bulb (the low cap, once a discharge, below 15%); and "Nh use
+left" after a long absence, once under 10 h. This item is for if a louder
+warning is wanted.
+
+**Options, quietest first:**
+1. **Hold it for a lit screen,** as "Saving power" is held: an alert that
+   trips with the screen dark waits for it to light. A few lines; it still
+   shows once.
+2. **Repeat it with the welcome-back notice:** at the first key after a
+   long absence (`power_wake_notice()`, sleep.c's `RC_LONG_SLEEP_S`),
+   while `warned` holds and the lights are not cut, show "Battery low" in
+   the time-left notice's place, or both in one message (the band takes 12
+   characters: "Low: 3h left"). No new state.
+3. **A standing mark:** a short "Low" kept in the band while the pack
+   stays under the threshold. The loudest, and it takes room the clock and
+   now-playing use.
+
+**Wait for:** the `warned` read at the cut, to know whether it fired. Then
+JD's call; any of these can ride along with a later firmware change.
+
 ## The bench supply as the pack: tests that no longer need a drain (2026-11-18) -- planned, after the drain reaches the RGB cut
 
 The bench's Riden RD6006P ([docs/test-bench.md](../docs/test-bench.md),

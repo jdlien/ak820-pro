@@ -46,9 +46,16 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
   (since 11-18), with `ridenctl` on Buzz and a lease JD grants; it stands in
   for the pack (`plans/BACKLOG.md`, "The bench supply as the pack";
   [docs/test-bench.md](../docs/test-bench.md), "The bench supply");
-- the drain, running on: 1,447 mAh of 4,011.6 at 17:17 11-13 (36.1%,
-  195.4 h since FULL, 7.41 mA mean; mAh since FULL = `charge_mah` +
-  2754.007), relay 2 off, no charge since 11-09. ⚠️ **Lights out from
+- the drain, near the cut: 3,778 mAh net at 10:07 11-23 (17.8 days since
+  FULL, 8.8 mA mean; mAh since FULL = `charge_mah` + 2754.007), the board
+  at 4%, the pack 3,480 mV while JD types and ~3,490 asleep, the cut at
+  3,400. The voltage has run a few points below the charge count since
+  ~15%. **At the cut:** the battery log first (`ak820battery.py log`, the
+  daemon paused, the data line up), and `ak820battery.py cfg` for
+  `warned`: JD has not seen "Battery low", due from ~16:47 11-20 by the
+  logger (`plans/BACKLOG.md`, the item "Battery low" is easy to miss). Earlier:
+  1,447 mAh at 17:17 11-13 (36.1%, 195.4 h, 7.41 mA mean), relay 2 off,
+  no charge since 11-09. ⚠️ **Lights out from
   10:12:05 to 12:28:18 11-14**, by a key while JD typed: the logger shows
   the RGB off at once (43.5 to 37.7 mA), the screen lit 4 s for the mode's
   message, then 27.7 awake and deep sleeps a minute after each pause; the
