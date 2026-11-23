@@ -5,7 +5,8 @@ because the originals live in `time-util-ak820pro/assets/`, which is a pristine
 upstream clone with uncommitted working-tree changes. A `git checkout` there
 silently destroys them, and there is no way to read assets back off the board.
 
-Blob CRC on device: `0x5C829F45` (verify with `ak820ctl flash crc 0xCE0000 177408`).
+Blob CRC on device: `0x42BB3F4A` (verify with `ak820ctl flash crc 0xCE0000 178688`).
+Before the OS icon (11-23) it was `0x5C829F45` over 177408 bytes.
 
 | File | Cell | Note |
 |---|---|---|
@@ -51,3 +52,13 @@ rows back — do not try to fix it by nudging offsets.
 To re-crop after regenerating, measure the ink extent of `0123456789:` first,
 crop to it, then re-paint one magenta pixel at each cell's top-left: `mkraw.py`
 reads markers from **row 0 only**, and marker spacing IS the advance.
+
+## `windows_linux_icon_24x24.png`: the Linux logo for the menu's OS icon
+
+Asset 12, drawn on the Win side of the Win/Mac switch when the menu's OS
+icon row is set to Linux. Its name sorts after `windows_icon_24x24.png` on
+purpose, so no earlier asset id moves. 24x24, composited over black by
+`mkraw.py`. It is a downscale of Tux, the Linux penguin, by Larry Ewing
+(lewing@isc.tamu.edu), made with The GIMP. His terms grant use and
+modification provided he and The GIMP are acknowledged. The copy in
+`time-util-ak820pro/assets/` is the one `mkraw.py` reads.

@@ -6,7 +6,7 @@
 
 #define FLASH_ASSET_MAGIC 0x53414B41
 #define FLASH_ASSET_VERSION 1
-#define FLASH_ASSET_COUNT 12
+#define FLASH_ASSET_COUNT 13
 
 enum {
     ASSET_2_4_G_ICON_24X24             = 0,   // 24x24
@@ -21,4 +21,5 @@ enum {
     ASSET_CONN_ROW_CABLE               = 9,   // 79x24
     ASSET_SONIXQMK                     = 10,   // 128x128
     ASSET_WINDOWS_ICON_24X24           = 11,   // 24x24
+    ASSET_WINDOWS_LINUX_ICON_24X24     = 12,   // 24x24
 };
