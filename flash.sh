@@ -90,6 +90,19 @@ sys.exit(0 if present(plistlib.loads(sys.stdin.buffer.read())) else 1)
                 if (Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue |
                         Where-Object { \$_.InstanceId -like \"*\$id*\" }) { exit 0 } else { exit 1 }" >/dev/null 2>&1
             ;;
+        Linux)
+            # sysfs, not hidapi: the bootloader (0x7140) binds no HID driver on
+            # Linux, so it has no hidraw node and hid.enumerate never sees it --
+            # the wait for Fn+Esc then runs its full ten minutes. Reading sysfs
+            # opens nothing, as the Windows branch's device tree does.
+            local d want
+            want=$(printf '%04x' "$1")
+            for d in /sys/bus/usb/devices/*/idProduct; do
+                [ "$(cat "$d" 2>/dev/null)" = "$want" ] \
+                    && [ "$(cat "${d%idProduct}idVendor" 2>/dev/null)" = 0c45 ] && return 0
+            done
+            return 1
+            ;;
         *) "$PY" -c 'import hid,sys; sys.exit(0 if hid.enumerate(0x0C45, int(sys.argv[1],16)) else 1)' "$1" 2>/dev/null ;;
     esac
 }
