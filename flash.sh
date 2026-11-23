@@ -113,6 +113,17 @@ echo
 # retry loop and can make the board look broken. Clear it before we need raw HID.
 pkill -f "qmk console" 2>/dev/null && echo "stopped a running qmk console"
 
+# Linux: the agent (hostagent/ak820-linux-agent.py) writes to the same raw-HID
+# interface every few seconds, and hidraw hands every reply to every reader, so
+# its echoes could land in the middle of the backup's reads. Stop it for the
+# flash and start it again however this script exits; it re-syncs the clock
+# and resends the track when the board comes back.
+if [ "$(uname -s)" = Linux ] && command -v systemctl >/dev/null 2>&1 \
+   && systemctl --user is-active --quiet ak820pro-agent 2>/dev/null; then
+    systemctl --user stop ak820pro-agent && echo "stopped the ak820pro-agent service (restarted at the end)"
+    trap 'systemctl --user start ak820pro-agent 2>/dev/null' EXIT
+fi
+
 # --- 1. back up the keymap while QMK is still running ----------------------
 # ⚠️ Under MSYS2, $HOME is C:\msys64\home\<user>, which has no Documents: the
 # backups belong in the Windows profile's, where the Windows-side tools look.
@@ -356,6 +367,7 @@ echo
 case "$(uname -s)" in
     Darwin)               STATUS="$HOME/Library/Application Support/ak820pro/ak820-agent.status" ;;
     MINGW*|MSYS*|CYGWIN*) STATUS="$(cygpath -u "${LOCALAPPDATA:-}" 2>/dev/null)/ak820pro/ak820-agent.status" ;;
+    Linux)                STATUS="${XDG_STATE_HOME:-$HOME/.local/state}/ak820pro/ak820-agent.status" ;;
     *)                    STATUS="" ;;
 esac
 daemon_owns_clock() {

@@ -1,0 +1,8 @@
+# AK820 Pro: give the logged-in user the board's raw HID, the 2.4G dongle's and
+# the Sonix bootloader's USB node, so the agent, flash.sh, ak820ctl and VIA in
+# Chrome run without root. Installed by setup.sh on Linux to
+# /etc/udev/rules.d/60-ak820pro.rules (60: after 50-udev-default, before
+# 73-seat-late, which is what applies `uaccess`).
+KERNEL=="hidraw*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="8009", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="fdfd", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0c45", ATTRS{idProduct}=="7140", TAG+="uaccess"

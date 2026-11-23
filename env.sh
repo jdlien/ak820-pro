@@ -53,6 +53,11 @@ case "$(uname -s)" in
     # cross-compiler still finds the copies it needs.
     export PATH="$AK820_VENV/bin:/mingw64/bin:$PATH:$AK820_ROOT/xpack-arm-none-eabi-gcc-13.3.1-1.1/bin"
     ;;
+  Linux)
+    # The distro's packages are already on PATH; only the pinned toolchain and
+    # the venv are ours.
+    export PATH="$AK820_ROOT/xpack-arm-none-eabi-gcc-13.3.1-1.1/bin:$AK820_VENV/bin:$PATH"
+    ;;
   *)
     # Homebrew's prefix differs by architecture (/opt/homebrew on Apple Silicon,
     # /usr/local on Intel); ask brew rather than guessing.

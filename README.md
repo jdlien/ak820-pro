@@ -152,6 +152,10 @@ It reads the system's own now-playing service (MediaRemote on macOS, SMTC on
 Windows), so Spotify, Apple Music, foobar2000 and any browser show up
 without per-app support.
 
+On Linux a separate, smaller agent, `hostagent/ak820-linux-agent.py`, does
+now playing and the clock over the USB cable only. It reads MPRIS through
+`busctl` and needs nothing installed beyond Python and systemd.
+
 ### Brightness, finely tuned, with no flicker
 
 The key lighting, the screen and the lock and charging lights each have
@@ -167,8 +171,8 @@ a product.
 | | macOS | Windows | Linux |
 |---|---|---|---|
 | The firmware, VIA | ✓ | ✓ | ✓ |
-| Building and flashing | ✓ | ✓ (MSYS2) | not tested |
-| The agent (now playing, clock) | build it yourself | ✓ from [Releases](https://github.com/jdlien/ak820-pro/releases) | none |
+| Building and flashing | ✓ | ✓ (MSYS2) | builds (Ubuntu 24.04); flashing not yet tested |
+| The agent (now playing, clock) | build it yourself | ✓ from [Releases](https://github.com/jdlien/ak820-pro/releases) | USB cable only, [`ak820-linux-agent.py`](#2-install-the-agent) |
 
 - **VIA macros are effectively gone.** The profiles take the EEPROM's space,
   leaving VIA's macro buffer 18 bytes.
@@ -185,9 +189,11 @@ because once it is overwritten there is no reading it back.
 
 ### 1. Flash the firmware
 
-macOS (Tahoe 26.x, Apple Silicon or Intel) with Homebrew, or Windows 11 from
+macOS (Tahoe 26.x, Apple Silicon or Intel) with Homebrew, Windows 11 from
 the **MSYS2 MinGW 64-bit** shell (`winget install MSYS2.MSYS2`; not Git Bash,
-not PowerShell):
+not PowerShell), or Linux (x86_64 or arm64; `setup.sh` installs the build
+packages with apt, dnf, pacman or zypper, asking for sudo once, plus a udev
+rule so the board needs no root):
 
 ```sh
 git clone https://github.com/jdlien/ak820-pro && cd ak820-pro
@@ -258,13 +264,28 @@ The installed copy is not on `PATH`: it lives in
 minutes after installing: it slews rather than jumping, and learns the USB
 timing as it goes.
 
+**Linux:** nothing to build. From the clone (after `./setup.sh`, which
+installs the udev rule the agent needs):
+
+```sh
+hostagent/ak820-linux-agent.py install --clock   # a systemd user service
+hostagent/ak820-linux-agent.py status
+hostagent/ak820-linux-agent.py probe             # what MPRIS says is playing
+hostagent/ak820-linux-agent.py uninstall
+```
+
+It works over the USB cable only (no 2.4G, no Bluetooth yet), and its clock
+lands within tens of milliseconds rather than a few. `flash.sh` stops it for
+the flash and starts it again.
+
 ### 3. Remap in VIA
 
 The board is not in VIA's public list, so hand VIA the definition once per
 browser:
 
 1. Plug in the USB cable (the slider position does not matter), and **stop
-   the agent** while you use VIA (`ak820 uninstall`; `install` again after).
+   the agent** while you use VIA (`ak820 uninstall`; `install` again after; on Linux,
+   `systemctl --user stop ak820pro-agent`).
    Two programs talking to the board at once can each get the other's
    replies.
 2. In **Chrome or Edge**, open [usevia.app](https://usevia.app), click
@@ -351,7 +372,8 @@ The menu covers all of these. They are here for speed.
   restarted it, and the screen says so. If it keeps happening, please open
   an issue.
 - The agent's log: `~/Library/Logs/ak820pro/ak820-agent.log` on macOS,
-  `%LOCALAPPDATA%\ak820pro\ak820-agent.log` on Windows.
+  `%LOCALAPPDATA%\ak820pro\ak820-agent.log` on Windows,
+  `journalctl --user -u ak820pro-agent` on Linux.
 
 ## For developers
 
