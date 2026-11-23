@@ -1357,6 +1357,9 @@ static uint8_t fk_font = ENV_FONT_SMALL, fk_font_writes, fk_refonts;
 uint8_t env_font(void) { return fk_font; }
 void env_font_set(uint8_t f) { fk_font = f; fk_font_writes++; }
 void env_text_refont(void) { fk_refonts++; }
+static bool fk_os_linux;
+bool env_os_linux(void) { return fk_os_linux; }
+void env_os_linux_set(bool l) { fk_os_linux = l; }
 /* What the readout is made of: 85% on battery, 160 h left, the average mature. */
 static env_batt_t fk_batt = {85, true, 9600, 120};
 void env_batt_facts(env_batt_t *b) { *b = fk_batt; }
@@ -2026,8 +2029,8 @@ static uint8_t sub5_cursor(void) { op27(5, 0, 0); return rpt[15]; }
 /* The top level's rows (P4, JD 10-25: Battery under Clock, Diagnostics
  * under Bootloader on page two): their indices, and each row's cells with
  * the defaults' values. */
-enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_PROF, T_BOOT, T_FONT, T_DEFS, T_DIAG, T_HELP,
-       T_EXIT, T_ROWS };   /* 10-28: About in Diagnostics, as System info, its first row (D_SYSINFO) */
+enum { T_LIGHT = 0, T_SCREEN, T_CONN, T_POWER, T_IND, T_CLOCK, T_BATT, T_PROF, T_BOOT, T_FONT, T_OSICON, T_DEFS, T_DIAG,
+       T_HELP, T_EXIT, T_ROWS };   /* 11-23: Win icon under Font */   /* 10-28: About in Diagnostics, as System info, its first row (D_SYSINFO) */
 enum { D_SYSINFO = 1, D_HEALTH, D_RESET, D_PROBE };   /* 10-28: the Camera page gone */   /* P5b: Profiles page one's last, Bootloader to page two; 10-27: Reset settings under it;
                                      * 10-28: Font under Bootloader */
 static const char *const top_rows_want[T_ROWS][2] = {
@@ -2036,6 +2039,7 @@ static const char *const top_rows_want[T_ROWS][2] = {
     {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R},  {FONT_MONO_I_CLOCK "Clock", "24h:ss"},
     {FONT_MONO_I_BATT " Battery", "Percent"}, {FONT_MONO_I_PROF " Profiles", "None"},
     {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R}, {FONT_MONO_I_FONT "Font", "8px"},
+    {FONT_MONO_I_SCREEN "OS icon", "Windows"},
     {FONT_MONO_I_RESET " Reset settings", FONT_MONO_TRI_R},
     {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R},
     {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
@@ -2067,7 +2071,7 @@ static void test_menu(void) {
     top_frame_ok(T_EXIT);   /* page two */
     /* Its thumb at the track's end: 64 px of 112 for fourteen rows (10-28: About in Diagnostics; 60 for
      * fifteen, 69 for P5b's thirteen), y 63-126 (codex: it was drawn off the panel). */
-    CHECK(fb[62][125] == MENU_TRACK && fb[63][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);
+    CHECK(fb[66][125] == MENU_TRACK && fb[67][125] == MENU_WHITE && fb[126][125] == MENU_WHITE);   /* 11-23: 60 px for fifteen rows (Win icon), y 67-126 */
     m_turn(1);
     CHECK(sub5_cursor() == 0);
 
@@ -4991,6 +4995,7 @@ static const char *const top_rows_l[T_ROWS][2] = {
     {FONT_MONO_I_IND "Indicators", FONT_MONO_TRI_R}, {FONT_MONO_I_CLOCK "Clock", "24h:ss"},
     {FONT_MONO_I_BATT " Battery", "%"}, {FONT_MONO_I_PROF " Profiles", FONT_MONO_TRI_R},
     {FONT_MONO_I_BOOT "Bootloader", FONT_MONO_TRI_R}, {FONT_MONO_I_FONT "Font", "Bold"},   /* "10px bold"'s short */
+    {FONT_MONO_I_SCREEN "OS icon", "Win"},
     {FONT_MONO_I_RESET " Defaults", FONT_MONO_TRI_R}, {FONT_MONO_I_DIAG " Diagnostics", FONT_MONO_TRI_R},
     {FONT_MONO_I_HELP "Help", FONT_MONO_TRI_R}, {FONT_MONO_I_EXIT " Exit", ""},
 };
@@ -5026,11 +5031,11 @@ static void test_large(void) {
     CHECK(title_bad(FONT_MONO_WRENCH "Configuration") == 0);
     CHECK(fb[15][4] == MENU_GREY && fb[15][123] == MENU_GREY && fb[14][60] != MENU_GREY);
     top_frame_ok_l(0);
-    CHECK(fb[16][125] == MENU_WHITE && fb[71][125] == MENU_WHITE && fb[72][125] == MENU_TRACK);   /* a 56 px thumb at the top (14 rows) */
+    CHECK(fb[16][125] == MENU_WHITE && fb[67][125] == MENU_WHITE && fb[68][125] == MENU_TRACK);   /* a 52 px thumb at the top (15 rows, 11-23) */
     m_turn(T_EXIT);
     CHECK(sub5_cursor() == T_EXIT);
     top_frame_ok_l(T_EXIT);
-    CHECK(fb[71][125] == MENU_TRACK && fb[72][125] == MENU_WHITE && fb[127][125] == MENU_WHITE);   /* at the end: y 72-127 */
+    CHECK(fb[75][125] == MENU_TRACK && fb[76][125] == MENU_WHITE && fb[127][125] == MENU_WHITE);   /* at the end: y 76-127 */
     m_turn(T_FONT - T_EXIT);
     top_frame_ok_l(T_FONT);
 
@@ -5069,6 +5074,21 @@ static void test_large(void) {
     m_unflash();
     CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_FONT);
     top_frame_ok_l(T_FONT);
+
+    /* 11-23: Win icon, a click toggles Windows <-> Linux in place, the row's value with it. */
+    m_turn(T_OSICON - T_FONT);
+    CHECK(sub5_cursor() == T_OSICON && !fk_os_linux);
+    m_click();
+    m_unflash();
+    CHECK(fk_os_linux);
+    CHECK(sub5_screen() == SC_TOP && sub5_cursor() == T_OSICON);
+    m_settle();
+    CHECK(row_bad(T_OSICON % 7, cells2(FONT_MONO_I_SCREEN "OS icon", "Linux"), MENU_LIT) == 0);
+    m_click();
+    m_unflash();
+    CHECK(!fk_os_linux);
+    top_frame_ok_l(T_OSICON);
+    m_turn(T_FONT - T_OSICON);
 
     /* Fn+B with the top level showing: the Power row's bulb follows the mode. */
     m_turn(T_POWER - T_FONT);
