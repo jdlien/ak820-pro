@@ -357,6 +357,165 @@ static void l_sleep_low(void) {
     CHECK(power_stage() != POWER_STAGE_ACTIVE, "though Full's lighting still follows Saver's stages when low");
 }
 
+#ifdef POWER_HAS_RESERVE
+/* The reserve's last stage (power.c, RESERVE_SLEEP_MS; 11-23): three zero
+ * reports on battery cut the lights and start it. Dark in every mode, typing
+ * too; "Charge now" as an alert at entry and at a wake, the screen lit 4 s
+ * for it; asleep at 30 s; latched through a rebound above the floor; lifted
+ * only by external power, with the cut. */
+static void reserve_enter(void) {
+    while (now_ms % 2500u != 0) ltick();   /* align at the old value: the next report is 2.5 s away */
+    c5 = 0;
+    lrun_s(5);
+    CHECK(!power_reserve(), "two zeroes: not yet the reserve");
+    for (int i = 0; i < 30 && !power_reserve(); i++) ltick();
+    CHECK(power_reserve() && power_lights_cut(), "the third zero: the cut and the reserve (%d %d)", power_reserve(),
+          power_lights_cut());
+}
+
+static void l_reserve(void) {
+    kb_eeconfig_set_power_mode(POWER_MODE_SAVER);
+    power_init();
+    on_battery_mid();
+    idle_ms = 0; ltick();
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, SIM_SAVER_VAL, "Saver, typing");
+    CHECK(!power_reserve(), "no reserve at ~37%%");
+    reserve_enter();
+    CHECK(!strcmp(last_alert, "Charge now"), "the alert at entry: '%s'", last_alert);
+    CHECK(power_stage() == POWER_STAGE_SCREEN_OFF && scale == 0, "dark while typing: stage %d scale %u",
+          power_stage(), scale);
+    CHECK(power_lights_mode() == POWER_MODE_MINIMAL, "the bulb is Lights out's: %d", power_lights_mode());
+    CHECK(bkl_cap == 0xFF, "lit for the message: cap %u", bkl_cap);
+    uint32_t t0 = now_ms;
+    while (now_ms - t0 < 3900u) ltick();
+    CHECK(bkl_cap == 0xFF, "still lit at 3.9 s: cap %u", bkl_cap);
+    lrun_s(1);
+    CHECK(bkl_cap == 0, "dark 4 s after it: cap %u", bkl_cap);
+    debug_open = true; ltick();
+    CHECK(bkl_cap == 0xFF, "lit while Fn+D's page (or the menu) is open: cap %u", bkl_cap);
+    debug_open = false; ltick();
+    CHECK(bkl_cap == 0, "dark when it closes: cap %u", bkl_cap);
+    idle_ms = 29999; ltick();
+    CHECK(!power_sleep_wanted(), "awake 1 ms before 30 s");
+    idle_ms = 30000; ltick();
+    CHECK(power_sleep_wanted(), "asleep at 30 s (Saver's own is 3 min)");
+    /* A wake someone caused says it again, lit. */
+    idle_ms = 0;
+    int n0 = n_alerts;
+    power_woke(); ltick();
+    CHECK(n_alerts == n0 + 1 && !strcmp(last_alert, "Charge now"), "again at a wake: %d '%s'", n_alerts - n0,
+          last_alert);
+    CHECK(bkl_cap == 0xFF, "lit for it: cap %u", bkl_cap);
+    lrun_s(2);
+    CHECK(n_alerts == n0 + 1, "once a wake: %d", n_alerts - n0);
+    /* The pack relaxes above the floor: latched. */
+    c5 = 3; lrun_s(120);
+    CHECK(power_reserve() && power_stage() == POWER_STAGE_SCREEN_OFF, "latched through a rebound: %d stage %d",
+          power_reserve(), power_stage());
+    /* External power lifts it, with the cut. */
+    become_full(); ltick();
+    CHECK(!power_reserve() && !power_lights_cut(), "lifted on USB: %d %d", power_reserve(), power_lights_cut());
+    expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 255, "on USB");
+    CHECK(power_lights_mode() == POWER_MODE_SAVER, "the bulb back: %d", power_lights_mode());
+    idle_ms = 86400000u; ltick();
+    CHECK(!power_sleep_wanted(), "no sleep on USB");
+    n0 = n_alerts;
+    idle_ms = 0; power_woke(); lrun_s(2);
+    CHECK(n_alerts == n0, "no message outside the reserve: %d '%s'", n_alerts - n0, last_alert);
+}
+
+/* Always on never sleeps above the floor, and does in the reserve. */
+static void l_reserve_full(void) {
+    kb_eeconfig_set_power_mode(POWER_MODE_FULL);
+    power_init();
+    on_battery_mid();
+    idle_ms = 86400000u; ltick();
+    CHECK(!power_sleep_wanted(), "Always on: never above the floor");
+    idle_ms = 0;
+    reserve_enter();
+    ltick();
+    CHECK(power_stage() == POWER_STAGE_SCREEN_OFF && scale == 0, "Always on, dark too: stage %d scale %u",
+          power_stage(), scale);
+    idle_ms = 29999; ltick();
+    CHECK(!power_sleep_wanted(), "Always on: awake before 30 s");
+    idle_ms = 30000; ltick();
+    CHECK(power_sleep_wanted(), "Always on: asleep at 30 s in the reserve");
+    CHECK(power_mode() == POWER_MODE_FULL, "the mode itself unchanged: %d", power_mode());
+}
+
+/* By voltage: the estimate under RESERVE_MV (3225) for 30 s, the bottom of
+ * `5C`'s accurate range. 8 counts (3231 mV) is above it; 7 (3222) below. The
+ * cut comes first (3400), as on a real discharge. */
+static void l_reserve_voltage(void) {
+    power_init();
+    on_battery_mid();
+    idle_ms = 0;
+    c5 = 8;
+    lrun_s(600);   /* the 64-report estimate settles in under 3 min */
+    CHECK(power_lights_cut(), "the cut at 8 counts (3231 mV)");
+    CHECK(!power_reserve(), "no reserve at 8 counts");
+    c5 = 7;
+    lrun_s(600);
+    CHECK(power_reserve(), "the reserve at 7 counts (3222 mV)");
+    CHECK(!strcmp(last_alert, "Charge now"), "its alert: '%s'", last_alert);
+}
+
+/* By time: 2 h of use past the cut, counted awake only. The cut is made at a
+ * healthy voltage here (a threshold over HC_BATTCFG), so neither voltage rule
+ * can start the stage. */
+static void l_reserve_timer(void) {
+    power_init();
+    on_battery_mid();
+    idle_ms = 0;
+    uint8_t out[28];
+    battery_cfg(1, 0, 3990, out);   /* a cut above the pack: latches in ~30 s */
+    for (int i = 0; i < 600 && !power_lights_cut(); i++) ltick();
+    CHECK(power_lights_cut(), "the cut");
+    uint32_t t0 = now_ms;
+    while (now_ms - t0 < 2u * 3600u * 1000u - 60000u) ltick();
+    CHECK(!power_reserve(), "no reserve a minute before 2 h of use");
+    now_ms += 3600u * 1000u;        /* a sleep's gap: the timer jumps, the count may not */
+    lrun_s(30);
+    CHECK(!power_reserve(), "a sleep's hour is not use");
+    lrun_s(40);
+    CHECK(power_reserve(), "the reserve at 2 h of use");
+    CHECK(!strcmp(last_alert, "Charge now"), "its alert: '%s'", last_alert);
+    /* Lifted with the cut by external power, and the count starts afresh. */
+    become_full(); ltick();
+    CHECK(!power_reserve() && !power_lights_cut(), "lifted on USB");
+    on_battery_mid();
+    battery_cfg(1, 0, 3990, out);
+    for (int i = 0; i < 600 && !power_lights_cut(); i++) ltick();
+    lrun_s(60);
+    CHECK(power_lights_cut() && !power_reserve(), "a new cut counts afresh: cut %d reserve %d", power_lights_cut(),
+          power_reserve());
+}
+
+/* A message owed while external power is in is not shown (the board is not
+ * on battery) and is dropped with the latch when the cable lifts it: the
+ * cable never brings "Charge now" back. */
+static void l_reserve_owed_usb(void) {
+    power_init();
+    on_battery_mid();
+    idle_ms = 0;
+    reserve_enter();
+    lrun_s(5);
+    vdd_mv = 4470; chrg_low = true; c5 = 0xFF;   /* plugged in, charging */
+    for (int i = 0; i < 100 && battery_supply() != BATTERY_SUPPLY_EXTERNAL; i++) ltick();
+    CHECK(battery_supply() == BATTERY_SUPPLY_EXTERNAL, "external within 10 s: %d", battery_supply());
+    CHECK(power_reserve(), "still latched before 5 s of evidence");
+    int n0 = n_alerts;
+    power_woke();
+    ltick();
+    CHECK(n_alerts == n0, "not shown on the cable: %d '%s'", n_alerts - n0, last_alert);
+    lrun_s(10);
+    CHECK(!power_reserve() && !power_lights_cut(), "lifted after 5 s of external power: %d %d", power_reserve(),
+          power_lights_cut());
+    CHECK(n_alerts == n0, "and dropped with the latch: %d '%s'", n_alerts - n0, last_alert);
+    CHECK(power_stage() == POWER_STAGE_ACTIVE, "on USB: stage %d", power_stage());
+}
+#endif
+
 static void l_sleep_usb(void) {
     power_init();
     become_full();

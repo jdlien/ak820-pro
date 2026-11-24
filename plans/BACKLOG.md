@@ -784,7 +784,7 @@ power-switched hub carries no wake for any device) and the host's
 resume, at 22:02 11-01 (§21). The gate is complete.
 
 
-## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- the direction settled 11-23: normal use to `5C`'s floor, then an ultra-low mode with a message at every wake; to build after the reserve is measured
+## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- BUILT 11-23 on `low-reserve` (`642b0bfcdf`, daily token `0xabef1667`): 2 h of use past the cut (or 3225 mV, or the zero rule), then dark, asleep at 30 s, "Charge now" at every wake; not flashed, Astra's review owed
 
 JD (10-28): "There's almost no downside to aggressive sleeping when the
 board is in this state since the lights are off anyways. But at least we
@@ -821,7 +821,26 @@ every mode" (10-21, now in `history/BACKLOG-DONE.md`), which was left alone.
      owner will think it broken and flip the slider. The band holds 12
      characters ("Charge now" fits; "Charge battery" needs a full-screen
      paint, like the "Low" glyph).
-- **The trigger for stage 2 is already in the hardware:** `5C`'s bottom
+- **As built (11-23, `low-reserve` `8e9e864f26` and `642b0bfcdf`):**
+  stage 2 starts at the first of **2 h of awake time past the RGB cut**
+  (`power.c`, `RESERVE_AFTER_CUT_MS`, counted by the pass so a sleep's gap
+  adds at most 1 s), **the estimate under 3225 mV for 30 s** (`battery.c`,
+  `RESERVE_MV`, the bottom of `5C`'s accurate range), or **the zero rule**.
+  Then: dark at once in every mode, typing too; asleep **30 s** after the
+  last input in every mode, Always on included; **"Charge now"** as an alert
+  at entry and at every wake someone caused (a key or the knob; after a
+  keep-alive's or the backstop's, at the first input), the screen lit 4 s
+  for it as Lights out lights a message; the bulb Lights out's. Latched with
+  the cut (lifts after 5 s of external power), RAM only. HC_BATTCFG's reply
+  carries it at [8] (`ak820battery.py cfg` prints `reserve`). The flash tidy
+  already stops at the cut, so no consolidation runs on a dying pack. Keys
+  type; the BT keep-alive runs. Host checks: `scripts/battery_sim`, 261
+  cases, five of them the stage's (`l_reserve*`).
+- **Why not the zero rule alone, as first written below:** on 11-23 the
+  module never sent three zeros; near empty `5C` flattens at a few counts
+  ([docs/battery.md](../docs/battery.md), "The reserve below 0%"). The first
+  build (`8e9e864f26`) had the zero rule only and would not have fired.
+- **The trigger for stage 2, as first proposed:** `5C`'s bottom
   clamp (~3.161 V, `c5_zero_run >= CRITICAL_ZEROES`), no timer needed. On
   the 11-05 drain the cut fired at 13:41:22 11-23 and the awake two-minute
   mean crossed 3161 mV at 16:55:15: **2 h 09 min awake after the cut

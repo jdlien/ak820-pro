@@ -40,6 +40,8 @@ void     display_set_alert(const char *msg) { (void)msg; }
 uint8_t  display_backlight_effective(void) { return 0; }
 void     power_set_lights_cut(bool cut) { (void)cut; }
 bool     power_lights_cut(void) { return false; }
+void     power_set_reserve(bool on) { (void)on; }   /* the reserve's last stage (11-23): power.c's */
+bool     power_reserve(void) { return false; }
 
 int main(int argc, char **argv) {
     printf("P %u %u %u %u %u\n", (unsigned)BATT_TAIL_N, (unsigned)BATT_T_TAIL_S, (unsigned)BATT_K_CC_PM_PER_H,

@@ -502,6 +502,9 @@ static void critical(void) {
     run_s(3);
     CHECK(power_lights_cut(), "three fresh zeroes cut at once");
     CHECK(battery_level_pct() == 0, "and the panel says Low at once, not 45 min later: %u", battery_level_pct());
+#ifdef POWER_HAS_RESERVE
+    CHECK(power_reserve(), "and the reserve's last stage");
+#endif
 }
 
 /* Three zeroes landing between two ticks are three reports, not one. */
@@ -527,6 +530,9 @@ static void restore_needs_evidence(void) {
     vdd_mv = 0; chrg_low = false;     /* unplugged, and the ADC fails */
     run_s(20);
     CHECK(power_lights_cut(), "no fresh evidence of USB: the cut holds");
+#ifdef POWER_HAS_RESERVE
+    CHECK(power_reserve(), "and so does the reserve");
+#endif
 }
 
 /* A charger fault at the top clamp: CHRG releases, the pack is really at 90. */
@@ -611,7 +617,7 @@ static void reseat_survives_replug(void) {
 static void threshold_at_clamp(void) {
     vdd_mv = 3900; c5 = 100;
     run_s(20);
-    uint8_t out[8];
+    uint8_t out[28];   /* HC_BATTCFG's payload, data[4..31]: the reply grows (11-23: the reserve at [8]) */
     battery_cfg(1, 4200, 4100, out);
     run_s(120);
     CHECK(!power_lights_cut() && n_alerts == 0, "no cut or warning on a clamp bound");
@@ -635,7 +641,7 @@ static void log_cadence(void) {
     battery_log_read(0, out);
     CHECK((out[1] | out[2] << 8) == 1, "one entry after one period: %u", out[1] | out[2] << 8);
 #if BATTERY_LOG_VERSION >= 6
-    uint8_t cfg[8];
+    uint8_t cfg[28];   /* HC_BATTCFG's payload, data[4..31] */
     battery_cfg(0, 0, 0, cfg);
     CHECK((cfg[6] | cfg[7] << 8) == 900, "period 900 s, from HC_BATTCFG: %u", cfg[6] | cfg[7] << 8);
     CHECK(out[0] == BATTERY_LOG_VERSION, "log v%u: %u", BATTERY_LOG_VERSION, out[0]);
@@ -644,7 +650,7 @@ static void log_cadence(void) {
     unsigned ex = out[11 + 2] | out[11 + 3] << 8;
     CHECK(ex >= 743 && ex <= 758, "the period's modelled energy ~751 x 0.1 mWh: %u", ex);
 #elif BATTERY_LOG_VERSION >= 5
-    uint8_t cfg[8];
+    uint8_t cfg[28];   /* HC_BATTCFG's payload, data[4..31] */
     battery_cfg(0, 0, 0, cfg);
     CHECK((cfg[6] | cfg[7] << 8) == 600, "period 600 s, from HC_BATTCFG: %u", cfg[6] | cfg[7] << 8);
     CHECK(out[0] == 5, "log v5: %u", out[0]);
@@ -840,7 +846,7 @@ static void warn_cfg_rearms(void) {
     vdd_mv = 3900; c5 = 55;
     run_s(200);
     CHECK(n_alerts == 1, "warned: %d", n_alerts);
-    uint8_t out[8];
+    uint8_t out[28];   /* HC_BATTCFG's payload, data[4..31]: the reply grows (11-23: the reserve at [8]) */
     battery_cfg(1, 3700, 3400, out);
     run_s(60);
     CHECK(n_alerts == 2, "a new threshold over HC_BATTCFG re-arms it: %d alerts", n_alerts);
@@ -1469,6 +1475,13 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "l_sleep"))         l_sleep();
     else if (!strcmp(s, "l_sleep_low"))     l_sleep_low();
     else if (!strcmp(s, "l_sleep_usb"))     l_sleep_usb();
+#ifdef POWER_HAS_RESERVE
+    else if (!strcmp(s, "l_reserve"))         l_reserve();
+    else if (!strcmp(s, "l_reserve_full"))    l_reserve_full();
+    else if (!strcmp(s, "l_reserve_owed_usb")) l_reserve_owed_usb();
+    else if (!strcmp(s, "l_reserve_voltage")) l_reserve_voltage();
+    else if (!strcmp(s, "l_reserve_timer"))   l_reserve_timer();
+#endif
     else if (!strcmp(s, "l_wake_notice"))   l_wake_notice();
     else if (!strcmp(s, "l_wake_notice_high")) l_wake_notice_high();
     else if (!strcmp(s, "l_no_lights_off")) l_no_lights_off();

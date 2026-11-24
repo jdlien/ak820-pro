@@ -749,6 +749,17 @@ collapsed to ~0 in 8 s and the MAX17048 lost power, with no cycling after.
 that and the protector, not a brownout, is what stops the board (at least
 at ~67 mA; the Riden's test 3 finds the board's own floor).
 
+⚠️ **Near empty `5C` flattens above 0, and reads high.** The calibration's
+"within ~10 mV of a meter" holds from 4.01 to ~3.22 V only. On 11-23 the
+module's 15-min means went 9.95, 7.20, 7.00 (16:39-17:09, the logger's pack
+~3.16-3.15 V), then 5, then 3 counts from ~18:40 to the death: **3 counts is
+3187 mV by the line, with the pack at 3.00 V by the logger.** One lone 0 came
+in the 17:24 period, never three in a row. So the zero rule (three zeros, the
+"bottom clamp") almost never fires on a real discharge, and nothing below
+~3.22 V can be read from `5C` as a voltage. The reserve's last stage starts
+by time and at 3225 mV for that reason (`power.c`, `battery.c`, branch
+`low-reserve`). The Riden's test 1 maps the bottom properly.
+
 ### Internal-flash writes: the blink, and how few are left
 
 Every internal-flash write blinks the LEDs dark for a few ms. The cause is the

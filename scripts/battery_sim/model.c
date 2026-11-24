@@ -327,7 +327,7 @@ static void m_log_v5(void) {   /* the name is run.sh's; it checks v6 now */
     const uint8_t *e = o + 11;
     uint8_t m = e[16], chg = e[17];
     CHECK((chg & 7) == ST_MODEL && m != 0xFF, "the entry's chg state MODEL and m %u: chg %02x", m, chg);
-    uint8_t cfg[8];
+    uint8_t cfg[28];   /* HC_BATTCFG's payload, data[4..31] */
     battery_cfg(0, 0, 0, cfg);
     CHECK((cfg[6] | cfg[7] << 8) == 900, "the period from HC_BATTCFG: %u", cfg[6] | cfg[7] << 8);
 }

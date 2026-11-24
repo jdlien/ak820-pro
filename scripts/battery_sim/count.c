@@ -302,7 +302,7 @@ static void c_cut_reseat(void) {
     u_target = tgt_fixed; tgt_fixed_pm = 400;
     vdd_mv = 3900; chrg_low = false;
     run_s(60);
-    uint8_t out[8];
+    uint8_t out[28];   /* HC_BATTCFG's payload, data[4..31]: the reply grows (11-23: the reserve at [8]) */
     battery_cfg(1, 0, 3990, out);   /* a cut above the pack: latches in ~30 s */
     run_s(BATTERY_RELAX_S + 120);
     CHECK(power_lights_cut(), "the cut latched");

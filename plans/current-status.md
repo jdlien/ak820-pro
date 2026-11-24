@@ -73,6 +73,15 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
     INA228 counts it negative). ~573 mA at once, the plug 2.83 V and
     rising: the protector released on the charger. Overnight; test 5 is
     left for a later charge.
+  - **Built from it, 11-23: the reserve's last stage**, `low-reserve`
+    `642b0bfcdf` (daily `via-daily-642b0bfcdf-20261123-220520.bin`, token
+    `0xabef1667`, heap gap 1832 B): 2 h of use past the cut (or 3225 mV,
+    or three zeros), then dark, asleep at 30 s, "Charge now" at every wake
+    (`plans/BACKLOG.md`, "A day of typing after the LED cut"). Not flashed.
+    **Owed:** Astra's review (codex's login expired 11-23: JD's `codex
+    login`), then JD's go and `Fn`+`Esc` (a daily has no USB bootloader
+    jump); at that flash, (0,13) back to Play/Pause (`0x00AE` on layers 0
+    and 2, its binding before the presser's F19 of 11-03).
   Before it: 3,778 mAh net at 10:07 11-23 (17.8 days, 8.8 mA mean), the
   board at 4%. Earlier:
   1,447 mAh at 17:17 11-13 (36.1%, 195.4 h, 7.41 mA mean), relay 2 off,

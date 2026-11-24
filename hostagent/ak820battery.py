@@ -381,7 +381,8 @@ def cfg(h, argv):
     else:
         r = xfer(h, HC_BATTCFG, [0])
     on = "pack" if fmt == 3 else "VDD"
-    print(f"warn {u16(r, 4)} mV  cut {u16(r, 6)} mV  ({on})  lights_cut {r[8]}  warned {r[9]}  "
+    # r[12], the reserve's last stage (11-23): 0 from a firmware before it, which echoes the host's 0.
+    print(f"warn {u16(r, 4)} mV  cut {u16(r, 6)} mV  ({on})  lights_cut {r[8]}  warned {r[9]}  reserve {r[12]}  "
           f"log period {u16(r, 10)} s  (RAM only: a reset restores the defaults)")
 
 
