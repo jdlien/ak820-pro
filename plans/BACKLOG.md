@@ -781,7 +781,7 @@ power-switched hub carries no wake for any device) and the host's
 resume, at 22:02 11-01 (§21). The gate is complete.
 
 
-## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- JD's call, to build after the reserve is measured
+## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- the direction settled 11-23: normal use to `5C`'s floor, then an ultra-low mode with a message at every wake; to build after the reserve is measured
 
 JD (10-28): "There's almost no downside to aggressive sleeping when the
 board is in this state since the lights are off anyways. But at least we
@@ -809,6 +809,33 @@ every mode" (10-21, now in `history/BACKLOG-DONE.md`), which was left alone.
 - **Measure first:** R5, the drain since 04:44 10-24, runs on past the cut
   to shutdown and measures the reserve as built at real use, and what ends
   it (`plans/current-status.md`). Size the change against that.
+- **The direction, settled 11-23, two stages after the cut:**
+  1. **A couple of hours of normal use** after the RGB cut, as now: the
+     screen on, the mode's own sleep.
+  2. **Then an ultra-low mode:** the screen dark, a sleep within seconds to
+     a minute of the last key, and **a message on every wake** ("Charge
+     battery", or the like) so the behaviour explains itself; otherwise an
+     owner will think it broken and flip the slider. The band holds 12
+     characters ("Charge now" fits; "Charge battery" needs a full-screen
+     paint, like the "Low" glyph).
+- **The trigger for stage 2 is already in the hardware:** `5C`'s bottom
+  clamp (~3.161 V, `c5_zero_run >= CRITICAL_ZEROES`), no timer needed. On
+  the 11-05 drain the cut fired at 13:41:22 11-23 and the awake two-minute
+  mean crossed 3161 mV at 16:55:15: **2 h 09 min awake after the cut
+  (3 h 14 min of the clock), 102 mAh**, JD typing on and off in Power
+  saver. Past the floor, 74 mAh more by 20:40 and still running.
+- **A slider flip must land in the same state:** the cut and the stage are
+  RAM-only, so a reboot on battery has to derive them from the voltage
+  again (it does for the cut: a fresh 0 is "critically low"). Stage 2 at
+  boot, with the message, when the first reports read the floor.
+- **Settled when built:** whether keys still type in stage 2 (yes, unless
+  there is reason not to); whether the BT keep-alive stops there (~0.1 mA
+  saved, the first key after 30 min then ~2.4 s); no settings writes past
+  the floor, so a pack that dies mid-write cannot tear one (the wear
+  leveling's check catches a torn line, but nothing is better); and what
+  ends it, from the logger's record of the 11-05 drain's death: a clean
+  drop, or the board cycling on the protector. Sized against that drain's
+  reserve and the Riden's test 3 (where the board itself browns out).
 
 ## The LED blink at an internal-flash write (2026-10-27) -- JD's bug; the consolidation is the blink; the scan through writes and the early cleanup in v0.2.0 (`dc8e6d0c`); left: the other flicker, the clock chip's write after each sync, and the unexplained settings writes
 
