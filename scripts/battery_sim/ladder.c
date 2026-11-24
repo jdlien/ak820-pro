@@ -395,6 +395,18 @@ static void l_reserve(void) {
     CHECK(bkl_cap == 0xFF, "lit while Fn+D's page (or the menu) is open: cap %u", bkl_cap);
     debug_open = false; ltick();
     CHECK(bkl_cap == 0, "dark when it closes: cap %u", bkl_cap);
+    /* Left open, Fn+D's page closes at the sleep time (its lit screen would
+     * block the sleep for good). */
+    debug_open = true; idle_ms = 29900; ltick();
+    CHECK(debug_open, "open before the sleep time");
+    int na = n_alerts;
+    idle_ms = 30000; ltick();
+    CHECK(!debug_open && n_owner_closes == 1, "closed at 30 s idle: open %d, closes %d", debug_open,
+          n_owner_closes);
+    CHECK(n_alerts == na + 1 && !strcmp(last_alert, "Charge now"), "said again in the same pass: %d '%s'",
+          n_alerts - na, last_alert);
+    CHECK(!power_sleep_wanted(), "and its hold already on: no sleep before the next pass");
+    lrun_s(6);                     /* past the re-posted alert's sleep hold */
     idle_ms = 29999; ltick();
     CHECK(!power_sleep_wanted(), "awake 1 ms before 30 s");
     idle_ms = 30000; ltick();
@@ -412,9 +424,13 @@ static void l_reserve(void) {
     c5 = 3; lrun_s(120);
     CHECK(power_reserve() && power_stage() == POWER_STAGE_SCREEN_OFF, "latched through a rebound: %d stage %d",
           power_reserve(), power_stage());
-    /* External power lifts it, with the cut. */
+    /* External power lifts it, with the cut, and takes a live alert down. */
+    power_woke(); ltick();
+    CHECK(alert_posted && !strcmp(last_alert, "Charge now"), "a live alert before the cable");
     become_full(); ltick();
     CHECK(!power_reserve() && !power_lights_cut(), "lifted on USB: %d %d", power_reserve(), power_lights_cut());
+    CHECK(n_alert_clears >= 1 && !alert_posted, "\"Charge now\" taken down: clears %d, up %d", n_alert_clears,
+          alert_posted);
     expect_stage(POWER_STAGE_ACTIVE, 255, 0xFF, 255, "on USB");
     CHECK(power_lights_mode() == POWER_MODE_SAVER, "the bulb back: %d", power_lights_mode());
     idle_ms = 86400000u; ltick();
@@ -436,6 +452,7 @@ static void l_reserve_full(void) {
     ltick();
     CHECK(power_stage() == POWER_STAGE_SCREEN_OFF && scale == 0, "Always on, dark too: stage %d scale %u",
           power_stage(), scale);
+    lrun_s(6);                     /* past the entry alert's sleep hold */
     idle_ms = 29999; ltick();
     CHECK(!power_sleep_wanted(), "Always on: awake before 30 s");
     idle_ms = 30000; ltick();
@@ -458,9 +475,132 @@ static void l_reserve_voltage(void) {
     lrun_s(600);
     CHECK(power_reserve(), "the reserve at 7 counts (3222 mV)");
     CHECK(!strcmp(last_alert, "Charge now"), "its alert: '%s'", last_alert);
+    /* A rebound well above RESERVE_MV and the cut: both latches hold. */
+    c5 = 30; lrun_s(600);
+    CHECK(power_reserve() && power_lights_cut(), "latched at 30 counts: reserve %d cut %d", power_reserve(),
+          power_lights_cut());
 }
 
-/* By time: 2 h of use past the cut, counted awake only. The cut is made at a
+/* The voltage rule alone (the configurable warning and cut disabled): it cuts
+ * the lights itself, after a continuous 30 s under 3225 mV of the estimate,
+ * and a lost estimate starts the 30 s over (Astra, 11-23). */
+static void l_reserve_voltage_alone(void) {
+    power_init();
+    on_battery_mid();
+    idle_ms = 0;
+    uint8_t out[28];
+    battery_cfg(1, 0, 0, out);
+    c5 = 7;
+    uint32_t t_under = 0;
+    for (int i = 0; i < 6000 && !t_under; i++) {
+        ltick();
+        if (battery_pack_mv() && battery_pack_mv() < 3225) t_under = now_ms;
+    }
+    CHECK(t_under, "the estimate under 3225 mV");
+    while (now_ms - t_under < 25000u) ltick();
+    battery_cfg(1, 0, 0, out);   /* a threshold write at 25 s does not restart the dwell */
+    while (now_ms - t_under < 29800u) ltick();
+    CHECK(!power_reserve() && !power_lights_cut(), "not at 29.8 s: reserve %d cut %d", power_reserve(),
+          power_lights_cut());
+    while (now_ms - t_under < 30000u) ltick();
+    CHECK(power_reserve() && power_lights_cut(), "both at 30 s, the cut by the voltage rule itself: reserve %d cut %d",
+          power_reserve(), power_lights_cut());
+
+    /* Again from a fresh board: 5 s under, then the radio silent. The last
+     * estimate stays valid 20 s (C5_STALE_MS), so the dwell reaches ~25 s and
+     * is then lost; back under, it needs 30 s more, not the ~5 left. */
+    power_set_reserve(false); power_set_lights_cut(false);
+    become_full(); on_battery_mid(); battery_cfg(1, 0, 0, out);
+    c5 = 7; t_under = 0;
+    for (int i = 0; i < 6000 && !t_under; i++) {
+        ltick();
+        if (battery_pack_mv() && battery_pack_mv() < 3225) t_under = now_ms;
+    }
+    while (now_ms - t_under < 5000u) ltick();
+    c5 = 0xFF;   /* silent: the estimate goes stale 20 s after the last report */
+    lrun_s(25);
+    CHECK(battery_pack_mv() == 0, "the estimate lost: %u", battery_pack_mv());
+    c5 = 7;
+    uint32_t t_back = 0;
+    for (int i = 0; i < 600 && !t_back; i++) {
+        ltick();
+        if (battery_pack_mv() && battery_pack_mv() < 3225) t_back = now_ms;
+    }
+    CHECK(!power_reserve(), "not latched across the loss");
+    while (now_ms - t_back < 20000u) ltick();
+    CHECK(!power_reserve(), "20 s after the estimate's return is not 30 s under");
+    while (now_ms - t_back < 32000u) ltick();
+    CHECK(power_reserve(), "30 s after it is");
+
+    /* A sleep's wake forgets the estimate, and fresh reports before the next
+     * tick must not resume the old dwell (Astra's verification). */
+    power_set_reserve(false); power_set_lights_cut(false);
+    become_full(); on_battery_mid(); battery_cfg(1, 0, 0, out);
+    c5 = 7; t_under = 0;
+    for (int i = 0; i < 6000 && !t_under; i++) {
+        ltick();
+        if (battery_pack_mv() && battery_pack_mv() < 3225) t_under = now_ms;
+    }
+    while (now_ms - t_under < 25000u) ltick();
+    battery_sleep_enter();
+    battery_sleep_wake();
+    battery_sleep_account(60000u);
+    for (int i = 0; i < 6; i++) deliver(7);
+    lrun_s(10);
+    CHECK(!power_reserve(), "10 s after a sleep is not 30 s under");
+    lrun_s(25);
+    CHECK(power_reserve(), "35 s after it is");
+
+    /* A stale gap no tick saw: the report after it restarts the dwell. */
+    power_set_reserve(false); power_set_lights_cut(false);
+    become_full(); on_battery_mid(); battery_cfg(1, 0, 0, out);
+    c5 = 7; t_under = 0;
+    for (int i = 0; i < 6000 && !t_under; i++) {
+        ltick();
+        if (battery_pack_mv() && battery_pack_mv() < 3225) t_under = now_ms;
+    }
+    while (now_ms - t_under < 25000u) ltick();
+    while (now_ms % 2500u != 0) ltick();
+    now_ms += 21000u;   /* 21 s with no report and no tick */
+    deliver(7);         /* the ring forgotten at intake: five fresh reports rebuild it */
+    t_back = 0;
+    for (int i = 0; i < 600 && !t_back; i++) {
+        ltick();
+        if (battery_pack_mv() && battery_pack_mv() < 3225) t_back = now_ms;
+    }
+    CHECK(t_back, "the estimate back");
+    while (now_ms - t_back < 29800u) ltick();
+    CHECK(!power_reserve(), "not at 29.8 s after the rebuilt estimate");
+    while (now_ms - t_back < 30000u) ltick();
+    CHECK(power_reserve(), "at 30 s after it");
+
+    /* Two zeros, a stale gap no tick saw, one zero: not three in a row. */
+    power_set_reserve(false); power_set_lights_cut(false);
+    become_full(); on_battery_mid(); battery_cfg(1, 0, 0, out);
+    c5 = 0xFF;
+    deliver(0); deliver(0); ltick();
+    now_ms += 21000u;
+    deliver(0); ltick();
+    CHECK(!power_lights_cut() && !power_reserve(), "no three-zero cut across a gap: cut %d reserve %d",
+          power_lights_cut(), power_reserve());
+}
+
+/* The stage starting while the board already sits idle past the sleep time
+ * (the hour running out between keys): no sleep until the alert has had its
+ * paint and its 4 s (Astra, 11-23). */
+static void l_reserve_idle_entry(void) {
+    power_init();
+    on_battery_mid();
+    idle_ms = 45000;   /* idle already, Balanced: no sleep before 20 min */
+    reserve_enter();
+    CHECK(!power_sleep_wanted(), "no sleep at the post");
+    lrun_s(4);
+    CHECK(!power_sleep_wanted(), "nor 4 s after it");
+    lrun_s(2);
+    CHECK(power_sleep_wanted(), "then the sleep, idle past 30 s");
+}
+
+/* By time: 1 h of use past the cut (power.c's RESERVE_AFTER_CUT_MS), counted awake only. The cut is made at a
  * healthy voltage here (a threshold over HC_BATTCFG), so neither voltage rule
  * can start the stage. */
 static void l_reserve_timer(void) {
@@ -472,13 +612,13 @@ static void l_reserve_timer(void) {
     for (int i = 0; i < 600 && !power_lights_cut(); i++) ltick();
     CHECK(power_lights_cut(), "the cut");
     uint32_t t0 = now_ms;
-    while (now_ms - t0 < 2u * 3600u * 1000u - 60000u) ltick();
-    CHECK(!power_reserve(), "no reserve a minute before 2 h of use");
+    while (now_ms - t0 < 1u * 3600u * 1000u - 60000u) ltick();
+    CHECK(!power_reserve(), "no reserve a minute before 1 h of use");
     now_ms += 3600u * 1000u;        /* a sleep's gap: the timer jumps, the count may not */
     lrun_s(30);
     CHECK(!power_reserve(), "a sleep's hour is not use");
     lrun_s(40);
-    CHECK(power_reserve(), "the reserve at 2 h of use");
+    CHECK(power_reserve(), "the reserve at 1 h of use");
     CHECK(!strcmp(last_alert, "Charge now"), "its alert: '%s'", last_alert);
     /* Lifted with the cut by external power, and the count starts afresh. */
     become_full(); ltick();
@@ -504,6 +644,9 @@ static void l_reserve_owed_usb(void) {
     for (int i = 0; i < 100 && battery_supply() != BATTERY_SUPPLY_EXTERNAL; i++) ltick();
     CHECK(battery_supply() == BATTERY_SUPPLY_EXTERNAL, "external within 10 s: %d", battery_supply());
     CHECK(power_reserve(), "still latched before 5 s of evidence");
+    ltick();
+    CHECK(!alert_posted && n_alert_clears == 1, "the entry's alert down at once on the cable: up %d, clears %d",
+          alert_posted, n_alert_clears);
     int n0 = n_alerts;
     power_woke();
     ltick();

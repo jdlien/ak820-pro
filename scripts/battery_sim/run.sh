@@ -37,14 +37,14 @@ phase2="l_normal l_modes l_usb l_low_cap l_val_cap l_lights_cut l_announce l_per
         c_stale c_excursion c_bias c_clamp_cross c_reboot
         c_band_top c_band_top_edge c_floor_boot c_cut_reseat c_hold_stale c_handover_stays c_floor_entry c_clamp_marker"
 # The reserve's last stage (11-23): only against a power.h with it.
-grep -q '^#define POWER_HAS_RESERVE' "$build/power.h" && phase2="$phase2 l_reserve l_reserve_full l_reserve_owed_usb l_reserve_voltage l_reserve_timer"
+grep -q '^#define POWER_HAS_RESERVE' "$build/power.h" && phase2="$phase2 l_reserve l_reserve_full l_reserve_owed_usb l_reserve_voltage l_reserve_voltage_alone l_reserve_timer l_reserve_idle_entry"
 # Deep sleep (sleeps.c): only against a battery.c with the hand-over.
 grep -q "BATTERY_P_SLEEP_UW" "$build/battery.h" && phase2="$phase2 s_energy s_time_left s_floor_cut s_unknown s_band_hold s_remainder s_relax s_log_within s_log_across s_log_long s_log_wrap_order s_log_pending s_log_recovery_boundary s_usb s_no_wake s_replay_v7 s_log_floor s_replay_mixed s_log_late_cut s_usb_relax_banked"
 r3="$hist/battery-2026-10-15-drain-2f/log-20261018-0205-rgbcut.csv"
 e2="$hist/battery-2026-10-12-drain-2e/log-20261014-0950-preswap.csv"
 for s in boot_battery boot_battery_clamp boot_usb_full discharge charge_log transitions \
          no_pack protection critical brief_plug unplug_mid_charge countdown_ease stale ring_restart \
-         burst restore_needs_evidence charger_fault chrg_gap boot_charging_rise full_then_replug \
+         burst restore_needs_evidence restore_short_plug charger_fault chrg_gap boot_charging_rise full_then_replug \
          reseat_survives_replug threshold_at_clamp log_cadence \
          reboot_after_full reboot_saved_mismatch reboot_below_clamp persist_tracks \
          warn_once warn_brief_plug warn_after_charge warn_cfg_rearms c5_equivalence; do

@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 void    display_set_alert(const char *msg);
+void    display_clear_alert(const char *msg);
+void    display_debug_toggle(void);
+bool    display_owner_close(void);
 void    display_set_param_status(const char *s);
 bool    display_message_recent(uint32_t ms);
 bool    display_band_busy(void);

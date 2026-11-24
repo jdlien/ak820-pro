@@ -784,7 +784,7 @@ power-switched hub carries no wake for any device) and the host's
 resume, at 22:02 11-01 (§21). The gate is complete.
 
 
-## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- BUILT 11-23 on `low-reserve` (`642b0bfcdf`, daily token `0xabef1667`): 2 h of use past the cut (or 3225 mV, or the zero rule), then dark, asleep at 30 s, "Charge now" at every wake; not flashed, Astra's review owed
+## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- BUILT 11-23/24 on `low-reserve` (`0d8da8b797`, daily token `0x8c6de7d9`): 1 h of use past the cut (or 3225 mV, or the zero rule), then dark, asleep at 30 s, "Charge now" at every wake; three Astra rounds, every P0/P1 fixed; the on-board test owed
 
 JD (10-28): "There's almost no downside to aggressive sleeping when the
 board is in this state since the lights are off anyways. But at least we
@@ -821,10 +821,12 @@ every mode" (10-21, now in `history/BACKLOG-DONE.md`), which was left alone.
      owner will think it broken and flip the slider. The band holds 12
      characters ("Charge now" fits; "Charge battery" needs a full-screen
      paint, like the "Low" glyph).
-- **As built (11-23, `low-reserve` `8e9e864f26` and `642b0bfcdf`):**
-  stage 2 starts at the first of **2 h of awake time past the RGB cut**
-  (`power.c`, `RESERVE_AFTER_CUT_MS`, counted by the pass so a sleep's gap
-  adds at most 1 s), **the estimate under 3225 mV for 30 s** (`battery.c`,
+- **As built (11-23, `low-reserve` `8e9e864f26` to `5038099c84`):**
+  stage 2 starts at the first of **1 h of awake time past the RGB cut**
+  (`power.c`, `RESERVE_AFTER_CUT_MS`, counted by the pass; the system
+  counter stops asleep, and a step is capped at 1 s besides; 1 h, not the
+  first build's 2: on 11-23 1 h of use past the cut left 154 of the
+  reserve's 199 mAh, 2 h 104), **the estimate under 3225 mV for 30 s** (`battery.c`,
   `RESERVE_MV`, the bottom of `5C`'s accurate range), or **the zero rule**.
   Then: dark at once in every mode, typing too; asleep **30 s** after the
   last input in every mode, Always on included; **"Charge now"** as an alert
@@ -834,8 +836,14 @@ every mode" (10-21, now in `history/BACKLOG-DONE.md`), which was left alone.
   the cut (lifts after 5 s of external power), RAM only. HC_BATTCFG's reply
   carries it at [8] (`ak820battery.py cfg` prints `reserve`). The flash tidy
   already stops at the cut, so no consolidation runs on a dying pack. Keys
-  type; the BT keep-alive runs. Host checks: `scripts/battery_sim`, 261
-  cases, five of them the stage's (`l_reserve*`).
+  type; the BT keep-alive runs. Fn+D's page closes at the sleep time; no
+  sleep for ~5.5 s after the alert's post; the alert comes down at once on
+  the cable. Host checks: `scripts/battery_sim`, 264 cases, eight of them
+  the stage's (`l_reserve*`, `restore_short_plug`). Astra's review and its
+  dispositions: `plans/review-codex-low-reserve-2026-11-23.md`. Not yet
+  tested on the board: the wake paths in sleep.c (the simulator has no
+  sleep.c), so the on-board test is the Riden at ~3.2 V, or the cut forced
+  over HC_BATTCFG and an hour of use.
 - **Why not the zero rule alone, as first written below:** on 11-23 the
   module never sent three zeros; near empty `5C` flattens at a few counts
   ([docs/battery.md](../docs/battery.md), "The reserve below 0%"). The first

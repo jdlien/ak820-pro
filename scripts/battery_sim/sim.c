@@ -76,6 +76,24 @@ bool     display_band_busy(void) {
            (status_posted && now_ms - status_at < 2000u);
 }
 bool     display_debug_active(void) { return debug_open; }
+/* The reserve's (11-23): the alert down early if it is still `m`, and Fn+D's
+ * tap, which closes the standalone page. */
+static int n_alert_clears, n_debug_toggles;
+void     display_clear_alert(const char *m) {
+    if (alert_posted && now_ms - alert_at < 60000u && strcmp(last_alert, m) == 0) {
+        alert_posted = false;
+        n_alert_clears++;
+    }
+}
+void     display_debug_toggle(void) { debug_open = !debug_open; n_debug_toggles++; }
+/* The sim's only owner is Fn+D's page (debug_open). */
+static int n_owner_closes;
+bool     display_owner_close(void) {
+    if (!debug_open) return false;
+    debug_open = false;
+    n_owner_closes++;
+    return true;
+}
 /* S0 (dde661d1): Lights out's exception asks whether an owner lights the
  * panel, Fn+D's page or the menu; the sim has only the page. */
 bool     display_panel_lit_for_owner(void) { return debug_open; }
@@ -532,6 +550,77 @@ static void restore_needs_evidence(void) {
     CHECK(power_lights_cut(), "no fresh evidence of USB: the cut holds");
 #ifdef POWER_HAS_RESERVE
     CHECK(power_reserve(), "and so does the reserve");
+#endif
+}
+
+/* A plug-in just short of the restore's 5 s, then out: CHRG's 1 s hold must
+ * not carry the count to 5 s after the cable is out (Astra, 11-23, P1). */
+static void restore_short_plug(void) {
+    vdd_mv = 3900; c5 = 50;
+    run_s(20);
+    c5 = 0;
+    run_s(20);
+    CHECK(power_lights_cut(), "cut");
+#ifdef POWER_HAS_RESERVE
+    CHECK(power_reserve(), "and the reserve");
+#endif
+    c5 = 50;
+    vdd_mv = 4193; chrg_low = true;   /* plugged in, charging, for 4.4 s */
+    for (int i = 0; i < 44; i++) tick();
+    vdd_mv = 3900; chrg_low = false;  /* out */
+    run_s(20);
+    CHECK(power_lights_cut(), "a 4.4 s plug-in does not lift the cut after the cable is out");
+#ifdef POWER_HAS_RESERVE
+    CHECK(power_reserve(), "nor the reserve");
+#endif
+    /* ... nor when the first readings after it are failed conversions, or
+     * between the thresholds (Astra's verification: chrg_hold and ext_run
+     * held over failures carried the count to 5 s). */
+    vdd_mv = 4193; chrg_low = true;
+    for (int i = 0; i < 44; i++) tick();
+    vdd_mv = 0; chrg_low = false;     /* out, the ADC failing */
+    run_s(3);
+    vdd_mv = 3900; run_s(10);
+    CHECK(power_lights_cut(), "a 4.4 s plug-in then failed conversions: the cut holds");
+#ifdef POWER_HAS_RESERVE
+    CHECK(power_reserve(), "and the reserve");
+#endif
+    vdd_mv = 4193; chrg_low = true;
+    for (int i = 0; i < 44; i++) tick();
+    vdd_mv = 4050; chrg_low = false;  /* out, a reading between the thresholds */
+    run_s(3);
+    vdd_mv = 3900; run_s(10);
+    CHECK(power_lights_cut(), "a 4.4 s plug-in then in-band readings: the cut holds");
+#ifdef POWER_HAS_RESERVE
+    CHECK(power_reserve(), "and the reserve");
+#endif
+    vdd_mv = 4470; chrg_low = false;  /* a real plug-in, the charge already done: VDD alone lifts both */
+    run_s(7);
+    CHECK(!power_lights_cut(), "7 s of USB's VDD with CHRG released lifts the cut");
+    /* A real cable on a marginal rail: an in-band reading every 5 s holds
+     * the count, never resets it (Astra, 11-24). */
+    vdd_mv = 3900; c5 = 0; run_s(30);
+    CHECK(power_lights_cut(), "cut again");
+    chrg_low = false;
+    for (int k = 0; k < 3; k++) {
+        vdd_mv = 4193; for (int i = 0; i < 49; i++) tick();
+        vdd_mv = 4050; tick();
+    }
+    CHECK(!power_lights_cut(), "lifted through in-band dips");
+    /* CHRG pulsing with the ADC failing: each pulse's qualified tick counts. */
+    vdd_mv = 3900; c5 = 0; run_s(30);
+    CHECK(power_lights_cut(), "cut again");
+    vdd_mv = 0; chrg_pulse = 12;      /* low ~7 ticks of every 12 */
+    run_s(90);
+    chrg_pulse = 0; chrg_low = false;
+    CHECK(!power_lights_cut(), "lifted by a pulsing CHRG through failed conversions");
+    vdd_mv = 3900; c5 = 0; run_s(30);
+    CHECK(power_lights_cut(), "cut again");
+    vdd_mv = 4193; chrg_low = true;   /* a real plug-in, charging, still lifts both */
+    run_s(7);
+    CHECK(!power_lights_cut(), "7 s of cable lifts the cut");
+#ifdef POWER_HAS_RESERVE
+    CHECK(!power_reserve(), "and the reserve");
 #endif
 }
 
@@ -1391,6 +1480,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "ring_restart"))       ring_restart();
     else if (!strcmp(s, "burst"))              burst();
     else if (!strcmp(s, "restore_needs_evidence")) restore_needs_evidence();
+    else if (!strcmp(s, "restore_short_plug")) restore_short_plug();
     else if (!strcmp(s, "charger_fault"))      charger_fault();
     else if (!strcmp(s, "chrg_gap"))           chrg_gap();
     else if (!strcmp(s, "boot_charging_rise")) boot_charging_rise();
@@ -1480,6 +1570,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(s, "l_reserve_full"))    l_reserve_full();
     else if (!strcmp(s, "l_reserve_owed_usb")) l_reserve_owed_usb();
     else if (!strcmp(s, "l_reserve_voltage")) l_reserve_voltage();
+    else if (!strcmp(s, "l_reserve_voltage_alone")) l_reserve_voltage_alone();
+    else if (!strcmp(s, "l_reserve_idle_entry")) l_reserve_idle_entry();
     else if (!strcmp(s, "l_reserve_timer"))   l_reserve_timer();
 #endif
     else if (!strcmp(s, "l_wake_notice"))   l_wake_notice();
