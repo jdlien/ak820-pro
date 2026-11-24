@@ -738,6 +738,17 @@ the 13:55:17 and 14:00:17 reads 10-14. Against the same line (100% less
 On run 2 `5C` reached its floor (≤ 3.161 V) ~45-55 min before the end. `flash.sh`
 refuses to flash on battery in this reserve ([hardware.md](hardware.md)).
 
+**At real use, logged (the drain from 11-05, measured 11-23):** the cut at
+13:41:22 after 17 d 23 h 45 min and 3,888 mAh net; `5C`'s floor 2 h 09 min
+awake later (102 mAh); **the death at 21:43:10, 8 h 02 min and 199 mAh after
+the cut**, JD typing on and off in Power saver (`plans/current-status.md`).
+**The pack's protector ends it, cleanly:** the plug read 2,322.5 mV under
+66.7 mA, then the current fell to nothing in one second, the terminals
+collapsed to ~0 in 8 s and the MAX17048 lost power, with no cycling after.
+**The board was still running at 2.32 V**, so the regulator holds below
+that and the protector, not a brownout, is what stops the board (at least
+at ~67 mA; the Riden's test 3 finds the board's own floor).
+
 ### Internal-flash writes: the blink, and how few are left
 
 Every internal-flash write blinks the LEDs dark for a few ms. The cause is the

@@ -46,14 +46,35 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
   (since 11-18), with `ridenctl` on Buzz and a lease JD grants; it stands in
   for the pack (`plans/BACKLOG.md`, "The bench supply as the pack";
   [docs/test-bench.md](../docs/test-bench.md), "The bench supply");
-- the drain, near the cut: 3,778 mAh net at 10:07 11-23 (17.8 days since
-  FULL, 8.8 mA mean; mAh since FULL = `charge_mah` + 2754.007), the board
-  at 4%, the pack 3,480 mV while JD types and ~3,490 asleep, the cut at
-  3,400. The voltage has run a few points below the charge count since
-  ~15%. **At the cut:** the battery log first (`ak820battery.py log`, the
-  daemon paused, the data line up), and `ak820battery.py cfg` for
-  `warned`: JD has not seen "Battery low", due from ~16:47 11-20 by the
-  logger (`plans/BACKLOG.md`, the item "Battery low" is easy to miss). Earlier:
+- **the drain from 11-05 is DONE, run to the pack's protector.**
+  - **The RGB cut at 13:41:22 11-23**, 17 d 23 h 45 min after FULL,
+    **3,888 mAh net** (R4's 4,011.6 at full white). `warned 1`: "Battery
+    low" had fired, unseen by JD (due from ~16:47 11-20 by the logger;
+    `plans/BACKLOG.md`, the item "Battery low" is easy to miss). The RAM
+    log at 20:12:37: `~/Documents/ak820pro-battlogs/log-20261123-201237-cut.csv`
+    (the daemon out and the data line up 20:12:38-20:12:45).
+  - **`5C`'s floor** (the awake two-minute mean under 3161 mV) at 16:55:15:
+    2 h 09 min awake after the cut, 102 mAh.
+  - **The death at 21:43:10 11-23**: the current 66.7 mA to 0.07 in one
+    row, the pack's plug 2,322.5 mV under that load just before, then the
+    terminals collapsing to ~0 in 8 s and the MAX17048 unpowered: **the
+    pack's protector opened, cleanly, no cycling** (nothing drawn since).
+    **The board still ran at 2.32 V**, so its own floor is lower (test 3
+    starts at 2.40 V now). The reserve: **8 h 01 min 48 s and 199 mAh**
+    from the cut, 4 h 48 min and 97 mAh past the floor, JD typing on and
+    off in Power saver. Whole drain: 18 d 7 h 47 min, **4,087 mAh net**,
+    9.29 mA mean.
+  - ⚠️ **The logger's QT Py dropped off USB for 3 s at 12:49:02 11-23**
+    (`power.log`: "Device not configured"; nobody was using it) and its
+    count restarted at 0: from 12:49:05, **mAh since FULL = `charge_mah` +
+    3848.261** (~0.04 mAh unlogged in the gap).
+  - **The recharge from empty: relay 2 on at 21:47:46 11-23**, `charge_mah`
+    238.977 just before (the charge in = 238.977 - `charge_mah`; the
+    INA228 counts it negative). ~573 mA at once, the plug 2.83 V and
+    rising: the protector released on the charger. Overnight; test 5 is
+    left for a later charge.
+  Before it: 3,778 mAh net at 10:07 11-23 (17.8 days, 8.8 mA mean), the
+  board at 4%. Earlier:
   1,447 mAh at 17:17 11-13 (36.1%, 195.4 h, 7.41 mA mean), relay 2 off,
   no charge since 11-09. ⚠️ **Lights out from
   10:12:05 to 12:28:18 11-14**, by a key while JD typed: the logger shows
@@ -74,8 +95,10 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
   start before the pulse, not the wake. The presser's two wired keys can
   come off white. (3,14)'s did on 11-14: a switch is back there for JD's
   End (set back from F20 at 06:20:14 11-14, the data line on
-  06:20:13-06:20:15), and A1 on (0,13) alone stays for the wake checks
-  ([docs/test-bench.md](../docs/test-bench.md), "The key presser").
+  06:20:13-06:20:15), and A1 on (0,13) stayed for the wake checks
+  ([docs/test-bench.md](../docs/test-bench.md), "The key presser") until
+  **11-23, when JD took both presser switches off white**. (0,13) still
+  sends F19 in the keymap until Delete is set back there.
 
 ## 2026-11-03 night — stages 3 and 4 of the row ISR rewrite went onto white hands-free; stage 4b is on it with the night's soak
 

@@ -99,8 +99,11 @@ with relay 2 off. None of these runs during the drain.
    the pack.
 3. **Where the keyboard dies (one lease).** Below 3.161 V the module reads
    0, and the voltage the keyboard dies at is unknown
-   ([docs/power.md](../docs/power.md), "The battery"). Step down from
-   3.20 V in 20 mV steps, 2 min each. Keep the keyboard awake (Always on,
+   ([docs/power.md](../docs/power.md), "The battery"). **It is below
+   2.32 V:** on 11-23 the board still ran there (66.7 mA) when the pack's
+   protector opened (`plans/current-status.md`, the drain's death). Step
+   down from 2.40 V in 20 mV steps, 2 min each, to 2.0 V or until it
+   stops. Keep the keyboard awake (Always on,
    so it never sleeps) with the data line on, and watch both currents (the
    supply's and the logger's). Find:
    - the voltage it stops at;
@@ -832,10 +835,16 @@ every mode" (10-21, now in `history/BACKLOG-DONE.md`), which was left alone.
   there is reason not to); whether the BT keep-alive stops there (~0.1 mA
   saved, the first key after 30 min then ~2.4 s); no settings writes past
   the floor, so a pack that dies mid-write cannot tear one (the wear
-  leveling's check catches a torn line, but nothing is better); and what
-  ends it, from the logger's record of the 11-05 drain's death: a clean
-  drop, or the board cycling on the protector. Sized against that drain's
-  reserve and the Riden's test 3 (where the board itself browns out).
+  leveling's check catches a torn line, but nothing is better). Sized
+  against the Riden's test 3 (where the board itself browns out).
+- **The reserve, measured on 11-23** (`plans/current-status.md`): **8 h
+  02 min and 199 mAh from the cut to the death**, 4 h 48 min and 97 mAh of
+  it past the floor, at JD's on-and-off use in Power saver. **What ends it:
+  the pack's protector, cleanly** (21:43:10, the plug at 2,322.5 mV under
+  66.7 mA, then nothing drawn and no cycling); the board still ran at
+  2.32 V. So no boot loop to design around at this pack's end, and stage
+  2 starts with ~97 mAh in hand: at deep sleep's ~4.5 mA near empty, most
+  of a day.
 
 ## The LED blink at an internal-flash write (2026-10-27) -- JD's bug; the consolidation is the blink; the scan through writes and the early cleanup in v0.2.0 (`dc8e6d0c`); left: the other flicker, the clock chip's write after each sync, and the unexplained settings writes
 
