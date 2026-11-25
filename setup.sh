@@ -16,6 +16,13 @@
 # itself is the Rust daemon in ak820-agent/, built and installed separately
 # (README.md); the venvs here also run the older Python agents, its fallback.
 #
+# Linux (tested on Ubuntu 24.04 x86_64; Fedora, Arch and openSUSE package
+# names are mapped but untested): the same toolchain, venv, clones, flasher
+# and ak820ctl, the build packages from the distro's own manager (sudo, asked
+# once), and a udev rule so the board, the dongle and the bootloader are
+# usable without root. Its host agent is hostagent/ak820-linux-agent.py,
+# stdlib Python only; the Rust daemon has no Linux backend.
+#
 # ⚠️ On Windows, run this from the MSYS2 MinGW 64-bit shell, not Git Bash or
 # PowerShell. qmk_cli refuses to run anywhere else, and Git Bash has no make.
 set -u
@@ -29,6 +36,7 @@ FAIL=0
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) PLATFORM=windows ;;
   Darwin)               PLATFORM=macos   ;;
+  Linux)                PLATFORM=linux   ;;
   *)                    PLATFORM=other   ;;
 esac
 
@@ -81,8 +89,69 @@ if [ "$PLATFORM" = windows ]; then
   fi
   # vim is only here for xxd, which build.sh's structural checks use.
   command -v xxd >/dev/null || die "xxd missing even after installing vim"
+elif [ "$PLATFORM" = linux ]; then
+  TC_EXT="tar.gz"
+  case "$(uname -m)" in
+    x86_64)        TC_ARCH="linux-x64"   ;;
+    aarch64|arm64) TC_ARCH="linux-arm64" ;;
+    *) die "unsupported architecture $(uname -m)" ;;
+  esac
+  # The distro plays Homebrew's part. What each piece is for:
+  #   zsh, xxd, shasum (perl)          build.sh's interpreter and its checks
+  #   make, gcc, pkg-config            sonixflasher and ak820ctl
+  #   hidapi (hidraw + libusb), libudev  ak820ctl links hidapi-hidraw;
+  #                                    SonixFlasherC's Linux branch links
+  #                                    hidapi-libusb and libudev, and ignores
+  #                                    USE_LIBUSB; the python `hid` package
+  #                                    loads libhidapi-hidraw at run time
+  #   python3 + venv                   qmk and hid live in ./venv
+  # Checked by what is missing, not by package name, so a machine that
+  # already has everything is never asked for sudo.
+  need_cmd=""; need_pc=""
+  for c in git curl make gcc pkg-config python3 zsh xxd shasum; do
+    command -v "$c" >/dev/null 2>&1 || need_cmd="$need_cmd $c"
+  done
+  if command -v pkg-config >/dev/null 2>&1; then
+    for m in hidapi-hidraw hidapi-libusb libusb-1.0 libudev; do
+      pkg-config --exists "$m" || need_pc="$need_pc $m"
+    done
+  else
+    need_pc=" hidapi-hidraw"
+  fi
+  # Debian and Ubuntu split ensurepip out of python3; without it venv fails
+  # with a message about python3-venv, after the toolchain download.
+  python3 -c 'import ensurepip' >/dev/null 2>&1 || need_cmd="$need_cmd venv"
+  if [ -n "$need_cmd$need_pc" ]; then
+    echo "  missing:$need_cmd$need_pc"
+    if   command -v apt-get >/dev/null; then
+      INSTALL="apt-get install -y git curl make gcc pkg-config python3 python3-venv zsh xxd perl libhidapi-dev libusb-1.0-0-dev libudev-dev"
+    elif command -v dnf >/dev/null; then
+      INSTALL="dnf install -y git curl make gcc pkgconf-pkg-config python3 zsh vim-common perl-Digest-SHA hidapi-devel libusb1-devel systemd-devel"
+    elif command -v pacman >/dev/null; then
+      INSTALL="pacman -S --needed --noconfirm git curl make gcc pkgconf python zsh tinyxxd perl hidapi libusb systemd-libs"
+    elif command -v zypper >/dev/null; then
+      INSTALL="zypper install -y git curl make gcc pkg-config python3 zsh xxd perl libhidapi-devel libusb-1_0-devel libudev-devel"
+    else
+      die "no apt-get, dnf, pacman or zypper here. Install the equivalents of:$need_cmd$need_pc and re-run."
+    fi
+    # Debian's xxd was part of vim-common before bookworm; fall back to it.
+    if command -v apt-get >/dev/null && ! apt-cache show xxd >/dev/null 2>&1; then
+      INSTALL="${INSTALL/ xxd / vim-common }"
+    fi
+    if [ "$(id -u)" = 0 ]; then SUDO=""; else SUDO="sudo"; fi
+    echo "  installing with: $SUDO $INSTALL"
+    case "$INSTALL" in apt-get*) $SUDO apt-get update -qq || warn "apt-get update failed; trying the install anyway" ;; esac
+    # shellcheck disable=SC2086
+    $SUDO $INSTALL >/dev/null || die "package install failed. Run it by hand:
+       $SUDO $INSTALL"
+    for c in $need_cmd; do
+      [ "$c" = venv ] && { python3 -c 'import ensurepip' 2>/dev/null || die "python3 venv support still missing"; continue; }
+      command -v "$c" >/dev/null || die "$c still missing after the install"
+    done
+    for m in $need_pc; do pkg-config --exists "$m" || die "pkg-config still cannot find $m after the install"; done
+  fi
 else
-  [ "$PLATFORM" = macos ] || warn "this script targets macOS or MSYS2; continuing anyway"
+  [ "$PLATFORM" = macos ] || warn "this script targets macOS, Linux or MSYS2; continuing anyway"
   TC_EXT="tar.gz"
   case "$(uname -m)" in
     arm64)  TC_ARCH="darwin-arm64" ;;
@@ -100,7 +169,7 @@ else
     brew list "$pkg" >/dev/null 2>&1 || { echo "  installing $pkg"; brew install "$pkg" || die "brew install $pkg"; }
   done
 fi
-ok "hidapi $(pkg-config --modversion hidapi 2>/dev/null || echo '?'), $(git --version)"
+ok "hidapi $(pkg-config --modversion hidapi 2>/dev/null || pkg-config --modversion hidapi-hidraw 2>/dev/null || echo '?'), $(git --version)"
 
 # --- 1. arm-none-eabi toolchain --------------------------------------------
 log "1/6 arm-none-eabi toolchain (xpack $TC_ARCH, no sudo)"
@@ -395,6 +464,36 @@ else
 fi
 rm -f "$BUILDLOG"
 
+# --- 5b. Linux only: a udev rule, so nothing here needs root at run time ------
+# /dev/hidraw* and the bootloader's USB node are root-only by default. The rule
+# tags the board (0C45:8009), the 2.4G dongle (0C45:FDFD) and the Sonix
+# bootloader (0C45:7140) `uaccess`, which gives them to whoever is logged in at
+# the seat: the agent, flash.sh, ak820ctl and VIA in Chrome all need it.
+# Installed only when missing or different, so a re-run asks for nothing.
+if [ "$PLATFORM" = linux ]; then
+  RULE_SRC="$ROOT/hostagent/60-ak820pro.rules"
+  RULE_DST="/etc/udev/rules.d/60-ak820pro.rules"
+  if ! command -v udevadm >/dev/null 2>&1; then
+    # A container or a udev-less distro: nothing to install into. Not a failure
+    # of the build, which needs no device.
+    warn "no udevadm here; skipping the udev rule (the board's raw HID will need root)"
+  elif cmp -s "$RULE_SRC" "$RULE_DST" 2>/dev/null; then
+    ok "udev rule already installed ($RULE_DST)"
+  else
+    if [ "$(id -u)" = 0 ]; then SUDO=""; else SUDO="sudo"; fi
+    echo "  installing $RULE_DST (sudo)"
+    if $SUDO install -D -m 0644 "$RULE_SRC" "$RULE_DST"; then
+      $SUDO udevadm control --reload-rules 2>/dev/null
+      $SUDO udevadm trigger --subsystem-match=hidraw --subsystem-match=usb 2>/dev/null
+      ok "udev rule installed; if the board was already plugged in and is still root-only, replug it"
+    else
+      warn "could not install $RULE_DST -- the board's raw HID will need root.
+       By hand: sudo install -m 0644 $RULE_SRC $RULE_DST && sudo udevadm control --reload-rules"
+      FAIL=1
+    fi
+  fi
+fi
+
 # --- 6. report --------------------------------------------------------------
 log "6/6 result"
 if [ "$FAIL" = 0 ]; then
@@ -422,6 +521,21 @@ EOF
       the agent -- ask it:  ak820 probe
       The older Python agents (the fallback) install with
         powershell -ExecutionPolicy Bypass -File hostagent\install-agents-windows.ps1
+EOF
+  elif [ "$PLATFORM" = linux ]; then
+    cat <<'EOF'
+
+  Linux notes:
+    - The host agent (now playing + clock, over the USB cable) is
+      hostagent/ak820-linux-agent.py: stdlib Python and busctl, nothing to
+      build. It runs as a systemd user service:
+
+        hostagent/ak820-linux-agent.py install --clock
+        hostagent/ak820-linux-agent.py status
+        hostagent/ak820-linux-agent.py probe     # what MPRIS says is playing
+
+      It does not do 2.4G or Bluetooth yet, and the Rust daemon has no Linux
+      backend.
 EOF
   else
     cat <<'EOF'

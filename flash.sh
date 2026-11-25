@@ -90,6 +90,19 @@ sys.exit(0 if present(plistlib.loads(sys.stdin.buffer.read())) else 1)
                 if (Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue |
                         Where-Object { \$_.InstanceId -like \"*\$id*\" }) { exit 0 } else { exit 1 }" >/dev/null 2>&1
             ;;
+        Linux)
+            # sysfs, not hidapi: the bootloader (0x7140) binds no HID driver on
+            # Linux, so it has no hidraw node and hid.enumerate never sees it --
+            # the wait for Fn+Esc then runs its full ten minutes. Reading sysfs
+            # opens nothing, as the Windows branch's device tree does.
+            local d want
+            want=$(printf '%04x' "$1")
+            for d in /sys/bus/usb/devices/*/idProduct; do
+                [ "$(cat "$d" 2>/dev/null)" = "$want" ] \
+                    && [ "$(cat "${d%idProduct}idVendor" 2>/dev/null)" = 0c45 ] && return 0
+            done
+            return 1
+            ;;
         *) "$PY" -c 'import hid,sys; sys.exit(0 if hid.enumerate(0x0C45, int(sys.argv[1],16)) else 1)' "$1" 2>/dev/null ;;
     esac
 }
@@ -112,6 +125,17 @@ echo
 # qmk console claims the HID interface exclusively; a second instance spins in a
 # retry loop and can make the board look broken. Clear it before we need raw HID.
 pkill -f "qmk console" 2>/dev/null && echo "stopped a running qmk console"
+
+# Linux: the agent (hostagent/ak820-linux-agent.py) writes to the same raw-HID
+# interface every few seconds, and hidraw hands every reply to every reader, so
+# its echoes could land in the middle of the backup's reads. Stop it for the
+# flash and start it again however this script exits; it re-syncs the clock
+# and resends the track when the board comes back.
+if [ "$(uname -s)" = Linux ] && command -v systemctl >/dev/null 2>&1 \
+   && systemctl --user is-active --quiet ak820pro-agent 2>/dev/null; then
+    systemctl --user stop ak820pro-agent && echo "stopped the ak820pro-agent service (restarted at the end)"
+    trap 'systemctl --user start ak820pro-agent 2>/dev/null' EXIT
+fi
 
 # --- 1. back up the keymap while QMK is still running ----------------------
 # ⚠️ Under MSYS2, $HOME is C:\msys64\home\<user>, which has no Documents: the
@@ -356,6 +380,7 @@ echo
 case "$(uname -s)" in
     Darwin)               STATUS="$HOME/Library/Application Support/ak820pro/ak820-agent.status" ;;
     MINGW*|MSYS*|CYGWIN*) STATUS="$(cygpath -u "${LOCALAPPDATA:-}" 2>/dev/null)/ak820pro/ak820-agent.status" ;;
+    Linux)                STATUS="${XDG_STATE_HOME:-$HOME/.local/state}/ak820pro/ak820-agent.status" ;;
     *)                    STATUS="" ;;
 esac
 daemon_owns_clock() {
