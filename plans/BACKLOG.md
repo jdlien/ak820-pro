@@ -784,7 +784,7 @@ power-switched hub carries no wake for any device) and the host's
 resume, at 22:02 11-01 (§21). The gate is complete.
 
 
-## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- BUILT 11-23/24 on `low-reserve` (`0d8da8b797`, daily token `0x8c6de7d9`): 1 h of use past the cut (or 3225 mV, or the zero rule), then dark, asleep at 30 s, "Charge now" at every wake; three Astra rounds, every P0/P1 fixed; the on-board test owed
+## A day of typing after the LED cut: sleep at 60 s and a dim screen on the reserve (2026-10-28) -- BUILT 11-23/24 on `low-reserve` (`0d8da8b797`, daily token `0x8c6de7d9`): 1 h of use past the cut (or 3225 mV, or the zero rule), then dark, asleep at 30 s, "Charge now" at every wake; three Astra rounds, every P0/P1 fixed; on white since 19:37 11-24; the on-board test owed
 
 JD (10-28): "There's almost no downside to aggressive sleeping when the
 board is in this state since the lights are off anyways. But at least we

@@ -71,8 +71,10 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
   - **The recharge from empty: relay 2 on at 21:47:46 11-23**, `charge_mah`
     238.977 just before (the charge in = 238.977 - `charge_mah`; the
     INA228 counts it negative). ~573 mA at once, the plug 2.83 V and
-    rising: the protector released on the charger. Overnight; test 5 is
-    left for a later charge.
+    rising: the protector released on the charger. **Charged by 10:17:18
+    11-24** (the last row under -5 mA; `charge_mah` -3864.725, the pack
+    4175 mV): **4,103.7 mAh in over 12 h 30 min**, 17 mAh more than the
+    drain's 4,087 out. Relay 2 stays on. Test 5 is left for a later charge.
   - **Built from it, 11-23: the reserve's last stage**, `low-reserve`
     `0d8da8b797` (daily `via-daily-0d8da8b797-20261124-002017.bin`, token
     `0x8c6de7d9`, heap gap 1816 B): 1 h of use past the cut (or 3225 mV,
@@ -80,9 +82,16 @@ VIA's EEPROM magic, which QMK takes from the build date (day 10 against
     (`plans/BACKLOG.md`, "A day of typing after the LED cut"). Three Astra
     rounds (`gpt-6.2-astra`; `plans/review-codex-low-reserve-2026-11-23.md`):
     every P0/P1 fixed, the third round's P2s fixed without a fourth pass.
-    JD's go for the flash 11-24 (`Fn`+`Esc`: a daily has no USB bootloader
-    jump), with (0,13) back to Play/Pause (`0x00AE` on layers 0 and 2, its
-    binding before the presser's F19 of 11-03).
+    **On white since 19:37 11-24** (JD's go; the 00:20 attempt timed out
+    waiting for `Fn`+`Esc` and flashed nothing). JD pressed `Fn`+`Esc`
+    with the data line off, so flash.sh found the bootloader at once and
+    restored the 00:20 backups (keymap, profiles, live settings: Power
+    saver). No battery-log dump this time: the RAM log from 00:21 to 19:37
+    is lost, the recharge, which the logger has. (0,13) is back to
+    Play/Pause (`0x00AE` on layers 0 and 2, its binding before the
+    presser's F19 of 11-03). Read after: `reserve 0`, `lights_cut 0`, on
+    USB, raw HID healthy. Owed: the reserve's wake paths on the board
+    (sleep.c isn't in the simulator).
   Before it: 3,778 mAh net at 10:07 11-23 (17.8 days, 8.8 mA mean), the
   board at 4%. Earlier:
   1,447 mAh at 17:17 11-13 (36.1%, 195.4 h, 7.41 mA mean), relay 2 off,
