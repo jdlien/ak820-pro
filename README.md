@@ -115,8 +115,15 @@ What that gives you:
 
 - **A deep sleep at 3.2 mA**, about seven weeks untouched. A key wakes it,
   and the key you pressed still types.
-- **A warning when the battery runs low.** At 0% the lights switch off, and
-  about 5 hours of typing remain.
+- **A warning when the battery runs low,** and a last stage that makes the
+  end of a charge last. At 0% the lights switch off and the keyboard types
+  on as before. After another hour of use, or sooner if the battery is
+  nearly flat, it saves what is left: the lights and the screen stay dark,
+  it sleeps 30 seconds after your last key, and each time you wake it the
+  screen shows "Charge now" for a few seconds, so a dark keyboard doesn't
+  look broken. Plug it in and everything comes back within seconds. On JD's
+  keyboard the lights went off with 8 hours of on-and-off typing left,
+  before this last stage existed.
 
 How long a charge lasts (Bluetooth, the screen dim):
 

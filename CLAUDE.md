@@ -111,10 +111,26 @@ Four things from that work that bite outside it:
 Measured results and audit findings from completed work: [`history/`](history/).
 ChibiOS patch inventory: `keyboards/a_jazz/ak820pro/PATCHES.md`.
 
-## Current state (2026-11-13)
+## Current state (2026-11-26)
 
-**Resume from [`plans/current-status.md`](plans/current-status.md)** (its
-top block, "2026-11-13 — v0.4.0"). **Feature-complete for JD's board.** What's left:
+**Resume from [`plans/current-status.md`](plans/current-status.md).**
+**v0.5.0, released 11-26 from `0d8da8b797`** (`ak820pro-jdlien`
+fast-forwarded from v0.4.0's `d59cb1fb0c` to `low-reserve`, pinned in
+`deps.lock`): v0.4.0 plus the reserve's last stage, an hour of use past
+the RGB cut (or 3225 mV, or the zero rule), then dark in every mode, asleep
+30 s after the last input, "Charge now" at every wake
+([docs/battery.md](docs/battery.md), "The reserve's last stage"); the
+agent 0.5.0 is a version bump only. **On white since 19:37 11-24: that
+daily** (token `0x8c6de7d9`, the release's binary); its 11-26 read: 41,990
+presses, no stall >= 25 ms, no watchdog event. ⚠️ Owed: the stage's wake
+paths on the board (`sleep.c`, outside the simulator), and the
+clean-Windows install of the zip. The 11-05 drain ran to the end on 11-23:
+the cut after 3,888 mAh, the pack's protector 8 h 02 min later at 2.32 V,
+the board still running.
+
+## Earlier state (2026-11-13)
+
+**Feature-complete for JD's board.** What was left then:
 - an untethered drain at real use, run to the RGB cut. The one from FULL
   at 04:44 10-24 stopped short at 20:11 11-04 with ~19% left by the
   logger, two long charges for bench work inside it

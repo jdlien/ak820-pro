@@ -757,8 +757,42 @@ module's 15-min means went 9.95, 7.20, 7.00 (16:39-17:09, the logger's pack
 in the 17:24 period, never three in a row. So the zero rule (three zeros, the
 "bottom clamp") almost never fires on a real discharge, and nothing below
 ~3.22 V can be read from `5C` as a voltage. The reserve's last stage starts
-by time and at 3225 mV for that reason (`power.c`, `battery.c`, branch
-`low-reserve`). The Riden's test 1 maps the bottom properly.
+by time and at 3225 mV for that reason (below). The Riden's test 1 maps the
+bottom properly.
+
+### The reserve's last stage (v0.5.0)
+
+`power.c` and `battery.c`, `0d8da8b797`. After the RGB cut the board types
+on as before (Power saver's stages, the screen at its level). **The last
+stage starts at the first of:**
+
+- **1 h of awake time on battery past the cut** (`RESERVE_AFTER_CUT_MS`;
+  asleep doesn't count, each step capped at 1 s). On 11-23, 1 h of use past
+  the cut left 154 of the reserve's 199 mAh, 2 h left 104;
+- **the estimate under 3225 mV for 30 s** (`RESERVE_MV`, `WARN_HOLD_TICKS`);
+- **the zero rule** (three zeros from `5C`), kept though it almost never
+  fires.
+
+**Then, in every power mode:** the RGB and the backlight dark, typing too
+(the bulb shows Lights out); the deep sleep 30 s after the last input
+(`RESERVE_SLEEP_MS`), Always on included; "Charge now" as the alert at
+entry and at every key or knob wake (after a passive wake, at the first
+input), the screen lit 4 s for it (`MESSAGE_WAKE_MS`) and the sleep held
+1.5 s past that; the menu and `Fn`+`D` closed at the sleep time. **It is
+latched with the cut** and lifts where the cut lifts: 5 s of current cable
+evidence (`EXT_RESTORE_TICKS`), the alert coming down at once. RAM only:
+a reset clears it with the cut. `HC_BATTCFG`'s reply byte 8 is the latch
+(`ak820battery.py cfg` prints `reserve`).
+
+The logic is covered by `scripts/battery_sim/` (264 cases; each of the
+review fixes' cases fails with its fix removed), and three Astra reviews
+(`plans/review-codex-low-reserve-2026-11-23.md`). ⚠️ **Not yet run on the
+board: the wake paths in `sleep.c`** (the "Charge now" after a key, a knob
+and a keep-alive wake), which the simulator doesn't build. Two ways to run
+them: raise the cut over `HC_BATTCFG` op 1 above a full pack's voltage
+(RAM only), relay 2 off, and type for an hour of awake time; or the Riden
+at ~3.2 V, which enters by the voltage rule in 30 s and tests that rule on
+hardware too (`plans/current-status.md`).
 
 ### Internal-flash writes: the blink, and how few are left
 
