@@ -84,25 +84,32 @@ relay 2 off, so the charger never pushes into the supply.
 
 ## Owed, in order
 
-1. **The reserve's last stage on the board.** The simulator covers the
-   logic (264 cases) but not `sleep.c`, so the wake paths have never run:
-   "Charge now" after a key, a knob and a keep-alive wake, and the 30 s
-   sleep in each mode. JD released without it. If something is wrong
-   there, it only shows in the last hours of a charge. Two ways to run it:
-   - **With the pack (no hardware change, about an hour of awake use):**
-     `Fn`+`B` to Power saver first. Then relay 2 off; raise the cut above
-     the full pack's voltage, `ak820battery.py cfg 3680 4200` (RAM only;
-     the cut fires after 30 s under it); JD types until the board has
-     been awake an hour, longer by the clock, since sleep doesn't count.
-     Then check: dark, asleep 30 s after the last key, "Charge now" lit
-     4 s at each key or knob wake; after a keep-alive wake, at the first
-     key. Afterwards `cfg 3680 3400` and relay 2 on (5 s of cable lifts
-     the cut and the stage).
+1. **The reserve's last stage on the board.** The simulator covers
+   `battery.c`'s and `power.c`'s decisions (264 cases) but not `sleep.c`,
+   the real menu or the alert's timing on the screen, so those have never
+   run: "Charge now" after a key, a knob and a keep-alive wake, and the
+   30 s sleep in each mode. JD released without it. If something is wrong
+   there, it only shows in the last hours of a charge. Two ways to run it
+   (`docs/battery.md`, "The reserve's last stage"):
+   - **With the pack (no hardware change, about an hour of awake use).**
+     ⚠️ **Not on a full pack:** the firmware ignores the cut while the
+     estimate sits at its top clamp (>= 4036 mV), whatever the threshold
+     (Astra, 11-26). So first run on battery until `ak820battery.py`'s
+     `pack` line shows a number, not `>=4036`. Then `Fn`+`B` to Power
+     saver; relay 2 off and the data line off (a live data bus holds sleep
+     off); `ak820battery.py cfg 3680 <the estimate + 100>` (RAM only); the
+     hour starts when `lights_cut` reads 1, ~30 s later. JD types until the
+     board has been awake an hour, longer by the clock, since sleep
+     doesn't count. Then check: dark, asleep ~30 s after the last key,
+     "Charge now" lit 4 s at each key or knob wake; after a keep-alive
+     wake, at the first key. Afterwards `cfg 3680 3400` and relay 2 on
+     (~5 s of cable lifts the cut and the stage).
    - **With the Riden (faster, and tests one more thing):** the supply at
-     ~3.2 V in place of the pack; the estimate stays under 3225 mV for
-     30 s and the stage starts at once, which also tests the voltage rule
-     on hardware (so far only in the simulator, on 11-23's readings).
-     Best done inside test 2 below, with the same setup.
+     ~3.2 V in place of the pack. The estimate falls under 3225 mV in
+     ~2-2.5 min (a trimmed mean of 64 reports) and the stage starts 30 s
+     after that, which also tests the voltage rule on hardware (so far
+     only in the simulator, on 11-23's readings). Best done inside test 2
+     below, with the same setup; the data line off here too.
 2. **The bench supply's tests** (`plans/BACKLOG.md`, "The bench supply as
    the pack"; tasks 22-26 in `.taskmaster/tasks/tasks.json`). Unblocked
    since the drain ended. Test 2 (Battery low and the RGB cut on demand)

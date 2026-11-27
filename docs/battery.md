@@ -763,36 +763,70 @@ bottom properly.
 ### The reserve's last stage (v0.5.0)
 
 `power.c` and `battery.c`, `0d8da8b797`. After the RGB cut the board types
-on as before (Power saver's stages, the screen at its level). **The last
-stage starts at the first of:**
+on under the low-battery rules for its mode: the RGB off; Always on awake;
+Balanced and Power saver asleep at 3 min; Lights out as ever, dark and
+asleep at 1 min. The battery row reads "Low". **The last stage starts at
+the first of:**
 
-- **1 h of awake time on battery past the cut** (`RESERVE_AFTER_CUT_MS`;
-  asleep doesn't count, each step capped at 1 s). On 11-23, 1 h of use past
-  the cut left 154 of the reserve's 199 mAh, 2 h left 104;
-- **the estimate under 3225 mV for 30 s** (`RESERVE_MV`, `WARN_HOLD_TICKS`);
-- **the zero rule** (three zeros from `5C`), kept though it almost never
+- **1 h awake on battery past the cut** (`RESERVE_AFTER_CUT_MS`): idle but
+  awake counts, deep sleep pauses it, each step is capped at 1 s. On 11-23,
+  1 h of use past the cut left 154 of the reserve's 199 mAh, 2 h left 104;
+- **the estimate under 3225 mV for 30 s** (`RESERVE_MV`, `WARN_HOLD_TICKS`).
+  The estimate is the trimmed mean of the last 64 `5C` reports, ~2-2.5 min
+  of them, so a step down in voltage takes that long to show;
+- **the zero rule:** three `5C` zeros in a row, still current, seen by a
+  protection check that has a fresh estimate. Kept, though it almost never
   fires.
 
-**Then, in every power mode:** the RGB and the backlight dark, typing too
-(the bulb shows Lights out); the deep sleep 30 s after the last input
-(`RESERVE_SLEEP_MS`), Always on included; "Charge now" as the alert at
-entry and at every key or knob wake (after a passive wake, at the first
-input), the screen lit 4 s for it (`MESSAGE_WAKE_MS`) and the sleep held
-1.5 s past that; the menu and `Fn`+`D` closed at the sleep time. **It is
-latched with the cut** and lifts where the cut lifts: 5 s of current cable
-evidence (`EXT_RESTORE_TICKS`), the alert coming down at once. RAM only:
-a reset clears it with the cut. `HC_BATTCFG`'s reply byte 8 is the latch
-(`ak820battery.py cfg` prints `reserve`).
+Either voltage rule can cut the RGB and start the stage in the same check,
+so a pack that is nearly flat (after a reset, say) skips the hour.
 
-The logic is covered by `scripts/battery_sim/` (264 cases; each of the
-review fixes' cases fails with its fix removed), and three Astra reviews
-(`plans/review-codex-low-reserve-2026-11-23.md`). ⚠️ **Not yet run on the
-board: the wake paths in `sleep.c`** (the "Charge now" after a key, a knob
-and a keep-alive wake), which the simulator doesn't build. Two ways to run
-them: raise the cut over `HC_BATTCFG` op 1 above a full pack's voltage
-(RAM only), relay 2 off, and type for an hour of awake time; or the Riden
-at ~3.2 V, which enters by the voltage rule in 30 s and tests that rule on
-hardware too (`plans/current-status.md`).
+**Then, in every power mode:**
+- **Dark:** the RGB and the backlight, typing too (the bulb shows Lights
+  out).
+- **Sleep is wanted 30 s after the last input** (`RESERVE_SLEEP_MS`),
+  Always on included. Sleep's usual holds still apply: a held key, a live
+  USB data bus, pairing. The menu and `Fn`+`D` are closed at 30 s (an open
+  edit rolled back) and "Charge now" posted again, so with either open the
+  sleep comes ~35.5 s after the last input.
+- **"Charge now"** at entry and at every key or knob wake. After a passive
+  wake (the keep-alive) it waits for the first input; a charger wake skips
+  it. The stage's backlight cap lifts for it, lighting the screen 4 s from
+  the paint (`MESSAGE_WAKE_MS`). It does **not** light a screen the owner
+  turned off (`Fn`+`Home`) or set to level 0: declined in review, the
+  owner's setting wins. The sleep waits 5.5 s from the post
+  (`RESERVE_SHOW_MS`).
+
+**It is latched with the cut.** On external power the screen's cap, the
+alert and the sleep request lift at once; the cut and the latch lift after
+50 qualifying samples, ~5 s of steady cable evidence (`EXT_RESTORE_TICKS`;
+ambiguous samples pause the count, so a brief plug can leave both set).
+RAM only: a reset clears the cut, the stage and the hour, so a slider flip
+brings the lights back until the cut fires again (~40 s, an estimate and
+its 30 s hold) and restarts the hour. `HC_BATTCFG`'s reply carries the
+latch at payload offset 8, byte 12 of the report (`ak820battery.py cfg`
+prints `reserve`).
+
+**What has tested it:** `scripts/battery_sim/` builds `battery.c` and
+`power.c` and covers their decisions (264 cases in all), with regression
+cases for the review fixes in those two files, each failing without its fix.
+Three Astra reviews (`plans/review-codex-low-reserve-2026-11-23.md`).
+⚠️ **Not yet run on a board:** the simulator calls `power_woke()`
+directly, paints alerts at once and stands a flag in for the menu, so the
+wake paths in `sleep.c`, the real menu and the alert's visible timing have
+never run. Two ways to run them:
+
+- **With the pack:** the cut is ignored while the estimate sits at its top
+  clamp (>= 4036 mV, `c5_top()`), whatever the threshold, so a full pack
+  won't do. Use the pack once its estimate reads under the clamp
+  (`ak820battery.py`'s `pack` line shows a number, not `>=4036`); raise the
+  cut above it over `HC_BATTCFG` op 1 (`ak820battery.py cfg 3680 <mV>`, RAM
+  only); start the hour when `lights_cut` reads 1. Relay 2 off, and the USB
+  data line off too: a live data bus holds sleep off.
+- **With the Riden at ~3.2 V** in place of the pack: the stage starts 30 s
+  after the estimate falls under 3225 mV, ~2.5-3 min after the step, and
+  this tests the voltage rule on hardware as well. The data line off here
+  too.
 
 ### Internal-flash writes: the blink, and how few are left
 
