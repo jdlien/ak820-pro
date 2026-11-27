@@ -391,7 +391,11 @@ def bench_sweep(sha, ev, duty, want):
     out = {**ev, "hold_s": res["hold_s"], "settle_s": res["settle_s"], "rows": rows}
     if "board_model_blob" in ev:
         (path, want), = ev["board_model_blob"].items()
-        out["board_model_same"] = blob(sha, path) == want   # model_mw then is the pin's model_nj
+        # model_mw then is the pin's model_nj. A later battery.c whose changes
+        # were checked to lie outside the model is listed, with the reason, in
+        # board_model_equivalent: the sweep's file, or one shown equal to it.
+        got = blob(sha, path)
+        out["board_model_same"] = got == want or got in ev.get("board_model_equivalent", {})
     return out
 
 

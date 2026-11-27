@@ -31,6 +31,7 @@
     "quantum/led_tables.c": "9fbe642cc76e796a97126316f40851a06b4765e6"
    },
    "board_model_blob": {"keyboards/a_jazz/ak820pro/battery.c": "80b2f8b773a0f775a6ffce07e72cfcc4b67bd980"},
+   "board_model_equivalent": {"94cf430a52bfa342d77802d54e2a2345e4c1b75d": "battery.c at 0d8da8b797 (v0.5.0, the reserve's last stage): every hunk is outside the model (supply_tick, c5_forget, the 5C report's staleness, battery_state, cut_lights, protection_tick, battery_cfg); d59cb1fb0c's lines 400-1243 equal 0d8da8b797's 427-1270 byte for byte, model_nj through battery_model_pm (diff, 11-26)"},
    "blobs_source": "git ls-tree d6656f926294024ab86b12a8f1580fa457d04f30. With battery.c the pin's too, the page's model must equal the board's own model_mw at every hold"
   }
  },
