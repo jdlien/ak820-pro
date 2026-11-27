@@ -134,7 +134,7 @@ the board still running.
 - an untethered drain at real use, run to the RGB cut. The one from FULL
   at 04:44 10-24 stopped short at 20:11 11-04 with ~19% left by the
   logger, two long charges for bench work inside it
-  (`plans/current-status.md`, "Stopped 20:11:24 11-04"); a new one runs from FULL since 13:56:13 11-05, on the daily build;
+  (`history/current-status-to-20261126.md`, "Stopped 20:11:24 11-04"); a new one runs from FULL since 13:56:13 11-05, on the daily build;
 - stripping the bench, the soak, and the release for other owners.
 
 **v0.4.0, released 11-13 from `d59cb1fb0c`** (`ak820pro-jdlien` fast-forwarded
@@ -160,14 +160,14 @@ and `deps.lock` there since 18:36): v0.3.0 plus F-033's fix (the row ISR's
 `NO_LED` read, ~1.3 mA on a dark frame), the daily and fpb builds, the
 Windows agent 0.3.1 (a version bump). Tagged once codex's wake gate was
 complete: cases 1, 2 and 4 on black, 3 on white
-(`plans/current-status.md`).
+(`history/current-status-to-20261126.md`).
 **v0.3.0, released 11-01 from `4c7395a4c6`**: the 10-31 firmware audit's
 fixes (41 of its 44 confirmed findings; `plans/AUDIT-2026-10-31.md`,
 `plans/BACKLOG.md`'s audit section) and the battery readout's Icon only,
 `ak820pro-jdlien` fast-forwarded to it and pinned in `deps.lock`; the daily
 and fpb builds and the Windows agent 0.3.0. ⚠️ Shipped before two checks:
 the clean-Windows install (gremlin's Windows Sandbox is off) and the wake
-fixes' USB cases 2-4 (`plans/current-status.md`). A protocol change for host
+fixes' USB cases 2-4 (`history/current-status-to-20261126.md`). A protocol change for host
 tools: a profiles restore applies the live record before its commit, and
 the commit names the live settings' side (`hostagent/ak820profiles.py`).
 **Before them, from 13:39 11-09: the DEV build of `row-isr` `4790208267`** (token `0x50f8f2d1`), the same
@@ -184,7 +184,7 @@ the curve JD's eye settled, the hold's ramp, the Cycles' place kept through a sp
 `SAVER_VAL` 191 (75%) and `DIM_VAL` 102 (40%), the new effect `Rain`, one colour, Rainfall now
 `Rain RGB`; the warm window 51.9 us and 41.5% at full white. ⚠️ No bootloader over USB or dev
 hooks: the return to dev is `Fn`+`Esc`. ⚠️ **A new drain runs from FULL since 13:56:13 11-05**
-(`charge_mah` -2754.007, relay 2 off): `plans/current-status.md`. ⚠️ The same setting gives
+(`charge_mah` -2754.007, relay 2 off): `history/current-status-to-20261126.md`. ⚠️ The same setting gives
 20-35% less light on battery than on USB while charging, by the camera, accepted. **Before it,
 from 12:46 11-05: `feef9b4bfe`** (dev token `0xd3e8d30b`). **Before it, from 12:15:
 `8ae385563d`; from 12:06: `5d46f4b1f7`.** **Before it, from 11:00 11-05: `d6656f9262`** (dev token
@@ -197,7 +197,7 @@ JD's eye). **Before it, from 20:41: `a86a07610f`** (dev token
 `0x6115beeb`; the menu's acceleration three tiers by the spin, 1, 2, 3
 percent, on every build; the curve geometric for JD's eye after the L* build's
 uneven steps, the dither a quarter tick under 16 ticks; six codex
-rounds, the last running; **resume from `plans/current-status.md`'s
+rounds, the last running; **resume from `history/current-status-to-20261126.md`'s
 RESUME HERE, written for a fresh session**): the committed frame holds pulse widths at 12
 bits, the uniform-value effects (Solid, Alphas/Mods, the Cycles,
 Jellybean) render their chroma and the flush applies the value through
@@ -254,7 +254,7 @@ decimation is reverted on 11-04** (the detector goes behind a flag the
 daily build leaves out; the silence report's pairing and PENDING verdict
 stay). The awake soak on it from 20:34 with JD typing, white to Hutch
 asleep at ~00:35. JD's eye at 444 Hz: the fringe all but gone, the
-screen's drawing about twice as fast (`plans/current-status.md`,
+screen's drawing about twice as fast (`history/current-status-to-20261126.md`,
 `history/rowisr-stage1-20261101/README.md`, "Stage 5g on white").
 **Before it, from 15:06 11-03 (and 13:34-14:31): stage 5e of the row ISR
 rewrite, the 125 us cadence, `739fe1b635`** (dev, token `0xf222e31c`,
@@ -282,7 +282,7 @@ night's awake soak ran clean to 09:35; **the camera gate met at 11:28
 11-03 from the Mac** (two forced clock-chip writes filmed at 240 fps, no
 trace; `history/rowisr-stage1-20261101/README.md`, "The gate met from
 the Mac"), so `pcf-unseen`'s deferral retirement is JD's call
-(`plans/current-status.md`, the 11-03 night block;
+(`history/current-status-to-20261126.md`, the 11-03 night block;
 `history/rowisr-stage1-20261101/README.md`).
 **Before it, from 02:27 11-03: the exit-only build, `f0ec5c68df`** (dev,
 token `0x9e2d894a`, heap gap 408 B, `row-isr`): the diagnostic below with
@@ -459,7 +459,7 @@ has no `HC_PROFILES`); from here `flash.sh` keeps them. **Before it, from
 options), the LED fix and the wake's dark-frame fix, flashed mid-drain on
 battery; the drain runs on to the cut. ⚠️ **On Buzz the daemon's lock-light channel sent nothing from
 10-23 to 19:28 10-25**, until Input Monitoring was granted
-(`plans/current-status.md`): a new Mac needs that grant before it works.
+(`history/current-status-to-20261126.md`): a new Mac needs that grant before it works.
 **Before it, from 22:02 10-24: `52acdffe99`** (dev, token `0xab194817`,
 `mac/wake-dark-frame`): `b9555ff3e6` plus the wake's dark-frame fix
 (`history/BACKLOG-DONE.md`). **Before it, from 23:48 10-23: the mainline until
@@ -660,7 +660,7 @@ fitted curve `759e265796` was on the board.
 ## Earlier state (2026-10-01)
 
 **The battery gauge's drain test is done and the curve is fitted, committed,
-not yet flashed.** Resume from [`plans/current-status.md`](plans/current-status.md);
+not yet flashed.** Resume from [`history/current-status-to-20261126.md`](history/current-status-to-20261126.md);
 the work is [`plans/BATTERY-GAUGE-PLAN.md`](plans/BATTERY-GAUGE-PLAN.md), the
 evidence [`docs/battery.md`](docs/battery.md). The level comes from the
 CH582F's `5C` (a linear voltmeter on the pack, within ~10 mV of a meter from
@@ -672,7 +672,7 @@ not "the owner".
 
 ## Earlier state (2026-09-24)
 
-**Resume from [`plans/current-status.md`](plans/current-status.md).** The
+**Resume from [`history/current-status-to-20261126.md`](history/current-status-to-20261126.md).** The
 2026-09-22/23 crash campaign fixed four things:
 
 - **The SPI hang behind the 2026-09-22 reset.** A CPU transaction ran during

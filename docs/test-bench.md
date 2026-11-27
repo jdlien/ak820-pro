@@ -787,7 +787,7 @@ a 2-pin connector to a gutted-switch plug.
   hub's port, and the sensors' LEDs still lit. A full unplug restarted it
   each time, once only at the hub end. Unproven between a short under the
   perfboard (above) and back-power from the sensors over the STEMMA bus.
-  Each unplug restarts the drain's charge count (`plans/current-status.md`).
+  Each unplug restarts the drain's charge count (`history/current-status-to-20261126.md`).
 - **The keymap, since 02:16 11-03:** (0,13) is F19 and (3,14) F20 on
   both base layers. F19 is what the Mac's F19 listener and
   `keydrop_test.py` watch. With the plugs in, JD can only press these keys

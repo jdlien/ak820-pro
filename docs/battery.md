@@ -741,7 +741,7 @@ refuses to flash on battery in this reserve ([hardware.md](hardware.md)).
 **At real use, logged (the drain from 11-05, measured 11-23):** the cut at
 13:41:22 after 17 d 23 h 45 min and 3,888 mAh net; `5C`'s floor 2 h 09 min
 awake later (102 mAh); **the death at 21:43:10, 8 h 02 min and 199 mAh after
-the cut**, JD typing on and off in Power saver (`plans/current-status.md`).
+the cut**, JD typing on and off in Power saver (`history/current-status-to-20261126.md`).
 **The pack's protector ends it, cleanly:** the plug read 2,322.5 mV under
 66.7 mA, then the current fell to nothing in one second, the terminals
 collapsed to ~0 in 8 s and the MAX17048 lost power, with no cycling after.

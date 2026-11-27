@@ -41,7 +41,7 @@ warning is wanted.
 **Wait for:** the `warned` read at the cut, to know whether it fired. Then
 JD's call; any of these can ride along with a later firmware change.
 
-## The bench supply as the pack: tests that no longer need a drain (2026-11-18) -- planned, after the drain reaches the RGB cut
+## The bench supply as the pack: tests that no longer need a drain (2026-11-18) -- planned; unblocked since the drain ended on 11-23
 
 The bench's Riden RD6006P ([docs/test-bench.md](../docs/test-bench.md),
 "The bench supply") can stand in for the pack at any voltage, for as long
@@ -101,7 +101,7 @@ with relay 2 off. None of these runs during the drain.
    0, and the voltage the keyboard dies at is unknown
    ([docs/power.md](../docs/power.md), "The battery"). **It is below
    2.32 V:** on 11-23 the board still ran there (66.7 mA) when the pack's
-   protector opened (`plans/current-status.md`, the drain's death). Step
+   protector opened (`history/current-status-to-20261126.md`, the drain's death). Step
    down from 2.40 V in 20 mV steps, 2 min each, to 2.0 V or until it
    stops. Keep the keyboard awake (Always on,
    so it never sleeps) with the data line on, and watch both currents (the
@@ -523,7 +523,7 @@ A multi-agent audit of the whole firmware ([`AUDIT-2026-10-31.md`](AUDIT-2026-10
 - **F-033:** the row ISR reads `led_state[255]` at the 9 empty matrix cells (upstream code). No longer cosmetic: the row ISR's stage 1 A/B on white (11-01, Always on, 40 s holds) measured a dark frame at 41.94 mA on stage 1, where the read lands on the wear-leveling cache, against 40.62 on `4c7395a4c6`, where it lands on the raw-HID IN queue's slot 0 and so comes and goes with the last reply (zero through those holds). With the fix both read 40.58-40.62 dark, 45.25-45.26 at white 64, 88.72-89.35 at white 255. **Fixed** (both PWM paths `continue` on `NO_LED`): `cfe6c2d3a5` (dev `0xc1237f1a`, measured on white 18:05-18:09), `ak820pro-jdlien` fast-forwarded to it and `deps.lock` pinned at 18:36 11-01, test `scripts/led_noled_test`, for v0.3.1; stage 1 carries the same line on `row-isr`.
 - **F-034 upstream:** the 2- and 4-byte wear-leveling stores still over-read on a length of 6 or 7 (`ak820pro-builds/UPSTREAM-CONTRIBUTIONS.md`).
 - **F-035:** nothing rate-limits host-driven EEPROM writes over `HC_PROFILES`; accepted (a real restore costs one consolidation).
-- **F-045, the bench:** case 3 (a uhubctl reconnect across a deep sleep, a key waking it) **passed on white 21:03-21:13 11-01** in both forms, the re-attach's and the plain reconnect's, HID read and no reset, on the row ISR's stage 2 (v0.3.1's USB and sleep code) (`history/wake-case3-20261101/`). Cases 1, 2 and 4 passed on black after it, so the gate is complete (`plans/current-status.md`).
+- **F-045, the bench:** case 3 (a uhubctl reconnect across a deep sleep, a key waking it) **passed on white 21:03-21:13 11-01** in both forms, the re-attach's and the plain reconnect's, HID read and no reset, on the row ISR's stage 2 (v0.3.1's USB and sleep code) (`history/wake-case3-20261101/`). Cases 1, 2 and 4 passed on black after it, so the gate is complete (`history/current-status-to-20261126.md`).
 - **Small:** `display_blink()` cuts one cycle short at the 49.7-day wrap; the audit's loose ends (stale comments, the SN32 serial and USB LLD notes, the row ISR's per-column divide).
 
 ## A lock change made while the board sleeps is lost (the 10-31 audit, F-008) -- documented; a daemon-side refresh is the fix, not built
@@ -811,7 +811,7 @@ every mode" (10-21, now in `history/BACKLOG-DONE.md`), which was left alone.
   awake); the screen is ~1 mA at JD's level, a few mA brighter.
 - **Measure first:** R5, the drain since 04:44 10-24, runs on past the cut
   to shutdown and measures the reserve as built at real use, and what ends
-  it (`plans/current-status.md`). Size the change against that.
+  it (`history/current-status-to-20261126.md`). Size the change against that.
 - **The direction, settled 11-23, two stages after the cut:**
   1. **A couple of hours of normal use** after the RGB cut, as now: the
      screen on, the mode's own sleep.
@@ -864,7 +864,7 @@ every mode" (10-21, now in `history/BACKLOG-DONE.md`), which was left alone.
   the floor, so a pack that dies mid-write cannot tear one (the wear
   leveling's check catches a torn line, but nothing is better). Sized
   against the Riden's test 3 (where the board itself browns out).
-- **The reserve, measured on 11-23** (`plans/current-status.md`): **8 h
+- **The reserve, measured on 11-23** (`history/current-status-to-20261126.md`): **8 h
   02 min and 199 mAh from the cut to the death**, 4 h 48 min and 97 mAh of
   it past the floor, at JD's on-and-off use in Power saver. **What ends it:
   the pack's protector, cleanly** (21:43:10, the plug at 2,322.5 mV under
